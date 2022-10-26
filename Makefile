@@ -1,5 +1,8 @@
+run-debug:
+	RUST_LOG=DEBUG cargo run -- --verbose
+
 run:
-	RUST_LOG=DEBUG cargo run
+	cargo run
 
 test:
 	cargo test
@@ -21,4 +24,4 @@ set:
 get:
 	curl 'http://127.0.0.1:26657/abci_query?data=0x736f6d656b6579'
 
-.PHONY: run test tendermint-clean-start tendermint-reset-unsafe tendermint-init tendermint-start set get
+.PHONY: run run-debug test tendermint-clean-start tendermint-reset-unsafe tendermint-init tendermint-start set get
