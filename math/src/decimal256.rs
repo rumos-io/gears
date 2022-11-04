@@ -375,6 +375,17 @@ impl Decimal256 {
             Err(_) => Self::MAX,
         }
     }
+
+    /// Converts to a string which is compatible with the cosmos SDK protobufs.
+    pub fn to_cosmos_proto_string(&self) -> String {
+        self.0.to_string()
+    }
+
+    /// Generates a Decimal256 from a cosmos SDK protobuf string representation.
+    pub fn from_cosmos_proto_string(input: &str) -> Result<Self, StdError> {
+        let internal = cosmwasm_std::Uint256::from_str(input)?;
+        Ok(Self(internal))
+    }
 }
 
 impl Fraction<Uint256> for Decimal256 {
@@ -1006,6 +1017,14 @@ mod tests {
             )
             .unwrap(),
             Decimal256::MAX
+        );
+    }
+
+    #[test]
+    fn decimal256_from_cosmos_proto_string_works() {
+        assert_eq!(
+            Decimal256::from_cosmos_proto_string("123000000000000000000").unwrap(),
+            Decimal256::from_str("123").unwrap(),
         );
     }
 
@@ -1878,6 +1897,14 @@ mod tests {
         assert_eq!(
             Decimal256(Uint256::from(100000000000000000u128)).to_string(),
             "0.1"
+        );
+    }
+
+    #[test]
+    fn decimal256_to_cosmos_proto_string_works() {
+        assert_eq!(
+            Decimal256(Uint256::from(10000000000000000u128)).to_cosmos_proto_string(),
+            "10000000000000000"
         );
     }
 
