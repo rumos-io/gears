@@ -6,7 +6,9 @@ As it stands this is simply a copy of the key/value store example given in the [
 
 Rust compiler - Tested with version 1.63.0 - [Installation instructions](https://doc.rust-lang.org/book/ch01-01-installation.html)
 
-Tendermint - Tested with v0.35.0 - [Installation instructions](https://github.com/tendermint/tendermint/blob/main/docs/introduction/install.md)
+Tendermint - Tested with v0.34.23 - [Installation instructions](https://github.com/tendermint/tendermint/blob/main/docs/introduction/install.md)
+
+Gaiad - For demonstrating the use of Cosmos SDK structures. To install clone the [gaia repo](https://github.com/cosmos/gaia) and run `make install`
 
 # Running the app
 
@@ -30,7 +32,7 @@ Tendermint will connect to the application and will bind the RPC server to 127.0
 3. Set a key/value pair in the keystore (set "somekey" to "somevalue"):
 
 ```
-curl 'http://127.0.0.1:26657/broadcast_tx_async?tx="somekey=somevalue"'
+curl 'http://127.0.0.1:26657/broadcast_tx_commit?tx="somekey=somevalue"'
 ```
 
 4. Query the store for the value of "somekey" ("736f6d656b6579" is the hex representation of "somekey"):
@@ -41,7 +43,7 @@ curl 'http://127.0.0.1:26657/abci_query?data=0x736f6d656b6579'
 
 Which will return:
 
-```
+```json
 {
   "jsonrpc": "2.0",
   "id": -1,
@@ -60,3 +62,20 @@ Which will return:
   }
 }
 ```
+
+5. Request a balance.
+
+```
+gaiad query bank balances cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux
+```
+
+Which will return:
+
+```yaml
+balances:
+- amount: "12"
+  denom: uatom
+pagination: null
+```
+
+NOTE: these values have been hard coded into the app.

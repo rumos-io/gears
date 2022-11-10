@@ -5,6 +5,8 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender},
 };
 
+use prost::Message;
+
 use bytes::BytesMut;
 use tendermint_abci::{Application, Error};
 use tendermint_proto::abci::{
@@ -132,6 +134,32 @@ impl Application for KeyValueStoreApp {
     }
 
     fn query(&self, request: RequestQuery) -> ResponseQuery {
+        debug!("Request path: {}", request.path);
+        if request.path == "/cosmos.bank.v1beta1.Query/AllBalances" {
+            debug!("Received all balance request");
+            let res = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse {
+                balances: vec![ibc_proto::cosmos::base::v1beta1::Coin {
+                    denom: "uatom".into(),
+                    amount: cosmwasm_std::Uint256::from(12_u32),
+                }],
+                pagination: None,
+            };
+
+            let res = res.encode_to_vec();
+
+            return ResponseQuery {
+                code: 0,
+                log: "exists".to_string(),
+                info: "".to_string(),
+                index: 0,
+                key: request.data,
+                value: res.into(),
+                proof_ops: None,
+                height: 12,
+                codespace: "".to_string(),
+            };
+        }
+
         let key = match std::str::from_utf8(&request.data) {
             Ok(s) => s,
             Err(e) => panic!("Failed to intepret key as UTF-8: {}", e),
@@ -202,18 +230,18 @@ impl Application for KeyValueStoreApp {
                 r#type: "app".to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: "key".to_string(),
-                        value: key.to_string(),
+                        key: "key".into(),
+                        value: key.to_string().into_bytes().into(),
                         index: true,
                     },
                     EventAttribute {
-                        key: "index_key".to_string(),
-                        value: "index is working".to_string(),
+                        key: "index_key".into(),
+                        value: "index is working".into(),
                         index: true,
                     },
                     EventAttribute {
-                        key: "noindex_key".to_string(),
-                        value: "index is working".to_string(),
+                        key: "noindex_key".into(),
+                        value: "index is working".into(),
                         index: false,
                     },
                 ],

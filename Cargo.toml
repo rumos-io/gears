@@ -1,3 +1,7 @@
 [workspace]
-
 members = ["math", "app"]
+
+[patch.crates-io]
+prost = { git = 'https://github.com/joneskm/prosit' }
+prost-derive = { git = 'https://github.com/joneskm/prosit' }
+prost-types = { git = 'https://github.com/joneskm/prosit' }
