@@ -2,6 +2,7 @@
 
 use std::{
     collections::HashMap,
+    str::FromStr,
     sync::mpsc::{channel, Receiver, Sender},
 };
 
@@ -79,12 +80,12 @@ impl KeyValueStoreApp {
     }
 
     /// Attempt to retrieve the value associated with the given key.
-    pub fn get<K: AsRef<str>>(&self, key: K) -> Result<(i64, Option<String>), Error> {
+    pub fn get(&self, key: Vec<u8>) -> Result<(i64, Option<Vec<u8>>), Error> {
         let (result_tx, result_rx) = channel();
         channel_send(
             &self.cmd_tx,
             Command::Get {
-                key: key.as_ref().to_string(),
+                key: key,
                 result_tx,
             },
         )?;
@@ -95,17 +96,13 @@ impl KeyValueStoreApp {
     ///
     /// Optionally returns any pre-existing value associated with the given
     /// key.
-    pub fn set<K, V>(&self, key: K, value: V) -> Result<Option<String>, Error>
-    where
-        K: AsRef<str>,
-        V: AsRef<str>,
-    {
+    pub fn set(&self, key: Vec<u8>, value: Vec<u8>) -> Result<Option<Vec<u8>>, Error> {
         let (result_tx, result_rx) = channel();
         channel_send(
             &self.cmd_tx,
             Command::Set {
-                key: key.as_ref().to_string(),
-                value: value.as_ref().to_string(),
+                key: key,
+                value: value,
                 result_tx,
             },
         )?;
@@ -134,63 +131,65 @@ impl Application for KeyValueStoreApp {
     }
 
     fn query(&self, request: RequestQuery) -> ResponseQuery {
-        debug!("Request path: {}", request.path);
         if request.path == "/cosmos.bank.v1beta1.Query/AllBalances" {
-            debug!("Received all balance request");
-            let res = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse {
-                balances: vec![ibc_proto::cosmos::base::v1beta1::Coin {
-                    denom: "uatom".into(),
-                    amount: cosmwasm_std::Uint256::from(12_u32),
-                }],
-                pagination: None,
-            };
+            let data = request.data.clone();
+            let req =
+                ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest::decode(data).unwrap();
 
-            let res = res.encode_to_vec();
+            match self.get(req.address.clone().into()) {
+                Ok((height, value_opt)) => match value_opt {
+                    Some(value) => {
+                        let res = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse {
+                            balances: vec![ibc_proto::cosmos::base::v1beta1::Coin {
+                                denom: "uatom".into(),
+                                amount: cosmwasm_std::Uint256::from_str(
+                                    &String::from_utf8(value).unwrap(),
+                                )
+                                .unwrap(),
+                            }],
+                            pagination: None,
+                        };
 
-            return ResponseQuery {
+                        let res = res.encode_to_vec();
+
+                        ResponseQuery {
+                            code: 0,
+                            log: "exists".to_string(),
+                            info: "".to_string(),
+                            index: 0,
+                            key: request.data,
+                            value: res.into(),
+                            proof_ops: None,
+                            height,
+                            codespace: "".to_string(),
+                        }
+                    }
+                    None => ResponseQuery {
+                        code: 0,
+                        log: "address does not exist".to_string(),
+                        info: "".to_string(),
+                        index: 0,
+                        key: request.data,
+                        value: Default::default(),
+                        proof_ops: None,
+                        height,
+                        codespace: "".to_string(),
+                    },
+                },
+                Err(e) => panic!("Failed to get key \"{}\": {:?}", req.address, e),
+            }
+        } else {
+            ResponseQuery {
                 code: 0,
-                log: "exists".to_string(),
+                log: "unrecognized query".to_string(),
                 info: "".to_string(),
                 index: 0,
                 key: request.data,
-                value: res.into(),
+                value: Default::default(),
                 proof_ops: None,
-                height: 12,
+                height: 0,
                 codespace: "".to_string(),
-            };
-        }
-
-        let key = match std::str::from_utf8(&request.data) {
-            Ok(s) => s,
-            Err(e) => panic!("Failed to intepret key as UTF-8: {}", e),
-        };
-        debug!("Attempting to get key: {}", key);
-        match self.get(key) {
-            Ok((height, value_opt)) => match value_opt {
-                Some(value) => ResponseQuery {
-                    code: 0,
-                    log: "exists".to_string(),
-                    info: "".to_string(),
-                    index: 0,
-                    key: request.data,
-                    value: value.into_bytes().into(),
-                    proof_ops: None,
-                    height,
-                    codespace: "".to_string(),
-                },
-                None => ResponseQuery {
-                    code: 0,
-                    log: "does not exist".to_string(),
-                    info: "".to_string(),
-                    index: 0,
-                    key: request.data,
-                    value: Default::default(),
-                    proof_ops: None,
-                    height,
-                    codespace: "".to_string(),
-                },
-            },
-            Err(e) => panic!("Failed to get key \"{}\": {:?}", key, e),
+            }
         }
     }
 
@@ -218,7 +217,7 @@ impl Application for KeyValueStoreApp {
         } else {
             (tx, tx)
         };
-        let _ = self.set(key, value).unwrap();
+        let _ = self.set(key.into(), value.into()).unwrap();
         ResponseDeliverTx {
             code: 0,
             data: Default::default(),
@@ -265,7 +264,7 @@ impl Application for KeyValueStoreApp {
 /// Manages key/value store state.
 #[derive(Debug)]
 pub struct KeyValueStoreDriver {
-    store: HashMap<String, String>,
+    store: HashMap<Vec<u8>, Vec<u8>>,
     height: i64,
     app_hash: Vec<u8>,
     cmd_rx: Receiver<Command>,
@@ -273,8 +272,15 @@ pub struct KeyValueStoreDriver {
 
 impl KeyValueStoreDriver {
     fn new(cmd_rx: Receiver<Command>) -> Self {
+        let mut store = HashMap::new();
+
+        // Initialize a hard coded genesis account
+        let key = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into();
+        let value: Vec<u8> = cosmwasm_std::Uint256::from(34_u32).to_string().into();
+        store.insert(key, value);
+
         Self {
-            store: HashMap::new(),
+            store,
             height: 0,
             app_hash: vec![0_u8; MAX_VARINT_LENGTH],
             cmd_rx,
@@ -290,7 +296,7 @@ impl KeyValueStoreDriver {
                     channel_send(&result_tx, (self.height, self.app_hash.clone()))?
                 }
                 Command::Get { key, result_tx } => {
-                    debug!("Getting value for \"{}\"", key);
+                    debug!("Getting value for \"{:?}\"", key);
                     channel_send(
                         &result_tx,
                         (self.height, self.store.get(&key).map(Clone::clone)),
@@ -301,7 +307,7 @@ impl KeyValueStoreDriver {
                     value,
                     result_tx,
                 } => {
-                    debug!("Setting \"{}\" = \"{}\"", key, value);
+                    debug!("Setting \"{:?}\" = \"{:?}\"", key, value);
                     channel_send(&result_tx, self.store.insert(key, value))?;
                 }
                 Command::Commit { result_tx } => self.commit(result_tx)?,
@@ -326,14 +332,14 @@ enum Command {
     GetInfo { result_tx: Sender<(i64, Vec<u8>)> },
     /// Get the key associated with `key`.
     Get {
-        key: String,
-        result_tx: Sender<(i64, Option<String>)>,
+        key: Vec<u8>,
+        result_tx: Sender<(i64, Option<Vec<u8>>)>,
     },
     /// Set the value of `key` to to `value`.
     Set {
-        key: String,
-        value: String,
-        result_tx: Sender<Option<String>>,
+        key: Vec<u8>,
+        value: Vec<u8>,
+        result_tx: Sender<Option<Vec<u8>>>,
     },
     /// Commit the current state of the application, which involves recomputing
     /// the application's hash.
