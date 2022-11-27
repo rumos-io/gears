@@ -79,3 +79,9 @@ pagination: null
 ```
 
 NOTE: these values have been hard coded into the app.
+
+6. Transfer token
+
+```
+gaiad tx bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux 100uatom --keyring-backend=test --chain-id=localnet
+```

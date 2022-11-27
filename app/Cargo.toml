@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bytes = { version = "1.0", default-features = false }
+#bytes = { version = "1.0", default-features = false }
 prost = { version = "0.8" }
 tendermint-proto = { git = 'https://github.com/joneskm/tendermint-rs' }
 tracing = { version = "0.1", default-features = false }
@@ -14,3 +14,4 @@ ibc-proto = { git = 'https://github.com/joneskm/ibc-proto-rs' }
 tendermint-abci = { git = 'https://github.com/joneskm/tendermint-rs' }
 structopt = { version = "0.3", optional = false, default-features = false }
 tracing-subscriber = { version = "0.2", optional = false, default-features = true }
+bytes = "1.2.1"

@@ -6,9 +6,13 @@ use std::{
     sync::mpsc::{channel, Receiver, Sender},
 };
 
+use ibc_proto::{
+    cosmos::{auth::v1beta1::BaseAccount, bank::v1beta1::MsgSend},
+    google::protobuf::Any,
+};
 use prost::Message;
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use tendermint_abci::{Application, Error};
 use tendermint_proto::abci::{
     Event, EventAttribute, RequestCheckTx, RequestDeliverTx, RequestInfo, RequestQuery,
@@ -131,55 +135,92 @@ impl Application for KeyValueStoreApp {
     }
 
     fn query(&self, request: RequestQuery) -> ResponseQuery {
-        if request.path == "/cosmos.bank.v1beta1.Query/AllBalances" {
-            let data = request.data.clone();
-            let req =
-                ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest::decode(data).unwrap();
+        debug!("Processing query. Path: {}", request.path);
 
-            match self.get(req.address.clone().into()) {
-                Ok((height, value_opt)) => match value_opt {
-                    Some(value) => {
-                        let res = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse {
-                            balances: vec![ibc_proto::cosmos::base::v1beta1::Coin {
-                                denom: "uatom".into(),
-                                amount: cosmwasm_std::Uint256::from_str(
-                                    &String::from_utf8(value).unwrap(),
-                                )
-                                .unwrap(),
-                            }],
-                            pagination: None,
-                        };
+        match request.path.as_str() {
+            "/cosmos.bank.v1beta1.Query/AllBalances" => {
+                let data = request.data.clone();
+                let req = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest::decode(data)
+                    .unwrap();
 
-                        let res = res.encode_to_vec();
+                match self.get(req.address.clone().into()) {
+                    Ok((height, value_opt)) => match value_opt {
+                        Some(value) => {
+                            let res = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse {
+                                balances: vec![ibc_proto::cosmos::base::v1beta1::Coin {
+                                    denom: "uatom".into(),
+                                    amount: cosmwasm_std::Uint256::from_str(
+                                        &String::from_utf8(value).unwrap(),
+                                    )
+                                    .unwrap(),
+                                }],
+                                pagination: None,
+                            };
 
-                        ResponseQuery {
+                            let res = res.encode_to_vec();
+
+                            ResponseQuery {
+                                code: 0,
+                                log: "exists".to_string(),
+                                info: "".to_string(),
+                                index: 0,
+                                key: request.data,
+                                value: res.into(),
+                                proof_ops: None,
+                                height,
+                                codespace: "".to_string(),
+                            }
+                        }
+                        None => ResponseQuery {
                             code: 0,
-                            log: "exists".to_string(),
+                            log: "address does not exist".to_string(),
                             info: "".to_string(),
                             index: 0,
                             key: request.data,
-                            value: res.into(),
+                            value: Default::default(),
                             proof_ops: None,
                             height,
                             codespace: "".to_string(),
-                        }
-                    }
-                    None => ResponseQuery {
-                        code: 0,
-                        log: "address does not exist".to_string(),
-                        info: "".to_string(),
-                        index: 0,
-                        key: request.data,
-                        value: Default::default(),
-                        proof_ops: None,
-                        height,
-                        codespace: "".to_string(),
+                        },
                     },
-                },
-                Err(e) => panic!("Failed to get key \"{}\": {:?}", req.address, e),
+                    Err(e) => panic!("Failed to get key \"{}\": {:?}", req.address, e),
+                }
             }
-        } else {
-            ResponseQuery {
+            "/cosmos.auth.v1beta1.Query/Account" => {
+                let data = request.data.clone();
+
+                let req =
+                    ibc_proto::cosmos::auth::v1beta1::QueryAccountRequest::decode(data).unwrap();
+
+                let account = BaseAccount {
+                    address: req.address,
+                    pub_key: None,
+                    account_number: 1,
+                    sequence: 1,
+                };
+
+                let res = ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse {
+                    account: Some(Any {
+                        type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
+                        value: account.encode_to_vec(),
+                    }),
+                };
+
+                let res = res.encode_to_vec();
+
+                ResponseQuery {
+                    code: 0,
+                    log: "exists".to_string(),
+                    info: "".to_string(),
+                    index: 0,
+                    key: request.data,
+                    value: res.into(),
+                    proof_ops: None,
+                    height: 0,
+                    codespace: "".to_string(),
+                }
+            }
+            _ => ResponseQuery {
                 code: 0,
                 log: "unrecognized query".to_string(),
                 info: "".to_string(),
@@ -189,7 +230,7 @@ impl Application for KeyValueStoreApp {
                 proof_ops: None,
                 height: 0,
                 codespace: "".to_string(),
-            }
+            },
         }
     }
 
@@ -210,14 +251,19 @@ impl Application for KeyValueStoreApp {
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
-        let tx = std::str::from_utf8(&request.tx).unwrap();
-        let tx_parts = tx.split('=').collect::<Vec<&str>>();
-        let (key, value) = if tx_parts.len() == 2 {
-            (tx_parts[0], tx_parts[1])
-        } else {
-            (tx, tx)
-        };
-        let _ = self.set(key.into(), value.into()).unwrap();
+        let tx = ibc_proto::cosmos::tx::v1beta1::Tx::decode(request.tx).unwrap();
+
+        let body = tx.body.unwrap();
+
+        let msg: MsgSend = ibc_proto::cosmos::bank::v1beta1::MsgSend::decode::<Bytes>(
+            body.messages[0].clone().value.into(),
+        )
+        .unwrap();
+
+        debug!("msg from address {}", msg.from_address);
+        debug!("msg from address {}", msg.to_address);
+        debug!("msg from address {:?}", msg.amount);
+
         ResponseDeliverTx {
             code: 0,
             data: Default::default(),
@@ -230,7 +276,7 @@ impl Application for KeyValueStoreApp {
                 attributes: vec![
                     EventAttribute {
                         key: "key".into(),
-                        value: key.to_string().into_bytes().into(),
+                        value: "nothing".into(),
                         index: true,
                     },
                     EventAttribute {
