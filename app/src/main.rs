@@ -5,7 +5,10 @@ use structopt::StructOpt;
 use tendermint_abci::ServerBuilder;
 use tracing_subscriber::filter::LevelFilter;
 
+mod error;
+mod iavl;
 mod kvstore;
+mod store;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
