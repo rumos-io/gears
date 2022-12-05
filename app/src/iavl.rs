@@ -2,35 +2,35 @@ use std::cmp;
 
 use crate::error::IAVLError;
 
-pub enum Node {
-    Inner(InnerNode),
-    Leaf(LeafNode),
+pub enum Node<'a> {
+    Inner(InnerNode<'a>),
+    Leaf(LeafNode<'a>),
 }
 
-pub struct InnerNode {
-    left_node: Box<Node>,
-    right_node: Box<Node>,
-    key: u64,
+pub struct InnerNode<'a> {
+    left_node: Box<Node<'a>>,
+    right_node: Box<Node<'a>>,
+    key: &'a [u8],
     height: u8,
 }
 
-pub struct LeafNode {
-    key: u64,
-    value: u64,
+pub struct LeafNode<'a> {
+    key: &'a [u8],
+    value: &'a [u8],
 }
 
-pub struct IAVLTree {
-    root: Node,
+pub struct IAVLTree<'a> {
+    root: Node<'a>,
 }
 
-impl IAVLTree {
-    pub fn set(tree: IAVLTree, key: u64, value: u64) -> Self {
+impl<'a> IAVLTree<'a> {
+    pub fn set(tree: IAVLTree<'a>, key: &'a [u8], value: &'a [u8]) -> IAVLTree<'a> {
         IAVLTree {
             root: Self::recursive_set(tree.root, key, value),
         }
     }
 
-    fn recursive_set(node: Node, key: u64, value: u64) -> Node {
+    fn recursive_set(node: Node<'a>, key: &'a [u8], value: &'a [u8]) -> Node<'a> {
         match node {
             Node::Leaf(mut node) => {
                 match key.cmp(&node.key) {
