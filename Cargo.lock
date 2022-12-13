@@ -9,6 +9,7 @@ dependencies = [
  "bytes",
  "cosmwasm-std",
  "ibc-proto",
+ "integer-encoding",
  "math 0.1.0",
  "prost",
  "sha2 0.10.6",
@@ -583,6 +584,12 @@ name = "indenter"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ce23b50ad8242c51a442f3ff322d56b02f08852c77e4c0b4d3fd684abc89c683"
+
+[[package]]
+name = "integer-encoding"
+version = "3.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8bb03732005da905c88227371639bf1ad885cc712789c011c31c5fb3ab3ccf02"
 
 [[package]]
 name = "itertools"

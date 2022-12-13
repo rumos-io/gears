@@ -16,3 +16,4 @@ structopt = { version = "0.3", optional = false, default-features = false }
 tracing-subscriber = { version = "0.2", optional = false, default-features = true }
 bytes = "1.2.1"
 sha2 = "0.10.6"
+integer-encoding = "3.0.4"
