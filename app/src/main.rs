@@ -5,6 +5,7 @@ use structopt::StructOpt;
 use tendermint_abci::ServerBuilder;
 use tracing_subscriber::filter::LevelFilter;
 
+mod bank;
 mod error;
 mod iavl;
 mod kvstore;

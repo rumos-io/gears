@@ -1,5 +1,3 @@
-//! In-memory key/value store ABCI application.
-
 use std::{
     collections::HashMap,
     str::FromStr,
@@ -7,7 +5,7 @@ use std::{
 };
 
 use ibc_proto::{
-    cosmos::{auth::v1beta1::BaseAccount, bank::v1beta1::MsgSend},
+    cosmos::{auth::v1beta1::BaseAccount, bank::v1beta1::MsgSend, base::v1beta1::Coin},
     google::protobuf::Any,
 };
 use prost::Message;
@@ -20,67 +18,35 @@ use tendermint_proto::abci::{
 };
 use tracing::{debug, info};
 
+use crate::{
+    bank::{Address, Balance, Bank, GenesisState},
+    store::Store,
+};
+
 pub const MAX_VARINT_LENGTH: usize = 16; //TODO: fix this
 
-/// In-memory, hashmap-backed key/value store ABCI application.
-///
-/// This structure effectively just serves as a handle to the actual key/value
-/// store - the [`KeyValueStoreDriver`].
-///
-/// ## Example
-/// ```rust
-/// use tendermint_abci::{KeyValueStoreApp, ServerBuilder, ClientBuilder};
-/// use tendermint_proto::abci::{RequestEcho, RequestDeliverTx, RequestQuery};
-///
-/// // Create our key/value store application
-/// let (app, driver) = KeyValueStoreApp::new();
-/// // Create our server, binding it to TCP port 26658 on localhost and
-/// // supplying it with our key/value store application
-/// let server = ServerBuilder::default().bind("127.0.0.1:26658", app).unwrap();
-/// let server_addr = server.local_addr();
-///
-/// // We want the driver and the server to run in the background while we
-/// // interact with them via the client in the foreground
-/// std::thread::spawn(move || driver.run());
-/// std::thread::spawn(move || server.listen());
-///
-/// let mut client = ClientBuilder::default().connect(server_addr).unwrap();
-/// let res = client
-///     .echo(RequestEcho {
-///         message: "Hello ABCI!".to_string(),
-///     })
-///     .unwrap();
-/// assert_eq!(res.message, "Hello ABCI!");
-///
-/// // Deliver a transaction and then commit the transaction
-/// client
-///     .deliver_tx(RequestDeliverTx {
-///         tx: "test-key=test-value".into(),
-///     })
-///     .unwrap();
-/// client.commit().unwrap();
-///
-/// // We should be able to query for the data we just delivered above
-/// let res = client
-///     .query(RequestQuery {
-///         data: "test-key".into(),
-///         path: "".to_string(),
-///         height: 0,
-///         prove: false,
-///     })
-///     .unwrap();
-/// assert_eq!(res.value, "test-value".as_bytes().to_owned());
-/// ```
 #[derive(Debug, Clone)]
 pub struct KeyValueStoreApp {
     cmd_tx: Sender<Command>,
+    bank: Bank,
 }
 
 impl KeyValueStoreApp {
-    /// Constructor.
     pub fn new() -> (Self, KeyValueStoreDriver) {
         let (cmd_tx, cmd_rx) = channel();
-        (Self { cmd_tx }, KeyValueStoreDriver::new(cmd_rx))
+        let store = Store::new();
+        let genesis = GenesisState {
+            balances: vec![Balance {
+                address: Address::new("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string())
+                    .unwrap(),
+                coins: vec![Coin {
+                    denom: "uatom".to_string(),
+                    amount: cosmwasm_std::Uint256::from(34_u32),
+                }],
+            }],
+        };
+        let bank = Bank::new(store, genesis);
+        (Self { cmd_tx, bank }, KeyValueStoreDriver::new(cmd_rx))
     }
 
     /// Attempt to retrieve the value associated with the given key.
@@ -143,48 +109,64 @@ impl Application for KeyValueStoreApp {
                 let req = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest::decode(data)
                     .unwrap();
 
-                match self.get(req.address.clone().into()) {
-                    Ok((height, value_opt)) => match value_opt {
-                        Some(value) => {
-                            let res = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse {
-                                balances: vec![ibc_proto::cosmos::base::v1beta1::Coin {
-                                    denom: "uatom".into(),
-                                    amount: cosmwasm_std::Uint256::from_str(
-                                        &String::from_utf8(value).unwrap(),
-                                    )
-                                    .unwrap(),
-                                }],
-                                pagination: None,
-                            };
+                let res = self.bank.query_all_balances(req);
 
-                            let res = res.encode_to_vec();
+                let res = res.encode_to_vec();
 
-                            ResponseQuery {
-                                code: 0,
-                                log: "exists".to_string(),
-                                info: "".to_string(),
-                                index: 0,
-                                key: request.data,
-                                value: res.into(),
-                                proof_ops: None,
-                                height,
-                                codespace: "".to_string(),
-                            }
-                        }
-                        None => ResponseQuery {
-                            code: 0,
-                            log: "address does not exist".to_string(),
-                            info: "".to_string(),
-                            index: 0,
-                            key: request.data,
-                            value: Default::default(),
-                            proof_ops: None,
-                            height,
-                            codespace: "".to_string(),
-                        },
-                    },
-                    Err(e) => panic!("Failed to get key \"{}\": {:?}", req.address, e),
+                ResponseQuery {
+                    code: 0,
+                    log: "exists".to_string(),
+                    info: "".to_string(),
+                    index: 0,
+                    key: request.data,
+                    value: res.into(),
+                    proof_ops: None,
+                    height: 1, //TODO: get actual height
+                    codespace: "".to_string(),
                 }
+
+                // match self.get(req.address.clone().into()) {
+                //     Ok((height, value_opt)) => match value_opt {
+                //         Some(value) => {
+                //             let res = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse {
+                //                 balances: vec![ibc_proto::cosmos::base::v1beta1::Coin {
+                //                     denom: "uatom".into(),
+                //                     amount: cosmwasm_std::Uint256::from_str(
+                //                         &String::from_utf8(value).unwrap(),
+                //                     )
+                //                     .unwrap(),
+                //                 }],
+                //                 pagination: None,
+                //             };
+
+                //             let res = res.encode_to_vec();
+
+                //             ResponseQuery {
+                //                 code: 0,
+                //                 log: "exists".to_string(),
+                //                 info: "".to_string(),
+                //                 index: 0,
+                //                 key: request.data,
+                //                 value: res.into(),
+                //                 proof_ops: None,
+                //                 height,
+                //                 codespace: "".to_string(),
+                //             }
+                //         }
+                //         None => ResponseQuery {
+                //             code: 0,
+                //             log: "address does not exist".to_string(),
+                //             info: "".to_string(),
+                //             index: 0,
+                //             key: request.data,
+                //             value: Default::default(),
+                //             proof_ops: None,
+                //             height,
+                //             codespace: "".to_string(),
+                //         },
+                //     },
+                //     Err(e) => panic!("Failed to get key \"{}\": {:?}", req.address, e),
+                // }
             }
             "/cosmos.auth.v1beta1.Query/Account" => {
                 let data = request.data.clone();
