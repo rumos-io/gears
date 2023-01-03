@@ -9,7 +9,7 @@ use ibc_proto::cosmos::{
     base::v1beta1::Coin,
 };
 
-use crate::{error::AppError, store::Store};
+use crate::{store::Store, types::AccAddress};
 
 const BALANCES_PREFIX: [u8; 1] = [2];
 
@@ -23,20 +23,8 @@ pub struct GenesisState {
 }
 
 pub struct Balance {
-    pub address: Address,
+    pub address: AccAddress,
     pub coins: Vec<Coin>,
-}
-
-/// Ensures that the contained address length is less than 256
-pub struct Address(String);
-
-impl Address {
-    pub fn new(addrs: String) -> Result<Self, AppError> {
-        if addrs.len() > 255 {
-            return Err(AppError::InvalidAddress);
-        }
-        return Ok(Address(addrs));
-    }
 }
 
 impl Bank {
@@ -44,12 +32,11 @@ impl Bank {
         let bank = Bank { store };
 
         for balance in genesis.balances {
-            let prefix = create_account_balances_prefix(balance.address.0.into())
-                .expect("Address guarantees that addrs length < 256");
-            let denom_store = bank.store.get_sub_store(prefix);
+            let prefix = create_account_balances_prefix(balance.address);
+            let account_store = bank.store.get_sub_store(prefix);
 
             for coin in balance.coins {
-                denom_store.set(
+                account_store.set(
                     coin.denom.as_bytes().to_vec(),
                     coin.amount.to_string().into(),
                 );
@@ -60,14 +47,16 @@ impl Bank {
     }
 
     pub fn query_balance(&self, req: QueryBalanceRequest) -> QueryBalanceResponse {
-        let prefix = create_account_balances_prefix(req.address.into());
-        let prefix = match prefix {
-            Ok(prefix) => prefix,
+        let address = AccAddress::from_bech32(&req.address);
+
+        let address = match address {
+            Ok(address) => address,
             Err(_) => return QueryBalanceResponse { balance: None },
         };
+        let prefix = create_account_balances_prefix(address);
 
-        let denom_store = self.store.get_sub_store(prefix);
-        let bal = denom_store.get(req.denom.as_bytes());
+        let account_store = self.store.get_sub_store(prefix);
+        let bal = account_store.get(req.denom.as_bytes());
 
         match bal {
             Some(amount) => QueryBalanceResponse {
@@ -84,9 +73,10 @@ impl Bank {
     }
 
     pub fn query_all_balances(&self, req: QueryAllBalancesRequest) -> QueryAllBalancesResponse {
-        let prefix = create_account_balances_prefix(req.address.into());
-        let prefix = match prefix {
-            Ok(prefix) => prefix,
+        let address = AccAddress::from_bech32(&req.address);
+
+        let address = match address {
+            Ok(address) => address,
             Err(_) => {
                 return QueryAllBalancesResponse {
                     balances: vec![],
@@ -94,12 +84,13 @@ impl Bank {
                 }
             }
         };
+        let prefix = create_account_balances_prefix(address);
 
-        let denom_store = self.store.get_sub_store(prefix);
+        let account_store = self.store.get_sub_store(prefix);
 
         let mut balances = vec![];
 
-        for (denom, amount) in denom_store {
+        for (denom, amount) in account_store {
             let denom = String::from_utf8(denom).expect("Should be valid utf8");
             let amount =
                 Uint256::from_str(&String::from_utf8(amount).expect("Should be valid Uint256"))
@@ -114,17 +105,20 @@ impl Bank {
             pagination: None,
         };
     }
+
+    pub fn _send_coins(_from: AccAddress, _to: AccAddress, _amount: Coin) {}
 }
 
-fn create_account_balances_prefix(mut addr: Vec<u8>) -> Result<Vec<u8>, AppError> {
+fn create_account_balances_prefix(addr: AccAddress) -> Vec<u8> {
+    let addr_len = addr.len();
+    let mut addr: Vec<u8> = addr.into();
     let mut prefix = Vec::new();
 
     prefix.extend(BALANCES_PREFIX);
-    let addr_len: u8 = addr.len().try_into()?;
     prefix.push(addr_len);
     prefix.append(&mut addr);
 
-    return Ok(prefix);
+    return prefix;
 }
 
 #[cfg(test)]
@@ -135,7 +129,8 @@ mod tests {
     #[test]
     fn create_account_balances_prefix_works() {
         let expected = vec![2, 4, 97, 98, 99, 100];
-        let res = create_account_balances_prefix("abcd".into()).unwrap();
+        let acc_address = AccAddress::try_from(vec![97, 98, 99, 100]).unwrap();
+        let res = create_account_balances_prefix(acc_address);
 
         assert_eq!(expected, res);
     }
@@ -143,15 +138,21 @@ mod tests {
     #[test]
     fn query_balance_works() {
         let store = Store::new();
-        let key = vec![2, 4, 97, 98, 99, 100, 99, 111, 105, 110, 65];
-        let value = "123".into();
-        store.set(key, value);
-        let genesis = GenesisState { balances: vec![] };
+        let genesis = GenesisState {
+            balances: vec![Balance {
+                address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
+                    .unwrap(),
+                coins: vec![Coin {
+                    denom: "coinA".into(),
+                    amount: Uint256::from_str("123").unwrap(),
+                }],
+            }],
+        };
 
         let bank = Bank::new(store, genesis);
 
         let req = QueryBalanceRequest {
-            address: "abcd".to_string(),
+            address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
             denom: "coinA".to_string(),
         };
 
@@ -170,15 +171,21 @@ mod tests {
     #[test]
     fn query_all_balances_works() {
         let store = Store::new();
-        let key = vec![2, 4, 97, 98, 99, 100, 99, 111, 105, 110, 65];
-        let value = "123".into();
-        store.set(key, value);
-        let genesis = GenesisState { balances: vec![] };
+        let genesis = GenesisState {
+            balances: vec![Balance {
+                address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
+                    .unwrap(),
+                coins: vec![Coin {
+                    denom: "coinA".into(),
+                    amount: Uint256::from_str("123").unwrap(),
+                }],
+            }],
+        };
 
         let bank = Bank::new(store, genesis);
 
         let req = QueryAllBalancesRequest {
-            address: "abcd".to_string(),
+            address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
             pagination: None,
         };
 

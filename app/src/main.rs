@@ -1,15 +1,17 @@
 //! In-memory key/value store application for Tendermint.
 
-use kvstore::KeyValueStoreApp;
+use baseapp::BaseApp;
 use structopt::StructOpt;
 use tendermint_abci::ServerBuilder;
 use tracing_subscriber::filter::LevelFilter;
 
-mod bank;
+mod baseapp;
+mod crypto;
 mod error;
 mod iavl;
-mod kvstore;
 mod store;
+mod types;
+mod x;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -47,10 +49,10 @@ fn main() {
 
     tracing_subscriber::fmt().with_max_level(log_level).init(); //TODO: fix this
 
-    let (app, driver) = KeyValueStoreApp::new();
+    let app = BaseApp::new();
     let server = ServerBuilder::new(opt.read_buf_size)
         .bind(format!("{}:{}", opt.host, opt.port), app)
         .unwrap();
-    std::thread::spawn(move || driver.run());
+    //std::thread::spawn(move || driver.run());
     server.listen().unwrap();
 }

@@ -1,7 +1,6 @@
 use std::{
-    borrow::Borrow,
     collections::HashMap,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
 };
 
 #[derive(Debug, Clone)]
@@ -9,8 +8,6 @@ pub struct Store {
     core: Arc<RwLock<HashMap<Vec<u8>, Vec<u8>>>>,
     prefix: Vec<u8>,
 }
-
-//TODO: fix TODOs
 
 impl Store {
     pub fn new() -> Self {
@@ -38,9 +35,9 @@ impl Store {
             .insert(k, v)
     }
 
-    pub fn get_state_hash() -> Vec<u8> {
-        return vec![];
-    }
+    // pub fn get_state_hash() -> Vec<u8> {
+    //     return vec![];
+    // }
 
     pub fn get_sub_store(&self, mut prefix: Vec<u8>) -> Self {
         let mut full_prefix = self.prefix.clone();
