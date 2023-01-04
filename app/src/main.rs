@@ -53,6 +53,5 @@ fn main() {
     let server = ServerBuilder::new(opt.read_buf_size)
         .bind(format!("{}:{}", opt.host, opt.port), app)
         .unwrap();
-    //std::thread::spawn(move || driver.run());
     server.listen().unwrap();
 }

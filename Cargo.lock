@@ -3,26 +3,6 @@
 version = 3
 
 [[package]]
-name = "abci-demo-app"
-version = "0.1.0"
-dependencies = [
- "bech32",
- "bytes",
- "cosmwasm-std",
- "ibc-proto",
- "integer-encoding",
- "math 0.1.0",
- "prost",
- "secp256k1",
- "sha2 0.10.6",
- "structopt",
- "tendermint-abci",
- "tendermint-proto",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "ahash"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -479,6 +459,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8cbd1169bd7b4a0a20d92b9af7a7e0422888bd38a6f5ec29c1fd8c1558a272e"
 
 [[package]]
+name = "gaia-rs"
+version = "0.1.0"
+dependencies = [
+ "bech32",
+ "bytes",
+ "cosmwasm-std",
+ "ibc-proto",
+ "integer-encoding",
+ "math 0.1.0",
+ "prost 0.8.0",
+ "secp256k1",
+ "sha2 0.10.6",
+ "structopt",
+ "tendermint-abci",
+ "tendermint-proto 0.28.0",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -577,10 +577,10 @@ dependencies = [
  "cosmwasm-std",
  "flex-error",
  "math 0.1.0 (git+https://github.com/joneskm/abci-demo-app/)",
- "prost",
+ "prost 0.8.0",
  "serde",
  "subtle-encoding",
- "tendermint-proto",
+ "tendermint-proto 0.26.0",
 ]
 
 [[package]]
@@ -824,9 +824,19 @@ dependencies = [
  "chrono",
  "cosmwasm-std",
  "math 0.1.0 (git+https://github.com/joneskm/abci-demo-app/)",
- "prost-derive",
+ "prost-derive 0.8.0",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "prost"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c01db6702aa05baa3f57dec92b8eeeeb4cb19e894e73996b32a4093289e54592"
+dependencies = [
+ "bytes",
+ "prost-derive 0.11.5",
 ]
 
 [[package]]
@@ -847,12 +857,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost-derive"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c8842bad1a5419bca14eac663ba798f6bc19c413c2fdceb5f3ba3b0932d96720"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "prost-types"
 version = "0.8.0"
 source = "git+https://github.com/joneskm/prosit#bb1105c568ddc0a63720711d4920a55d8c8e3646"
 dependencies = [
  "bytes",
- "prost",
+ "prost 0.8.0",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.11.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "017f79637768cde62820bc2d4fe0e45daaa027755c323ad077767c6c5f173091"
+dependencies = [
+ "bytes",
+ "prost 0.11.5",
 ]
 
 [[package]]
@@ -1160,13 +1193,14 @@ dependencies = [
 
 [[package]]
 name = "tendermint-abci"
-version = "0.26.0"
-source = "git+https://github.com/joneskm/tendermint-rs#b0b2525494ca5ae61a72b7230b216ca488b63082"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "890340677de267793c691648d8e10d5e50f5a7fb5a8b60f96c36041cc68a1f04"
 dependencies = [
  "bytes",
  "flex-error",
- "prost",
- "tendermint-proto",
+ "prost 0.11.5",
+ "tendermint-proto 0.28.0",
  "tracing",
 ]
 
@@ -1179,8 +1213,26 @@ dependencies = [
  "flex-error",
  "num-derive",
  "num-traits",
- "prost",
- "prost-types",
+ "prost 0.8.0",
+ "prost-types 0.8.0",
+ "serde",
+ "serde_bytes",
+ "subtle-encoding",
+ "time 0.3.16",
+]
+
+[[package]]
+name = "tendermint-proto"
+version = "0.28.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "890f1fb6dee48900c85f0cdf711ebf130e505ac09ad918cee5c34ed477973b05"
+dependencies = [
+ "bytes",
+ "flex-error",
+ "num-derive",
+ "num-traits",
+ "prost 0.11.5",
+ "prost-types 0.11.5",
  "serde",
  "serde_bytes",
  "subtle-encoding",

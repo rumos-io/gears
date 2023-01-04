@@ -1,18 +1,20 @@
 [package]
-name = "abci-demo-app"
+name = "gaia-rs"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-#bytes = { version = "1.0", default-features = false }
 secp256k1 = { version = "0.25.0", features = ["bitcoin-hashes"] }
 prost = { version = "0.8" }
-tendermint-proto = { git = 'https://github.com/joneskm/tendermint-rs' }
 tracing = { version = "0.1", default-features = false }
 math = { path = "../math" }
 cosmwasm-std = "1.1.5"
 ibc-proto = { git = 'https://github.com/joneskm/ibc-proto-rs' }
-tendermint-abci = { git = 'https://github.com/joneskm/tendermint-rs' }
+# It's not clear what version of the Tendermint API each version of tendermint-abci implements
+# this line suggests that that v0.28.0 implements Tendermint API v0.34.x 
+# https://github.com/informalsystems/tendermint-rs/blob/560c852840ac58cb03b55fc376ff0dc2ac089d94/abci/src/codec.rs#L5
+tendermint-abci = "0.28.0"
+tendermint-proto = "0.28.0"
 structopt = { version = "0.3", optional = false, default-features = false }
 tracing-subscriber = { version = "0.2", optional = false, default-features = true }
 bytes = "1.2.1"

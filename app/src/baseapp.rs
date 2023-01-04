@@ -1,6 +1,11 @@
 use std::sync::{Arc, RwLock};
 
-use ibc_proto::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin};
+use ibc_proto::cosmos::{
+    auth::v1beta1::QueryAccountRequest,
+    bank::v1beta1::MsgSend,
+    base::v1beta1::Coin,
+    tx::v1beta1::{Tx, TxBody},
+};
 use prost::Message;
 
 use bytes::Bytes;
@@ -111,8 +116,7 @@ impl Application for BaseApp {
             }
             "/cosmos.auth.v1beta1.Query/Account" => {
                 let data = request.data.clone();
-                let req =
-                    ibc_proto::cosmos::auth::v1beta1::QueryAccountRequest::decode(data).unwrap();
+                let req = QueryAccountRequest::decode(data).unwrap();
 
                 let res = self.auth.query_account(req).encode_to_vec();
 
@@ -159,18 +163,22 @@ impl Application for BaseApp {
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
+        // TODO:
+        // 1. update account sequence etc - should this be done externally?
+
         let tx_raw = ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
-
-        let tx = ibc_proto::cosmos::tx::v1beta1::Tx::decode(request.tx).unwrap();
-
+        let tx = Tx::decode(request.tx).unwrap();
         verify_signature(tx.clone(), tx_raw);
 
         let body = tx.body.unwrap();
 
-        let msg: MsgSend = ibc_proto::cosmos::bank::v1beta1::MsgSend::decode::<Bytes>(
-            body.messages[0].clone().value.into(),
-        )
-        .unwrap();
+        let url = body.messages[0].clone().type_url;
+
+        // println!("URL: {}", url);
+        // /cosmos.bank.v1beta1.MsgSend
+        let request = MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
+
+        self.bank.send_coins(request);
 
         ResponseDeliverTx {
             code: 0,
@@ -181,23 +189,11 @@ impl Application for BaseApp {
             gas_used: 0,
             events: vec![Event {
                 r#type: "app".to_string(),
-                attributes: vec![
-                    EventAttribute {
-                        key: "key".into(),
-                        value: "nothing".into(),
-                        index: true,
-                    },
-                    EventAttribute {
-                        key: "index_key".into(),
-                        value: "index is working".into(),
-                        index: true,
-                    },
-                    EventAttribute {
-                        key: "noindex_key".into(),
-                        value: "index is working".into(),
-                        index: false,
-                    },
-                ],
+                attributes: vec![EventAttribute {
+                    key: "key".into(),
+                    value: "nothing".into(),
+                    index: true,
+                }],
             }],
             codespace: "".to_string(),
         }

@@ -9,6 +9,7 @@ pub enum IAVLError {
 pub enum AppError {
     Bech32(bech32::Error),
     InvalidAddress(String),
+    Send(String),
 }
 
 impl Display for AppError {
@@ -16,6 +17,7 @@ impl Display for AppError {
         match self {
             AppError::Bech32(err) => err.fmt(f),
             AppError::InvalidAddress(msg) => write!(f, "{}", msg),
+            AppError::Send(msg) => write!(f, "{}", msg),
         }
     }
 }

@@ -29,10 +29,11 @@ impl Store {
     }
 
     pub fn set(&self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
+        let full_key = self.get_full_key(&k);
         self.core
             .write()
             .expect("Mutex will not be poisoned")
-            .insert(k, v)
+            .insert(full_key, v)
     }
 
     // pub fn get_state_hash() -> Vec<u8> {
@@ -44,8 +45,18 @@ impl Store {
         full_prefix.append(&mut prefix);
         return Store {
             core: self.core.clone(),
-            prefix,
+            prefix: full_prefix,
         };
+    }
+
+    fn get_full_key(&self, k: &[u8]) -> Vec<u8> {
+        let mut full_key = self.prefix.clone();
+        full_key.extend(k);
+        return full_key;
+    }
+
+    pub fn _get_prefix(&self) -> Vec<u8> {
+        return self.prefix.clone();
     }
 }
 
@@ -65,11 +76,30 @@ impl IntoIterator for Store {
             .filter(move |x| {
                 let key = &x.0;
                 let key_prefix = &key[0..prefix.len()];
-                let eq = key_prefix == &prefix[..];
-                return eq;
+                return key_prefix == &prefix[..];
             })
             .map(move |x| (x.0[prefix2.len()..].to_vec(), x.1));
 
         return Box::new(iter);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn sub_store_iterator_works() {
+        let store = Store::new();
+        store.set(vec![0, 1], vec![1]);
+
+        let sub_store = store.get_sub_store(vec![1]);
+        sub_store.set(vec![3], vec![2]);
+
+        for (k, v) in sub_store {
+            assert_eq!(k, vec![3]);
+            assert_eq!(v, vec![2]);
+        }
     }
 }

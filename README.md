@@ -58,7 +58,7 @@ The balance is set at 34 in a hard coded genesis structure.
 echo "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow" | gaiad keys add demo --recover --keyring-backend=test
 ```
 
-5. Send token
+5. Send tokens
 
 ```
 gaiad tx bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut 10uatom --keyring-backend=test --chain-id=localnet --fees 0uatom
