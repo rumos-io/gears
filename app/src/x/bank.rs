@@ -9,14 +9,17 @@ use ibc_proto::cosmos::{
     base::v1beta1::Coin,
 };
 
-use crate::{error::AppError, store::Store, types::AccAddress};
+use crate::{
+    baseapp::BANK_STORE_PREFIX,
+    error::AppError,
+    store::Store,
+    types::{AccAddress, Context},
+};
 
 const BALANCES_PREFIX: [u8; 1] = [2];
 
 #[derive(Debug, Clone)]
-pub struct Bank {
-    store: Store,
-}
+pub struct Bank {}
 
 pub struct GenesisState {
     pub balances: Vec<Balance>,
@@ -28,12 +31,12 @@ pub struct Balance {
 }
 
 impl Bank {
-    pub fn new(store: Store, genesis: GenesisState) -> Self {
-        let bank = Bank { store };
+    pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
+        let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
 
         for balance in genesis.balances {
             let prefix = create_account_balances_prefix(balance.address);
-            let account_store = bank.store.get_sub_store(prefix);
+            let account_store = bank_store.get_sub_store(prefix);
 
             for coin in balance.coins {
                 account_store.set(
@@ -42,19 +45,18 @@ impl Bank {
                 );
             }
         }
-
-        return bank;
     }
 
     pub fn query_balance(
-        &self,
+        ctx: &Context,
         req: QueryBalanceRequest,
     ) -> Result<QueryBalanceResponse, AppError> {
         let address = AccAddress::from_bech32(&req.address)?;
 
+        let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
         let prefix = create_account_balances_prefix(address);
 
-        let account_store = self.store.get_sub_store(prefix);
+        let account_store = bank_store.get_sub_store(prefix);
         let bal = account_store.get(req.denom.as_bytes());
 
         match bal {
@@ -71,20 +73,15 @@ impl Bank {
         }
     }
 
-    pub fn query_all_balances(&self, req: QueryAllBalancesRequest) -> QueryAllBalancesResponse {
-        let address = AccAddress::from_bech32(&req.address);
+    pub fn query_all_balances(
+        ctx: &Context,
+        req: QueryAllBalancesRequest,
+    ) -> Result<QueryAllBalancesResponse, AppError> {
+        let address = AccAddress::from_bech32(&req.address)?;
 
-        let address = match address {
-            Ok(address) => address,
-            Err(_) => {
-                return QueryAllBalancesResponse {
-                    balances: vec![],
-                    pagination: None,
-                }
-            }
-        };
+        let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
         let prefix = create_account_balances_prefix(address);
-        let account_store = self.store.get_sub_store(prefix);
+        let account_store = bank_store.get_sub_store(prefix);
 
         let mut balances = vec![];
 
@@ -98,49 +95,49 @@ impl Bank {
             balances.push(coin);
         }
 
-        return QueryAllBalancesResponse {
+        return Ok(QueryAllBalancesResponse {
             balances,
             pagination: None,
-        };
+        });
     }
 
-    pub fn send_coins(&self, msg: MsgSend) -> Result<(), AppError> {
-        let from_account_store = self.get_account_store(&msg.from_address)?;
-        let to_account_store = self.get_account_store(&msg.to_address)?;
+    pub fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
+        let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
+        let from_account_store = Bank::get_account_store(&bank_store, &msg.from_address)?;
+        let to_account_store = Bank::get_account_store(&bank_store, &msg.to_address)?;
 
-        for coin in msg.amount {
-            let from_balance = from_account_store.get(coin.denom.as_bytes());
+        for send_coin in msg.amount {
+            let from_balance = from_account_store.get(send_coin.denom.as_bytes());
 
             match from_balance {
-                None => continue, //TODO: should reject the entire TX
-                Some(bal) => {
-                    let amount = Uint256::from_str(
-                        &String::from_utf8(bal).expect("Should be valid Uint256"),
+                None => return Err(AppError::Send("Insufficient funds".into())),
+                Some(from_balance) => {
+                    let from_balance = Uint256::from_str(
+                        &String::from_utf8(from_balance).expect("Should be valid Uint256"),
                     )
                     .expect("Should be valid utf8");
 
-                    if amount < coin.amount {
-                        continue; //TODO: should reject the entire TX
+                    if from_balance < send_coin.amount {
+                        return Err(AppError::Send("Insufficient funds".into()));
                     }
 
                     from_account_store.set(
-                        coin.denom.clone().into(),
-                        (amount - coin.amount).to_string().into(),
+                        send_coin.denom.clone().into(),
+                        (from_balance - send_coin.amount).to_string().into(),
                     );
 
-                    let to_balance = to_account_store.get(coin.denom.as_bytes());
-
+                    let to_balance = to_account_store.get(send_coin.denom.as_bytes());
                     let to_balance = match to_balance {
-                        Some(bal) => Uint256::from_str(
-                            &String::from_utf8(bal).expect("Should be valid Uint256"),
+                        Some(to_balance) => Uint256::from_str(
+                            &String::from_utf8(to_balance).expect("Should be valid Uint256"),
                         )
                         .expect("Should be valid utf8"),
                         None => Uint256::zero(),
                     };
 
                     to_account_store.set(
-                        coin.denom.into(),
-                        (to_balance + coin.amount).to_string().into(),
+                        send_coin.denom.into(),
+                        (to_balance + send_coin.amount).to_string().into(),
                     );
                 }
             }
@@ -149,10 +146,10 @@ impl Bank {
         return Ok(());
     }
 
-    fn get_account_store(&self, address: &String) -> Result<Store, AppError> {
+    fn get_account_store(bank_store: &Store, address: &String) -> Result<Store, AppError> {
         let address = AccAddress::from_bech32(address)?;
         let prefix = create_account_balances_prefix(address);
-        Ok(self.store.get_sub_store(prefix))
+        Ok(bank_store.get_sub_store(prefix))
     }
 }
 
@@ -196,14 +193,15 @@ mod tests {
             }],
         };
 
-        let bank = Bank::new(store, genesis);
+        let mut ctx = Context::new(store);
+        Bank::init_genesis(&mut ctx, genesis);
 
         let req = QueryBalanceRequest {
             address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
             denom: "coinA".to_string(),
         };
 
-        let res = bank.query_balance(req).unwrap();
+        let res = Bank::query_balance(&ctx, req).unwrap();
 
         let expected_res = QueryBalanceResponse {
             balance: Some(Coin {
@@ -229,14 +227,15 @@ mod tests {
             }],
         };
 
-        let bank = Bank::new(store, genesis);
-
         let req = QueryAllBalancesRequest {
             address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
             pagination: None,
         };
 
-        let res = bank.query_all_balances(req);
+        let mut ctx = Context::new(store);
+        Bank::init_genesis(&mut ctx, genesis);
+
+        let res = Bank::query_all_balances(&ctx, req).unwrap();
 
         let expected_res = QueryAllBalancesResponse {
             balances: vec![Coin {

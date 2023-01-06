@@ -4,38 +4,37 @@ use ibc_proto::{
 };
 use prost::Message;
 
-use crate::{store::Store, types::AccAddress};
+use crate::{
+    baseapp::AUTH_STORE_PREFIX,
+    error::AppError,
+    types::{AccAddress, Context},
+};
 
 const ADDRESS_STORE_KEY_PREFIX: [u8; 1] = [1];
 
 #[derive(Debug, Clone)]
-pub struct Auth {
-    store: Store,
-}
+pub struct Auth {}
 
 impl Auth {
-    pub fn new(store: Store) -> Self {
-        Auth { store }
-    }
+    //TODO: return error if address is invalid
+    pub fn query_account(
+        ctx: &Context,
+        req: QueryAccountRequest,
+    ) -> Result<QueryAccountResponse, AppError> {
+        let address = AccAddress::from_bech32(&req.address)?;
 
-    pub fn query_account(&self, req: QueryAccountRequest) -> QueryAccountResponse {
-        let address = AccAddress::from_bech32(&req.address);
-
-        let address = match address {
-            Ok(address) => address,
-            Err(_) => return QueryAccountResponse { account: None },
-        };
+        let auth_store = ctx.get_store().get_sub_store(AUTH_STORE_PREFIX.into());
 
         let key = address_store_key(address);
-        let account = self.store.get(&key);
+        let account = auth_store.get(&key);
 
         match account {
-            Some(account) => QueryAccountResponse {
+            Some(account) => Ok(QueryAccountResponse {
                 account: Some(Any {
                     type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
                     value: account,
                 }),
-            },
+            }),
             None => {
                 let account = BaseAccount {
                     address: req.address,
@@ -43,12 +42,12 @@ impl Auth {
                     account_number: 0,
                     sequence: 1,
                 };
-                QueryAccountResponse {
+                Ok(QueryAccountResponse {
                     account: Some(Any {
                         type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
                         value: account.encode_to_vec(),
                     }),
-                }
+                })
             }
         }
     }
@@ -67,6 +66,8 @@ fn address_store_key(addr: AccAddress) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
+    use crate::store::Store;
+
     use super::*;
 
     #[test]
@@ -79,7 +80,7 @@ mod tests {
     }
 
     #[test]
-    fn new_account_query_account_works() {
+    fn query_account_on_unseen_account_works() {
         let expected = QueryAccountResponse {
             account: Some(Any {
                 type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
@@ -98,9 +99,9 @@ mod tests {
         };
 
         let store = Store::new();
-        let auth = Auth::new(store);
+        let ctx = Context::new(store);
 
-        let res = auth.query_account(req);
+        let res = Auth::query_account(&ctx, req).unwrap();
 
         assert_eq!(expected, res);
     }

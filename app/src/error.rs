@@ -16,8 +16,8 @@ impl Display for AppError {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
             AppError::Bech32(err) => err.fmt(f),
-            AppError::InvalidAddress(msg) => write!(f, "{}", msg),
-            AppError::Send(msg) => write!(f, "{}", msg),
+            AppError::InvalidAddress(msg) => write!(f, "Invalid address: {}", msg),
+            AppError::Send(msg) => write!(f, "Send error: {}", msg),
         }
     }
 }

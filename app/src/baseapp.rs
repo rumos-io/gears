@@ -19,46 +19,44 @@ use tracing::debug;
 use crate::{
     crypto::verify_signature,
     store::Store,
-    types::AccAddress,
+    types::{AccAddress, Context},
     x::{
         auth::Auth,
         bank::{Balance, Bank, GenesisState},
     },
 };
 
-const BANK_STORE_PREFIX: [u8; 1] = [2];
-const AUTH_STORE_PREFIX: [u8; 1] = [2];
+pub const BANK_STORE_PREFIX: [u8; 1] = [2];
+pub const AUTH_STORE_PREFIX: [u8; 1] = [3];
 
 #[derive(Debug, Clone)]
 pub struct BaseApp {
-    bank: Bank,
-    auth: Auth,
+    store: Arc<RwLock<Store>>,
     height: Arc<RwLock<u32>>,
 }
 
 impl BaseApp {
     pub fn new() -> Self {
         let store = Store::new();
-        let bank_store = store.get_sub_store(BANK_STORE_PREFIX.into());
+
         let genesis = GenesisState {
             balances: vec![Balance {
                 address: AccAddress::from_bech32(
                     &"cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
                 )
-                .unwrap(),
+                .expect("this won't fail"),
                 coins: vec![Coin {
                     denom: "uatom".to_string(),
                     amount: cosmwasm_std::Uint256::from(34_u32),
                 }],
             }],
         };
-        let bank = Bank::new(bank_store, genesis);
 
-        let auth_store = store.get_sub_store(AUTH_STORE_PREFIX.into());
-        let auth = Auth::new(auth_store);
+        let mut ctx = Context::new(store);
+        Bank::init_genesis(&mut ctx, genesis);
+
         Self {
-            auth,
-            bank,
+            store: Arc::new(RwLock::new(ctx.store)),
             height: Arc::new(RwLock::new(0)),
         }
     }
@@ -99,37 +97,72 @@ impl Application for BaseApp {
                 let req = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest::decode(data)
                     .unwrap();
 
-                let res = self.bank.query_all_balances(req);
-                let res = res.encode_to_vec();
+                let store = self.store.read().unwrap();
+                let ctx = Context::new(store.clone());
 
-                ResponseQuery {
-                    code: 0,
-                    log: "exists".to_string(),
-                    info: "".to_string(),
-                    index: 0,
-                    key: request.data,
-                    value: res.into(),
-                    proof_ops: None,
-                    height: self.get_block_height().into(),
-                    codespace: "".to_string(),
+                let res = Bank::query_all_balances(&ctx, req);
+
+                match res {
+                    Ok(res) => {
+                        let res = res.encode_to_vec();
+
+                        ResponseQuery {
+                            code: 0,
+                            log: "exists".to_string(),
+                            info: "".to_string(),
+                            index: 0,
+                            key: request.data,
+                            value: res.into(),
+                            proof_ops: None,
+                            height: self.get_block_height().into(),
+                            codespace: "".to_string(),
+                        }
+                    }
+                    Err(e) => ResponseQuery {
+                        code: 0,
+                        log: e.to_string(),
+                        info: "".to_string(),
+                        index: 0,
+                        key: request.data,
+                        value: vec![].into(),
+                        proof_ops: None,
+                        height: self.get_block_height().into(),
+                        codespace: "".to_string(),
+                    },
                 }
             }
             "/cosmos.auth.v1beta1.Query/Account" => {
                 let data = request.data.clone();
                 let req = QueryAccountRequest::decode(data).unwrap();
 
-                let res = self.auth.query_account(req).encode_to_vec();
+                let store = self.store.read().unwrap();
+                let ctx = Context::new(store.clone());
 
-                ResponseQuery {
-                    code: 0,
-                    log: "exists".to_string(),
-                    info: "".to_string(),
-                    index: 0,
-                    key: request.data,
-                    value: res.into(),
-                    proof_ops: None,
-                    height: 0,
-                    codespace: "".to_string(),
+                let res = Auth::query_account(&ctx, req);
+
+                match res {
+                    Ok(res) => ResponseQuery {
+                        code: 0,
+                        log: "exists".to_string(),
+                        info: "".to_string(),
+                        index: 0,
+                        key: request.data,
+                        value: res.encode_to_vec().into(),
+                        proof_ops: None,
+                        height: 0,
+                        codespace: "".to_string(),
+                    },
+                    Err(e) => ResponseQuery {
+                        code: 0,
+                        log: e.to_string(),
+                        info: "".to_string(),
+                        index: 0,
+                        key: request.data,
+                        value: vec![].into(),
+                        proof_ops: None,
+                        height: 0,
+                        codespace: "".to_string(),
+                    },
                 }
             }
             _ => ResponseQuery {
@@ -165,6 +198,8 @@ impl Application for BaseApp {
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         // TODO:
         // 1. update account sequence etc - should this be done externally?
+        // 2. Remove unwraps
+        // 3. Tx routing
 
         let tx_raw = ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
         let tx = Tx::decode(request.tx).unwrap();
@@ -178,7 +213,14 @@ impl Application for BaseApp {
         // /cosmos.bank.v1beta1.MsgSend
         let request = MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
 
-        self.bank.send_coins(request);
+        let mut store = self.store.write().unwrap();
+        let transient_store = store.clone();
+        let mut ctx = Context::new(transient_store);
+
+        match Bank::send_coins(&mut ctx, request) {
+            Ok(_) => *store = ctx.store,
+            Err(_) => (),
+        }
 
         ResponseDeliverTx {
             code: 0,
