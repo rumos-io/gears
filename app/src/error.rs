@@ -10,6 +10,7 @@ pub enum AppError {
     Bech32(bech32::Error),
     InvalidAddress(String),
     Send(String),
+    AccountNotFound,
 }
 
 impl Display for AppError {
@@ -18,6 +19,7 @@ impl Display for AppError {
             AppError::Bech32(err) => err.fmt(f),
             AppError::InvalidAddress(msg) => write!(f, "Invalid address: {}", msg),
             AppError::Send(msg) => write!(f, "Send error: {}", msg),
+            AppError::AccountNotFound => write!(f, "Account does not exist"),
         }
     }
 }

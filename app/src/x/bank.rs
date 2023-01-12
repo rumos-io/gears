@@ -16,7 +16,7 @@ use crate::{
     types::{AccAddress, Context},
 };
 
-const BALANCES_PREFIX: [u8; 1] = [2];
+const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 
 #[derive(Debug, Clone)]
 pub struct Bank {}
@@ -35,11 +35,11 @@ impl Bank {
         let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
 
         for balance in genesis.balances {
-            let prefix = create_account_balances_prefix(balance.address);
-            let account_store = bank_store.get_sub_store(prefix);
+            let prefix = create_denom_balance_prefix(balance.address);
+            let denom_balance_store = bank_store.get_sub_store(prefix);
 
             for coin in balance.coins {
-                account_store.set(
+                denom_balance_store.set(
                     coin.denom.as_bytes().to_vec(),
                     coin.amount.to_string().into(),
                 );
@@ -54,7 +54,7 @@ impl Bank {
         let address = AccAddress::from_bech32(&req.address)?;
 
         let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
-        let prefix = create_account_balances_prefix(address);
+        let prefix = create_denom_balance_prefix(address);
 
         let account_store = bank_store.get_sub_store(prefix);
         let bal = account_store.get(req.denom.as_bytes());
@@ -80,7 +80,7 @@ impl Bank {
         let address = AccAddress::from_bech32(&req.address)?;
 
         let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
-        let prefix = create_account_balances_prefix(address);
+        let prefix = create_denom_balance_prefix(address);
         let account_store = bank_store.get_sub_store(prefix);
 
         let mut balances = vec![];
@@ -103,62 +103,66 @@ impl Bank {
 
     pub fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
         let bank_store = ctx.get_store().get_sub_store(BANK_STORE_PREFIX.into());
-        let from_account_store = Bank::get_account_store(&bank_store, &msg.from_address)?;
-        let to_account_store = Bank::get_account_store(&bank_store, &msg.to_address)?;
+
+        let from_address = AccAddress::from_bech32(&msg.from_address)?;
+        let from_account_store = Bank::get_address_balances_store(&bank_store, &from_address);
+
+        let to_address = AccAddress::from_bech32(&msg.to_address)?;
+        let to_account_store = Bank::get_address_balances_store(&bank_store, &to_address);
 
         for send_coin in msg.amount {
-            let from_balance = from_account_store.get(send_coin.denom.as_bytes());
+            let from_balance = from_account_store
+                .get(send_coin.denom.as_bytes())
+                .ok_or(AppError::Send("Insufficient funds".into()))?;
 
-            match from_balance {
-                None => return Err(AppError::Send("Insufficient funds".into())),
-                Some(from_balance) => {
-                    let from_balance = Uint256::from_str(
-                        &String::from_utf8(from_balance).expect("Should be valid Uint256"),
-                    )
-                    .expect("Should be valid utf8");
+            let from_balance = Uint256::from_str(
+                &String::from_utf8(from_balance).expect("Should be valid Uint256"),
+            )
+            .expect("Should be valid utf8");
 
-                    if from_balance < send_coin.amount {
-                        return Err(AppError::Send("Insufficient funds".into()));
-                    }
-
-                    from_account_store.set(
-                        send_coin.denom.clone().into(),
-                        (from_balance - send_coin.amount).to_string().into(),
-                    );
-
-                    let to_balance = to_account_store.get(send_coin.denom.as_bytes());
-                    let to_balance = match to_balance {
-                        Some(to_balance) => Uint256::from_str(
-                            &String::from_utf8(to_balance).expect("Should be valid Uint256"),
-                        )
-                        .expect("Should be valid utf8"),
-                        None => Uint256::zero(),
-                    };
-
-                    to_account_store.set(
-                        send_coin.denom.into(),
-                        (to_balance + send_coin.amount).to_string().into(),
-                    );
-                }
+            if from_balance < send_coin.amount {
+                return Err(AppError::Send("Insufficient funds".into()));
             }
+
+            from_account_store.set(
+                send_coin.denom.clone().into(),
+                (from_balance - send_coin.amount).to_string().into(),
+            );
+
+            let to_balance = to_account_store.get(send_coin.denom.as_bytes());
+            let to_balance = match to_balance {
+                Some(to_balance) => Uint256::from_str(
+                    &String::from_utf8(to_balance).expect("Should be valid Uint256"),
+                )
+                .expect("Should be valid utf8"),
+                None => Uint256::zero(),
+            };
+
+            to_account_store.set(
+                send_coin.denom.into(),
+                (to_balance + send_coin.amount).to_string().into(),
+            );
         }
+
+        //TODO:
+        // Create account if recipient does not exist
+        //has_account(ctx: &Context, addr: &AccAddress)
 
         return Ok(());
     }
 
-    fn get_account_store(bank_store: &Store, address: &String) -> Result<Store, AppError> {
-        let address = AccAddress::from_bech32(address)?;
-        let prefix = create_account_balances_prefix(address);
-        Ok(bank_store.get_sub_store(prefix))
+    fn get_address_balances_store(bank_store: &Store, address: &AccAddress) -> Store {
+        let prefix = create_denom_balance_prefix(address.to_owned());
+        bank_store.get_sub_store(prefix)
     }
 }
 
-fn create_account_balances_prefix(addr: AccAddress) -> Vec<u8> {
+fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
     let addr_len = addr.len();
     let mut addr: Vec<u8> = addr.into();
     let mut prefix = Vec::new();
 
-    prefix.extend(BALANCES_PREFIX);
+    prefix.extend(ADDRESS_BALANCES_STORE_PREFIX);
     prefix.push(addr_len);
     prefix.append(&mut addr);
 
@@ -174,7 +178,7 @@ mod tests {
     fn create_account_balances_prefix_works() {
         let expected = vec![2, 4, 97, 98, 99, 100];
         let acc_address = AccAddress::try_from(vec![97, 98, 99, 100]).unwrap();
-        let res = create_account_balances_prefix(acc_address);
+        let res = create_denom_balance_prefix(acc_address);
 
         assert_eq!(expected, res);
     }

@@ -26,8 +26,8 @@ use crate::{
     },
 };
 
-pub const BANK_STORE_PREFIX: [u8; 1] = [2];
-pub const AUTH_STORE_PREFIX: [u8; 1] = [3];
+pub const BANK_STORE_PREFIX: [u8; 4] = [098, 097, 110, 107]; // "bank"
+pub const AUTH_STORE_PREFIX: [u8; 3] = [097, 099, 099]; // "acc" - use acc even though it's the auth store to match cosmos SDK
 
 #[derive(Debug, Clone)]
 pub struct BaseApp {
@@ -197,9 +197,11 @@ impl Application for BaseApp {
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         // TODO:
-        // 1. update account sequence etc - should this be done externally?
+        // 1. Update account sequence etc - should this be done externally?
         // 2. Remove unwraps
         // 3. Tx routing
+        // 4. Check from address is signer
+        // 5. Handle Tx fees
 
         let tx_raw = ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
         let tx = Tx::decode(request.tx).unwrap();
@@ -214,7 +216,7 @@ impl Application for BaseApp {
         let request = MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
 
         let mut store = self.store.write().unwrap();
-        let transient_store = store.clone();
+        let transient_store = store.clone(); //TODO: this clone doesn't prevent the same underlying HashMap from being mutated since it's behind an Arc - need to implement clone for store
         let mut ctx = Context::new(transient_store);
 
         match Bank::send_coins(&mut ctx, request) {

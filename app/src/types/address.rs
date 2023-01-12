@@ -3,7 +3,7 @@ use bech32::{self, FromBase32, Variant};
 
 //TODO: finish testing
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct AccAddress(Vec<u8>);
 
 const MAX_ADDR_LEN: u8 = 255;
