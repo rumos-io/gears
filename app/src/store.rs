@@ -1,52 +1,90 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
-pub struct Store {
-    core: Arc<RwLock<HashMap<Vec<u8>, Vec<u8>>>>,
+pub struct MultiStore {
+    core: HashMap<Vec<u8>, Vec<u8>>,
+}
+
+impl MultiStore {
+    pub fn new() -> Self {
+        MultiStore {
+            core: HashMap::new(),
+        }
+    }
+
+    pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
+        self.core.get(k)
+    }
+
+    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
+        self.core.insert(k, v)
+    }
+
+    pub fn get_immutable_sub_store(&self, prefix: Vec<u8>) -> ImmutableSubStore {
+        ImmutableSubStore {
+            store: self,
+            prefix,
+        }
+    }
+
+    pub fn get_mutable_sub_store(&mut self, prefix: Vec<u8>) -> MutableSubStore {
+        MutableSubStore {
+            store: self,
+            prefix,
+        }
+    }
+}
+
+/// Wraps an immutable reference to a MultiStore with a prefix
+pub struct ImmutableSubStore<'a> {
+    store: &'a MultiStore,
     prefix: Vec<u8>,
 }
 
-impl Store {
-    pub fn new() -> Self {
-        let core = HashMap::new();
-        return Store {
-            core: Arc::new(RwLock::new(core)),
-            prefix: vec![],
-        };
-    }
-
-    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
+impl<'a> ImmutableSubStore<'a> {
+    pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
         let mut full_key = self.prefix.clone();
         full_key.extend(k);
-        self.core
-            .read()
-            .expect("Mutex will not be poisoned")
-            .get(&full_key)
-            .map(Clone::clone)
+        self.store.get(&full_key)
     }
 
-    pub fn set(&self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
-        let full_key = self.get_full_key(&k);
-        self.core
-            .write()
-            .expect("Mutex will not be poisoned")
-            .insert(full_key, v)
-    }
-
-    // pub fn get_state_hash() -> Vec<u8> {
-    //     return vec![];
-    // }
-
-    pub fn get_sub_store(&self, mut prefix: Vec<u8>) -> Self {
+    pub fn get_sub_store(&self, mut prefix: Vec<u8>) -> ImmutableSubStore {
         let mut full_prefix = self.prefix.clone();
         full_prefix.append(&mut prefix);
-        return Store {
-            core: self.core.clone(),
+
+        ImmutableSubStore {
+            store: self.store,
             prefix: full_prefix,
-        };
+        }
+    }
+}
+
+/// Wraps an mutable reference to a MultiStore with a prefix
+pub struct MutableSubStore<'a> {
+    store: &'a mut MultiStore,
+    prefix: Vec<u8>,
+}
+
+impl<'a> MutableSubStore<'a> {
+    pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
+        let mut full_key = self.prefix.clone();
+        full_key.extend(k);
+        self.store.get(&full_key)
+    }
+
+    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
+        let full_key = self.get_full_key(&k);
+        self.store.set(full_key, v)
+    }
+
+    pub fn get_sub_store(&mut self, mut prefix: Vec<u8>) -> MutableSubStore {
+        let mut full_prefix = self.prefix.clone();
+        full_prefix.append(&mut prefix);
+
+        MutableSubStore {
+            store: self.store,
+            prefix: full_prefix,
+        }
     }
 
     fn get_full_key(&self, k: &[u8]) -> Vec<u8> {
@@ -60,7 +98,7 @@ impl Store {
     }
 }
 
-impl IntoIterator for Store {
+impl<'a> IntoIterator for ImmutableSubStore<'a> {
     type Item = (Vec<u8>, Vec<u8>);
     type IntoIter = Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>;
 
@@ -68,9 +106,8 @@ impl IntoIterator for Store {
         let prefix = self.prefix.clone();
         let prefix2 = self.prefix.clone();
         let iter = self
+            .store
             .core
-            .read()
-            .expect("Mutex will not be poisoned")
             .clone()
             .into_iter()
             .filter(move |x| {
@@ -91,11 +128,11 @@ mod tests {
 
     #[test]
     fn sub_store_iterator_works() {
-        let store = Store::new();
+        let mut store = MultiStore::new();
         store.set(vec![0, 1], vec![1]);
+        store.set(vec![1, 3], vec![2]);
 
-        let sub_store = store.get_sub_store(vec![1]);
-        sub_store.set(vec![3], vec![2]);
+        let sub_store = store.get_immutable_sub_store(vec![1]);
 
         for (k, v) in sub_store {
             assert_eq!(k, vec![3]);

@@ -28,26 +28,28 @@ pub struct Account {
 pub struct Auth {}
 
 impl Auth {
-    pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
-        //TODO: set next account number value
-        for acct in genesis.accounts {
-            let base_acct = BaseAccount {
-                address: todo!(),
-                pub_key: todo!(),
-                account_number: todo!(),
-                sequence: todo!(),
-            };
+    // pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
+    //     //TODO: set next account number value
+    //     for acct in genesis.accounts {
+    //         let base_acct = BaseAccount {
+    //             address: todo!(),
+    //             pub_key: todo!(),
+    //             account_number: todo!(),
+    //             sequence: todo!(),
+    //         };
 
-            Auth::set_account(ctx, base_acct, &acct.address)
-        }
-    }
+    //         Auth::set_account(ctx, base_acct, &acct.address)
+    //     }
+    // }
 
     pub fn query_account(
         ctx: &Context,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
         let address = AccAddress::from_bech32(&req.address)?;
-        let auth_store = ctx.get_store().get_sub_store(AUTH_STORE_PREFIX.into());
+        let auth_store = ctx
+            .get_multi_store()
+            .get_immutable_sub_store(AUTH_STORE_PREFIX.into());
         let key = create_auth_store_key(address);
         let account = auth_store.get(&key);
 
@@ -55,7 +57,7 @@ impl Auth {
             Some(account) => Ok(QueryAccountResponse {
                 account: Some(Any {
                     type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                    value: account,
+                    value: account.to_owned(),
                 }),
             }),
             None => {
@@ -76,14 +78,16 @@ impl Auth {
     }
 
     fn get_next_account_number(ctx: &mut Context) -> u64 {
-        let auth_store = ctx.get_store().get_sub_store(AUTH_STORE_PREFIX.into());
+        let mut auth_store = ctx
+            .get_mutable_store()
+            .get_mutable_sub_store(AUTH_STORE_PREFIX.into());
 
         // NOTE: The next available account number is what's stored in the KV store
         let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
 
         let acct_num: u64 = match acct_num {
             None => 0, //initialize account numbers
-            Some(num) => u64::decode::<Bytes>(num.into()).unwrap(),
+            Some(num) => u64::decode::<Bytes>(num.to_owned().into()).unwrap(),
         };
 
         let next_acct_num = acct_num + 1;
@@ -96,14 +100,17 @@ impl Auth {
     }
 
     fn has_account(ctx: &Context, addr: &AccAddress) -> bool {
-        let auth_store = ctx.get_store().get_sub_store(AUTH_STORE_PREFIX.into());
+        let auth_store = ctx
+            .get_multi_store()
+            .get_immutable_sub_store(AUTH_STORE_PREFIX.into());
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
     }
 
-    // TODO: this is confusing ctx is an immutable reference but still gets mutated because the store is behind an arc/mutex
-    fn set_account(ctx: &Context, acct: BaseAccount, addr: &AccAddress) {
-        let auth_store = ctx.get_store().get_sub_store(AUTH_STORE_PREFIX.into());
+    fn set_account(ctx: &mut Context, acct: BaseAccount, addr: &AccAddress) {
+        let mut auth_store = ctx
+            .get_mutable_store()
+            .get_mutable_sub_store(AUTH_STORE_PREFIX.into());
         let key = create_auth_store_key(addr.to_owned());
         auth_store.set(key, acct.encode_to_vec());
     }
@@ -157,7 +164,7 @@ fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
 mod tests {
 
     use super::*;
-    use crate::store::Store;
+    use crate::store::MultiStore;
 
     #[test]
     fn address_store_key_works() {
@@ -176,7 +183,7 @@ mod tests {
             address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
         };
 
-        let store = Store::new();
+        let store = MultiStore::new();
         let ctx = Context::new(store);
         let res = Auth::query_account(&ctx, req).unwrap_err();
 
@@ -186,7 +193,7 @@ mod tests {
     #[test]
     fn get_next_account_number_init_works() {
         let expected = 0;
-        let store = Store::new();
+        let store = MultiStore::new();
         let mut ctx = Context::new(store);
         let acct_num = Auth::get_next_account_number(&mut ctx);
 
@@ -196,8 +203,8 @@ mod tests {
     #[test]
     fn get_next_account_number_works() {
         let expected = 5038438478387;
-        let store = Store::new();
-        let auth_store = store.get_sub_store(AUTH_STORE_PREFIX.into());
+        let mut store = MultiStore::new();
+        let mut auth_store = store.get_mutable_sub_store(AUTH_STORE_PREFIX.into());
 
         auth_store.set(
             GLOBAL_ACCOUNT_NUMBER_KEY.clone().into(),

@@ -1,16 +1,20 @@
-use crate::store::Store;
+use crate::store::MultiStore;
 
 pub struct Context {
-    pub store: Store,
+    pub multi_store: MultiStore,
 }
 
 impl Context {
-    pub fn new(store: Store) -> Self {
-        Context { store }
+    pub fn new(multi_store: MultiStore) -> Self {
+        Context { multi_store }
     }
 
-    pub fn get_store(&self) -> &Store {
-        return &self.store;
+    pub fn get_multi_store(&self) -> &MultiStore {
+        return &self.multi_store;
+    }
+
+    pub fn get_mutable_store(&mut self) -> &mut MultiStore {
+        return &mut self.multi_store;
     }
 }
 

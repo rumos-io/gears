@@ -18,7 +18,7 @@ use tracing::debug;
 
 use crate::{
     crypto::verify_signature,
-    store::Store,
+    store::MultiStore,
     types::{AccAddress, Context},
     x::{
         auth::Auth,
@@ -31,13 +31,13 @@ pub const AUTH_STORE_PREFIX: [u8; 3] = [097, 099, 099]; // "acc" - use acc even 
 
 #[derive(Debug, Clone)]
 pub struct BaseApp {
-    store: Arc<RwLock<Store>>,
+    multi_store: Arc<RwLock<MultiStore>>,
     height: Arc<RwLock<u32>>,
 }
 
 impl BaseApp {
     pub fn new() -> Self {
-        let store = Store::new();
+        let store = MultiStore::new();
 
         let genesis = GenesisState {
             balances: vec![Balance {
@@ -56,7 +56,7 @@ impl BaseApp {
         Bank::init_genesis(&mut ctx, genesis);
 
         Self {
-            store: Arc::new(RwLock::new(ctx.store)),
+            multi_store: Arc::new(RwLock::new(ctx.multi_store)),
             height: Arc::new(RwLock::new(0)),
         }
     }
@@ -97,7 +97,7 @@ impl Application for BaseApp {
                 let req = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest::decode(data)
                     .unwrap();
 
-                let store = self.store.read().unwrap();
+                let store = self.multi_store.read().unwrap();
                 let ctx = Context::new(store.clone());
 
                 let res = Bank::query_all_balances(&ctx, req);
@@ -135,7 +135,7 @@ impl Application for BaseApp {
                 let data = request.data.clone();
                 let req = QueryAccountRequest::decode(data).unwrap();
 
-                let store = self.store.read().unwrap();
+                let store = self.multi_store.read().unwrap();
                 let ctx = Context::new(store.clone());
 
                 let res = Auth::query_account(&ctx, req);
@@ -215,12 +215,12 @@ impl Application for BaseApp {
         // /cosmos.bank.v1beta1.MsgSend
         let request = MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
 
-        let mut store = self.store.write().unwrap();
-        let transient_store = store.clone(); //TODO: this clone doesn't prevent the same underlying HashMap from being mutated since it's behind an Arc - need to implement clone for store
+        let mut multi_store = self.multi_store.write().unwrap();
+        let transient_store = multi_store.clone();
         let mut ctx = Context::new(transient_store);
 
         match Bank::send_coins(&mut ctx, request) {
-            Ok(_) => *store = ctx.store,
+            Ok(_) => *multi_store = ctx.multi_store,
             Err(_) => (),
         }
 
