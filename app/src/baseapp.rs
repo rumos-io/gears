@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use ibc_proto::cosmos::{
-    auth::v1beta1::QueryAccountRequest,
+    auth::v1beta1::{BaseAccount, QueryAccountRequest},
     bank::v1beta1::MsgSend,
     base::v1beta1::Coin,
     tx::v1beta1::{Tx, TxBody},
@@ -54,6 +54,16 @@ impl BaseApp {
 
         let mut ctx = Context::new(store);
         Bank::init_genesis(&mut ctx, genesis);
+
+        let genesis = crate::x::auth::GenesisState {
+            accounts: vec![BaseAccount {
+                address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
+                pub_key: None,
+                account_number: 0,
+                sequence: 0,
+            }],
+        };
+        Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
 
         Self {
             multi_store: Arc::new(RwLock::new(ctx.multi_store)),

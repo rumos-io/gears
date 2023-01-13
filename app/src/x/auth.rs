@@ -17,30 +17,22 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 ]; // "globalAccountNumber"
 
 pub struct GenesisState {
-    pub accounts: Vec<Account>,
-}
-
-pub struct Account {
-    pub address: AccAddress,
+    pub accounts: Vec<BaseAccount>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Auth {}
 
 impl Auth {
-    // pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
-    //     //TODO: set next account number value
-    //     for acct in genesis.accounts {
-    //         let base_acct = BaseAccount {
-    //             address: todo!(),
-    //             pub_key: todo!(),
-    //             account_number: todo!(),
-    //             sequence: todo!(),
-    //         };
+    pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) -> Result<(), AppError> {
+        for mut acct in genesis.accounts {
+            acct.account_number = Auth::get_next_account_number(ctx);
+            let addr = AccAddress::from_bech32(&acct.address)?;
+            Auth::set_account(ctx, acct, &addr)
+        }
 
-    //         Auth::set_account(ctx, base_acct, &acct.address)
-    //     }
-    // }
+        Ok(())
+    }
 
     pub fn query_account(
         ctx: &Context,
@@ -60,20 +52,7 @@ impl Auth {
                     value: account.to_owned(),
                 }),
             }),
-            None => {
-                let account = BaseAccount {
-                    address: req.address,
-                    pub_key: None,
-                    account_number: 0,
-                    sequence: 1,
-                };
-                Ok(QueryAccountResponse {
-                    account: Some(Any {
-                        type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                        value: account.encode_to_vec(),
-                    }),
-                })
-            } //None => Err(AppError::AccountNotFound),
+            None => Err(AppError::AccountNotFound),
         }
     }
 
@@ -114,19 +93,6 @@ impl Auth {
         let key = create_auth_store_key(addr.to_owned());
         auth_store.set(key, acct.encode_to_vec());
     }
-
-    //     // SetAccount implements AccountKeeperI.
-    // func (ak AccountKeeper) SetAccount(ctx sdk.Context, acc types.AccountI) {
-    // 	addr := acc.GetAddress()
-    // 	store := ctx.KVStore(ak.key)
-
-    // 	bz, err := ak.MarshalAccount(acc)
-    // 	if err != nil {
-    // 		panic(err)
-    // 	}
-
-    // 	store.Set(types.AddressStoreKey(addr), bz)
-    // }
 
     // pub fn update_account(ctx: &Context, addr: AccAddress) {
     //     let auth_store = ctx.get_store().get_sub_store(AUTH_STORE_PREFIX.into());

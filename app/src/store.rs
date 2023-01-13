@@ -112,6 +112,9 @@ impl<'a> IntoIterator for ImmutableSubStore<'a> {
             .into_iter()
             .filter(move |x| {
                 let key = &x.0;
+                if key.len() < prefix.len() {
+                    return false;
+                }
                 let key_prefix = &key[0..prefix.len()];
                 return key_prefix == &prefix[..];
             })
