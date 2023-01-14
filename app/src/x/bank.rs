@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use cosmwasm_std::Uint256;
 use ibc_proto::cosmos::{
+    auth::v1beta1::BaseAccount,
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
         QueryBalanceResponse,
@@ -15,6 +16,8 @@ use crate::{
     store::MutableSubStore,
     types::{AccAddress, Context},
 };
+
+use super::auth::Auth;
 
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 
@@ -113,7 +116,6 @@ impl Bank {
             .get_mutable_sub_store(BANK_STORE_PREFIX.into());
 
         let from_address = AccAddress::from_bech32(&msg.from_address)?;
-
         let to_address = AccAddress::from_bech32(&msg.to_address)?;
 
         for send_coin in msg.amount {
@@ -154,8 +156,10 @@ impl Bank {
             );
         }
 
-        //TODO:
         // Create account if recipient does not exist
+        if !Auth::has_account(ctx, &to_address) {
+            Auth::new_account(ctx, &to_address);
+        };
 
         return Ok(());
     }

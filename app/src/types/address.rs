@@ -1,5 +1,5 @@
 use crate::error::AppError;
-use bech32::{self, FromBase32, Variant};
+use bech32::{self, FromBase32, ToBase32, Variant};
 
 //TODO: finish testing
 
@@ -58,6 +58,13 @@ impl TryFrom<Vec<u8>> for AccAddress {
             ));
         }
         Ok(AccAddress(v))
+    }
+}
+
+impl From<AccAddress> for String {
+    fn from(v: AccAddress) -> String {
+        bech32::encode(BECH32_PREFIX_ACC_ADDR, v.0.to_base32(), Variant::Bech32)
+            .expect("AccAddress should contain valid bech32 address")
     }
 }
 

@@ -78,7 +78,7 @@ impl Auth {
         return acct_num;
     }
 
-    fn has_account(ctx: &Context, addr: &AccAddress) -> bool {
+    pub fn has_account(ctx: &Context, addr: &AccAddress) -> bool {
         let auth_store = ctx
             .get_multi_store()
             .get_immutable_sub_store(AUTH_STORE_PREFIX.into());
@@ -94,27 +94,16 @@ impl Auth {
         auth_store.set(key, acct.encode_to_vec());
     }
 
-    // pub fn update_account(ctx: &Context, addr: AccAddress) {
-    //     let auth_store = ctx.get_store().get_sub_store(AUTH_STORE_PREFIX.into());
+    pub fn new_account(ctx: &mut Context, addr: &AccAddress) {
+        let acct = BaseAccount {
+            address: addr.to_owned().into(),
+            pub_key: None,
+            account_number: Auth::get_next_account_number(ctx),
+            sequence: 0,
+        };
 
-    //     let key = address_store_key(addr);
-    //     let account = auth_store.get(&key);
-
-    //     match account {
-    //         Some(account) => {
-    //             let account = BaseAccount::decode::<Bytes>(account.into())
-    //                 .expect("Store should contain valid data");
-
-    //             BaseAccount {
-    //                 address: todo!(),
-    //                 pub_key: todo!(),
-    //                 account_number: todo!(),
-    //                 sequence: todo!(),
-    //             };
-    //         }
-    //         None => todo!(),
-    //     }
-    // }
+        Auth::set_account(ctx, acct, addr)
+    }
 }
 
 fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
