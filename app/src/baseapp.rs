@@ -14,7 +14,7 @@ use tendermint_proto::abci::{
     Event, EventAttribute, RequestCheckTx, RequestDeliverTx, RequestInfo, RequestQuery,
     ResponseCheckTx, ResponseCommit, ResponseDeliverTx, ResponseInfo, ResponseQuery,
 };
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::{
     crypto::verify_signature,
@@ -99,7 +99,7 @@ impl Application for BaseApp {
     }
 
     fn query(&self, request: RequestQuery) -> ResponseQuery {
-        debug!("Processing query. Path: {}", request.path);
+        info!("Handling query to: {}", request.path);
 
         match request.path.as_str() {
             "/cosmos.bank.v1beta1.Query/AllBalances" => {
@@ -209,47 +209,70 @@ impl Application for BaseApp {
         // TODO:
         // 1. Update account sequence etc - should this be done externally?
         // 2. Remove unwraps
-        // 3. Tx routing
         // 4. Check from address is signer
         // 5. Handle Tx fees
+        // 6. Handle app errors e.g. what happens when insufficient funds?
 
-        let tx_raw = ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
-        let tx = Tx::decode(request.tx).unwrap();
-        verify_signature(tx.clone(), tx_raw);
-
+        //###########################
+        let tx = Tx::decode(request.tx.clone()).unwrap();
         let body = tx.body.unwrap();
-
         let url = body.messages[0].clone().type_url;
+        info!("Handling deliver tx to: {}", url);
 
-        // println!("URL: {}", url);
-        // /cosmos.bank.v1beta1.MsgSend
-        let request = MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
+        match url.as_str() {
+            "/cosmos.bank.v1beta1.MsgSend" => {
+                let tx_raw =
+                    ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
+                let tx = Tx::decode(request.tx).unwrap();
+                verify_signature(tx.clone(), tx_raw);
 
-        let mut multi_store = self.multi_store.write().unwrap();
-        let transient_store = multi_store.clone();
-        let mut ctx = Context::new(transient_store);
+                let body = tx.body.unwrap();
 
-        match Bank::send_coins(&mut ctx, request) {
-            Ok(_) => *multi_store = ctx.multi_store,
-            Err(_) => (),
-        }
+                let url = body.messages[0].clone().type_url;
 
-        ResponseDeliverTx {
-            code: 0,
-            data: Default::default(),
-            log: "".to_string(),
-            info: "".to_string(),
-            gas_wanted: 0,
-            gas_used: 0,
-            events: vec![Event {
-                r#type: "app".to_string(),
-                attributes: vec![EventAttribute {
-                    key: "key".into(),
-                    value: "nothing".into(),
-                    index: true,
-                }],
-            }],
-            codespace: "".to_string(),
+                let request =
+                    MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
+
+                let mut multi_store = self.multi_store.write().unwrap();
+                let transient_store = multi_store.clone();
+                let mut ctx = Context::new(transient_store);
+
+                match Bank::send_coins(&mut ctx, request) {
+                    Ok(_) => *multi_store = ctx.multi_store,
+                    Err(_) => (),
+                }
+
+                ResponseDeliverTx {
+                    code: 0,
+                    data: Default::default(),
+                    log: "".to_string(),
+                    info: "".to_string(),
+                    gas_wanted: 0,
+                    gas_used: 0,
+                    events: vec![Event {
+                        r#type: "app".to_string(),
+                        attributes: vec![EventAttribute {
+                            key: "key".into(),
+                            value: "nothing".into(),
+                            index: true,
+                        }],
+                    }],
+                    codespace: "".to_string(),
+                }
+            }
+            _ => {
+                dbg!("Rejecting tx: no such message type");
+                ResponseDeliverTx {
+                    code: 6,
+                    data: "".into(),
+                    log: "No such message type".into(),
+                    info: "".into(),
+                    gas_wanted: 0,
+                    gas_used: 0,
+                    events: vec![],
+                    codespace: "".into(),
+                }
+            }
         }
     }
 
