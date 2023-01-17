@@ -209,9 +209,9 @@ impl Application for BaseApp {
         // TODO:
         // 1. Update account sequence etc - should this be done externally?
         // 2. Remove unwraps
-        // 4. Check from address is signer
-        // 5. Handle Tx fees
-        // 6. Handle app errors e.g. what happens when insufficient funds?
+        // 3. Check from address is signer
+        // 4. Handle Tx fees
+        // 5. Handle multiple messages
 
         //###########################
         let tx = Tx::decode(request.tx.clone()).unwrap();
@@ -228,8 +228,6 @@ impl Application for BaseApp {
 
                 let body = tx.body.unwrap();
 
-                let url = body.messages[0].clone().type_url;
-
                 let request =
                     MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
 
@@ -238,34 +236,44 @@ impl Application for BaseApp {
                 let mut ctx = Context::new(transient_store);
 
                 match Bank::send_coins(&mut ctx, request) {
-                    Ok(_) => *multi_store = ctx.multi_store,
-                    Err(_) => (),
-                }
-
-                ResponseDeliverTx {
-                    code: 0,
-                    data: Default::default(),
-                    log: "".to_string(),
-                    info: "".to_string(),
-                    gas_wanted: 0,
-                    gas_used: 0,
-                    events: vec![Event {
-                        r#type: "app".to_string(),
-                        attributes: vec![EventAttribute {
-                            key: "key".into(),
-                            value: "nothing".into(),
-                            index: true,
-                        }],
-                    }],
-                    codespace: "".to_string(),
+                    Ok(_) => {
+                        *multi_store = ctx.multi_store;
+                        ResponseDeliverTx {
+                            code: 0,
+                            data: Default::default(),
+                            log: "".to_string(),
+                            info: "".to_string(),
+                            gas_wanted: 0,
+                            gas_used: 0,
+                            events: vec![Event {
+                                r#type: "app".to_string(),
+                                attributes: vec![EventAttribute {
+                                    key: "key".into(),
+                                    value: "nothing".into(),
+                                    index: true,
+                                }],
+                            }],
+                            codespace: "".to_string(),
+                        }
+                    }
+                    Err(e) => ResponseDeliverTx {
+                        code: e.code(),
+                        data: Bytes::new(),
+                        log: e.to_string(),
+                        info: "".to_string(),
+                        gas_wanted: 0,
+                        gas_used: 0,
+                        events: vec![],
+                        codespace: "".to_string(),
+                    },
                 }
             }
             _ => {
                 dbg!("Rejecting tx: no such message type");
                 ResponseDeliverTx {
-                    code: 6,
+                    code: 2, // If no interface has been registered then this id the error code given by the cosmos SDK
                     data: "".into(),
-                    log: "No such message type".into(),
+                    log: "tx parse error".into(),
                     info: "".into(),
                     gas_wanted: 0,
                     gas_used: 0,

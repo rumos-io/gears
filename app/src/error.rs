@@ -1,5 +1,7 @@
 use std::fmt::{Display, Formatter, Result};
 
+use structopt::clap::App;
+
 #[derive(Debug)]
 pub enum IAVLError {
     RotateError,
@@ -20,6 +22,17 @@ impl Display for AppError {
             AppError::InvalidAddress(msg) => write!(f, "Invalid address: {}", msg),
             AppError::Send(msg) => write!(f, "Send error: {}", msg),
             AppError::AccountNotFound => write!(f, "Account does not exist"),
+        }
+    }
+}
+
+impl AppError {
+    pub fn code(&self) -> u32 {
+        match self {
+            AppError::Bech32(_) => 1,
+            AppError::InvalidAddress(_) => 1,
+            AppError::Send(_) => 1,
+            AppError::AccountNotFound => 1,
         }
     }
 }
