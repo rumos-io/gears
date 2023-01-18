@@ -19,7 +19,7 @@ use tracing::{debug, info};
 use crate::{
     crypto::verify_signature,
     store::MultiStore,
-    types::{AccAddress, Context},
+    types::{AccAddress, Context, DecodedTx},
     x::{
         auth::Auth,
         bank::{Balance, Bank, GenesisState},
@@ -221,6 +221,22 @@ impl Application for BaseApp {
 
         match url.as_str() {
             "/cosmos.bank.v1beta1.MsgSend" => {
+                //########################
+
+                //---------------------
+
+                let tx = DecodedTx::from_bytes(request.tx.clone());
+
+                let msgs = tx.get_msgs();
+
+                let msg = &msgs[0];
+
+                let signers = msg.get_signers();
+
+                println!("################### Signers: {}", signers);
+
+                //#######################
+
                 let tx_raw =
                     ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
                 let tx = Tx::decode(request.tx).unwrap();
