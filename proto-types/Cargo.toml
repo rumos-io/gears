@@ -1,5 +1,5 @@
 [package]
-name = "math"
+name = "proto-types"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,3 +14,4 @@ serde = { version = "1.0.103", default-features = false, features = [
     "alloc",
 ] }
 thiserror = "1.0.13"
+bech32 = "0.9.1"

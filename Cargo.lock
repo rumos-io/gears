@@ -467,8 +467,8 @@ dependencies = [
  "cosmwasm-std",
  "ibc-proto",
  "integer-encoding",
- "math 0.1.0",
  "prost 0.8.0",
+ "proto-types",
  "secp256k1",
  "sha2 0.10.6",
  "structopt",
@@ -576,7 +576,7 @@ dependencies = [
  "bytes",
  "cosmwasm-std",
  "flex-error",
- "math 0.1.0 (git+https://github.com/joneskm/abci-demo-app/)",
+ "math",
  "prost 0.8.0",
  "serde",
  "subtle-encoding",
@@ -678,17 +678,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f099785f7595cc4b4553a174ce30dd7589ef93391ff414dbb67f62392b9e0ce1"
 dependencies = [
  "regex-automata",
-]
-
-[[package]]
-name = "math"
-version = "0.1.0"
-dependencies = [
- "cosmwasm-std",
- "forward_ref",
- "schemars",
- "serde",
- "thiserror",
 ]
 
 [[package]]
@@ -823,7 +812,7 @@ dependencies = [
  "bytes",
  "chrono",
  "cosmwasm-std",
- "math 0.1.0 (git+https://github.com/joneskm/abci-demo-app/)",
+ "math",
  "prost-derive 0.8.0",
  "url",
  "uuid",
@@ -848,7 +837,7 @@ dependencies = [
  "chrono",
  "cosmwasm-std",
  "itertools",
- "math 0.1.0 (git+https://github.com/joneskm/abci-demo-app/)",
+ "math",
  "proc-macro2",
  "quote",
  "syn",
@@ -886,6 +875,18 @@ checksum = "017f79637768cde62820bc2d4fe0e45daaa027755c323ad077767c6c5f173091"
 dependencies = [
  "bytes",
  "prost 0.11.5",
+]
+
+[[package]]
+name = "proto-types"
+version = "0.1.0"
+dependencies = [
+ "bech32",
+ "cosmwasm-std",
+ "forward_ref",
+ "schemars",
+ "serde",
+ "thiserror",
 ]
 
 [[package]]
