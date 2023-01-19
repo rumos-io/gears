@@ -1,7 +1,6 @@
-mod address;
 mod context;
+pub mod proto;
 mod tx;
 
-pub use address::*;
 pub use context::*;
 pub use tx::*;

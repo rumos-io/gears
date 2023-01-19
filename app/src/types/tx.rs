@@ -1,7 +1,10 @@
 use bytes::Bytes;
 use prost::Message;
 
-use ibc_proto::cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx};
+use ibc_proto::cosmos::tx::v1beta1::Tx;
+use proto_types::AccAddress;
+
+use super::proto::MsgSend;
 
 pub enum Msg {
     Send(MsgSend),
@@ -9,9 +12,9 @@ pub enum Msg {
 }
 
 impl Msg {
-    pub fn get_signers(&self) -> String {
+    pub fn get_signers(&self) -> &AccAddress {
         match &self {
-            Msg::Send(msg) => return msg.from_address.clone(),
+            Msg::Send(msg) => return &msg.from_address,
             Msg::Test => todo!(),
         }
     }

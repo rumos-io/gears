@@ -1,14 +1,13 @@
 use std::sync::{Arc, RwLock};
 
 use ibc_proto::cosmos::{
-    auth::v1beta1::{BaseAccount, QueryAccountRequest},
-    bank::v1beta1::MsgSend,
     base::v1beta1::Coin,
     tx::v1beta1::{Tx, TxBody},
 };
 use prost::Message;
 
 use bytes::Bytes;
+use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
     Event, EventAttribute, RequestCheckTx, RequestDeliverTx, RequestInfo, RequestQuery,
@@ -19,7 +18,10 @@ use tracing::{debug, info};
 use crate::{
     crypto::verify_signature,
     store::MultiStore,
-    types::{AccAddress, Context, DecodedTx},
+    types::{
+        proto::{BaseAccount, MsgSend, QueryAccountRequest, QueryAllBalancesRequest},
+        Context, DecodedTx,
+    },
     x::{
         auth::Auth,
         bank::{Balance, Bank, GenesisState},
@@ -57,7 +59,10 @@ impl BaseApp {
 
         let genesis = crate::x::auth::GenesisState {
             accounts: vec![BaseAccount {
-                address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
+                address: AccAddress::from_bech32(
+                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
+                )
+                .expect("this won't fail"),
                 pub_key: None,
                 account_number: 0,
                 sequence: 0,
@@ -104,8 +109,7 @@ impl Application for BaseApp {
         match request.path.as_str() {
             "/cosmos.bank.v1beta1.Query/AllBalances" => {
                 let data = request.data.clone();
-                let req = ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesRequest::decode(data)
-                    .unwrap();
+                let req = QueryAllBalancesRequest::decode(data).unwrap();
 
                 let store = self.multi_store.read().unwrap();
                 let ctx = Context::new(store.clone());

@@ -2,19 +2,19 @@ use std::str::FromStr;
 
 use cosmwasm_std::Uint256;
 use ibc_proto::cosmos::{
-    auth::v1beta1::BaseAccount,
-    bank::v1beta1::{
-        MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
-        QueryBalanceResponse,
-    },
+    bank::v1beta1::{QueryAllBalancesResponse, QueryBalanceResponse},
     base::v1beta1::Coin,
 };
+use proto_types::AccAddress;
 
 use crate::{
     baseapp::BANK_STORE_PREFIX,
     error::AppError,
     store::MutableSubStore,
-    types::{AccAddress, Context},
+    types::{
+        proto::{MsgSend, QueryAllBalancesRequest, QueryBalanceRequest},
+        Context,
+    },
 };
 
 use super::auth::Auth;
@@ -56,12 +56,10 @@ impl Bank {
         ctx: &Context,
         req: QueryBalanceRequest,
     ) -> Result<QueryBalanceResponse, AppError> {
-        let address = AccAddress::from_bech32(&req.address)?;
-
         let bank_store = ctx
             .get_multi_store()
             .get_immutable_sub_store(BANK_STORE_PREFIX.into());
-        let prefix = create_denom_balance_prefix(address);
+        let prefix = create_denom_balance_prefix(req.address);
 
         let account_store = bank_store.get_sub_store(prefix);
         let bal = account_store.get(req.denom.as_bytes());
@@ -84,12 +82,10 @@ impl Bank {
         ctx: &Context,
         req: QueryAllBalancesRequest,
     ) -> Result<QueryAllBalancesResponse, AppError> {
-        let address = AccAddress::from_bech32(&req.address)?;
-
         let bank_store = ctx
             .get_multi_store()
             .get_immutable_sub_store(BANK_STORE_PREFIX.into());
-        let prefix = create_denom_balance_prefix(address);
+        let prefix = create_denom_balance_prefix(req.address);
         let account_store = bank_store.get_sub_store(prefix);
 
         let mut balances = vec![];
@@ -115,8 +111,8 @@ impl Bank {
             .get_mutable_store()
             .get_mutable_sub_store(BANK_STORE_PREFIX.into());
 
-        let from_address = AccAddress::from_bech32(&msg.from_address)?;
-        let to_address = AccAddress::from_bech32(&msg.to_address)?;
+        let from_address = msg.from_address;
+        let to_address = msg.to_address;
 
         for send_coin in msg.amount {
             let mut from_account_store =
@@ -219,7 +215,8 @@ mod tests {
         Bank::init_genesis(&mut ctx, genesis);
 
         let req = QueryBalanceRequest {
-            address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
+            address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
+                .unwrap(),
             denom: "coinA".to_string(),
         };
 
@@ -250,7 +247,8 @@ mod tests {
         };
 
         let req = QueryAllBalancesRequest {
-            address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
+            address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
+                .unwrap(),
             pagination: None,
         };
 

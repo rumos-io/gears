@@ -1,14 +1,15 @@
 use bytes::Bytes;
-use ibc_proto::{
-    cosmos::auth::v1beta1::{BaseAccount, QueryAccountRequest, QueryAccountResponse},
-    google::protobuf::Any,
-};
+use ibc_proto::{cosmos::auth::v1beta1::QueryAccountResponse, google::protobuf::Any};
 use prost::Message;
+use proto_types::AccAddress;
 
 use crate::{
     baseapp::AUTH_STORE_PREFIX,
     error::AppError,
-    types::{AccAddress, Context},
+    types::{
+        proto::{BaseAccount, QueryAccountRequest},
+        Context,
+    },
 };
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
@@ -27,8 +28,7 @@ impl Auth {
     pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) -> Result<(), AppError> {
         for mut acct in genesis.accounts {
             acct.account_number = Auth::get_next_account_number(ctx);
-            let addr = AccAddress::from_bech32(&acct.address)?;
-            Auth::set_account(ctx, acct, &addr)
+            Auth::set_account(ctx, acct);
         }
 
         Ok(())
@@ -38,11 +38,10 @@ impl Auth {
         ctx: &Context,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
-        let address = AccAddress::from_bech32(&req.address)?;
         let auth_store = ctx
             .get_multi_store()
             .get_immutable_sub_store(AUTH_STORE_PREFIX.into());
-        let key = create_auth_store_key(address);
+        let key = create_auth_store_key(req.address);
         let account = auth_store.get(&key);
 
         match account {
@@ -86,23 +85,23 @@ impl Auth {
         auth_store.get(&key).is_some()
     }
 
-    fn set_account(ctx: &mut Context, acct: BaseAccount, addr: &AccAddress) {
+    fn set_account(ctx: &mut Context, acct: BaseAccount) {
         let mut auth_store = ctx
             .get_mutable_store()
             .get_mutable_sub_store(AUTH_STORE_PREFIX.into());
-        let key = create_auth_store_key(addr.to_owned());
+        let key = create_auth_store_key(acct.address.to_owned());
         auth_store.set(key, acct.encode_to_vec());
     }
 
     pub fn new_account(ctx: &mut Context, addr: &AccAddress) {
         let acct = BaseAccount {
-            address: addr.to_owned().into(),
+            address: addr.clone(),
             pub_key: None,
             account_number: Auth::get_next_account_number(ctx),
             sequence: 0,
         };
 
-        Auth::set_account(ctx, acct, addr)
+        Auth::set_account(ctx, acct)
     }
 }
 
@@ -135,7 +134,10 @@ mod tests {
         let expected = AppError::AccountNotFound;
 
         let req = QueryAccountRequest {
-            address: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
+            address: AccAddress::from_bech32(
+                "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
+            )
+            .unwrap(),
         };
 
         let store = MultiStore::new();
