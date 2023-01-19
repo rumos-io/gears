@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 use bech32::{self, FromBase32, ToBase32, Variant};
 
 use crate::error::AddressError;
@@ -64,6 +66,14 @@ impl From<AccAddress> for String {
     fn from(v: AccAddress) -> String {
         bech32::encode(BECH32_PREFIX_ACC_ADDR, v.0.to_base32(), Variant::Bech32)
             .expect("can only error if HRP is not valid, which can never happen")
+    }
+}
+
+impl Display for AccAddress {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let addr = bech32::encode(BECH32_PREFIX_ACC_ADDR, self.0.to_base32(), Variant::Bech32)
+            .expect("can only error if HRP is not valid, which can never happen");
+        write!(f, "{}", addr)
     }
 }
 
@@ -153,5 +163,14 @@ mod tests {
                 found: 300
             }
         );
+    }
+
+    #[test]
+    fn to_string_success() {
+        let addr = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string();
+
+        let acc_addr = AccAddress::from_bech32(&addr).unwrap();
+
+        assert_eq!(addr, acc_addr.to_string());
     }
 }
