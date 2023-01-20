@@ -17,6 +17,7 @@ use tracing::{debug, info};
 
 use crate::{
     crypto::verify_signature,
+    error::AppError,
     store::MultiStore,
     types::{
         proto::{BaseAccount, MsgSend, QueryAccountRequest, QueryAllBalancesRequest},
@@ -84,6 +85,22 @@ impl BaseApp {
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
         return *height;
+    }
+
+    fn run_tx(raw: Bytes) -> Result<(), AppError> {
+        let tx = DecodedTx::from_bytes(raw)?;
+
+        let msgs = tx.get_msgs();
+
+        let msg = &msgs[0];
+
+        let signers = msg.get_signers();
+
+        println!("################### Signers: {}", signers);
+
+        Ok(())
+
+        //#######################
     }
 }
 
@@ -218,6 +235,15 @@ impl Application for BaseApp {
         // 5. Handle multiple messages
 
         //###########################
+
+        //########################
+
+        //---------------------
+
+        Self::run_tx(request.tx.clone());
+
+        //#######################
+
         let tx = Tx::decode(request.tx.clone()).unwrap();
         let body = tx.body.unwrap();
         let url = body.messages[0].clone().type_url;
@@ -225,22 +251,6 @@ impl Application for BaseApp {
 
         match url.as_str() {
             "/cosmos.bank.v1beta1.MsgSend" => {
-                //########################
-
-                //---------------------
-
-                let tx = DecodedTx::from_bytes(request.tx.clone());
-
-                let msgs = tx.get_msgs();
-
-                let msg = &msgs[0];
-
-                let signers = msg.get_signers();
-
-                println!("################### Signers: {}", signers);
-
-                //#######################
-
                 let tx_raw =
                     ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
                 let tx = Tx::decode(request.tx).unwrap();

@@ -1,10 +1,14 @@
 use bytes::Bytes;
 use prost::Message;
 
-use ibc_proto::cosmos::tx::v1beta1::Tx;
 use proto_types::AccAddress;
 
-use super::proto::MsgSend;
+use crate::error::AppError;
+
+use super::proto::{MsgSend, Tx};
+
+// TODO:
+// 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
 
 pub enum Msg {
     Send(MsgSend),
@@ -25,24 +29,21 @@ pub struct DecodedTx {
 }
 
 impl DecodedTx {
-    pub fn from_bytes(raw: Bytes) -> DecodedTx {
-        let tx = Tx::decode(raw).unwrap();
-        let body = tx.body.unwrap();
-        let url = body.messages[0].clone().type_url;
-
+    pub fn from_bytes(raw: Bytes) -> Result<DecodedTx, AppError> {
+        let tx = Tx::decode(raw)?;
         let mut messages: Vec<Msg> = vec![];
 
-        match url.as_str() {
-            "/cosmos.bank.v1beta1.MsgSend" => {
-                let msg = MsgSend::decode::<Bytes>(body.clone().messages[0].clone().value.into())
-                    .unwrap();
+        for msg in tx.body.messages {
+            match msg.type_url.as_str() {
+                "/cosmos.bank.v1beta1.MsgSend" => {
+                    let msg = MsgSend::decode::<Bytes>(msg.value.into())?;
+                    messages.push(Msg::Send(msg));
+                }
+                _ => return Err(AppError::TxParseError), // If any message is not recognized then reject the entire Tx
+            };
+        }
 
-                messages.push(Msg::Send(msg));
-            }
-            _ => (),
-        };
-
-        DecodedTx { messages }
+        Ok(DecodedTx { messages })
     }
 
     pub fn get_msgs(&self) -> &Vec<Msg> {
