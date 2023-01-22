@@ -18,3 +18,9 @@ pub enum AddressError {
     #[error("invalid length, max length is: {max:?}, found {found:?})")]
     InvalidLength { max: u8, found: usize },
 }
+
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum Error {
+    #[error("invalid denom")]
+    InvalidDenom,
+}

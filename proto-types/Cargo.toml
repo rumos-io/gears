@@ -15,3 +15,5 @@ serde = { version = "1.0.103", default-features = false, features = [
 ] }
 thiserror = "1.0.13"
 bech32 = "0.9.1"
+lazy_static = "1.4.0"
+regex = "1.7.1"
