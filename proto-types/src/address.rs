@@ -46,7 +46,10 @@ impl AccAddress {
     }
 
     pub fn len(&self) -> u8 {
-        self.0.len().try_into().expect("MAX_ADDR_LEN is also a u8")
+        self.0
+            .len()
+            .try_into()
+            .expect("MAX_ADDR_LEN is a u8 so this can't fail")
     }
 }
 
@@ -67,14 +70,14 @@ impl TryFrom<Vec<u8>> for AccAddress {
 impl From<AccAddress> for String {
     fn from(v: AccAddress) -> String {
         bech32::encode(BECH32_PREFIX_ACC_ADDR, v.0.to_base32(), Variant::Bech32)
-            .expect("can only error if HRP is not valid, which can never happen")
+            .expect("method can only error if HRP is not valid, hard coded HRP is valid")
     }
 }
 
 impl Display for AccAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let addr = bech32::encode(BECH32_PREFIX_ACC_ADDR, self.0.to_base32(), Variant::Bech32)
-            .expect("can only error if HRP is not valid, which can never happen");
+            .expect("method can only error if HRP is not valid, hard coded HRP is valid");
         write!(f, "{}", addr)
     }
 }

@@ -5,7 +5,7 @@ use proto_types::AccAddress;
 
 use crate::error::AppError;
 
-use super::proto::{MsgSend, Tx};
+use super::proto::{self, MsgSend, Tx};
 
 // TODO:
 // 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
@@ -19,6 +19,13 @@ impl Msg {
     pub fn get_signers(&self) -> &AccAddress {
         match &self {
             Msg::Send(msg) => return &msg.from_address,
+            Msg::Test => todo!(),
+        }
+    }
+
+    pub fn validate_basic(&self) -> Result<(), AppError> {
+        match &self {
+            Msg::Send(msg) => proto::validate_coins(&msg.amount),
             Msg::Test => todo!(),
         }
     }

@@ -12,21 +12,23 @@ pub enum IAVLError {
 pub enum AppError {
     Bech32(bech32::Error),
     Prost(DecodeError),
-    InvalidAddress(String),
+    InvalidRequest(String),
     Send(String),
     AccountNotFound,
     TxParseError,
+    Coins(String),
 }
 
 impl Display for AppError {
     fn fmt(&self, f: &mut Formatter) -> Result {
         match self {
             AppError::Bech32(err) => err.fmt(f),
-            AppError::InvalidAddress(msg) => write!(f, "invalid address: {}", msg),
+            AppError::InvalidRequest(msg) => write!(f, "invalid request: {}", msg),
             AppError::Send(msg) => write!(f, "send error: {}", msg),
             AppError::AccountNotFound => write!(f, "account does not exist"),
             AppError::Prost(err) => err.fmt(f),
             AppError::TxParseError => write!(f, "tx parse error"),
+            AppError::Coins(msg) => write!(f, "invalid coins: {}", msg),
         }
     }
 }

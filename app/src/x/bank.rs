@@ -62,12 +62,12 @@ impl Bank {
         let prefix = create_denom_balance_prefix(req.address);
 
         let account_store = bank_store.get_sub_store(prefix);
-        let bal = account_store.get(req.denom.as_bytes());
+        let bal = account_store.get(req.denom.to_string().as_bytes());
 
         match bal {
             Some(amount) => Ok(QueryBalanceResponse {
                 balance: Some(Coin {
-                    denom: req.denom,
+                    denom: req.denom.to_string(),
                     amount: Uint256::from_str(
                         &String::from_utf8(amount.to_owned()).expect("Should be valid Uint256"),
                     )
@@ -118,7 +118,7 @@ impl Bank {
             let mut from_account_store =
                 Bank::get_address_balances_store(&mut bank_store, &from_address);
             let from_balance = from_account_store
-                .get(send_coin.denom.as_bytes())
+                .get(send_coin.denom.to_string().as_bytes())
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
 
             let from_balance = Uint256::from_str(
@@ -131,13 +131,13 @@ impl Bank {
             }
 
             from_account_store.set(
-                send_coin.denom.clone().into(),
+                send_coin.denom.clone().to_string().into(),
                 (from_balance - send_coin.amount).to_string().into(),
             );
 
             let mut to_account_store =
                 Bank::get_address_balances_store(&mut bank_store, &to_address);
-            let to_balance = to_account_store.get(send_coin.denom.as_bytes());
+            let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
             let to_balance = match to_balance {
                 Some(to_balance) => Uint256::from_str(
                     &String::from_utf8(to_balance.to_owned()).expect("Should be valid Uint256"),
@@ -147,7 +147,7 @@ impl Bank {
             };
 
             to_account_store.set(
-                send_coin.denom.into(),
+                send_coin.denom.to_string().into(),
                 (to_balance + send_coin.amount).to_string().into(),
             );
         }
@@ -184,6 +184,8 @@ fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
+    use proto_types::Denom;
+
     use crate::store::MultiStore;
 
     use super::*;
@@ -217,7 +219,7 @@ mod tests {
         let req = QueryBalanceRequest {
             address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
                 .unwrap(),
-            denom: "coinA".to_string(),
+            denom: Denom::try_from(String::from("coinA")).unwrap(),
         };
 
         let res = Bank::query_balance(&ctx, req).unwrap();

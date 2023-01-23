@@ -21,7 +21,7 @@ use crate::{
     store::MultiStore,
     types::{
         proto::{BaseAccount, MsgSend, QueryAccountRequest, QueryAllBalancesRequest},
-        Context, DecodedTx,
+        Context, DecodedTx, Msg,
     },
     x::{
         auth::Auth,
@@ -90,6 +90,8 @@ impl BaseApp {
     fn run_tx(raw: Bytes) -> Result<(), AppError> {
         let tx = DecodedTx::from_bytes(raw)?;
 
+        BaseApp::validate_basic(tx.get_msgs())?;
+
         let msgs = tx.get_msgs();
 
         let msg = &msgs[0];
@@ -101,6 +103,20 @@ impl BaseApp {
         Ok(())
 
         //#######################
+    }
+
+    fn validate_basic(msgs: &Vec<Msg>) -> Result<(), AppError> {
+        if msgs.is_empty() {
+            return Err(AppError::InvalidRequest(
+                "must contain at least one message".into(),
+            ));
+        }
+
+        for msg in msgs {
+            msg.validate_basic()?
+        }
+
+        return Ok(());
     }
 }
 

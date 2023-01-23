@@ -14,6 +14,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "aho-corasick"
+version = "0.7.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc936419f96fa211c1b9166887b38e5e40b19958e5b895be7c1f93adec7071ac"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "android_system_properties"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -271,9 +280,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51d1075c37807dcf850c379432f0df05ba52cc30f279c5cfc43cc221ce7f8579"
+checksum = "b61a7545f753a88bcbe0a70de1fcc0221e10bfc752f576754fa91e663db1622e"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -283,9 +292,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5044281f61b27bc598f2f6647d480aed48d2bf52d6eb0b627d84c0361b17aa70"
+checksum = "f464457d494b5ed6905c63b0c4704842aba319084a0a3561cdc1359536b53200"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -298,15 +307,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61b50bc93ba22c27b0d31128d2d130a0a6b3d267ae27ef7e4fae2167dfe8781c"
+checksum = "43c7119ce3a3701ed81aca8410b9acf6fc399d2629d057b87e2efa4e63a3aaea"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.86"
+version = "1.0.87"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39e61fda7e62115119469c7b3591fd913ecca96fb766cfd3f2e2502ab7bc87a5"
+checksum = "65e07508b90551e610910fa648a1878991d367064997a596135b86df30daf07e"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -682,6 +691,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "memchr"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
+
+[[package]]
 name = "num-derive"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -787,7 +802,7 @@ dependencies = [
 [[package]]
 name = "prost"
 version = "0.8.0"
-source = "git+https://github.com/joneskm/prosit#24105fa2e3047110b773800867196590494b489f"
+source = "git+https://github.com/joneskm/prosit#5d483a2ee836478fefa04c7cab41487dd4ca27e6"
 dependencies = [
  "bytes",
  "chrono",
@@ -811,7 +826,7 @@ dependencies = [
 [[package]]
 name = "prost-derive"
 version = "0.8.0"
-source = "git+https://github.com/joneskm/prosit#24105fa2e3047110b773800867196590494b489f"
+source = "git+https://github.com/joneskm/prosit#5d483a2ee836478fefa04c7cab41487dd4ca27e6"
 dependencies = [
  "anyhow",
  "chrono",
@@ -841,7 +856,7 @@ dependencies = [
 [[package]]
 name = "prost-types"
 version = "0.8.0"
-source = "git+https://github.com/joneskm/prosit#24105fa2e3047110b773800867196590494b489f"
+source = "git+https://github.com/joneskm/prosit#5d483a2ee836478fefa04c7cab41487dd4ca27e6"
 dependencies = [
  "bytes",
  "prost 0.8.0",
@@ -864,6 +879,8 @@ dependencies = [
  "bech32",
  "cosmwasm-std",
  "forward_ref",
+ "lazy_static",
+ "regex",
  "schemars",
  "serde",
  "thiserror",
@@ -872,11 +889,13 @@ dependencies = [
 [[package]]
 name = "proto-types"
 version = "0.1.0"
-source = "git+https://github.com/joneskm/gaia-rs/#6d6d257655e38f6cc1354b307281b32664b6fedb"
+source = "git+https://github.com/joneskm/gaia-rs/#966d43e910edd7d815b1f73d0c68548fb9e1846f"
 dependencies = [
  "bech32",
  "cosmwasm-std",
  "forward_ref",
+ "lazy_static",
+ "regex",
  "schemars",
  "serde",
  "thiserror",
@@ -912,6 +931,8 @@ version = "1.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48aaa5748ba571fb95cd2c85c09f629215d3a6ece942baa100950af03a34f733"
 dependencies = [
+ "aho-corasick",
+ "memchr",
  "regex-syntax",
 ]
 
@@ -1415,9 +1436,9 @@ dependencies = [
 
 [[package]]
 name = "unicode-bidi"
-version = "0.3.9"
+version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0046be40136ef78dc325e0edefccf84ccddacd0afcc1ca54103fa3c61bbdab1d"
+checksum = "d54675592c1dbefd78cbd98db9bacd89886e1ca50692a0692baefffdeb92dd58"
 
 [[package]]
 name = "unicode-ident"
