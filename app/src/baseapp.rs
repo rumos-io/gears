@@ -29,6 +29,9 @@ use crate::{
     },
 };
 
+//TODO:
+// 1. Remove unwraps
+
 pub const BANK_STORE_PREFIX: [u8; 4] = [098, 097, 110, 107]; // "bank"
 pub const AUTH_STORE_PREFIX: [u8; 3] = [097, 099, 099]; // "acc" - use acc even though it's the auth store to match cosmos SDK
 
@@ -47,7 +50,7 @@ impl BaseApp {
                 address: AccAddress::from_bech32(
                     &"cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
                 )
-                .expect("this won't fail"),
+                .expect("hard coded address is valid"),
                 coins: vec![Coin {
                     denom: "uatom".to_string(),
                     amount: cosmwasm_std::Uint256::from(34_u32),
@@ -63,7 +66,7 @@ impl BaseApp {
                 address: AccAddress::from_bech32(
                     "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
                 )
-                .expect("this won't fail"),
+                .expect("hard coded address is valid"),
                 pub_key: None,
                 account_number: 0,
                 sequence: 0,
@@ -87,22 +90,51 @@ impl BaseApp {
         return *height;
     }
 
-    fn run_tx(raw: Bytes) -> Result<(), AppError> {
+    fn run_tx(&self, raw: Bytes) -> Result<(), AppError> {
+        // TODO:
+        // 1. Update account sequence etc - should this be done externally?
+        // 2. Check from address is signer + verify signature
+        // 3. Handle Tx fees
+
         let tx = DecodedTx::from_bytes(raw)?;
 
         BaseApp::validate_basic(tx.get_msgs())?;
 
-        let msgs = tx.get_msgs();
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+        let transient_store = multi_store.clone();
+        let mut ctx = Context::new(transient_store);
 
-        let msg = &msgs[0];
+        BaseApp::run_msgs(&mut ctx, tx.get_msgs())?;
 
-        let signers = msg.get_signers();
-
-        println!("################### Signers: {}", signers);
+        *multi_store = ctx.multi_store;
 
         Ok(())
 
+        //###########################
+        // let msgs = tx.get_msgs();
+        // let msg = &msgs[0];
+
+        // let signers = msg.get_signers();
+
+        // println!("################### Signers: {}", signers);
+
+        // Ok(())
+
         //#######################
+    }
+
+    fn run_msgs(ctx: &mut Context, msgs: &Vec<Msg>) -> Result<(), AppError> {
+        for msg in msgs {
+            match msg {
+                Msg::Send(send_msg) => Bank::send_coins(ctx, send_msg.clone())?,
+                Msg::Test => return Err(AppError::AccountNotFound),
+            };
+        }
+
+        return Ok(());
     }
 
     fn validate_basic(msgs: &Vec<Msg>) -> Result<(), AppError> {
@@ -243,91 +275,106 @@ impl Application for BaseApp {
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
-        // TODO:
-        // 1. Update account sequence etc - should this be done externally?
-        // 2. Remove unwraps
-        // 3. Check from address is signer
-        // 4. Handle Tx fees
-        // 5. Handle multiple messages
-
-        //###########################
-
-        //########################
-
-        //---------------------
-
-        Self::run_tx(request.tx.clone());
+        match self.run_tx(request.tx) {
+            Ok(_) => ResponseDeliverTx {
+                code: 0,
+                data: Default::default(),
+                log: "".to_string(),
+                info: "".to_string(),
+                gas_wanted: 0,
+                gas_used: 0,
+                events: vec![Event {
+                    r#type: "app".to_string(),
+                    attributes: vec![EventAttribute {
+                        key: "key".into(),
+                        value: "nothing".into(),
+                        index: true,
+                    }],
+                }],
+                codespace: "".to_string(),
+            },
+            Err(e) => ResponseDeliverTx {
+                code: e.code(),
+                data: Bytes::new(),
+                log: e.to_string(),
+                info: "".to_string(),
+                gas_wanted: 0,
+                gas_used: 0,
+                events: vec![],
+                codespace: "".to_string(),
+            },
+        }
 
         //#######################
 
-        let tx = Tx::decode(request.tx.clone()).unwrap();
-        let body = tx.body.unwrap();
-        let url = body.messages[0].clone().type_url;
-        info!("Handling deliver tx to: {}", url);
+        // let tx = Tx::decode(request.tx.clone()).unwrap();
+        // let body = tx.body.unwrap();
+        // let url = body.messages[0].clone().type_url;
+        // info!("Handling deliver tx to: {}", url);
 
-        match url.as_str() {
-            "/cosmos.bank.v1beta1.MsgSend" => {
-                let tx_raw =
-                    ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
-                let tx = Tx::decode(request.tx).unwrap();
-                verify_signature(tx.clone(), tx_raw);
+        // match url.as_str() {
+        //     "/cosmos.bank.v1beta1.MsgSend" => {
+        //         let tx_raw =
+        //             ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
+        //         let tx = Tx::decode(request.tx).unwrap();
+        //         verify_signature(tx.clone(), tx_raw);
 
-                let body = tx.body.unwrap();
+        //         let body = tx.body.unwrap();
 
-                let request =
-                    MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
+        //         let request =
+        //             MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
 
-                let mut multi_store = self.multi_store.write().unwrap();
-                let transient_store = multi_store.clone();
-                let mut ctx = Context::new(transient_store);
+        //         let mut multi_store = self.multi_store.write().unwrap();
+        //         let transient_store = multi_store.clone();
+        //         let mut ctx = Context::new(transient_store);
 
-                match Bank::send_coins(&mut ctx, request) {
-                    Ok(_) => {
-                        *multi_store = ctx.multi_store;
-                        ResponseDeliverTx {
-                            code: 0,
-                            data: Default::default(),
-                            log: "".to_string(),
-                            info: "".to_string(),
-                            gas_wanted: 0,
-                            gas_used: 0,
-                            events: vec![Event {
-                                r#type: "app".to_string(),
-                                attributes: vec![EventAttribute {
-                                    key: "key".into(),
-                                    value: "nothing".into(),
-                                    index: true,
-                                }],
-                            }],
-                            codespace: "".to_string(),
-                        }
-                    }
-                    Err(e) => ResponseDeliverTx {
-                        code: e.code(),
-                        data: Bytes::new(),
-                        log: e.to_string(),
-                        info: "".to_string(),
-                        gas_wanted: 0,
-                        gas_used: 0,
-                        events: vec![],
-                        codespace: "".to_string(),
-                    },
-                }
-            }
-            _ => {
-                dbg!("Rejecting tx: no such message type");
-                ResponseDeliverTx {
-                    code: 2, // If no interface has been registered then this id the error code given by the cosmos SDK
-                    data: "".into(),
-                    log: "tx parse error".into(),
-                    info: "".into(),
-                    gas_wanted: 0,
-                    gas_used: 0,
-                    events: vec![],
-                    codespace: "".into(),
-                }
-            }
-        }
+        //         match Bank::send_coins(&mut ctx, request) {
+        //             Ok(_) => {
+        //                 *multi_store = ctx.multi_store;
+        //                 ResponseDeliverTx {
+        //                     code: 0,
+        //                     data: Default::default(),
+        //                     log: "".to_string(),
+        //                     info: "".to_string(),
+        //                     gas_wanted: 0,
+        //                     gas_used: 0,
+        //                     events: vec![Event {
+        //                         r#type: "app".to_string(),
+        //                         attributes: vec![EventAttribute {
+        //                             key: "key".into(),
+        //                             value: "nothing".into(),
+        //                             index: true,
+        //                         }],
+        //                     }],
+        //                     codespace: "".to_string(),
+        //                 }
+        //             }
+        //             Err(e) => ResponseDeliverTx {
+        //                 code: e.code(),
+        //                 data: Bytes::new(),
+        //                 log: e.to_string(),
+        //                 info: "".to_string(),
+        //                 gas_wanted: 0,
+        //                 gas_used: 0,
+        //                 events: vec![],
+        //                 codespace: "".to_string(),
+        //             },
+        //         }
+        //     }
+        //     _ => {
+        //         dbg!("Rejecting tx: no such message type");
+        //         ResponseDeliverTx {
+        //             code: 2, // If no interface has been registered then this id the error code given by the cosmos SDK
+        //             data: "".into(),
+        //             log: "tx parse error".into(),
+        //             info: "".into(),
+        //             gas_wanted: 0,
+        //             gas_used: 0,
+        //             events: vec![],
+        //             codespace: "".into(),
+        //         }
+        //     }
+        //}
     }
 
     fn commit(&self) -> ResponseCommit {

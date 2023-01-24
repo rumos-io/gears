@@ -5,7 +5,7 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new(multi_store: MultiStore) -> Self {
+    pub fn new(mut multi_store: MultiStore) -> Self {
         Context { multi_store }
     }
 
