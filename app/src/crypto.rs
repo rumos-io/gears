@@ -18,6 +18,13 @@ pub fn verify_signature(tx: Tx, tx_raw: TxRaw) -> bool {
         .clone()
         .public_key
         .unwrap()
+        .type_url;
+    println!("################# URL:  {}", public);
+
+    let public = tx.auth_info.clone().unwrap().signer_infos[0]
+        .clone()
+        .public_key
+        .unwrap()
         .value;
     let public = PubKey::decode::<Bytes>(public.into()).unwrap();
     let public_key = PublicKey::from_slice(&public.key).unwrap();

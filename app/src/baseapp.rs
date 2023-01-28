@@ -16,6 +16,7 @@ use tendermint_proto::abci::{
 use tracing::{debug, info};
 
 use crate::{
+    ante::AnteHandler,
     crypto::verify_signature,
     error::AppError,
     store::MultiStore,
@@ -96,6 +97,26 @@ impl BaseApp {
         // 2. Check from address is signer + verify signature
         // 3. Handle Tx fees
 
+        //###########################
+        let tx = Tx::decode(raw.clone())?;
+
+        let public = tx.auth_info.clone().unwrap().signer_infos[0]
+            .clone()
+            .public_key
+            .unwrap()
+            .type_url;
+        println!("################# URL:  {}", public);
+        ///cosmos.crypto.secp256k1.PubKey
+        // let msgs = tx.get_msgs();
+        // let msg = &msgs[0];
+
+        // let signers = msg.get_signers();
+
+        // println!("################### Signers: {}", signers);
+
+        // Ok(())
+
+        //#######################
         let tx = DecodedTx::from_bytes(raw)?;
 
         BaseApp::validate_basic(tx.get_msgs())?;
@@ -107,23 +128,13 @@ impl BaseApp {
         let transient_store = multi_store.clone();
         let mut ctx = Context::new(transient_store);
 
-        BaseApp::run_msgs(&mut ctx, tx.get_msgs())?;
+        AnteHandler::run(&mut ctx, &tx)?;
+        *multi_store = ctx.multi_store.clone();
 
+        BaseApp::run_msgs(&mut ctx, tx.get_msgs())?;
         *multi_store = ctx.multi_store;
 
         Ok(())
-
-        //###########################
-        // let msgs = tx.get_msgs();
-        // let msg = &msgs[0];
-
-        // let signers = msg.get_signers();
-
-        // println!("################### Signers: {}", signers);
-
-        // Ok(())
-
-        //#######################
     }
 
     fn run_msgs(ctx: &mut Context, msgs: &Vec<Msg>) -> Result<(), AppError> {
@@ -293,16 +304,19 @@ impl Application for BaseApp {
                 }],
                 codespace: "".to_string(),
             },
-            Err(e) => ResponseDeliverTx {
-                code: e.code(),
-                data: Bytes::new(),
-                log: e.to_string(),
-                info: "".to_string(),
-                gas_wanted: 0,
-                gas_used: 0,
-                events: vec![],
-                codespace: "".to_string(),
-            },
+            Err(e) => {
+                info!("failed to process tx: {}", e);
+                ResponseDeliverTx {
+                    code: e.code(),
+                    data: Bytes::new(),
+                    log: e.to_string(),
+                    info: "".to_string(),
+                    gas_wanted: 0,
+                    gas_used: 0,
+                    events: vec![],
+                    codespace: "".to_string(),
+                }
+            }
         }
 
         //#######################

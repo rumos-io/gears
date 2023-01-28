@@ -61,7 +61,7 @@ echo "race draft rival universe maid cheese steel logic crowd fork comic easy tr
 5. Send tokens
 
 ```
-gaiad tx bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut 10uatom --keyring-backend=test --chain-id=localnet --fees 0uatom
+gaiad tx bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut 10uatom --keyring-backend=test --chain-id=localnet --broadcast-mode block --fees 0uatom
 ```
 
 6. Query the address balance and observe that it has decreased by 10uatom:

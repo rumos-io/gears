@@ -15,7 +15,7 @@ pub enum AppError {
     InvalidRequest(String),
     Send(String),
     AccountNotFound,
-    TxParseError,
+    TxParseError(String),
     Coins(String),
 }
 
@@ -27,7 +27,7 @@ impl Display for AppError {
             AppError::Send(msg) => write!(f, "send error: {}", msg),
             AppError::AccountNotFound => write!(f, "account does not exist"),
             AppError::Prost(err) => err.fmt(f),
-            AppError::TxParseError => write!(f, "tx parse error"),
+            AppError::TxParseError(msg) => write!(f, "tx parse error: {}", msg),
             AppError::Coins(msg) => write!(f, "invalid coins: {}", msg),
         }
     }

@@ -89,7 +89,7 @@ pub struct Coin {
     pub amount: ::cosmwasm_std::Uint256,
 }
 
-// Validate checks that the Coins are sorted, have positive amount, with a valid and unique
+// Checks that the Coins are sorted, have positive amount, with a valid and unique
 // denomination (i.e no duplicates). Otherwise, it returns an error.
 // A valid list of coins satisfies:
 // Contains at least one coin

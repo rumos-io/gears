@@ -8,6 +8,7 @@ secp256k1 = { version = "0.25.0", features = ["bitcoin-hashes"] }
 prost = { version = "0.8" }
 tracing = { version = "0.1", default-features = false }
 proto-types = { git = "https://github.com/joneskm/gaia-rs/" }
+proto-messages = { path = "../proto-messages" }
 cosmwasm-std = "1.1.5"
 ibc-proto = { git = 'https://github.com/joneskm/ibc-proto-rs' }
 # It's not clear what version of the Tendermint API each version of tendermint-abci implements

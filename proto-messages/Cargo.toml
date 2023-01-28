@@ -1,0 +1,13 @@
+[package]
+name = "proto-messages"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+prost = { git = 'https://github.com/joneskm/prosit' }
+ibc-proto = { git = 'https://github.com/joneskm/ibc-proto-rs' }
+proto-types = { git = "https://github.com/joneskm/gaia-rs/" }
+cosmwasm-std = "1.1.5"
+thiserror = "1.0.13"
