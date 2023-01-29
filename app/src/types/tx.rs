@@ -80,9 +80,13 @@ impl DecodedTx {
         }
 
         // ensure any specified fee payer is included in the required signers (at the end)
-        //let fee_payer = &self.auth_info.fee.as_ref().unwrap().payer;
+        let fee_payer = &self.auth_info.fee.payer;
 
-        todo!();
+        if let Some(addr) = fee_payer {
+            if seen.insert(addr.to_string()) {
+                signers.push(addr);
+            }
+        }
 
         return signers;
     }
@@ -112,6 +116,11 @@ mod tests {
             AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut".into())
                 .unwrap();
 
+        let fee_addr =
+            AccAddress::from_bech32("cosmos1ryt87gjvnn8ph0lqac8k2x2kdek0sgh8uckq6u".into())
+                .unwrap();
+
+        // No fee address
         let tx = DecodedTx {
             messages: vec![
                 Msg::Send(MsgSend {
@@ -126,7 +135,7 @@ mod tests {
                 }),
                 Msg::Send(MsgSend {
                     from_address: from_addr_1_3.clone(),
-                    to_address: to_addr,
+                    to_address: to_addr.clone(),
                     amount: vec![],
                 }),
             ],
@@ -141,16 +150,82 @@ mod tests {
                         .unwrap(),
                     ),
                     gas_limit: 0,
-                    payer: "payer".into(),
+                    payer: None,
                     granter: "granter".into(),
                 },
             },
             signatures: vec![],
         };
-
         let signers = tx.get_signers();
         let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2];
+        assert_eq!(signers, expected);
 
-        assert_eq!(signers, expected)
+        // Includes different fee address
+        let tx = DecodedTx {
+            messages: vec![
+                Msg::Send(MsgSend {
+                    from_address: from_addr_1_3.clone(),
+                    to_address: to_addr.clone(),
+                    amount: vec![],
+                }),
+                Msg::Send(MsgSend {
+                    from_address: from_addr_2.clone(),
+                    to_address: to_addr.clone(),
+                    amount: vec![],
+                }),
+                Msg::Send(MsgSend {
+                    from_address: from_addr_1_3.clone(),
+                    to_address: to_addr.clone(),
+                    amount: vec![],
+                }),
+            ],
+            auth_info: AuthInfo {
+                signer_infos: vec![],
+                fee: Fee {
+                    amount: None,
+                    gas_limit: 0,
+                    payer: Some(fee_addr.clone()),
+                    granter: "granter".into(),
+                },
+            },
+            signatures: vec![],
+        };
+        let signers = tx.get_signers();
+        let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2, &fee_addr];
+        assert_eq!(signers, expected);
+
+        // Includes duplicate fee address
+        let tx = DecodedTx {
+            messages: vec![
+                Msg::Send(MsgSend {
+                    from_address: from_addr_1_3.clone(),
+                    to_address: to_addr.clone(),
+                    amount: vec![],
+                }),
+                Msg::Send(MsgSend {
+                    from_address: from_addr_2.clone(),
+                    to_address: to_addr.clone(),
+                    amount: vec![],
+                }),
+                Msg::Send(MsgSend {
+                    from_address: from_addr_1_3.clone(),
+                    to_address: to_addr.clone(),
+                    amount: vec![],
+                }),
+            ],
+            auth_info: AuthInfo {
+                signer_infos: vec![],
+                fee: Fee {
+                    amount: None,
+                    gas_limit: 0,
+                    payer: Some(from_addr_2.clone()),
+                    granter: "granter".into(),
+                },
+            },
+            signatures: vec![],
+        };
+        let signers = tx.get_signers();
+        let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2];
+        assert_eq!(signers, expected);
     }
 }

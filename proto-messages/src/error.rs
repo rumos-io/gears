@@ -12,4 +12,6 @@ pub enum Error {
     DecodeAny(String),
     #[error("missing field: `{0}`")]
     MissingField(String),
+    #[error("decode error: `{0}`")]
+    DecodeAddress(String),
 }

@@ -243,7 +243,7 @@ impl Application for BaseApp {
                         codespace: "".to_string(),
                     },
                     Err(e) => ResponseQuery {
-                        code: 0,
+                        code: 1,
                         log: e.to_string(),
                         info: "".to_string(),
                         index: 0,
@@ -256,7 +256,7 @@ impl Application for BaseApp {
                 }
             }
             _ => ResponseQuery {
-                code: 0,
+                code: 1,
                 log: "unrecognized query".to_string(),
                 info: "".to_string(),
                 index: 0,

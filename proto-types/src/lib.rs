@@ -6,3 +6,4 @@ mod error;
 pub use address::AccAddress;
 pub use decimal256::Decimal256;
 pub use denom::Denom;
+pub use error::{AddressError, Error};
