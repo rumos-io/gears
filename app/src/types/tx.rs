@@ -90,6 +90,10 @@ impl DecodedTx {
 
         return signers;
     }
+
+    pub fn get_signatures(&self) -> &Vec<Vec<u8>> {
+        return &self.signatures;
+    }
 }
 
 #[cfg(test)]

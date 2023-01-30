@@ -17,6 +17,8 @@ pub mod v1beta1 {
         error::Error,
     };
 
+    pub const MAX_GAS_WANTED: u64 = 9223372036854775807; // = (1 << 63) -1 as specified in the cosmos SDK
+
     /// Tx is the standard type used for broadcasting transactions.
     #[derive(Clone, PartialEq)]
     pub struct Tx {
@@ -35,8 +37,16 @@ pub mod v1beta1 {
         type Error = Error;
 
         fn try_from(raw: RawTx) -> Result<Self, Self::Error> {
+            let body = raw.body.ok_or(Error::MissingField("body".into()))?;
+
+            // This covers the SDK RejectExtensionOptions ante handler
+            // https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/ante/ext.go#L27-L36
+            if !body.extension_options.is_empty() {
+                return Err(Error::DecodeGeneral("unknown extension options".into()));
+            }
+
             Ok(Tx {
-                body: raw.body.ok_or(Error::MissingField("body".into()))?,
+                body,
                 auth_info: raw
                     .auth_info
                     .ok_or(Error::MissingField("auth_info".into()))?
@@ -227,6 +237,13 @@ pub mod v1beta1 {
         type Error = Error;
 
         fn try_from(raw: RawFee) -> Result<Self, Self::Error> {
+            if raw.gas_limit > MAX_GAS_WANTED {
+                return Err(Error::DecodeGeneral(format!(
+                    "inavlid gas supplied {} > {}",
+                    raw.gas_limit, MAX_GAS_WANTED
+                )));
+            }
+
             // There's a special case in the cosmos-sdk which allows the list of coins to be "invalid" provided
             // they're all zero - we'll check for this case and represent such a list of coins as a None fee amount.
             let mut all_zero = true;

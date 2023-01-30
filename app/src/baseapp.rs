@@ -119,7 +119,7 @@ impl BaseApp {
         //#######################
         let tx = DecodedTx::from_bytes(raw)?;
 
-        BaseApp::validate_basic(tx.get_msgs())?;
+        BaseApp::validate_basic_tx_msgs(tx.get_msgs())?;
 
         let mut multi_store = self
             .multi_store
@@ -148,7 +148,7 @@ impl BaseApp {
         return Ok(());
     }
 
-    fn validate_basic(msgs: &Vec<Msg>) -> Result<(), AppError> {
+    fn validate_basic_tx_msgs(msgs: &Vec<Msg>) -> Result<(), AppError> {
         if msgs.is_empty() {
             return Err(AppError::InvalidRequest(
                 "must contain at least one message".into(),
@@ -318,77 +318,6 @@ impl Application for BaseApp {
                 }
             }
         }
-
-        //#######################
-
-        // let tx = Tx::decode(request.tx.clone()).unwrap();
-        // let body = tx.body.unwrap();
-        // let url = body.messages[0].clone().type_url;
-        // info!("Handling deliver tx to: {}", url);
-
-        // match url.as_str() {
-        //     "/cosmos.bank.v1beta1.MsgSend" => {
-        //         let tx_raw =
-        //             ibc_proto::cosmos::tx::v1beta1::TxRaw::decode(request.tx.clone()).unwrap();
-        //         let tx = Tx::decode(request.tx).unwrap();
-        //         verify_signature(tx.clone(), tx_raw);
-
-        //         let body = tx.body.unwrap();
-
-        //         let request =
-        //             MsgSend::decode::<Bytes>(body.messages[0].clone().value.into()).unwrap();
-
-        //         let mut multi_store = self.multi_store.write().unwrap();
-        //         let transient_store = multi_store.clone();
-        //         let mut ctx = Context::new(transient_store);
-
-        //         match Bank::send_coins(&mut ctx, request) {
-        //             Ok(_) => {
-        //                 *multi_store = ctx.multi_store;
-        //                 ResponseDeliverTx {
-        //                     code: 0,
-        //                     data: Default::default(),
-        //                     log: "".to_string(),
-        //                     info: "".to_string(),
-        //                     gas_wanted: 0,
-        //                     gas_used: 0,
-        //                     events: vec![Event {
-        //                         r#type: "app".to_string(),
-        //                         attributes: vec![EventAttribute {
-        //                             key: "key".into(),
-        //                             value: "nothing".into(),
-        //                             index: true,
-        //                         }],
-        //                     }],
-        //                     codespace: "".to_string(),
-        //                 }
-        //             }
-        //             Err(e) => ResponseDeliverTx {
-        //                 code: e.code(),
-        //                 data: Bytes::new(),
-        //                 log: e.to_string(),
-        //                 info: "".to_string(),
-        //                 gas_wanted: 0,
-        //                 gas_used: 0,
-        //                 events: vec![],
-        //                 codespace: "".to_string(),
-        //             },
-        //         }
-        //     }
-        //     _ => {
-        //         dbg!("Rejecting tx: no such message type");
-        //         ResponseDeliverTx {
-        //             code: 2, // If no interface has been registered then this id the error code given by the cosmos SDK
-        //             data: "".into(),
-        //             log: "tx parse error".into(),
-        //             info: "".into(),
-        //             gas_wanted: 0,
-        //             gas_used: 0,
-        //             events: vec![],
-        //             codespace: "".into(),
-        //         }
-        //     }
-        //}
     }
 
     fn commit(&self) -> ResponseCommit {

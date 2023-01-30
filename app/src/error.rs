@@ -17,6 +17,7 @@ pub enum AppError {
     AccountNotFound,
     TxParseError(String),
     Coins(String),
+    TxValidation(String),
 }
 
 impl Display for AppError {
@@ -29,6 +30,7 @@ impl Display for AppError {
             AppError::Prost(err) => err.fmt(f),
             AppError::TxParseError(msg) => write!(f, "tx parse error: {}", msg),
             AppError::Coins(msg) => write!(f, "invalid coins: {}", msg),
+            AppError::TxValidation(msg) => write!(f, "invalid transaction: {}", msg),
         }
     }
 }
