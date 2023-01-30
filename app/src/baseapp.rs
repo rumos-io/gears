@@ -39,7 +39,7 @@ pub const AUTH_STORE_PREFIX: [u8; 3] = [097, 099, 099]; // "acc" - use acc even 
 #[derive(Debug, Clone)]
 pub struct BaseApp {
     multi_store: Arc<RwLock<MultiStore>>,
-    height: Arc<RwLock<u32>>,
+    height: Arc<RwLock<u64>>,
 }
 
 impl BaseApp {
@@ -59,7 +59,7 @@ impl BaseApp {
             }],
         };
 
-        let mut ctx = Context::new(store);
+        let mut ctx = Context::new(store, 0);
         Bank::init_genesis(&mut ctx, genesis);
 
         let genesis = crate::x::auth::GenesisState {
@@ -81,11 +81,11 @@ impl BaseApp {
         }
     }
 
-    fn get_block_height(&self) -> u32 {
+    fn get_block_height(&self) -> u64 {
         *self.height.read().expect("RwLock will not be poisoned")
     }
 
-    fn increment_block_height(&self) -> u32 {
+    fn increment_block_height(&self) -> u64 {
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
         return *height;
@@ -126,7 +126,7 @@ impl BaseApp {
             .write()
             .expect("RwLock will not be poisoned");
         let transient_store = multi_store.clone();
-        let mut ctx = Context::new(transient_store);
+        let mut ctx = Context::new(transient_store, self.get_block_height());
 
         AnteHandler::run(&mut ctx, &tx)?;
         *multi_store = ctx.multi_store.clone();
@@ -174,7 +174,10 @@ impl Application for BaseApp {
             data: "gaia-rs".to_string(),
             version: "0.1.0".to_string(),
             app_version: 1,
-            last_block_height: self.get_block_height().into(),
+            last_block_height: self
+                .get_block_height()
+                .try_into()
+                .expect("can't believe we made it this far"),
             last_block_app_hash: "hash_goes_here".into(),
         }
     }
@@ -188,7 +191,7 @@ impl Application for BaseApp {
                 let req = QueryAllBalancesRequest::decode(data).unwrap();
 
                 let store = self.multi_store.read().unwrap();
-                let ctx = Context::new(store.clone());
+                let ctx = Context::new(store.clone(), self.get_block_height());
 
                 let res = Bank::query_all_balances(&ctx, req);
 
@@ -204,7 +207,10 @@ impl Application for BaseApp {
                             key: request.data,
                             value: res.into(),
                             proof_ops: None,
-                            height: self.get_block_height().into(),
+                            height: self
+                                .get_block_height()
+                                .try_into()
+                                .expect("can't believe we made it this far"),
                             codespace: "".to_string(),
                         }
                     }
@@ -216,7 +222,10 @@ impl Application for BaseApp {
                         key: request.data,
                         value: vec![].into(),
                         proof_ops: None,
-                        height: self.get_block_height().into(),
+                        height: self
+                            .get_block_height()
+                            .try_into()
+                            .expect("can't believe we made it this far"),
                         codespace: "".to_string(),
                     },
                 }
@@ -226,7 +235,7 @@ impl Application for BaseApp {
                 let req = QueryAccountRequest::decode(data).unwrap();
 
                 let store = self.multi_store.read().unwrap();
-                let ctx = Context::new(store.clone());
+                let ctx = Context::new(store.clone(), self.get_block_height());
 
                 let res = Auth::query_account(&ctx, req);
 
@@ -325,7 +334,9 @@ impl Application for BaseApp {
 
         ResponseCommit {
             data: "hash_goes_here".into(),
-            retain_height: (new_height - 1).into(),
+            retain_height: (new_height - 1)
+                .try_into()
+                .expect("can't believe we made it this far"),
         }
     }
 }

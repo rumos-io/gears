@@ -213,7 +213,7 @@ mod tests {
             }],
         };
 
-        let mut ctx = Context::new(store);
+        let mut ctx = Context::new(store, 0);
         Bank::init_genesis(&mut ctx, genesis);
 
         let req = QueryBalanceRequest {
@@ -254,7 +254,7 @@ mod tests {
             pagination: None,
         };
 
-        let mut ctx = Context::new(store);
+        let mut ctx = Context::new(store, 0);
         Bank::init_genesis(&mut ctx, genesis);
 
         let res = Bank::query_all_balances(&ctx, req).unwrap();

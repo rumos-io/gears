@@ -2,11 +2,15 @@ use crate::store::MultiStore;
 
 pub struct Context {
     pub multi_store: MultiStore,
+    height: u64,
 }
 
 impl Context {
-    pub fn new(mut multi_store: MultiStore) -> Self {
-        Context { multi_store }
+    pub fn new(multi_store: MultiStore, height: u64) -> Self {
+        Context {
+            multi_store,
+            height,
+        }
     }
 
     pub fn get_multi_store(&self) -> &MultiStore {
@@ -15,6 +19,10 @@ impl Context {
 
     pub fn get_mutable_store(&mut self) -> &mut MultiStore {
         return &mut self.multi_store;
+    }
+
+    pub fn get_height(&self) -> u64 {
+        self.height
     }
 }
 

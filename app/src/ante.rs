@@ -8,11 +8,13 @@ pub struct AnteHandler {}
 impl AnteHandler {
     pub fn run(ctx: &mut Context, tx: &DecodedTx) -> Result<(), AppError> {
         validate_basic_ante_handler(tx)?;
+        tx_timeout_height_ante_handler(ctx, tx)?;
+
         // ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
         //  - NewMempoolFeeDecorator(opts.BypassMinFeeMsgTypes), // NOT USED FOR DELIVER_TX
         //  - ante.NewValidateBasicDecorator(),
-        // ante.NewTxTimeoutHeightDecorator(),
+        //  - ante.NewTxTimeoutHeightDecorator(),
         // ante.NewValidateMemoDecorator(opts.AccountKeeper),
         // ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
         // ante.NewDeductFeeDecorator(opts.AccountKeeper, opts.BankKeeper, opts.FeegrantKeeper),
@@ -45,4 +47,24 @@ fn validate_basic_ante_handler(tx: &DecodedTx) -> Result<(), AppError> {
     }
 
     return Ok(());
+}
+
+fn tx_timeout_height_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), AppError> {
+    let timeout_height = tx.get_timeout_height();
+
+    // timeout_height of zero means no timeout height
+    if timeout_height == 0 {
+        return Ok(());
+    }
+
+    let block_height = ctx.get_height();
+
+    if ctx.get_height() > timeout_height {
+        return Err(AppError::Timeout {
+            timeout: timeout_height,
+            current: block_height,
+        });
+    }
+
+    Ok(())
 }

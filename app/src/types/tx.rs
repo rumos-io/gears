@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
 use bytes::Bytes;
-use ibc_proto::{cosmos::tx::v1beta1::SignerInfo, protobuf::Protobuf};
+use ibc_proto::{
+    cosmos::tx::v1beta1::{SignerInfo, TxBody},
+    protobuf::Protobuf,
+};
 use prost::Message;
 
 use proto_messages::cosmos::tx::v1beta1::{AuthInfo, Tx};
@@ -39,6 +42,7 @@ pub struct DecodedTx {
     messages: Vec<Msg>,
     auth_info: AuthInfo,
     signatures: Vec<Vec<u8>>,
+    body: TxBody,
 }
 
 impl DecodedTx {
@@ -46,10 +50,10 @@ impl DecodedTx {
         let tx = Tx::decode(raw).map_err(|e| AppError::TxParseError(e.to_string()))?;
         let mut messages: Vec<Msg> = vec![];
 
-        for msg in tx.body.messages {
+        for msg in &tx.body.messages {
             match msg.type_url.as_str() {
                 "/cosmos.bank.v1beta1.MsgSend" => {
-                    let msg = MsgSend::decode::<Bytes>(msg.value.into())?;
+                    let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())?;
                     messages.push(Msg::Send(msg));
                 }
                 _ => return Err(AppError::TxParseError("message type not recognized".into())), // If any message is not recognized then reject the entire Tx
@@ -60,6 +64,7 @@ impl DecodedTx {
             messages,
             auth_info: tx.auth_info,
             signatures: tx.signatures,
+            body: tx.body,
         })
     }
 
@@ -93,6 +98,10 @@ impl DecodedTx {
 
     pub fn get_signatures(&self) -> &Vec<Vec<u8>> {
         return &self.signatures;
+    }
+
+    pub fn get_timeout_height(&self) -> u64 {
+        self.body.timeout_height
     }
 }
 
@@ -159,6 +168,13 @@ mod tests {
                 },
             },
             signatures: vec![],
+            body: TxBody {
+                messages: vec![],
+                memo: "".into(),
+                timeout_height: 0,
+                extension_options: vec![],
+                non_critical_extension_options: vec![],
+            },
         };
         let signers = tx.get_signers();
         let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2];
@@ -193,6 +209,13 @@ mod tests {
                 },
             },
             signatures: vec![],
+            body: TxBody {
+                messages: vec![],
+                memo: "".into(),
+                timeout_height: 0,
+                extension_options: vec![],
+                non_critical_extension_options: vec![],
+            },
         };
         let signers = tx.get_signers();
         let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2, &fee_addr];
@@ -227,6 +250,13 @@ mod tests {
                 },
             },
             signatures: vec![],
+            body: TxBody {
+                messages: vec![],
+                memo: "".into(),
+                timeout_height: 0,
+                extension_options: vec![],
+                non_critical_extension_options: vec![],
+            },
         };
         let signers = tx.get_signers();
         let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2];

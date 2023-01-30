@@ -141,7 +141,7 @@ mod tests {
         };
 
         let store = MultiStore::new();
-        let ctx = Context::new(store);
+        let ctx = Context::new(store, 0);
         let res = Auth::query_account(&ctx, req).unwrap_err();
 
         assert_eq!(expected, res);
@@ -151,7 +151,7 @@ mod tests {
     fn get_next_account_number_init_works() {
         let expected = 0;
         let store = MultiStore::new();
-        let mut ctx = Context::new(store);
+        let mut ctx = Context::new(store, 0);
         let acct_num = Auth::get_next_account_number(&mut ctx);
 
         assert_eq!(expected, acct_num);
@@ -168,7 +168,7 @@ mod tests {
             expected.encode_to_vec(),
         );
 
-        let mut ctx = Context::new(store);
+        let mut ctx = Context::new(store, 0);
         let acct_num = Auth::get_next_account_number(&mut ctx);
 
         assert_eq!(expected, acct_num);

@@ -18,6 +18,7 @@ pub enum AppError {
     TxParseError(String),
     Coins(String),
     TxValidation(String),
+    Timeout { timeout: u64, current: u64 },
 }
 
 impl Display for AppError {
@@ -31,6 +32,11 @@ impl Display for AppError {
             AppError::TxParseError(msg) => write!(f, "tx parse error: {}", msg),
             AppError::Coins(msg) => write!(f, "invalid coins: {}", msg),
             AppError::TxValidation(msg) => write!(f, "invalid transaction: {}", msg),
+            AppError::Timeout { timeout, current } => write!(
+                f,
+                "tx has timed out; timeout height: {}, current height: {}",
+                timeout, current
+            ),
         }
     }
 }
