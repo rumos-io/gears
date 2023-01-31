@@ -4,8 +4,8 @@ use prost::Message;
 use proto_types::AccAddress;
 
 use crate::{
-    baseapp::AUTH_STORE_PREFIX,
     error::AppError,
+    store::StoreKey,
     types::{
         proto::{BaseAccount, QueryAccountRequest},
         Context,
@@ -38,9 +38,7 @@ impl Auth {
         ctx: &Context,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
-        let auth_store = ctx
-            .get_multi_store()
-            .get_immutable_sub_store(AUTH_STORE_PREFIX.into());
+        let auth_store = ctx.get_kv_store(StoreKey::Auth);
         let key = create_auth_store_key(req.address);
         let account = auth_store.get(&key);
 
@@ -56,9 +54,7 @@ impl Auth {
     }
 
     fn get_next_account_number(ctx: &mut Context) -> u64 {
-        let mut auth_store = ctx
-            .get_mutable_store()
-            .get_mutable_sub_store(AUTH_STORE_PREFIX.into());
+        let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
 
         // NOTE: The next available account number is what's stored in the KV store
         let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
@@ -78,17 +74,13 @@ impl Auth {
     }
 
     pub fn has_account(ctx: &Context, addr: &AccAddress) -> bool {
-        let auth_store = ctx
-            .get_multi_store()
-            .get_immutable_sub_store(AUTH_STORE_PREFIX.into());
+        let auth_store = ctx.get_kv_store(StoreKey::Auth);
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
     }
 
     fn set_account(ctx: &mut Context, acct: BaseAccount) {
-        let mut auth_store = ctx
-            .get_mutable_store()
-            .get_mutable_sub_store(AUTH_STORE_PREFIX.into());
+        let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
         let key = create_auth_store_key(acct.address.to_owned());
         auth_store.set(key, acct.encode_to_vec());
     }
@@ -161,7 +153,7 @@ mod tests {
     fn get_next_account_number_works() {
         let expected = 5038438478387;
         let mut store = MultiStore::new();
-        let mut auth_store = store.get_mutable_sub_store(AUTH_STORE_PREFIX.into());
+        let auth_store = store.get_mutable_kv_store(StoreKey::Auth);
 
         auth_store.set(
             GLOBAL_ACCOUNT_NUMBER_KEY.clone().into(),

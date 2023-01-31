@@ -8,9 +8,8 @@ use ibc_proto::cosmos::{
 use proto_types::AccAddress;
 
 use crate::{
-    baseapp::BANK_STORE_PREFIX,
     error::AppError,
-    store::MutableSubStore,
+    store::{KVStore, MutablePrefixStore, StoreKey},
     types::{
         proto::{MsgSend, QueryAllBalancesRequest, QueryBalanceRequest},
         Context,
@@ -35,13 +34,11 @@ pub struct Balance {
 
 impl Bank {
     pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
-        let mut bank_store = ctx
-            .get_mutable_store()
-            .get_mutable_sub_store(BANK_STORE_PREFIX.into());
+        let mut bank_store = ctx.get_mutable_kv_store(StoreKey::Bank);
 
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
-            let mut denom_balance_store = bank_store.get_sub_store(prefix);
+            let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
                 denom_balance_store.set(
@@ -56,12 +53,10 @@ impl Bank {
         ctx: &Context,
         req: QueryBalanceRequest,
     ) -> Result<QueryBalanceResponse, AppError> {
-        let bank_store = ctx
-            .get_multi_store()
-            .get_immutable_sub_store(BANK_STORE_PREFIX.into());
+        let bank_store = ctx.get_kv_store(StoreKey::Bank);
         let prefix = create_denom_balance_prefix(req.address);
 
-        let account_store = bank_store.get_sub_store(prefix);
+        let account_store = bank_store.get_immutable_prefix_store(prefix);
         let bal = account_store.get(req.denom.to_string().as_bytes());
 
         match bal {
@@ -82,11 +77,9 @@ impl Bank {
         ctx: &Context,
         req: QueryAllBalancesRequest,
     ) -> Result<QueryAllBalancesResponse, AppError> {
-        let bank_store = ctx
-            .get_multi_store()
-            .get_immutable_sub_store(BANK_STORE_PREFIX.into());
+        let bank_store = ctx.get_kv_store(StoreKey::Bank);
         let prefix = create_denom_balance_prefix(req.address);
-        let account_store = bank_store.get_sub_store(prefix);
+        let account_store = bank_store.get_immutable_prefix_store(prefix);
 
         let mut balances = vec![];
 
@@ -107,16 +100,14 @@ impl Bank {
     }
 
     pub fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
-        let mut bank_store = ctx
-            .get_mutable_store()
-            .get_mutable_sub_store(BANK_STORE_PREFIX.into());
+        let bank_store = ctx.get_mutable_kv_store(StoreKey::Bank);
 
         let from_address = msg.from_address;
         let to_address = msg.to_address;
 
         for send_coin in msg.amount {
             let mut from_account_store =
-                Bank::get_address_balances_store(&mut bank_store, &from_address);
+                Bank::get_address_balances_store(bank_store, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
@@ -135,8 +126,7 @@ impl Bank {
                 (from_balance - send_coin.amount).to_string().into(),
             );
 
-            let mut to_account_store =
-                Bank::get_address_balances_store(&mut bank_store, &to_address);
+            let mut to_account_store = Bank::get_address_balances_store(bank_store, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
             let to_balance = match to_balance {
                 Some(to_balance) => Uint256::from_str(
@@ -161,11 +151,11 @@ impl Bank {
     }
 
     fn get_address_balances_store<'a>(
-        bank_store: &'a mut MutableSubStore,
+        bank_store: &'a mut KVStore,
         address: &AccAddress,
-    ) -> MutableSubStore<'a> {
+    ) -> MutablePrefixStore<'a> {
         let prefix = create_denom_balance_prefix(address.to_owned());
-        bank_store.get_sub_store(prefix)
+        bank_store.get_mutable_prefix_store(prefix)
     }
 }
 

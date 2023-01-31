@@ -33,9 +33,6 @@ use crate::{
 //TODO:
 // 1. Remove unwraps
 
-pub const BANK_STORE_PREFIX: [u8; 4] = [098, 097, 110, 107]; // "bank"
-pub const AUTH_STORE_PREFIX: [u8; 3] = [097, 099, 099]; // "acc" - use acc even though it's the auth store to match cosmos SDK
-
 #[derive(Debug, Clone)]
 pub struct BaseApp {
     multi_store: Arc<RwLock<MultiStore>>,

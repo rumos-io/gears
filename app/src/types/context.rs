@@ -1,4 +1,4 @@
-use crate::store::MultiStore;
+use crate::store::{KVStore, MultiStore, StoreKey};
 
 pub struct Context {
     pub multi_store: MultiStore,
@@ -13,12 +13,14 @@ impl Context {
         }
     }
 
-    pub fn get_multi_store(&self) -> &MultiStore {
-        return &self.multi_store;
+    ///  Fetches an immutable ref to a KVStore from the MultiStore.
+    pub fn get_kv_store(&self, store_key: StoreKey) -> &KVStore {
+        return self.multi_store.get_kv_store(store_key);
     }
 
-    pub fn get_mutable_store(&mut self) -> &mut MultiStore {
-        return &mut self.multi_store;
+    /// Fetches a mutable ref to a KVStore from the MultiStore.
+    pub fn get_mutable_kv_store(&mut self, store_key: StoreKey) -> &mut KVStore {
+        return self.multi_store.get_mutable_kv_store(store_key);
     }
 
     pub fn get_height(&self) -> u64 {
