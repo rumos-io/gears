@@ -9,13 +9,14 @@ impl AnteHandler {
     pub fn run(ctx: &mut Context, tx: &DecodedTx) -> Result<(), AppError> {
         validate_basic_ante_handler(tx)?;
         tx_timeout_height_ante_handler(ctx, tx)?;
+        validate_memo_ante_handler(ctx, tx)?;
 
         // ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
         //  - NewMempoolFeeDecorator(opts.BypassMinFeeMsgTypes), // NOT USED FOR DELIVER_TX
         //  - ante.NewValidateBasicDecorator(),
         //  - ante.NewTxTimeoutHeightDecorator(),
-        // ante.NewValidateMemoDecorator(opts.AccountKeeper),
+        //  - ante.NewValidateMemoDecorator(opts.AccountKeeper),
         // ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
         // ante.NewDeductFeeDecorator(opts.AccountKeeper, opts.BankKeeper, opts.FeegrantKeeper),
         // // SetPubKeyDecorator must be called before all signature verification decorators
@@ -66,5 +67,19 @@ fn tx_timeout_height_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), A
         });
     }
 
+    Ok(())
+}
+
+fn validate_memo_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), AppError> {
+    let max_memo_chars = ctx.get_auth_params_store().get_params().max_memo_characters;
+    let memo_length: u64 = tx
+        .get_memo()
+        .len()
+        .try_into()
+        .map_err(|_| AppError::Memo(max_memo_chars))?;
+
+    if memo_length > max_memo_chars {
+        return Err(AppError::Memo(max_memo_chars));
+    };
     Ok(())
 }

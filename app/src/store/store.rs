@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::x::auth::ParamsStore as AuthParamsStore;
+
 pub enum StoreKey {
     Bank,
     Auth,
@@ -9,6 +11,7 @@ pub enum StoreKey {
 pub struct MultiStore {
     bank_store: KVStore,
     auth_store: KVStore,
+    auth_params_store: AuthParamsStore,
 }
 
 impl MultiStore {
@@ -16,6 +19,7 @@ impl MultiStore {
         MultiStore {
             bank_store: KVStore::new(),
             auth_store: KVStore::new(),
+            auth_params_store: AuthParamsStore::new_default(),
         }
     }
 
@@ -31,6 +35,10 @@ impl MultiStore {
             StoreKey::Bank => &mut self.bank_store,
             StoreKey::Auth => &mut self.auth_store,
         }
+    }
+
+    pub fn get_auth_params_store(&self) -> &AuthParamsStore {
+        &self.auth_params_store
     }
 }
 

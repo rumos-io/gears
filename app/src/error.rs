@@ -19,6 +19,7 @@ pub enum AppError {
     Coins(String),
     TxValidation(String),
     Timeout { timeout: u64, current: u64 },
+    Memo(u64),
 }
 
 impl Display for AppError {
@@ -37,6 +38,7 @@ impl Display for AppError {
                 "tx has timed out; timeout height: {}, current height: {}",
                 timeout, current
             ),
+            AppError::Memo(length) => write!(f, "memo is too long, max length is {}", length),
         }
     }
 }

@@ -103,6 +103,10 @@ impl DecodedTx {
     pub fn get_timeout_height(&self) -> u64 {
         self.body.timeout_height
     }
+
+    pub fn get_memo(&self) -> &str {
+        &self.body.memo
+    }
 }
 
 #[cfg(test)]
