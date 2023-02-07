@@ -10,8 +10,9 @@ use bytes::Bytes;
 use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
-    Event, EventAttribute, RequestCheckTx, RequestDeliverTx, RequestInfo, RequestQuery,
-    ResponseCheckTx, ResponseCommit, ResponseDeliverTx, ResponseInfo, ResponseQuery,
+    Event, EventAttribute, RequestCheckTx, RequestDeliverTx, RequestInfo, RequestInitChain,
+    RequestQuery, ResponseCheckTx, ResponseCommit, ResponseDeliverTx, ResponseInfo,
+    ResponseInitChain, ResponseQuery,
 };
 use tracing::{debug, info};
 
@@ -41,40 +42,8 @@ pub struct BaseApp {
 
 impl BaseApp {
     pub fn new() -> Self {
-        let store = MultiStore::new();
-
-        let genesis = GenesisState {
-            balances: vec![Balance {
-                address: AccAddress::from_bech32(
-                    &"cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
-                )
-                .expect("hard coded address is valid"),
-                coins: vec![Coin {
-                    denom: "uatom".to_string(),
-                    amount: cosmwasm_std::Uint256::from(34_u32),
-                }],
-            }],
-        };
-
-        let mut ctx = Context::new(store, 0);
-        Bank::init_genesis(&mut ctx, genesis);
-
-        let genesis = crate::x::auth::GenesisState {
-            accounts: vec![BaseAccount {
-                address: AccAddress::from_bech32(
-                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
-                )
-                .expect("hard coded address is valid"),
-                pub_key: None,
-                account_number: 0,
-                sequence: 0,
-            }],
-            params: DEFAULT_PARAMS,
-        };
-        Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
-
         Self {
-            multi_store: Arc::new(RwLock::new(ctx.multi_store)),
+            multi_store: Arc::new(RwLock::new(MultiStore::new())),
             height: Arc::new(RwLock::new(0)),
         }
     }
@@ -162,6 +131,51 @@ impl BaseApp {
 }
 
 impl Application for BaseApp {
+    fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+        let transient_store = multi_store.clone();
+        let mut ctx = Context::new(transient_store, self.get_block_height());
+
+        let genesis = GenesisState {
+            balances: vec![Balance {
+                address: AccAddress::from_bech32(
+                    &"cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
+                )
+                .expect("hard coded address is valid"),
+                coins: vec![Coin {
+                    denom: "uatom".to_string(),
+                    amount: cosmwasm_std::Uint256::from(34_u32),
+                }],
+            }],
+        };
+        Bank::init_genesis(&mut ctx, genesis);
+
+        let genesis = crate::x::auth::GenesisState {
+            accounts: vec![BaseAccount {
+                address: AccAddress::from_bech32(
+                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
+                )
+                .expect("hard coded address is valid"),
+                pub_key: None,
+                account_number: 0,
+                sequence: 0,
+            }],
+            params: DEFAULT_PARAMS,
+        };
+        Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
+
+        *multi_store = ctx.multi_store;
+
+        ResponseInitChain {
+            consensus_params: request.consensus_params,
+            validators: request.validators,
+            app_hash: "hash_goes_here".into(),
+        }
+    }
+
     fn info(&self, request: RequestInfo) -> ResponseInfo {
         debug!(
             "Got info request. Tendermint version: {}; Block version: {}; P2P version: {}",
