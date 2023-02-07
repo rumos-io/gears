@@ -25,7 +25,7 @@ use crate::{
         Context, DecodedTx, Msg,
     },
     x::{
-        auth::Auth,
+        auth::{Auth, DEFAULT_PARAMS},
         bank::{Balance, Bank, GenesisState},
     },
 };
@@ -69,6 +69,7 @@ impl BaseApp {
                 account_number: 0,
                 sequence: 0,
             }],
+            params: DEFAULT_PARAMS,
         };
         Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
 

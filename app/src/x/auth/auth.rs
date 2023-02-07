@@ -12,6 +12,8 @@ use crate::{
     },
 };
 
+use super::Params;
+
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
     103, 108, 111, 098, 097, 108, 065, 099, 099, 111, 117, 110, 116, 078, 117, 109, 098, 101, 114,
@@ -19,6 +21,7 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 
 pub struct GenesisState {
     pub accounts: Vec<BaseAccount>,
+    pub params: Params,
 }
 
 #[derive(Debug, Clone)]
@@ -26,6 +29,8 @@ pub struct Auth {}
 
 impl Auth {
     pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) -> Result<(), AppError> {
+        Params::set(ctx, genesis.params);
+
         for mut acct in genesis.accounts {
             acct.account_number = Auth::get_next_account_number(ctx);
             Auth::set_account(ctx, acct);

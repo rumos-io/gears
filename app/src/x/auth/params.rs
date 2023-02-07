@@ -1,4 +1,7 @@
-use crate::store::KVStore;
+use crate::{
+    store::{KVStore, StoreKey},
+    types::Context,
+};
 
 #[derive(Debug, Clone)]
 pub struct Params {
@@ -25,7 +28,7 @@ const KEY_SIG_VERIFY_COST_SECP256K1: [u8; 22] = [
     054, 107, 049,
 ]; // "SigVerifyCostSecp256k1"
 
-const DEFAULT_PARAMS: Params = Params {
+pub const DEFAULT_PARAMS: Params = Params {
     max_memo_characters: 256,
     tx_sig_limit: 7,
     tx_size_cost_per_byte: 10,
@@ -33,51 +36,97 @@ const DEFAULT_PARAMS: Params = Params {
     sig_verify_cost_secp256k1: 1000,
 };
 
-#[derive(Debug, Clone)]
-pub struct ParamsStore {
-    kv_store: KVStore,
-    params: Params,
-}
+impl Params {
+    pub fn get(ctx: &Context) -> Params {
+        let store = ctx.get_kv_store(crate::store::StoreKey::AuthParams);
 
-impl ParamsStore {
-    pub fn new_default() -> Self {
-        let kv_store = KVStore::new();
-        ParamsStore {
-            kv_store,
-            params: DEFAULT_PARAMS,
+        let max_memo_characters: u64 = String::from_utf8(
+            store
+                .get(&KEY_MAX_MEMO_CHARACTERS)
+                .expect("key should be set in kv store")
+                .clone(),
+        )
+        .expect("should be valid utf-8")
+        .parse()
+        .expect("should be valid u64");
+
+        let tx_sig_limit: u64 = String::from_utf8(
+            store
+                .get(&KEY_TX_SIG_LIMIT)
+                .expect("key should be set in kv store")
+                .clone(),
+        )
+        .expect("should be valid utf-8")
+        .parse()
+        .expect("should be valid u64");
+
+        let tx_size_cost_per_byte: u64 = String::from_utf8(
+            store
+                .get(&KEY_TX_SIZE_COST_PER_BYTE)
+                .expect("key should be set in kv store")
+                .clone(),
+        )
+        .expect("should be valid utf-8")
+        .parse()
+        .expect("should be valid u64");
+
+        let sig_verify_cost_ed25519: u64 = String::from_utf8(
+            store
+                .get(&KEY_SIG_VERIFY_COST_ED25519)
+                .expect("key should be set in kv store")
+                .clone(),
+        )
+        .expect("should be valid utf-8")
+        .parse()
+        .expect("should be valid u64");
+
+        let sig_verify_cost_secp256k1: u64 = String::from_utf8(
+            store
+                .get(&KEY_SIG_VERIFY_COST_SECP256K1)
+                .expect("key should be set in kv store")
+                .clone(),
+        )
+        .expect("should be valid utf-8")
+        .parse()
+        .expect("should be valid u64");
+
+        Params {
+            max_memo_characters,
+            tx_sig_limit,
+            tx_size_cost_per_byte,
+            sig_verify_cost_ed25519,
+            sig_verify_cost_secp256k1,
         }
     }
 
-    pub fn get_params(&self) -> &Params {
-        &self.params
-    }
+    pub fn set(ctx: &mut Context, params: Params) {
+        let store = ctx.get_mutable_kv_store(crate::store::StoreKey::AuthParams);
 
-    pub fn set_params(&mut self, params: Params) {
-        self.kv_store.set(
+        store.set(
             KEY_MAX_MEMO_CHARACTERS.into(),
             params.max_memo_characters.to_string().into(),
         );
 
-        self.kv_store.set(
+        store.set(
             KEY_TX_SIG_LIMIT.into(),
             params.tx_sig_limit.to_string().into(),
         );
 
-        self.kv_store.set(
+        store.set(
             KEY_TX_SIZE_COST_PER_BYTE.into(),
             params.tx_size_cost_per_byte.to_string().into(),
         );
 
-        self.kv_store.set(
+        store.set(
             KEY_SIG_VERIFY_COST_ED25519.into(),
             params.sig_verify_cost_ed25519.to_string().into(),
         );
 
-        self.kv_store.set(
+        store.set(
             KEY_SIG_VERIFY_COST_SECP256K1.into(),
             params.sig_verify_cost_secp256k1.to_string().into(),
         );
 
-        self.params = params;
+        return;
     }
 }

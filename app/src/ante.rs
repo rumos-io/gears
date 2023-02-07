@@ -1,6 +1,7 @@
 use crate::{
     error::AppError,
     types::{Context, DecodedTx},
+    x::auth::Params as AuthParams,
 };
 
 pub struct AnteHandler {}
@@ -10,6 +11,7 @@ impl AnteHandler {
         validate_basic_ante_handler(tx)?;
         tx_timeout_height_ante_handler(ctx, tx)?;
         validate_memo_ante_handler(ctx, tx)?;
+        //consume_gas_for_tx_size(ctx, tx)?;
 
         // ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
@@ -71,7 +73,7 @@ fn tx_timeout_height_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), A
 }
 
 fn validate_memo_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), AppError> {
-    let max_memo_chars = ctx.get_auth_params_store().get_params().max_memo_characters;
+    let max_memo_chars = AuthParams::get(ctx).max_memo_characters;
     let memo_length: u64 = tx
         .get_memo()
         .len()
@@ -83,3 +85,11 @@ fn validate_memo_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), AppEr
     };
     Ok(())
 }
+
+// fn consume_gas_for_tx_size(ctx: &Context, tx: &DecodedTx) -> Result<(), AppError> {
+//     let tx_size_cost_per_byte = AuthParams::get(ctx).tx_size_cost_per_byte;
+
+//     //ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*sdk.Gas(len(ctx.TxBytes())), "txSize")
+
+//     Ok(())
+// }

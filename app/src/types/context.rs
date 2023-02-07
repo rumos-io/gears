@@ -1,7 +1,4 @@
-use crate::{
-    store::{KVStore, MultiStore, StoreKey},
-    x::auth::ParamsStore,
-};
+use crate::store::{KVStore, MultiStore, StoreKey};
 
 pub struct Context {
     pub multi_store: MultiStore,
@@ -28,10 +25,6 @@ impl Context {
 
     pub fn get_height(&self) -> u64 {
         self.height
-    }
-
-    pub fn get_auth_params_store(&self) -> &ParamsStore {
-        self.multi_store.get_auth_params_store()
     }
 }
 
