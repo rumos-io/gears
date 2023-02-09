@@ -5,18 +5,19 @@ use ibc_proto::cosmos::{
     bank::v1beta1::{QueryAllBalancesResponse, QueryBalanceResponse},
     base::v1beta1::Coin,
 };
+use proto_messages::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::SendCoins};
 use proto_types::AccAddress;
 
 use crate::{
     error::AppError,
     store::{KVStore, MutablePrefixStore, StoreKey},
     types::{
-        proto::{MsgSend, QueryAllBalancesRequest, QueryBalanceRequest},
+        proto::{QueryAllBalancesRequest, QueryBalanceRequest},
         Context,
     },
 };
 
-use super::auth::Auth;
+use super::auth::{Auth, Module};
 
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 
@@ -34,7 +35,7 @@ pub struct Balance {
 
 impl Bank {
     pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
-        let mut bank_store = ctx.get_mutable_kv_store(StoreKey::Bank);
+        let bank_store = ctx.get_mutable_kv_store(StoreKey::Bank);
 
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
@@ -99,6 +100,37 @@ impl Bank {
         });
     }
 
+    pub fn send_coins_from_account_to_module(
+        ctx: &mut Context,
+        from_address: AccAddress,
+        to_module: Module,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        Auth::check_create_new_module_account(ctx, &to_module);
+
+        let msg = MsgSend {
+            from_address,
+            to_address: to_module.get_address(),
+            amount,
+        };
+
+        Bank::send_coins(ctx, msg)
+    }
+
+    pub fn send_coins_from_account_to_account(
+        ctx: &mut Context,
+        msg: MsgSend,
+    ) -> Result<(), AppError> {
+        Bank::send_coins(ctx, msg.clone())?;
+
+        // Create account if recipient does not exist
+        if !Auth::has_account(ctx, &msg.to_address) {
+            Auth::create_new_base_account(ctx, &msg.to_address);
+        };
+
+        Ok(())
+    }
+
     pub fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
         let bank_store = ctx.get_mutable_kv_store(StoreKey::Bank);
 
@@ -126,6 +158,8 @@ impl Bank {
                 (from_balance - send_coin.amount).to_string().into(),
             );
 
+            //TODO: if balance == 0 then denom should be removed from store
+
             let mut to_account_store = Bank::get_address_balances_store(bank_store, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
             let to_balance = match to_balance {
@@ -144,7 +178,7 @@ impl Bank {
 
         // Create account if recipient does not exist
         if !Auth::has_account(ctx, &to_address) {
-            Auth::new_account(ctx, &to_address);
+            Auth::create_new_base_account(ctx, &to_address);
         };
 
         return Ok(());

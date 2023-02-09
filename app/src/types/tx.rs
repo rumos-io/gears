@@ -7,16 +7,21 @@ use ibc_proto::{
 };
 use prost::Message;
 
-use proto_messages::cosmos::tx::v1beta1::{AuthInfo, Tx};
+use proto_messages::cosmos::{
+    bank::v1beta1::MsgSend,
+    base::v1beta1::SendCoins,
+    tx::v1beta1::{AuthInfo, Tx},
+};
 use proto_types::AccAddress;
 
 use crate::{crypto::PubKey, error::AppError};
 
-use super::proto::{self, MsgSend};
+use super::proto::{self};
 
 // TODO:
 // 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
 // 2. Implement equality on AccAddress to avoid conversion to string in get_signers()
+// 3. Consider removing the "seen" hashset in get_signers()
 pub enum Msg {
     Send(MsgSend),
     Test,
@@ -32,7 +37,7 @@ impl Msg {
 
     pub fn validate_basic(&self) -> Result<(), AppError> {
         match &self {
-            Msg::Send(msg) => proto::validate_coins(&msg.amount),
+            Msg::Send(msg) => Ok(()),
             Msg::Test => todo!(),
         }
     }
@@ -53,7 +58,8 @@ impl DecodedTx {
         for msg in &tx.body.messages {
             match msg.type_url.as_str() {
                 "/cosmos.bank.v1beta1.MsgSend" => {
-                    let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())?;
+                    let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())
+                        .map_err(|e| AppError::TxParseError(e.to_string()))?;
                     messages.push(Msg::Send(msg));
                 }
                 _ => return Err(AppError::TxParseError("message type not recognized".into())), // If any message is not recognized then reject the entire Tx
@@ -107,11 +113,25 @@ impl DecodedTx {
     pub fn get_memo(&self) -> &str {
         &self.body.memo
     }
+
+    pub fn get_fee(&self) -> &Option<SendCoins> {
+        return &self.auth_info.fee.amount;
+    }
+
+    pub fn get_fee_payer(&self) -> &AccAddress {
+        if let Some(payer) = &self.auth_info.fee.payer {
+            return payer;
+        } else {
+            // At least one signer exists due to Ante::validate_basic_ante_handler()
+            return self.get_signers()[0];
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
 
+    use cosmwasm_std::Uint256;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::Fee,
@@ -143,17 +163,29 @@ mod tests {
                 Msg::Send(MsgSend {
                     from_address: from_addr_1_3.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
                 Msg::Send(MsgSend {
                     from_address: from_addr_2.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
                 Msg::Send(MsgSend {
                     from_address: from_addr_1_3.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
             ],
             auth_info: AuthInfo {
@@ -190,17 +222,29 @@ mod tests {
                 Msg::Send(MsgSend {
                     from_address: from_addr_1_3.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
                 Msg::Send(MsgSend {
                     from_address: from_addr_2.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
                 Msg::Send(MsgSend {
                     from_address: from_addr_1_3.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
             ],
             auth_info: AuthInfo {
@@ -231,17 +275,29 @@ mod tests {
                 Msg::Send(MsgSend {
                     from_address: from_addr_1_3.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
                 Msg::Send(MsgSend {
                     from_address: from_addr_2.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
                 Msg::Send(MsgSend {
                     from_address: from_addr_1_3.clone(),
                     to_address: to_addr.clone(),
-                    amount: vec![],
+                    amount: SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: Uint256::one(),
+                    }])
+                    .unwrap(),
                 }),
             ],
             auth_info: AuthInfo {

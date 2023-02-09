@@ -7,7 +7,7 @@ use crate::{
     error::AppError,
     store::StoreKey,
     types::{
-        proto::{BaseAccount, QueryAccountRequest},
+        proto::{BaseAccount, ModuleAccount, QueryAccountRequest},
         Context,
     },
 };
@@ -22,6 +22,34 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 pub struct GenesisState {
     pub accounts: Vec<BaseAccount>,
     pub params: Params,
+}
+
+pub enum Module {
+    FeeCollector,
+}
+
+impl Module {
+    pub fn get_address(&self) -> AccAddress {
+        match self {
+            Module::FeeCollector => {
+                //TODO: construct address from Vec<u8>
+                AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
+                    .expect("hard coded address is valid")
+            }
+        }
+    }
+
+    pub fn get_name(&self) -> String {
+        match self {
+            Module::FeeCollector => "fee_collector".into(),
+        }
+    }
+
+    pub fn get_permissions(&self) -> Vec<String> {
+        match self {
+            Module::FeeCollector => vec![],
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -47,15 +75,27 @@ impl Auth {
         let key = create_auth_store_key(req.address);
         let account = auth_store.get(&key);
 
-        match account {
-            Some(account) => Ok(QueryAccountResponse {
-                account: Some(Any {
-                    type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                    value: account.to_owned(),
-                }),
-            }),
-            None => Err(AppError::AccountNotFound),
+        if let Some(buf) = account {
+            //check which type of account we have by attempting to decode
+
+            if let Ok(_) = BaseAccount::decode::<Bytes>(buf.to_owned().into()) {
+                return Ok(QueryAccountResponse {
+                    account: Some(Any {
+                        type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
+                        value: buf.to_owned(),
+                    }),
+                });
+            } else if let Ok(_) = ModuleAccount::decode::<Bytes>(buf.to_owned().into()) {
+                return Ok(QueryAccountResponse {
+                    account: Some(Any {
+                        type_url: "/cosmos.auth.v1beta1.ModuleAccount".to_string(),
+                        value: buf.to_owned(),
+                    }),
+                });
+            }
         }
+
+        return Err(AppError::AccountNotFound);
     }
 
     fn get_next_account_number(ctx: &mut Context) -> u64 {
@@ -90,7 +130,8 @@ impl Auth {
         auth_store.set(key, acct.encode_to_vec());
     }
 
-    pub fn new_account(ctx: &mut Context, addr: &AccAddress) {
+    /// Overwrites existing account
+    pub fn create_new_base_account(ctx: &mut Context, addr: &AccAddress) {
         let acct = BaseAccount {
             address: addr.clone(),
             pub_key: None,
@@ -99,6 +140,30 @@ impl Auth {
         };
 
         Auth::set_account(ctx, acct)
+    }
+
+    /// Creates a new module account if it doesn't already exist
+    pub fn check_create_new_module_account(ctx: &mut Context, module: &Module) {
+        let addr = module.get_address();
+
+        if Auth::has_account(ctx, &addr) {
+            return;
+        } else {
+            let account = ModuleAccount {
+                base_account: BaseAccount {
+                    address: addr.clone(),
+                    pub_key: None,
+                    account_number: Auth::get_next_account_number(ctx),
+                    sequence: 0,
+                },
+                name: module.get_name(),
+                permissions: module.get_permissions(),
+            };
+
+            let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
+            let key = create_auth_store_key(account.base_account.address.to_owned());
+            auth_store.set(key, account.encode_to_vec());
+        }
     }
 }
 

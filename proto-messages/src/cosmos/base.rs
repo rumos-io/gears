@@ -94,4 +94,13 @@ pub mod v1beta1 {
             coins.0
         }
     }
+
+    impl IntoIterator for SendCoins {
+        type Item = Coin;
+        type IntoIter = std::vec::IntoIter<Self::Item>;
+
+        fn into_iter(self) -> Self::IntoIter {
+            self.0.into_iter()
+        }
+    }
 }

@@ -7,16 +7,16 @@ use structopt::clap::App;
 
 use crate::error::AppError;
 
-/// MsgSend represents a message to send coins from one account to another.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct MsgSend {
-    #[prost(address, tag = "1")]
-    pub from_address: proto_types::AccAddress,
-    #[prost(address, tag = "2")]
-    pub to_address: proto_types::AccAddress,
-    #[prost(message, repeated, tag = "3")]
-    pub amount: Vec<Coin>,
-}
+// /// MsgSend represents a message to send coins from one account to another.
+// #[derive(Clone, PartialEq, ::prost::Message)]
+// pub struct MsgSend {
+//     #[prost(address, tag = "1")]
+//     pub from_address: proto_types::AccAddress,
+//     #[prost(address, tag = "2")]
+//     pub to_address: proto_types::AccAddress,
+//     #[prost(message, repeated, tag = "3")]
+//     pub amount: Vec<Coin>,
+// }
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -55,6 +55,16 @@ pub struct BaseAccount {
     pub sequence: u64,
 }
 
+/// ModuleAccount defines an account for modules that holds coins on a pool.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ModuleAccount {
+    #[prost(message, required, tag = "1")]
+    pub base_account: BaseAccount,
+    #[prost(string, tag = "2")]
+    pub name: ::prost::alloc::string::String,
+    #[prost(string, repeated, tag = "3")]
+    pub permissions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
 /// QueryAccountRequest is the request type for the Query/Account RPC method.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryAccountRequest {

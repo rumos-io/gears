@@ -22,7 +22,7 @@ use crate::{
     error::AppError,
     store::MultiStore,
     types::{
-        proto::{BaseAccount, MsgSend, QueryAccountRequest, QueryAllBalancesRequest},
+        proto::{BaseAccount, QueryAccountRequest, QueryAllBalancesRequest},
         Context, DecodedTx, Msg,
     },
     x::{
@@ -107,7 +107,9 @@ impl BaseApp {
     fn run_msgs(ctx: &mut Context, msgs: &Vec<Msg>) -> Result<(), AppError> {
         for msg in msgs {
             match msg {
-                Msg::Send(send_msg) => Bank::send_coins(ctx, send_msg.clone())?,
+                Msg::Send(send_msg) => {
+                    Bank::send_coins_from_account_to_account(ctx, send_msg.clone())?
+                }
                 Msg::Test => return Err(AppError::AccountNotFound),
             };
         }

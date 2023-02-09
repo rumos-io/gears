@@ -61,10 +61,10 @@ echo "race draft rival universe maid cheese steel logic crowd fork comic easy tr
 5. Send tokens
 
 ```
-gaiad tx bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut 10uatom --keyring-backend=test --chain-id=localnet --broadcast-mode block --fees 0uatom
+gaiad tx bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut 10uatom --keyring-backend=test --chain-id=localnet --broadcast-mode block --fees 1uatom
 ```
 
-6. Query the address balance and observe that it has decreased by 10uatom:
+6. Query the address balance and observe that it has decreased by 11uatom ( = 10uatom + fee):
 
 ```
 gaiad query bank balances cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux
@@ -74,7 +74,7 @@ Which returns:
 
 ```yaml
 balances:
-- amount: "24"
+- amount: "23"
   denom: uatom
 pagination: null
 ```

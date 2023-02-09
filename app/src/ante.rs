@@ -1,7 +1,10 @@
 use crate::{
     error::AppError,
     types::{Context, DecodedTx},
-    x::auth::Params as AuthParams,
+    x::{
+        auth::{Auth, Module, Params as AuthParams},
+        bank::Bank,
+    },
 };
 
 pub struct AnteHandler {}
@@ -11,7 +14,8 @@ impl AnteHandler {
         validate_basic_ante_handler(tx)?;
         tx_timeout_height_ante_handler(ctx, tx)?;
         validate_memo_ante_handler(ctx, tx)?;
-        //consume_gas_for_tx_size(ctx, tx)?;
+        //consume_gas_for_tx_size_ante_handler(ctx, tx)?;
+        deduct_fee_ante_handler(ctx, tx)?;
 
         // ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
@@ -86,7 +90,27 @@ fn validate_memo_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), AppEr
     Ok(())
 }
 
-// fn consume_gas_for_tx_size(ctx: &Context, tx: &DecodedTx) -> Result<(), AppError> {
+fn deduct_fee_ante_handler(ctx: &mut Context, tx: &DecodedTx) -> Result<(), AppError> {
+    let fee = tx.get_fee();
+    let fee_payer = tx.get_fee_payer();
+
+    if !Auth::has_account(ctx, fee_payer) {
+        return Err(AppError::AccountNotFound);
+    }
+
+    if let Some(fee) = fee {
+        Bank::send_coins_from_account_to_module(
+            ctx,
+            fee_payer.to_owned(),
+            Module::FeeCollector,
+            fee.to_owned(),
+        )?;
+    }
+
+    Ok(())
+}
+
+// fn consume_gas_for_tx_size_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), AppError> {
 //     let tx_size_cost_per_byte = AuthParams::get(ctx).tx_size_cost_per_byte;
 
 //     //ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*sdk.Gas(len(ctx.TxBytes())), "txSize")
