@@ -11,8 +11,6 @@ const MAX_ADDR_LEN: u8 = 255;
 const BECH32_MAIN_PREFIX: &str = "cosmos";
 const BECH32_PREFIX_ACC_ADDR: &str = BECH32_MAIN_PREFIX;
 
-// TODO: from Vec<u8> should fail if length > MAX
-
 impl AccAddress {
     pub fn from_bech32(address: &str) -> Result<Self, AddressError> {
         let (hrp, data, variant) = bech32::decode(address)?;
@@ -64,6 +62,20 @@ impl TryFrom<Vec<u8>> for AccAddress {
             });
         }
         Ok(AccAddress(v))
+    }
+}
+
+impl TryFrom<&[u8]> for AccAddress {
+    type Error = AddressError;
+
+    fn try_from(v: &[u8]) -> Result<AccAddress, AddressError> {
+        if v.len() > MAX_ADDR_LEN.into() {
+            return Err(AddressError::InvalidLength {
+                max: MAX_ADDR_LEN,
+                found: v.len(),
+            });
+        }
+        Ok(AccAddress(v.to_vec()))
     }
 }
 
