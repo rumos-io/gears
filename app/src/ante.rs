@@ -1,5 +1,3 @@
-use tendermint_proto::crypto::public_key;
-
 use crate::{
     error::AppError,
     types::{Context, DecodedTx},
@@ -16,11 +14,11 @@ impl AnteHandler {
         validate_basic_ante_handler(tx)?;
         tx_timeout_height_ante_handler(ctx, tx)?;
         validate_memo_ante_handler(ctx, tx)?;
-        //consume_gas_for_tx_size_ante_handler(ctx, tx)?;
         deduct_fee_ante_handler(ctx, tx)?;
         set_pub_key_ante_handler(ctx, tx)?;
+        increment_sequence_ante_handler(ctx, tx)?;
 
-        // ante.NewSetUpContextDecorator(),
+        //  ** ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
         //  - NewMempoolFeeDecorator(opts.BypassMinFeeMsgTypes), // NOT USED FOR DELIVER_TX
         //  - ante.NewValidateBasicDecorator(),
@@ -33,7 +31,7 @@ impl AnteHandler {
         //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
         //  ** ante.NewSigGasConsumeDecorator(opts.AccountKeeper, sigGasConsumer),
         //  ** ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
-        //  ** ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
+        //  - ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
 
         Ok(())
@@ -130,20 +128,16 @@ fn set_pub_key_ante_handler(ctx: &mut Context, tx: &DecodedTx) -> Result<(), App
         if let Some(key) = key {
             let addr = key.get_address();
 
-            // check signer and key address are the same
             if &addr != signers[i] {
                 return Err(AppError::InvalidPublicKey);
             }
 
-            // get signer account
             let mut acct = Auth::get_account(ctx, &addr).ok_or(AppError::AccountNotFound)?;
 
-            // if pub key not empty then skip
             if acct.get_public_key().is_some() {
                 continue;
             }
 
-            // set pub key + account
             acct.set_public_key(key.clone());
             Auth::set_account(ctx, acct)
         }
@@ -152,10 +146,12 @@ fn set_pub_key_ante_handler(ctx: &mut Context, tx: &DecodedTx) -> Result<(), App
     Ok(())
 }
 
-// fn consume_gas_for_tx_size_ante_handler(ctx: &Context, tx: &DecodedTx) -> Result<(), AppError> {
-//     let tx_size_cost_per_byte = AuthParams::get(ctx).tx_size_cost_per_byte;
+fn increment_sequence_ante_handler(ctx: &mut Context, tx: &DecodedTx) -> Result<(), AppError> {
+    for signer in tx.get_signers() {
+        let mut acct = Auth::get_account(ctx, signer).ok_or(AppError::AccountNotFound)?;
+        acct.increment_sequence();
+        Auth::set_account(ctx, acct)
+    }
 
-//     //ctx.GasMeter().ConsumeGas(params.TxSizeCostPerByte*sdk.Gas(len(ctx.TxBytes())), "txSize")
-
-//     Ok(())
-// }
+    Ok(())
+}

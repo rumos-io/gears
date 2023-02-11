@@ -75,6 +75,13 @@ impl Account {
             Account::Module(acct) => acct.base_account.pub_key = Some(key),
         }
     }
+
+    pub fn increment_sequence(&mut self) {
+        match self {
+            Account::Base(acct) => acct.sequence += 1,
+            Account::Module(acct) => acct.base_account.sequence += 1,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

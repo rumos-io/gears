@@ -61,9 +61,7 @@ impl BaseApp {
 
     fn run_tx(&self, raw: Bytes) -> Result<(), AppError> {
         // TODO:
-        // 1. Update account sequence etc - should this be done externally?
-        // 2. Check from address is signer + verify signature
-        // 3. Handle Tx fees
+        // 1. Check from address is signer + verify signature
 
         //###########################
         let tx = Tx::decode(raw.clone())?;
