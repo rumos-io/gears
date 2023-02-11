@@ -1,3 +1,5 @@
+use tendermint_proto::crypto::public_key;
+
 use crate::{
     error::AppError,
     types::{Context, DecodedTx},
@@ -16,6 +18,7 @@ impl AnteHandler {
         validate_memo_ante_handler(ctx, tx)?;
         //consume_gas_for_tx_size_ante_handler(ctx, tx)?;
         deduct_fee_ante_handler(ctx, tx)?;
+        set_pub_key_ante_handler(ctx, tx)?;
 
         // ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
@@ -23,15 +26,15 @@ impl AnteHandler {
         //  - ante.NewValidateBasicDecorator(),
         //  - ante.NewTxTimeoutHeightDecorator(),
         //  - ante.NewValidateMemoDecorator(opts.AccountKeeper),
-        // ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
-        // ante.NewDeductFeeDecorator(opts.AccountKeeper, opts.BankKeeper, opts.FeegrantKeeper),
+        //  ** ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
+        //  - ante.NewDeductFeeDecorator(opts.AccountKeeper, opts.BankKeeper, opts.FeegrantKeeper),
         // // SetPubKeyDecorator must be called before all signature verification decorators
-        // ante.NewSetPubKeyDecorator(opts.AccountKeeper),
-        // ante.NewValidateSigCountDecorator(opts.AccountKeeper),
-        // ante.NewSigGasConsumeDecorator(opts.AccountKeeper, sigGasConsumer),
-        // ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
-        // ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
-        // ibcante.NewAnteDecorator(opts.IBCkeeper),
+        //  - ante.NewSetPubKeyDecorator(opts.AccountKeeper),
+        //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
+        //  ** ante.NewSigGasConsumeDecorator(opts.AccountKeeper, sigGasConsumer),
+        //  ** ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
+        //  ** ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
+        //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
 
         Ok(())
     }
@@ -47,7 +50,7 @@ fn validate_basic_ante_handler(tx: &DecodedTx) -> Result<(), AppError> {
 
     if sigs.len() != tx.get_signers().len() {
         return Err(AppError::TxValidation(format!(
-            "wrong number of signers; expected {}, got {}",
+            "wrong number of signatures; expected {}, got {}",
             tx.get_signers().len(),
             sigs.len()
         )));
@@ -105,6 +108,45 @@ fn deduct_fee_ante_handler(ctx: &mut Context, tx: &DecodedTx) -> Result<(), AppE
             Module::FeeCollector,
             fee.to_owned(),
         )?;
+    }
+
+    Ok(())
+}
+
+fn set_pub_key_ante_handler(ctx: &mut Context, tx: &DecodedTx) -> Result<(), AppError> {
+    let public_keys = tx.get_public_keys();
+    let signers = tx.get_signers();
+
+    // additional check not found in the sdk - this prevents a panic
+    if signers.len() != public_keys.len() {
+        return Err(AppError::TxValidation(format!(
+            "wrong number of signer info; expected {}, got {}",
+            signers.len(),
+            public_keys.len()
+        )));
+    }
+
+    for (i, key) in public_keys.iter().enumerate() {
+        if let Some(key) = key {
+            let addr = key.get_address();
+
+            // check signer and key address are the same
+            if &addr != signers[i] {
+                return Err(AppError::InvalidPublicKey);
+            }
+
+            // get signer account
+            let mut acct = Auth::get_account(ctx, &addr).ok_or(AppError::AccountNotFound)?;
+
+            // if pub key not empty then skip
+            if acct.get_public_key().is_some() {
+                continue;
+            }
+
+            // set pub key + account
+            acct.set_public_key(key.clone());
+            Auth::set_account(ctx, acct)
+        }
     }
 
     Ok(())

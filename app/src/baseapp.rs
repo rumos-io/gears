@@ -7,6 +7,7 @@ use ibc_proto::cosmos::{
 use prost::Message;
 
 use bytes::Bytes;
+use proto_messages::cosmos::auth::v1beta1::BaseAccount;
 use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
@@ -22,7 +23,7 @@ use crate::{
     error::AppError,
     store::MultiStore,
     types::{
-        proto::{BaseAccount, QueryAccountRequest, QueryAllBalancesRequest},
+        proto::{QueryAccountRequest, QueryAllBalancesRequest},
         Context, DecodedTx, Msg,
     },
     x::{

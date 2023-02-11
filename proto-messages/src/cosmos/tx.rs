@@ -14,6 +14,7 @@ pub mod v1beta1 {
 
     use crate::{
         cosmos::base::v1beta1::{Coin, SendCoins},
+        cosmos::crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
         error::Error,
     };
 
@@ -121,18 +122,20 @@ pub mod v1beta1 {
 
     impl Protobuf<RawAuthInfo> for AuthInfo {}
 
-    #[derive(Clone, PartialEq, ::prost::Message)]
-    pub struct Secp256k1 {
-        #[prost(bytes = "vec", tag = "1")]
-        pub key: Vec<u8>,
-    }
-
-    #[derive(Clone, PartialEq)]
+    #[derive(Clone, PartialEq, Debug)]
     pub enum PublicKey {
-        Secp256k1(Secp256k1),
+        Secp256k1(Secp256k1PubKey),
         //Secp256r1(Vec<u8>),
         //Ed25519(Vec<u8>),
         //Multisig(Vec<u8>),
+    }
+
+    impl PublicKey {
+        pub fn get_address(&self) -> AccAddress {
+            match self {
+                PublicKey::Secp256k1(key) => key.get_address(),
+            }
+        }
     }
 
     impl TryFrom<Any> for PublicKey {
@@ -141,7 +144,8 @@ pub mod v1beta1 {
         fn try_from(any: Any) -> Result<Self, Self::Error> {
             match any.type_url.as_str() {
                 "/cosmos.crypto.secp256k1.PubKey" => {
-                    let key = Secp256k1::decode::<Bytes>(any.value.into())?;
+                    let key = Secp256k1PubKey::decode::<Bytes>(any.value.into())
+                        .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
                     Ok(PublicKey::Secp256k1(key))
                 }
                 _ => Err(Error::DecodeAny(format!(
@@ -157,7 +161,9 @@ pub mod v1beta1 {
             match key {
                 PublicKey::Secp256k1(key) => Any {
                     type_url: "/cosmos.crypto.secp256k1.PubKey".to_string(),
-                    value: key.encode_to_vec(),
+                    value: key.encode_vec().expect(
+                        "library call will never return an error - this is a bug in the library",
+                    ),
                 },
             }
         }

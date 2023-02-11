@@ -65,9 +65,10 @@ impl Bank {
                 balance: Some(Coin {
                     denom: req.denom.to_string(),
                     amount: Uint256::from_str(
-                        &String::from_utf8(amount.to_owned()).expect("Should be valid Uint256"),
+                        &String::from_utf8(amount.to_owned())
+                            .expect("invalid data in database - possible database corruption"),
                     )
-                    .expect("Should be valid utf8"),
+                    .expect("invalid data in database - possible database corruption"),
                 }),
             }),
             None => Ok(QueryBalanceResponse { balance: None }),
@@ -85,10 +86,13 @@ impl Bank {
         let mut balances = vec![];
 
         for (denom, amount) in account_store {
-            let denom = String::from_utf8(denom).expect("Should be valid utf8");
-            let amount =
-                Uint256::from_str(&String::from_utf8(amount).expect("Should be valid Uint256"))
-                    .expect("Should be valid utf8");
+            let denom = String::from_utf8(denom)
+                .expect("invalid data in database - possible database corruption");
+            let amount = Uint256::from_str(
+                &String::from_utf8(amount)
+                    .expect("invalid data in database - possible database corruption"),
+            )
+            .expect("invalid data in database - possible database corruption");
 
             let coin = Coin { denom, amount };
             balances.push(coin);
@@ -145,9 +149,10 @@ impl Bank {
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
 
             let from_balance = Uint256::from_str(
-                &String::from_utf8(from_balance.to_owned()).expect("Should be valid Uint256"),
+                &String::from_utf8(from_balance.to_owned())
+                    .expect("invalid data in database - possible database corruption"),
             )
-            .expect("Should be valid utf8");
+            .expect("invalid data in database - possible database corruption");
 
             if from_balance < send_coin.amount {
                 return Err(AppError::Send("Insufficient funds".into()));
@@ -164,9 +169,10 @@ impl Bank {
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
             let to_balance = match to_balance {
                 Some(to_balance) => Uint256::from_str(
-                    &String::from_utf8(to_balance.to_owned()).expect("Should be valid Uint256"),
+                    &String::from_utf8(to_balance.to_owned())
+                        .expect("invalid data in database - possible database corruption"),
                 )
-                .expect("Should be valid utf8"),
+                .expect("invalid data in database - possible database corruption"),
                 None => Uint256::zero(),
             };
 

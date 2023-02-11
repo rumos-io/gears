@@ -20,6 +20,7 @@ pub enum AppError {
     TxValidation(String),
     Timeout { timeout: u64, current: u64 },
     Memo(u64),
+    InvalidPublicKey,
 }
 
 impl Display for AppError {
@@ -39,6 +40,7 @@ impl Display for AppError {
                 timeout, current
             ),
             AppError::Memo(length) => write!(f, "memo is too long, max length is {}", length),
+            AppError::InvalidPublicKey => write!(f, "public key is invalid"),
         }
     }
 }

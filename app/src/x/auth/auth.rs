@@ -1,15 +1,19 @@
 use bytes::Bytes;
-use ibc_proto::{cosmos::auth::v1beta1::QueryAccountResponse, google::protobuf::Any};
+use ibc_proto::{
+    cosmos::auth::v1beta1::QueryAccountResponse, google::protobuf::Any, protobuf::Protobuf,
+};
 use prost::Message;
+use proto_messages::cosmos::{
+    auth::v1beta1::{BaseAccount, ModuleAccount},
+    crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
+    tx::v1beta1::PublicKey,
+};
 use proto_types::AccAddress;
 
 use crate::{
     error::AppError,
     store::StoreKey,
-    types::{
-        proto::{BaseAccount, ModuleAccount, QueryAccountRequest},
-        Context,
-    },
+    types::{proto::QueryAccountRequest, Context},
 };
 
 use super::Params;
@@ -32,7 +36,7 @@ impl Module {
     pub fn get_address(&self) -> AccAddress {
         match self {
             Module::FeeCollector => {
-                //TODO: construct address from Vec<u8>
+                //TODO: construct address from Vec<u8> + make address constant
                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
                     .expect("hard coded address is valid")
             }
@@ -52,6 +56,27 @@ impl Module {
     }
 }
 
+pub enum Account {
+    Base(BaseAccount),
+    Module(ModuleAccount),
+}
+
+impl Account {
+    pub fn get_public_key(&self) -> &Option<PublicKey> {
+        match self {
+            Account::Base(acct) => &acct.pub_key,
+            Account::Module(acct) => &acct.base_account.pub_key,
+        }
+    }
+
+    pub fn set_public_key(&mut self, key: PublicKey) {
+        match self {
+            Account::Base(acct) => acct.pub_key = Some(key),
+            Account::Module(acct) => acct.base_account.pub_key = Some(key),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Auth {}
 
@@ -61,7 +86,7 @@ impl Auth {
 
         for mut acct in genesis.accounts {
             acct.account_number = Auth::get_next_account_number(ctx);
-            Auth::set_account(ctx, acct);
+            Auth::set_account(ctx, Account::Base(acct));
         }
 
         Ok(())
@@ -77,7 +102,6 @@ impl Auth {
 
         if let Some(buf) = account {
             //check which type of account we have by attempting to decode
-
             if let Ok(_) = BaseAccount::decode::<Bytes>(buf.to_owned().into()) {
                 return Ok(QueryAccountResponse {
                     account: Some(Any {
@@ -92,6 +116,8 @@ impl Auth {
                         value: buf.to_owned(),
                     }),
                 });
+            } else {
+                panic!("invalid data in database - possible database corruption")
             }
         }
 
@@ -106,7 +132,8 @@ impl Auth {
 
         let acct_num: u64 = match acct_num {
             None => 0, //initialize account numbers
-            Some(num) => u64::decode::<Bytes>(num.to_owned().into()).unwrap(),
+            Some(num) => u64::decode::<Bytes>(num.to_owned().into())
+                .expect("invalid data in database - possible database corruption"),
         };
 
         let next_acct_num = acct_num + 1;
@@ -124,10 +151,47 @@ impl Auth {
         auth_store.get(&key).is_some()
     }
 
-    fn set_account(ctx: &mut Context, acct: BaseAccount) {
+    pub fn set_account(ctx: &mut Context, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
-        let key = create_auth_store_key(acct.address.to_owned());
-        auth_store.set(key, acct.encode_to_vec());
+
+        match acct {
+            Account::Base(acct) => {
+                let key = create_auth_store_key(acct.address.to_owned());
+                auth_store.set(
+                    key,
+                    acct.encode_vec().expect(
+                        "library call will never return an error - this is a bug in the library",
+                    ),
+                );
+            }
+            Account::Module(acct) => {
+                let key = create_auth_store_key(acct.base_account.address.to_owned());
+                auth_store.set(
+                    key,
+                    acct.encode_vec().expect(
+                        "library call will never return an error - this is a bug in the library",
+                    ),
+                );
+            }
+        };
+    }
+
+    pub fn get_account(ctx: &Context, addr: &AccAddress) -> Option<Account> {
+        let auth_store = ctx.get_kv_store(StoreKey::Auth);
+        let key = create_auth_store_key(addr.to_owned());
+        let account = auth_store.get(&key);
+
+        if let Some(buf) = account {
+            if let Ok(acct) = BaseAccount::decode::<Bytes>(buf.to_owned().into()) {
+                return Some(Account::Base(acct));
+            } else if let Ok(acct) = ModuleAccount::decode::<Bytes>(buf.to_owned().into()) {
+                return Some(Account::Module(acct));
+            } else {
+                panic!("invalid data in database - possible database corruption")
+            }
+        }
+
+        return None;
     }
 
     /// Overwrites existing account
@@ -139,7 +203,7 @@ impl Auth {
             sequence: 0,
         };
 
-        Auth::set_account(ctx, acct)
+        Auth::set_account(ctx, Account::Base(acct))
     }
 
     /// Creates a new module account if it doesn't already exist
@@ -162,7 +226,12 @@ impl Auth {
 
             let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
             let key = create_auth_store_key(account.base_account.address.to_owned());
-            auth_store.set(key, account.encode_to_vec());
+            auth_store.set(
+                key,
+                account.encode_vec().expect(
+                    "library call will never return an error - this is a bug in the library",
+                ),
+            );
         }
     }
 }
@@ -178,6 +247,8 @@ fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
+
+    use proto_messages::cosmos::crypto::secp256k1::v1beta1::RawPubKey;
 
     use super::*;
     use crate::store::MultiStore;
@@ -238,5 +309,30 @@ mod tests {
         // check account number is being incremented
         let acct_num = Auth::get_next_account_number(&mut ctx);
         assert_eq!(expected + 1, acct_num);
+    }
+
+    #[test]
+    fn set_public_key_works() {
+        let address =
+            AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into())
+                .unwrap();
+
+        let key = hex::decode("02950e1cdfcb133d6024109fd489f734eeb4502418e538c28481f22bce276f248c")
+            .unwrap();
+        let raw = RawPubKey { key };
+        let key: Secp256k1PubKey = raw.try_into().unwrap();
+
+        let mut acct = Account::Base(BaseAccount {
+            address,
+            pub_key: None,
+            account_number: 1,
+            sequence: 1,
+        });
+
+        assert_eq!(acct.get_public_key(), &None);
+
+        acct.set_public_key(PublicKey::Secp256k1(key.clone()));
+
+        assert_eq!(acct.get_public_key(), &Some(PublicKey::Secp256k1(key)));
     }
 }

@@ -1,22 +1,4 @@
-use std::collections::{HashMap, HashSet};
-
-use cosmwasm_std::Uint256;
-use ibc_proto::cosmos::tx::v1beta1::{AuthInfo, TxBody};
-use serde::de::IntoDeserializer;
-use structopt::clap::App;
-
 use crate::error::AppError;
-
-// /// MsgSend represents a message to send coins from one account to another.
-// #[derive(Clone, PartialEq, ::prost::Message)]
-// pub struct MsgSend {
-//     #[prost(address, tag = "1")]
-//     pub from_address: proto_types::AccAddress,
-//     #[prost(address, tag = "2")]
-//     pub to_address: proto_types::AccAddress,
-//     #[prost(message, repeated, tag = "3")]
-//     pub amount: Vec<Coin>,
-// }
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
 #[derive(Clone, PartialEq, ::prost::Message)]
@@ -40,54 +22,12 @@ pub struct QueryAllBalancesRequest {
     pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageRequest>,
 }
 
-/// BaseAccount defines a base account type. It contains all the necessary fields
-/// for basic account functionality. Any custom account type should extend this
-/// type for additional functionality (e.g. vesting).
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct BaseAccount {
-    #[prost(address, tag = "1")]
-    pub address: proto_types::AccAddress,
-    #[prost(message, optional, tag = "2")]
-    pub pub_key: Option<ibc_proto::google::protobuf::Any>,
-    #[prost(uint64, tag = "3")]
-    pub account_number: u64,
-    #[prost(uint64, tag = "4")]
-    pub sequence: u64,
-}
-
-/// ModuleAccount defines an account for modules that holds coins on a pool.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct ModuleAccount {
-    #[prost(message, required, tag = "1")]
-    pub base_account: BaseAccount,
-    #[prost(string, tag = "2")]
-    pub name: ::prost::alloc::string::String,
-    #[prost(string, repeated, tag = "3")]
-    pub permissions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
-}
 /// QueryAccountRequest is the request type for the Query/Account RPC method.
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct QueryAccountRequest {
     /// address defines the address to query for.
     #[prost(address, tag = "1")]
     pub address: proto_types::AccAddress,
-}
-
-/// Tx is the standard type used for broadcasting transactions.
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Tx {
-    /// body is the processable content of the transaction
-    #[prost(message, required, tag = "1")]
-    pub body: TxBody,
-    /// auth_info is the authorization related content of the transaction,
-    /// specifically signers, signer modes and fee
-    #[prost(message, required, tag = "2")]
-    pub auth_info: AuthInfo,
-    /// signatures is a list of signatures that matches the length and order of
-    /// AuthInfo's signer_infos to allow connecting signature meta information like
-    /// public key and signing mode by position.
-    #[prost(bytes = "vec", repeated, tag = "3")]
-    pub signatures: Vec<Vec<u8>>,
 }
 
 /// Coin defines a token with a denomination and an amount.
@@ -144,12 +84,14 @@ pub fn validate_coins(coins: &Vec<Coin>) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
 
+    use cosmwasm_std::Uint256;
     use std::str::FromStr;
 
     use super::*;
 
     #[test]
     fn validate_coins_success() {
+        //TODO: move these tests to the proto_messages crate
         let coins = vec![
             Coin {
                 denom: String::from("atom").try_into().unwrap(),

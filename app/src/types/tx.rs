@@ -10,7 +10,7 @@ use prost::Message;
 use proto_messages::cosmos::{
     bank::v1beta1::MsgSend,
     base::v1beta1::SendCoins,
-    tx::v1beta1::{AuthInfo, Tx},
+    tx::v1beta1::{AuthInfo, PublicKey, Tx},
 };
 use proto_types::AccAddress;
 
@@ -126,6 +126,37 @@ impl DecodedTx {
             return self.get_signers()[0];
         }
     }
+
+    pub fn get_public_keys(&self) -> Vec<&Option<PublicKey>> {
+        self.auth_info
+            .signer_infos
+            .iter()
+            .map(|si| &si.public_key)
+            .collect()
+    }
+
+    // func (w *wrapper) GetPubKeys() ([]cryptotypes.PubKey, error) {
+    //     signerInfos := w.tx.AuthInfo.SignerInfos
+    //     pks := make([]cryptotypes.PubKey, len(signerInfos))
+
+    //     for i, si := range signerInfos {
+    //         // NOTE: it is okay to leave this nil if there is no PubKey in the SignerInfo.
+    //         // PubKey's can be left unset in SignerInfo.
+    //         if si.PublicKey == nil {
+    //             continue
+    //         }
+
+    //         pkAny := si.PublicKey.GetCachedValue()
+    //         pk, ok := pkAny.(cryptotypes.PubKey)
+    //         if ok {
+    //             pks[i] = pk
+    //         } else {
+    //             return nil, sdkerrors.Wrapf(sdkerrors.ErrLogic, "Expecting PubKey, got: %T", pkAny)
+    //         }
+    //     }
+
+    //     return pks, nil
+    // }
 }
 
 #[cfg(test)]
