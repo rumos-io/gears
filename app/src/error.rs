@@ -1,12 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
 use prost::DecodeError;
-use structopt::clap::App;
-
-#[derive(Debug)]
-pub enum IAVLError {
-    RotateError,
-}
 
 #[derive(Debug, PartialEq)]
 pub enum AppError {

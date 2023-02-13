@@ -9,7 +9,7 @@ NOTE: this is a WIP. As it stands not all of the gaia state machine has been imp
 Gaia-rs uses [tendermint-abci](https://crates.io/crates/tendermint-abci) to communicate with a Tendermint instance which runs as a separate process. So to run a node, Tendermint must be installed and run separately (see instructions below).
 ## Requirements
 
-Rust compiler - The minimum supported Rust version is 1.63.0 - [Installation instructions](https://doc.rust-lang.org/book/ch01-01-installation.html).
+Rust compiler - The minimum supported Rust version is 1.67.1 - [Installation instructions](https://doc.rust-lang.org/book/ch01-01-installation.html).
 
 Tendermint - Gaia v0.7.1.0 uses Tendermint version v0.34.21 - Follow the [installation instructions](https://github.com/tendermint/tendermint/blob/main/docs/introduction/install.md) ensuring to checkout v0.34.21.
 

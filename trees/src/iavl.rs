@@ -3,7 +3,7 @@ use std::cmp;
 use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
-use crate::error::IAVLError;
+use crate::error::Error;
 
 #[derive(Debug)]
 pub enum Node<'a> {
@@ -268,12 +268,12 @@ impl<'a> IAVLTree<'a> {
         left_height - right_height
     }
 
-    fn right_rotate(mut z: InnerNode, version: u32) -> Result<InnerNode, IAVLError> {
+    fn right_rotate(mut z: InnerNode, version: u32) -> Result<InnerNode, Error> {
         let y = z.left_node;
 
         let mut y = match *y {
             Node::Inner(y) => y,
-            Node::Leaf(_) => return Err(IAVLError::RotateError),
+            Node::Leaf(_) => return Err(Error::RotateError),
         };
 
         let t3 = y.right_node;
@@ -303,12 +303,12 @@ impl<'a> IAVLTree<'a> {
         return Ok(y);
     }
 
-    fn left_rotate(mut z: InnerNode, version: u32) -> Result<InnerNode, IAVLError> {
+    fn left_rotate(mut z: InnerNode, version: u32) -> Result<InnerNode, Error> {
         let y = z.right_node;
 
         let mut y = match *y {
             Node::Inner(y) => y,
-            Node::Leaf(_) => return Err(IAVLError::RotateError),
+            Node::Leaf(_) => return Err(Error::RotateError),
         };
 
         let t2 = y.left_node;

@@ -9,7 +9,6 @@ mod ante;
 mod baseapp;
 mod crypto;
 mod error;
-mod iavl;
 mod store;
 mod types;
 mod x;

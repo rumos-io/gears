@@ -1444,6 +1444,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "trees"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "integer-encoding",
+ "sha2 0.10.6",
+ "thiserror",
+]
+
+[[package]]
 name = "typenum"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
