@@ -1,9 +1,26 @@
 use std::collections::HashMap;
 
-pub enum StoreKey {
+use crate::x::bank;
+
+use super::hash::{self, StoreInfo};
+
+pub enum Store {
     Bank,
     Auth,
     AuthParams,
+}
+
+//TODO:
+// 1. this overlaps with Auth::Module
+// 2. use strum crate to iterate over stores
+impl Store {
+    pub fn name(&self) -> String {
+        match self {
+            Store::Bank => "bank".to_string(),
+            Store::Auth => "acc".to_string(),
+            Store::AuthParams => "auth_params".to_string(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -22,20 +39,41 @@ impl MultiStore {
         }
     }
 
-    pub fn get_kv_store(&self, store_key: StoreKey) -> &KVStore {
+    pub fn get_kv_store(&self, store_key: Store) -> &KVStore {
         match store_key {
-            StoreKey::Bank => &self.bank_store,
-            StoreKey::Auth => &self.auth_store,
-            StoreKey::AuthParams => &self.auth_params_store,
+            Store::Bank => &self.bank_store,
+            Store::Auth => &self.auth_store,
+            Store::AuthParams => &self.auth_params_store,
         }
     }
 
-    pub fn get_mutable_kv_store(&mut self, store_key: StoreKey) -> &mut KVStore {
+    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore {
         match store_key {
-            StoreKey::Bank => &mut self.bank_store,
-            StoreKey::Auth => &mut self.auth_store,
-            StoreKey::AuthParams => &mut self.auth_params_store,
+            Store::Bank => &mut self.bank_store,
+            Store::Auth => &mut self.auth_store,
+            Store::AuthParams => &mut self.auth_params_store,
         }
+    }
+
+    pub fn commit(&self) -> [u8; 32] {
+        let bank_info = StoreInfo {
+            name: Store::Bank.name(),
+            hash: self.bank_store.commit(),
+        };
+
+        let auth_info = StoreInfo {
+            name: Store::Auth.name(),
+            hash: self.auth_store.commit(),
+        };
+
+        let auth_params_info = StoreInfo {
+            name: Store::AuthParams.name(),
+            hash: self.auth_params_store.commit(),
+        };
+
+        let store_infos = [bank_info, auth_info, auth_params_info].into();
+
+        hash::hash_store_infos(store_infos)
     }
 }
 
@@ -71,6 +109,10 @@ impl KVStore {
             store: self,
             prefix,
         }
+    }
+
+    pub fn commit(&self) -> [u8; 32] {
+        todo!()
     }
 }
 

@@ -10,7 +10,7 @@ use proto_types::AccAddress;
 
 use crate::{
     error::AppError,
-    store::{KVStore, MutablePrefixStore, StoreKey},
+    store::{KVStore, MutablePrefixStore, Store},
     types::{
         proto::{QueryAllBalancesRequest, QueryBalanceRequest},
         Context,
@@ -35,7 +35,7 @@ pub struct Balance {
 
 impl Bank {
     pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
-        let bank_store = ctx.get_mutable_kv_store(StoreKey::Bank);
+        let bank_store = ctx.get_mutable_kv_store(Store::Bank);
 
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
@@ -54,7 +54,7 @@ impl Bank {
         ctx: &Context,
         req: QueryBalanceRequest,
     ) -> Result<QueryBalanceResponse, AppError> {
-        let bank_store = ctx.get_kv_store(StoreKey::Bank);
+        let bank_store = ctx.get_kv_store(Store::Bank);
         let prefix = create_denom_balance_prefix(req.address);
 
         let account_store = bank_store.get_immutable_prefix_store(prefix);
@@ -79,7 +79,7 @@ impl Bank {
         ctx: &Context,
         req: QueryAllBalancesRequest,
     ) -> Result<QueryAllBalancesResponse, AppError> {
-        let bank_store = ctx.get_kv_store(StoreKey::Bank);
+        let bank_store = ctx.get_kv_store(Store::Bank);
         let prefix = create_denom_balance_prefix(req.address);
         let account_store = bank_store.get_immutable_prefix_store(prefix);
 
@@ -136,7 +136,7 @@ impl Bank {
     }
 
     pub fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
-        let bank_store = ctx.get_mutable_kv_store(StoreKey::Bank);
+        let bank_store = ctx.get_mutable_kv_store(Store::Bank);
 
         let from_address = msg.from_address;
         let to_address = msg.to_address;

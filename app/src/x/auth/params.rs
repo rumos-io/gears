@@ -1,5 +1,5 @@
 use crate::{
-    store::{KVStore, StoreKey},
+    store::{KVStore, Store},
     types::Context,
 };
 
@@ -38,7 +38,7 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 impl Params {
     pub fn get(ctx: &Context) -> Params {
-        let store = ctx.get_kv_store(crate::store::StoreKey::AuthParams);
+        let store = ctx.get_kv_store(crate::store::Store::AuthParams);
 
         let max_memo_characters: u64 = String::from_utf8(
             store
@@ -100,7 +100,7 @@ impl Params {
     }
 
     pub fn set(ctx: &mut Context, params: Params) {
-        let store = ctx.get_mutable_kv_store(crate::store::StoreKey::AuthParams);
+        let store = ctx.get_mutable_kv_store(crate::store::Store::AuthParams);
 
         store.set(
             KEY_MAX_MEMO_CHARACTERS.into(),

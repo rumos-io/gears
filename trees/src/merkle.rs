@@ -7,7 +7,7 @@ const EMPTY_HASH: [u8; 32] = [
     100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
 ]; // = Sha256::digest([]).into()
 
-pub fn root_hash(items: &[&[u8]]) -> [u8; 32] {
+pub fn root_hash(items: &[Vec<u8>]) -> [u8; 32] {
     match items.len() {
         0 => EMPTY_HASH,
         1 => leaf_hash(&items[0]),
@@ -52,31 +52,31 @@ mod tests {
 
     #[test]
     fn root_hash_works() {
-        let items: [&[u8]; 0] = [];
+        let items = [];
         assert_eq!(
             hex::encode(root_hash(&items)),
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         );
 
-        let items: [&[u8]; 1] = [&[1, 2, 3]];
+        let items = [vec![1, 2, 3]];
         assert_eq!(
             hex::encode(root_hash(&items)),
             "054edec1d0211f624fed0cbca9d4f9400b0e491c43742af2c5b0abebf0c990d8"
         );
 
-        let items: [&[u8]; 1] = [&[]];
+        let items = [vec![]];
         assert_eq!(
             hex::encode(root_hash(&items)),
             "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
         );
 
-        let items: [&[u8]; 2] = [&[1, 2, 3], &[4, 5, 6]];
+        let items = [vec![1, 2, 3], vec![4, 5, 6]];
         assert_eq!(
             hex::encode(root_hash(&items)),
             "82e6cfce00453804379b53962939eaa7906b39904be0813fcadd31b100773c4b"
         );
 
-        let items: [&[u8]; 5] = [&[1, 2], &[3, 4], &[5, 6], &[7, 8], &[9, 10]];
+        let items = [vec![1, 2], vec![3, 4], vec![5, 6], vec![7, 8], vec![9, 10]];
         assert_eq!(
             hex::encode(root_hash(&items)),
             "f326493eceab4f2d9ffbc78c59432a0a005d6ea98392045c74df5d14a113be18"

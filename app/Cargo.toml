@@ -23,6 +23,7 @@ sha2 = "0.10.6"
 integer-encoding = "3.0.4"
 bech32 = "0.9.1"
 serde = { version = "1.0", default-features = false }
+trees = { path = "../trees" }
 
 [dev-dependencies]
 hex = "0.4.3"

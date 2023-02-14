@@ -12,7 +12,7 @@ use proto_types::AccAddress;
 
 use crate::{
     error::AppError,
-    store::StoreKey,
+    store::Store,
     types::{proto::QueryAccountRequest, Context},
 };
 
@@ -37,6 +37,7 @@ impl Module {
         match self {
             Module::FeeCollector => {
                 //TODO: construct address from Vec<u8> + make address constant
+                //TODO: where do these addresses come from?
                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
                     .expect("hard coded address is valid")
             }
@@ -103,7 +104,7 @@ impl Auth {
         ctx: &Context,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
-        let auth_store = ctx.get_kv_store(StoreKey::Auth);
+        let auth_store = ctx.get_kv_store(Store::Auth);
         let key = create_auth_store_key(req.address);
         let account = auth_store.get(&key);
 
@@ -132,7 +133,7 @@ impl Auth {
     }
 
     fn get_next_account_number(ctx: &mut Context) -> u64 {
-        let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
+        let auth_store = ctx.get_mutable_kv_store(Store::Auth);
 
         // NOTE: The next available account number is what's stored in the KV store
         let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
@@ -153,13 +154,13 @@ impl Auth {
     }
 
     pub fn has_account(ctx: &Context, addr: &AccAddress) -> bool {
-        let auth_store = ctx.get_kv_store(StoreKey::Auth);
+        let auth_store = ctx.get_kv_store(Store::Auth);
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
     }
 
     pub fn set_account(ctx: &mut Context, acct: Account) {
-        let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
+        let auth_store = ctx.get_mutable_kv_store(Store::Auth);
 
         match acct {
             Account::Base(acct) => {
@@ -184,7 +185,7 @@ impl Auth {
     }
 
     pub fn get_account(ctx: &Context, addr: &AccAddress) -> Option<Account> {
-        let auth_store = ctx.get_kv_store(StoreKey::Auth);
+        let auth_store = ctx.get_kv_store(Store::Auth);
         let key = create_auth_store_key(addr.to_owned());
         let account = auth_store.get(&key);
 
@@ -231,7 +232,7 @@ impl Auth {
                 permissions: module.get_permissions(),
             };
 
-            let auth_store = ctx.get_mutable_kv_store(StoreKey::Auth);
+            let auth_store = ctx.get_mutable_kv_store(Store::Auth);
             let key = create_auth_store_key(account.base_account.address.to_owned());
             auth_store.set(
                 key,
@@ -301,7 +302,7 @@ mod tests {
     fn get_next_account_number_works() {
         let expected = 5038438478387;
         let mut store = MultiStore::new();
-        let auth_store = store.get_mutable_kv_store(StoreKey::Auth);
+        let auth_store = store.get_mutable_kv_store(Store::Auth);
 
         auth_store.set(
             GLOBAL_ACCOUNT_NUMBER_KEY.clone().into(),

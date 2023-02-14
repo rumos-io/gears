@@ -489,6 +489,7 @@ dependencies = [
  "tendermint-proto 0.28.0",
  "tracing",
  "tracing-subscriber",
+ "trees",
 ]
 
 [[package]]

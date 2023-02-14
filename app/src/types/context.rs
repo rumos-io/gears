@@ -1,4 +1,4 @@
-use crate::store::{KVStore, MultiStore, StoreKey};
+use crate::store::{KVStore, MultiStore, Store};
 
 pub struct Context {
     pub multi_store: MultiStore,
@@ -14,12 +14,12 @@ impl Context {
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: StoreKey) -> &KVStore {
+    pub fn get_kv_store(&self, store_key: Store) -> &KVStore {
         return self.multi_store.get_kv_store(store_key);
     }
 
     /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: StoreKey) -> &mut KVStore {
+    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore {
         return self.multi_store.get_mutable_kv_store(store_key);
     }
 
