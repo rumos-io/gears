@@ -28,6 +28,8 @@ const KEY_SIG_VERIFY_COST_SECP256K1: [u8; 22] = [
     054, 107, 049,
 ]; // "SigVerifyCostSecp256k1"
 
+const SUBSPACE_NAME: &str = "auth/";
+
 pub const DEFAULT_PARAMS: Params = Params {
     max_memo_characters: 256,
     tx_sig_limit: 7,
@@ -38,7 +40,8 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 impl Params {
     pub fn get(ctx: &Context) -> Params {
-        let store = ctx.get_kv_store(crate::store::Store::AuthParams);
+        let store = ctx.get_kv_store(crate::store::Store::Params);
+        let store = store.get_immutable_prefix_store(SUBSPACE_NAME.into());
 
         let max_memo_characters: u64 = String::from_utf8(
             store
@@ -100,7 +103,8 @@ impl Params {
     }
 
     pub fn set(ctx: &mut Context, params: Params) {
-        let store = ctx.get_mutable_kv_store(crate::store::Store::AuthParams);
+        let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
+        let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
         store.set(
             KEY_MAX_MEMO_CHARACTERS.into(),

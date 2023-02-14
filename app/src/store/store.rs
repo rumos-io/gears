@@ -7,7 +7,7 @@ use super::hash::{self, StoreInfo};
 pub enum Store {
     Bank,
     Auth,
-    AuthParams,
+    Params,
 }
 
 //TODO:
@@ -18,7 +18,7 @@ impl Store {
         match self {
             Store::Bank => "bank".to_string(),
             Store::Auth => "acc".to_string(),
-            Store::AuthParams => "auth_params".to_string(),
+            Store::Params => "params".to_string(),
         }
     }
 }
@@ -27,7 +27,7 @@ impl Store {
 pub struct MultiStore {
     bank_store: KVStore,
     auth_store: KVStore,
-    auth_params_store: KVStore,
+    params_store: KVStore,
 }
 
 impl MultiStore {
@@ -35,7 +35,7 @@ impl MultiStore {
         MultiStore {
             bank_store: KVStore::new(),
             auth_store: KVStore::new(),
-            auth_params_store: KVStore::new(),
+            params_store: KVStore::new(),
         }
     }
 
@@ -43,7 +43,7 @@ impl MultiStore {
         match store_key {
             Store::Bank => &self.bank_store,
             Store::Auth => &self.auth_store,
-            Store::AuthParams => &self.auth_params_store,
+            Store::Params => &self.params_store,
         }
     }
 
@@ -51,7 +51,7 @@ impl MultiStore {
         match store_key {
             Store::Bank => &mut self.bank_store,
             Store::Auth => &mut self.auth_store,
-            Store::AuthParams => &mut self.auth_params_store,
+            Store::Params => &mut self.params_store,
         }
     }
 
@@ -66,12 +66,12 @@ impl MultiStore {
             hash: self.auth_store.commit(),
         };
 
-        let auth_params_info = StoreInfo {
-            name: Store::AuthParams.name(),
-            hash: self.auth_params_store.commit(),
+        let params_info = StoreInfo {
+            name: Store::Params.name(),
+            hash: self.params_store.commit(),
         };
 
-        let store_infos = [bank_info, auth_info, auth_params_info].into();
+        let store_infos = [bank_info, auth_info, params_info].into();
 
         hash::hash_store_infos(store_infos)
     }
