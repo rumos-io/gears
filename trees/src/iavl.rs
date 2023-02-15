@@ -95,6 +95,30 @@ impl<'a> IAVLTree<'a> {
         }
     }
 
+    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        IAVLTree::recursive_get(&self.root, key)
+    }
+
+    pub fn recursive_get(node: &Node<'a>, key: &[u8]) -> Option<Vec<u8>> {
+        match node {
+            Node::Leaf(leaf) => {
+                println!("leaf key ############ : {:?}", leaf.key);
+                if leaf.key == key {
+                    return Some(leaf.value.into());
+                } else {
+                    return None;
+                }
+            }
+            Node::Inner(node) => {
+                if key < &node.key {
+                    return IAVLTree::recursive_get(&node.left_node, key);
+                } else {
+                    return IAVLTree::recursive_get(&node.right_node, key);
+                }
+            }
+        }
+    }
+
     pub fn set(tree: IAVLTree<'a>, key: &'a [u8], value: &'a [u8]) -> IAVLTree<'a> {
         IAVLTree {
             root: Self::recursive_set(tree.root, key, value, tree.version),
@@ -145,7 +169,7 @@ impl<'a> IAVLTree<'a> {
 
                         let right_hash = right_node.hash();
 
-                        let key = node.key;
+                        //let key = node.key;
                         let left_node = Node::Leaf(node);
                         let left_hash = left_node.hash();
 
@@ -366,5 +390,22 @@ mod tests {
         ];
 
         assert_eq!(expected, tree.root.hash());
+    }
+
+    #[test]
+    fn get_works() {
+        let tree = IAVLTree::new(b"alice", b"abc");
+
+        let tree = IAVLTree::set(tree, b"bob", b"123");
+
+        println!("root: {:?}", tree.root);
+        let tree = IAVLTree::set(tree, b"c", b"1");
+        let tree = IAVLTree::set(tree, b"q", b"1");
+
+        assert_eq!(tree.get(b"alice"), Some(String::from("abc").into()));
+        assert_eq!(tree.get(b"bob"), Some(String::from("123").into()));
+        assert_eq!(tree.get(b"c"), Some(String::from("1").into()));
+        assert_eq!(tree.get(b"q"), Some(String::from("1").into()));
+        assert_eq!(tree.get(b"house"), None);
     }
 }
