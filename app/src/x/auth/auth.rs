@@ -97,6 +97,8 @@ impl Auth {
             Auth::set_account(ctx, Account::Base(acct));
         }
 
+        // Create the fee collector account
+        Auth::check_create_new_module_account(ctx, &Module::FeeCollector);
         Ok(())
     }
 

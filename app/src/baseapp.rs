@@ -7,7 +7,10 @@ use ibc_proto::cosmos::{
 use prost::Message;
 
 use bytes::Bytes;
-use proto_messages::cosmos::auth::v1beta1::BaseAccount;
+use proto_messages::cosmos::{
+    auth::v1beta1::BaseAccount,
+    base::v1beta1::{Coin as ProtoCoin, SendCoins},
+};
 use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
@@ -151,6 +154,11 @@ impl Application for BaseApp {
                     amount: cosmwasm_std::Uint256::from(34_u32),
                 }],
             }],
+            total_supply: SendCoins::new(vec![ProtoCoin {
+                denom: "uatom".to_string().try_into().unwrap(),
+                amount: cosmwasm_std::Uint256::from(34_u32),
+            }])
+            .unwrap(),
         };
         Bank::init_genesis(&mut ctx, genesis);
 

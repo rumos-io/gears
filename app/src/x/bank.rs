@@ -5,7 +5,10 @@ use ibc_proto::cosmos::{
     bank::v1beta1::{QueryAllBalancesResponse, QueryBalanceResponse},
     base::v1beta1::Coin,
 };
-use proto_messages::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::SendCoins};
+use proto_messages::cosmos::{
+    bank::v1beta1::MsgSend,
+    base::v1beta1::{Coin as ProtoCoin, SendCoins},
+};
 use proto_types::AccAddress;
 
 use crate::{
@@ -19,13 +22,16 @@ use crate::{
 
 use super::auth::{Auth, Module};
 
+const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 
 #[derive(Debug, Clone)]
 pub struct Bank {}
 
+// TODO: should remove total supply since it can be derived from the balances
 pub struct GenesisState {
     pub balances: Vec<Balance>,
+    pub total_supply: SendCoins,
 }
 
 pub struct Balance {
@@ -35,6 +41,10 @@ pub struct Balance {
 
 impl Bank {
     pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
+        // TODO:
+        // 1. cosmos SDK orders the balances first
+        // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
+        // 3. Need to set denom metadata
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
 
         for balance in genesis.balances {
@@ -47,6 +57,10 @@ impl Bank {
                     coin.amount.to_string().into(),
                 );
             }
+        }
+
+        for coin in genesis.total_supply {
+            Bank::set_supply(ctx, coin);
         }
     }
 
@@ -135,7 +149,9 @@ impl Bank {
         Ok(())
     }
 
-    pub fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
+    fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
+        // TODO: refactor this to subtract all amounts before adding all amounts
+
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
 
         let from_address = msg.from_address;
@@ -182,12 +198,19 @@ impl Bank {
             );
         }
 
-        // Create account if recipient does not exist
-        if !Auth::has_account(ctx, &to_address) {
-            Auth::create_new_base_account(ctx, &to_address);
-        };
-
         return Ok(());
+    }
+
+    pub fn set_supply(ctx: &mut Context, coin: ProtoCoin) {
+        // TODO: need to delete coins with zero balance
+
+        let bank_store = ctx.get_mutable_kv_store(Store::Bank);
+        let mut supplyStore = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
+
+        supplyStore.set(
+            coin.denom.to_string().into(),
+            coin.amount.to_string().into(),
+        );
     }
 
     fn get_address_balances_store<'a>(
@@ -214,9 +237,11 @@ fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use proto_types::Denom;
+    use std::vec;
 
     use crate::store::MultiStore;
+    use proto_messages::cosmos::base::v1beta1::Coin as ProtoCoin;
+    use proto_types::Denom;
 
     use super::*;
 
@@ -241,6 +266,11 @@ mod tests {
                     amount: Uint256::from_str("123").unwrap(),
                 }],
             }],
+            total_supply: SendCoins::new(vec![ProtoCoin {
+                denom: "coinA".to_string().try_into().unwrap(),
+                amount: Uint256::from_str("123").unwrap(),
+            }])
+            .unwrap(),
         };
 
         let mut ctx = Context::new(store, 0);
@@ -276,6 +306,11 @@ mod tests {
                     amount: Uint256::from_str("123").unwrap(),
                 }],
             }],
+            total_supply: SendCoins::new(vec![ProtoCoin {
+                denom: "coinA".to_string().try_into().unwrap(),
+                amount: Uint256::from_str("123").unwrap(),
+            }])
+            .unwrap(),
         };
 
         let req = QueryAllBalancesRequest {
