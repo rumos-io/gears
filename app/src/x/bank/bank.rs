@@ -18,9 +18,10 @@ use crate::{
         proto::{QueryAllBalancesRequest, QueryBalanceRequest},
         Context,
     },
+    x::auth::{Auth, Module},
 };
 
-use super::auth::{Auth, Module};
+use super::Params;
 
 const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
@@ -32,6 +33,7 @@ pub struct Bank {}
 pub struct GenesisState {
     pub balances: Vec<Balance>,
     pub total_supply: SendCoins,
+    pub params: Params,
 }
 
 pub struct Balance {
@@ -45,6 +47,8 @@ impl Bank {
         // 1. cosmos SDK orders the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
+        Params::set(ctx, genesis.params);
+
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
 
         for balance in genesis.balances {
@@ -239,7 +243,7 @@ mod tests {
 
     use std::vec;
 
-    use crate::store::MultiStore;
+    use crate::{store::MultiStore, x::bank::DEFAULT_PARAMS};
     use proto_messages::cosmos::base::v1beta1::Coin as ProtoCoin;
     use proto_types::Denom;
 
@@ -271,6 +275,7 @@ mod tests {
                 amount: Uint256::from_str("123").unwrap(),
             }])
             .unwrap(),
+            params: DEFAULT_PARAMS,
         };
 
         let mut ctx = Context::new(store, 0);
@@ -311,6 +316,7 @@ mod tests {
                 amount: Uint256::from_str("123").unwrap(),
             }])
             .unwrap(),
+            params: DEFAULT_PARAMS,
         };
 
         let req = QueryAllBalancesRequest {

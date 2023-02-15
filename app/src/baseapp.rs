@@ -31,7 +31,7 @@ use crate::{
     },
     x::{
         auth::{Auth, DEFAULT_PARAMS},
-        bank::{Balance, Bank, GenesisState},
+        bank::{Balance, Bank, GenesisState, DEFAULT_PARAMS as BANK_DEFAULT_PARAMS},
     },
 };
 
@@ -159,6 +159,7 @@ impl Application for BaseApp {
                 amount: cosmwasm_std::Uint256::from(34_u32),
             }])
             .unwrap(),
+            params: BANK_DEFAULT_PARAMS,
         };
         Bank::init_genesis(&mut ctx, genesis);
 
