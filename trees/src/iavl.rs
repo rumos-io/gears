@@ -34,6 +34,7 @@ pub struct LeafNode<'a> {
 pub struct IAVLTree<'a> {
     root: Node<'a>,
     version: u32,
+    pairs: Vec<(Vec<u8>, Vec<u8>)>, // also store all KV pairs in a vec as a temporary hack to make converting the tree to an iterator easier
 }
 
 impl<'a> Node<'a> {
@@ -92,6 +93,7 @@ impl<'a> IAVLTree<'a> {
                 version: 1,
             }),
             version: 1,
+            pairs: vec![(key.to_vec(), value.to_vec())],
         }
     }
 
@@ -102,7 +104,6 @@ impl<'a> IAVLTree<'a> {
     pub fn recursive_get(node: &Node<'a>, key: &[u8]) -> Option<Vec<u8>> {
         match node {
             Node::Leaf(leaf) => {
-                println!("leaf key ############ : {:?}", leaf.key);
                 if leaf.key == key {
                     return Some(leaf.value.into());
                 } else {
@@ -120,9 +121,12 @@ impl<'a> IAVLTree<'a> {
     }
 
     pub fn set(tree: IAVLTree<'a>, key: &'a [u8], value: &'a [u8]) -> IAVLTree<'a> {
+        let mut pairs = tree.pairs.clone();
+        pairs.push((key.to_owned(), value.to_owned()));
         IAVLTree {
             root: Self::recursive_set(tree.root, key, value, tree.version),
             version: tree.version, // + 1,
+            pairs,
         }
     }
 
@@ -371,8 +375,19 @@ fn encode_bytes(mut bz: Vec<u8>) -> Vec<u8> {
     return enc_bytes;
 }
 
+impl<'a> IntoIterator for IAVLTree<'a> {
+    type Item = (Vec<u8>, Vec<u8>);
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.pairs.into_iter()
+    }
+}
+
 #[cfg(test)]
 mod tests {
+
+    use std::collections::HashSet;
 
     use super::*;
 
@@ -395,10 +410,7 @@ mod tests {
     #[test]
     fn get_works() {
         let tree = IAVLTree::new(b"alice", b"abc");
-
         let tree = IAVLTree::set(tree, b"bob", b"123");
-
-        println!("root: {:?}", tree.root);
         let tree = IAVLTree::set(tree, b"c", b"1");
         let tree = IAVLTree::set(tree, b"q", b"1");
 
@@ -407,5 +419,22 @@ mod tests {
         assert_eq!(tree.get(b"c"), Some(String::from("1").into()));
         assert_eq!(tree.get(b"q"), Some(String::from("1").into()));
         assert_eq!(tree.get(b"house"), None);
+    }
+
+    #[test]
+    fn into_iter_works() {
+        let tree = IAVLTree::new(b"alice", b"abc");
+        let tree = IAVLTree::set(tree, b"bob", b"123");
+        let tree = IAVLTree::set(tree, b"c", b"1");
+        let tree = IAVLTree::set(tree, b"q", b"1");
+
+        let pairs: HashSet<(Vec<u8>, Vec<u8>)> = tree.into_iter().collect();
+        let mut expected: HashSet<(Vec<u8>, Vec<u8>)> = HashSet::new();
+        expected.insert((b"alice".to_vec(), b"abc".to_vec()));
+        expected.insert((b"c".to_vec(), b"1".to_vec()));
+        expected.insert((b"q".to_vec(), b"1".to_vec()));
+        expected.insert((b"bob".to_vec(), b"123".to_vec()));
+
+        assert_eq!(expected, pairs)
     }
 }
