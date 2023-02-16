@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use trees::iavl::IAVLTree;
+
 use crate::x::bank;
 
 use super::hash::{self, StoreInfo};
@@ -79,13 +81,13 @@ impl MultiStore {
 
 #[derive(Debug, Clone)]
 pub struct KVStore {
-    core: HashMap<Vec<u8>, Vec<u8>>,
+    core: IAVLTree,
 }
 
 impl KVStore {
     pub fn new() -> Self {
         KVStore {
-            core: HashMap::new(),
+            core: IAVLTree::new(),
         }
     }
 
@@ -93,8 +95,8 @@ impl KVStore {
         self.core.get(k)
     }
 
-    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
-        self.core.insert(k, v)
+    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
+        self.core.set(k, v)
     }
 
     pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore {
@@ -153,7 +155,7 @@ impl<'a> MutablePrefixStore<'a> {
         self.store.get(&full_key)
     }
 
-    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) -> Option<Vec<u8>> {
+    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
         let full_key = self.get_full_key(&k);
         self.store.set(full_key, v)
     }

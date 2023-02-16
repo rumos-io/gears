@@ -1,9 +1,9 @@
-use std::cmp;
+use std::{cmp, collections::HashMap};
 
 use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
-use crate::error::Error;
+use crate::{error::Error, merkle::EMPTY_HASH};
 
 #[derive(Debug, Clone)]
 pub enum Node {
@@ -30,11 +30,11 @@ pub struct LeafNode {
     version: u32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IAVLTree {
-    root: Node,
+    root: Option<Node>,
     version: u32,
-    pairs: Vec<(Vec<u8>, Vec<u8>)>, // also store all KV pairs in a vec as a temporary hack to make converting the tree to an iterator easier
+    pairs: HashMap<Vec<u8>, Vec<u8>>, // also store all KV pairs in a HashMap as a temporary hack to make converting the tree to an iterator easier
 }
 
 impl Node {
@@ -85,20 +85,26 @@ impl Node {
 }
 
 impl IAVLTree {
-    pub fn new(key: Vec<u8>, value: Vec<u8>) -> IAVLTree {
+    pub fn new() -> IAVLTree {
         IAVLTree {
-            root: Node::Leaf(LeafNode {
-                key: key.clone(),
-                value: value.clone(),
-                version: 1,
-            }),
+            root: None,
             version: 1,
-            pairs: vec![(key, value)],
+            pairs: HashMap::new(),
+        }
+    }
+
+    pub fn root_hash(&self) -> [u8; 32] {
+        match &self.root {
+            Some(root) => root.hash(),
+            None => EMPTY_HASH,
         }
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
-        IAVLTree::recursive_get(&self.root, key)
+        match &self.root {
+            Some(root) => IAVLTree::recursive_get(root, key),
+            None => None,
+        }
     }
 
     pub fn recursive_get<'a>(node: &'a Node, key: &[u8]) -> Option<&'a Vec<u8>> {
@@ -121,9 +127,19 @@ impl IAVLTree {
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
-        self.pairs.push((key.clone(), value.clone()));
-        // TODO: recursive_set should take a mutable reference to avoid cloning the node here
-        self.root = Self::recursive_set(self.root.clone(), key, value, self.version);
+        self.pairs.insert(key.clone(), value.clone());
+
+        self.root = match &self.root {
+            Some(root) => {
+                // TODO: recursive_set should take a mutable reference to avoid cloning the node here
+                Some(Self::recursive_set(root.clone(), key, value, self.version))
+            }
+            None => Some(Node::Leaf(LeafNode {
+                key: key,
+                value: value,
+                version: 1,
+            })),
+        };
     }
 
     fn recursive_set(node: Node, key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
@@ -381,7 +397,7 @@ fn encode_bytes(mut bz: Vec<u8>) -> Vec<u8> {
 
 impl<'a> IntoIterator for IAVLTree {
     type Item = (Vec<u8>, Vec<u8>);
-    type IntoIter = std::vec::IntoIter<Self::Item>;
+    type IntoIter = std::collections::hash_map::IntoIter<Vec<u8>, Vec<u8>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.pairs.into_iter()
@@ -391,13 +407,12 @@ impl<'a> IntoIterator for IAVLTree {
 #[cfg(test)]
 mod tests {
 
-    use std::collections::HashSet;
-
     use super::*;
 
     #[test]
     fn repeated_set_works() {
-        let mut tree = IAVLTree::new(b"alice".to_vec(), b"abc".to_vec());
+        let mut tree = IAVLTree::new();
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
@@ -407,12 +422,13 @@ mod tests {
             189, 127, 230, 108, 58, 127, 251, 149, 9, 33, 87, 249, 158, 138,
         ];
 
-        assert_eq!(expected, tree.root.hash());
+        assert_eq!(expected, tree.root_hash());
     }
 
     #[test]
     fn get_works() {
-        let mut tree = IAVLTree::new(b"alice".to_vec(), b"abc".to_vec());
+        let mut tree = IAVLTree::new();
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
@@ -425,19 +441,35 @@ mod tests {
     }
 
     #[test]
-    fn into_iter_works() {
-        let mut tree = IAVLTree::new(b"alice".to_vec(), b"abc".to_vec());
+    fn into_iter_unique_keys_works() {
+        let mut tree = IAVLTree::new();
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.into_iter().collect();
 
-        let pairs: HashSet<(Vec<u8>, Vec<u8>)> = tree.into_iter().collect();
-        let mut expected: HashSet<(Vec<u8>, Vec<u8>)> = HashSet::new();
-        expected.insert((b"alice".to_vec(), b"abc".to_vec()));
-        expected.insert((b"c".to_vec(), b"1".to_vec()));
-        expected.insert((b"q".to_vec(), b"1".to_vec()));
-        expected.insert((b"bob".to_vec(), b"123".to_vec()));
+        let expected_pairs = vec![
+            (b"alice".to_vec(), b"abc".to_vec()),
+            (b"c".to_vec(), b"1".to_vec()),
+            (b"q".to_vec(), b"1".to_vec()),
+            (b"bob".to_vec(), b"123".to_vec()),
+        ];
 
-        assert_eq!(expected, pairs)
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| got_pairs.contains(e)))
+    }
+
+    #[test]
+    fn into_iter_duplicate_keys_works() {
+        let mut tree = IAVLTree::new();
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.into_iter().collect();
+
+        let expected_pairs = vec![(b"alice".to_vec(), b"abc".to_vec())];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| got_pairs.contains(e)))
     }
 }
