@@ -5,17 +5,17 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
-#[derive(Debug)]
-pub enum Node<'a> {
-    Leaf(LeafNode<'a>),
-    Inner(InnerNode<'a>),
+#[derive(Debug, Clone)]
+pub enum Node {
+    Leaf(LeafNode),
+    Inner(InnerNode),
 }
 
-#[derive(Debug)]
-pub struct InnerNode<'a> {
-    left_node: Box<Node<'a>>,
-    right_node: Box<Node<'a>>,
-    key: &'a [u8],
+#[derive(Debug, Clone)]
+pub struct InnerNode {
+    left_node: Box<Node>,
+    right_node: Box<Node>,
+    key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtree
     left_hash: [u8; 32],
@@ -23,21 +23,21 @@ pub struct InnerNode<'a> {
     version: u32,
 }
 
-#[derive(Debug)]
-pub struct LeafNode<'a> {
-    key: &'a [u8],
-    value: &'a [u8],
+#[derive(Debug, Clone)]
+pub struct LeafNode {
+    key: Vec<u8>,
+    value: Vec<u8>,
     version: u32,
 }
 
 #[derive(Debug)]
-pub struct IAVLTree<'a> {
-    root: Node<'a>,
+pub struct IAVLTree {
+    root: Node,
     version: u32,
     pairs: Vec<(Vec<u8>, Vec<u8>)>, // also store all KV pairs in a vec as a temporary hack to make converting the tree to an iterator easier
 }
 
-impl<'a> Node<'a> {
+impl Node {
     pub fn hash(&self) -> [u8; 32] {
         let serialized = self.serialize();
         Sha256::digest(serialized).into()
@@ -57,7 +57,7 @@ impl<'a> Node<'a> {
 
                 // Indirection is needed to provide proofs without values.
                 let mut hasher = Sha256::new();
-                hasher.update(node.value);
+                hasher.update(node.value.clone());
                 let hashed_value = hasher.finalize();
 
                 node_bytes.append(&mut encode_bytes(hashed_value.to_vec()));
@@ -84,28 +84,28 @@ impl<'a> Node<'a> {
     }
 }
 
-impl<'a> IAVLTree<'a> {
-    pub fn new(key: &'a [u8], value: &'a [u8]) -> IAVLTree<'a> {
+impl IAVLTree {
+    pub fn new(key: Vec<u8>, value: Vec<u8>) -> IAVLTree {
         IAVLTree {
             root: Node::Leaf(LeafNode {
-                key,
-                value,
+                key: key.clone(),
+                value: value.clone(),
                 version: 1,
             }),
             version: 1,
-            pairs: vec![(key.to_vec(), value.to_vec())],
+            pairs: vec![(key, value)],
         }
     }
 
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+    pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
         IAVLTree::recursive_get(&self.root, key)
     }
 
-    pub fn recursive_get(node: &Node<'a>, key: &[u8]) -> Option<Vec<u8>> {
+    pub fn recursive_get<'a>(node: &'a Node, key: &[u8]) -> Option<&'a Vec<u8>> {
         match node {
             Node::Leaf(leaf) => {
                 if leaf.key == key {
-                    return Some(leaf.value.into());
+                    return Some(&leaf.value);
                 } else {
                     return None;
                 }
@@ -120,17 +120,13 @@ impl<'a> IAVLTree<'a> {
         }
     }
 
-    pub fn set(tree: IAVLTree<'a>, key: &'a [u8], value: &'a [u8]) -> IAVLTree<'a> {
-        let mut pairs = tree.pairs.clone();
-        pairs.push((key.to_owned(), value.to_owned()));
-        IAVLTree {
-            root: Self::recursive_set(tree.root, key, value, tree.version),
-            version: tree.version, // + 1,
-            pairs,
-        }
+    pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        self.pairs.push((key.clone(), value.clone()));
+        // TODO: recursive_set should take a mutable reference to avoid cloning the node here
+        self.root = Self::recursive_set(self.root.clone(), key, value, self.version);
     }
 
-    fn recursive_set(node: Node<'a>, key: &'a [u8], value: &'a [u8], version: u32) -> Node<'a> {
+    fn recursive_set(node: Node, key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
         match node {
             Node::Leaf(mut node) => {
                 match key.cmp(&node.key) {
@@ -143,12 +139,12 @@ impl<'a> IAVLTree<'a> {
 
                         let left_hash = left_node.hash();
 
-                        let key = node.key;
+                        let key = node.key.clone();
                         let right_node = Node::Leaf(node);
                         let right_hash = right_node.hash();
 
                         let root = InnerNode {
-                            key,
+                            key: key.clone(),
                             left_node: Box::new(left_node),
                             right_node: Box::new(right_node),
                             height: 1,
@@ -166,7 +162,7 @@ impl<'a> IAVLTree<'a> {
                     }
                     cmp::Ordering::Greater => {
                         let right_node = Node::Leaf(LeafNode {
-                            key,
+                            key: key.clone(),
                             value,
                             version,
                         });
@@ -194,12 +190,20 @@ impl<'a> IAVLTree<'a> {
             Node::Inner(mut node) => {
                 // Perform normal BST
                 if key < node.key {
-                    node.left_node =
-                        Box::new(Self::recursive_set(*node.left_node, key, value, version));
+                    node.left_node = Box::new(Self::recursive_set(
+                        *node.left_node,
+                        key.clone(),
+                        value,
+                        version,
+                    ));
                     node.left_hash = node.left_node.hash();
                 } else {
-                    node.right_node =
-                        Box::new(Self::recursive_set(*node.right_node, key, value, version));
+                    node.right_node = Box::new(Self::recursive_set(
+                        *node.right_node,
+                        key.clone(),
+                        value,
+                        version,
+                    ));
                     node.right_hash = node.right_node.hash();
                 }
 
@@ -375,7 +379,7 @@ fn encode_bytes(mut bz: Vec<u8>) -> Vec<u8> {
     return enc_bytes;
 }
 
-impl<'a> IntoIterator for IAVLTree<'a> {
+impl<'a> IntoIterator for IAVLTree {
     type Item = (Vec<u8>, Vec<u8>);
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -393,11 +397,10 @@ mod tests {
 
     #[test]
     fn repeated_set_works() {
-        let tree = IAVLTree::new(b"alice", b"abc");
-
-        let tree = IAVLTree::set(tree, b"bob", b"123");
-        let tree = IAVLTree::set(tree, b"c", b"1");
-        let tree = IAVLTree::set(tree, b"q", b"1");
+        let mut tree = IAVLTree::new(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
 
         let expected = [
             202, 52, 159, 10, 210, 166, 72, 207, 248, 190, 60, 114, 172, 147, 84, 27, 120, 202,
@@ -409,24 +412,24 @@ mod tests {
 
     #[test]
     fn get_works() {
-        let tree = IAVLTree::new(b"alice", b"abc");
-        let tree = IAVLTree::set(tree, b"bob", b"123");
-        let tree = IAVLTree::set(tree, b"c", b"1");
-        let tree = IAVLTree::set(tree, b"q", b"1");
+        let mut tree = IAVLTree::new(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
 
-        assert_eq!(tree.get(b"alice"), Some(String::from("abc").into()));
-        assert_eq!(tree.get(b"bob"), Some(String::from("123").into()));
-        assert_eq!(tree.get(b"c"), Some(String::from("1").into()));
-        assert_eq!(tree.get(b"q"), Some(String::from("1").into()));
+        assert_eq!(tree.get(b"alice"), Some(&String::from("abc").into()));
+        assert_eq!(tree.get(b"bob"), Some(&String::from("123").into()));
+        assert_eq!(tree.get(b"c"), Some(&String::from("1").into()));
+        assert_eq!(tree.get(b"q"), Some(&String::from("1").into()));
         assert_eq!(tree.get(b"house"), None);
     }
 
     #[test]
     fn into_iter_works() {
-        let tree = IAVLTree::new(b"alice", b"abc");
-        let tree = IAVLTree::set(tree, b"bob", b"123");
-        let tree = IAVLTree::set(tree, b"c", b"1");
-        let tree = IAVLTree::set(tree, b"q", b"1");
+        let mut tree = IAVLTree::new(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
 
         let pairs: HashSet<(Vec<u8>, Vec<u8>)> = tree.into_iter().collect();
         let mut expected: HashSet<(Vec<u8>, Vec<u8>)> = HashSet::new();
