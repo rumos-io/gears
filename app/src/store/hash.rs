@@ -1,6 +1,7 @@
 use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
+#[derive(Debug)]
 pub struct StoreInfo {
     pub name: String,
     pub hash: [u8; 32],

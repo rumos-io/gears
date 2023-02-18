@@ -114,7 +114,7 @@ impl KVStore {
     }
 
     pub fn commit(&self) -> [u8; 32] {
-        todo!()
+        self.core.root_hash()
     }
 }
 
