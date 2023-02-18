@@ -353,6 +353,12 @@ impl Application for BaseApp {
 
     fn commit(&self) -> ResponseCommit {
         let new_height = self.increment_block_height();
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        multi_store.commit();
 
         ResponseCommit {
             data: "hash_goes_here".into(),

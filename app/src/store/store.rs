@@ -57,7 +57,7 @@ impl MultiStore {
         }
     }
 
-    pub fn commit(&self) -> [u8; 32] {
+    pub fn commit(&mut self) -> [u8; 32] {
         let bank_info = StoreInfo {
             name: Store::Bank.name(),
             hash: self.bank_store.commit(),
@@ -82,21 +82,38 @@ impl MultiStore {
 #[derive(Debug, Clone)]
 pub struct KVStore {
     core: IAVLTree,
+    cache: HashMap<Vec<u8>, Vec<u8>>,
 }
 
 impl KVStore {
     pub fn new() -> Self {
         KVStore {
             core: IAVLTree::new(),
+            cache: HashMap::new(),
         }
     }
 
-    pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
-        self.core.get(k)
+    pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
+        let cache_val = self.cache.get(key);
+
+        if cache_val.is_none() {
+            return self.core.get(key);
+        }
+
+        cache_val
     }
 
-    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
-        self.core.set(k, v)
+    pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        self.set_cache_value(key, value);
+    }
+
+    fn set_cache_value(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        if key.is_empty() {
+            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
+            panic!("key is empty")
+        }
+
+        self.cache.insert(key, value);
     }
 
     pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore {
@@ -113,7 +130,22 @@ impl KVStore {
         }
     }
 
-    pub fn commit(&self) -> [u8; 32] {
+    fn write(&mut self) {
+        let mut keys: Vec<&Vec<u8>> = self.cache.keys().collect();
+        keys.sort();
+
+        for key in keys {
+            let value = self
+                .cache
+                .get(key)
+                .expect("key is definitely in the HashMap");
+            self.core.set(key.to_owned(), value.to_owned())
+        }
+        self.cache.clear();
+    }
+
+    pub fn commit(&mut self) -> [u8; 32] {
+        self.write();
         self.core.root_hash()
     }
 }
@@ -186,6 +218,7 @@ impl<'a> IntoIterator for ImmutablePrefixStore<'a> {
     type IntoIter = Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>;
 
     fn into_iter(self) -> Self::IntoIter {
+        //TODO: this doesn't iterate over cached values
         let prefix = self.prefix.clone();
         let prefix2 = self.prefix.clone();
         let iter = self
