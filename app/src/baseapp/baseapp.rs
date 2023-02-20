@@ -21,7 +21,7 @@ use tendermint_proto::abci::{
 use tracing::{debug, info};
 
 use crate::{
-    ante::AnteHandler,
+    baseapp::ante::AnteHandler,
     crypto::verify_signature,
     error::AppError,
     store::MultiStore,
@@ -178,6 +178,8 @@ impl Application for BaseApp {
         Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
 
         *multi_store = ctx.multi_store;
+        let hash = multi_store.commit();
+        println!("working hash:\n{:?}", hash);
 
         ResponseInitChain {
             consensus_params: request.consensus_params,

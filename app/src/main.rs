@@ -1,11 +1,8 @@
-//! In-memory key/value store application for Tendermint.
-
 use baseapp::BaseApp;
 use structopt::StructOpt;
 use tendermint_abci::ServerBuilder;
 use tracing_subscriber::filter::LevelFilter;
 
-mod ante;
 mod baseapp;
 mod crypto;
 mod error;
