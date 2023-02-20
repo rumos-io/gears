@@ -4,7 +4,7 @@ use ibc_proto::{
 };
 use prost::Message;
 use proto_messages::cosmos::{
-    auth::v1beta1::{BaseAccount, ModuleAccount},
+    auth::v1beta1::{Account, BaseAccount, ModuleAccount},
     crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
     tx::v1beta1::PublicKey,
 };
@@ -57,39 +57,12 @@ impl Module {
     }
 }
 
-pub enum Account {
-    Base(BaseAccount),
-    Module(ModuleAccount),
-}
-
-impl Account {
-    pub fn get_public_key(&self) -> &Option<PublicKey> {
-        match self {
-            Account::Base(acct) => &acct.pub_key,
-            Account::Module(acct) => &acct.base_account.pub_key,
-        }
-    }
-
-    pub fn set_public_key(&mut self, key: PublicKey) {
-        match self {
-            Account::Base(acct) => acct.pub_key = Some(key),
-            Account::Module(acct) => acct.base_account.pub_key = Some(key),
-        }
-    }
-
-    pub fn increment_sequence(&mut self) {
-        match self {
-            Account::Base(acct) => acct.sequence += 1,
-            Account::Module(acct) => acct.base_account.sequence += 1,
-        }
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Auth {}
 
 impl Auth {
     pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) -> Result<(), AppError> {
+        //TODO: sdk sanitizes accounts
         Params::set(ctx, genesis.params);
 
         for mut acct in genesis.accounts {
@@ -111,24 +84,12 @@ impl Auth {
         let account = auth_store.get(&key);
 
         if let Some(buf) = account {
-            //check which type of account we have by attempting to decode
-            if let Ok(_) = BaseAccount::decode::<Bytes>(buf.to_owned().into()) {
-                return Ok(QueryAccountResponse {
-                    account: Some(Any {
-                        type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                        value: buf.to_owned(),
-                    }),
-                });
-            } else if let Ok(_) = ModuleAccount::decode::<Bytes>(buf.to_owned().into()) {
-                return Ok(QueryAccountResponse {
-                    account: Some(Any {
-                        type_url: "/cosmos.auth.v1beta1.ModuleAccount".to_string(),
-                        value: buf.to_owned(),
-                    }),
-                });
-            } else {
-                panic!("invalid data in database - possible database corruption")
-            }
+            let account = Account::decode::<Bytes>(buf.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
+
+            return Ok(QueryAccountResponse {
+                account: Some(account.into()),
+            });
         }
 
         return Err(AppError::AccountNotFound);
@@ -163,27 +124,13 @@ impl Auth {
 
     pub fn set_account(ctx: &mut Context, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(Store::Auth);
+        let key = create_auth_store_key(acct.get_address().to_owned());
 
-        match acct {
-            Account::Base(acct) => {
-                let key = create_auth_store_key(acct.address.to_owned());
-                auth_store.set(
-                    key,
-                    acct.encode_vec().expect(
-                        "library call will never return an error - this is a bug in the library",
-                    ),
-                );
-            }
-            Account::Module(acct) => {
-                let key = create_auth_store_key(acct.base_account.address.to_owned());
-                auth_store.set(
-                    key,
-                    acct.encode_vec().expect(
-                        "library call will never return an error - this is a bug in the library",
-                    ),
-                );
-            }
-        };
+        auth_store.set(
+            key,
+            acct.encode_vec()
+                .expect("library call will never return an error - this is a bug in the library"),
+        );
     }
 
     pub fn get_account(ctx: &Context, addr: &AccAddress) -> Option<Account> {
@@ -192,13 +139,10 @@ impl Auth {
         let account = auth_store.get(&key);
 
         if let Some(buf) = account {
-            if let Ok(acct) = BaseAccount::decode::<Bytes>(buf.to_owned().into()) {
-                return Some(Account::Base(acct));
-            } else if let Ok(acct) = ModuleAccount::decode::<Bytes>(buf.to_owned().into()) {
-                return Some(Account::Module(acct));
-            } else {
-                panic!("invalid data in database - possible database corruption")
-            }
+            let account = Account::decode::<Bytes>(buf.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
+
+            return Some(account);
         }
 
         return None;
@@ -234,14 +178,7 @@ impl Auth {
                 permissions: module.get_permissions(),
             };
 
-            let auth_store = ctx.get_mutable_kv_store(Store::Auth);
-            let key = create_auth_store_key(account.base_account.address.to_owned());
-            auth_store.set(
-                key,
-                account.encode_vec().expect(
-                    "library call will never return an error - this is a bug in the library",
-                ),
-            );
+            Auth::set_account(ctx, Account::Module(account))
         }
     }
 }

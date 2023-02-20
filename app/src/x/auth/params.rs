@@ -1,5 +1,5 @@
 use crate::{
-    store::{KVStore, Store},
+    store::{ImmutablePrefixStore, KVStore, Store},
     types::Context,
 };
 
@@ -39,59 +39,42 @@ pub const DEFAULT_PARAMS: Params = Params {
 };
 
 impl Params {
+    fn parse_param(value: Vec<u8>) -> u64 {
+        String::from_utf8(value)
+            .expect("should be valid utf-8")
+            .strip_suffix("\"")
+            .expect("should have suffix")
+            .strip_prefix("\"")
+            .expect("should have prefix")
+            .parse()
+            .expect("should be valid u64")
+    }
+
+    fn get_raw_param(key: &[u8], store: &ImmutablePrefixStore) -> Vec<u8> {
+        store
+            .get(key)
+            .expect("key should be set in kv store")
+            .clone()
+    }
+
     pub fn get(ctx: &Context) -> Params {
         let store = ctx.get_kv_store(crate::store::Store::Params);
         let store = store.get_immutable_prefix_store(SUBSPACE_NAME.into());
 
-        let max_memo_characters: u64 = String::from_utf8(
-            store
-                .get(&KEY_MAX_MEMO_CHARACTERS)
-                .expect("key should be set in kv store")
-                .clone(),
-        )
-        .expect("should be valid utf-8")
-        .parse()
-        .expect("should be valid u64");
+        let raw = Params::get_raw_param(&KEY_MAX_MEMO_CHARACTERS, &store);
+        let max_memo_characters = Params::parse_param(raw);
 
-        let tx_sig_limit: u64 = String::from_utf8(
-            store
-                .get(&KEY_TX_SIG_LIMIT)
-                .expect("key should be set in kv store")
-                .clone(),
-        )
-        .expect("should be valid utf-8")
-        .parse()
-        .expect("should be valid u64");
+        let raw = Params::get_raw_param(&KEY_TX_SIG_LIMIT, &store);
+        let tx_sig_limit = Params::parse_param(raw);
 
-        let tx_size_cost_per_byte: u64 = String::from_utf8(
-            store
-                .get(&KEY_TX_SIZE_COST_PER_BYTE)
-                .expect("key should be set in kv store")
-                .clone(),
-        )
-        .expect("should be valid utf-8")
-        .parse()
-        .expect("should be valid u64");
+        let raw = Params::get_raw_param(&KEY_TX_SIZE_COST_PER_BYTE, &store);
+        let tx_size_cost_per_byte = Params::parse_param(raw);
 
-        let sig_verify_cost_ed25519: u64 = String::from_utf8(
-            store
-                .get(&KEY_SIG_VERIFY_COST_ED25519)
-                .expect("key should be set in kv store")
-                .clone(),
-        )
-        .expect("should be valid utf-8")
-        .parse()
-        .expect("should be valid u64");
+        let raw = Params::get_raw_param(&KEY_SIG_VERIFY_COST_ED25519, &store);
+        let sig_verify_cost_ed25519 = Params::parse_param(raw);
 
-        let sig_verify_cost_secp256k1: u64 = String::from_utf8(
-            store
-                .get(&KEY_SIG_VERIFY_COST_SECP256K1)
-                .expect("key should be set in kv store")
-                .clone(),
-        )
-        .expect("should be valid utf-8")
-        .parse()
-        .expect("should be valid u64");
+        let raw = Params::get_raw_param(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
+        let sig_verify_cost_secp256k1 = Params::parse_param(raw);
 
         Params {
             max_memo_characters,
@@ -108,27 +91,27 @@ impl Params {
 
         store.set(
             KEY_MAX_MEMO_CHARACTERS.into(),
-            params.max_memo_characters.to_string().into(),
+            format!("\"{}\"", params.max_memo_characters.to_string()).into(),
         );
 
         store.set(
             KEY_TX_SIG_LIMIT.into(),
-            params.tx_sig_limit.to_string().into(),
+            format!("\"{}\"", params.tx_sig_limit.to_string()).into(),
         );
 
         store.set(
             KEY_TX_SIZE_COST_PER_BYTE.into(),
-            params.tx_size_cost_per_byte.to_string().into(),
+            format!("\"{}\"", params.tx_size_cost_per_byte.to_string()).into(),
         );
 
         store.set(
             KEY_SIG_VERIFY_COST_ED25519.into(),
-            params.sig_verify_cost_ed25519.to_string().into(),
+            format!("\"{}\"", params.sig_verify_cost_ed25519.to_string()).into(),
         );
 
         store.set(
             KEY_SIG_VERIFY_COST_SECP256K1.into(),
-            params.sig_verify_cost_secp256k1.to_string().into(),
+            format!("\"{}\"", params.sig_verify_cost_secp256k1.to_string()).into(),
         );
 
         return;

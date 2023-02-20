@@ -1,10 +1,12 @@
 use std::str::FromStr;
 
+use bytes::Bytes;
 use cosmwasm_std::Uint256;
 use ibc_proto::cosmos::{
     bank::v1beta1::{QueryAllBalancesResponse, QueryBalanceResponse},
     base::v1beta1::Coin,
 };
+use prost::Message;
 use proto_messages::cosmos::{
     bank::v1beta1::MsgSend,
     base::v1beta1::{Coin as ProtoCoin, SendCoins},
@@ -56,10 +58,7 @@ impl Bank {
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(
-                    coin.denom.as_bytes().to_vec(),
-                    coin.amount.to_string().into(),
-                );
+                denom_balance_store.set(coin.denom.as_bytes().to_vec(), coin.encode_to_vec());
             }
         }
 
@@ -80,14 +79,10 @@ impl Bank {
 
         match bal {
             Some(amount) => Ok(QueryBalanceResponse {
-                balance: Some(Coin {
-                    denom: req.denom.to_string(),
-                    amount: Uint256::from_str(
-                        &String::from_utf8(amount.to_owned())
-                            .expect("invalid data in database - possible database corruption"),
-                    )
-                    .expect("invalid data in database - possible database corruption"),
-                }),
+                balance: Some(
+                    Coin::decode::<Bytes>(amount.to_owned().into())
+                        .expect("invalid data in database - possible database corruption"),
+                ),
             }),
             None => Ok(QueryBalanceResponse { balance: None }),
         }
@@ -103,16 +98,9 @@ impl Bank {
 
         let mut balances = vec![];
 
-        for (denom, amount) in account_store {
-            let denom = String::from_utf8(denom)
+        for (_, coin) in account_store {
+            let coin: Coin = Coin::decode::<Bytes>(coin.into())
                 .expect("invalid data in database - possible database corruption");
-            let amount = Uint256::from_str(
-                &String::from_utf8(amount)
-                    .expect("invalid data in database - possible database corruption"),
-            )
-            .expect("invalid data in database - possible database corruption");
-
-            let coin = Coin { denom, amount };
             balances.push(coin);
         }
 
@@ -168,37 +156,39 @@ impl Bank {
                 .get(send_coin.denom.to_string().as_bytes())
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
 
-            let from_balance = Uint256::from_str(
-                &String::from_utf8(from_balance.to_owned())
-                    .expect("invalid data in database - possible database corruption"),
-            )
-            .expect("invalid data in database - possible database corruption");
+            let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
 
-            if from_balance < send_coin.amount {
+            if from_balance.amount < send_coin.amount {
                 return Err(AppError::Send("Insufficient funds".into()));
             }
 
+            from_balance.amount = from_balance.amount - send_coin.amount;
+
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
-                (from_balance - send_coin.amount).to_string().into(),
+                from_balance.encode_to_vec(),
             );
 
             //TODO: if balance == 0 then denom should be removed from store
 
             let mut to_account_store = Bank::get_address_balances_store(bank_store, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
-            let to_balance = match to_balance {
-                Some(to_balance) => Uint256::from_str(
-                    &String::from_utf8(to_balance.to_owned())
-                        .expect("invalid data in database - possible database corruption"),
-                )
-                .expect("invalid data in database - possible database corruption"),
-                None => Uint256::zero(),
+
+            let mut to_balance: Coin = match to_balance {
+                Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
+                    .expect("invalid data in database - possible database corruption"),
+                None => Coin {
+                    denom: send_coin.denom.to_string(),
+                    amount: Uint256::zero(),
+                },
             };
+
+            to_balance.amount = to_balance.amount + send_coin.amount;
 
             to_account_store.set(
                 send_coin.denom.to_string().into(),
-                (to_balance + send_coin.amount).to_string().into(),
+                to_balance.encode_to_vec(),
             );
         }
 
@@ -209,9 +199,9 @@ impl Bank {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
-        let mut supplyStore = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
+        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
 
-        supplyStore.set(
+        supply_store.set(
             coin.denom.to_string().into(),
             coin.amount.to_string().into(),
         );
@@ -327,6 +317,7 @@ mod tests {
 
         let mut ctx = Context::new(store, 0);
         Bank::init_genesis(&mut ctx, genesis);
+        ctx.multi_store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
 
         let res = Bank::query_all_balances(&ctx, req).unwrap();
 
