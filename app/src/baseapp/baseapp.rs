@@ -14,14 +14,14 @@ use proto_messages::cosmos::{
 use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
-    Event, EventAttribute, RequestCheckTx, RequestDeliverTx, RequestInfo, RequestInitChain,
-    RequestQuery, ResponseCheckTx, ResponseCommit, ResponseDeliverTx, ResponseInfo,
-    ResponseInitChain, ResponseQuery,
+    BlockParams, ConsensusParams, Event, EventAttribute, RequestCheckTx, RequestDeliverTx,
+    RequestInfo, RequestInitChain, RequestQuery, ResponseCheckTx, ResponseCommit,
+    ResponseDeliverTx, ResponseInfo, ResponseInitChain, ResponseQuery,
 };
 use tracing::{debug, info};
 
 use crate::{
-    baseapp::ante::AnteHandler,
+    baseapp::{ante::AnteHandler, params},
     crypto::verify_signature,
     error::AppError,
     store::MultiStore,
@@ -37,6 +37,7 @@ use crate::{
 
 //TODO:
 // 1. Remove unwraps
+// 2. Remove "hash goes here"
 
 #[derive(Debug, Clone)]
 pub struct BaseApp {
@@ -143,6 +144,10 @@ impl Application for BaseApp {
         let transient_store = multi_store.clone();
         let mut ctx = Context::new(transient_store, self.get_block_height());
 
+        if let Some(params) = request.consensus_params.clone() {
+            params::set_consensus_params(&mut ctx, params);
+        }
+
         let genesis = GenesisState {
             balances: vec![Balance {
                 address: AccAddress::from_bech32(
@@ -178,8 +183,6 @@ impl Application for BaseApp {
         Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
 
         *multi_store = ctx.multi_store;
-        let hash = multi_store.commit();
-        println!("working hash:\n{:?}", hash);
 
         ResponseInitChain {
             consensus_params: request.consensus_params,

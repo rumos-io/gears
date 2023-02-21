@@ -483,6 +483,7 @@ dependencies = [
  "proto-types 0.1.0 (git+https://github.com/joneskm/gaia-rs/)",
  "secp256k1",
  "serde",
+ "serde_json",
  "sha2 0.10.6",
  "structopt",
  "tendermint-abci",
