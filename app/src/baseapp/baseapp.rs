@@ -341,7 +341,7 @@ impl Application for BaseApp {
                 codespace: "".to_string(),
             },
             Err(e) => {
-                info!("failed to process tx: {}", e);
+                info!("Failed to process tx: {}", e);
                 ResponseDeliverTx {
                     code: e.code(),
                     data: Bytes::new(),
@@ -363,10 +363,15 @@ impl Application for BaseApp {
             .write()
             .expect("RwLock will not be poisoned");
 
-        multi_store.commit();
+        let hash = multi_store.commit();
+        info!(
+            "Committed state, block height: {} app hash: {}",
+            new_height,
+            hex::encode(hash)
+        );
 
         ResponseCommit {
-            data: "hash_goes_here".into(),
+            data: hash.to_vec().into(),
             retain_height: (new_height - 1)
                 .try_into()
                 .expect("can't believe we made it this far"),

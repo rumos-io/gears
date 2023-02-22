@@ -88,9 +88,14 @@ impl IAVLTree {
     pub fn new() -> IAVLTree {
         IAVLTree {
             root: None,
-            version: 1,
+            version: 0,
             pairs: HashMap::new(),
         }
+    }
+
+    pub fn save_version(&mut self) -> ([u8; 32], u32) {
+        self.version += 1;
+        (self.root_hash(), self.version)
     }
 
     pub fn root_hash(&self) -> [u8; 32] {
@@ -132,12 +137,17 @@ impl IAVLTree {
         self.root = match &self.root {
             Some(root) => {
                 // TODO: recursive_set should take a mutable reference to avoid cloning the node here
-                Some(Self::recursive_set(root.clone(), key, value, self.version))
+                Some(Self::recursive_set(
+                    root.clone(),
+                    key,
+                    value,
+                    self.version + 1,
+                ))
             }
             None => Some(Node::Leaf(LeafNode {
                 key: key,
                 value: value,
-                version: 1,
+                version: 1, //TODO: should this be self.version
             })),
         };
     }
@@ -426,6 +436,30 @@ mod tests {
     }
 
     #[test]
+    fn save_version_works() {
+        let mut tree = IAVLTree::new();
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
+
+        tree.save_version();
+        tree.save_version();
+        tree.set(b"qwerty".to_vec(), b"312".to_vec());
+        tree.set(b"-32".to_vec(), b"gamma".to_vec());
+        tree.save_version();
+        tree.set(b"alice".to_vec(), b"123".to_vec());
+        tree.save_version();
+
+        let expected = [
+            37, 155, 233, 229, 243, 173, 29, 241, 235, 234, 85, 10, 36, 129, 53, 79, 77, 11, 29,
+            118, 201, 233, 133, 60, 78, 187, 37, 81, 42, 96, 105, 150,
+        ];
+
+        assert_eq!(expected, tree.root_hash());
+    }
+
+    #[test]
     fn get_works() {
         let mut tree = IAVLTree::new();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
@@ -471,5 +505,57 @@ mod tests {
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| got_pairs.contains(e)))
+    }
+
+    #[test]
+    fn scenario_works() {
+        let mut tree = IAVLTree::new();
+        tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
+        tree.set(
+            vec![
+                2, 20, 129, 58, 194, 42, 97, 73, 22, 85, 226, 120, 106, 224, 209, 39, 214, 153, 11,
+                251, 251, 222, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 51, 52],
+        );
+
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+
+        tree.set(
+            vec![
+                2, 20, 59, 214, 51, 187, 112, 177, 248, 133, 197, 68, 36, 228, 124, 164, 14, 68,
+                72, 143, 236, 46, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 49, 48],
+        );
+        tree.set(
+            vec![
+                2, 20, 129, 58, 194, 42, 97, 73, 22, 85, 226, 120, 106, 224, 209, 39, 214, 153, 11,
+                251, 251, 222, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 50, 51],
+        );
+        tree.set(
+            vec![
+                2, 20, 241, 130, 150, 118, 219, 87, 118, 130, 233, 68, 252, 52, 147, 212, 81, 182,
+                127, 243, 226, 159, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 1, 49],
+        );
+
+        let expected = [
+            34, 215, 64, 141, 118, 237, 192, 198, 47, 22, 34, 81, 0, 146, 145, 66, 182, 59, 101,
+            145, 99, 187, 82, 49, 149, 36, 196, 63, 37, 42, 171, 124,
+        ];
+
+        let (hash, version) = tree.save_version();
+
+        assert_eq!((expected, 8), (hash, version));
     }
 }

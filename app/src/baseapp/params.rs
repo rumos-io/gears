@@ -106,7 +106,7 @@ pub fn set_consensus_params(ctx: &mut Context, params: ConsensusParams) {
 #[cfg(test)]
 mod tests {
 
-    use tendermint_proto::{abci::Evidence, types::EvidenceParams as RawEvidenceParams};
+    use tendermint_proto::types::EvidenceParams as RawEvidenceParams;
 
     use super::*;
 
@@ -124,7 +124,7 @@ mod tests {
 
         assert_eq!(
             serde_json::to_string(&params).unwrap(),
-            "{\"max_age_num_blocks\":0,\"max_age_duration\":10000000030,\"max_bytes\":0}"
+            "{\"max_age_num_blocks\":\"0\",\"max_age_duration\":\"10000000030\",\"max_bytes\":\"0\"}"
                 .to_string()
         );
     }

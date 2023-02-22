@@ -74,7 +74,6 @@ impl MultiStore {
         };
 
         let store_infos = [bank_info, auth_info, params_info].into();
-
         hash::hash_store_infos(store_infos)
     }
 }
@@ -146,7 +145,8 @@ impl KVStore {
 
     pub fn commit(&mut self) -> [u8; 32] {
         self.write();
-        self.core.root_hash()
+        let (hash, _) = self.core.save_version();
+        hash
     }
 }
 
