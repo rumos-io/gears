@@ -7,6 +7,9 @@ run:
 test:
 	cargo test
 
+install:
+	cargo install --path .
+
 # This option only deletes the data and not the gensis file. This is useful since
 # the timeout_commit = "10s" param has been manually changed in my genesis file.
 tendermint-clean-start: tendermint-reset-unsafe tendermint-start

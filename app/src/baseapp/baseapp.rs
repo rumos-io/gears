@@ -14,9 +14,13 @@ use proto_messages::cosmos::{
 use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
-    BlockParams, ConsensusParams, Event, EventAttribute, RequestCheckTx, RequestDeliverTx,
-    RequestInfo, RequestInitChain, RequestQuery, ResponseCheckTx, ResponseCommit,
-    ResponseDeliverTx, ResponseInfo, ResponseInitChain, ResponseQuery,
+    BlockParams, ConsensusParams, Event, EventAttribute, RequestApplySnapshotChunk,
+    RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho, RequestEndBlock, RequestInfo,
+    RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot, RequestQuery,
+    ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
+    ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
+    ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
+    ResponseQuery,
 };
 use tracing::{debug, info};
 
@@ -35,6 +39,8 @@ use crate::{
     },
 };
 
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 //TODO:
 // 1. Remove unwraps
 // 2. Remove "hash goes here"
@@ -137,6 +143,7 @@ impl BaseApp {
 
 impl Application for BaseApp {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
+        info!("Got init chain request");
         let mut multi_store = self
             .multi_store
             .write()
@@ -192,15 +199,16 @@ impl Application for BaseApp {
     }
 
     fn info(&self, request: RequestInfo) -> ResponseInfo {
-        debug!(
+        info!(
             "Got info request. Tendermint version: {}; Block version: {}; P2P version: {}",
             request.version, request.block_version, request.p2p_version
         );
 
         ResponseInfo {
-            data: "gaia-rs".to_string(),
-            version: "0.1.0".to_string(),
+            data: APP_NAME.to_string(),
+            version: APP_VERSION.to_string(),
             app_version: 1,
+            // TODO: use get_block_height method
             last_block_height: self
                 .get_block_height()
                 .try_into()
@@ -210,7 +218,7 @@ impl Application for BaseApp {
     }
 
     fn query(&self, request: RequestQuery) -> ResponseQuery {
-        info!("Handling query to: {}", request.path);
+        info!("Got query request to: {}", request.path);
 
         match request.path.as_str() {
             "/cosmos.bank.v1beta1.Query/AllBalances" => {
@@ -306,6 +314,7 @@ impl Application for BaseApp {
     }
 
     fn check_tx(&self, _request: RequestCheckTx) -> ResponseCheckTx {
+        info!("Got check tx request");
         ResponseCheckTx {
             code: 0,
             data: Default::default(),
@@ -322,6 +331,7 @@ impl Application for BaseApp {
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
+        info!("Got deliver tx request");
         match self.run_tx(request.tx) {
             Ok(_) => ResponseDeliverTx {
                 code: 0,
@@ -357,6 +367,7 @@ impl Application for BaseApp {
     }
 
     fn commit(&self) -> ResponseCommit {
+        info!("Got commit request");
         let new_height = self.increment_block_height();
         let mut multi_store = self
             .multi_store
@@ -376,5 +387,55 @@ impl Application for BaseApp {
                 .try_into()
                 .expect("can't believe we made it this far"),
         }
+    }
+
+    fn echo(&self, request: RequestEcho) -> ResponseEcho {
+        info!("Got echo request");
+        ResponseEcho {
+            message: request.message,
+        }
+    }
+
+    fn begin_block(&self, _request: RequestBeginBlock) -> ResponseBeginBlock {
+        info!("Got begin block request");
+        Default::default()
+    }
+
+    fn end_block(&self, _request: RequestEndBlock) -> ResponseEndBlock {
+        info!("Got end block request");
+        Default::default()
+    }
+
+    /// Signals that messages queued on the client should be flushed to the server.
+    fn flush(&self) -> ResponseFlush {
+        info!("Got flush request");
+        ResponseFlush {}
+    }
+
+    /// Used during state sync to discover available snapshots on peers.
+    fn list_snapshots(&self) -> ResponseListSnapshots {
+        info!("Got list snapshots request");
+        Default::default()
+    }
+
+    /// Called when bootstrapping the node using state sync.
+    fn offer_snapshot(&self, _request: RequestOfferSnapshot) -> ResponseOfferSnapshot {
+        info!("Got offer snapshot request");
+        Default::default()
+    }
+
+    /// Used during state sync to retrieve chunks of snapshots from peers.
+    fn load_snapshot_chunk(&self, _request: RequestLoadSnapshotChunk) -> ResponseLoadSnapshotChunk {
+        info!("Got load snapshot chunk request");
+        Default::default()
+    }
+
+    /// Apply the given snapshot chunk to the application's state.
+    fn apply_snapshot_chunk(
+        &self,
+        _request: RequestApplySnapshotChunk,
+    ) -> ResponseApplySnapshotChunk {
+        info!("Got apply snapshot chunk request");
+        Default::default()
     }
 }

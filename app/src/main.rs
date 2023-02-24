@@ -44,7 +44,7 @@ fn main() {
         LevelFilter::INFO
     };
 
-    tracing_subscriber::fmt().with_max_level(log_level).init(); //TODO: fix this
+    tracing_subscriber::fmt().with_max_level(log_level).init();
 
     let app = BaseApp::new();
     let server = ServerBuilder::new(opt.read_buf_size)

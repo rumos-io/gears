@@ -2,7 +2,7 @@
 
 Gaia-rs will be a cosmos hub (gaia) node written in Rust. It will initially implement v7.1.0 of the gaia state machine as specified by the [golang implementation](https://github.com/cosmos/gaia/tree/v7.1.0).
 
-NOTE: this is a WIP. As it stands not all of the gaia state machine has been implemented so it isn't able to correctly replicate state.
+NOTE: This is a WIP. As it stands not all of the gaia state machine has been implemented so it isn't able to correctly replicate state.
 
 # Getting Started
 
@@ -11,7 +11,7 @@ Gaia-rs uses [tendermint-abci](https://crates.io/crates/tendermint-abci) to comm
 
 Rust compiler - The minimum supported Rust version is 1.67.1 - [Installation instructions](https://doc.rust-lang.org/book/ch01-01-installation.html).
 
-Tendermint - Gaia v0.7.1.0 uses Tendermint version v0.34.21 - Follow the [installation instructions](https://github.com/tendermint/tendermint/blob/main/docs/introduction/install.md) ensuring to checkout v0.34.21.
+Tendermint - Gaia v0.7.1.0 uses Tendermint version v0.34.21 - Checkout v0.34.21 then follow the [installation instructions](https://github.com/tendermint/tendermint/blob/v0.34.21/docs/introduction/install.md).
 
 Gaiad - Currently gaia-rs does not implement a client so we use the golang implementation. To install gaiad, clone the [gaia repo](https://github.com/cosmos/gaia), checkout `v7.1.0` then run `make install`.
 
