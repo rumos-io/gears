@@ -31,7 +31,7 @@ use crate::{
     store::MultiStore,
     types::{
         proto::{QueryAccountRequest, QueryAllBalancesRequest},
-        Context, DecodedTx, Msg,
+        Context, DecodedTx, Msg, QueryContext,
     },
     x::{
         auth::{Auth, DEFAULT_PARAMS},
@@ -101,14 +101,13 @@ impl BaseApp {
             .multi_store
             .write()
             .expect("RwLock will not be poisoned");
-        let transient_store = multi_store.clone();
-        let mut ctx = Context::new(transient_store, self.get_block_height());
+        let mut ctx = Context::new(&mut multi_store, self.get_block_height());
 
+        // TODO: if there's an error here we need to clear the TX cache
         AnteHandler::run(&mut ctx, &tx)?;
-        *multi_store = ctx.multi_store.clone();
 
+        // TODO: if there's an error here we need to clear the TX cache otherwise write TXCache to BlockCache
         BaseApp::run_msgs(&mut ctx, tx.get_msgs())?;
-        *multi_store = ctx.multi_store;
 
         Ok(())
     }
@@ -148,8 +147,7 @@ impl Application for BaseApp {
             .multi_store
             .write()
             .expect("RwLock will not be poisoned");
-        let transient_store = multi_store.clone();
-        let mut ctx = Context::new(transient_store, self.get_block_height());
+        let mut ctx = Context::new(&mut multi_store, self.get_block_height());
 
         if let Some(params) = request.consensus_params.clone() {
             params::set_consensus_params(&mut ctx, params);
@@ -189,8 +187,6 @@ impl Application for BaseApp {
         };
         Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
 
-        *multi_store = ctx.multi_store;
-
         ResponseInitChain {
             consensus_params: request.consensus_params,
             validators: request.validators,
@@ -226,7 +222,7 @@ impl Application for BaseApp {
                 let req = QueryAllBalancesRequest::decode(data).unwrap();
 
                 let store = self.multi_store.read().unwrap();
-                let ctx = Context::new(store.clone(), self.get_block_height());
+                let ctx = QueryContext::new(&store, self.get_block_height());
 
                 let res = Bank::query_all_balances(&ctx, req);
 
@@ -270,7 +266,7 @@ impl Application for BaseApp {
                 let req = QueryAccountRequest::decode(data).unwrap();
 
                 let store = self.multi_store.read().unwrap();
-                let ctx = Context::new(store.clone(), self.get_block_height());
+                let ctx = QueryContext::new(&store, self.get_block_height());
 
                 let res = Auth::query_account(&ctx, req);
 

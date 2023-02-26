@@ -18,7 +18,7 @@ use crate::{
     store::{KVStore, MutablePrefixStore, Store},
     types::{
         proto::{QueryAllBalancesRequest, QueryBalanceRequest},
-        Context,
+        Context, QueryContext,
     },
     x::auth::{Auth, Module},
 };
@@ -89,7 +89,7 @@ impl Bank {
     }
 
     pub fn query_all_balances(
-        ctx: &Context,
+        ctx: &QueryContext,
         req: QueryAllBalancesRequest,
     ) -> Result<QueryAllBalancesResponse, AppError> {
         let bank_store = ctx.get_kv_store(Store::Bank);
@@ -250,7 +250,7 @@ mod tests {
 
     #[test]
     fn query_balance_works() {
-        let store = MultiStore::new();
+        let mut store = MultiStore::new();
         let genesis = GenesisState {
             balances: vec![Balance {
                 address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
@@ -268,7 +268,7 @@ mod tests {
             params: DEFAULT_PARAMS,
         };
 
-        let mut ctx = Context::new(store, 0);
+        let mut ctx = Context::new(&mut store, 0);
         Bank::init_genesis(&mut ctx, genesis);
 
         let req = QueryBalanceRequest {
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn query_all_balances_works() {
-        let store = MultiStore::new();
+        let mut store = MultiStore::new();
         let genesis = GenesisState {
             balances: vec![Balance {
                 address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
@@ -315,10 +315,11 @@ mod tests {
             pagination: None,
         };
 
-        let mut ctx = Context::new(store, 0);
+        let mut ctx = Context::new(&mut store, 0);
         Bank::init_genesis(&mut ctx, genesis);
         ctx.multi_store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
 
+        let ctx = QueryContext::new(&store, 0);
         let res = Bank::query_all_balances(&ctx, req).unwrap();
 
         let expected_res = QueryAllBalancesResponse {

@@ -13,7 +13,7 @@ use proto_types::AccAddress;
 use crate::{
     error::AppError,
     store::Store,
-    types::{proto::QueryAccountRequest, Context},
+    types::{proto::QueryAccountRequest, Context, QueryContext},
 };
 
 use super::Params;
@@ -76,7 +76,7 @@ impl Auth {
     }
 
     pub fn query_account(
-        ctx: &Context,
+        ctx: &QueryContext,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
         let auth_store = ctx.get_kv_store(Store::Auth);
@@ -221,7 +221,7 @@ mod tests {
         };
 
         let store = MultiStore::new();
-        let ctx = Context::new(store, 0);
+        let ctx = QueryContext::new(&store, 0);
         let res = Auth::query_account(&ctx, req).unwrap_err();
 
         assert_eq!(expected, res);
@@ -230,8 +230,8 @@ mod tests {
     #[test]
     fn get_next_account_number_init_works() {
         let expected = 0;
-        let store = MultiStore::new();
-        let mut ctx = Context::new(store, 0);
+        let mut store = MultiStore::new();
+        let mut ctx = Context::new(&mut store, 0);
         let acct_num = Auth::get_next_account_number(&mut ctx);
 
         assert_eq!(expected, acct_num);
@@ -248,7 +248,7 @@ mod tests {
             expected.encode_to_vec(),
         );
 
-        let mut ctx = Context::new(store, 0);
+        let mut ctx = Context::new(&mut store, 0);
         let acct_num = Auth::get_next_account_number(&mut ctx);
 
         assert_eq!(expected, acct_num);

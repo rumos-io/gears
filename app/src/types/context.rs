@@ -1,12 +1,12 @@
 use crate::store::{KVStore, MultiStore, Store};
 
-pub struct Context {
-    pub multi_store: MultiStore,
+pub struct Context<'a> {
+    pub multi_store: &'a mut MultiStore,
     height: u64,
 }
 
-impl Context {
-    pub fn new(multi_store: MultiStore, height: u64) -> Self {
+impl<'a> Context<'a> {
+    pub fn new(multi_store: &'a mut MultiStore, height: u64) -> Self {
         Context {
             multi_store,
             height,
@@ -21,6 +21,30 @@ impl Context {
     /// Fetches a mutable ref to a KVStore from the MultiStore.
     pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore {
         return self.multi_store.get_mutable_kv_store(store_key);
+    }
+
+    pub fn get_height(&self) -> u64 {
+        self.height
+    }
+}
+
+/// A Context which holds an immutable reference to a MultiStore
+pub struct QueryContext<'a> {
+    pub multi_store: &'a MultiStore,
+    height: u64,
+}
+
+impl<'a> QueryContext<'a> {
+    pub fn new(multi_store: &'a MultiStore, height: u64) -> Self {
+        QueryContext {
+            multi_store,
+            height,
+        }
+    }
+
+    ///  Fetches an immutable ref to a KVStore from the MultiStore.
+    pub fn get_kv_store(&self, store_key: Store) -> &KVStore {
+        return self.multi_store.get_kv_store(store_key);
     }
 
     pub fn get_height(&self) -> u64 {
