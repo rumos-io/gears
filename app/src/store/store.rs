@@ -183,6 +183,7 @@ impl KVStore {
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
+        self.write_then_clear_tx_cache();
         self.write_then_clear_block_cache();
         let (hash, _) = self.tree_store.save_version();
         hash
@@ -197,19 +198,8 @@ pub struct ImmutablePrefixStore<'a> {
 
 impl<'a> ImmutablePrefixStore<'a> {
     pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
-        let mut full_key = self.prefix.clone();
-        full_key.extend(k);
+        let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
-    }
-
-    pub fn get_prefix_store(&self, mut prefix: Vec<u8>) -> ImmutablePrefixStore {
-        let mut full_prefix = self.prefix.clone();
-        full_prefix.append(&mut prefix);
-
-        ImmutablePrefixStore {
-            store: self.store,
-            prefix: full_prefix,
-        }
     }
 }
 
@@ -221,34 +211,13 @@ pub struct MutablePrefixStore<'a> {
 
 impl<'a> MutablePrefixStore<'a> {
     pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
-        let mut full_key = self.prefix.clone();
-        full_key.extend(k);
+        let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
     }
 
     pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
-        let full_key = self.get_full_key(&k);
+        let full_key = [self.prefix.clone(), k].concat();
         self.store.set(full_key, v)
-    }
-
-    pub fn get_prefix_store(&mut self, mut prefix: Vec<u8>) -> MutablePrefixStore {
-        let mut full_prefix = self.prefix.clone();
-        full_prefix.append(&mut prefix);
-
-        MutablePrefixStore {
-            store: self.store,
-            prefix: full_prefix,
-        }
-    }
-
-    fn get_full_key(&self, k: &[u8]) -> Vec<u8> {
-        let mut full_key = self.prefix.clone();
-        full_key.extend(k);
-        return full_key;
-    }
-
-    pub fn _get_prefix(&self) -> Vec<u8> {
-        return self.prefix.clone();
     }
 }
 
