@@ -103,13 +103,26 @@ impl BaseApp {
             .expect("RwLock will not be poisoned");
         let mut ctx = Context::new(&mut multi_store, self.get_block_height());
 
-        // TODO: if there's an error here we need to clear the TX cache
-        AnteHandler::run(&mut ctx, &tx)?;
+        match AnteHandler::run(&mut ctx, &tx) {
+            Ok(_) => multi_store.write_then_clear_tx_caches(),
+            Err(e) => {
+                multi_store.clear_tx_caches();
+                return Err(e);
+            }
+        };
 
-        // TODO: if there's an error here we need to clear the TX cache otherwise write TXCache to BlockCache
-        BaseApp::run_msgs(&mut ctx, tx.get_msgs())?;
+        let mut ctx = Context::new(&mut multi_store, self.get_block_height());
 
-        Ok(())
+        match BaseApp::run_msgs(&mut ctx, tx.get_msgs()) {
+            Ok(_) => {
+                multi_store.write_then_clear_tx_caches();
+                Ok(())
+            }
+            Err(e) => {
+                multi_store.clear_tx_caches();
+                Err(e)
+            }
+        }
     }
 
     fn run_msgs(ctx: &mut Context, msgs: &Vec<Msg>) -> Result<(), AppError> {
@@ -186,6 +199,8 @@ impl Application for BaseApp {
             params: DEFAULT_PARAMS,
         };
         Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
+
+        multi_store.write_then_clear_tx_caches();
 
         ResponseInitChain {
             consensus_params: request.consensus_params,

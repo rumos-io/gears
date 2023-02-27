@@ -57,6 +57,20 @@ impl MultiStore {
         }
     }
 
+    /// Write each store's tx cache to the store's block cache then clear's the tx caches
+    pub fn write_then_clear_tx_caches(&mut self) {
+        self.bank_store.write_then_clear_tx_cache();
+        self.auth_store.write_then_clear_tx_cache();
+        self.params_store.write_then_clear_tx_cache();
+    }
+
+    /// Write each store's tx cache to the store's block cache then clear's the tx caches
+    pub fn clear_tx_caches(&mut self) {
+        self.bank_store.clear_tx_cache();
+        self.auth_store.clear_tx_cache();
+        self.params_store.clear_tx_cache();
+    }
+
     pub fn commit(&mut self) -> [u8; 32] {
         let bank_info = StoreInfo {
             name: Store::Bank.name(),
@@ -80,39 +94,43 @@ impl MultiStore {
 
 #[derive(Debug, Clone)]
 pub struct KVStore {
-    core: IAVLTree,
-    cache: HashMap<Vec<u8>, Vec<u8>>,
+    tree_store: IAVLTree,
+    block_cache: HashMap<Vec<u8>, Vec<u8>>,
+    tx_cache: HashMap<Vec<u8>, Vec<u8>>,
 }
 
 impl KVStore {
     pub fn new() -> Self {
         KVStore {
-            core: IAVLTree::new(),
-            cache: HashMap::new(),
+            tree_store: IAVLTree::new(),
+            block_cache: HashMap::new(),
+            tx_cache: HashMap::new(),
         }
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
-        let cache_val = self.cache.get(key);
+        let tx_cache_val = self.tx_cache.get(key);
 
-        if cache_val.is_none() {
-            return self.core.get(key);
+        if tx_cache_val.is_none() {
+            let block_cache_val = self.block_cache.get(key);
+
+            if block_cache_val.is_none() {
+                return self.tree_store.get(key);
+            };
+
+            return block_cache_val;
         }
 
-        cache_val
+        tx_cache_val
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
-        self.set_cache_value(key, value);
-    }
-
-    fn set_cache_value(&mut self, key: Vec<u8>, value: Vec<u8>) {
         if key.is_empty() {
             // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
             panic!("key is empty")
         }
 
-        self.cache.insert(key, value);
+        self.tx_cache.insert(key, value);
     }
 
     pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore {
@@ -129,23 +147,44 @@ impl KVStore {
         }
     }
 
-    fn write(&mut self) {
-        let mut keys: Vec<&Vec<u8>> = self.cache.keys().collect();
+    /// Writes tx cache into block cache then clears the tx cache
+    pub fn write_then_clear_tx_cache(&mut self) {
+        let mut keys: Vec<&Vec<u8>> = self.tx_cache.keys().collect();
         keys.sort();
 
         for key in keys {
             let value = self
-                .cache
+                .tx_cache
                 .get(key)
                 .expect("key is definitely in the HashMap");
-            self.core.set(key.to_owned(), value.to_owned())
+            self.block_cache.insert(key.to_owned(), value.to_owned());
         }
-        self.cache.clear();
+        self.tx_cache.clear();
+    }
+
+    /// Clears the tx cache
+    pub fn clear_tx_cache(&mut self) {
+        self.tx_cache.clear();
+    }
+
+    /// Writes block cache into the tree store then clears the block cache
+    fn write_then_clear_block_cache(&mut self) {
+        let mut keys: Vec<&Vec<u8>> = self.block_cache.keys().collect();
+        keys.sort();
+
+        for key in keys {
+            let value = self
+                .block_cache
+                .get(key)
+                .expect("key is definitely in the HashMap");
+            self.tree_store.set(key.to_owned(), value.to_owned())
+        }
+        self.block_cache.clear();
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
-        self.write();
-        let (hash, _) = self.core.save_version();
+        self.write_then_clear_block_cache();
+        let (hash, _) = self.tree_store.save_version();
         hash
     }
 }
@@ -223,7 +262,7 @@ impl<'a> IntoIterator for ImmutablePrefixStore<'a> {
         let prefix2 = self.prefix.clone();
         let iter = self
             .store
-            .core
+            .tree_store
             .clone()
             .into_iter()
             .filter(move |x| {
