@@ -98,8 +98,8 @@ impl Bank {
 
         let mut balances = vec![];
 
-        for (_, coin) in account_store {
-            let coin: Coin = Coin::decode::<Bytes>(coin.into())
+        for (_, coin) in account_store.range(..) {
+            let coin: Coin = Coin::decode::<Bytes>(coin.to_owned().into())
                 .expect("invalid data in database - possible database corruption");
             balances.push(coin);
         }

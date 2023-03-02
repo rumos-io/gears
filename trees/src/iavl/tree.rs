@@ -1,95 +1,23 @@
-use std::{cmp, collections::HashMap};
-
-use integer_encoding::VarInt;
-use sha2::{Digest, Sha256};
+use std::{
+    cmp,
+    ops::{Bound, RangeBounds},
+};
 
 use crate::{error::Error, merkle::EMPTY_HASH};
 
-#[derive(Debug, Clone)]
-pub enum Node {
-    Leaf(LeafNode),
-    Inner(InnerNode),
-}
+use super::node::{InnerNode, LeafNode, Node};
 
 #[derive(Debug, Clone)]
-pub struct InnerNode {
-    left_node: Box<Node>,
-    right_node: Box<Node>,
-    key: Vec<u8>,
-    height: u8,
-    size: u32, // number of leaf nodes in this node's subtree
-    left_hash: [u8; 32],
-    right_hash: [u8; 32],
-    version: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct LeafNode {
-    key: Vec<u8>,
-    value: Vec<u8>,
-    version: u32,
-}
-
-#[derive(Debug, Clone)]
-pub struct IAVLTree {
+pub struct Tree {
     root: Option<Node>,
     version: u32,
-    pairs: HashMap<Vec<u8>, Vec<u8>>, // also store all KV pairs in a HashMap as a temporary hack to make converting the tree to an iterator easier
 }
 
-impl Node {
-    pub fn hash(&self) -> [u8; 32] {
-        let serialized = self.serialize();
-        Sha256::digest(serialized).into()
-    }
-    pub fn serialize(&self) -> Vec<u8> {
-        match self {
-            Node::Leaf(node) => {
-                let height: i64 = 0; // i64 required for compatibility with cosmos
-                let mut node_bytes = height.encode_var_vec();
-
-                let size: i64 = 1; // i64 required for compatibility with cosmos
-                node_bytes.append(&mut size.encode_var_vec());
-
-                let version: i64 = node.version.into(); // conversion to i64 required for compatibility with cosmos
-                node_bytes.append(&mut version.encode_var_vec());
-                node_bytes.append(&mut encode_bytes(node.key.to_vec()));
-
-                // Indirection is needed to provide proofs without values.
-                let mut hasher = Sha256::new();
-                hasher.update(node.value.clone());
-                let hashed_value = hasher.finalize();
-
-                node_bytes.append(&mut encode_bytes(hashed_value.to_vec()));
-
-                return node_bytes;
-            }
-            Node::Inner(node) => {
-                let height: i64 = node.height.into(); // conversion to i64 required for compatibility with cosmos
-                let mut node_bytes = height.encode_var_vec();
-
-                let size: i64 = node.size.into(); // conversion to i64 required for compatibility with cosmos
-                node_bytes.append(&mut size.encode_var_vec());
-
-                let version: i64 = node.version.into(); // conversion to i64 required for compatibility with cosmos
-                node_bytes.append(&mut version.encode_var_vec());
-
-                node_bytes.append(&mut encode_bytes(node.left_hash.clone().into()));
-
-                node_bytes.append(&mut encode_bytes(node.right_hash.clone().into()));
-
-                return node_bytes;
-            }
-        }
-    }
-}
-
-impl IAVLTree {
-    pub fn new() -> IAVLTree {
-        IAVLTree {
+impl Tree {
+    pub fn new() -> Tree {
+        Tree {
             root: None,
             version: 0,
-            pairs: HashMap::new(),
         }
     }
 
@@ -107,12 +35,12 @@ impl IAVLTree {
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
         match &self.root {
-            Some(root) => IAVLTree::recursive_get(root, key),
+            Some(root) => Tree::recursive_get(root, key),
             None => None,
         }
     }
 
-    pub fn recursive_get<'a>(node: &'a Node, key: &[u8]) -> Option<&'a Vec<u8>> {
+    fn recursive_get<'a>(node: &'a Node, key: &[u8]) -> Option<&'a Vec<u8>> {
         match node {
             Node::Leaf(leaf) => {
                 if leaf.key == key {
@@ -123,17 +51,15 @@ impl IAVLTree {
             }
             Node::Inner(node) => {
                 if key < &node.key {
-                    return IAVLTree::recursive_get(&node.left_node, key);
+                    return Tree::recursive_get(&node.left_node, key);
                 } else {
-                    return IAVLTree::recursive_get(&node.right_node, key);
+                    return Tree::recursive_get(&node.right_node, key);
                 }
             }
         }
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
-        self.pairs.insert(key.clone(), value.clone());
-
         self.root = match &self.root {
             Some(root) => {
                 // TODO: recursive_set should take a mutable reference to avoid cloning the node here
@@ -147,7 +73,7 @@ impl IAVLTree {
             None => Some(Node::Leaf(LeafNode {
                 key: key,
                 value: value,
-                version: 1, //TODO: should this be self.version
+                version: 1, //TODO: should this be self.version + 1
             })),
         };
     }
@@ -395,22 +321,73 @@ impl IAVLTree {
         // Return the new root
         return Ok(y);
     }
+
+    pub fn range<R>(&self, range: R) -> Range<R>
+    where
+        R: RangeBounds<Vec<u8>>,
+    {
+        match &self.root {
+            Some(node) => Range {
+                range,
+                delayed_nodes: vec![&node],
+            },
+            None => Range {
+                range,
+                delayed_nodes: vec![],
+            },
+        }
+    }
 }
 
-fn encode_bytes(mut bz: Vec<u8>) -> Vec<u8> {
-    let mut enc_bytes = bz.len().encode_var_vec();
-
-    enc_bytes.append(&mut bz);
-
-    return enc_bytes;
+pub struct Range<'a, R: RangeBounds<Vec<u8>>> {
+    range: R,
+    delayed_nodes: Vec<&'a Node>,
 }
 
-impl<'a> IntoIterator for IAVLTree {
-    type Item = (Vec<u8>, Vec<u8>);
-    type IntoIter = std::collections::hash_map::IntoIter<Vec<u8>, Vec<u8>>;
+impl<'a, T: RangeBounds<Vec<u8>>> Range<'a, T> {
+    fn traverse(&mut self) -> Option<(&'a Vec<u8>, &'a Vec<u8>)> {
+        let node = self.delayed_nodes.pop()?;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.pairs.into_iter()
+        let after_start = match self.range.start_bound() {
+            Bound::Included(l) => node.get_key() > l,
+            Bound::Excluded(l) => node.get_key() > l,
+            Bound::Unbounded => true,
+        };
+
+        let before_end = match self.range.end_bound() {
+            Bound::Included(u) => node.get_key() <= u,
+            Bound::Excluded(u) => node.get_key() < u,
+            Bound::Unbounded => true,
+        };
+
+        match node {
+            Node::Inner(node) => {
+                // Traverse through the left subtree, then the right subtree.
+                if before_end {
+                    self.delayed_nodes.push(&node.right_node);
+                }
+
+                if after_start {
+                    self.delayed_nodes.push(&node.left_node);
+                }
+            }
+            Node::Leaf(node) => {
+                if self.range.contains(&node.key) {
+                    // we have a leaf node within the range
+                    return Some((&node.key, &node.value));
+                }
+            }
+        }
+
+        self.traverse()
+    }
+}
+
+impl<'a, T: RangeBounds<Vec<u8>>> Iterator for Range<'a, T> {
+    type Item = (&'a Vec<u8>, &'a Vec<u8>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.traverse()
     }
 }
 
@@ -421,7 +398,7 @@ mod tests {
 
     #[test]
     fn repeated_set_works() {
-        let mut tree = IAVLTree::new();
+        let mut tree = Tree::new();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -437,7 +414,7 @@ mod tests {
 
     #[test]
     fn save_version_works() {
-        let mut tree = IAVLTree::new();
+        let mut tree = Tree::new();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -461,7 +438,7 @@ mod tests {
 
     #[test]
     fn get_works() {
-        let mut tree = IAVLTree::new();
+        let mut tree = Tree::new();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -475,41 +452,8 @@ mod tests {
     }
 
     #[test]
-    fn into_iter_unique_keys_works() {
-        let mut tree = IAVLTree::new();
-        tree.set(b"alice".to_vec(), b"abc".to_vec());
-        tree.set(b"bob".to_vec(), b"123".to_vec());
-        tree.set(b"c".to_vec(), b"1".to_vec());
-        tree.set(b"q".to_vec(), b"1".to_vec());
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.into_iter().collect();
-
-        let expected_pairs = vec![
-            (b"alice".to_vec(), b"abc".to_vec()),
-            (b"c".to_vec(), b"1".to_vec()),
-            (b"q".to_vec(), b"1".to_vec()),
-            (b"bob".to_vec(), b"123".to_vec()),
-        ];
-
-        assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| got_pairs.contains(e)))
-    }
-
-    #[test]
-    fn into_iter_duplicate_keys_works() {
-        let mut tree = IAVLTree::new();
-        tree.set(b"alice".to_vec(), b"abc".to_vec());
-        tree.set(b"alice".to_vec(), b"abc".to_vec());
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.into_iter().collect();
-
-        let expected_pairs = vec![(b"alice".to_vec(), b"abc".to_vec())];
-
-        assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| got_pairs.contains(e)))
-    }
-
-    #[test]
     fn scenario_works() {
-        let mut tree = IAVLTree::new();
+        let mut tree = Tree::new();
         tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
         tree.set(
             vec![
@@ -557,5 +501,106 @@ mod tests {
         let (hash, version) = tree.save_version();
 
         assert_eq!((expected, 8), (hash, version));
+    }
+
+    #[test]
+    fn bounded_range_works() {
+        let mut tree = Tree::new();
+        tree.set(b"1".to_vec(), b"abc1".to_vec());
+        tree.set(b"2".to_vec(), b"abc2".to_vec());
+        tree.set(b"3".to_vec(), b"abc3".to_vec());
+        tree.set(b"4".to_vec(), b"abc4".to_vec());
+        tree.set(b"5".to_vec(), b"abc5".to_vec());
+        tree.set(b"6".to_vec(), b"abc6".to_vec());
+        tree.set(b"7".to_vec(), b"abc7".to_vec());
+
+        // [,)
+        let start = b"3".to_vec();
+        let stop = b"6".to_vec();
+        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(start..stop).collect();
+        let expected_pairs = vec![
+            (b"3".to_vec(), b"abc3".to_vec()),
+            (b"4".to_vec(), b"abc4".to_vec()),
+            (b"5".to_vec(), b"abc5".to_vec()),
+        ];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (&e.0, &e.1);
+            got_pairs.contains(&cmp)
+        }));
+
+        // [,]
+        let start = b"3".to_vec();
+        let stop = b"6".to_vec();
+        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(start..=stop).collect();
+        let expected_pairs = vec![
+            (b"3".to_vec(), b"abc3".to_vec()),
+            (b"4".to_vec(), b"abc4".to_vec()),
+            (b"5".to_vec(), b"abc5".to_vec()),
+            (b"6".to_vec(), b"abc6".to_vec()),
+        ];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (&e.0, &e.1);
+            got_pairs.contains(&cmp)
+        }));
+
+        // (,)
+        let start = b"3".to_vec();
+        let stop = b"6".to_vec();
+        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree
+            .range((Bound::Excluded(start), Bound::Excluded(stop)))
+            .collect();
+        let expected_pairs = vec![
+            (b"4".to_vec(), b"abc4".to_vec()),
+            (b"5".to_vec(), b"abc5".to_vec()),
+        ];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (&e.0, &e.1);
+            got_pairs.contains(&cmp)
+        }));
+    }
+
+    #[test]
+    fn full_range_unique_keys_works() {
+        let mut tree = Tree::new();
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
+        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
+
+        let expected_pairs = vec![
+            (b"alice".to_vec(), b"abc".to_vec()),
+            (b"c".to_vec(), b"1".to_vec()),
+            (b"q".to_vec(), b"1".to_vec()),
+            (b"bob".to_vec(), b"123".to_vec()),
+        ];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (&e.0, &e.1);
+            got_pairs.contains(&cmp)
+        }));
+    }
+
+    #[test]
+    fn full_range_duplicate_keys_works() {
+        let mut tree = Tree::new();
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
+
+        let expected_pairs = vec![(b"alice".to_vec(), b"abc".to_vec())];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (&e.0, &e.1);
+            got_pairs.contains(&cmp)
+        }));
     }
 }

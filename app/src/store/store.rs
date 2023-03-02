@@ -1,8 +1,9 @@
-use std::collections::HashMap;
+use std::{
+    collections::BTreeMap,
+    ops::{Bound, RangeBounds},
+};
 
-use trees::iavl::IAVLTree;
-
-use crate::x::bank;
+use trees::iavl::{Range, Tree};
 
 use super::hash::{self, StoreInfo};
 
@@ -15,6 +16,7 @@ pub enum Store {
 //TODO:
 // 1. this overlaps with Auth::Module
 // 2. use strum crate to iterate over stores
+// 3. move prefix store into separate file
 impl Store {
     pub fn name(&self) -> String {
         match self {
@@ -94,17 +96,17 @@ impl MultiStore {
 
 #[derive(Debug, Clone)]
 pub struct KVStore {
-    tree_store: IAVLTree,
-    block_cache: HashMap<Vec<u8>, Vec<u8>>,
-    tx_cache: HashMap<Vec<u8>, Vec<u8>>,
+    tree_store: Tree,
+    block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
+    tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
 impl KVStore {
     pub fn new() -> Self {
         KVStore {
-            tree_store: IAVLTree::new(),
-            block_cache: HashMap::new(),
-            tx_cache: HashMap::new(),
+            tree_store: Tree::new(),
+            block_cache: BTreeMap::new(),
+            tx_cache: BTreeMap::new(),
         }
     }
 
@@ -145,6 +147,14 @@ impl KVStore {
             store: self,
             prefix,
         }
+    }
+
+    pub fn range<R>(&self, range: R) -> Range<R>
+    where
+        R: RangeBounds<Vec<u8>>,
+    {
+        //TODO: this doesn't iterate over cached values
+        self.tree_store.range(range)
     }
 
     /// Writes tx cache into block cache then clears the tx cache
@@ -201,6 +211,66 @@ impl<'a> ImmutablePrefixStore<'a> {
         let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
     }
+
+    pub fn range<T: RangeBounds<Vec<u8>>>(&self, range: T) -> PrefixRange<'a> {
+        let new_start = match range.start_bound() {
+            Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
+            Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
+            Bound::Unbounded => Bound::Included(self.prefix.clone()),
+        };
+
+        let new_end = match range.end_bound() {
+            Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
+            Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
+            Bound::Unbounded => prefix_end_bound(self.prefix.clone()),
+        };
+
+        PrefixRange {
+            parent_range: self.store.range((new_start, new_end)),
+            prefix_length: self.prefix.len(),
+        }
+    }
+}
+
+pub struct PrefixRange<'a> {
+    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>)>,
+    prefix_length: usize,
+}
+
+impl<'a> Iterator for PrefixRange<'a> {
+    type Item = (Vec<u8>, &'a Vec<u8>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let next = self.parent_range.next()?;
+
+        // Remove the prefix from the key - this is safe since all returned keys will include the prefix.
+        // TODO: what if the key now has zero length, is this safe given the check on KVStore set.
+        let truncated_key = next.0[self.prefix_length..].to_vec();
+
+        Some((truncated_key, next.1))
+    }
+}
+
+/// Returns the KVStore Bound that would end an unbounded upper
+/// range query on a PrefixStore with the given prefix
+///
+/// That is the smallest x such that, prefix + y < x for all y. If
+/// no such x exists (i.e. prefix = vec![255; N]; for some N) it returns Bound::Unbounded
+fn prefix_end_bound(mut prefix: Vec<u8>) -> Bound<Vec<u8>> {
+    loop {
+        let last = prefix.last_mut();
+
+        match last {
+            None => return Bound::Unbounded,
+            Some(last) => {
+                if *last != 255 {
+                    *last += 1;
+                    return Bound::Excluded(prefix);
+                }
+                prefix.pop();
+            }
+        }
+    }
 }
 
 /// Wraps an mutable reference to a KVStore with a prefix
@@ -216,35 +286,9 @@ impl<'a> MutablePrefixStore<'a> {
     }
 
     pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
+        // TODO: do we need to check for zero length keys as with the KVStore::set?
         let full_key = [self.prefix.clone(), k].concat();
         self.store.set(full_key, v)
-    }
-}
-
-impl<'a> IntoIterator for ImmutablePrefixStore<'a> {
-    type Item = (Vec<u8>, Vec<u8>);
-    type IntoIter = Box<dyn Iterator<Item = (Vec<u8>, Vec<u8>)>>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        //TODO: this doesn't iterate over cached values
-        let prefix = self.prefix.clone();
-        let prefix2 = self.prefix.clone();
-        let iter = self
-            .store
-            .tree_store
-            .clone()
-            .into_iter()
-            .filter(move |x| {
-                let key = &x.0;
-                if key.len() < prefix.len() {
-                    return false;
-                }
-                let key_prefix = &key[0..prefix.len()];
-                return key_prefix == &prefix[..];
-            })
-            .map(move |x| (x.0[prefix2.len()..].to_vec(), x.1));
-
-        return Box::new(iter);
     }
 }
 
@@ -254,16 +298,92 @@ mod tests {
     use super::*;
 
     #[test]
-    fn prefix_store_iterator_works() {
+    fn prefix_store_range_works() {
         let mut store = KVStore::new();
-        store.set(vec![0, 1], vec![1]);
-        store.set(vec![1, 3], vec![2]);
+        store.set(vec![0], vec![1]);
+        store.set(vec![0, 1], vec![2]);
+        store.set(vec![0, 2], vec![3]);
+        store.set(vec![1], vec![4]);
+        store.set(vec![1, 1], vec![5]);
+        store.set(vec![1, 2], vec![6]);
+        store.set(vec![1, 3], vec![7]);
+        store.set(vec![1, 4], vec![8]);
+        store.set(vec![1, 5], vec![9]);
+        store.set(vec![2], vec![10]);
+        store.set(vec![2, 1], vec![11]);
+        store.set(vec![2, 2], vec![12]);
+        store.set(vec![2, 3], vec![13]);
+        store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
 
         let prefix_store = store.get_immutable_prefix_store(vec![1]);
 
-        for (k, v) in prefix_store {
-            assert_eq!(k, vec![3]);
-            assert_eq!(v, vec![2]);
-        }
+        // unbounded
+        let got_pairs: Vec<(Vec<u8>, &Vec<u8>)> = prefix_store.range(..).collect();
+        let expected_pairs = vec![
+            (vec![], vec![4]),
+            (vec![1], vec![5]),
+            (vec![2], vec![6]),
+            (vec![3], vec![7]),
+            (vec![4], vec![8]),
+            (vec![5], vec![9]),
+        ];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (e.0.clone(), &e.1);
+            got_pairs.contains(&cmp)
+        }));
+
+        // [,]
+        let got_pairs: Vec<(Vec<u8>, &Vec<u8>)> = prefix_store.range(vec![1]..=vec![3]).collect();
+        let expected_pairs = vec![(vec![1], vec![5]), (vec![2], vec![6]), (vec![3], vec![7])];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (e.0.clone(), &e.1);
+            got_pairs.contains(&cmp)
+        }));
+
+        // (,)
+        let start = vec![1];
+        let stop = vec![3];
+        let got_pairs: Vec<(Vec<u8>, &Vec<u8>)> = prefix_store
+            .range((Bound::Excluded(start), Bound::Excluded(stop)))
+            .collect();
+        let expected_pairs = vec![(vec![2], vec![6])];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (e.0.clone(), &e.1);
+            got_pairs.contains(&cmp)
+        }));
+    }
+
+    #[test]
+    fn prefix_end_bound_works() {
+        let prefix = vec![1, 2, 3];
+        let expected = vec![1, 2, 4];
+
+        assert!(matches!(
+            prefix_end_bound(prefix),
+            Bound::Excluded(x) if x == expected));
+
+        let prefix = vec![1, 2, 255];
+        let expected = vec![1, 3];
+
+        assert!(matches!(
+            prefix_end_bound(prefix),
+            Bound::Excluded(x) if x == expected));
+
+        let prefix = vec![1, 255, 255];
+        let expected = vec![2];
+
+        assert!(matches!(
+            prefix_end_bound(prefix),
+            Bound::Excluded(x) if x == expected));
+
+        let prefix = vec![255, 255, 255];
+
+        assert!(matches!(prefix_end_bound(prefix), Bound::Unbounded));
     }
 }
