@@ -3,7 +3,7 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use trees::iavl::{Range, Tree};
+use trees::iavl::{IAVLTreeStore, Range};
 
 use super::hash::{self, StoreInfo};
 
@@ -59,14 +59,14 @@ impl MultiStore {
         }
     }
 
-    /// Write each store's tx cache to the store's block cache then clear's the tx caches
+    /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
     pub fn write_then_clear_tx_caches(&mut self) {
         self.bank_store.write_then_clear_tx_cache();
         self.auth_store.write_then_clear_tx_cache();
         self.params_store.write_then_clear_tx_cache();
     }
 
-    /// Write each store's tx cache to the store's block cache then clear's the tx caches
+    /// Clears the tx caches
     pub fn clear_tx_caches(&mut self) {
         self.bank_store.clear_tx_cache();
         self.auth_store.clear_tx_cache();
@@ -96,7 +96,7 @@ impl MultiStore {
 
 #[derive(Debug, Clone)]
 pub struct KVStore {
-    tree_store: Tree,
+    persistent_store: IAVLTreeStore,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
@@ -104,7 +104,7 @@ pub struct KVStore {
 impl KVStore {
     pub fn new() -> Self {
         KVStore {
-            tree_store: Tree::new(),
+            persistent_store: IAVLTreeStore::new(),
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         }
@@ -117,7 +117,7 @@ impl KVStore {
             let block_cache_val = self.block_cache.get(key);
 
             if block_cache_val.is_none() {
-                return self.tree_store.get(key);
+                return self.persistent_store.get(key);
             };
 
             return block_cache_val;
@@ -154,7 +154,7 @@ impl KVStore {
         R: RangeBounds<Vec<u8>>,
     {
         //TODO: this doesn't iterate over cached values
-        self.tree_store.range(range)
+        self.persistent_store.range(range)
     }
 
     /// Writes tx cache into block cache then clears the tx cache
@@ -187,7 +187,7 @@ impl KVStore {
                 .block_cache
                 .get(key)
                 .expect("key is definitely in the HashMap");
-            self.tree_store.set(key.to_owned(), value.to_owned())
+            self.persistent_store.set(key.to_owned(), value.to_owned())
         }
         self.block_cache.clear();
     }
@@ -195,7 +195,7 @@ impl KVStore {
     pub fn commit(&mut self) -> [u8; 32] {
         self.write_then_clear_tx_cache();
         self.write_then_clear_block_cache();
-        let (hash, _) = self.tree_store.save_version();
+        let (hash, _) = self.persistent_store.save_version();
         hash
     }
 }
