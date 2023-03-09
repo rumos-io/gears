@@ -8,13 +8,15 @@ use sha2::{Digest, Sha256};
 
 use crate::error::Error;
 
+use super::node_db::{self, NodeDB};
+
 // TODO:
 // 1. fetch from DB in get methods
 
 #[derive(Debug, Clone, PartialEq, Default)]
 struct InnerNode {
-    cached_left_subtree: Option<Box<Tree>>, // None means value is the same as that in the DB
-    cached_right_subtree: Option<Box<Tree>>,
+    left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
+    right_node: Option<Box<Node>>,
     key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
@@ -24,37 +26,37 @@ struct InnerNode {
 }
 
 impl InnerNode {
-    fn get_mut_left_subtree(&mut self) -> &mut Tree {
-        match &mut self.cached_left_subtree {
-            Some(tree) => return &mut *tree,
+    fn get_mut_left_node(&mut self, node_db: &NodeDB) -> &mut Node {
+        match &mut self.left_node {
+            Some(node) => return node,
             None => todo!(), //fetch from DB + update cached value
         }
     }
 
-    fn get_left_subtree(&self) -> &Tree {
-        match &self.cached_left_subtree {
-            Some(tree) => return &*tree,
+    fn get_left_node(&self, node_db: &NodeDB) -> &Node {
+        match &self.left_node {
+            Some(node) => return node,
             None => todo!(), //fetch from DB + possibly don't update cached value?
         }
     }
 
-    fn get_mut_right_subtree(&mut self) -> &mut Tree {
-        match &mut self.cached_right_subtree {
-            Some(tree) => return &mut *tree,
+    fn get_mut_right_node(&mut self, node_db: &NodeDB) -> &mut Node {
+        match &mut self.right_node {
+            Some(node) => return node,
             None => todo!(), //fetch from DB + update cached value
         }
     }
 
-    fn get_right_subtree(&self) -> &Tree {
-        match &self.cached_right_subtree {
-            Some(tree) => return &*tree,
+    fn get_right_node(&self, node_db: &NodeDB) -> &Node {
+        match &self.right_node {
+            Some(node) => return node,
             None => todo!(), //fetch from DB + possibly don't update cached value?
         }
     }
 
-    fn get_balance_factor(&self) -> i16 {
-        let left_height: i16 = self.get_left_subtree().get_height().into();
-        let right_height: i16 = self.get_right_subtree().get_height().into();
+    fn get_balance_factor(&self, node_db: &NodeDB) -> i16 {
+        let left_height: i16 = self.get_left_node(node_db).get_height().into();
+        let right_height: i16 = self.get_right_node(node_db).get_height().into();
         left_height - right_height
     }
 }
@@ -85,33 +87,85 @@ impl Node {
             Node::Inner(inner) => &inner.key,
         }
     }
+
+    pub fn get_height(&self) -> u8 {
+        match self {
+            Node::Leaf(leaf) => 0,
+            Node::Inner(inner) => inner.height,
+        }
+    }
+
+    pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
+        return Node::Leaf(LeafNode {
+            key,
+            value,
+            version,
+        });
+    }
+
+    pub fn hash(&self) -> [u8; 32] {
+        let serialized = self.serialize();
+        Sha256::digest(serialized).into()
+    }
+
+    fn serialize(&self) -> Vec<u8> {
+        match &self {
+            //TODO: partly move this code into node
+            Node::Leaf(node) => {
+                // NOTE: i64 is used here for parameters for compatibility wih cosmos
+                let height: i64 = 0;
+                let size: i64 = 1;
+                let version: i64 = node.version.into();
+                let hashed_value = Sha256::digest(&node.value);
+
+                let mut serialized = height.encode_var_vec();
+                serialized.extend(size.encode_var_vec());
+                serialized.extend(version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.key));
+                serialized.extend(encode_bytes(&hashed_value));
+
+                return serialized;
+            }
+            Node::Inner(node) => {
+                // NOTE: i64 is used here for parameters for compatibility wih cosmos
+                let height: i64 = node.height.into();
+                let size: i64 = node.size.into();
+                let version: i64 = node.version.into();
+
+                let mut node_bytes = height.encode_var_vec();
+                node_bytes.extend(size.encode_var_vec());
+                node_bytes.extend(version.encode_var_vec());
+                node_bytes.extend(encode_bytes(&node.left_hash));
+                node_bytes.extend(encode_bytes(&node.right_hash));
+
+                return node_bytes;
+            }
+        }
+    }
+
+    fn get_size(&self) -> u32 {
+        match &self {
+            Node::Leaf(_) => 1,
+            Node::Inner(n) => n.size,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Tree {
     root: Node,
+    node_db: NodeDB,
 }
 
 impl Tree {
-    pub fn new(key: Vec<u8>, value: Vec<u8>, version: u32) -> Tree {
+    pub fn new(key: Vec<u8>, value: Vec<u8>, version: u32, node_db: NodeDB) -> Tree {
         Tree {
             root: Node::Leaf(LeafNode {
                 key,
                 value,
                 version,
             }),
-        }
-    }
-
-    fn new_from_leaf(leaf: LeafNode) -> Tree {
-        Tree {
-            root: Node::Leaf(leaf),
-        }
-    }
-
-    fn new_from_inner(inner: InnerNode) -> Tree {
-        Tree {
-            root: Node::Inner(inner),
+            node_db,
         }
     }
 
@@ -136,6 +190,7 @@ impl Tree {
 
     fn serialize(&self) -> Vec<u8> {
         match &self.root {
+            //TODO: partly move this code into node
             Node::Leaf(node) => {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
                 let height: i64 = 0;
@@ -169,7 +224,11 @@ impl Tree {
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
-        match &self.root {
+        Self::recursive_get(&self.root, key, &self.node_db)
+    }
+
+    fn recursive_get<'a>(node: &'a Node, key: &[u8], node_db: &NodeDB) -> Option<&'a Vec<u8>> {
+        match node {
             Node::Leaf(leaf) => {
                 if leaf.key == key {
                     return Some(&leaf.value);
@@ -179,28 +238,38 @@ impl Tree {
             }
             Node::Inner(node) => {
                 if key < &node.key {
-                    return node.get_left_subtree().get(key);
+                    return Self::recursive_get(node.get_left_node(node_db), key, node_db);
                 } else {
-                    return node.get_right_subtree().get(key);
+                    return Self::recursive_get(node.get_right_node(node_db), key, node_db);
                 }
             }
         }
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>, version: u32) {
-        match &mut self.root {
+        Self::recursive_set(&mut self.root, key, value, version, &mut self.node_db)
+    }
+
+    fn recursive_set(
+        mut node: &mut Node,
+        key: Vec<u8>,
+        value: Vec<u8>,
+        version: u32,
+        node_db: &mut NodeDB,
+    ) {
+        match &mut node {
             Node::Leaf(leaf_node) => {
                 match key.cmp(&leaf_node.key) {
                     cmp::Ordering::Less => {
-                        let left_subtree = Tree::new(key, value, version);
-                        let left_hash = left_subtree.hash();
-                        let right_subtree = Tree::new_from_leaf(leaf_node.clone());
-                        let right_hash = right_subtree.hash();
+                        let left_node = Node::new_leaf(key, value, version);
+                        let left_hash = left_node.hash();
+                        let right_node = Node::Leaf(leaf_node.clone());
+                        let right_hash = right_node.hash();
 
-                        *self = Tree::new_from_inner(InnerNode {
+                        *node = Node::Inner(InnerNode {
                             key: leaf_node.key.clone(),
-                            cached_left_subtree: Some(Box::new(left_subtree)),
-                            cached_right_subtree: Some(Box::new(right_subtree)),
+                            left_node: Some(Box::new(left_node)),
+                            right_node: Some(Box::new(right_node)),
                             height: 1,
                             size: 2,
                             version,
@@ -215,15 +284,15 @@ impl Tree {
                         return;
                     }
                     cmp::Ordering::Greater => {
-                        let right_subtree = Tree::new(key.clone(), value, version);
-                        let right_hash = right_subtree.hash();
-                        let left_subtree = Tree::new_from_leaf(leaf_node.clone());
+                        let right_node = Node::new_leaf(key.clone(), value, version);
+                        let right_hash = right_node.hash();
+                        let left_subtree = node.clone();
                         let left_hash = left_subtree.hash();
 
-                        *self = Tree::new_from_inner(InnerNode {
+                        *node = Node::Inner(InnerNode {
                             key,
-                            cached_left_subtree: Some(Box::new(left_subtree)),
-                            cached_right_subtree: Some(Box::new(right_subtree)),
+                            left_node: Some(Box::new(left_subtree)),
+                            right_node: Some(Box::new(right_node)),
                             height: 1,
                             size: 2,
                             left_hash,
@@ -237,58 +306,64 @@ impl Tree {
             Node::Inner(root_node) => {
                 // Perform normal BST
                 if key < root_node.key {
-                    root_node
-                        .get_mut_left_subtree()
-                        .set(key.clone(), value, version);
-                    root_node.left_hash = root_node.get_left_subtree().hash();
+                    Self::recursive_set(
+                        root_node.get_mut_left_node(node_db),
+                        key.clone(),
+                        value,
+                        version,
+                        node_db,
+                    );
+                    root_node.left_hash = root_node.get_left_node(node_db).hash();
                 } else {
-                    root_node
-                        .get_mut_right_subtree()
-                        .set(key.clone(), value, version);
-                    root_node.right_hash = root_node.get_right_subtree().hash();
+                    Self::recursive_set(
+                        root_node.get_mut_right_node(node_db),
+                        key.clone(),
+                        value,
+                        version,
+                        node_db,
+                    );
+                    root_node.right_hash = root_node.get_right_node(node_db).hash();
                 }
 
                 // Update height + size + version
                 root_node.height = 1 + cmp::max(
-                    root_node.get_left_subtree().get_height(),
-                    root_node.get_right_subtree().get_height(),
+                    root_node.get_left_node(node_db).get_height(),
+                    root_node.get_right_node(node_db).get_height(),
                 );
 
-                root_node.size = root_node.get_left_subtree().get_size()
-                    + root_node.get_right_subtree().get_size();
+                root_node.size = root_node.get_left_node(node_db).get_size()
+                    + root_node.get_right_node(node_db).get_size();
 
                 root_node.version = version;
 
                 // If the tree is unbalanced then try out the usual four cases
-                let balance_factor = root_node.get_balance_factor();
+                let balance_factor = root_node.get_balance_factor(node_db);
                 if balance_factor > 1 {
-                    let left_subtree = root_node.get_mut_left_subtree();
+                    let left_node = root_node.get_mut_left_node(node_db);
 
-                    if &key < left_subtree.root.get_key() {
+                    if &key < left_node.get_key() {
                         // Case 1 - Right
-                        self.right_rotate(version)
+                        Self::right_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     } else {
                         // Case 2 - Left Right
-                        left_subtree
-                            .left_rotate(version)
+                        Self::left_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
-                        self.right_rotate(version)
+                        Self::right_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     }
                 } else if balance_factor < -1 {
-                    let right_subtree = root_node.get_mut_right_subtree();
+                    let right_node = root_node.get_mut_right_node(node_db);
 
-                    if &key > right_subtree.root.get_key() {
+                    if &key > right_node.get_key() {
                         // Case 3 - Left
-                        self.left_rotate(version)
+                        Self::left_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     } else {
                         // Case 4 - Right Left
-                        right_subtree
-                            .right_rotate(version)
+                        Self::right_rotate(right_node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
-                        self.left_rotate(version)
+                        Self::left_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     }
                 }
@@ -296,40 +371,40 @@ impl Tree {
         };
     }
 
-    fn right_rotate(&mut self, version: u32) -> Result<(), Error> {
-        if let Node::Inner(z) = &mut self.root {
+    fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB) -> Result<(), Error> {
+        if let Node::Inner(z) = node {
             let mut z = mem::take(z);
-            let y = mem::take(z.get_mut_left_subtree());
+            let y = mem::take(z.get_mut_left_node(node_db));
 
-            let mut y = match y.root {
+            let mut y = match y {
                 Node::Inner(y) => y,
                 Node::Leaf(_) => return Err(Error::RotateError),
             };
 
-            let t3 = y.cached_right_subtree;
+            let t3 = y.right_node;
 
             // Perform rotation on z and update height and hash
-            z.cached_left_subtree = t3;
+            z.left_node = t3;
             z.height = 1 + cmp::max(
-                z.get_left_subtree().get_height(),
-                z.get_right_subtree().get_height(),
+                z.get_left_node(node_db).get_height(),
+                z.get_right_node(node_db).get_height(),
             );
-            z.size = z.get_left_subtree().get_size() + z.get_right_subtree().get_size();
+            z.size = z.get_left_node(node_db).get_size() + z.get_right_node(node_db).get_size();
             z.version = version;
             z.left_hash = y.right_hash;
-            let z = Tree::new_from_inner(z);
+            let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.right_hash = z.hash();
-            y.cached_right_subtree = Some(Box::new(z));
+            y.right_node = Some(Box::new(z));
             y.height = 1 + cmp::max(
-                y.get_left_subtree().get_height(),
-                y.get_right_subtree().get_height(),
+                y.get_left_node(node_db).get_height(),
+                y.get_right_node(node_db).get_height(),
             );
-            y.size = y.get_left_subtree().get_size() + y.get_right_subtree().get_size();
+            y.size = y.get_left_node(node_db).get_size() + y.get_right_node(node_db).get_size();
             y.version = version;
 
-            *self = Tree::new_from_inner(y);
+            *node = Node::Inner(y);
 
             return Ok(());
         } else {
@@ -338,40 +413,40 @@ impl Tree {
         }
     }
 
-    fn left_rotate(&mut self, version: u32) -> Result<(), Error> {
-        if let Node::Inner(z) = &mut self.root {
+    fn left_rotate(node: &mut Node, version: u32, node_db: &NodeDB) -> Result<(), Error> {
+        if let Node::Inner(z) = node {
             let mut z = mem::take(z);
-            let y = mem::take(z.get_mut_right_subtree());
+            let y = mem::take(z.get_mut_right_node(node_db));
 
-            let mut y = match y.root {
+            let mut y = match y {
                 Node::Inner(y) => y,
                 Node::Leaf(_) => return Err(Error::RotateError),
             };
 
-            let t2 = y.cached_left_subtree;
+            let t2 = y.left_node;
 
             // Perform rotation on z and update height and hash
-            z.cached_right_subtree = t2;
+            z.right_node = t2;
             z.height = 1 + cmp::max(
-                z.get_left_subtree().get_height(),
-                z.get_right_subtree().get_height(),
+                z.get_left_node(node_db).get_height(),
+                z.get_right_node(node_db).get_height(),
             );
-            z.size = z.get_left_subtree().get_size() + z.get_right_subtree().get_size();
+            z.size = z.get_left_node(node_db).get_size() + z.get_right_node(node_db).get_size();
             z.version = version;
             z.right_hash = y.left_hash;
-            let z = Tree::new_from_inner(z);
+            let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.left_hash = z.hash();
-            y.cached_left_subtree = Some(Box::new(z));
+            y.left_node = Some(Box::new(z));
             y.height = 1 + cmp::max(
-                y.get_left_subtree().get_height(),
-                y.get_right_subtree().get_height(),
+                y.get_left_node(node_db).get_height(),
+                y.get_right_node(node_db).get_height(),
             );
-            y.size = y.get_left_subtree().get_size() + y.get_right_subtree().get_size();
+            y.size = y.get_left_node(node_db).get_size() + y.get_right_node(node_db).get_size();
             y.version = version;
 
-            *self = Tree::new_from_inner(y);
+            *node = Node::Inner(y);
 
             return Ok(());
         } else {
@@ -387,6 +462,7 @@ impl Tree {
         Range {
             range,
             delayed_nodes: vec![&self.root],
+            node_db: &self.node_db,
         }
     }
 }
@@ -394,6 +470,7 @@ impl Tree {
 pub struct Range<'a, R: RangeBounds<Vec<u8>>> {
     range: R,
     delayed_nodes: Vec<&'a Node>,
+    node_db: &'a NodeDB,
 }
 
 impl<'a, T: RangeBounds<Vec<u8>>> Range<'a, T> {
@@ -416,11 +493,11 @@ impl<'a, T: RangeBounds<Vec<u8>>> Range<'a, T> {
             Node::Inner(inner) => {
                 // Traverse through the left subtree, then the right subtree.
                 if before_end {
-                    self.delayed_nodes.push(&inner.get_right_subtree().root);
+                    self.delayed_nodes.push(&inner.get_right_node(self.node_db));
                 }
 
                 if after_start {
-                    self.delayed_nodes.push(&inner.get_left_subtree().root);
+                    self.delayed_nodes.push(&inner.get_left_node(self.node_db));
                 }
             }
             Node::Leaf(leaf) => {
@@ -443,7 +520,7 @@ impl<'a, T: RangeBounds<Vec<u8>>> Iterator for Range<'a, T> {
     }
 }
 
-fn encode_bytes(mut bz: &[u8]) -> Vec<u8> {
+fn encode_bytes(bz: &[u8]) -> Vec<u8> {
     let mut enc_bytes = bz.len().encode_var_vec();
     enc_bytes.extend_from_slice(bz);
 
@@ -458,12 +535,12 @@ mod tests {
     #[test]
     fn right_rotate_works() {
         let t3 = InnerNode {
-            cached_left_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![19],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            cached_right_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![20],
                 value: vec![1, 6, 9],
                 version: 0,
@@ -483,12 +560,12 @@ mod tests {
         };
 
         let y = InnerNode {
-            cached_left_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![18],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            cached_right_subtree: Some(Box::new(Tree::new_from_inner(t3))),
+            right_node: Some(Box::new(Node::Inner(t3))),
             key: vec![19],
             height: 2,
             size: 3,
@@ -504,8 +581,8 @@ mod tests {
         };
 
         let z = InnerNode {
-            cached_left_subtree: Some(Box::new(Tree::new_from_inner(y))),
-            cached_right_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            left_node: Some(Box::new(Node::Inner(y))),
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![21],
                 value: vec![3, 2, 1],
                 version: 0,
@@ -524,9 +601,9 @@ mod tests {
             version: 0,
         };
 
-        let mut z = Tree::new_from_inner(z);
+        let mut z = Node::Inner(z);
 
-        z.right_rotate(0).unwrap();
+        Tree::right_rotate(&mut z, 0, &NodeDB {}).unwrap();
 
         let hash = z.hash();
         let expected = [
@@ -539,12 +616,12 @@ mod tests {
     #[test]
     fn left_rotate_works() {
         let t2 = InnerNode {
-            cached_left_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![19],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            cached_right_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![20],
                 value: vec![1, 6, 9],
                 version: 0,
@@ -564,12 +641,12 @@ mod tests {
         };
 
         let y = InnerNode {
-            cached_right_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![21],
                 value: vec![3, 2, 1, 1],
                 version: 0,
             }))),
-            cached_left_subtree: Some(Box::new(Tree::new_from_inner(t2))),
+            left_node: Some(Box::new(Node::Inner(t2))),
             key: vec![21],
             height: 2,
             size: 3,
@@ -585,8 +662,8 @@ mod tests {
         };
 
         let z = InnerNode {
-            cached_right_subtree: Some(Box::new(Tree::new_from_inner(y))),
-            cached_left_subtree: Some(Box::new(Tree::new_from_leaf(LeafNode {
+            right_node: Some(Box::new(Node::Inner(y))),
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![18],
                 value: vec![3, 2, 2],
                 version: 0,
@@ -605,9 +682,9 @@ mod tests {
             version: 0,
         };
 
-        let mut z = Tree::new_from_inner(z);
+        let mut z = Node::Inner(z);
 
-        z.left_rotate(0).unwrap();
+        Tree::left_rotate(&mut z, 0, &NodeDB {}).unwrap();
 
         let hash = z.hash();
         let expected = [
@@ -619,11 +696,7 @@ mod tests {
 
     #[test]
     fn set_equal_leaf_works() {
-        let mut tree = Tree::new_from_leaf(LeafNode {
-            key: vec![1],
-            value: vec![2],
-            version: 0,
-        });
+        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB {});
 
         tree.set(vec![1], vec![3], 0);
 
@@ -637,11 +710,7 @@ mod tests {
 
     #[test]
     fn set_less_than_leaf_works() {
-        let mut tree = Tree::new_from_leaf(LeafNode {
-            key: vec![3],
-            value: vec![2],
-            version: 0,
-        });
+        let mut tree = Tree::new(vec![3], vec![2], 0, NodeDB {});
 
         tree.set(vec![1], vec![3], 0);
 
@@ -655,11 +724,7 @@ mod tests {
 
     #[test]
     fn set_greater_than_leaf_works() {
-        let mut tree = Tree::new_from_leaf(LeafNode {
-            key: vec![1],
-            value: vec![2],
-            version: 0,
-        });
+        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB {});
 
         tree.set(vec![3], vec![3], 0);
 
@@ -673,7 +738,7 @@ mod tests {
 
     #[test]
     fn bounded_range_works() {
-        let mut tree = Tree::new(b"1".to_vec(), b"abc1".to_vec(), 0);
+        let mut tree = Tree::new(b"1".to_vec(), b"abc1".to_vec(), 0, NodeDB {});
         tree.set(b"2".to_vec(), b"abc2".to_vec(), 0);
         tree.set(b"3".to_vec(), b"abc3".to_vec(), 0);
         tree.set(b"4".to_vec(), b"abc4".to_vec(), 0);
@@ -734,7 +799,7 @@ mod tests {
 
     #[test]
     fn full_range_unique_keys_works() {
-        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0);
+        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB {});
         tree.set(b"bob".to_vec(), b"123".to_vec(), 0);
         tree.set(b"c".to_vec(), b"1".to_vec(), 0);
         tree.set(b"q".to_vec(), b"1".to_vec(), 0);
@@ -756,7 +821,7 @@ mod tests {
 
     #[test]
     fn full_range_duplicate_keys_works() {
-        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0);
+        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB {});
         tree.set(b"alice".to_vec(), b"abc".to_vec(), 0);
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
 

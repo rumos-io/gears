@@ -1,4 +1,7 @@
-use super::tree::{Range as TreeRange, Tree};
+use super::{
+    node_db::NodeDB,
+    tree::{Range as TreeRange, Tree},
+};
 use crate::merkle::EMPTY_HASH;
 use std::ops::RangeBounds;
 
@@ -39,7 +42,7 @@ impl IAVLTreeStore {
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         match &mut self.tree {
             Some(root) => root.set(key, value, self.version + 1),
-            None => self.tree = Some(Tree::new(key, value, self.version + 1)),
+            None => self.tree = Some(Tree::new(key, value, self.version + 1, NodeDB {})),
         };
     }
 
