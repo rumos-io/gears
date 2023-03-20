@@ -3,6 +3,7 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
+use database::DB;
 use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
@@ -26,35 +27,35 @@ struct InnerNode {
 }
 
 impl InnerNode {
-    fn get_mut_left_node(&mut self, node_db: &NodeDB) -> &mut Node {
+    fn get_mut_left_node<T: DB>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         match &mut self.left_node {
             Some(node) => return node,
             None => todo!(), //fetch from DB + update cached value
         }
     }
 
-    fn get_left_node(&self, node_db: &NodeDB) -> &Node {
+    fn get_left_node<T: DB>(&self, node_db: &NodeDB<T>) -> &Node {
         match &self.left_node {
             Some(node) => return node,
             None => todo!(), //fetch from DB + possibly don't update cached value?
         }
     }
 
-    fn get_mut_right_node(&mut self, node_db: &NodeDB) -> &mut Node {
+    fn get_mut_right_node<T: DB>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         match &mut self.right_node {
             Some(node) => return node,
             None => todo!(), //fetch from DB + update cached value
         }
     }
 
-    fn get_right_node(&self, node_db: &NodeDB) -> &Node {
+    fn get_right_node<T: DB>(&self, node_db: &NodeDB<T>) -> &Node {
         match &self.right_node {
             Some(node) => return node,
             None => todo!(), //fetch from DB + possibly don't update cached value?
         }
     }
 
-    fn get_balance_factor(&self, node_db: &NodeDB) -> i16 {
+    fn get_balance_factor<T: DB>(&self, node_db: &NodeDB<T>) -> i16 {
         let left_height: i16 = self.get_left_node(node_db).get_height().into();
         let right_height: i16 = self.get_right_node(node_db).get_height().into();
         left_height - right_height
@@ -110,7 +111,6 @@ impl Node {
 
     fn serialize(&self) -> Vec<u8> {
         match &self {
-            //TODO: partly move this code into node
             Node::Leaf(node) => {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
                 let height: i64 = 0;
@@ -151,14 +151,20 @@ impl Node {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct Tree {
+#[derive(Debug)]
+pub struct Tree<T>
+where
+    T: DB,
+{
     root: Node,
-    node_db: NodeDB,
+    node_db: NodeDB<T>,
 }
 
-impl Tree {
-    pub fn new(key: Vec<u8>, value: Vec<u8>, version: u32, node_db: NodeDB) -> Tree {
+impl<T> Tree<T>
+where
+    T: DB,
+{
+    pub fn new(key: Vec<u8>, value: Vec<u8>, version: u32, node_db: NodeDB<T>) -> Tree<T> {
         Tree {
             root: Node::Leaf(LeafNode {
                 key,
@@ -169,65 +175,19 @@ impl Tree {
         }
     }
 
-    fn get_height(&self) -> u8 {
-        match &self.root {
-            Node::Leaf(_) => 0,
-            Node::Inner(n) => n.height,
-        }
-    }
-
-    fn get_size(&self) -> u32 {
-        match &self.root {
-            Node::Leaf(_) => 1,
-            Node::Inner(n) => n.size,
-        }
+    pub fn load_version(&mut self, version: u32) {
+        todo!()
     }
 
     pub fn hash(&self) -> [u8; 32] {
-        let serialized = self.serialize();
-        Sha256::digest(serialized).into()
-    }
-
-    fn serialize(&self) -> Vec<u8> {
-        match &self.root {
-            //TODO: partly move this code into node
-            Node::Leaf(node) => {
-                // NOTE: i64 is used here for parameters for compatibility wih cosmos
-                let height: i64 = 0;
-                let size: i64 = 1;
-                let version: i64 = node.version.into();
-                let hashed_value = Sha256::digest(&node.value);
-
-                let mut serialized = height.encode_var_vec();
-                serialized.extend(size.encode_var_vec());
-                serialized.extend(version.encode_var_vec());
-                serialized.extend(encode_bytes(&node.key));
-                serialized.extend(encode_bytes(&hashed_value));
-
-                return serialized;
-            }
-            Node::Inner(node) => {
-                // NOTE: i64 is used here for parameters for compatibility wih cosmos
-                let height: i64 = node.height.into();
-                let size: i64 = node.size.into();
-                let version: i64 = node.version.into();
-
-                let mut node_bytes = height.encode_var_vec();
-                node_bytes.extend(size.encode_var_vec());
-                node_bytes.extend(version.encode_var_vec());
-                node_bytes.extend(encode_bytes(&node.left_hash));
-                node_bytes.extend(encode_bytes(&node.right_hash));
-
-                return node_bytes;
-            }
-        }
+        self.root.hash()
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
         Self::recursive_get(&self.root, key, &self.node_db)
     }
 
-    fn recursive_get<'a>(node: &'a Node, key: &[u8], node_db: &NodeDB) -> Option<&'a Vec<u8>> {
+    fn recursive_get<'a>(node: &'a Node, key: &[u8], node_db: &NodeDB<T>) -> Option<&'a Vec<u8>> {
         match node {
             Node::Leaf(leaf) => {
                 if leaf.key == key {
@@ -255,7 +215,7 @@ impl Tree {
         key: Vec<u8>,
         value: Vec<u8>,
         version: u32,
-        node_db: &mut NodeDB,
+        node_db: &mut NodeDB<T>,
     ) {
         match &mut node {
             Node::Leaf(leaf_node) => {
@@ -371,7 +331,7 @@ impl Tree {
         };
     }
 
-    fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB) -> Result<(), Error> {
+    fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
         if let Node::Inner(z) = node {
             let mut z = mem::take(z);
             let y = mem::take(z.get_mut_left_node(node_db));
@@ -413,7 +373,7 @@ impl Tree {
         }
     }
 
-    fn left_rotate(node: &mut Node, version: u32, node_db: &NodeDB) -> Result<(), Error> {
+    fn left_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
         if let Node::Inner(z) = node {
             let mut z = mem::take(z);
             let y = mem::take(z.get_mut_right_node(node_db));
@@ -455,7 +415,7 @@ impl Tree {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R>
+    pub fn range<R>(&self, range: R) -> Range<R, T>
     where
         R: RangeBounds<Vec<u8>>,
     {
@@ -467,13 +427,16 @@ impl Tree {
     }
 }
 
-pub struct Range<'a, R: RangeBounds<Vec<u8>>> {
+pub struct Range<'a, R: RangeBounds<Vec<u8>>, T>
+where
+    T: DB,
+{
     range: R,
     delayed_nodes: Vec<&'a Node>,
-    node_db: &'a NodeDB,
+    node_db: &'a NodeDB<T>,
 }
 
-impl<'a, T: RangeBounds<Vec<u8>>> Range<'a, T> {
+impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
     fn traverse(&mut self) -> Option<(&'a Vec<u8>, &'a Vec<u8>)> {
         let node = self.delayed_nodes.pop()?;
 
@@ -512,7 +475,7 @@ impl<'a, T: RangeBounds<Vec<u8>>> Range<'a, T> {
     }
 }
 
-impl<'a, T: RangeBounds<Vec<u8>>> Iterator for Range<'a, T> {
+impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Iterator for Range<'a, T, R> {
     type Item = (&'a Vec<u8>, &'a Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -529,8 +492,8 @@ fn encode_bytes(bz: &[u8]) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
+    use database::MemDB;
 
     #[test]
     fn right_rotate_works() {
@@ -603,7 +566,8 @@ mod tests {
 
         let mut z = Node::Inner(z);
 
-        Tree::right_rotate(&mut z, 0, &NodeDB {}).unwrap();
+        let db = MemDB::new();
+        Tree::right_rotate(&mut z, 0, &NodeDB::new(db)).unwrap();
 
         let hash = z.hash();
         let expected = [
@@ -684,7 +648,8 @@ mod tests {
 
         let mut z = Node::Inner(z);
 
-        Tree::left_rotate(&mut z, 0, &NodeDB {}).unwrap();
+        let db = MemDB::new();
+        Tree::left_rotate(&mut z, 0, &NodeDB::new(db)).unwrap();
 
         let hash = z.hash();
         let expected = [
@@ -696,7 +661,8 @@ mod tests {
 
     #[test]
     fn set_equal_leaf_works() {
-        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB {});
+        let db = MemDB::new();
+        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB::new(db));
 
         tree.set(vec![1], vec![3], 0);
 
@@ -710,7 +676,8 @@ mod tests {
 
     #[test]
     fn set_less_than_leaf_works() {
-        let mut tree = Tree::new(vec![3], vec![2], 0, NodeDB {});
+        let db = MemDB::new();
+        let mut tree = Tree::new(vec![3], vec![2], 0, NodeDB::new(db));
 
         tree.set(vec![1], vec![3], 0);
 
@@ -724,7 +691,8 @@ mod tests {
 
     #[test]
     fn set_greater_than_leaf_works() {
-        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB {});
+        let db = MemDB::new();
+        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB::new(db));
 
         tree.set(vec![3], vec![3], 0);
 
@@ -738,7 +706,8 @@ mod tests {
 
     #[test]
     fn bounded_range_works() {
-        let mut tree = Tree::new(b"1".to_vec(), b"abc1".to_vec(), 0, NodeDB {});
+        let db = MemDB::new();
+        let mut tree = Tree::new(b"1".to_vec(), b"abc1".to_vec(), 0, NodeDB::new(db));
         tree.set(b"2".to_vec(), b"abc2".to_vec(), 0);
         tree.set(b"3".to_vec(), b"abc3".to_vec(), 0);
         tree.set(b"4".to_vec(), b"abc4".to_vec(), 0);
@@ -799,7 +768,8 @@ mod tests {
 
     #[test]
     fn full_range_unique_keys_works() {
-        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB {});
+        let db = MemDB::new();
+        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB::new(db));
         tree.set(b"bob".to_vec(), b"123".to_vec(), 0);
         tree.set(b"c".to_vec(), b"1".to_vec(), 0);
         tree.set(b"q".to_vec(), b"1".to_vec(), 0);
@@ -821,7 +791,8 @@ mod tests {
 
     #[test]
     fn full_range_duplicate_keys_works() {
-        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB {});
+        let db = MemDB::new();
+        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB::new(db));
         tree.set(b"alice".to_vec(), b"abc".to_vec(), 0);
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
 

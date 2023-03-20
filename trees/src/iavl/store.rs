@@ -1,23 +1,34 @@
+use database::{PrefixDB, RocksDB, DB};
+
 use super::{
     node_db::NodeDB,
     tree::{Range as TreeRange, Tree},
 };
 use crate::merkle::EMPTY_HASH;
-use std::ops::RangeBounds;
+use std::{mem, ops::RangeBounds, sync::Arc};
 
 /// A versioned IAVL tree
-#[derive(Debug, Clone, PartialEq)]
-pub struct IAVLTreeStore {
-    tree: Option<Tree>,
+#[derive(Debug)]
+pub struct IAVLTreeStore<T>
+where
+    T: DB,
+{
+    tree: Option<Tree<T>>,
     version: u32,
+    db: Option<T>,
 }
 
-impl IAVLTreeStore {
-    pub fn new() -> IAVLTreeStore {
+impl<T: DB> IAVLTreeStore<T> {
+    pub fn new(db: T) -> IAVLTreeStore<T> {
         IAVLTreeStore {
             tree: None,
             version: 0,
+            db: Some(db),
         }
+    }
+
+    pub fn load_version(&mut self, version: u32) {
+        todo!()
     }
 
     pub fn save_version(&mut self) -> ([u8; 32], u32) {
@@ -27,26 +38,34 @@ impl IAVLTreeStore {
 
     pub fn root_hash(&self) -> [u8; 32] {
         match &self.tree {
-            Some(root) => root.hash(),
+            Some(tree) => tree.hash(),
             None => EMPTY_HASH,
         }
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
         match &self.tree {
-            Some(root) => root.get(key),
+            Some(tree) => tree.get(key),
             None => None,
         }
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         match &mut self.tree {
-            Some(root) => root.set(key, value, self.version + 1),
-            None => self.tree = Some(Tree::new(key, value, self.version + 1, NodeDB {})),
+            Some(tree) => tree.set(key, value, self.version + 1),
+            None => {
+                let db = mem::replace(&mut self.db, None); //TODO: tis is a hack which will go away after the merge o IAVLTreeStore and Tree
+                self.tree = Some(Tree::new(
+                    key,
+                    value,
+                    self.version + 1,
+                    NodeDB::new(db.unwrap()),
+                ))
+            }
         };
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R>
+    pub fn range<R>(&self, range: R) -> Range<R, T>
     where
         R: RangeBounds<Vec<u8>>,
     {
@@ -59,11 +78,11 @@ impl IAVLTreeStore {
     }
 }
 
-pub struct Range<'a, R: RangeBounds<Vec<u8>>> {
-    tree: Option<TreeRange<'a, R>>,
+pub struct Range<'a, R: RangeBounds<Vec<u8>>, T: DB> {
+    tree: Option<TreeRange<'a, R, T>>,
 }
 
-impl<'a, T: RangeBounds<Vec<u8>>> Iterator for Range<'a, T> {
+impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Iterator for Range<'a, T, R> {
     type Item = (&'a Vec<u8>, &'a Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -79,11 +98,14 @@ mod tests {
 
     use std::ops::Bound;
 
+    use database::MemDB;
+
     use super::*;
 
     #[test]
     fn repeated_set_works() {
-        let mut tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let mut tree = IAVLTreeStore::new(db);
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -99,7 +121,8 @@ mod tests {
 
     #[test]
     fn save_version_works() {
-        let mut tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let mut tree = IAVLTreeStore::new(db);
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -123,7 +146,8 @@ mod tests {
 
     #[test]
     fn get_works() {
-        let mut tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let mut tree = IAVLTreeStore::new(db);
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -138,7 +162,8 @@ mod tests {
 
     #[test]
     fn scenario_works() {
-        let mut tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let mut tree = IAVLTreeStore::new(db);
         tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
         tree.set(
             vec![
@@ -190,7 +215,8 @@ mod tests {
 
     #[test]
     fn bounded_range_works() {
-        let mut tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let mut tree = IAVLTreeStore::new(db);
         tree.set(b"1".to_vec(), b"abc1".to_vec());
         tree.set(b"2".to_vec(), b"abc2".to_vec());
         tree.set(b"3".to_vec(), b"abc3".to_vec());
@@ -252,7 +278,8 @@ mod tests {
 
     #[test]
     fn full_range_unique_keys_works() {
-        let mut tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let mut tree = IAVLTreeStore::new(db);
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -275,7 +302,8 @@ mod tests {
 
     #[test]
     fn full_range_duplicate_keys_works() {
-        let mut tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let mut tree = IAVLTreeStore::new(db);
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
@@ -291,7 +319,8 @@ mod tests {
 
     #[test]
     fn empty_tree_range_works() {
-        let tree = IAVLTreeStore::new();
+        let db = MemDB::new();
+        let tree = IAVLTreeStore::new(db);
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];

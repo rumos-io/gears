@@ -1,3 +1,5 @@
+use database::DB;
+
 use crate::{
     store::{KVStore, Store},
     types::Context,
@@ -21,7 +23,7 @@ pub const DEFAULT_PARAMS: Params = Params {
 };
 
 impl Params {
-    pub fn get(ctx: &Context) -> Params {
+    pub fn get<T: DB>(ctx: &Context<T>) -> Params {
         let store = ctx.get_kv_store(crate::store::Store::Params);
         let store = store.get_immutable_prefix_store(SUBSPACE_NAME.into());
 
@@ -40,7 +42,7 @@ impl Params {
         }
     }
 
-    pub fn set(ctx: &mut Context, params: Params) {
+    pub fn set<T: DB>(ctx: &mut Context<T>, params: Params) {
         let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 

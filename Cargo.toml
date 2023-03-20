@@ -1,5 +1,5 @@
 [workspace]
-members = ["proto-types", "proto-messages", "app", "trees"]
+members = ["proto-types", "proto-messages", "app", "trees", "database"]
 
 [patch.crates-io]
 prost = { git = 'https://github.com/joneskm/prosit' }

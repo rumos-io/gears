@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use bytes::Bytes;
 use cosmwasm_std::Uint256;
+use database::DB;
 use ibc_proto::cosmos::{
     bank::v1beta1::{QueryAllBalancesResponse, QueryBalanceResponse},
     base::v1beta1::Coin,
@@ -44,7 +45,7 @@ pub struct Balance {
 }
 
 impl Bank {
-    pub fn init_genesis(ctx: &mut Context, genesis: GenesisState) {
+    pub fn init_genesis<T: DB>(ctx: &mut Context<T>, genesis: GenesisState) {
         // TODO:
         // 1. cosmos SDK orders the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
@@ -67,8 +68,8 @@ impl Bank {
         }
     }
 
-    pub fn query_balance(
-        ctx: &Context,
+    pub fn query_balance<T: DB>(
+        ctx: &Context<T>,
         req: QueryBalanceRequest,
     ) -> Result<QueryBalanceResponse, AppError> {
         let bank_store = ctx.get_kv_store(Store::Bank);
@@ -88,8 +89,8 @@ impl Bank {
         }
     }
 
-    pub fn query_all_balances(
-        ctx: &QueryContext,
+    pub fn query_all_balances<T: DB>(
+        ctx: &QueryContext<T>,
         req: QueryAllBalancesRequest,
     ) -> Result<QueryAllBalancesResponse, AppError> {
         let bank_store = ctx.get_kv_store(Store::Bank);
@@ -110,8 +111,8 @@ impl Bank {
         });
     }
 
-    pub fn send_coins_from_account_to_module(
-        ctx: &mut Context,
+    pub fn send_coins_from_account_to_module<T: DB>(
+        ctx: &mut Context<T>,
         from_address: AccAddress,
         to_module: Module,
         amount: SendCoins,
@@ -127,8 +128,8 @@ impl Bank {
         Bank::send_coins(ctx, msg)
     }
 
-    pub fn send_coins_from_account_to_account(
-        ctx: &mut Context,
+    pub fn send_coins_from_account_to_account<T: DB>(
+        ctx: &mut Context<T>,
         msg: MsgSend,
     ) -> Result<(), AppError> {
         Bank::send_coins(ctx, msg.clone())?;
@@ -141,7 +142,7 @@ impl Bank {
         Ok(())
     }
 
-    fn send_coins(ctx: &mut Context, msg: MsgSend) -> Result<(), AppError> {
+    fn send_coins<T: DB>(ctx: &mut Context<T>, msg: MsgSend) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
@@ -195,7 +196,7 @@ impl Bank {
         return Ok(());
     }
 
-    pub fn set_supply(ctx: &mut Context, coin: ProtoCoin) {
+    pub fn set_supply<T: DB>(ctx: &mut Context<T>, coin: ProtoCoin) {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
@@ -207,10 +208,10 @@ impl Bank {
         );
     }
 
-    fn get_address_balances_store<'a>(
-        bank_store: &'a mut KVStore,
+    fn get_address_balances_store<'a, T: DB>(
+        bank_store: &'a mut KVStore<T>,
         address: &AccAddress,
-    ) -> MutablePrefixStore<'a> {
+    ) -> MutablePrefixStore<'a, T> {
         let prefix = create_denom_balance_prefix(address.to_owned());
         bank_store.get_mutable_prefix_store(prefix)
     }
@@ -234,6 +235,7 @@ mod tests {
     use std::vec;
 
     use crate::{store::MultiStore, x::bank::DEFAULT_PARAMS};
+    use database::{MemDB, RocksDB};
     use proto_messages::cosmos::base::v1beta1::Coin as ProtoCoin;
     use proto_types::Denom;
 
@@ -250,7 +252,8 @@ mod tests {
 
     #[test]
     fn query_balance_works() {
-        let mut store = MultiStore::new();
+        let db = MemDB::new();
+        let mut store = MultiStore::new(db);
         let genesis = GenesisState {
             balances: vec![Balance {
                 address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
@@ -291,7 +294,8 @@ mod tests {
 
     #[test]
     fn query_all_balances_works() {
-        let mut store = MultiStore::new();
+        let db = MemDB::new();
+        let mut store = MultiStore::new(db);
         let genesis = GenesisState {
             balances: vec![Balance {
                 address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")

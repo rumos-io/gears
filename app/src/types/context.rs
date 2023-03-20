@@ -1,12 +1,14 @@
+use database::{PrefixDB, DB};
+
 use crate::store::{KVStore, MultiStore, Store};
 
-pub struct Context<'a> {
-    pub multi_store: &'a mut MultiStore,
+pub struct Context<'a, T: DB> {
+    pub multi_store: &'a mut MultiStore<T>,
     height: u64,
 }
 
-impl<'a> Context<'a> {
-    pub fn new(multi_store: &'a mut MultiStore, height: u64) -> Self {
+impl<'a, T: DB> Context<'a, T> {
+    pub fn new(multi_store: &'a mut MultiStore<T>, height: u64) -> Self {
         Context {
             multi_store,
             height,
@@ -14,12 +16,12 @@ impl<'a> Context<'a> {
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore {
+    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
         return self.multi_store.get_kv_store(store_key);
     }
 
     /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore {
+    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore<PrefixDB<T>> {
         return self.multi_store.get_mutable_kv_store(store_key);
     }
 
@@ -29,13 +31,13 @@ impl<'a> Context<'a> {
 }
 
 /// A Context which holds an immutable reference to a MultiStore
-pub struct QueryContext<'a> {
-    pub multi_store: &'a MultiStore,
+pub struct QueryContext<'a, T: DB> {
+    pub multi_store: &'a MultiStore<T>,
     height: u64,
 }
 
-impl<'a> QueryContext<'a> {
-    pub fn new(multi_store: &'a MultiStore, height: u64) -> Self {
+impl<'a, T: DB> QueryContext<'a, T> {
+    pub fn new(multi_store: &'a MultiStore<T>, height: u64) -> Self {
         QueryContext {
             multi_store,
             height,
@@ -43,7 +45,7 @@ impl<'a> QueryContext<'a> {
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore {
+    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
         return self.multi_store.get_kv_store(store_key);
     }
 

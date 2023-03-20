@@ -15,6 +15,8 @@ Tendermint - Gaia v0.7.1.0 uses Tendermint version v0.34.21 - Checkout v0.34.21 
 
 Gaiad - Currently gaia-rs does not implement a client so we use the golang implementation. To install gaiad, clone the [gaia repo](https://github.com/cosmos/gaia), checkout `v7.1.0` then run `make install`.
 
+libclang - This is needed by rocks db, run `sudo apt install libclang-dev build-essential`
+
 ## Running
 
 1. From the gaia-rs directory change into the app directory then run make to build and start the application:

@@ -1,7 +1,14 @@
+use std::path::PathBuf;
+
 use baseapp::BaseApp;
-use structopt::StructOpt;
+use database::RocksDB;
+use error::AppError;
+use structopt::{clap::App, StructOpt};
 use tendermint_abci::ServerBuilder;
+use tracing::{error, info};
 use tracing_subscriber::filter::LevelFilter;
+
+use crate::baseapp::APP_NAME;
 
 mod baseapp;
 mod crypto;
@@ -12,6 +19,10 @@ mod x;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
+    /// Directory for config and data
+    #[structopt(long, about = "Directory for config and data", parse(from_os_str))]
+    home: Option<PathBuf>,
+
     /// Bind the TCP server to this host.
     #[structopt(short, long, default_value = "127.0.0.1")]
     host: String,
@@ -46,7 +57,26 @@ fn main() {
 
     tracing_subscriber::fmt().with_max_level(log_level).init();
 
-    let app = BaseApp::new();
+    let home = opt
+        .home
+        .or(dirs::config_dir().map(|mut h| {
+            h.push(APP_NAME);
+            h
+        }))
+        .unwrap_or_else(|| {
+            error!("Home argument not provided and OS does not provide a default config directory");
+            std::process::exit(1)
+        });
+    info!("Using directory {} for config and data.", home.display());
+    let mut db_dir = home.clone();
+    db_dir.push("data");
+    db_dir.push("application.db");
+    let db = RocksDB::new(db_dir).unwrap_or_else(|e| {
+        error!("Could not open database {}", e);
+        std::process::exit(1)
+    });
+
+    let app = BaseApp::new(db);
     let server = ServerBuilder::new(opt.read_buf_size)
         .bind(format!("{}:{}", opt.host, opt.port), app)
         .unwrap();

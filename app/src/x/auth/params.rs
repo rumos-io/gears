@@ -1,3 +1,5 @@
+use database::DB;
+
 use crate::{
     store::{ImmutablePrefixStore, KVStore, Store},
     types::Context,
@@ -50,14 +52,14 @@ impl Params {
             .expect("should be valid u64")
     }
 
-    fn get_raw_param(key: &[u8], store: &ImmutablePrefixStore) -> Vec<u8> {
+    fn get_raw_param<T: DB>(key: &[u8], store: &ImmutablePrefixStore<T>) -> Vec<u8> {
         store
             .get(key)
             .expect("key should be set in kv store")
             .clone()
     }
 
-    pub fn get(ctx: &Context) -> Params {
+    pub fn get<T: DB>(ctx: &Context<T>) -> Params {
         let store = ctx.get_kv_store(crate::store::Store::Params);
         let store = store.get_immutable_prefix_store(SUBSPACE_NAME.into());
 
@@ -85,7 +87,7 @@ impl Params {
         }
     }
 
-    pub fn set(ctx: &mut Context, params: Params) {
+    pub fn set<T: DB>(ctx: &mut Context<T>, params: Params) {
         let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 

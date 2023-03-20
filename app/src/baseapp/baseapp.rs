@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 
+use database::{RocksDB, DB};
 use ibc_proto::cosmos::{
     base::v1beta1::Coin,
     tx::v1beta1::{Tx, TxBody},
@@ -22,7 +23,7 @@ use tendermint_proto::abci::{
     ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
     ResponseQuery,
 };
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use crate::{
     baseapp::{ante::AnteHandler, params},
@@ -39,7 +40,7 @@ use crate::{
     },
 };
 
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
+pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 //TODO:
 // 1. Remove unwraps
@@ -47,14 +48,14 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone)]
 pub struct BaseApp {
-    multi_store: Arc<RwLock<MultiStore>>,
+    multi_store: Arc<RwLock<MultiStore<RocksDB>>>,
     height: Arc<RwLock<u64>>,
 }
 
 impl BaseApp {
-    pub fn new() -> Self {
+    pub fn new(db: RocksDB) -> Self {
         Self {
-            multi_store: Arc::new(RwLock::new(MultiStore::new())),
+            multi_store: Arc::new(RwLock::new(MultiStore::new(db))),
             height: Arc::new(RwLock::new(0)),
         }
     }
@@ -95,7 +96,7 @@ impl BaseApp {
         //#######################
         let tx = DecodedTx::from_bytes(raw)?;
 
-        BaseApp::validate_basic_tx_msgs(tx.get_msgs())?;
+        Self::validate_basic_tx_msgs(tx.get_msgs())?;
 
         let mut multi_store = self
             .multi_store
@@ -125,7 +126,7 @@ impl BaseApp {
         }
     }
 
-    fn run_msgs(ctx: &mut Context, msgs: &Vec<Msg>) -> Result<(), AppError> {
+    fn run_msgs<T: DB>(ctx: &mut Context<T>, msgs: &Vec<Msg>) -> Result<(), AppError> {
         for msg in msgs {
             match msg {
                 Msg::Send(send_msg) => {

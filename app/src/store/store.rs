@@ -1,8 +1,11 @@
 use std::{
     collections::BTreeMap,
     ops::{Bound, RangeBounds},
+    rc::Rc,
+    sync::Arc,
 };
 
+use database::{MemDB, PrefixDB, DB};
 use trees::iavl::{IAVLTreeStore, Range};
 
 use super::hash::{self, StoreInfo};
@@ -18,32 +21,40 @@ pub enum Store {
 // 2. use strum crate to iterate over stores
 // 3. move prefix store into separate file
 impl Store {
-    pub fn name(&self) -> String {
+    pub fn name(&self) -> &str {
         match self {
-            Store::Bank => "bank".to_string(),
-            Store::Auth => "acc".to_string(),
-            Store::Params => "params".to_string(),
+            Store::Bank => "bank",
+            Store::Auth => "acc",
+            Store::Params => "params",
         }
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct MultiStore {
-    bank_store: KVStore,
-    auth_store: KVStore,
-    params_store: KVStore,
+#[derive(Debug)]
+pub struct MultiStore<T: DB> {
+    bank_store: KVStore<PrefixDB<T>>,
+    auth_store: KVStore<PrefixDB<T>>,
+    params_store: KVStore<PrefixDB<T>>,
 }
 
-impl MultiStore {
-    pub fn new() -> Self {
+impl<T: DB> MultiStore<T> {
+    pub fn new(db: T) -> Self {
+        let db = Arc::new(db);
+
         MultiStore {
-            bank_store: KVStore::new(),
-            auth_store: KVStore::new(),
-            params_store: KVStore::new(),
+            bank_store: KVStore::new(PrefixDB::new(
+                db.clone(),
+                Store::Bank.name().as_bytes().to_vec(),
+            )),
+            auth_store: KVStore::new(PrefixDB::new(
+                db.clone(),
+                Store::Auth.name().as_bytes().to_vec(),
+            )),
+            params_store: KVStore::new(PrefixDB::new(db, Store::Params.name().as_bytes().to_vec())),
         }
     }
 
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore {
+    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
         match store_key {
             Store::Bank => &self.bank_store,
             Store::Auth => &self.auth_store,
@@ -51,7 +62,7 @@ impl MultiStore {
         }
     }
 
-    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore {
+    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore<PrefixDB<T>> {
         match store_key {
             Store::Bank => &mut self.bank_store,
             Store::Auth => &mut self.auth_store,
@@ -75,17 +86,17 @@ impl MultiStore {
 
     pub fn commit(&mut self) -> [u8; 32] {
         let bank_info = StoreInfo {
-            name: Store::Bank.name(),
+            name: Store::Bank.name().into(),
             hash: self.bank_store.commit(),
         };
 
         let auth_info = StoreInfo {
-            name: Store::Auth.name(),
+            name: Store::Auth.name().into(),
             hash: self.auth_store.commit(),
         };
 
         let params_info = StoreInfo {
-            name: Store::Params.name(),
+            name: Store::Params.name().into(),
             hash: self.params_store.commit(),
         };
 
@@ -94,17 +105,17 @@ impl MultiStore {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct KVStore {
-    persistent_store: IAVLTreeStore,
+#[derive(Debug)]
+pub struct KVStore<T: DB> {
+    persistent_store: IAVLTreeStore<T>,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
-impl KVStore {
-    pub fn new() -> Self {
+impl<T: DB> KVStore<T> {
+    pub fn new(db: T) -> Self {
         KVStore {
-            persistent_store: IAVLTreeStore::new(),
+            persistent_store: IAVLTreeStore::new(db),
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         }
@@ -135,21 +146,21 @@ impl KVStore {
         self.tx_cache.insert(key, value);
     }
 
-    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore {
+    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<T> {
         ImmutablePrefixStore {
             store: self,
             prefix,
         }
     }
 
-    pub fn get_mutable_prefix_store(&mut self, prefix: Vec<u8>) -> MutablePrefixStore {
+    pub fn get_mutable_prefix_store(&mut self, prefix: Vec<u8>) -> MutablePrefixStore<T> {
         MutablePrefixStore {
             store: self,
             prefix,
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R>
+    pub fn range<R>(&self, range: R) -> Range<R, T>
     where
         R: RangeBounds<Vec<u8>>,
     {
@@ -201,18 +212,18 @@ impl KVStore {
 }
 
 /// Wraps an immutable reference to a KVStore with a prefix
-pub struct ImmutablePrefixStore<'a> {
-    store: &'a KVStore,
+pub struct ImmutablePrefixStore<'a, T: DB> {
+    store: &'a KVStore<T>,
     prefix: Vec<u8>,
 }
 
-impl<'a> ImmutablePrefixStore<'a> {
+impl<'a, T: DB> ImmutablePrefixStore<'a, T> {
     pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
         let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
     }
 
-    pub fn range<T: RangeBounds<Vec<u8>>>(&self, range: T) -> PrefixRange<'a> {
+    pub fn range<R: RangeBounds<Vec<u8>>>(&self, range: R) -> PrefixRange<'a, T> {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
@@ -232,12 +243,12 @@ impl<'a> ImmutablePrefixStore<'a> {
     }
 }
 
-pub struct PrefixRange<'a> {
-    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>)>,
+pub struct PrefixRange<'a, T: DB> {
+    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), T>,
     prefix_length: usize,
 }
 
-impl<'a> Iterator for PrefixRange<'a> {
+impl<'a, T: DB> Iterator for PrefixRange<'a, T> {
     type Item = (Vec<u8>, &'a Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -274,12 +285,12 @@ fn prefix_end_bound(mut prefix: Vec<u8>) -> Bound<Vec<u8>> {
 }
 
 /// Wraps an mutable reference to a KVStore with a prefix
-pub struct MutablePrefixStore<'a> {
-    store: &'a mut KVStore,
+pub struct MutablePrefixStore<'a, T: DB> {
+    store: &'a mut KVStore<T>,
     prefix: Vec<u8>,
 }
 
-impl<'a> MutablePrefixStore<'a> {
+impl<'a, T: DB> MutablePrefixStore<'a, T> {
     pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
         let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
@@ -295,11 +306,14 @@ impl<'a> MutablePrefixStore<'a> {
 #[cfg(test)]
 mod tests {
 
+    use database::MemDB;
+
     use super::*;
 
     #[test]
     fn prefix_store_range_works() {
-        let mut store = KVStore::new();
+        let db = MemDB::new();
+        let mut store = KVStore::new(db);
         store.set(vec![0], vec![1]);
         store.set(vec![0, 1], vec![2]);
         store.set(vec![0, 2], vec![3]);

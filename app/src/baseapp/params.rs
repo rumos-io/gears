@@ -1,3 +1,4 @@
+use database::DB;
 use serde::{Deserialize, Serialize};
 use tendermint_proto::google::protobuf::Duration;
 use tendermint_proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
@@ -80,7 +81,7 @@ impl From<RawEvidenceParams> for EvidenceParams {
     }
 }
 
-pub fn set_consensus_params(ctx: &mut Context, params: ConsensusParams) {
+pub fn set_consensus_params<T: DB>(ctx: &mut Context<T>, params: ConsensusParams) {
     let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
     let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
