@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use database::{PrefixDB, RocksDB, DB};
+use database::DB;
 use integer_encoding::VarInt;
 
 #[derive(Debug)]
@@ -11,6 +9,8 @@ where
     db: T,
 }
 
+const ROOTS_PREFIX: [u8; 1] = [1];
+
 impl<T> NodeDB<T>
 where
     T: DB,
@@ -20,9 +20,8 @@ where
     }
 
     pub fn get_roots(&self) -> Vec<(u32, Box<[u8]>)> {
-        //TODO: the roots need to be prefixed
         self.db
-            .iterator()
+            .prefix_iterator(ROOTS_PREFIX.into())
             .map(|(k, v)| {
                 let version = u32::decode_var(&k)
                     .expect("expect this to be a valid u32")

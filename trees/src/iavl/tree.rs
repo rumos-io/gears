@@ -7,9 +7,9 @@ use database::DB;
 use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
-use crate::error::Error;
+use crate::{error::Error, merkle::EMPTY_HASH};
 
-use super::node_db::{self, NodeDB};
+use super::node_db::NodeDB;
 
 // TODO:
 // 1. fetch from DB in get methods
@@ -156,22 +156,32 @@ pub struct Tree<T>
 where
     T: DB,
 {
-    root: Node,
+    root: Option<Node>,
     node_db: NodeDB<T>,
+    version: u32,
 }
 
 impl<T> Tree<T>
 where
     T: DB,
 {
-    pub fn new(key: Vec<u8>, value: Vec<u8>, version: u32, node_db: NodeDB<T>) -> Tree<T> {
+    pub fn new(db: T) -> Tree<T> {
         Tree {
-            root: Node::Leaf(LeafNode {
-                key,
-                value,
-                version,
-            }),
-            node_db,
+            root: None,
+            version: 0,
+            node_db: NodeDB::new(db),
+        }
+    }
+
+    pub fn save_version(&mut self) -> ([u8; 32], u32) {
+        self.version += 1;
+        (self.root_hash(), self.version)
+    }
+
+    pub fn root_hash(&self) -> [u8; 32] {
+        match &self.root {
+            Some(root) => root.hash(),
+            None => EMPTY_HASH,
         }
     }
 
@@ -179,12 +189,11 @@ where
         todo!()
     }
 
-    pub fn hash(&self) -> [u8; 32] {
-        self.root.hash()
-    }
-
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
-        Self::recursive_get(&self.root, key, &self.node_db)
+        match &self.root {
+            Some(root) => Self::recursive_get(root, key, &self.node_db),
+            None => None,
+        }
     }
 
     fn recursive_get<'a>(node: &'a Node, key: &[u8], node_db: &NodeDB<T>) -> Option<&'a Vec<u8>> {
@@ -206,8 +215,19 @@ where
         }
     }
 
-    pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>, version: u32) {
-        Self::recursive_set(&mut self.root, key, value, version, &mut self.node_db)
+    pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
+        match &mut self.root {
+            Some(root) => {
+                Self::recursive_set(root, key, value, self.version + 1, &mut self.node_db)
+            }
+            None => {
+                self.root = Some(Node::Leaf(LeafNode {
+                    key,
+                    value,
+                    version: self.version + 1,
+                }));
+            }
+        };
     }
 
     fn recursive_set(
@@ -419,10 +439,17 @@ where
     where
         R: RangeBounds<Vec<u8>>,
     {
-        Range {
-            range,
-            delayed_nodes: vec![&self.root],
-            node_db: &self.node_db,
+        match &self.root {
+            Some(root) => Range {
+                range,
+                delayed_nodes: vec![root],
+                node_db: &self.node_db,
+            },
+            None => Range {
+                range,
+                delayed_nodes: vec![],
+                node_db: &&self.node_db,
+            },
         }
     }
 }
@@ -662,14 +689,14 @@ mod tests {
     #[test]
     fn set_equal_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB::new(db));
+        let mut tree = Tree::new(db);
+        tree.set(vec![1], vec![2]);
+        tree.set(vec![1], vec![3]);
 
-        tree.set(vec![1], vec![3], 0);
-
-        let hash = tree.hash();
+        let hash = tree.root_hash();
         let expected = [
-            46, 68, 166, 6, 187, 132, 138, 140, 3, 145, 33, 200, 21, 142, 122, 82, 61, 125, 241,
-            253, 119, 20, 63, 239, 82, 222, 14, 147, 135, 171, 254, 136,
+            146, 114, 60, 233, 157, 240, 49, 35, 57, 65, 154, 83, 84, 160, 123, 45, 153, 137, 215,
+            139, 195, 141, 74, 219, 86, 182, 75, 239, 223, 87, 133, 81,
         ];
         assert_eq!(hash, expected)
     }
@@ -677,14 +704,14 @@ mod tests {
     #[test]
     fn set_less_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(vec![3], vec![2], 0, NodeDB::new(db));
+        let mut tree = Tree::new(db);
+        tree.set(vec![3], vec![2]);
+        tree.set(vec![1], vec![3]);
 
-        tree.set(vec![1], vec![3], 0);
-
-        let hash = tree.hash();
+        let hash = tree.root_hash();
         let expected = [
-            30, 254, 236, 57, 212, 196, 124, 228, 141, 110, 64, 58, 11, 211, 15, 73, 222, 55, 198,
-            175, 97, 14, 102, 225, 106, 137, 53, 152, 238, 232, 110, 116,
+            197, 117, 162, 213, 61, 146, 253, 165, 111, 237, 42, 95, 186, 76, 202, 167, 174, 187,
+            19, 6, 150, 29, 243, 41, 209, 142, 80, 45, 32, 9, 235, 24,
         ];
         assert_eq!(hash, expected)
     }
@@ -692,28 +719,141 @@ mod tests {
     #[test]
     fn set_greater_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(vec![1], vec![2], 0, NodeDB::new(db));
+        let mut tree = Tree::new(db);
+        tree.set(vec![1], vec![2]);
+        tree.set(vec![3], vec![3]);
 
-        tree.set(vec![3], vec![3], 0);
-
-        let hash = tree.hash();
+        let hash = tree.root_hash();
         let expected = [
-            24, 202, 171, 156, 30, 224, 204, 18, 127, 116, 118, 17, 136, 40, 101, 25, 103, 227, 97,
-            43, 93, 221, 153, 130, 68, 104, 58, 191, 104, 227, 16, 205,
+            27, 213, 240, 14, 167, 98, 231, 104, 130, 46, 40, 228, 172, 2, 149, 149, 32, 10, 198,
+            129, 179, 18, 29, 182, 227, 231, 178, 29, 160, 69, 142, 244,
         ];
         assert_eq!(hash, expected)
     }
 
     #[test]
+    fn repeated_set_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db);
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
+
+        let expected = [
+            202, 52, 159, 10, 210, 166, 72, 207, 248, 190, 60, 114, 172, 147, 84, 27, 120, 202,
+            189, 127, 230, 108, 58, 127, 251, 149, 9, 33, 87, 249, 158, 138,
+        ];
+
+        assert_eq!(expected, tree.root_hash());
+    }
+
+    #[test]
+    fn save_version_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db);
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
+
+        tree.save_version();
+        tree.save_version();
+        tree.set(b"qwerty".to_vec(), b"312".to_vec());
+        tree.set(b"-32".to_vec(), b"gamma".to_vec());
+        tree.save_version();
+        tree.set(b"alice".to_vec(), b"123".to_vec());
+        tree.save_version();
+
+        let expected = [
+            37, 155, 233, 229, 243, 173, 29, 241, 235, 234, 85, 10, 36, 129, 53, 79, 77, 11, 29,
+            118, 201, 233, 133, 60, 78, 187, 37, 81, 42, 96, 105, 150,
+        ];
+
+        assert_eq!(expected, tree.root_hash());
+    }
+
+    #[test]
+    fn get_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db);
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
+
+        assert_eq!(tree.get(b"alice"), Some(&String::from("abc").into()));
+        assert_eq!(tree.get(b"bob"), Some(&String::from("123").into()));
+        assert_eq!(tree.get(b"c"), Some(&String::from("1").into()));
+        assert_eq!(tree.get(b"q"), Some(&String::from("1").into()));
+        assert_eq!(tree.get(b"house"), None);
+    }
+
+    #[test]
+    fn scenario_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db);
+        tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
+        tree.set(
+            vec![
+                2, 20, 129, 58, 194, 42, 97, 73, 22, 85, 226, 120, 106, 224, 209, 39, 214, 153, 11,
+                251, 251, 222, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 51, 52],
+        );
+
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+        tree.save_version();
+
+        tree.set(
+            vec![
+                2, 20, 59, 214, 51, 187, 112, 177, 248, 133, 197, 68, 36, 228, 124, 164, 14, 68,
+                72, 143, 236, 46, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 49, 48],
+        );
+        tree.set(
+            vec![
+                2, 20, 129, 58, 194, 42, 97, 73, 22, 85, 226, 120, 106, 224, 209, 39, 214, 153, 11,
+                251, 251, 222, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 50, 51],
+        );
+        tree.set(
+            vec![
+                2, 20, 241, 130, 150, 118, 219, 87, 118, 130, 233, 68, 252, 52, 147, 212, 81, 182,
+                127, 243, 226, 159, 117, 97, 116, 111, 109,
+            ],
+            vec![10, 5, 117, 97, 116, 111, 109, 18, 1, 49],
+        );
+
+        let expected = [
+            34, 215, 64, 141, 118, 237, 192, 198, 47, 22, 34, 81, 0, 146, 145, 66, 182, 59, 101,
+            145, 99, 187, 82, 49, 149, 36, 196, 63, 37, 42, 171, 124,
+        ];
+
+        let (hash, version) = tree.save_version();
+
+        assert_eq!((expected, 8), (hash, version));
+    }
+
+    #[test]
     fn bounded_range_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(b"1".to_vec(), b"abc1".to_vec(), 0, NodeDB::new(db));
-        tree.set(b"2".to_vec(), b"abc2".to_vec(), 0);
-        tree.set(b"3".to_vec(), b"abc3".to_vec(), 0);
-        tree.set(b"4".to_vec(), b"abc4".to_vec(), 0);
-        tree.set(b"5".to_vec(), b"abc5".to_vec(), 0);
-        tree.set(b"6".to_vec(), b"abc6".to_vec(), 0);
-        tree.set(b"7".to_vec(), b"abc7".to_vec(), 0);
+        let mut tree = Tree::new(db);
+        tree.set(b"1".to_vec(), b"abc1".to_vec());
+
+        tree.set(b"2".to_vec(), b"abc2".to_vec());
+        tree.set(b"3".to_vec(), b"abc3".to_vec());
+        tree.set(b"4".to_vec(), b"abc4".to_vec());
+        tree.set(b"5".to_vec(), b"abc5".to_vec());
+        tree.set(b"6".to_vec(), b"abc6".to_vec());
+        tree.set(b"7".to_vec(), b"abc7".to_vec());
 
         // [,)
         let start = b"3".to_vec();
@@ -769,10 +909,11 @@ mod tests {
     #[test]
     fn full_range_unique_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB::new(db));
-        tree.set(b"bob".to_vec(), b"123".to_vec(), 0);
-        tree.set(b"c".to_vec(), b"1".to_vec(), 0);
-        tree.set(b"q".to_vec(), b"1".to_vec(), 0);
+        let mut tree = Tree::new(db);
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"bob".to_vec(), b"123".to_vec());
+        tree.set(b"c".to_vec(), b"1".to_vec());
+        tree.set(b"q".to_vec(), b"1".to_vec());
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs = vec![
@@ -792,11 +933,27 @@ mod tests {
     #[test]
     fn full_range_duplicate_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(b"alice".to_vec(), b"abc".to_vec(), 0, NodeDB::new(db));
-        tree.set(b"alice".to_vec(), b"abc".to_vec(), 0);
+        let mut tree = Tree::new(db);
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
+        tree.set(b"alice".to_vec(), b"abc".to_vec());
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs = vec![(b"alice".to_vec(), b"abc".to_vec())];
+
+        assert_eq!(expected_pairs.len(), got_pairs.len());
+        assert!(expected_pairs.iter().all(|e| {
+            let cmp = (&e.0, &e.1);
+            got_pairs.contains(&cmp)
+        }));
+    }
+
+    #[test]
+    fn empty_tree_range_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db);
+        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
+
+        let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {

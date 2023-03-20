@@ -6,7 +6,7 @@ use std::{
 };
 
 use database::{MemDB, PrefixDB, DB};
-use trees::iavl::{IAVLTreeStore, Range};
+use trees::iavl::{Range, Tree};
 
 use super::hash::{self, StoreInfo};
 
@@ -107,7 +107,7 @@ impl<T: DB> MultiStore<T> {
 
 #[derive(Debug)]
 pub struct KVStore<T: DB> {
-    persistent_store: IAVLTreeStore<T>,
+    persistent_store: Tree<T>,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
@@ -115,7 +115,7 @@ pub struct KVStore<T: DB> {
 impl<T: DB> KVStore<T> {
     pub fn new(db: T) -> Self {
         KVStore {
-            persistent_store: IAVLTreeStore::new(db),
+            persistent_store: Tree::new(db),
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         }
