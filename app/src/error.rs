@@ -15,6 +15,7 @@ pub enum AppError {
     Timeout { timeout: u64, current: u64 },
     Memo(u64),
     InvalidPublicKey,
+    Tree(trees::Error),
 }
 
 impl Display for AppError {
@@ -35,6 +36,7 @@ impl Display for AppError {
             ),
             AppError::Memo(length) => write!(f, "memo is too long, max length is {}", length),
             AppError::InvalidPublicKey => write!(f, "public key is invalid"),
+            AppError::Tree(err) => err.fmt(f),
         }
     }
 }
@@ -56,5 +58,11 @@ impl From<bech32::Error> for AppError {
 impl From<DecodeError> for AppError {
     fn from(err: DecodeError) -> AppError {
         AppError::Prost(err)
+    }
+}
+
+impl From<trees::Error> for AppError {
+    fn from(err: trees::Error) -> AppError {
+        AppError::Tree(err)
     }
 }

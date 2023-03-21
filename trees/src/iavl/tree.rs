@@ -1,5 +1,7 @@
 use std::{
-    cmp, mem,
+    cmp,
+    collections::{BTreeSet, HashSet},
+    mem,
     ops::{Bound, RangeBounds},
 };
 
@@ -15,7 +17,7 @@ use super::node_db::NodeDB;
 // 1. fetch from DB in get methods
 
 #[derive(Debug, Clone, PartialEq, Default)]
-struct InnerNode {
+pub(crate) struct InnerNode {
     left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     right_node: Option<Box<Node>>,
     key: Vec<u8>,
@@ -63,14 +65,14 @@ impl InnerNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
-struct LeafNode {
+pub(crate) struct LeafNode {
     key: Vec<u8>,
     value: Vec<u8>,
     version: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum Node {
+pub(crate) enum Node {
     Leaf(LeafNode),
     Inner(InnerNode),
 }
@@ -105,11 +107,11 @@ impl Node {
     }
 
     pub fn hash(&self) -> [u8; 32] {
-        let serialized = self.serialize();
+        let serialized = self.hash_serialize();
         Sha256::digest(serialized).into()
     }
 
-    fn serialize(&self) -> Vec<u8> {
+    fn hash_serialize(&self) -> Vec<u8> {
         match &self {
             Node::Leaf(node) => {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
@@ -143,6 +145,44 @@ impl Node {
         }
     }
 
+    pub(crate) fn deserialize(bytes: Vec<u8>) -> Result<Self, Error> {
+        let (height, mut n) = u8::decode_var(&bytes).ok_or(Error::NodeDeserialize)?;
+        let (size, ns) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
+        n += ns;
+        let (version, nv) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
+        n += nv;
+        let (key, nk) = decode_bytes(&bytes[n..])?;
+        n += nk;
+
+        if height == 0 {
+            // leaf node
+            let (value, _) = decode_bytes(&bytes[n..])?;
+
+            Ok(Node::Leaf(LeafNode {
+                key,
+                value,
+                version,
+            }))
+        } else {
+            // inner node
+            let (left_hash, nl) = decode_bytes(&bytes[n..])?;
+            n += nl;
+
+            let (right_hash, _) = decode_bytes(&bytes[n..])?;
+
+            Ok(Node::Inner(InnerNode {
+                left_node: None,
+                right_node: None,
+                key,
+                height,
+                size,
+                left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
+                right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
+                version,
+            }))
+        }
+    }
+
     fn get_size(&self) -> u32 {
         match &self {
             Node::Leaf(_) => 1,
@@ -159,17 +199,45 @@ where
     root: Option<Node>,
     node_db: NodeDB<T>,
     version: u32,
+    versions: BTreeSet<u32>,
 }
 
 impl<T> Tree<T>
 where
     T: DB,
 {
-    pub fn new(db: T) -> Tree<T> {
-        Tree {
-            root: None,
-            version: 0,
-            node_db: NodeDB::new(db),
+    pub fn new(db: T, target_version: Option<u32>) -> Result<Tree<T>, Error> {
+        let node_db = NodeDB::new(db);
+        let versions = node_db.get_versions();
+
+        if let Some(target_version) = target_version {
+            let root = node_db
+                .get_root(target_version)
+                .ok_or(Error::VersionNotFound)?;
+
+            Ok(Tree {
+                root: Some(root),
+                version: target_version,
+                node_db,
+                versions,
+            })
+        } else {
+            // use the latest version available
+            if let Some(latest_version) = versions.last() {
+                Ok(Tree {
+                    root: node_db.get_root(*latest_version),
+                    version: *latest_version,
+                    node_db,
+                    versions,
+                })
+            } else {
+                Ok(Tree {
+                    root: None,
+                    version: 0,
+                    node_db,
+                    versions,
+                })
+            }
         }
     }
 
@@ -183,10 +251,6 @@ where
             Some(root) => root.hash(),
             None => EMPTY_HASH,
         }
-    }
-
-    pub fn load_version(&mut self, version: u32) {
-        todo!()
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
@@ -517,6 +581,13 @@ fn encode_bytes(bz: &[u8]) -> Vec<u8> {
     return enc_bytes;
 }
 
+fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), Error> {
+    let (bz_length, n_consumed) = usize::decode_var(&bz).ok_or(Error::NodeDeserialize)?;
+    let bytes = bz[n_consumed..n_consumed + bz_length].to_vec();
+
+    return Ok((bytes, n_consumed + bz_length));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -689,7 +760,7 @@ mod tests {
     #[test]
     fn set_equal_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(vec![1], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -704,7 +775,7 @@ mod tests {
     #[test]
     fn set_less_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(vec![3], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -719,7 +790,7 @@ mod tests {
     #[test]
     fn set_greater_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(vec![1], vec![2]);
         tree.set(vec![3], vec![3]);
 
@@ -734,7 +805,7 @@ mod tests {
     #[test]
     fn repeated_set_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -751,7 +822,7 @@ mod tests {
     #[test]
     fn save_version_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -776,7 +847,7 @@ mod tests {
     #[test]
     fn get_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -792,7 +863,7 @@ mod tests {
     #[test]
     fn scenario_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
         tree.set(
             vec![
@@ -845,7 +916,7 @@ mod tests {
     #[test]
     fn bounded_range_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(b"1".to_vec(), b"abc1".to_vec());
 
         tree.set(b"2".to_vec(), b"abc2".to_vec());
@@ -909,7 +980,7 @@ mod tests {
     #[test]
     fn full_range_unique_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -933,7 +1004,7 @@ mod tests {
     #[test]
     fn full_range_duplicate_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
@@ -950,7 +1021,7 @@ mod tests {
     #[test]
     fn empty_tree_range_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db);
+        let mut tree = Tree::new(db, None).unwrap();
         let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];

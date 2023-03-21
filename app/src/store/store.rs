@@ -8,6 +8,8 @@ use std::{
 use database::{MemDB, PrefixDB, DB};
 use trees::iavl::{Range, Tree};
 
+use crate::error::AppError;
+
 use super::hash::{self, StoreInfo};
 
 pub enum Store {
@@ -42,15 +44,21 @@ impl<T: DB> MultiStore<T> {
         let db = Arc::new(db);
 
         MultiStore {
-            bank_store: KVStore::new(PrefixDB::new(
-                db.clone(),
-                Store::Bank.name().as_bytes().to_vec(),
-            )),
-            auth_store: KVStore::new(PrefixDB::new(
-                db.clone(),
-                Store::Auth.name().as_bytes().to_vec(),
-            )),
-            params_store: KVStore::new(PrefixDB::new(db, Store::Params.name().as_bytes().to_vec())),
+            bank_store: KVStore::new(
+                PrefixDB::new(db.clone(), Store::Bank.name().as_bytes().to_vec()),
+                None,
+            )
+            .unwrap(),
+            auth_store: KVStore::new(
+                PrefixDB::new(db.clone(), Store::Auth.name().as_bytes().to_vec()),
+                None,
+            )
+            .unwrap(),
+            params_store: KVStore::new(
+                PrefixDB::new(db, Store::Params.name().as_bytes().to_vec()),
+                None,
+            )
+            .unwrap(),
         }
     }
 
@@ -113,12 +121,12 @@ pub struct KVStore<T: DB> {
 }
 
 impl<T: DB> KVStore<T> {
-    pub fn new(db: T) -> Self {
-        KVStore {
-            persistent_store: Tree::new(db),
+    pub fn new(db: T, target_version: Option<u32>) -> Result<Self, AppError> {
+        Ok(KVStore {
+            persistent_store: Tree::new(db, target_version)?,
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
-        }
+        })
     }
 
     pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
@@ -313,7 +321,7 @@ mod tests {
     #[test]
     fn prefix_store_range_works() {
         let db = MemDB::new();
-        let mut store = KVStore::new(db);
+        let mut store = KVStore::new(db, None).unwrap();
         store.set(vec![0], vec![1]);
         store.set(vec![0, 1], vec![2]);
         store.set(vec![0, 2], vec![3]);
