@@ -1,6 +1,6 @@
 use std::{
     cmp,
-    collections::{BTreeSet, HashSet},
+    collections::BTreeSet,
     mem,
     ops::{Bound, RangeBounds},
 };
@@ -12,9 +12,6 @@ use sha2::{Digest, Sha256};
 use crate::{error::Error, merkle::EMPTY_HASH};
 
 use super::node_db::NodeDB;
-
-// TODO:
-// 1. fetch from DB in get methods
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct InnerNode {
@@ -30,30 +27,50 @@ pub(crate) struct InnerNode {
 
 impl InnerNode {
     fn get_mut_left_node<T: DB>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
+        if self.left_node.is_none() {
+            let node = node_db
+                .get_node(&self.left_hash)
+                .expect("this node should be in the DB");
+
+            self.left_node = Some(Box::new(node));
+        }
+
         match &mut self.left_node {
-            Some(node) => return node,
-            None => todo!(), //fetch from DB + update cached value
+            Some(node) => node,
+            None => panic!("it can't be None given the block above"),
         }
     }
 
-    fn get_left_node<T: DB>(&self, node_db: &NodeDB<T>) -> &Node {
+    fn get_left_node<T: DB>(&self, node_db: &NodeDB<T>) -> Node {
         match &self.left_node {
-            Some(node) => return node,
-            None => todo!(), //fetch from DB + possibly don't update cached value?
+            Some(node) => return *node.clone(),
+            None => node_db
+                .get_node(&self.left_hash)
+                .expect("this node should be in the DB"),
         }
     }
 
     fn get_mut_right_node<T: DB>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
+        if self.right_node.is_none() {
+            let node = node_db
+                .get_node(&self.right_hash)
+                .expect("this node should be in the DB");
+
+            self.right_node = Some(Box::new(node));
+        }
+
         match &mut self.right_node {
-            Some(node) => return node,
-            None => todo!(), //fetch from DB + update cached value
+            Some(node) => node,
+            None => panic!("it can't be None given the block above"),
         }
     }
 
-    fn get_right_node<T: DB>(&self, node_db: &NodeDB<T>) -> &Node {
+    fn get_right_node<T: DB>(&self, node_db: &NodeDB<T>) -> Node {
         match &self.right_node {
-            Some(node) => return node,
-            None => todo!(), //fetch from DB + possibly don't update cached value?
+            Some(node) => return *node.clone(),
+            None => node_db
+                .get_node(&self.right_hash)
+                .expect("this node should be in the DB"),
         }
     }
 
@@ -253,27 +270,29 @@ where
         }
     }
 
-    pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
+    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         match &self.root {
-            Some(root) => Self::recursive_get(root, key, &self.node_db),
+            Some(root) => Self::recursive_get(root.clone(), key, &self.node_db),
             None => None,
         }
     }
 
-    fn recursive_get<'a>(node: &'a Node, key: &[u8], node_db: &NodeDB<T>) -> Option<&'a Vec<u8>> {
+    fn recursive_get<'a>(node: Node, key: &[u8], node_db: &NodeDB<T>) -> Option<Vec<u8>> {
         match node {
             Node::Leaf(leaf) => {
                 if leaf.key == key {
-                    return Some(&leaf.value);
+                    return Some(leaf.value);
                 } else {
                     return None;
                 }
             }
             Node::Inner(node) => {
                 if key < &node.key {
-                    return Self::recursive_get(node.get_left_node(node_db), key, node_db);
+                    let left_node = node.get_left_node(node_db);
+                    return Self::recursive_get(left_node, key, node_db);
                 } else {
-                    return Self::recursive_get(node.get_right_node(node_db), key, node_db);
+                    let right_node = node.get_right_node(node_db);
+                    return Self::recursive_get(right_node, key, node_db);
                 }
             }
         }
@@ -506,7 +525,7 @@ where
         match &self.root {
             Some(root) => Range {
                 range,
-                delayed_nodes: vec![root],
+                delayed_nodes: vec![root.clone()],
                 node_db: &self.node_db,
             },
             None => Range {
@@ -523,12 +542,12 @@ where
     T: DB,
 {
     range: R,
-    delayed_nodes: Vec<&'a Node>,
+    delayed_nodes: Vec<Node>,
     node_db: &'a NodeDB<T>,
 }
 
 impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
-    fn traverse(&mut self) -> Option<(&'a Vec<u8>, &'a Vec<u8>)> {
+    fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         let node = self.delayed_nodes.pop()?;
 
         let after_start = match self.range.start_bound() {
@@ -547,17 +566,17 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
             Node::Inner(inner) => {
                 // Traverse through the left subtree, then the right subtree.
                 if before_end {
-                    self.delayed_nodes.push(&inner.get_right_node(self.node_db));
+                    self.delayed_nodes.push(inner.get_right_node(self.node_db));
                 }
 
                 if after_start {
-                    self.delayed_nodes.push(&inner.get_left_node(self.node_db));
+                    self.delayed_nodes.push(inner.get_left_node(self.node_db));
                 }
             }
             Node::Leaf(leaf) => {
                 if self.range.contains(&leaf.key) {
                     // we have a leaf node within the range
-                    return Some((&leaf.key, &leaf.value));
+                    return Some((leaf.key, leaf.value));
                 }
             }
         }
@@ -567,7 +586,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
 }
 
 impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Iterator for Range<'a, T, R> {
-    type Item = (&'a Vec<u8>, &'a Vec<u8>);
+    type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.traverse()
@@ -853,10 +872,10 @@ mod tests {
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
 
-        assert_eq!(tree.get(b"alice"), Some(&String::from("abc").into()));
-        assert_eq!(tree.get(b"bob"), Some(&String::from("123").into()));
-        assert_eq!(tree.get(b"c"), Some(&String::from("1").into()));
-        assert_eq!(tree.get(b"q"), Some(&String::from("1").into()));
+        assert_eq!(tree.get(b"alice"), Some(String::from("abc").into()));
+        assert_eq!(tree.get(b"bob"), Some(String::from("123").into()));
+        assert_eq!(tree.get(b"c"), Some(String::from("1").into()));
+        assert_eq!(tree.get(b"q"), Some(String::from("1").into()));
         assert_eq!(tree.get(b"house"), None);
     }
 
@@ -929,7 +948,7 @@ mod tests {
         // [,)
         let start = b"3".to_vec();
         let stop = b"6".to_vec();
-        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(start..stop).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(start..stop).collect();
         let expected_pairs = vec![
             (b"3".to_vec(), b"abc3".to_vec()),
             (b"4".to_vec(), b"abc4".to_vec()),
@@ -937,15 +956,15 @@ mod tests {
         ];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| {
-            let cmp = (&e.0, &e.1);
+        assert!(expected_pairs.into_iter().all(|e| {
+            let cmp = (e.0, e.1);
             got_pairs.contains(&cmp)
         }));
 
         // [,]
         let start = b"3".to_vec();
         let stop = b"6".to_vec();
-        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(start..=stop).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(start..=stop).collect();
         let expected_pairs = vec![
             (b"3".to_vec(), b"abc3".to_vec()),
             (b"4".to_vec(), b"abc4".to_vec()),
@@ -954,15 +973,15 @@ mod tests {
         ];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| {
-            let cmp = (&e.0, &e.1);
+        assert!(expected_pairs.into_iter().all(|e| {
+            let cmp = (e.0, e.1);
             got_pairs.contains(&cmp)
         }));
 
         // (,)
         let start = b"3".to_vec();
         let stop = b"6".to_vec();
-        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree
             .range((Bound::Excluded(start), Bound::Excluded(stop)))
             .collect();
         let expected_pairs = vec![
@@ -971,8 +990,8 @@ mod tests {
         ];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| {
-            let cmp = (&e.0, &e.1);
+        assert!(expected_pairs.into_iter().all(|e| {
+            let cmp = (e.0, e.1);
             got_pairs.contains(&cmp)
         }));
     }
@@ -985,7 +1004,7 @@ mod tests {
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
-        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs = vec![
             (b"alice".to_vec(), b"abc".to_vec()),
@@ -995,8 +1014,8 @@ mod tests {
         ];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| {
-            let cmp = (&e.0, &e.1);
+        assert!(expected_pairs.into_iter().all(|e| {
+            let cmp = (e.0, e.1);
             got_pairs.contains(&cmp)
         }));
     }
@@ -1007,13 +1026,13 @@ mod tests {
         let mut tree = Tree::new(db, None).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
-        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs = vec![(b"alice".to_vec(), b"abc".to_vec())];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| {
-            let cmp = (&e.0, &e.1);
+        assert!(expected_pairs.into_iter().all(|e| {
+            let cmp = (e.0, e.1);
             got_pairs.contains(&cmp)
         }));
     }
@@ -1022,13 +1041,13 @@ mod tests {
     fn empty_tree_range_works() {
         let db = MemDB::new();
         let mut tree = Tree::new(db, None).unwrap();
-        let got_pairs: Vec<(&Vec<u8>, &Vec<u8>)> = tree.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
-        assert!(expected_pairs.iter().all(|e| {
-            let cmp = (&e.0, &e.1);
+        assert!(expected_pairs.into_iter().all(|e| {
+            let cmp = (e.0, e.1);
             got_pairs.contains(&cmp)
         }));
     }

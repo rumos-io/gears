@@ -129,7 +129,7 @@ impl<T: DB> KVStore<T> {
         })
     }
 
-    pub fn get(&self, key: &[u8]) -> Option<&Vec<u8>> {
+    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let tx_cache_val = self.tx_cache.get(key);
 
         if tx_cache_val.is_none() {
@@ -139,10 +139,10 @@ impl<T: DB> KVStore<T> {
                 return self.persistent_store.get(key);
             };
 
-            return block_cache_val;
+            return block_cache_val.cloned();
         }
 
-        tx_cache_val
+        tx_cache_val.cloned()
     }
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
@@ -226,7 +226,7 @@ pub struct ImmutablePrefixStore<'a, T: DB> {
 }
 
 impl<'a, T: DB> ImmutablePrefixStore<'a, T> {
-    pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
+    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
         let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
     }
@@ -257,7 +257,7 @@ pub struct PrefixRange<'a, T: DB> {
 }
 
 impl<'a, T: DB> Iterator for PrefixRange<'a, T> {
-    type Item = (Vec<u8>, &'a Vec<u8>);
+    type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
         let next = self.parent_range.next()?;
@@ -299,7 +299,7 @@ pub struct MutablePrefixStore<'a, T: DB> {
 }
 
 impl<'a, T: DB> MutablePrefixStore<'a, T> {
-    pub fn get(&self, k: &[u8]) -> Option<&Vec<u8>> {
+    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
         let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
     }
@@ -340,7 +340,7 @@ mod tests {
         let prefix_store = store.get_immutable_prefix_store(vec![1]);
 
         // unbounded
-        let got_pairs: Vec<(Vec<u8>, &Vec<u8>)> = prefix_store.range(..).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store.range(..).collect();
         let expected_pairs = vec![
             (vec![], vec![4]),
             (vec![1], vec![5]),
@@ -352,31 +352,31 @@ mod tests {
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {
-            let cmp = (e.0.clone(), &e.1);
+            let cmp = (e.0.clone(), e.1.clone());
             got_pairs.contains(&cmp)
         }));
 
         // [,]
-        let got_pairs: Vec<(Vec<u8>, &Vec<u8>)> = prefix_store.range(vec![1]..=vec![3]).collect();
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store.range(vec![1]..=vec![3]).collect();
         let expected_pairs = vec![(vec![1], vec![5]), (vec![2], vec![6]), (vec![3], vec![7])];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {
-            let cmp = (e.0.clone(), &e.1);
+            let cmp = (e.0.clone(), e.1.clone());
             got_pairs.contains(&cmp)
         }));
 
         // (,)
         let start = vec![1];
         let stop = vec![3];
-        let got_pairs: Vec<(Vec<u8>, &Vec<u8>)> = prefix_store
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store
             .range((Bound::Excluded(start), Bound::Excluded(stop)))
             .collect();
         let expected_pairs = vec![(vec![2], vec![6])];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {
-            let cmp = (e.0.clone(), &e.1);
+            let cmp = (e.0.clone(), e.1.clone());
             got_pairs.contains(&cmp)
         }));
     }

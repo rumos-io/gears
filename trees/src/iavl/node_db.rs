@@ -39,10 +39,17 @@ where
         let root_hash = self
             .db
             .get(&[ROOTS_PREFIX.into(), version.encode_var_vec()].concat())?;
+
+        Some(
+            self.get_node(&root_hash.try_into().expect("conversion should succeed"))
+                .unwrap(), // this node should be in the DB, if it isn't then better to panic
+        )
+    }
+
+    pub(crate) fn get_node(&self, hash: &[u8; 32]) -> Option<Node> {
         let node_bytes = self
             .db
-            .get(&[NODES_PREFIX.into(), root_hash].concat())
-            .expect("root node should be in DB");
+            .get(&[NODES_PREFIX.to_vec(), hash.to_vec()].concat())?;
 
         Some(
             Node::deserialize(node_bytes)
