@@ -3,6 +3,7 @@ use std::{
     collections::BTreeSet,
     mem,
     ops::{Bound, RangeBounds},
+    sync::Arc,
 };
 
 use database::DB;
@@ -15,8 +16,8 @@ use super::node_db::NodeDB;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct InnerNode {
-    left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
-    right_node: Option<Box<Node>>,
+    left_node: Option<Arc<Node>>, // None means value is the same as what's in the DB
+    right_node: Option<Arc<Node>>,
     key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
@@ -32,21 +33,25 @@ impl InnerNode {
                 .get_node(&self.left_hash)
                 .expect("this node should be in the DB");
 
-            self.left_node = Some(Box::new(node));
+            self.left_node = Some(Arc::new(node));
         }
 
         match &mut self.left_node {
-            Some(node) => node,
+            Some(node) => {
+                Arc::get_mut(node).expect("there are no other Arc pointers to this allocation")
+            }
             None => panic!("it can't be None given the block above"),
         }
     }
 
-    fn get_left_node<T: DB>(&self, node_db: &NodeDB<T>) -> Node {
+    fn get_left_node<T: DB>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
         match &self.left_node {
-            Some(node) => return *node.clone(),
-            None => node_db
-                .get_node(&self.left_hash)
-                .expect("this node should be in the DB"),
+            Some(node) => return node.clone(),
+            None => Arc::new(
+                node_db
+                    .get_node(&self.left_hash)
+                    .expect("this node should be in the DB"),
+            ),
         }
     }
 
@@ -56,21 +61,25 @@ impl InnerNode {
                 .get_node(&self.right_hash)
                 .expect("this node should be in the DB");
 
-            self.right_node = Some(Box::new(node));
+            self.right_node = Some(Arc::new(node));
         }
 
         match &mut self.right_node {
-            Some(node) => node,
+            Some(node) => {
+                Arc::get_mut(node).expect("there are no other Arc pointers to this allocation")
+            }
             None => panic!("it can't be None given the block above"),
         }
     }
 
-    fn get_right_node<T: DB>(&self, node_db: &NodeDB<T>) -> Node {
+    fn get_right_node<T: DB>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
         match &self.right_node {
-            Some(node) => return *node.clone(),
-            None => node_db
-                .get_node(&self.right_hash)
-                .expect("this node should be in the DB"),
+            Some(node) => return node.clone(),
+            None => Arc::new(
+                node_db
+                    .get_node(&self.right_hash)
+                    .expect("this node should be in the DB"),
+            ),
         }
     }
 
@@ -213,7 +222,7 @@ pub struct Tree<T>
 where
     T: DB,
 {
-    root: Option<Node>,
+    root: Option<Arc<Node>>,
     node_db: NodeDB<T>,
     version: u32,
     versions: BTreeSet<u32>,
@@ -233,7 +242,7 @@ where
                 .ok_or(Error::VersionNotFound)?;
 
             Ok(Tree {
-                root: Some(root),
+                root: Some(Arc::new(root)),
                 version: target_version,
                 node_db,
                 versions,
@@ -242,7 +251,7 @@ where
             // use the latest version available
             if let Some(latest_version) = versions.last() {
                 Ok(Tree {
-                    root: node_db.get_root(*latest_version),
+                    root: node_db.get_root(*latest_version).map(|n| Arc::new(n)),
                     version: *latest_version,
                     node_db,
                     versions,
@@ -277,11 +286,11 @@ where
         }
     }
 
-    fn recursive_get<'a>(node: Node, key: &[u8], node_db: &NodeDB<T>) -> Option<Vec<u8>> {
-        match node {
+    fn recursive_get<'a>(node: Arc<Node>, key: &[u8], node_db: &NodeDB<T>) -> Option<Vec<u8>> {
+        match &*node {
             Node::Leaf(leaf) => {
                 if leaf.key == key {
-                    return Some(leaf.value);
+                    return Some(leaf.value.clone());
                 } else {
                     return None;
                 }
@@ -300,15 +309,19 @@ where
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         match &mut self.root {
-            Some(root) => {
-                Self::recursive_set(root, key, value, self.version + 1, &mut self.node_db)
-            }
+            Some(root) => Self::recursive_set(
+                Arc::get_mut(root).expect("there are no other Arc pointers to this allocation"),
+                key,
+                value,
+                self.version + 1,
+                &mut self.node_db,
+            ),
             None => {
-                self.root = Some(Node::Leaf(LeafNode {
+                self.root = Some(Arc::new(Node::Leaf(LeafNode {
                     key,
                     value,
                     version: self.version + 1,
-                }));
+                })));
             }
         };
     }
@@ -331,8 +344,8 @@ where
 
                         *node = Node::Inner(InnerNode {
                             key: leaf_node.key.clone(),
-                            left_node: Some(Box::new(left_node)),
-                            right_node: Some(Box::new(right_node)),
+                            left_node: Some(Arc::new(left_node)),
+                            right_node: Some(Arc::new(right_node)),
                             height: 1,
                             size: 2,
                             version,
@@ -354,8 +367,8 @@ where
 
                         *node = Node::Inner(InnerNode {
                             key,
-                            left_node: Some(Box::new(left_subtree)),
-                            right_node: Some(Box::new(right_node)),
+                            left_node: Some(Arc::new(left_subtree)),
+                            right_node: Some(Arc::new(right_node)),
                             height: 1,
                             size: 2,
                             left_hash,
@@ -459,7 +472,7 @@ where
 
             // Perform rotation on y, update hash and update height
             y.right_hash = z.hash();
-            y.right_node = Some(Box::new(z));
+            y.right_node = Some(Arc::new(z));
             y.height = 1 + cmp::max(
                 y.get_left_node(node_db).get_height(),
                 y.get_right_node(node_db).get_height(),
@@ -501,7 +514,7 @@ where
 
             // Perform rotation on y, update hash and update height
             y.left_hash = z.hash();
-            y.left_node = Some(Box::new(z));
+            y.left_node = Some(Arc::new(z));
             y.height = 1 + cmp::max(
                 y.get_left_node(node_db).get_height(),
                 y.get_right_node(node_db).get_height(),
@@ -542,7 +555,7 @@ where
     T: DB,
 {
     range: R,
-    delayed_nodes: Vec<Node>,
+    delayed_nodes: Vec<Arc<Node>>,
     node_db: &'a NodeDB<T>,
 }
 
@@ -562,7 +575,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
             Bound::Unbounded => true,
         };
 
-        match node {
+        match &*node {
             Node::Inner(inner) => {
                 // Traverse through the left subtree, then the right subtree.
                 if before_end {
@@ -576,7 +589,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
             Node::Leaf(leaf) => {
                 if self.range.contains(&leaf.key) {
                     // we have a leaf node within the range
-                    return Some((leaf.key, leaf.value));
+                    return Some((leaf.key.clone(), leaf.value.clone()));
                 }
             }
         }
@@ -615,12 +628,12 @@ mod tests {
     #[test]
     fn right_rotate_works() {
         let t3 = InnerNode {
-            left_node: Some(Box::new(Node::Leaf(LeafNode {
+            left_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![19],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            right_node: Some(Box::new(Node::Leaf(LeafNode {
+            right_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![20],
                 value: vec![1, 6, 9],
                 version: 0,
@@ -640,12 +653,12 @@ mod tests {
         };
 
         let y = InnerNode {
-            left_node: Some(Box::new(Node::Leaf(LeafNode {
+            left_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![18],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            right_node: Some(Box::new(Node::Inner(t3))),
+            right_node: Some(Arc::new(Node::Inner(t3))),
             key: vec![19],
             height: 2,
             size: 3,
@@ -661,8 +674,8 @@ mod tests {
         };
 
         let z = InnerNode {
-            left_node: Some(Box::new(Node::Inner(y))),
-            right_node: Some(Box::new(Node::Leaf(LeafNode {
+            left_node: Some(Arc::new(Node::Inner(y))),
+            right_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![21],
                 value: vec![3, 2, 1],
                 version: 0,
@@ -697,12 +710,12 @@ mod tests {
     #[test]
     fn left_rotate_works() {
         let t2 = InnerNode {
-            left_node: Some(Box::new(Node::Leaf(LeafNode {
+            left_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![19],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            right_node: Some(Box::new(Node::Leaf(LeafNode {
+            right_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![20],
                 value: vec![1, 6, 9],
                 version: 0,
@@ -722,12 +735,12 @@ mod tests {
         };
 
         let y = InnerNode {
-            right_node: Some(Box::new(Node::Leaf(LeafNode {
+            right_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![21],
                 value: vec![3, 2, 1, 1],
                 version: 0,
             }))),
-            left_node: Some(Box::new(Node::Inner(t2))),
+            left_node: Some(Arc::new(Node::Inner(t2))),
             key: vec![21],
             height: 2,
             size: 3,
@@ -743,8 +756,8 @@ mod tests {
         };
 
         let z = InnerNode {
-            right_node: Some(Box::new(Node::Inner(y))),
-            left_node: Some(Box::new(Node::Leaf(LeafNode {
+            right_node: Some(Arc::new(Node::Inner(y))),
+            left_node: Some(Arc::new(Node::Leaf(LeafNode {
                 key: vec![18],
                 value: vec![3, 2, 2],
                 version: 0,
