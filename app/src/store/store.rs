@@ -1,11 +1,10 @@
 use std::{
     collections::BTreeMap,
     ops::{Bound, RangeBounds},
-    rc::Rc,
     sync::Arc,
 };
 
-use database::{MemDB, PrefixDB, DB};
+use database::{PrefixDB, DB};
 use trees::iavl::{Range, Tree};
 
 use crate::error::AppError;
@@ -37,29 +36,62 @@ pub struct MultiStore<T: DB> {
     bank_store: KVStore<PrefixDB<T>>,
     auth_store: KVStore<PrefixDB<T>>,
     params_store: KVStore<PrefixDB<T>>,
+    head_version: u32,
+    head_commit_hash: [u8; 32],
 }
 
 impl<T: DB> MultiStore<T> {
     pub fn new(db: T) -> Self {
         let db = Arc::new(db);
 
+        let bank_store = KVStore::new(
+            PrefixDB::new(db.clone(), Store::Bank.name().as_bytes().to_vec()),
+            None,
+        )
+        .unwrap();
+        let auth_store = KVStore::new(
+            PrefixDB::new(db.clone(), Store::Auth.name().as_bytes().to_vec()),
+            None,
+        )
+        .unwrap();
+        let params_store = KVStore::new(
+            PrefixDB::new(db, Store::Params.name().as_bytes().to_vec()),
+            None,
+        )
+        .unwrap();
+
+        let bank_info = StoreInfo {
+            name: Store::Bank.name().into(),
+            hash: bank_store.head_commit_hash(),
+        };
+
+        let auth_info = StoreInfo {
+            name: Store::Auth.name().into(),
+            hash: auth_store.head_commit_hash(),
+        };
+
+        let params_info = StoreInfo {
+            name: Store::Params.name().into(),
+            hash: params_store.head_commit_hash(),
+        };
+
+        let store_infos = [bank_info, auth_info, params_info].into();
+
         MultiStore {
-            bank_store: KVStore::new(
-                PrefixDB::new(db.clone(), Store::Bank.name().as_bytes().to_vec()),
-                None,
-            )
-            .unwrap(),
-            auth_store: KVStore::new(
-                PrefixDB::new(db.clone(), Store::Auth.name().as_bytes().to_vec()),
-                None,
-            )
-            .unwrap(),
-            params_store: KVStore::new(
-                PrefixDB::new(db, Store::Params.name().as_bytes().to_vec()),
-                None,
-            )
-            .unwrap(),
+            head_version: bank_store.last_committed_version(),
+            bank_store,
+            auth_store,
+            params_store,
+            head_commit_hash: hash::hash_store_infos(store_infos),
         }
+    }
+
+    pub fn get_head_version(&self) -> u32 {
+        self.head_version
+    }
+
+    pub fn get_head_commit_hash(&self) -> [u8; 32] {
+        self.head_commit_hash
     }
 
     pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
@@ -109,7 +141,11 @@ impl<T: DB> MultiStore<T> {
         };
 
         let store_infos = [bank_info, auth_info, params_info].into();
-        hash::hash_store_infos(store_infos)
+        let hash = hash::hash_store_infos(store_infos);
+
+        self.head_commit_hash = hash;
+        self.head_version += 1;
+        hash
     }
 }
 
@@ -214,8 +250,16 @@ impl<T: DB> KVStore<T> {
     pub fn commit(&mut self) -> [u8; 32] {
         self.write_then_clear_tx_cache();
         self.write_then_clear_block_cache();
-        let (hash, _) = self.persistent_store.save_version();
+        let (hash, _) = self.persistent_store.save_version().unwrap(); //TODO: is it safe to assume this won't ever error?
         hash
+    }
+
+    pub fn head_commit_hash(&self) -> [u8; 32] {
+        self.persistent_store.root_hash()
+    }
+
+    pub fn last_committed_version(&self) -> u32 {
+        self.persistent_store.loaded_version()
     }
 }
 

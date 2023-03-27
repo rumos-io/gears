@@ -16,13 +16,13 @@ use super::node_db::NodeDB;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct InnerNode {
-    left_node: Option<Arc<Node>>, // None means value is the same as what's in the DB
-    right_node: Option<Arc<Node>>,
+    pub(crate) left_node: Option<Arc<Node>>, // None means value is the same as what's in the DB
+    pub(crate) right_node: Option<Arc<Node>>,
     key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
-    left_hash: [u8; 32],
-    right_hash: [u8; 32],
+    pub(crate) left_hash: [u8; 32],
+    pub(crate) right_hash: [u8; 32],
     version: u32,
 }
 
@@ -31,7 +31,7 @@ impl InnerNode {
         if self.left_node.is_none() {
             let node = node_db
                 .get_node(&self.left_hash)
-                .expect("this node should be in the DB");
+                .expect("invalid data in database - possible database corruption");
 
             self.left_node = Some(Arc::new(node));
         }
@@ -50,7 +50,7 @@ impl InnerNode {
             None => Arc::new(
                 node_db
                     .get_node(&self.left_hash)
-                    .expect("this node should be in the DB"),
+                    .expect("invalid data in database - possible database corruption"),
             ),
         }
     }
@@ -59,7 +59,7 @@ impl InnerNode {
         if self.right_node.is_none() {
             let node = node_db
                 .get_node(&self.right_hash)
-                .expect("this node should be in the DB");
+                .expect("invalid data in database - possible database corruption");
 
             self.right_node = Some(Arc::new(node));
         }
@@ -78,7 +78,7 @@ impl InnerNode {
             None => Arc::new(
                 node_db
                     .get_node(&self.right_hash)
-                    .expect("this node should be in the DB"),
+                    .expect("invalid data in database - possible database corruption"),
             ),
         }
     }
@@ -119,7 +119,7 @@ impl Node {
 
     pub fn get_height(&self) -> u8 {
         match self {
-            Node::Leaf(leaf) => 0,
+            Node::Leaf(_) => 0,
             Node::Inner(inner) => inner.height,
         }
     }
@@ -160,13 +160,40 @@ impl Node {
                 let size: i64 = node.size.into();
                 let version: i64 = node.version.into();
 
-                let mut node_bytes = height.encode_var_vec();
-                node_bytes.extend(size.encode_var_vec());
-                node_bytes.extend(version.encode_var_vec());
-                node_bytes.extend(encode_bytes(&node.left_hash));
-                node_bytes.extend(encode_bytes(&node.right_hash));
+                let mut serialized = height.encode_var_vec();
+                serialized.extend(size.encode_var_vec());
+                serialized.extend(version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.left_hash));
+                serialized.extend(encode_bytes(&node.right_hash));
 
-                return node_bytes;
+                return serialized;
+            }
+        }
+    }
+
+    pub(crate) fn serialize(&self) -> Vec<u8> {
+        match &self {
+            Node::Leaf(node) => {
+                let height: u8 = 0;
+                let size: u32 = 1;
+
+                let mut serialized = height.encode_var_vec();
+                serialized.extend(size.encode_var_vec());
+                serialized.extend(node.version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.key));
+                serialized.extend(encode_bytes(&node.value));
+
+                return serialized;
+            }
+            Node::Inner(node) => {
+                let mut serialized = node.height.encode_var_vec();
+                serialized.extend(node.size.encode_var_vec());
+                serialized.extend(node.version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.key));
+                serialized.extend(encode_bytes(&node.left_hash));
+                serialized.extend(encode_bytes(&node.right_hash));
+
+                return serialized;
             }
         }
     }
@@ -193,9 +220,7 @@ impl Node {
             // inner node
             let (left_hash, nl) = decode_bytes(&bytes[n..])?;
             n += nl;
-
             let (right_hash, _) = decode_bytes(&bytes[n..])?;
-
             Ok(Node::Inner(InnerNode {
                 left_node: None,
                 right_node: None,
@@ -224,7 +249,7 @@ where
 {
     root: Option<Arc<Node>>,
     node_db: NodeDB<T>,
-    version: u32,
+    loaded_version: u32,
     versions: BTreeSet<u32>,
 }
 
@@ -238,12 +263,12 @@ where
 
         if let Some(target_version) = target_version {
             let root = node_db
-                .get_root(target_version)
-                .ok_or(Error::VersionNotFound)?;
+                .get_root_node(target_version)?
+                .map(|node| Arc::new(node));
 
             Ok(Tree {
-                root: Some(Arc::new(root)),
-                version: target_version,
+                root,
+                loaded_version: target_version,
                 node_db,
                 versions,
             })
@@ -251,15 +276,18 @@ where
             // use the latest version available
             if let Some(latest_version) = versions.last() {
                 Ok(Tree {
-                    root: node_db.get_root(*latest_version).map(|n| Arc::new(n)),
-                    version: *latest_version,
+                    root: node_db
+                        .get_root_node(*latest_version)
+                        .expect("invalid data in database - possible database corruption")
+                        .map(|n| Arc::new(n)),
+                    loaded_version: *latest_version,
                     node_db,
                     versions,
                 })
             } else {
                 Ok(Tree {
                     root: None,
-                    version: 0,
+                    loaded_version: 0,
                     node_db,
                     versions,
                 })
@@ -267,9 +295,54 @@ where
         }
     }
 
-    pub fn save_version(&mut self) -> ([u8; 32], u32) {
-        self.version += 1;
-        (self.root_hash(), self.version)
+    /// Save the current tree to disk.
+    /// Returns an error if saving would overwrite an existing version
+    pub fn save_version(&mut self) -> Result<([u8; 32], u32), Error> {
+        let version = self.loaded_version + 1;
+
+        if self.versions.contains(&version) {
+            // If the version already exists, return an error as we're attempting to overwrite.
+            // However, the same hash means idempotent (i.e. no-op).
+            // TODO: do we really need to be doing this?
+            let saved_hash = self
+                .node_db
+                .get_root_hash(version)
+                .expect("invalid data in database - possible database corruption");
+            let working_hash = self.root_hash();
+
+            if saved_hash == working_hash {
+                self.loaded_version = version;
+
+                // clear the root node's left and right nodes if they exist
+                if let Some(node) = &mut self.root {
+                    let node = Arc::get_mut(node)
+                        .expect("there are no other Arc pointers to this allocation");
+                    if let Node::Inner(inner) = node {
+                        inner.left_node = None;
+                        inner.right_node = None;
+                    }
+                }
+                return Ok((saved_hash, self.loaded_version));
+            }
+            return Err(Error::Overwrite);
+        }
+
+        let root = self.root.as_mut();
+        let root_hash = if let Some(root) = root {
+            let root =
+                Arc::get_mut(root).expect("there are no other Arc pointers to this allocation");
+            let root_hash = self.node_db.save_tree(root);
+            self.node_db.save_version(version, &root_hash);
+            root_hash
+        } else {
+            self.node_db.save_version(version, &EMPTY_HASH);
+            EMPTY_HASH
+        };
+
+        self.versions.insert(version);
+
+        self.loaded_version = version;
+        Ok((root_hash, self.loaded_version))
     }
 
     pub fn root_hash(&self) -> [u8; 32] {
@@ -277,6 +350,10 @@ where
             Some(root) => root.hash(),
             None => EMPTY_HASH,
         }
+    }
+
+    pub fn loaded_version(&self) -> u32 {
+        self.loaded_version
     }
 
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
@@ -313,14 +390,14 @@ where
                 Arc::get_mut(root).expect("there are no other Arc pointers to this allocation"),
                 key,
                 value,
-                self.version + 1,
+                self.loaded_version + 1,
                 &mut self.node_db,
             ),
             None => {
                 self.root = Some(Arc::new(Node::Leaf(LeafNode {
                     key,
                     value,
-                    version: self.version + 1,
+                    version: self.loaded_version + 1,
                 })));
             }
         };
@@ -940,7 +1017,7 @@ mod tests {
             145, 99, 187, 82, 49, 149, 36, 196, 63, 37, 42, 171, 124,
         ];
 
-        let (hash, version) = tree.save_version();
+        let (hash, version) = tree.save_version().unwrap();
 
         assert_eq!((expected, 8), (hash, version));
     }
@@ -1053,7 +1130,7 @@ mod tests {
     #[test]
     fn empty_tree_range_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None).unwrap();
+        let tree = Tree::new(db, None).unwrap();
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
@@ -1063,5 +1140,52 @@ mod tests {
             let cmp = (e.0, e.1);
             got_pairs.contains(&cmp)
         }));
+    }
+
+    #[test]
+    fn serialize_deserialize_inner_works() {
+        let orig_node = Node::Inner(InnerNode {
+            left_node: None,
+            right_node: None,
+            key: vec![19],
+            height: 3,
+            size: 4,
+            left_hash: [
+                121, 226, 107, 73, 123, 135, 165, 82, 94, 53, 112, 50, 126, 200, 252, 137, 235, 87,
+                205, 133, 96, 202, 94, 222, 39, 138, 231, 198, 189, 196, 49, 196,
+            ],
+            right_hash: [
+                13, 181, 53, 227, 140, 38, 242, 22, 94, 152, 94, 71, 0, 89, 35, 122, 129, 85, 55,
+                190, 253, 226, 35, 230, 65, 214, 244, 35, 69, 39, 223, 90,
+            ],
+            version: 0,
+        });
+
+        let node_bytes = orig_node.serialize();
+        assert_eq!(
+            node_bytes,
+            [
+                3, 4, 0, 1, 19, 32, 121, 226, 107, 73, 123, 135, 165, 82, 94, 53, 112, 50, 126,
+                200, 252, 137, 235, 87, 205, 133, 96, 202, 94, 222, 39, 138, 231, 198, 189, 196,
+                49, 196, 32, 13, 181, 53, 227, 140, 38, 242, 22, 94, 152, 94, 71, 0, 89, 35, 122,
+                129, 85, 55, 190, 253, 226, 35, 230, 65, 214, 244, 35, 69, 39, 223, 90
+            ]
+        );
+        let deserialized_node = Node::deserialize(node_bytes).unwrap();
+        assert_eq!(deserialized_node, orig_node);
+    }
+
+    #[test]
+    fn serialize_deserialize_leaf_works() {
+        let orig_node = Node::Leaf(LeafNode {
+            key: vec![19],
+            value: vec![1, 2, 3],
+            version: 0,
+        });
+
+        let node_bytes = orig_node.serialize();
+        assert_eq!(node_bytes, [0, 1, 0, 1, 19, 3, 1, 2, 3]);
+        let deserialized_node = Node::deserialize(node_bytes).unwrap();
+        assert_eq!(deserialized_node, orig_node);
     }
 }

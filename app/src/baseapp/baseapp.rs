@@ -54,14 +54,23 @@ pub struct BaseApp {
 
 impl BaseApp {
     pub fn new(db: RocksDB) -> Self {
+        let multi_store = MultiStore::new(db);
+        let height = multi_store.get_head_version().into();
         Self {
-            multi_store: Arc::new(RwLock::new(MultiStore::new(db))),
-            height: Arc::new(RwLock::new(0)),
+            multi_store: Arc::new(RwLock::new(multi_store)),
+            height: Arc::new(RwLock::new(height)),
         }
     }
 
     fn get_block_height(&self) -> u64 {
         *self.height.read().expect("RwLock will not be poisoned")
+    }
+
+    fn get_last_commit_hash(&self) -> [u8; 32] {
+        self.multi_store
+            .read()
+            .expect("RwLock will not be poisoned")
+            .get_head_commit_hash()
     }
 
     fn increment_block_height(&self) -> u64 {
@@ -220,12 +229,11 @@ impl Application for BaseApp {
             data: APP_NAME.to_string(),
             version: APP_VERSION.to_string(),
             app_version: 1,
-            // TODO: use get_block_height method
             last_block_height: self
                 .get_block_height()
                 .try_into()
                 .expect("can't believe we made it this far"),
-            last_block_app_hash: "hash_goes_here".into(),
+            last_block_app_hash: self.get_last_commit_hash().to_vec().into(),
         }
     }
 

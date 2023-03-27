@@ -8,4 +8,6 @@ pub enum Error {
     VersionNotFound,
     #[error("unable to deserialize bytes to Node")]
     NodeDeserialize,
+    #[error("cannot overwrite existing version")]
+    Overwrite,
 }
