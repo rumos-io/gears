@@ -1,20 +1,16 @@
 use bytes::Bytes;
 use database::DB;
-use ibc_proto::{
-    cosmos::auth::v1beta1::QueryAccountResponse, google::protobuf::Any, protobuf::Protobuf,
-};
+use ibc_proto::{cosmos::auth::v1beta1::QueryAccountResponse, protobuf::Protobuf};
 use prost::Message;
-use proto_messages::cosmos::{
-    auth::v1beta1::{Account, BaseAccount, ModuleAccount},
-    crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
-    tx::v1beta1::PublicKey,
+use proto_messages::cosmos::auth::v1beta1::{
+    Account, BaseAccount, ModuleAccount, QueryAccountRequest,
 };
 use proto_types::AccAddress;
 
 use crate::{
     error::AppError,
     store::Store,
-    types::{proto::QueryAccountRequest, Context, QueryContext},
+    types::{Context, QueryContext},
 };
 
 use super::Params;
@@ -199,8 +195,11 @@ fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use database::{MemDB, RocksDB};
+    use database::MemDB;
     use proto_messages::cosmos::crypto::secp256k1::v1beta1::RawPubKey;
+    use proto_messages::cosmos::{
+        crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey, tx::v1beta1::PublicKey,
+    };
 
     use super::*;
     use crate::store::MultiStore;

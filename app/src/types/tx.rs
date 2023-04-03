@@ -1,11 +1,8 @@
 use std::collections::HashSet;
 
 use bytes::Bytes;
-use ibc_proto::{
-    cosmos::tx::v1beta1::{SignerInfo, TxBody},
-    protobuf::Protobuf,
-};
-use prost::Message;
+use ibc::core::ics26_routing::msgs::MsgEnvelope;
+use ibc_proto::{cosmos::tx::v1beta1::TxBody, protobuf::Protobuf};
 
 use proto_messages::cosmos::{
     bank::v1beta1::MsgSend,
@@ -14,9 +11,9 @@ use proto_messages::cosmos::{
 };
 use proto_types::AccAddress;
 
-use crate::{crypto::PubKey, error::AppError};
+use crate::error::AppError;
 
-use super::proto::{self};
+//use super::proto::{self};
 
 // TODO:
 // 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
@@ -24,6 +21,7 @@ use super::proto::{self};
 // 3. Consider removing the "seen" hashset in get_signers()
 pub enum Msg {
     Send(MsgSend),
+    //IBC,
     Test,
 }
 
@@ -56,13 +54,19 @@ impl DecodedTx {
         let mut messages: Vec<Msg> = vec![];
 
         for msg in &tx.body.messages {
-            match msg.type_url.as_str() {
-                "/cosmos.bank.v1beta1.MsgSend" => {
-                    let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())
-                        .map_err(|e| AppError::TxParseError(e.to_string()))?;
-                    messages.push(Msg::Send(msg));
+            if msg.type_url.starts_with("/ibc") {
+                let a: MsgEnvelope = MsgEnvelope::try_from(msg.to_owned()).unwrap();
+
+                //messages.push(Msg::IBC);
+            } else {
+                match msg.type_url.as_str() {
+                    "/cosmos.bank.v1beta1.MsgSend" => {
+                        let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())
+                            .map_err(|e| AppError::TxParseError(e.to_string()))?;
+                        messages.push(Msg::Send(msg));
+                    }
+                    _ => return Err(AppError::TxParseError("message type not recognized".into())), // If any message is not recognized then reject the entire Tx
                 }
-                _ => return Err(AppError::TxParseError("message type not recognized".into())), // If any message is not recognized then reject the entire Tx
             };
         }
 
@@ -233,6 +237,7 @@ mod tests {
                     payer: None,
                     granter: "granter".into(),
                 },
+                tip: None,
             },
             signatures: vec![],
             body: TxBody {
@@ -286,6 +291,7 @@ mod tests {
                     payer: Some(fee_addr.clone()),
                     granter: "granter".into(),
                 },
+                tip: None,
             },
             signatures: vec![],
             body: TxBody {
@@ -339,6 +345,7 @@ mod tests {
                     payer: Some(from_addr_2.clone()),
                     granter: "granter".into(),
                 },
+                tip: None,
             },
             signatures: vec![],
             body: TxBody {

@@ -1,15 +1,18 @@
 pub mod v1beta1 {
 
+    use std::str::FromStr;
+
+    use cosmwasm_std::Uint256;
     use ibc_proto::{
         cosmos::base::v1beta1::Coin as RawCoin,
         cosmos::tx::v1beta1::{
             AuthInfo as RawAuthInfo, Fee as RawFee, ModeInfo, SignerInfo as RawSignerInfo,
-            Tx as RawTx, TxBody,
+            Tip as RawTip, Tx as RawTx, TxBody,
         },
         google::protobuf::Any,
         protobuf::Protobuf,
     };
-    use prost::{bytes::Bytes, Message};
+    use prost::bytes::Bytes;
     use proto_types::AccAddress;
 
     use crate::{
@@ -83,6 +86,13 @@ pub mod v1beta1 {
         /// based on the cost of evaluating the body and doing signature verification
         /// of the signers. This can be estimated via simulation.
         pub fee: Fee,
+        // Tip is the optional tip used for transactions fees paid in another denom.
+        //
+        // This field is ignored if the chain didn't enable tips, i.e. didn't add the
+        // `TipDecorator` in its posthandler.
+        //
+        // Since: cosmos-sdk 0.46
+        pub tip: Option<Tip>,
     }
 
     impl TryFrom<RawAuthInfo> for AuthInfo {
@@ -95,12 +105,15 @@ pub mod v1beta1 {
                 .map(|info| info.try_into())
                 .collect();
 
+            let tip = raw.tip.map(|tip| tip.try_into()).transpose()?;
+
             Ok(AuthInfo {
                 signer_infos: signer_infos?,
                 fee: raw
                     .fee
                     .ok_or(Error::MissingField(String::from("fee")))?
                     .try_into()?,
+                tip,
             })
         }
     }
@@ -116,6 +129,7 @@ pub mod v1beta1 {
             RawAuthInfo {
                 signer_infos: sig_infos,
                 fee: Some(auth_info.fee.into()),
+                tip: auth_info.tip.map(|tip| tip.into()),
             }
         }
     }
@@ -245,7 +259,7 @@ pub mod v1beta1 {
         fn try_from(raw: RawFee) -> Result<Self, Self::Error> {
             if raw.gas_limit > MAX_GAS_WANTED {
                 return Err(Error::DecodeGeneral(format!(
-                    "inavlid gas supplied {} > {}",
+                    "invalid gas supplied {} > {}",
                     raw.gas_limit, MAX_GAS_WANTED
                 )));
             }
@@ -254,7 +268,9 @@ pub mod v1beta1 {
             // they're all zero - we'll check for this case and represent such a list of coins as a None fee amount.
             let mut all_zero = true;
             for coin in &raw.amount {
-                if !coin.amount.is_zero() {
+                let amount = Uint256::from_str(&coin.amount)
+                    .map_err(|_| Error::Coin(String::from("coin error")))?;
+                if !amount.is_zero() {
                     all_zero = false;
                     break;
                 }
@@ -322,4 +338,59 @@ pub mod v1beta1 {
     }
 
     impl Protobuf<RawFee> for Fee {}
+
+    // Tip is the tip used for meta-transactions.
+    //
+    // Since: cosmos-sdk 0.46
+    #[derive(Clone, PartialEq)]
+    pub struct Tip {
+        /// amount is the amount of the tip
+        pub amount: Option<SendCoins>,
+        /// tipper is the address of the account paying for the tip
+        pub tipper: AccAddress,
+    }
+
+    impl TryFrom<RawTip> for Tip {
+        type Error = Error;
+
+        fn try_from(raw: RawTip) -> Result<Self, Self::Error> {
+            let tipper = AccAddress::from_bech32(&raw.tipper)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?;
+
+            let coins: Result<Vec<Coin>, Error> = raw
+                .amount
+                .into_iter()
+                .map(|coin| Coin::try_from(coin))
+                .collect();
+
+            Ok(Tip {
+                amount: Some(SendCoins::new(coins?)?),
+                tipper,
+            })
+        }
+    }
+
+    impl From<Tip> for RawTip {
+        fn from(tip: Tip) -> RawTip {
+            let tipper = tip.tipper.to_string();
+
+            match tip.amount {
+                Some(amount) => {
+                    let coins: Vec<Coin> = amount.into();
+                    let coins = coins.into_iter().map(|coin| RawCoin::from(coin)).collect();
+
+                    RawTip {
+                        amount: coins,
+                        tipper,
+                    }
+                }
+                None => RawTip {
+                    amount: vec![],
+                    tipper,
+                },
+            }
+        }
+    }
+
+    impl Protobuf<RawTip> for Tip {}
 }

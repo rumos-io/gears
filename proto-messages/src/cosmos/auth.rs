@@ -1,7 +1,10 @@
 pub mod v1beta1 {
 
     use ibc_proto::{
-        cosmos::auth::v1beta1::{BaseAccount as RawBaseAccount, ModuleAccount as RawModuleAccount},
+        cosmos::auth::v1beta1::{
+            BaseAccount as RawBaseAccount, ModuleAccount as RawModuleAccount,
+            QueryAccountRequest as RawQueryAccountRequest,
+        },
         google::protobuf::Any,
         protobuf::Protobuf,
     };
@@ -178,13 +181,40 @@ pub mod v1beta1 {
     }
 
     impl Protobuf<Any> for Account {}
+
+    /// QueryAccountRequest is the request type for the Query/Account RPC method.
+    #[derive(Clone, PartialEq)]
+    pub struct QueryAccountRequest {
+        /// address defines the address to query for.
+        pub address: proto_types::AccAddress,
+    }
+
+    impl TryFrom<RawQueryAccountRequest> for QueryAccountRequest {
+        type Error = Error;
+
+        fn try_from(raw: RawQueryAccountRequest) -> Result<Self, Self::Error> {
+            let address = AccAddress::from_bech32(&raw.address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?;
+
+            Ok(QueryAccountRequest { address })
+        }
+    }
+
+    impl From<QueryAccountRequest> for RawQueryAccountRequest {
+        fn from(query: QueryAccountRequest) -> RawQueryAccountRequest {
+            RawQueryAccountRequest {
+                address: query.address.to_string(),
+            }
+        }
+    }
+
+    impl Protobuf<RawQueryAccountRequest> for QueryAccountRequest {}
 }
 
 #[cfg(test)]
 mod tests {
 
     use ibc_proto::protobuf::Protobuf;
-    use prost::Message;
     use proto_types::AccAddress;
 
     use super::v1beta1::*;

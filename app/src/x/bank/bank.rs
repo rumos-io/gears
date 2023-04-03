@@ -1,26 +1,20 @@
-use std::str::FromStr;
-
 use bytes::Bytes;
 use cosmwasm_std::Uint256;
 use database::DB;
-use ibc_proto::cosmos::{
-    bank::v1beta1::{QueryAllBalancesResponse, QueryBalanceResponse},
-    base::v1beta1::Coin,
-};
-use prost::Message;
+use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
-    bank::v1beta1::MsgSend,
-    base::v1beta1::{Coin as ProtoCoin, SendCoins},
+    bank::v1beta1::{
+        MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
+        QueryBalanceResponse,
+    },
+    base::v1beta1::{Coin, SendCoins},
 };
 use proto_types::AccAddress;
 
 use crate::{
     error::AppError,
     store::{KVStore, MutablePrefixStore, Store},
-    types::{
-        proto::{QueryAllBalancesRequest, QueryBalanceRequest},
-        Context, QueryContext,
-    },
+    types::{Context, QueryContext},
     x::auth::{Auth, Module},
 };
 
@@ -59,7 +53,12 @@ impl Bank {
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(coin.denom.as_bytes().to_vec(), coin.encode_to_vec());
+                denom_balance_store.set(
+                    coin.denom.to_string().into_bytes(),
+                    coin.encode_vec().expect(
+                        "library call will never return an error - this is a bug in the library",
+                    ),
+                );
             }
         }
 
@@ -104,6 +103,9 @@ impl Bank {
                 .expect("invalid data in database - possible database corruption");
             balances.push(coin);
         }
+
+        let balances = SendCoins::new(balances)
+            .map_err(|e| AppError::Coins(format!("error parsing coins: {}", e.to_string())))?;
 
         return Ok(QueryAllBalancesResponse {
             balances,
@@ -168,7 +170,9 @@ impl Bank {
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
-                from_balance.encode_to_vec(),
+                from_balance.encode_vec().expect(
+                    "library call will never return an error - this is a bug in the library",
+                ),
             );
 
             //TODO: if balance == 0 then denom should be removed from store
@@ -180,7 +184,7 @@ impl Bank {
                 Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
                     .expect("invalid data in database - possible database corruption"),
                 None => Coin {
-                    denom: send_coin.denom.to_string(),
+                    denom: send_coin.denom.clone(),
                     amount: Uint256::zero(),
                 },
             };
@@ -189,14 +193,16 @@ impl Bank {
 
             to_account_store.set(
                 send_coin.denom.to_string().into(),
-                to_balance.encode_to_vec(),
+                to_balance.encode_vec().expect(
+                    "library call will never return an error - this is a bug in the library",
+                ),
             );
         }
 
         return Ok(());
     }
 
-    pub fn set_supply<T: DB>(ctx: &mut Context<T>, coin: ProtoCoin) {
+    pub fn set_supply<T: DB>(ctx: &mut Context<T>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
@@ -232,11 +238,10 @@ fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use std::vec;
+    use std::{str::FromStr, vec};
 
     use crate::{store::MultiStore, x::bank::DEFAULT_PARAMS};
-    use database::{MemDB, RocksDB};
-    use proto_messages::cosmos::base::v1beta1::Coin as ProtoCoin;
+    use database::MemDB;
     use proto_types::Denom;
 
     use super::*;
@@ -259,11 +264,11 @@ mod tests {
                 address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
                     .unwrap(),
                 coins: vec![Coin {
-                    denom: "coinA".into(),
+                    denom: "coinA".to_string().try_into().unwrap(),
                     amount: Uint256::from_str("123").unwrap(),
                 }],
             }],
-            total_supply: SendCoins::new(vec![ProtoCoin {
+            total_supply: SendCoins::new(vec![Coin {
                 denom: "coinA".to_string().try_into().unwrap(),
                 amount: Uint256::from_str("123").unwrap(),
             }])
@@ -285,7 +290,7 @@ mod tests {
         let expected_res = QueryBalanceResponse {
             balance: Some(Coin {
                 amount: Uint256::from_str("123").unwrap(),
-                denom: "coinA".to_string(),
+                denom: "coinA".to_string().try_into().unwrap(),
             }),
         };
 
@@ -301,11 +306,11 @@ mod tests {
                 address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
                     .unwrap(),
                 coins: vec![Coin {
-                    denom: "coinA".into(),
+                    denom: "coinA".to_string().try_into().unwrap(),
                     amount: Uint256::from_str("123").unwrap(),
                 }],
             }],
-            total_supply: SendCoins::new(vec![ProtoCoin {
+            total_supply: SendCoins::new(vec![Coin {
                 denom: "coinA".to_string().try_into().unwrap(),
                 amount: Uint256::from_str("123").unwrap(),
             }])
@@ -327,10 +332,11 @@ mod tests {
         let res = Bank::query_all_balances(&ctx, req).unwrap();
 
         let expected_res = QueryAllBalancesResponse {
-            balances: vec![Coin {
-                denom: "coinA".to_string(),
+            balances: SendCoins::new(vec![Coin {
+                denom: "coinA".to_string().try_into().unwrap(),
                 amount: Uint256::from_str("123").unwrap(),
-            }],
+            }])
+            .unwrap(),
             pagination: None,
         };
 

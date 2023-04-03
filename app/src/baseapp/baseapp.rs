@@ -1,13 +1,14 @@
 use std::sync::{Arc, RwLock};
 
 use database::{RocksDB, DB};
-use ibc_proto::cosmos::{
-    base::v1beta1::Coin,
-    tx::v1beta1::{Tx, TxBody},
-};
+use ibc_proto::cosmos::tx::v1beta1::Tx;
+use ibc_proto::protobuf::Protobuf;
 use prost::Message;
 
 use bytes::Bytes;
+use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
+use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
+use proto_messages::cosmos::base::v1beta1::Coin;
 use proto_messages::cosmos::{
     auth::v1beta1::BaseAccount,
     base::v1beta1::{Coin as ProtoCoin, SendCoins},
@@ -15,25 +16,20 @@ use proto_messages::cosmos::{
 use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
-    BlockParams, ConsensusParams, Event, EventAttribute, RequestApplySnapshotChunk,
-    RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho, RequestEndBlock, RequestInfo,
-    RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot, RequestQuery,
-    ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
-    ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
-    ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
-    ResponseQuery,
+    Event, EventAttribute, RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx,
+    RequestDeliverTx, RequestEcho, RequestEndBlock, RequestInfo, RequestInitChain,
+    RequestLoadSnapshotChunk, RequestOfferSnapshot, RequestQuery, ResponseApplySnapshotChunk,
+    ResponseBeginBlock, ResponseCheckTx, ResponseCommit, ResponseDeliverTx, ResponseEcho,
+    ResponseEndBlock, ResponseFlush, ResponseInfo, ResponseInitChain, ResponseListSnapshots,
+    ResponseLoadSnapshotChunk, ResponseOfferSnapshot, ResponseQuery,
 };
-use tracing::{debug, error, info};
+use tracing::info;
 
 use crate::{
     baseapp::{ante::AnteHandler, params},
-    crypto::verify_signature,
     error::AppError,
     store::MultiStore,
-    types::{
-        proto::{QueryAccountRequest, QueryAllBalancesRequest},
-        Context, DecodedTx, Msg, QueryContext,
-    },
+    types::{Context, DecodedTx, Msg, QueryContext},
     x::{
         auth::{Auth, DEFAULT_PARAMS},
         bank::{Balance, Bank, GenesisState, DEFAULT_PARAMS as BANK_DEFAULT_PARAMS},
@@ -84,7 +80,7 @@ impl BaseApp {
         // 1. Check from address is signer + verify signature
 
         //###########################
-        let tx = Tx::decode(raw.clone())?;
+        let tx = Tx::decode(raw.clone()).unwrap();
 
         let public = tx.auth_info.clone().unwrap().signer_infos[0]
             .clone()
@@ -183,7 +179,7 @@ impl Application for BaseApp {
                 )
                 .expect("hard coded address is valid"),
                 coins: vec![Coin {
-                    denom: "uatom".to_string(),
+                    denom: "uatom".to_string().try_into().unwrap(),
                     amount: cosmwasm_std::Uint256::from(34_u32),
                 }],
             }],
@@ -240,86 +236,9 @@ impl Application for BaseApp {
     fn query(&self, request: RequestQuery) -> ResponseQuery {
         info!("Got query request to: {}", request.path);
 
-        match request.path.as_str() {
-            "/cosmos.bank.v1beta1.Query/AllBalances" => {
-                let data = request.data.clone();
-                let req = QueryAllBalancesRequest::decode(data).unwrap();
-
-                let store = self.multi_store.read().unwrap();
-                let ctx = QueryContext::new(&store, self.get_block_height());
-
-                let res = Bank::query_all_balances(&ctx, req);
-
-                match res {
-                    Ok(res) => {
-                        let res = res.encode_to_vec();
-
-                        ResponseQuery {
-                            code: 0,
-                            log: "exists".to_string(),
-                            info: "".to_string(),
-                            index: 0,
-                            key: request.data,
-                            value: res.into(),
-                            proof_ops: None,
-                            height: self
-                                .get_block_height()
-                                .try_into()
-                                .expect("can't believe we made it this far"),
-                            codespace: "".to_string(),
-                        }
-                    }
-                    Err(e) => ResponseQuery {
-                        code: 0,
-                        log: e.to_string(),
-                        info: "".to_string(),
-                        index: 0,
-                        key: request.data,
-                        value: vec![].into(),
-                        proof_ops: None,
-                        height: self
-                            .get_block_height()
-                            .try_into()
-                            .expect("can't believe we made it this far"),
-                        codespace: "".to_string(),
-                    },
-                }
-            }
-            "/cosmos.auth.v1beta1.Query/Account" => {
-                let data = request.data.clone();
-                let req = QueryAccountRequest::decode(data).unwrap();
-
-                let store = self.multi_store.read().unwrap();
-                let ctx = QueryContext::new(&store, self.get_block_height());
-
-                let res = Auth::query_account(&ctx, req);
-
-                match res {
-                    Ok(res) => ResponseQuery {
-                        code: 0,
-                        log: "exists".to_string(),
-                        info: "".to_string(),
-                        index: 0,
-                        key: request.data,
-                        value: res.encode_to_vec().into(),
-                        proof_ops: None,
-                        height: 0,
-                        codespace: "".to_string(),
-                    },
-                    Err(e) => ResponseQuery {
-                        code: 1,
-                        log: e.to_string(),
-                        info: "".to_string(),
-                        index: 0,
-                        key: request.data,
-                        value: vec![].into(),
-                        proof_ops: None,
-                        height: 0,
-                        codespace: "".to_string(),
-                    },
-                }
-            }
-            _ => ResponseQuery {
+        if request.path.starts_with("/ibc") {
+            //handle ibc queries
+            ResponseQuery {
                 code: 1,
                 log: "unrecognized query".to_string(),
                 info: "".to_string(),
@@ -329,7 +248,102 @@ impl Application for BaseApp {
                 proof_ops: None,
                 height: 0,
                 codespace: "".to_string(),
-            },
+            }
+        } else {
+            match request.path.as_str() {
+                "/cosmos.bank.v1beta1.Query/AllBalances" => {
+                    let data = request.data.clone();
+                    let req = QueryAllBalancesRequest::decode(data).unwrap();
+
+                    let store = self.multi_store.read().unwrap();
+                    let ctx = QueryContext::new(&store, self.get_block_height());
+
+                    let res = Bank::query_all_balances(&ctx, req);
+
+                    match res {
+                        Ok(res) => {
+                            let res = res.encode_vec().expect(
+                                "library call will never return an error - this is a bug in the library",
+                            );
+
+                            ResponseQuery {
+                                code: 0,
+                                log: "exists".to_string(),
+                                info: "".to_string(),
+                                index: 0,
+                                key: request.data,
+                                value: res.into(),
+                                proof_ops: None,
+                                height: self
+                                    .get_block_height()
+                                    .try_into()
+                                    .expect("can't believe we made it this far"),
+                                codespace: "".to_string(),
+                            }
+                        }
+                        Err(e) => ResponseQuery {
+                            code: 0,
+                            log: e.to_string(),
+                            info: "".to_string(),
+                            index: 0,
+                            key: request.data,
+                            value: vec![].into(),
+                            proof_ops: None,
+                            height: self
+                                .get_block_height()
+                                .try_into()
+                                .expect("can't believe we made it this far"),
+                            codespace: "".to_string(),
+                        },
+                    }
+                }
+                "/cosmos.auth.v1beta1.Query/Account" => {
+                    let data = request.data.clone();
+                    let req = QueryAccountRequest::decode(data).unwrap();
+
+                    let store = self.multi_store.read().unwrap();
+                    let ctx = QueryContext::new(&store, self.get_block_height());
+
+                    let res = Auth::query_account(&ctx, req);
+
+                    match res {
+                        Ok(res) => ResponseQuery {
+                            code: 0,
+                            log: "exists".to_string(),
+                            info: "".to_string(),
+                            index: 0,
+                            key: request.data,
+                            value: res.encode_to_vec().into(),
+                            proof_ops: None,
+                            height: 0,
+                            codespace: "".to_string(),
+                        },
+                        Err(e) => ResponseQuery {
+                            code: 1,
+                            log: e.to_string(),
+                            info: "".to_string(),
+                            index: 0,
+                            key: request.data,
+                            value: vec![].into(),
+                            proof_ops: None,
+                            height: 0,
+                            codespace: "".to_string(),
+                        },
+                    }
+                }
+
+                _ => ResponseQuery {
+                    code: 1,
+                    log: "unrecognized query".to_string(),
+                    info: "".to_string(),
+                    index: 0,
+                    key: request.data,
+                    value: Default::default(),
+                    proof_ops: None,
+                    height: 0,
+                    codespace: "".to_string(),
+                },
+            }
         }
     }
 
