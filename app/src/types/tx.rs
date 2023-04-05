@@ -11,7 +11,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::AccAddress;
 
-use crate::error::AppError;
+use crate::{error::AppError, x::ibc::IBCMsg};
 
 //use super::proto::{self};
 
@@ -21,22 +21,21 @@ use crate::error::AppError;
 // 3. Consider removing the "seen" hashset in get_signers()
 pub enum Msg {
     Send(MsgSend),
-    //IBC,
-    Test,
+    IBC(IBCMsg),
 }
 
 impl Msg {
     pub fn get_signers(&self) -> Vec<&AccAddress> {
         match &self {
             Msg::Send(msg) => return vec![&msg.from_address],
-            Msg::Test => todo!(),
+            Msg::IBC(msg) => msg.signers.iter().map(|s| s).collect(),
         }
     }
 
     pub fn validate_basic(&self) -> Result<(), AppError> {
         match &self {
-            Msg::Send(msg) => Ok(()),
-            Msg::Test => todo!(),
+            Msg::Send(_) => Ok(()),
+            Msg::IBC(_) => Ok(()),
         }
     }
 }
@@ -55,9 +54,10 @@ impl DecodedTx {
 
         for msg in &tx.body.messages {
             if msg.type_url.starts_with("/ibc") {
-                let a: MsgEnvelope = MsgEnvelope::try_from(msg.to_owned()).unwrap();
+                let msg: MsgEnvelope = MsgEnvelope::try_from(msg.to_owned())
+                    .map_err(|e| AppError::IBC(e.to_string()))?;
 
-                //messages.push(Msg::IBC);
+                messages.push(Msg::IBC(IBCMsg::new(msg)?));
             } else {
                 match msg.type_url.as_str() {
                     "/cosmos.bank.v1beta1.MsgSend" => {

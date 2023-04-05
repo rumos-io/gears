@@ -13,6 +13,7 @@ pub enum AppError {
     Memo(u64),
     InvalidPublicKey,
     Tree(trees::Error),
+    IBC(String),
 }
 
 impl Display for AppError {
@@ -33,6 +34,7 @@ impl Display for AppError {
             AppError::Memo(length) => write!(f, "memo is too long, max length is {}", length),
             AppError::InvalidPublicKey => write!(f, "public key is invalid"),
             AppError::Tree(err) => err.fmt(f),
+            AppError::IBC(msg) => write!(f, "ibc routing error: {}", msg),
         }
     }
 }

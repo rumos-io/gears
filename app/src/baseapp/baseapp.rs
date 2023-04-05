@@ -137,7 +137,7 @@ impl BaseApp {
                 Msg::Send(send_msg) => {
                     Bank::send_coins_from_account_to_account(ctx, send_msg.clone())?
                 }
-                Msg::Test => return Err(AppError::AccountNotFound),
+                Msg::IBC(msg) => crate::x::ibc::run_tx(ctx, msg.to_owned())?,
             };
         }
 
