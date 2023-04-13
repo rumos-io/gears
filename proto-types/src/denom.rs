@@ -2,6 +2,7 @@ use std::fmt::{self, Display};
 
 use lazy_static::lazy_static;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 
@@ -12,7 +13,7 @@ lazy_static! {
         Regex::new(r"^[a-zA-Z][a-zA-Z0-9/-]{2,127}$").expect("hard coded RE won't fail");
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Eq, Hash)]
 pub struct Denom(String);
 
 impl TryFrom<String> for Denom {

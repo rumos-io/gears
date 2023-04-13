@@ -14,6 +14,7 @@ pub mod v1beta1 {
     };
     use prost::bytes::Bytes;
     use proto_types::AccAddress;
+    use serde::{Deserialize, Serialize};
 
     use crate::{
         cosmos::base::v1beta1::{Coin, SendCoins},
@@ -136,7 +137,7 @@ pub mod v1beta1 {
 
     impl Protobuf<RawAuthInfo> for AuthInfo {}
 
-    #[derive(Clone, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub enum PublicKey {
         Secp256k1(Secp256k1PubKey),
         //Secp256r1(Vec<u8>),

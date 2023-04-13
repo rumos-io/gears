@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, HashMap};
+
 use bytes::Bytes;
 use cosmwasm_std::Uint256;
 use database::DB;
@@ -9,7 +11,8 @@ use proto_messages::cosmos::{
     },
     base::v1beta1::{Coin, SendCoins},
 };
-use proto_types::AccAddress;
+use proto_types::{AccAddress, Denom};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     error::AppError,
@@ -27,12 +30,13 @@ const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 pub struct Bank {}
 
 // TODO: should remove total supply since it can be derived from the balances
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct GenesisState {
     pub balances: Vec<Balance>,
-    pub total_supply: SendCoins,
     pub params: Params,
 }
 
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Balance {
     pub address: AccAddress,
     pub coins: Vec<Coin>,
@@ -41,13 +45,14 @@ pub struct Balance {
 impl Bank {
     pub fn init_genesis<T: DB>(ctx: &mut Context<T>, genesis: GenesisState) {
         // TODO:
-        // 1. cosmos SDK orders the balances first
+        // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
         Params::set(ctx, genesis.params);
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
 
+        let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
@@ -59,11 +64,21 @@ impl Bank {
                         "library call will never return an error - this is a bug in the library",
                     ),
                 );
+                let zero = Uint256::zero();
+                let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
+                total_supply.insert(coin.denom, coin.amount + current_balance);
             }
         }
 
-        for coin in genesis.total_supply {
-            Bank::set_supply(ctx, coin);
+        // TODO: does the SDK sort these?
+        for coin in total_supply {
+            Bank::set_supply(
+                ctx,
+                Coin {
+                    denom: coin.0,
+                    amount: coin.1,
+                },
+            );
         }
     }
 
@@ -268,11 +283,6 @@ mod tests {
                     amount: Uint256::from_str("123").unwrap(),
                 }],
             }],
-            total_supply: SendCoins::new(vec![Coin {
-                denom: "coinA".to_string().try_into().unwrap(),
-                amount: Uint256::from_str("123").unwrap(),
-            }])
-            .unwrap(),
             params: DEFAULT_PARAMS,
         };
 
@@ -310,11 +320,6 @@ mod tests {
                     amount: Uint256::from_str("123").unwrap(),
                 }],
             }],
-            total_supply: SendCoins::new(vec![Coin {
-                denom: "coinA".to_string().try_into().unwrap(),
-                amount: Uint256::from_str("123").unwrap(),
-            }])
-            .unwrap(),
             params: DEFAULT_PARAMS,
         };
 

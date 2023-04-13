@@ -3,11 +3,12 @@ pub mod v1beta1 {
 
     use cosmwasm_std::Uint256;
     use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, protobuf::Protobuf};
+    use serde::{Deserialize, Serialize};
 
     use crate::error::Error;
 
     /// Coin defines a token with a denomination and an amount.
-    #[derive(Clone, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub struct Coin {
         pub denom: proto_types::Denom,
         pub amount: ::cosmwasm_std::Uint256,
@@ -44,7 +45,7 @@ pub mod v1beta1 {
     // - All coin amounts are positive
     // - No duplicate denominations
     // - Sorted lexicographically
-    #[derive(Clone, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub struct SendCoins(Vec<Coin>);
 
     impl SendCoins {

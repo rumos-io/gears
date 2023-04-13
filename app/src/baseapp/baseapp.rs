@@ -183,11 +183,6 @@ impl Application for BaseApp {
                     amount: cosmwasm_std::Uint256::from(34_u32),
                 }],
             }],
-            total_supply: SendCoins::new(vec![ProtoCoin {
-                denom: "uatom".to_string().try_into().unwrap(),
-                amount: cosmwasm_std::Uint256::from(34_u32),
-            }])
-            .unwrap(),
             params: BANK_DEFAULT_PARAMS,
         };
         Bank::init_genesis(&mut ctx, genesis);

@@ -1,4 +1,5 @@
 use database::DB;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     store::{KVStore, Store},
@@ -6,7 +7,7 @@ use crate::{
 };
 
 // NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Params {
     pub default_send_enabled: bool,
 }

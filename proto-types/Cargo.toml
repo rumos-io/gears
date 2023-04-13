@@ -15,3 +15,6 @@ thiserror = "1.0.13"
 bech32 = "0.9.1"
 lazy_static = "1.4.0"
 regex = "1.7.1"
+
+[dev-dependencies]
+serde_json = "1.0.93"

@@ -14,6 +14,7 @@ pub enum AppError {
     InvalidPublicKey,
     Tree(trees::Error),
     IBC(String),
+    Genesis(String),
 }
 
 impl Display for AppError {
@@ -35,6 +36,7 @@ impl Display for AppError {
             AppError::InvalidPublicKey => write!(f, "public key is invalid"),
             AppError::Tree(err) => err.fmt(f),
             AppError::IBC(msg) => write!(f, "ibc routing error: {}", msg),
+            AppError::Genesis(msg) => write!(f, "{}", msg),
         }
     }
 }

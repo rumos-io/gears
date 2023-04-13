@@ -29,6 +29,7 @@ hex = "0.4.3"
 database = { path = "../database" }
 dirs = "4.0.0"
 ibc = "0.36.0"
+serde-aux = "4.2.0"
 
 [dev-dependencies]
 hex = "0.4.3"

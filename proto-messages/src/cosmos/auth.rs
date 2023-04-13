@@ -10,17 +10,23 @@ pub mod v1beta1 {
     };
     use prost::bytes::Bytes;
     use proto_types::AccAddress;
+    use serde::{Deserialize, Serialize};
+    use serde_aux::prelude::deserialize_number_from_string;
 
-    use crate::{cosmos::tx::v1beta1::PublicKey, Error};
+    use crate::{cosmos::tx::v1beta1::PublicKey, utils::serialize_number_to_string, Error};
 
     /// BaseAccount defines a base account type. It contains all the necessary fields
     /// for basic account functionality. Any custom account type should extend this
     /// type for additional functionality (e.g. vesting).
-    #[derive(Clone, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub struct BaseAccount {
         pub address: proto_types::AccAddress,
         pub pub_key: Option<PublicKey>,
+        #[serde(deserialize_with = "deserialize_number_from_string")]
+        #[serde(serialize_with = "serialize_number_to_string")]
         pub account_number: u64,
+        #[serde(deserialize_with = "deserialize_number_from_string")]
+        #[serde(serialize_with = "serialize_number_to_string")]
         pub sequence: u64,
     }
 

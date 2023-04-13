@@ -2,6 +2,7 @@ pub mod v1beta1 {
     use ibc_proto::protobuf::Protobuf;
     use proto_types::AccAddress;
     use ripemd::Ripemd160;
+    use serde::{Deserialize, Serialize};
     use sha2::{Digest, Sha256};
 
     use crate::Error;
@@ -16,7 +17,7 @@ pub mod v1beta1 {
         pub key: Vec<u8>,
     }
 
-    #[derive(Clone, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub struct PubKey {
         key: Vec<u8>,
     }

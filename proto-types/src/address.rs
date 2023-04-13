@@ -1,6 +1,10 @@
-use std::fmt::{self, Display};
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
 use bech32::{self, FromBase32, ToBase32, Variant};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::error::AddressError;
 
@@ -48,6 +52,49 @@ impl AccAddress {
             .len()
             .try_into()
             .expect("MAX_ADDR_LEN is a u8 so this can't fail")
+    }
+}
+
+impl Serialize for AccAddress {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::ser::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for AccAddress {
+    fn deserialize<D>(deserializer: D) -> Result<AccAddress, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(AccAddressVisitor)
+    }
+}
+
+struct AccAddressVisitor;
+
+impl<'de> serde::de::Visitor<'de> for AccAddressVisitor {
+    type Value = AccAddress;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("bech32 encoded address")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        AccAddress::from_str(v).map_err(|e| E::custom(format!("invalid address '{}' - {}", v, e)))
+    }
+}
+
+impl FromStr for AccAddress {
+    type Err = AddressError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from_bech32(s)
     }
 }
 
@@ -189,5 +236,25 @@ mod tests {
         let acc_addr = AccAddress::from_bech32(&addr).unwrap();
 
         assert_eq!(addr, acc_addr.to_string());
+    }
+
+    #[test]
+    fn serialize_works() {
+        let addr = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string();
+        let acc_addr = AccAddress::from_bech32(&addr).unwrap();
+
+        let json = serde_json::to_string(&acc_addr).unwrap();
+
+        assert_eq!(json, r#""cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux""#);
+    }
+
+    #[test]
+    fn deserialize_works() {
+        let json = r#""cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux""#;
+        let addr: AccAddress = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            addr,
+            AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux").unwrap()
+        )
     }
 }
