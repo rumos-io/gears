@@ -60,10 +60,7 @@ impl Module {
 pub struct Auth {}
 
 impl Auth {
-    pub fn init_genesis<T: DB>(
-        ctx: &mut Context<T>,
-        genesis: GenesisState,
-    ) -> Result<(), AppError> {
+    pub fn init_genesis<T: DB>(ctx: &mut Context<T>, genesis: GenesisState) {
         //TODO: sdk sanitizes accounts
         Params::set(ctx, genesis.params);
 
@@ -74,7 +71,6 @@ impl Auth {
 
         // Create the fee collector account
         Auth::check_create_new_module_account(ctx, &Module::FeeCollector);
-        Ok(())
     }
 
     pub fn query_account<T: DB>(

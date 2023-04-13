@@ -10,8 +10,8 @@ use crate::{
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct GenesisState {
-    bank: BankGenesis,
-    auth: AuthGenesis,
+    pub bank: BankGenesis,
+    pub auth: AuthGenesis,
 }
 
 impl FromStr for GenesisState {

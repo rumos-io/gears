@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 use database::{RocksDB, DB};
@@ -23,8 +24,9 @@ use tendermint_proto::abci::{
     ResponseEndBlock, ResponseFlush, ResponseInfo, ResponseInitChain, ResponseListSnapshots,
     ResponseLoadSnapshotChunk, ResponseOfferSnapshot, ResponseQuery,
 };
-use tracing::info;
+use tracing::{error, info};
 
+use crate::types::GenesisState;
 use crate::{
     baseapp::{ante::AnteHandler, params},
     error::AppError,
@@ -32,7 +34,7 @@ use crate::{
     types::{Context, DecodedTx, Msg, QueryContext},
     x::{
         auth::{Auth, DEFAULT_PARAMS},
-        bank::{Balance, Bank, GenesisState, DEFAULT_PARAMS as BANK_DEFAULT_PARAMS},
+        bank::{Balance, Bank, DEFAULT_PARAMS as BANK_DEFAULT_PARAMS},
     },
 };
 
@@ -172,34 +174,19 @@ impl Application for BaseApp {
             params::set_consensus_params(&mut ctx, params);
         }
 
-        let genesis = GenesisState {
-            balances: vec![Balance {
-                address: AccAddress::from_bech32(
-                    &"cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_string(),
-                )
-                .expect("hard coded address is valid"),
-                coins: vec![Coin {
-                    denom: "uatom".to_string().try_into().unwrap(),
-                    amount: cosmwasm_std::Uint256::from(34_u32),
-                }],
-            }],
-            params: BANK_DEFAULT_PARAMS,
-        };
-        Bank::init_genesis(&mut ctx, genesis);
+        let genesis = String::from_utf8(request.app_state_bytes.into())
+            .map_err(|e| AppError::Genesis(e.to_string()))
+            .and_then(|f| GenesisState::from_str(&f))
+            .unwrap_or_else(|e| {
+                error!(
+                    "Invalid genesis provided by Tendermint.\n{}\nTerminating process",
+                    e.to_string()
+                );
+                std::process::exit(1)
+            });
 
-        let genesis = crate::x::auth::GenesisState {
-            accounts: vec![BaseAccount {
-                address: AccAddress::from_bech32(
-                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into(),
-                )
-                .expect("hard coded address is valid"),
-                pub_key: None,
-                account_number: 0,
-                sequence: 0,
-            }],
-            params: DEFAULT_PARAMS,
-        };
-        Auth::init_genesis(&mut ctx, genesis).expect("genesis is valid");
+        Bank::init_genesis(&mut ctx, genesis.bank);
+        Auth::init_genesis(&mut ctx, genesis.auth);
 
         multi_store.write_then_clear_tx_caches();
 
