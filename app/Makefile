@@ -1,8 +1,8 @@
 run-debug:
-	RUST_LOG=DEBUG cargo run -- --verbose
+	RUST_LOG=DEBUG cargo run -- run --verbose
 
 run:
-	cargo run
+	cargo run -- run
 
 test:
 	cargo test
