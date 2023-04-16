@@ -6,7 +6,7 @@ pub enum Error {
     Coins(String),
     #[error("invalid coin: `{0}`")]
     Coin(String),
-    #[error("decode error")]
+    #[error(transparent)]
     Decode(#[from] prost::DecodeError),
     #[error("decode error: `{0}`")]
     DecodeAny(String),

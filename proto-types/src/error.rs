@@ -6,7 +6,7 @@ pub struct RoundUpOverflowError;
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum AddressError {
-    #[error("failed to decode")]
+    #[error(transparent)]
     Decode(#[from] bech32::Error),
 
     #[error("address has wrong prefix (expected {expected:?}, found {found:?})")]

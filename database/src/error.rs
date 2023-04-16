@@ -2,6 +2,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum Error {
-    #[error("database error")]
+    #[error(transparent)]
     Decode(#[from] rocksdb::Error),
 }

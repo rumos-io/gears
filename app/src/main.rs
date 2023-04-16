@@ -16,10 +16,6 @@ mod store;
 mod types;
 mod x;
 
-// TODO:
-// 1. remove unwraps
-// 2. ip address value_parser / validator
-
 fn get_default_home_dir() -> Option<PathBuf> {
     dirs::config_dir().map(|mut h| {
         h.push(APP_NAME);
@@ -87,15 +83,23 @@ fn run_run_command(matches: &ArgMatches) {
     db_dir.push("data");
     db_dir.push("application.db");
     let db = RocksDB::new(db_dir).unwrap_or_else(|e| {
-        error!("Could not open database {}", e);
+        error!("Could not open database: {}", e);
         std::process::exit(1)
     });
 
     let app = BaseApp::new(db);
     let server = ServerBuilder::new(*read_buf_size)
         .bind(format!("{}:{}", host, port), app)
-        .unwrap();
-    server.listen().unwrap();
+        .unwrap_or_else(|e| {
+            error!("Error binding to host: {}", e);
+            std::process::exit(1)
+        });
+    server.listen().unwrap_or_else(|e| {
+        error!("Fatal server error: {}", e);
+        std::process::exit(1)
+    });
+
+    unreachable!("server.listen() will not return `Ok`")
 }
 
 fn get_run_command() -> Command {
@@ -117,7 +121,7 @@ fn get_run_command() -> Command {
             arg!(--host)
                 .help("Bind the TCP server to this host")
                 .action(ArgAction::Set)
-                .value_parser(value_parser!(String)) //TODO: replace with IP address value parser
+                .value_parser(value_parser!(String))
                 .default_value("127.0.0.1"),
         )
         .arg(
