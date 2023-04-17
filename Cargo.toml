@@ -1,2 +1,9 @@
 [workspace]
-members = ["proto-types", "proto-messages", "app", "trees", "database"]
+members = [
+    "proto-types",
+    "proto-messages",
+    "app",
+    "trees",
+    "database",
+    "tendermint",
+]

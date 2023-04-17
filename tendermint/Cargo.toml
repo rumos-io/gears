@@ -1,0 +1,18 @@
+[package]
+name = "tendermint"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+thiserror = "1.0.13"
+tendermint-config = "0.28.0"
+toml = "0.7.3"
+serde_json = "1.0.93"
+serde = { version = "1.0.103", default-features = false, features = [
+    "derive",
+    "alloc",
+] }
+handlebars = "4.3.6"
+tendermint = "0.28.0"
+
+[dev-dependencies]

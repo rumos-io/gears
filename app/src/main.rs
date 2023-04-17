@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{fs, path::PathBuf};
 
 use baseapp::BaseApp;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
@@ -17,8 +17,8 @@ mod types;
 mod x;
 
 fn get_default_home_dir() -> Option<PathBuf> {
-    dirs::config_dir().map(|mut h| {
-        h.push(APP_NAME);
+    dirs::home_dir().map(|mut h| {
+        h.push(format!(".{}", APP_NAME));
         h
     })
 }
@@ -34,13 +34,25 @@ fn run_init_command(sub_matches: &ArgMatches) {
         .get_one::<PathBuf>("home")
         .or(default_home_directory.as_ref())
         .unwrap_or_else(|| {
-            error!("Home argument not provided and OS does not provide a default config directory");
+            println!("Home argument not provided and OS does not provide a default home directory");
             std::process::exit(1)
         });
 
-    //TODO: remove these and complete command
-    println!("Using {} as moniker", moniker);
-    println!("Using directory {} for config and data", home.display());
+    let mut config_dir = home.clone();
+    config_dir.push("config");
+    fs::create_dir_all(&config_dir).unwrap_or_else(|e| {
+        println!("Could not create config directory {}", e);
+        std::process::exit(1)
+    });
+
+    let mut tm_config_file = config_dir;
+    tm_config_file.push("config.toml");
+
+    tendermint::write_tm_config_file(&tm_config_file, moniker).unwrap_or_else(|e| {
+        println!("Error writing config file {}", e);
+        std::process::exit(1)
+    });
+    println!("Tendermint config written to {}", tm_config_file.display());
 }
 
 fn run_run_command(matches: &ArgMatches) {
@@ -74,7 +86,7 @@ fn run_run_command(matches: &ArgMatches) {
         .get_one::<PathBuf>("home")
         .or(default_home_directory.as_ref())
         .unwrap_or_else(|| {
-            error!("Home argument not provided and OS does not provide a default config directory");
+            error!("Home argument not provided and OS does not provide a default home directory");
             std::process::exit(1)
         });
     info!("Using directory {} for config and data", home.display());
