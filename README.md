@@ -19,7 +19,7 @@ libclang - This is needed by rocks db, run `sudo apt install libclang-dev build-
 
 ## Running
 
-0. From the gaia-rs directory change into the app directory then initialize a new chain
+0. From the gaia-rs directory change into the app directory then initialize a new chain:
 
 ```
 make init
@@ -58,7 +58,7 @@ balances:
 pagination: null
 ```
 
-The balance is set at 34 in a hard coded genesis structure.
+The balance is set at 34 in the genesis file.
 
 4. Import the key corresponding to the above address into gaiad:
 
