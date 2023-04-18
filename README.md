@@ -19,7 +19,13 @@ libclang - This is needed by rocks db, run `sudo apt install libclang-dev build-
 
 ## Running
 
-1. From the gaia-rs directory change into the app directory then run make to build and start the application:
+0. From the gaia-rs directory change into the app directory then initialize a new chain
+
+```
+make init
+```
+
+1. Run make to build and start the application:
 
 ```
 cd app
@@ -31,7 +37,7 @@ The application will listen for connections on tcp://127.0.0.1:26658
 2. Start Tendermint:
 
 ```
-make tendermint-clean-start
+make tendermint-start
 ```
 
 Tendermint will connect to the application and will bind the RPC server to 127.0.0.1:26657

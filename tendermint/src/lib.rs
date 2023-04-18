@@ -1,13 +1,16 @@
-use std::{
-    fs::{self, File},
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 
 use ed25519_dalek::Keypair;
 use error::Error;
 use rand::rngs::OsRng;
-use tendermint::consensus::State;
+use tendermint::{
+    block::Size,
+    consensus::{params::ValidatorParams, Params, State},
+    evidence::Duration as TmDuration,
+    public_key::Algorithm,
+    validator::Info,
+    Genesis, Time,
+};
 use tendermint_config::{
     AbciMode, ConsensusConfig, CorsHeader, CorsMethod, DbBackend, FastsyncConfig,
     InstrumentationConfig, LogFormat, MempoolConfig, NodeKey, P2PConfig, PrivValidatorKey,
@@ -19,8 +22,14 @@ mod error;
 
 //TOD0: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
 //TODO: expose write_tm_config_file args
+//TODO: pass in chain id
 
-pub fn write_keys(mut node_key_file: File, mut priv_validator_key_file: File) -> Result<(), Error> {
+pub fn write_keys_and_genesis(
+    mut node_key_file: File,
+    mut priv_validator_key_file: File,
+    mut genesis_file: File,
+    app_state: serde_json::Value,
+) -> Result<(), Error> {
     // write node key
     let mut csprng = OsRng {};
     let keypair: Keypair = Keypair::generate(&mut csprng);
@@ -35,35 +44,82 @@ pub fn write_keys(mut node_key_file: File, mut priv_validator_key_file: File) ->
     // write node private validator key
     let keypair: Keypair = Keypair::generate(&mut csprng);
     let priv_key = tendermint::PrivateKey::Ed25519(keypair);
+    let public_key = priv_key.public_key();
     let address: tendermint::account::Id = priv_key.public_key().into();
     let priv_validator_key = PrivValidatorKey {
         address,
         pub_key: priv_key.public_key(),
-        priv_key,
+        priv_key: priv_key,
     };
-    priv_validator_key_file
+    priv_validator_key_file.write_all(
+        serde_json::to_string_pretty(&priv_validator_key)
+            .expect("PrivValidatorKey structure serialization will always succeed")
+            .as_bytes(),
+    )?;
+
+    let validator = Info::new(public_key, 10u32.into());
+
+    // write genesis file
+    let genesis = Genesis {
+        genesis_time: Time::now(),
+        chain_id: "testnet".try_into().unwrap(), //TODO: this should be passed in
+        initial_height: 1,
+        consensus_params: Params {
+            block: Size {
+                max_bytes: 22020096,
+                max_gas: -1,
+                time_iota_ms: 1000,
+            },
+            evidence: tendermint::evidence::Params {
+                max_age_num_blocks: 100000,
+                max_age_duration: TmDuration(Duration::new(172800, 0)),
+                max_bytes: 1048576,
+            },
+            validator: ValidatorParams {
+                pub_key_types: vec![Algorithm::Ed25519],
+            },
+            version: None,
+        },
+        validators: vec![validator],
+        app_hash: vec![].try_into().unwrap(),
+        app_state,
+    };
+
+    genesis_file
         .write_all(
-            serde_json::to_string_pretty(&priv_validator_key)
-                .expect("PrivValidatorKey structure serialization will always succeed")
+            serde_json::to_string_pretty(&genesis)
+                .expect("Genesis structure serialization will always succeed")
                 .as_bytes(),
         )
         .map_err(|e| e.into())
 }
 
 pub fn write_priv_validator_state(mut priv_validator_state_key_file: File) -> Result<(), Error> {
-    let state = State {
-        height: 0u32.into(),
-        round: 0u8.into(),
-        step: 0,
-        block_id: None,
-    };
+    // This is what this code should do. However there's a bug in Tendermint-rs which means the round
+    // gets written as a string. This causes Tendermint to fail. Instead we use a hard coded string
+    // let state = State {
+    //     height: 0u32.into(),
+    //     round: 0u8.into(),
+    //     step: 0,
+    //     block_id: None,
+    // };
+
+    // priv_validator_state_key_file
+    //     .write_all(
+    //         serde_json::to_string_pretty(&state)
+    //             .expect("State structure serialization will always succeed")
+    //             .as_bytes(),
+    //     )
+    //     .map_err(|e| e.into())
+
+    let state = r#"{
+    "height": "0",
+    "round": 0,
+    "step": 0
+}"#;
 
     priv_validator_state_key_file
-        .write_all(
-            serde_json::to_string_pretty(&state)
-                .expect("State structure serialization will always succeed")
-                .as_bytes(),
-        )
+        .write_all(state.as_bytes())
         .map_err(|e| e.into())
 }
 
@@ -174,7 +230,7 @@ fn get_default_tm_config() -> TendermintConfig {
             timeout_prevote_delta: "500ms".parse().expect("hard coded timeout is valid"),
             timeout_precommit: "1000ms".parse().expect("hard coded timeout is valid"),
             timeout_precommit_delta: "500ms".parse().expect("hard coded timeout is valid"),
-            timeout_commit: "1000ms".parse().expect("hard coded timeout is valid"),
+            timeout_commit: "5000ms".parse().expect("hard coded timeout is valid"),
             double_sign_check_height: 0,
             skip_timeout_commit: false,
             create_empty_blocks: true,

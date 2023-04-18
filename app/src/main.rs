@@ -7,7 +7,7 @@ use tendermint_abci::ServerBuilder;
 use tracing::{error, info};
 use tracing_subscriber::filter::LevelFilter;
 
-use crate::baseapp::APP_NAME;
+use crate::{baseapp::APP_NAME, types::GenesisState};
 
 mod baseapp;
 mod crypto;
@@ -37,6 +37,10 @@ fn run_init_command(sub_matches: &ArgMatches) {
             println!("Home argument not provided and OS does not provide a default home directory");
             std::process::exit(1)
         });
+
+    let chain_id = sub_matches
+        .get_one::<String>("id")
+        .expect("has a default value so will never be None");
 
     // Create config directory
     let mut config_dir = home.clone();
@@ -87,9 +91,61 @@ fn run_init_command(sub_matches: &ArgMatches) {
             std::process::exit(1)
         });
 
-    // Write key files
-    tendermint::write_keys(node_key_file, priv_validator_key_file).unwrap_or_else(|e| {
-        println!("Error writing key files {}", e);
+    // Build genesis state
+    let app_state = GenesisState {
+        bank: x::bank::GenesisState {
+            balances: vec![x::bank::Balance {
+                address: proto_types::AccAddress::from_bech32(
+                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
+                )
+                .unwrap(),
+                coins: vec![proto_messages::cosmos::base::v1beta1::Coin {
+                    denom: proto_types::Denom::try_from(String::from("uatom")).unwrap(),
+                    amount: cosmwasm_std::Uint256::from_u128(34),
+                }],
+            }],
+            params: crate::x::bank::Params {
+                default_send_enabled: true,
+            },
+        },
+        auth: x::auth::GenesisState {
+            accounts: vec![proto_messages::cosmos::auth::v1beta1::BaseAccount {
+                address: proto_types::AccAddress::from_bech32(
+                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
+                )
+                .unwrap(),
+                pub_key: None,
+                account_number: 0,
+                sequence: 0,
+            }],
+            params: crate::x::auth::Params {
+                max_memo_characters: 256,
+                tx_sig_limit: 7,
+                tx_size_cost_per_byte: 10,
+                sig_verify_cost_ed25519: 590,
+                sig_verify_cost_secp256k1: 1000,
+            },
+        },
+    };
+    let app_state = serde_json::to_value(app_state).unwrap();
+
+    // Create genesis file
+    let mut genesis_file_path = config_dir.clone();
+    genesis_file_path.push("genesis.json");
+    let genesis_file = std::fs::File::create(&genesis_file_path).unwrap_or_else(|e| {
+        println!("Could not create genesis file {}", e);
+        std::process::exit(1)
+    });
+
+    // Write key and genesis
+    tendermint::write_keys_and_genesis(
+        node_key_file,
+        priv_validator_key_file,
+        genesis_file,
+        app_state,
+    )
+    .unwrap_or_else(|e| {
+        println!("Error writing key and genesis files {}", e);
         std::process::exit(1)
     });
     println!(
@@ -97,6 +153,7 @@ fn run_init_command(sub_matches: &ArgMatches) {
         node_key_file_path.display(),
         priv_validator_key_file_path.display()
     );
+    println!("Genesis file written to {}", genesis_file_path.display(),);
 
     // Write write private validator state file
     let mut state_file_path = data_dir.clone();
@@ -244,6 +301,12 @@ fn get_init_command() -> Command {
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),
+        )
+        .arg(
+            arg!(--id)
+                .help("Genesis file chain-id")
+                .default_value("test-chain")
+                .action(ArgAction::Set),
         )
 }
 

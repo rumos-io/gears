@@ -10,6 +10,18 @@ test:
 install:
 	cargo install --path .
 
+init:
+	./scripts/init.sh
+
+tendermint-start:
+	tendermint start --home ~/.gears
+
+
+
+
+
+
+
 # This option only deletes the data and not the config files. This is useful since
 # the timeout_commit = "10s" param has been manually changed in my config file.
 tendermint-clean-start: tendermint-reset-unsafe tendermint-start
@@ -23,7 +35,6 @@ tendermint-reset-unsafe:
 tendermint-reset-init:
 	./init-tendermint.sh
 	
-tendermint-start:
-	tendermint start
+
 
 .PHONY: run run-debug test tendermint-clean-start tendermint-reset-unsafe tendermint-init tendermint-start tendermint-hard-reset
