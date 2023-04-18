@@ -38,6 +38,7 @@ fn run_init_command(sub_matches: &ArgMatches) {
             std::process::exit(1)
         });
 
+    // Create config directory
     let mut config_dir = home.clone();
     config_dir.push("config");
     fs::create_dir_all(&config_dir).unwrap_or_else(|e| {
@@ -45,14 +46,73 @@ fn run_init_command(sub_matches: &ArgMatches) {
         std::process::exit(1)
     });
 
-    let mut tm_config_file = config_dir;
-    tm_config_file.push("config.toml");
+    // Create data directory
+    let mut data_dir = home.clone();
+    data_dir.push("data");
+    fs::create_dir_all(&data_dir).unwrap_or_else(|e| {
+        println!("Could not create data directory {}", e);
+        std::process::exit(1)
+    });
 
-    tendermint::write_tm_config_file(&tm_config_file, moniker).unwrap_or_else(|e| {
+    // Write tendermint config file
+    let mut tm_config_file_path = config_dir.clone();
+    tm_config_file_path.push("config.toml");
+    let tm_config_file = std::fs::File::create(&tm_config_file_path).unwrap_or_else(|e| {
+        println!("Could not create config file {}", e);
+        std::process::exit(1)
+    });
+    tendermint::write_tm_config(tm_config_file, moniker).unwrap_or_else(|e| {
         println!("Error writing config file {}", e);
         std::process::exit(1)
     });
-    println!("Tendermint config written to {}", tm_config_file.display());
+    println!(
+        "Tendermint config written to {}",
+        tm_config_file_path.display()
+    );
+
+    // Create node key file
+    let mut node_key_file_path = config_dir.clone();
+    node_key_file_path.push("node_key.json");
+    let node_key_file = std::fs::File::create(&node_key_file_path).unwrap_or_else(|e| {
+        println!("Could not create node key file {}", e);
+        std::process::exit(1)
+    });
+
+    // Create private validator key file
+    let mut priv_validator_key_file_path = config_dir.clone();
+    priv_validator_key_file_path.push("priv_validator_key.json");
+    let priv_validator_key_file = std::fs::File::create(&priv_validator_key_file_path)
+        .unwrap_or_else(|e| {
+            println!("Could not create private validator key file {}", e);
+            std::process::exit(1)
+        });
+
+    // Write key files
+    tendermint::write_keys(node_key_file, priv_validator_key_file).unwrap_or_else(|e| {
+        println!("Error writing key files {}", e);
+        std::process::exit(1)
+    });
+    println!(
+        "Key files written to {} and {}",
+        node_key_file_path.display(),
+        priv_validator_key_file_path.display()
+    );
+
+    // Write write private validator state file
+    let mut state_file_path = data_dir.clone();
+    state_file_path.push("priv_validator_state.json");
+    let state_file = std::fs::File::create(&state_file_path).unwrap_or_else(|e| {
+        println!("Could not create private validator state file {}", e);
+        std::process::exit(1)
+    });
+    tendermint::write_priv_validator_state(state_file).unwrap_or_else(|e| {
+        println!("Error writing private validator state file {}", e);
+        std::process::exit(1)
+    });
+    println!(
+        "Private validator state written to {}",
+        state_file_path.display()
+    );
 }
 
 fn run_run_command(matches: &ArgMatches) {

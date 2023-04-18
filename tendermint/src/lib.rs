@@ -1,13 +1,18 @@
 use std::{
-    fs,
+    fs::{self, File},
+    io::Write,
     path::{Path, PathBuf},
 };
 
+use ed25519_dalek::Keypair;
 use error::Error;
+use rand::rngs::OsRng;
+use tendermint::consensus::State;
 use tendermint_config::{
     AbciMode, ConsensusConfig, CorsHeader, CorsMethod, DbBackend, FastsyncConfig,
-    InstrumentationConfig, LogFormat, MempoolConfig, P2PConfig, RpcConfig, StatesyncConfig,
-    StorageConfig, TendermintConfig, TransferRate, TxIndexConfig, TxIndexer,
+    InstrumentationConfig, LogFormat, MempoolConfig, NodeKey, P2PConfig, PrivValidatorKey,
+    RpcConfig, StatesyncConfig, StorageConfig, TendermintConfig, TransferRate, TxIndexConfig,
+    TxIndexer,
 };
 
 mod error;
@@ -15,17 +20,61 @@ mod error;
 //TOD0: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
 //TODO: expose write_tm_config_file args
 
-pub fn write_tm_config_file<P>(
-    path: P,
+pub fn write_keys(mut node_key_file: File, mut priv_validator_key_file: File) -> Result<(), Error> {
+    // write node key
+    let mut csprng = OsRng {};
+    let keypair: Keypair = Keypair::generate(&mut csprng);
+    let priv_key = tendermint::PrivateKey::Ed25519(keypair);
+    let node_key = NodeKey { priv_key };
+    node_key_file.write_all(
+        serde_json::to_string_pretty(&node_key)
+            .expect("NodeKey structure serialization will always succeed")
+            .as_bytes(),
+    )?;
+
+    // write node private validator key
+    let keypair: Keypair = Keypair::generate(&mut csprng);
+    let priv_key = tendermint::PrivateKey::Ed25519(keypair);
+    let address: tendermint::account::Id = priv_key.public_key().into();
+    let priv_validator_key = PrivValidatorKey {
+        address,
+        pub_key: priv_key.public_key(),
+        priv_key,
+    };
+    priv_validator_key_file
+        .write_all(
+            serde_json::to_string_pretty(&priv_validator_key)
+                .expect("PrivValidatorKey structure serialization will always succeed")
+                .as_bytes(),
+        )
+        .map_err(|e| e.into())
+}
+
+pub fn write_priv_validator_state(mut priv_validator_state_key_file: File) -> Result<(), Error> {
+    let state = State {
+        height: 0u32.into(),
+        round: 0u8.into(),
+        step: 0,
+        block_id: None,
+    };
+
+    priv_validator_state_key_file
+        .write_all(
+            serde_json::to_string_pretty(&state)
+                .expect("State structure serialization will always succeed")
+                .as_bytes(),
+        )
+        .map_err(|e| e.into())
+}
+
+pub fn write_tm_config(
+    mut file: File,
     node_name: &str,
     // peers: Vec<Address>,
     // external_address: Option<Address>,
     // tm_rpc_bind: Option<SocketAddr>,
     // tm_p2p_bind: Option<SocketAddr>,
-) -> Result<(), Error>
-where
-    P: AsRef<Path>,
-{
+) -> Result<(), Error> {
     let mut handlebars = handlebars::Handlebars::new();
     handlebars
         .register_template_string("config", TM_CONFIG_TEMPLATE)
@@ -40,8 +89,7 @@ where
         .render("config", &tm_config)
         .expect("TendermintConfig will always work with the TM_CONFIG_TEMPLATE");
 
-    fs::write(&path, tm_config)?;
-    Ok(())
+    file.write_all(tm_config.as_bytes()).map_err(|e| e.into())
 }
 
 fn get_default_tm_config() -> TendermintConfig {
@@ -177,7 +225,7 @@ fn get_default_cors_allowed_headers() -> Vec<CorsHeader> {
 }
 
 /// This method is needed since there doesn't seem to be a way to construct
-/// a CorsMethod directly
+/// a TransferRate directly
 fn new_transfer_rate(rate: u64) -> TransferRate {
     serde_json::from_str(&rate.to_string()).expect("will always succeed")
 }
