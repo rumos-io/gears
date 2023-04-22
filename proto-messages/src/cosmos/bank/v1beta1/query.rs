@@ -9,6 +9,7 @@ use ibc_proto::{
     protobuf::Protobuf,
 };
 use proto_types::AccAddress;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     cosmos::base::v1beta1::{Coin, SendCoins},
@@ -87,7 +88,7 @@ impl Protobuf<RawQueryAllBalancesRequest> for QueryAllBalancesRequest {}
 
 /// QueryAllBalancesResponse is the response type for the Query/AllBalances RPC
 /// method.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct QueryAllBalancesResponse {
     /// balances is the balances of all the coins.
     pub balances: SendCoins,

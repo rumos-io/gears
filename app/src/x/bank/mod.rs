@@ -1,4 +1,5 @@
 mod bank;
+pub mod cli;
 mod params;
 
 pub use bank::*;

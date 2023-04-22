@@ -1,11 +1,14 @@
 use std::{fs, path::PathBuf};
 
+use anyhow::Result;
 use baseapp::BaseApp;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
+use human_panic::setup_panic;
 use tendermint_abci::ServerBuilder;
 use tracing::{error, info};
 use tracing_subscriber::filter::LevelFilter;
+use x::bank::cli::{get_bank_query_command, run_bank_query_command};
 
 use crate::{baseapp::APP_NAME, types::GenesisState};
 
@@ -231,6 +234,20 @@ fn run_run_command(matches: &ArgMatches) {
     unreachable!("server.listen() will not return `Ok`")
 }
 
+fn run_query_command(matches: &ArgMatches) -> Result<()> {
+    let node = matches
+        .get_one::<String>("node")
+        .expect("Node arg has a default value so this cannot be `None`.");
+
+    let res = match matches.subcommand() {
+        Some(("bank", sub_matches)) => run_bank_query_command(sub_matches, node),
+        _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
+    }?;
+
+    println!("{}", res);
+    Ok(())
+}
+
 fn get_run_command() -> Command {
     Command::new("run")
         .about("Run the full node application")
@@ -310,17 +327,36 @@ fn get_init_command() -> Command {
         )
 }
 
-fn main() {
+fn get_query_command() -> Command {
+    Command::new("query")
+        .about("Querying subcommands")
+        .subcommand(get_bank_query_command())
+        .subcommand_required(true)
+        .arg(
+            arg!(--node)
+                .help("<host>:<port> to Tendermint RPC interface for this chain (default \"http://localhost:26657\")")
+                .default_value("http://localhost:26657")
+                .action(ArgAction::Set),
+        )
+}
+
+fn main() -> Result<()> {
+    setup_panic!();
+
     let cli = Command::new("CLI")
         .subcommand(get_init_command())
         .subcommand(get_run_command())
-        .subcommand_required(true);
+        .subcommand_required(true)
+        .subcommand(get_query_command());
 
     let matches = cli.get_matches();
 
     match matches.subcommand() {
         Some(("init", sub_matches)) => run_init_command(sub_matches),
         Some(("run", sub_matches)) => run_run_command(sub_matches),
+        Some(("query", sub_matches)) => run_query_command(sub_matches)?,
         _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
-    }
+    };
+
+    Ok(())
 }
