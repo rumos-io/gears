@@ -334,9 +334,10 @@ fn get_query_command() -> Command {
         .subcommand_required(true)
         .arg(
             arg!(--node)
-                .help("<host>:<port> to Tendermint RPC interface for this chain (default \"http://localhost:26657\")")
+                .help("<host>:<port> to Tendermint RPC interface for this chain")
                 .default_value("http://localhost:26657")
-                .action(ArgAction::Set),
+                .action(ArgAction::Set)
+                .global(true),
         )
 }
 

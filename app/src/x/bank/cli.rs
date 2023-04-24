@@ -1,6 +1,4 @@
-use std::str::FromStr;
-
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 use clap::{Arg, ArgMatches, Command};
 
 use ibc_proto::protobuf::Protobuf;
@@ -9,16 +7,17 @@ use proto_types::AccAddress;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
-// TODO: use clap derive
-// TODO: get clap to parse node url and address
-
 pub fn get_bank_query_command() -> Command {
     Command::new("bank")
         .about("Querying commands for the bank module")
         .subcommand(
             Command::new("balances")
                 .about("Query for account balances by address")
-                .arg(Arg::new("address").required(true)),
+                .arg(
+                    Arg::new("address")
+                        .required(true)
+                        .value_parser(clap::value_parser!(AccAddress)),
+                ),
         )
         .subcommand_required(true)
 }
@@ -29,7 +28,7 @@ pub fn run_bank_query_command(matches: &ArgMatches, node: &str) -> Result<String
     match matches.subcommand() {
         Some(("balances", sub_matches)) => {
             let address = sub_matches
-                .get_one::<String>("address")
+                .get_one::<AccAddress>("address")
                 .expect("address argument is required preventing `None`")
                 .to_owned();
 
@@ -41,9 +40,9 @@ pub fn run_bank_query_command(matches: &ArgMatches, node: &str) -> Result<String
     }
 }
 
-pub async fn get_balances(client: HttpClient, address: String) -> Result<String> {
+pub async fn get_balances(client: HttpClient, address: AccAddress) -> Result<String> {
     let query = QueryAllBalancesRequest {
-        address: AccAddress::from_str(&address).with_context(|| "invalid address")?,
+        address,
         pagination: None,
     };
     let res = client
