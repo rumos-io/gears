@@ -5,7 +5,7 @@ use error::Error;
 use rand::rngs::OsRng;
 use tendermint::{
     block::Size,
-    consensus::{params::ValidatorParams, Params, State},
+    consensus::{params::ValidatorParams, Params},
     evidence::Duration as TmDuration,
     public_key::Algorithm,
     validator::Info,

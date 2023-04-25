@@ -10,21 +10,20 @@ use tracing::{error, info};
 use tracing_subscriber::filter::LevelFilter;
 use x::bank::cli::{get_bank_query_command, run_bank_query_command};
 
-use crate::{baseapp::APP_NAME, types::GenesisState};
+use crate::{
+    client::keys::{get_keys_command, run_keys_command},
+    types::GenesisState,
+    utils::get_default_home_dir,
+};
 
 mod baseapp;
+mod client;
 mod crypto;
 mod error;
 mod store;
 mod types;
+mod utils;
 mod x;
-
-fn get_default_home_dir() -> Option<PathBuf> {
-    dirs::home_dir().map(|mut h| {
-        h.push(format!(".{}", APP_NAME));
-        h
-    })
-}
 
 fn run_init_command(sub_matches: &ArgMatches) {
     let moniker = sub_matches
@@ -348,7 +347,8 @@ fn main() -> Result<()> {
         .subcommand(get_init_command())
         .subcommand(get_run_command())
         .subcommand_required(true)
-        .subcommand(get_query_command());
+        .subcommand(get_query_command())
+        .subcommand(get_keys_command());
 
     let matches = cli.get_matches();
 
@@ -356,7 +356,8 @@ fn main() -> Result<()> {
         Some(("init", sub_matches)) => run_init_command(sub_matches),
         Some(("run", sub_matches)) => run_run_command(sub_matches),
         Some(("query", sub_matches)) => run_query_command(sub_matches)?,
-        _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
+        Some(("keys", sub_matches)) => run_keys_command(sub_matches)?,
+        _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };
 
     Ok(())

@@ -35,6 +35,11 @@ tendermint = { path = "../tendermint" }
 tokio = "1.27.0"
 human-panic = "1.1.4"
 anyhow = "1.0.70"
+text_io = "0.1.12"
+ibc-relayer = "0.23.0"
+ibc-relayer-types = "0.23.0"
+hdpath = "0.6.2"
+lazy_static = "1.4.0"
 
 [dev-dependencies]
 hex = "0.4.3"
