@@ -1,9 +1,8 @@
 use std::{path::PathBuf, str::FromStr};
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 
-use cosmwasm_std::Uint256;
 use ibc_proto::{
     cosmos::tx::v1beta1::{
         mode_info::{Single, Sum},
@@ -19,13 +18,13 @@ use proto_messages::cosmos::{
     crypto::secp256k1::v1beta1::{PubKey, RawPubKey},
     tx::v1beta1::{AuthInfo, Fee, PublicKey, SignerInfo},
 };
-use proto_types::{AccAddress, Denom};
+use proto_types::AccAddress;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
 use crate::{client::keys::key_store::DiskStore, x::auth::client::cli::query::get_account};
 
-// TODO: remove hard coded fee
+// TODO: remove hard coded gas limit
 
 pub fn get_bank_tx_command() -> Command {
     Command::new("bank")
@@ -46,12 +45,13 @@ pub fn get_bank_tx_command() -> Command {
                 .arg(
                     Arg::new("amount")
                         .required(true)
-                        .value_parser(clap::value_parser!(Uint256)),
+                        .value_parser(clap::value_parser!(Coin)),
                 )
                 .arg(
-                    Arg::new("denom")
-                        .required(true)
-                        .value_parser(clap::value_parser!(Denom)),
+                    arg!(--fee)
+                        .help(format!("Fee to pay along with transaction"))
+                        .action(ArgAction::Set)
+                        .value_parser(clap::value_parser!(Coin)),
                 ),
         )
         .subcommand_required(true)
@@ -71,14 +71,11 @@ pub fn run_bank_tx_command(matches: &ArgMatches, node: &str, home: PathBuf) -> R
                 .to_owned();
 
             let amount = sub_matches
-                .get_one::<Uint256>("amount")
+                .get_one::<Coin>("amount")
                 .expect("amount argument is required preventing `None`")
                 .to_owned();
 
-            let denom = sub_matches
-                .get_one::<Denom>("denom")
-                .expect("denom argument is required preventing `None`")
-                .to_owned();
+            let fee = sub_matches.get_one::<Coin>("fee").cloned();
 
             let key_store: DiskStore<Secp256k1KeyPair> = DiskStore::new(home)?;
 
@@ -93,7 +90,7 @@ pub fn run_bank_tx_command(matches: &ArgMatches, node: &str, home: PathBuf) -> R
                 AccAddress::from_str(&key.account())?,
                 to_address.clone(),
                 amount,
-                denom.clone(),
+                fee,
                 account.account.get_sequence(),
                 account.account.get_account_number(),
                 key,
@@ -121,8 +118,8 @@ pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()
 pub fn create_signed_send_tx(
     from_address: AccAddress,
     to_address: AccAddress,
-    amount: Uint256,
-    denom: Denom,
+    amount: Coin,
+    fee_amount: Option<Coin>,
     sequence: u64,
     account_number: u64,
     key: Secp256k1KeyPair,
@@ -130,7 +127,7 @@ pub fn create_signed_send_tx(
     let message = MsgSend {
         from_address,
         to_address,
-        amount: SendCoins::new(vec![Coin { denom, amount }])?,
+        amount: SendCoins::new(vec![amount])?,
     };
 
     let tx_body = TxBody {
@@ -155,16 +152,10 @@ pub fn create_signed_send_tx(
         sequence,
     };
 
-    let fee_amount = Coin {
-        denom: String::from("uatom")
-            .try_into()
-            .expect("uatom is a valid denom"),
-        amount: Uint256::one(),
-    };
-    let fee_amount = SendCoins::new(vec![fee_amount])
-        .expect("conversion of hard coded vector of coins will always succeed");
+    let fee_amount = fee_amount.map(|f| SendCoins::new(vec![f])).transpose()?; // can legitimately fail if coin amount is zero
+
     let fee = Fee {
-        amount: Some(fee_amount),
+        amount: fee_amount,
         gas_limit: 100000000,
         payer: None,
         granter: "".into(),

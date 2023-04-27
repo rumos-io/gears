@@ -3,6 +3,7 @@ pub mod v1beta1 {
 
     use cosmwasm_std::Uint256;
     use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, protobuf::Protobuf};
+    use proto_types::Denom;
     use serde::{Deserialize, Serialize};
 
     use crate::error::Error;
@@ -39,6 +40,27 @@ pub mod v1beta1 {
     }
 
     impl Protobuf<RawCoin> for Coin {}
+
+    impl FromStr for Coin {
+        type Err = Error;
+
+        fn from_str(input: &str) -> Result<Self, Self::Err> {
+            // get the index at which amount ends and denom starts
+            let i = input
+                .find(|c: char| !c.is_numeric())
+                .unwrap_or_else(|| input.len());
+
+            let amount = input[..i]
+                .parse::<Uint256>()
+                .map_err(|e| Error::Coin(String::from(format!("coin error: {}", e))))?;
+
+            let denom = input[i..]
+                .parse::<Denom>()
+                .map_err(|e| Error::Coin(String::from(format!("coin error: {}", e))))?;
+
+            Ok(Coin { denom, amount })
+        }
+    }
 
     // Represents a list of coins with the following properties:
     // - Contains at least one coin
@@ -116,6 +138,58 @@ pub mod v1beta1 {
         use std::str::FromStr;
 
         use super::*;
+
+        #[test]
+        fn coin_from_string_successes() {
+            let raw = "32454uatom";
+            let coin = raw.parse::<Coin>().unwrap();
+            assert_eq!(
+                Coin {
+                    denom: String::from("uatom").try_into().unwrap(),
+                    amount: "32454".try_into().unwrap()
+                },
+                coin
+            );
+
+            let raw = "0uatom";
+            let coin = raw.parse::<Coin>().unwrap();
+            assert_eq!(
+                Coin {
+                    denom: String::from("uatom").try_into().unwrap(),
+                    amount: "0".try_into().unwrap()
+                },
+                coin
+            );
+
+            let raw = "0001uatom";
+            let coin = raw.parse::<Coin>().unwrap();
+            assert_eq!(
+                Coin {
+                    denom: String::from("uatom").try_into().unwrap(),
+                    amount: "1".try_into().unwrap()
+                },
+                coin
+            );
+
+            let raw = "12uatom56";
+            let coin = raw.parse::<Coin>().unwrap();
+            assert_eq!(
+                Coin {
+                    denom: String::from("uatom56").try_into().unwrap(),
+                    amount: "12".try_into().unwrap()
+                },
+                coin
+            );
+        }
+
+        #[test]
+        fn coin_from_string_failures() {
+            let raw = "32454-uatom";
+            raw.parse::<Coin>().unwrap_err();
+
+            let raw = "-32454uatom";
+            raw.parse::<Coin>().unwrap_err();
+        }
 
         #[test]
         fn validate_coins_success() {
