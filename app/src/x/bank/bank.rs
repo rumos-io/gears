@@ -119,9 +119,6 @@ impl Bank {
             balances.push(coin);
         }
 
-        let balances = SendCoins::new(balances)
-            .map_err(|e| AppError::Coins(format!("error parsing coins: {}", e.to_string())))?;
-
         return Ok(QueryAllBalancesResponse {
             balances,
             pagination: None,
@@ -337,11 +334,10 @@ mod tests {
         let res = Bank::query_all_balances(&ctx, req).unwrap();
 
         let expected_res = QueryAllBalancesResponse {
-            balances: SendCoins::new(vec![Coin {
+            balances: vec![Coin {
                 denom: "coinA".to_string().try_into().unwrap(),
                 amount: Uint256::from_str("123").unwrap(),
-            }])
-            .unwrap(),
+            }],
             pagination: None,
         };
 

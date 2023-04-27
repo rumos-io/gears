@@ -3,19 +3,19 @@ use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 use ed25519_dalek::Keypair;
 use error::Error;
 use rand::rngs::OsRng;
-use tendermint::{
+use tendermint_config::{
+    AbciMode, ConsensusConfig, CorsHeader, CorsMethod, DbBackend, FastsyncConfig,
+    InstrumentationConfig, LogFormat, MempoolConfig, NodeKey, P2PConfig, PrivValidatorKey,
+    RpcConfig, StatesyncConfig, StorageConfig, TendermintConfig, TransferRate, TxIndexConfig,
+    TxIndexer,
+};
+use tendermint_crates::{
     block::Size,
     consensus::{params::ValidatorParams, Params},
     evidence::Duration as TmDuration,
     public_key::Algorithm,
     validator::Info,
     Genesis, Time,
-};
-use tendermint_config::{
-    AbciMode, ConsensusConfig, CorsHeader, CorsMethod, DbBackend, FastsyncConfig,
-    InstrumentationConfig, LogFormat, MempoolConfig, NodeKey, P2PConfig, PrivValidatorKey,
-    RpcConfig, StatesyncConfig, StorageConfig, TendermintConfig, TransferRate, TxIndexConfig,
-    TxIndexer,
 };
 
 mod error;
@@ -33,7 +33,7 @@ pub fn write_keys_and_genesis(
     // write node key
     let mut csprng = OsRng {};
     let keypair: Keypair = Keypair::generate(&mut csprng);
-    let priv_key = tendermint::PrivateKey::Ed25519(keypair);
+    let priv_key = tendermint_crates::PrivateKey::Ed25519(keypair);
     let node_key = NodeKey { priv_key };
     node_key_file.write_all(
         serde_json::to_string_pretty(&node_key)
@@ -43,9 +43,9 @@ pub fn write_keys_and_genesis(
 
     // write node private validator key
     let keypair: Keypair = Keypair::generate(&mut csprng);
-    let priv_key = tendermint::PrivateKey::Ed25519(keypair);
+    let priv_key = tendermint_crates::PrivateKey::Ed25519(keypair);
     let public_key = priv_key.public_key();
-    let address: tendermint::account::Id = priv_key.public_key().into();
+    let address: tendermint_crates::account::Id = priv_key.public_key().into();
     let priv_validator_key = PrivValidatorKey {
         address,
         pub_key: priv_key.public_key(),
@@ -70,7 +70,7 @@ pub fn write_keys_and_genesis(
                 max_gas: -1,
                 time_iota_ms: 1000,
             },
-            evidence: tendermint::evidence::Params {
+            evidence: tendermint_crates::evidence::Params {
                 max_age_num_blocks: 100000,
                 max_age_duration: TmDuration(Duration::new(172800, 0)),
                 max_bytes: 1048576,

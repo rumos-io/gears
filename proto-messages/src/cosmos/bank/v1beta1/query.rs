@@ -11,10 +11,7 @@ use ibc_proto::{
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    cosmos::base::v1beta1::{Coin, SendCoins},
-    Error,
-};
+use crate::{cosmos::base::v1beta1::Coin, Error};
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
 #[derive(Clone, PartialEq)]
@@ -91,7 +88,7 @@ impl Protobuf<RawQueryAllBalancesRequest> for QueryAllBalancesRequest {}
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct QueryAllBalancesResponse {
     /// balances is the balances of all the coins.
-    pub balances: SendCoins,
+    pub balances: Vec<Coin>,
     /// pagination defines the pagination in the response.
     pub pagination: ::core::option::Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
 }
@@ -107,7 +104,7 @@ impl TryFrom<RawQueryAllBalancesResponse> for QueryAllBalancesResponse {
             .collect();
 
         Ok(QueryAllBalancesResponse {
-            balances: SendCoins::new(balances?)?,
+            balances: balances?,
             pagination: raw.pagination,
         })
     }
