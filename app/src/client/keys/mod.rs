@@ -12,7 +12,7 @@ use text_io::read;
 
 use crate::{client::keys::key_store::DiskStore, utils::get_default_home_dir};
 
-mod key_store;
+pub mod key_store;
 
 // Values for the HD_PATH copied from
 // https://github.com/informalsystems/hermes/blob/d5fa30db6d4a3dcce84435354f3ce4af932c0141/crates/relayer-cli/src/commands/keys/add.rs#L85

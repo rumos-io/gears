@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use baseapp::BaseApp;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
@@ -8,12 +8,22 @@ use human_panic::setup_panic;
 use tendermint_abci::ServerBuilder;
 use tracing::{error, info};
 use tracing_subscriber::filter::LevelFilter;
-use x::bank::cli::{get_bank_query_command, run_bank_query_command};
+use x::{
+    auth::client::cli::query::get_auth_query_command,
+    bank::client::cli::{
+        query::{get_bank_query_command, run_bank_query_command},
+        tx::get_bank_tx_command,
+    },
+};
 
 use crate::{
     client::keys::{get_keys_command, run_keys_command},
     types::GenesisState,
     utils::get_default_home_dir,
+    x::{
+        auth::client::cli::query::run_auth_query_command,
+        bank::client::cli::tx::run_bank_tx_command,
+    },
 };
 
 mod baseapp;
@@ -240,11 +250,33 @@ fn run_query_command(matches: &ArgMatches) -> Result<()> {
 
     let res = match matches.subcommand() {
         Some(("bank", sub_matches)) => run_bank_query_command(sub_matches, node),
+        Some(("auth", sub_matches)) => run_auth_query_command(sub_matches, node),
+
         _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
     }?;
 
     println!("{}", res);
     Ok(())
+}
+
+fn run_tx_command(matches: &ArgMatches) -> Result<()> {
+    let node = matches
+        .get_one::<String>("node")
+        .expect("Node arg has a default value so this cannot be `None`.");
+
+    let default_home_directory = get_default_home_dir();
+    let home = matches
+        .get_one::<PathBuf>("home")
+        .or(default_home_directory.as_ref())
+        .ok_or(anyhow!(
+            "Home argument not provided and OS does not provide a default home directory"
+        ))?
+        .to_owned();
+
+    match matches.subcommand() {
+        Some(("bank", sub_matches)) => run_bank_tx_command(sub_matches, node, home),
+        _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
+    }
 }
 
 fn get_run_command() -> Command {
@@ -330,6 +362,7 @@ fn get_query_command() -> Command {
     Command::new("query")
         .about("Querying subcommands")
         .subcommand(get_bank_query_command())
+        .subcommand(get_auth_query_command())
         .subcommand_required(true)
         .arg(
             arg!(--node)
@@ -337,6 +370,32 @@ fn get_query_command() -> Command {
                 .default_value("http://localhost:26657")
                 .action(ArgAction::Set)
                 .global(true),
+        )
+}
+
+fn get_tx_command() -> Command {
+    Command::new("tx")
+        .about("Transaction subcommands")
+        .subcommand(get_bank_tx_command())
+        .subcommand_required(true)
+        .arg(
+            arg!(--node)
+                .help("<host>:<port> to Tendermint RPC interface for this chain")
+                .default_value("http://localhost:26657")
+                .action(ArgAction::Set)
+                .global(true),
+        )
+        .arg(
+            arg!(--home)
+                .help(format!(
+                    "Directory for config and data [default: {}]",
+                    get_default_home_dir()
+                        .unwrap_or_default()
+                        .display()
+                        .to_string()
+                ))
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(PathBuf)),
         )
 }
 
@@ -348,7 +407,8 @@ fn main() -> Result<()> {
         .subcommand(get_run_command())
         .subcommand_required(true)
         .subcommand(get_query_command())
-        .subcommand(get_keys_command());
+        .subcommand(get_keys_command())
+        .subcommand(get_tx_command());
 
     let matches = cli.get_matches();
 
@@ -357,6 +417,7 @@ fn main() -> Result<()> {
         Some(("run", sub_matches)) => run_run_command(sub_matches),
         Some(("query", sub_matches)) => run_query_command(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches)?,
+        Some(("tx", sub_matches)) => run_tx_command(sub_matches)?,
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };
 

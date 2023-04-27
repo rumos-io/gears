@@ -1,6 +1,6 @@
 use ibc_proto::{
     cosmos::bank::v1beta1::MsgSend as RawMsgSend, cosmos::base::v1beta1::Coin as RawCoin,
-    protobuf::Protobuf,
+    google::protobuf::Any, protobuf::Protobuf,
 };
 use proto_types::AccAddress;
 
@@ -55,3 +55,14 @@ impl From<MsgSend> for RawMsgSend {
 }
 
 impl Protobuf<RawMsgSend> for MsgSend {}
+
+impl From<MsgSend> for Any {
+    fn from(msg: MsgSend) -> Self {
+        Any {
+            type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
+            value: msg
+                .encode_vec()
+                .expect("library call will never return an error - this is a bug in the library"),
+        }
+    }
+}

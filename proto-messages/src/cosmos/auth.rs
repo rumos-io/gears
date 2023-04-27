@@ -4,6 +4,7 @@ pub mod v1beta1 {
         cosmos::auth::v1beta1::{
             BaseAccount as RawBaseAccount, ModuleAccount as RawModuleAccount,
             QueryAccountRequest as RawQueryAccountRequest,
+            QueryAccountResponse as RawQueryAccountResponse,
         },
         google::protobuf::Any,
         protobuf::Protobuf,
@@ -72,7 +73,7 @@ pub mod v1beta1 {
     impl Protobuf<RawBaseAccount> for BaseAccount {}
 
     /// ModuleAccount defines an account for modules that holds coins on a pool.
-    #[derive(Clone, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub struct ModuleAccount {
         pub base_account: BaseAccount,
         pub name: String,
@@ -108,7 +109,7 @@ pub mod v1beta1 {
 
     impl Protobuf<RawModuleAccount> for ModuleAccount {}
 
-    #[derive(Clone, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub enum Account {
         Base(BaseAccount),
         Module(ModuleAccount),
@@ -140,6 +141,20 @@ pub mod v1beta1 {
             match self {
                 Account::Base(acct) => acct.sequence += 1,
                 Account::Module(acct) => acct.base_account.sequence += 1,
+            }
+        }
+
+        pub fn get_sequence(&self) -> u64 {
+            match self {
+                Account::Base(acct) => acct.sequence,
+                Account::Module(acct) => acct.base_account.sequence,
+            }
+        }
+
+        pub fn get_account_number(&self) -> u64 {
+            match self {
+                Account::Base(acct) => acct.account_number,
+                Account::Module(acct) => acct.base_account.account_number,
             }
         }
     }
@@ -215,6 +230,36 @@ pub mod v1beta1 {
     }
 
     impl Protobuf<RawQueryAccountRequest> for QueryAccountRequest {}
+
+    /// QueryAccountResponse is the response type for the Query/Account RPC method.
+    #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+    pub struct QueryAccountResponse {
+        /// account defines the account of the corresponding address.
+        pub account: Account,
+    }
+
+    impl TryFrom<RawQueryAccountResponse> for QueryAccountResponse {
+        type Error = Error;
+
+        fn try_from(raw: RawQueryAccountResponse) -> Result<Self, Self::Error> {
+            let account = raw
+                .account
+                .ok_or(Error::MissingField("account".into()))?
+                .try_into()?;
+
+            Ok(QueryAccountResponse { account })
+        }
+    }
+
+    impl From<QueryAccountResponse> for RawQueryAccountResponse {
+        fn from(query: QueryAccountResponse) -> RawQueryAccountResponse {
+            RawQueryAccountResponse {
+                account: Some(query.account.into()),
+            }
+        }
+    }
+
+    impl Protobuf<RawQueryAccountResponse> for QueryAccountResponse {}
 }
 
 #[cfg(test)]

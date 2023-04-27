@@ -31,6 +31,8 @@ pub enum Module {
     FeeCollector,
 }
 
+//TODO: use properly typed QueryAccountResponse and QueryAccountRequest
+
 impl Module {
     pub fn get_address(&self) -> AccAddress {
         match self {

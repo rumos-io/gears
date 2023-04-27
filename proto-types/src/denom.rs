@@ -1,4 +1,7 @@
-use std::fmt::{self, Display};
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -25,6 +28,14 @@ impl TryFrom<String> for Denom {
         };
 
         Ok(Denom(v))
+    }
+}
+
+impl FromStr for Denom {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(s.to_string())
     }
 }
 
