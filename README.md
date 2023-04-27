@@ -64,7 +64,7 @@ node and CLI).
 
 1. Install gears:
 
-```
+```console
 make install
 ```
 

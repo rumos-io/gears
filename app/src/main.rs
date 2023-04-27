@@ -1,8 +1,9 @@
 use std::{fs, path::PathBuf};
 
 use anyhow::{anyhow, Result};
-use baseapp::BaseApp;
+use baseapp::{BaseApp, APP_NAME};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
+use clap_complete::{generate, Generator, Shell};
 use database::RocksDB;
 use human_panic::setup_panic;
 use tendermint_abci::ServerBuilder;
@@ -399,17 +400,43 @@ fn get_tx_command() -> Command {
         )
 }
 
-fn main() -> Result<()> {
-    setup_panic!();
+fn get_completions_command() -> Command {
+    Command::new("completions")
+        .about("Output shell completions")
+        .arg(
+            Arg::new("shell")
+                .required(true)
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(Shell)),
+        )
+}
 
-    let cli = Command::new("CLI")
+fn run_completions_command(matches: &ArgMatches) {
+    if let Some(generator) = matches.get_one::<Shell>("shell").copied() {
+        let mut cmd = build_cli();
+        print_completions(generator, &mut cmd);
+    }
+}
+
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+}
+
+fn build_cli() -> Command {
+    Command::new(APP_NAME)
         .subcommand(get_init_command())
         .subcommand(get_run_command())
         .subcommand_required(true)
         .subcommand(get_query_command())
         .subcommand(get_keys_command())
-        .subcommand(get_tx_command());
+        .subcommand(get_tx_command())
+        .subcommand(get_completions_command())
+}
 
+fn main() -> Result<()> {
+    setup_panic!();
+
+    let cli = build_cli();
     let matches = cli.get_matches();
 
     match matches.subcommand() {
@@ -418,6 +445,7 @@ fn main() -> Result<()> {
         Some(("query", sub_matches)) => run_query_command(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches)?,
         Some(("tx", sub_matches)) => run_tx_command(sub_matches)?,
+        Some(("completions", sub_matches)) => run_completions_command(sub_matches),
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };
 
