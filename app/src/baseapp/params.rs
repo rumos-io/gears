@@ -1,15 +1,11 @@
 use database::DB;
 use serde::{Deserialize, Serialize};
-use tendermint_proto::google::protobuf::Duration;
 use tendermint_proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
 
 use tendermint_proto::types::EvidenceParams as RawEvidenceParams;
 use tendermint_proto::types::ValidatorParams as RawValidatorParams;
 
-use crate::{
-    store::{ImmutablePrefixStore, KVStore, Store},
-    types::Context,
-};
+use crate::types::Context;
 
 const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
 const KEY_EVIDENCE_PARAMS: [u8; 14] = [
@@ -107,6 +103,7 @@ pub fn set_consensus_params<T: DB>(ctx: &mut Context<T>, params: ConsensusParams
 #[cfg(test)]
 mod tests {
 
+    use tendermint_proto::google::protobuf::Duration;
     use tendermint_proto::types::EvidenceParams as RawEvidenceParams;
 
     use super::*;

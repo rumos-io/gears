@@ -1,10 +1,7 @@
 use database::DB;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    store::{KVStore, Store},
-    types::Context,
-};
+use crate::types::Context;
 
 // NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -19,7 +16,7 @@ const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [
 
 const SUBSPACE_NAME: &str = "bank/";
 
-pub const DEFAULT_PARAMS: Params = Params {
+pub const _DEFAULT_PARAMS: Params = Params {
     default_send_enabled: true,
 };
 

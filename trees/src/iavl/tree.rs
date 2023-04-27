@@ -937,13 +937,13 @@ mod tests {
         tree.set(b"c".to_vec(), b"1".to_vec());
         tree.set(b"q".to_vec(), b"1".to_vec());
 
-        tree.save_version();
-        tree.save_version();
+        tree.save_version().unwrap();
+        tree.save_version().unwrap();
         tree.set(b"qwerty".to_vec(), b"312".to_vec());
         tree.set(b"-32".to_vec(), b"gamma".to_vec());
-        tree.save_version();
+        tree.save_version().unwrap();
         tree.set(b"alice".to_vec(), b"123".to_vec());
-        tree.save_version();
+        tree.save_version().unwrap();
 
         let expected = [
             37, 155, 233, 229, 243, 173, 29, 241, 235, 234, 85, 10, 36, 129, 53, 79, 77, 11, 29,
@@ -982,13 +982,13 @@ mod tests {
             vec![10, 5, 117, 97, 116, 111, 109, 18, 2, 51, 52],
         );
 
-        tree.save_version();
-        tree.save_version();
-        tree.save_version();
-        tree.save_version();
-        tree.save_version();
-        tree.save_version();
-        tree.save_version();
+        tree.save_version().unwrap();
+        tree.save_version().unwrap();
+        tree.save_version().unwrap();
+        tree.save_version().unwrap();
+        tree.save_version().unwrap();
+        tree.save_version().unwrap();
+        tree.save_version().unwrap();
 
         tree.set(
             vec![

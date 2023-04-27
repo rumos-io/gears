@@ -33,14 +33,14 @@ impl<'a, T: DB> Context<'a, T> {
 /// A Context which holds an immutable reference to a MultiStore
 pub struct QueryContext<'a, T: DB> {
     pub multi_store: &'a MultiStore<T>,
-    height: u64,
+    _height: u64,
 }
 
 impl<'a, T: DB> QueryContext<'a, T> {
     pub fn new(multi_store: &'a MultiStore<T>, height: u64) -> Self {
         QueryContext {
             multi_store,
-            height,
+            _height: height,
         }
     }
 
@@ -49,8 +49,8 @@ impl<'a, T: DB> QueryContext<'a, T> {
         return self.multi_store.get_kv_store(store_key);
     }
 
-    pub fn get_height(&self) -> u64 {
-        self.height
+    pub fn _get_height(&self) -> u64 {
+        self._height
     }
 }
 

@@ -9,12 +9,6 @@ use prost::Message;
 use bytes::Bytes;
 use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
 use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
-use proto_messages::cosmos::base::v1beta1::Coin;
-use proto_messages::cosmos::{
-    auth::v1beta1::BaseAccount,
-    base::v1beta1::{Coin as ProtoCoin, SendCoins},
-};
-use proto_types::AccAddress;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
     Event, EventAttribute, RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx,
@@ -32,10 +26,7 @@ use crate::{
     error::AppError,
     store::MultiStore,
     types::{Context, DecodedTx, Msg, QueryContext},
-    x::{
-        auth::{Auth, DEFAULT_PARAMS},
-        bank::{Balance, Bank, DEFAULT_PARAMS as BANK_DEFAULT_PARAMS},
-    },
+    x::{auth::Auth, bank::Bank},
 };
 
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME"); // TODO: should this be moved to utils?
@@ -90,7 +81,7 @@ impl BaseApp {
             .unwrap()
             .type_url;
         println!("################# URL:  {}", public);
-        ///cosmos.crypto.secp256k1.PubKey
+        //cosmos.crypto.secp256k1.PubKey
         // let msgs = tx.get_msgs();
         // let msg = &msgs[0];
 
@@ -139,7 +130,7 @@ impl BaseApp {
                 Msg::Send(send_msg) => {
                     Bank::send_coins_from_account_to_account(ctx, send_msg.clone())?
                 }
-                Msg::IBC(msg) => crate::x::ibc::run_tx(ctx, msg.to_owned())?,
+                Msg::_IBC(msg) => crate::x::ibc::run_tx(ctx, msg.to_owned())?,
             };
         }
 
@@ -222,7 +213,7 @@ impl Application for BaseApp {
             //handle ibc queries
             ResponseQuery {
                 code: 1,
-                log: "unrecognized query".to_string(),
+                log: "not implemented".to_string(),
                 info: "".to_string(),
                 index: 0,
                 key: request.data,

@@ -3,10 +3,7 @@ use proto_messages::utils::serialize_number_to_string;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 
-use crate::{
-    store::{ImmutablePrefixStore, KVStore, Store},
-    types::Context,
-};
+use crate::{store::ImmutablePrefixStore, types::Context};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Params {
@@ -45,13 +42,13 @@ const KEY_SIG_VERIFY_COST_SECP256K1: [u8; 22] = [
 
 const SUBSPACE_NAME: &str = "auth/";
 
-pub const DEFAULT_PARAMS: Params = Params {
-    max_memo_characters: 256,
-    tx_sig_limit: 7,
-    tx_size_cost_per_byte: 10,
-    sig_verify_cost_ed25519: 590,
-    sig_verify_cost_secp256k1: 1000,
-};
+// pub const DEFAULT_PARAMS: Params = Params {
+//     max_memo_characters: 256,
+//     tx_sig_limit: 7,
+//     tx_size_cost_per_byte: 10,
+//     sig_verify_cost_ed25519: 590,
+//     sig_verify_cost_secp256k1: 1000,
+// };
 
 impl Params {
     fn parse_param(value: Vec<u8>) -> u64 {

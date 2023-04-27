@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use bytes::Bytes;
-use ibc::core::ics26_routing::msgs::MsgEnvelope;
 use ibc_proto::{cosmos::tx::v1beta1::TxBody, protobuf::Protobuf};
 
 use proto_messages::cosmos::{
@@ -21,21 +20,21 @@ use crate::{error::AppError, x::ibc::IBCMsg};
 // 3. Consider removing the "seen" hashset in get_signers()
 pub enum Msg {
     Send(MsgSend),
-    IBC(IBCMsg),
+    _IBC(IBCMsg),
 }
 
 impl Msg {
     pub fn get_signers(&self) -> Vec<&AccAddress> {
         match &self {
             Msg::Send(msg) => return vec![&msg.from_address],
-            Msg::IBC(msg) => msg.signers.iter().map(|s| s).collect(),
+            Msg::_IBC(msg) => msg.signers.iter().map(|s| s).collect(),
         }
     }
 
     pub fn validate_basic(&self) -> Result<(), AppError> {
         match &self {
             Msg::Send(_) => Ok(()),
-            Msg::IBC(_) => Ok(()),
+            Msg::_IBC(_) => Ok(()),
         }
     }
 }
@@ -54,10 +53,12 @@ impl DecodedTx {
 
         for msg in &tx.body.messages {
             if msg.type_url.starts_with("/ibc") {
-                let msg: MsgEnvelope = MsgEnvelope::try_from(msg.to_owned())
-                    .map_err(|e| AppError::IBC(e.to_string()))?;
+                // let msg: MsgEnvelope = MsgEnvelope::try_from(msg.to_owned())
+                //     .map_err(|e| AppError::IBC(e.to_string()))?;
 
-                messages.push(Msg::IBC(IBCMsg::new(msg)?));
+                // messages.push(Msg::IBC(IBCMsg::new(msg)?));
+                return Err(AppError::TxParseError("message type not supported".into()));
+            // If any message is not recognized then reject the entire Tx
             } else {
                 match msg.type_url.as_str() {
                     "/cosmos.bank.v1beta1.MsgSend" => {

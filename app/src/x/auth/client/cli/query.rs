@@ -2,7 +2,6 @@ use anyhow::{anyhow, Result};
 use clap::{Arg, ArgMatches, Command};
 
 use ibc_proto::protobuf::Protobuf;
-use prost::Message;
 use proto_messages::cosmos::auth::v1beta1::{QueryAccountRequest, QueryAccountResponse};
 use proto_types::AccAddress;
 use tendermint_rpc::{Client, HttpClient};

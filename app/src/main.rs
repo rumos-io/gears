@@ -51,7 +51,7 @@ fn run_init_command(sub_matches: &ArgMatches) {
             std::process::exit(1)
         });
 
-    let chain_id = sub_matches
+    let _chain_id = sub_matches
         .get_one::<String>("id")
         .expect("has a default value so will never be None");
 
@@ -105,6 +105,7 @@ fn run_init_command(sub_matches: &ArgMatches) {
         });
 
     // Build genesis state
+    // TODO: get defaults from the modules
     let app_state = GenesisState {
         bank: x::bank::GenesisState {
             balances: vec![x::bank::Balance {

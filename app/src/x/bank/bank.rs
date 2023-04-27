@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 use bytes::Bytes;
 use cosmwasm_std::Uint256;
@@ -82,7 +82,7 @@ impl Bank {
         }
     }
 
-    pub fn query_balance<T: DB>(
+    pub fn _query_balance<T: DB>(
         ctx: &Context<T>,
         req: QueryBalanceRequest,
     ) -> Result<QueryBalanceResponse, AppError> {
@@ -252,7 +252,7 @@ mod tests {
 
     use std::{str::FromStr, vec};
 
-    use crate::{store::MultiStore, x::bank::DEFAULT_PARAMS};
+    use crate::{store::MultiStore, x::bank::_DEFAULT_PARAMS as DEFAULT_PARAMS};
     use database::MemDB;
     use proto_types::Denom;
 
@@ -292,7 +292,7 @@ mod tests {
             denom: Denom::try_from(String::from("coinA")).unwrap(),
         };
 
-        let res = Bank::query_balance(&ctx, req).unwrap();
+        let res = Bank::_query_balance(&ctx, req).unwrap();
 
         let expected_res = QueryBalanceResponse {
             balance: Some(Coin {

@@ -3,7 +3,7 @@ use ibc_proto::cosmos::tx::v1beta1::{SignDoc, Tx, TxRaw};
 use prost::Message;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey, Secp256k1};
 
-pub fn verify_signature(tx: Tx, tx_raw: TxRaw) -> bool {
+pub fn _verify_signature(tx: Tx, tx_raw: TxRaw) -> bool {
     let sign_bytes = SignDoc {
         body_bytes: tx_raw.body_bytes,
         auth_info_bytes: tx_raw.auth_info_bytes,
