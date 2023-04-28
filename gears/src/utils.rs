@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::baseapp::APP_NAME;
+use crate::app::APP_NAME;
 
 pub fn get_default_home_dir() -> Option<PathBuf> {
     dirs::home_dir().map(|mut h| {

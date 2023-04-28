@@ -2,7 +2,7 @@
 members = [
     "proto-types",
     "proto-messages",
-    "app",
+    "gears",
     "trees",
     "database",
     "tendermint",
