@@ -60,7 +60,7 @@ The chain (consisting of one node) is now up and running.
 
 So far we've been running gears indirectly using make commnds and the rust build tool, Cargo. In the next
 section we'll install gears and use it to query the chain (just like cosmos-sdk chains the gears binary serves as a
-node and CLI).
+node and client).
 
 1. Install gears:
 

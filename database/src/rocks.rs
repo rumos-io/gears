@@ -8,6 +8,8 @@ pub struct RocksDB {
     db: DBWithThreadMode<SingleThreaded>,
 }
 
+// TODO: remove panics
+
 impl RocksDB {
     pub fn new<P>(path: P) -> Result<RocksDB, Error>
     where

@@ -24,6 +24,8 @@ mod types;
 mod utils;
 mod x;
 
+const TM_ADDRESS: &str = "http://localhost:26657"; // used by rest service when proxying requests to tendermint
+
 fn get_completions_command() -> Command {
     Command::new("completions")
         .about("Output shell completions")

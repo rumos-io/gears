@@ -7,6 +7,7 @@ use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
 use crate::app::BaseApp;
+use crate::client::rest::run_rest_server;
 use crate::utils::get_default_home_dir;
 
 pub fn run_run_command(matches: &ArgMatches) {
@@ -54,6 +55,9 @@ pub fn run_run_command(matches: &ArgMatches) {
     });
 
     let app = BaseApp::new(db);
+
+    run_rest_server(app.clone());
+
     let server = ServerBuilder::new(*read_buf_size)
         .bind(format!("{}:{}", host, port), app)
         .unwrap_or_else(|e| {
