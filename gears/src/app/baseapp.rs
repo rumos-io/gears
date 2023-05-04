@@ -68,7 +68,7 @@ impl BaseApp {
         return *height;
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<(), AppError> {
+    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
         // TODO:
         // 1. Check from address is signer + verify signature
 
@@ -114,8 +114,9 @@ impl BaseApp {
 
         match BaseApp::run_msgs(&mut ctx, tx.get_msgs()) {
             Ok(_) => {
+                let events = ctx.events;
                 multi_store.write_then_clear_tx_caches();
-                Ok(())
+                Ok(events)
             }
             Err(e) => {
                 multi_store.clear_tx_caches();
@@ -340,21 +341,14 @@ impl Application for BaseApp {
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
         match self.run_tx(request.tx) {
-            Ok(_) => ResponseDeliverTx {
+            Ok(events) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
                 info: "".to_string(),
                 gas_wanted: 0,
                 gas_used: 0,
-                events: vec![Event {
-                    r#type: "app".to_string(),
-                    attributes: vec![EventAttribute {
-                        key: "key".into(),
-                        value: "nothing".into(),
-                        index: true,
-                    }],
-                }],
+                events: events.into_iter().map(|e| e.into()).collect(),
                 codespace: "".to_string(),
             },
             Err(e) => {

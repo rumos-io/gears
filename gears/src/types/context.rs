@@ -1,10 +1,12 @@
 use database::{PrefixDB, DB};
+use tendermint_informal::abci::Event;
 
 use crate::store::{KVStore, MultiStore, Store};
 
 pub struct Context<'a, T: DB> {
     pub multi_store: &'a mut MultiStore<T>,
     height: u64,
+    pub events: Vec<Event>,
 }
 
 impl<'a, T: DB> Context<'a, T> {
@@ -12,6 +14,7 @@ impl<'a, T: DB> Context<'a, T> {
         Context {
             multi_store,
             height,
+            events: vec![],
         }
     }
 
@@ -27,6 +30,14 @@ impl<'a, T: DB> Context<'a, T> {
 
     pub fn get_height(&self) -> u64 {
         self.height
+    }
+
+    pub fn push_event(&mut self, event: Event) {
+        self.events.push(event);
+    }
+
+    pub fn append_events(&mut self, mut events: Vec<Event>) {
+        self.events.append(&mut events);
     }
 }
 

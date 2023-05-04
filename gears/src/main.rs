@@ -50,9 +50,9 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
 
 fn build_cli() -> Command {
     Command::new(APP_NAME)
+        .subcommand_required(true)
         .subcommand(get_init_command())
         .subcommand(get_run_command())
-        .subcommand_required(true)
         .subcommand(get_query_command())
         .subcommand(get_keys_command())
         .subcommand(get_tx_command())

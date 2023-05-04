@@ -8,10 +8,10 @@ test:
 	cargo test
 
 install:
-	cargo install --path ./app
+	cargo install --path ./gears
 
 init:
-	./app/scripts/init.sh
+	./gears/scripts/init.sh
 
 tendermint-start:
 	tendermint start --home ~/.gears

@@ -13,6 +13,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::{AccAddress, Denom};
 use serde::{Deserialize, Serialize};
+use tendermint_informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{
     error::AppError,
@@ -160,6 +161,7 @@ impl Bank {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
+        let mut events = vec![];
 
         let from_address = msg.from_address;
         let to_address = msg.to_address;
@@ -209,7 +211,18 @@ impl Bank {
                     "library call will never return an error - this is a bug in the library",
                 ),
             );
+
+            events.push(Event::new(
+                "transfer",
+                vec![
+                    ("recipient", String::from(to_address.clone())).index(),
+                    ("sender", String::from(from_address.clone())).index(),
+                    ("amount", send_coin.amount.into()).index(),
+                ],
+            ));
         }
+
+        ctx.append_events(events);
 
         return Ok(());
     }
