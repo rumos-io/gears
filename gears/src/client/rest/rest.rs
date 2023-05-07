@@ -1,44 +1,14 @@
 use rocket::{
-    fairing::{Fairing, Kind},
+    fairing::{AdHoc, Fairing, Kind},
     figment::Figment,
-    get,
-    http::Header,
-    routes, Config, Request, Response,
+    http::{Accept, Header},
+    routes, Config, Request, Response as RocketResponse,
 };
-use serde::{Deserialize, Serialize};
-use tendermint_informal::node::Info;
-use tendermint_rpc::{Client, HttpClient};
 
-use crate::{app::BaseApp, TM_ADDRESS};
+use super::handlers::{node_info, txs};
+use crate::app::BaseApp;
 
 const DEFAULT_SOCKET: u16 = 1317;
-
-#[derive(Serialize, Deserialize)]
-struct NodeInfoResponse {
-    #[serde(rename = "default_node_info")]
-    node_info: Info,
-    //TODO: application_version
-}
-
-#[get("/cosmos/base/tendermint/v1beta1/node_info")]
-async fn node_info() -> String {
-    let client = HttpClient::new(TM_ADDRESS)
-        .expect("tendermint should be running and accepting connections");
-
-    get_node_status(client).await
-}
-
-pub async fn get_node_status(client: HttpClient) -> String {
-    let res = client
-        .status()
-        .await
-        .expect("tendermint should respond with no error");
-
-    let node_info = NodeInfoResponse {
-        node_info: res.node_info,
-    };
-    serde_json::to_string_pretty(&node_info).expect("tendermint response should be valid")
-}
 
 fn rocket_launch(app: BaseApp) {
     // Disable rocket catching signals to prevent it interfering with the rest
@@ -57,8 +27,15 @@ fn rocket_launch(app: BaseApp) {
 
     let rocket = rocket::custom(figment)
         .manage(app)
-        .mount("/", routes![node_info])
+        .mount("/", routes![node_info, txs])
         .attach(CORS)
+        // Replace "accept" header to force rocket to return json errors rather than the default HTML.
+        // Doesn't work if request is malformed (HTML is returned) see https://github.com/SergioBenitez/Rocket/issues/2129
+        .attach(AdHoc::on_request("Accept Rewriter", |req, _| {
+            Box::pin(async move {
+                req.replace_header(Accept::JSON);
+            })
+        }))
         .launch();
 
     rocket::execute(async move { rocket.await })
@@ -80,7 +57,7 @@ impl Fairing for CORS {
         }
     }
 
-    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut RocketResponse<'r>) {
         response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
         response.set_header(Header::new(
             "Access-Control-Allow-Methods",

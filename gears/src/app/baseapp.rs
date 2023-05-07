@@ -11,12 +11,12 @@ use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
 use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
-    Event, EventAttribute, RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx,
-    RequestDeliverTx, RequestEcho, RequestEndBlock, RequestInfo, RequestInitChain,
-    RequestLoadSnapshotChunk, RequestOfferSnapshot, RequestQuery, ResponseApplySnapshotChunk,
-    ResponseBeginBlock, ResponseCheckTx, ResponseCommit, ResponseDeliverTx, ResponseEcho,
-    ResponseEndBlock, ResponseFlush, ResponseInfo, ResponseInitChain, ResponseListSnapshots,
-    ResponseLoadSnapshotChunk, ResponseOfferSnapshot, ResponseQuery,
+    RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
+    RequestEndBlock, RequestInfo, RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot,
+    RequestQuery, ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
+    ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
+    ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
+    ResponseQuery,
 };
 use tracing::{error, info};
 
