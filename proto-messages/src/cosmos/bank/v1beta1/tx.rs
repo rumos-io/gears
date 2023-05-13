@@ -3,6 +3,7 @@ use ibc_proto::{
     google::protobuf::Any, protobuf::Protobuf,
 };
 use proto_types::AccAddress;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     cosmos::base::v1beta1::{Coin, SendCoins},
@@ -10,7 +11,7 @@ use crate::{
 };
 
 /// MsgSend represents a message to send coins from one account to another.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MsgSend {
     pub from_address: AccAddress,
     pub to_address: AccAddress,
@@ -56,13 +57,12 @@ impl From<MsgSend> for RawMsgSend {
 
 impl Protobuf<RawMsgSend> for MsgSend {}
 
+//TODO: should to Any be implemented at the individual message type?
 impl From<MsgSend> for Any {
     fn from(msg: MsgSend) -> Self {
         Any {
             type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-            value: msg
-                .encode_vec()
-                .expect("library call will never return an error - this is a bug in the library"),
+            value: msg.encode_vec(),
         }
     }
 }

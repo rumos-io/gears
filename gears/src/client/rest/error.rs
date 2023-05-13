@@ -38,6 +38,13 @@ impl Error {
         }
     }
 
+    pub fn bad_gateway() -> Error {
+        Error {
+            status: Status::BadGateway,
+            description: None,
+        }
+    }
+
     fn to_serializable(self) -> PrintError {
         PrintError {
             error: PrintErrorCore {

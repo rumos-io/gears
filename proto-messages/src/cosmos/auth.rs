@@ -187,15 +187,11 @@ pub mod v1beta1 {
             match account {
                 Account::Base(base) => Any {
                     type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                    value: base.encode_vec().expect(
-                        "library call will never return an error - this is a bug in the library",
-                    ),
+                    value: base.encode_vec(),
                 },
                 Account::Module(module) => Any {
                     type_url: "/cosmos.auth.v1beta1.ModuleAccount".to_string(),
-                    value: module.encode_vec().expect(
-                        "library call will never return an error - this is a bug in the library",
-                    ),
+                    value: module.encode_vec(),
                 },
             }
         }
@@ -282,6 +278,6 @@ mod tests {
 
         let exp = "0a2d636f736d6f73317379617679326e706679743974636e63647473647a66376b6e79396c68373737706168757578";
 
-        assert_eq!(exp, hex::encode(account.encode_vec().unwrap()))
+        assert_eq!(exp, hex::encode(account.encode_vec()))
     }
 }

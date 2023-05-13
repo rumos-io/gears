@@ -50,7 +50,7 @@ impl From<QueryBalanceRequest> for RawQueryBalanceRequest {
 impl Protobuf<RawQueryBalanceRequest> for QueryBalanceRequest {}
 
 /// QueryAllBalanceRequest is the request type for the Query/AllBalances RPC method.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct QueryAllBalancesRequest {
     /// address is the address to query balances for.
     pub address: proto_types::AccAddress,
@@ -128,7 +128,7 @@ impl From<QueryAllBalancesResponse> for RawQueryAllBalancesResponse {
 impl Protobuf<RawQueryAllBalancesResponse> for QueryAllBalancesResponse {}
 
 /// QueryBalanceResponse is the response type for the Query/Balance RPC method.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct QueryBalanceResponse {
     /// balance is the balance of the coin.
     pub balance: Option<Coin>,

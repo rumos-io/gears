@@ -46,10 +46,12 @@ pub async fn get_account(client: HttpClient, address: AccAddress) -> Result<Quer
     let query = QueryAccountRequest { address };
     let res = client
         .abci_query(
-            Some("/cosmos.auth.v1beta1.Query/Account".into()),
-            query
-                .encode_vec()
-                .expect("library call will never return an error - this is a bug in the library"),
+            Some(
+                "/cosmos.auth.v1beta1.Query/Account"
+                    .parse()
+                    .expect("hard coded path will always succeed"),
+            ),
+            query.encode_vec(),
             None,
             false,
         )

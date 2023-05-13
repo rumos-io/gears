@@ -59,12 +59,7 @@ impl Bank {
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(
-                    coin.denom.to_string().into_bytes(),
-                    coin.encode_vec().expect(
-                        "library call will never return an error - this is a bug in the library",
-                    ),
-                );
+                denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
                 let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount + current_balance);
@@ -84,7 +79,7 @@ impl Bank {
     }
 
     pub fn _query_balance<T: DB>(
-        ctx: &Context<T>,
+        ctx: &QueryContext<T>,
         req: QueryBalanceRequest,
     ) -> Result<QueryBalanceResponse, AppError> {
         let bank_store = ctx.get_kv_store(Store::Bank);
@@ -184,9 +179,7 @@ impl Bank {
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
-                from_balance.encode_vec().expect(
-                    "library call will never return an error - this is a bug in the library",
-                ),
+                from_balance.encode_vec(),
             );
 
             //TODO: if balance == 0 then denom should be removed from store
@@ -205,12 +198,7 @@ impl Bank {
 
             to_balance.amount = to_balance.amount + send_coin.amount;
 
-            to_account_store.set(
-                send_coin.denom.to_string().into(),
-                to_balance.encode_vec().expect(
-                    "library call will never return an error - this is a bug in the library",
-                ),
-            );
+            to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
 
             events.push(Event::new(
                 "transfer",
@@ -298,6 +286,8 @@ mod tests {
 
         let mut ctx = Context::new(&mut store, 0);
         Bank::init_genesis(&mut ctx, genesis);
+
+        let ctx = QueryContext::new(&store, 0);
 
         let req = QueryBalanceRequest {
             address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")

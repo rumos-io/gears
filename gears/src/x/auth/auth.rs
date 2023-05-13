@@ -126,11 +126,7 @@ impl Auth {
         let auth_store = ctx.get_mutable_kv_store(Store::Auth);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(
-            key,
-            acct.encode_vec()
-                .expect("library call will never return an error - this is a bug in the library"),
-        );
+        auth_store.set(key, acct.encode_vec());
     }
 
     pub fn get_account<T: DB>(ctx: &Context<T>, addr: &AccAddress) -> Option<Account> {

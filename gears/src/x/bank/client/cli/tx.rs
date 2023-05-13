@@ -169,9 +169,7 @@ pub fn create_signed_send_tx(
 
     let sign_doc = SignDoc {
         body_bytes: tx_body.encode_to_vec(),
-        auth_info_bytes: auth_info
-            .encode_vec()
-            .expect("library call will never return an error - this is a bug in the library"),
+        auth_info_bytes: auth_info.encode_vec(),
         chain_id: "localnet".into(),
         account_number,
     };

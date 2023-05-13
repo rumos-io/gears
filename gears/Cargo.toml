@@ -10,14 +10,16 @@ tracing = { version = "0.1", default-features = false }
 proto-types = { path = "../proto-types" }
 proto-messages = { path = "../proto-messages" }
 cosmwasm-std = "1.1.5"
-ibc-proto = "0.26.0"
+ibc-proto = { git = "https://github.com/joneskm/ibc-proto-rs" }
 # It's not clear what version of the Tendermint API each version of tendermint-abci implements
 # this line suggests that v0.28.0 implements Tendermint API v0.34.x 
 # https://github.com/informalsystems/tendermint-rs/blob/560c852840ac58cb03b55fc376ff0dc2ac089d94/abci/src/codec.rs#L5
-tendermint-abci = "0.28.0"
-tendermint-proto = "0.28.0"
-tendermint-informal = { package = "tendermint", version = "0.28.0" }
-tendermint-rpc = { version = "0.28.0", features = ["http-client"] }
+tendermint-abci = { git = "https://github.com/joneskm/tendermint-rs" }
+tendermint-proto = { git = "https://github.com/joneskm/tendermint-rs" }
+tendermint-informal = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs" }
+tendermint-rpc = { git = "https://github.com/joneskm/tendermint-rs", features = [
+    "http-client",
+] }
 clap = { version = "4.2.2", features = ["derive"] }
 tracing-subscriber = { version = "0.2", optional = false, default-features = true }
 bytes = "1.2.1"

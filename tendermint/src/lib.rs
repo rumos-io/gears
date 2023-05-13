@@ -1,6 +1,6 @@
 use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 
-use ed25519_dalek::Keypair;
+use ed25519_consensus::SigningKey;
 use error::Error;
 use rand::rngs::OsRng;
 use tendermint_config::{
@@ -32,8 +32,9 @@ pub fn write_keys_and_genesis(
 ) -> Result<(), Error> {
     // write node key
     let mut csprng = OsRng {};
-    let keypair: Keypair = Keypair::generate(&mut csprng);
-    let priv_key = tendermint_crates::PrivateKey::Ed25519(keypair);
+    let signing_key = SigningKey::new(&mut csprng);
+    let priv_key =
+        tendermint_crates::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
     let node_key = NodeKey { priv_key };
     node_key_file.write_all(
         serde_json::to_string_pretty(&node_key)
@@ -42,8 +43,9 @@ pub fn write_keys_and_genesis(
     )?;
 
     // write node private validator key
-    let keypair: Keypair = Keypair::generate(&mut csprng);
-    let priv_key = tendermint_crates::PrivateKey::Ed25519(keypair);
+    let signing_key = SigningKey::new(&mut csprng);
+    let priv_key =
+        tendermint_crates::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
     let public_key = priv_key.public_key();
     let address: tendermint_crates::account::Id = priv_key.public_key().into();
     let priv_validator_key = PrivValidatorKey {

@@ -9,6 +9,7 @@ use prost::Message;
 use bytes::Bytes;
 use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
 use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
+use proto_messages::cosmos::tx::v1beta1::Msg;
 use tendermint_abci::Application;
 use tendermint_proto::abci::{
     RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
@@ -25,7 +26,7 @@ use crate::{
     app::{ante::AnteHandler, params},
     error::AppError,
     store::MultiStore,
-    types::{Context, DecodedTx, Msg, QueryContext},
+    types::{Context, DecodedTx, QueryContext},
     x::{auth::Auth, bank::Bank},
 };
 
@@ -37,7 +38,7 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Clone)]
 pub struct BaseApp {
-    multi_store: Arc<RwLock<MultiStore<RocksDB>>>,
+    pub multi_store: Arc<RwLock<MultiStore<RocksDB>>>,
     height: Arc<RwLock<u64>>,
 }
 
@@ -51,7 +52,7 @@ impl BaseApp {
         }
     }
 
-    fn get_block_height(&self) -> u64 {
+    pub fn get_block_height(&self) -> u64 {
         *self.height.read().expect("RwLock will not be poisoned")
     }
 
@@ -131,7 +132,6 @@ impl BaseApp {
                 Msg::Send(send_msg) => {
                     Bank::send_coins_from_account_to_account(ctx, send_msg.clone())?
                 }
-                Msg::_IBC(msg) => crate::x::ibc::run_tx(ctx, msg.to_owned())?,
             };
         }
 
@@ -146,7 +146,8 @@ impl BaseApp {
         }
 
         for msg in msgs {
-            msg.validate_basic()?
+            msg.validate_basic()
+                .map_err(|e| AppError::TxValidation(e.to_string()))?
         }
 
         return Ok(());
@@ -236,9 +237,7 @@ impl Application for BaseApp {
 
                     match res {
                         Ok(res) => {
-                            let res = res.encode_vec().expect(
-                                "library call will never return an error - this is a bug in the library",
-                            );
+                            let res = res.encode_vec();
 
                             ResponseQuery {
                                 code: 0,

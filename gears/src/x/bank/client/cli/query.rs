@@ -47,10 +47,12 @@ pub async fn get_balances(client: HttpClient, address: AccAddress) -> Result<Str
     };
     let res = client
         .abci_query(
-            Some("/cosmos.bank.v1beta1.Query/AllBalances".into()),
-            query
-                .encode_vec()
-                .expect("library call will never return an error - this is a bug in the library"),
+            Some(
+                "/cosmos.bank.v1beta1.Query/AllBalances"
+                    .parse()
+                    .expect("hard coded path will always succeed"),
+            ),
+            query.encode_vec(),
             None,
             false,
         )

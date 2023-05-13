@@ -27,7 +27,7 @@ fn rocket_launch(app: BaseApp) {
 
     let rocket = rocket::custom(figment)
         .manage(app)
-        .mount("/", routes![node_info, txs])
+        .mount("/", routes![node_info, txs,])
         .attach(CORS)
         // Replace "accept" header to force rocket to return json errors rather than the default HTML.
         // Doesn't work if request is malformed (HTML is returned) see https://github.com/SergioBenitez/Rocket/issues/2129

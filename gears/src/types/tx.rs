@@ -1,43 +1,23 @@
 use std::collections::HashSet;
 
 use bytes::Bytes;
-use ibc_proto::{cosmos::tx::v1beta1::TxBody, protobuf::Protobuf};
+use ibc_proto::protobuf::Protobuf;
 
 use proto_messages::cosmos::{
-    bank::v1beta1::MsgSend,
     base::v1beta1::SendCoins,
-    tx::v1beta1::{AuthInfo, PublicKey, Tx},
+    tx::v1beta1::{AuthInfo, Msg, PublicKey, Tx, TxBody},
 };
 use proto_types::AccAddress;
 
-use crate::{error::AppError, x::ibc::IBCMsg};
+use crate::error::AppError;
 
 //use super::proto::{self};
 
 // TODO:
+// 0. Move all of DecodeTx functionality into proto_messages::cosmos::tx::v1beta1::tx
 // 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
 // 2. Implement equality on AccAddress to avoid conversion to string in get_signers()
 // 3. Consider removing the "seen" hashset in get_signers()
-pub enum Msg {
-    Send(MsgSend),
-    _IBC(IBCMsg),
-}
-
-impl Msg {
-    pub fn get_signers(&self) -> Vec<&AccAddress> {
-        match &self {
-            Msg::Send(msg) => return vec![&msg.from_address],
-            Msg::_IBC(msg) => msg.signers.iter().map(|s| s).collect(),
-        }
-    }
-
-    pub fn validate_basic(&self) -> Result<(), AppError> {
-        match &self {
-            Msg::Send(_) => Ok(()),
-            Msg::_IBC(_) => Ok(()),
-        }
-    }
-}
 
 pub struct DecodedTx {
     messages: Vec<Msg>,
@@ -49,30 +29,9 @@ pub struct DecodedTx {
 impl DecodedTx {
     pub fn from_bytes(raw: Bytes) -> Result<DecodedTx, AppError> {
         let tx = Tx::decode(raw).map_err(|e| AppError::TxParseError(e.to_string()))?;
-        let mut messages: Vec<Msg> = vec![];
-
-        for msg in &tx.body.messages {
-            if msg.type_url.starts_with("/ibc") {
-                // let msg: MsgEnvelope = MsgEnvelope::try_from(msg.to_owned())
-                //     .map_err(|e| AppError::IBC(e.to_string()))?;
-
-                // messages.push(Msg::IBC(IBCMsg::new(msg)?));
-                return Err(AppError::TxParseError("message type not supported".into()));
-            // If any message is not recognized then reject the entire Tx
-            } else {
-                match msg.type_url.as_str() {
-                    "/cosmos.bank.v1beta1.MsgSend" => {
-                        let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())
-                            .map_err(|e| AppError::TxParseError(e.to_string()))?;
-                        messages.push(Msg::Send(msg));
-                    }
-                    _ => return Err(AppError::TxParseError("message type not recognized".into())), // If any message is not recognized then reject the entire Tx
-                }
-            };
-        }
 
         Ok(DecodedTx {
-            messages,
+            messages: tx.body.messages.clone(),
             auth_info: tx.auth_info,
             signatures: tx.signatures,
             body: tx.body,
@@ -169,6 +128,7 @@ mod tests {
 
     use cosmwasm_std::Uint256;
     use proto_messages::cosmos::{
+        bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::Fee,
     };

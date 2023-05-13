@@ -19,6 +19,7 @@ pub mod v1beta1 {
 
     #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub struct PubKey {
+        #[serde(with = "crate::utils::Base64Standard")]
         key: Vec<u8>,
     }
 
@@ -57,6 +58,12 @@ pub mod v1beta1 {
             );
 
             res
+        }
+    }
+
+    impl From<PubKey> for Vec<u8> {
+        fn from(key: PubKey) -> Vec<u8> {
+            key.key
         }
     }
 }
