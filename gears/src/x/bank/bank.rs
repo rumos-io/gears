@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use bytes::Bytes;
 use cosmwasm_std::Uint256;
@@ -78,10 +78,10 @@ impl Bank {
         }
     }
 
-    pub fn _query_balance<T: DB>(
+    pub fn query_balance<T: DB>(
         ctx: &QueryContext<T>,
         req: QueryBalanceRequest,
-    ) -> Result<QueryBalanceResponse, AppError> {
+    ) -> QueryBalanceResponse {
         let bank_store = ctx.get_kv_store(Store::Bank);
         let prefix = create_denom_balance_prefix(req.address);
 
@@ -89,20 +89,20 @@ impl Bank {
         let bal = account_store.get(req.denom.to_string().as_bytes());
 
         match bal {
-            Some(amount) => Ok(QueryBalanceResponse {
+            Some(amount) => QueryBalanceResponse {
                 balance: Some(
                     Coin::decode::<Bytes>(amount.to_owned().into())
                         .expect("invalid data in database - possible database corruption"),
                 ),
-            }),
-            None => Ok(QueryBalanceResponse { balance: None }),
+            },
+            None => QueryBalanceResponse { balance: None },
         }
     }
 
     pub fn query_all_balances<T: DB>(
         ctx: &QueryContext<T>,
         req: QueryAllBalancesRequest,
-    ) -> Result<QueryAllBalancesResponse, AppError> {
+    ) -> QueryAllBalancesResponse {
         let bank_store = ctx.get_kv_store(Store::Bank);
         let prefix = create_denom_balance_prefix(req.address);
         let account_store = bank_store.get_immutable_prefix_store(prefix);
@@ -115,10 +115,30 @@ impl Bank {
             balances.push(coin);
         }
 
-        return Ok(QueryAllBalancesResponse {
+        QueryAllBalancesResponse {
             balances,
             pagination: None,
-        });
+        }
+    }
+
+    /// Gets the total supply of every denom
+    // TODO: should be paginated
+    // TODO: should ignore coins with zero balance
+    // TODO: does this method guarantee that coins are sorted?
+    pub fn get_paginated_total_supply<T: DB>(ctx: &QueryContext<T>) -> Vec<Coin> {
+        let bank_store = ctx.get_kv_store(Store::Bank);
+        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into());
+
+        supply_store
+            .range(..)
+            .map(|raw_coin| {
+                let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
+                    .expect("invalid data in database - possible database corruption");
+                let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
+                    .expect("invalid data in database - possible database corruption");
+                Coin { denom, amount }
+            })
+            .collect()
     }
 
     pub fn send_coins_from_account_to_module<T: DB>(
@@ -295,7 +315,7 @@ mod tests {
             denom: Denom::try_from(String::from("coinA")).unwrap(),
         };
 
-        let res = Bank::_query_balance(&ctx, req).unwrap();
+        let res = Bank::query_balance(&ctx, req);
 
         let expected_res = QueryBalanceResponse {
             balance: Some(Coin {
@@ -334,7 +354,7 @@ mod tests {
         ctx.multi_store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
 
         let ctx = QueryContext::new(&store, 0);
-        let res = Bank::query_all_balances(&ctx, req).unwrap();
+        let res = Bank::query_all_balances(&ctx, req);
 
         let expected_res = QueryAllBalancesResponse {
             balances: vec![Coin {
@@ -343,6 +363,49 @@ mod tests {
             }],
             pagination: None,
         };
+
+        assert_eq!(expected_res, res);
+    }
+
+    #[test]
+    fn get_paginated_total_supply_works() {
+        let db = MemDB::new();
+        let mut store = MultiStore::new(db);
+        let genesis = GenesisState {
+            balances: vec![Balance {
+                address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
+                    .unwrap(),
+                coins: vec![
+                    Coin {
+                        denom: "coinA".to_string().try_into().unwrap(),
+                        amount: Uint256::from_str("123").unwrap(),
+                    },
+                    Coin {
+                        denom: "coinB".to_string().try_into().unwrap(),
+                        amount: Uint256::from_str("321").unwrap(),
+                    },
+                ],
+            }],
+            params: DEFAULT_PARAMS,
+        };
+
+        let mut ctx = Context::new(&mut store, 0);
+        Bank::init_genesis(&mut ctx, genesis);
+        ctx.multi_store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
+
+        let ctx = QueryContext::new(&store, 0);
+        let res = Bank::get_paginated_total_supply(&ctx);
+
+        let expected_res = vec![
+            Coin {
+                denom: "coinA".to_string().try_into().unwrap(),
+                amount: Uint256::from_str("123").unwrap(),
+            },
+            Coin {
+                denom: "coinB".to_string().try_into().unwrap(),
+                amount: Uint256::from_str("321").unwrap(),
+            },
+        ];
 
         assert_eq!(expected_res, res);
     }

@@ -151,3 +151,15 @@ impl From<QueryBalanceResponse> for RawQueryBalanceResponse {
 }
 
 impl Protobuf<RawQueryBalanceResponse> for QueryBalanceResponse {}
+
+/// QueryTotalSupplyResponse is the response type for the Query/TotalSupply RPC
+/// method
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct QueryTotalSupplyResponse {
+    /// supply is the supply of the coins
+    pub supply: Vec<Coin>,
+    /// pagination defines the pagination in the response.
+    ///
+    /// Since: cosmos-sdk 0.43
+    pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
+}

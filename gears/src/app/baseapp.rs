@@ -233,42 +233,57 @@ impl Application for BaseApp {
                     let store = self.multi_store.read().unwrap();
                     let ctx = QueryContext::new(&store, self.get_block_height());
 
-                    let res = Bank::query_all_balances(&ctx, req);
+                    let res = Bank::query_all_balances(&ctx, req).encode_vec();
 
-                    match res {
-                        Ok(res) => {
-                            let res = res.encode_vec();
-
-                            ResponseQuery {
-                                code: 0,
-                                log: "exists".to_string(),
-                                info: "".to_string(),
-                                index: 0,
-                                key: request.data,
-                                value: res.into(),
-                                proof_ops: None,
-                                height: self
-                                    .get_block_height()
-                                    .try_into()
-                                    .expect("can't believe we made it this far"),
-                                codespace: "".to_string(),
-                            }
-                        }
-                        Err(e) => ResponseQuery {
-                            code: 0,
-                            log: e.to_string(),
-                            info: "".to_string(),
-                            index: 0,
-                            key: request.data,
-                            value: vec![].into(),
-                            proof_ops: None,
-                            height: self
-                                .get_block_height()
-                                .try_into()
-                                .expect("can't believe we made it this far"),
-                            codespace: "".to_string(),
-                        },
+                    ResponseQuery {
+                        code: 0,
+                        log: "exists".to_string(),
+                        info: "".to_string(),
+                        index: 0,
+                        key: request.data,
+                        value: res.into(),
+                        proof_ops: None,
+                        height: self
+                            .get_block_height()
+                            .try_into()
+                            .expect("can't believe we made it this far"),
+                        codespace: "".to_string(),
                     }
+
+                    // match res {
+                    //     Ok(res) => {
+                    //         let res = res.encode_vec();
+
+                    //         ResponseQuery {
+                    //             code: 0,
+                    //             log: "exists".to_string(),
+                    //             info: "".to_string(),
+                    //             index: 0,
+                    //             key: request.data,
+                    //             value: res.into(),
+                    //             proof_ops: None,
+                    //             height: self
+                    //                 .get_block_height()
+                    //                 .try_into()
+                    //                 .expect("can't believe we made it this far"),
+                    //             codespace: "".to_string(),
+                    //         }
+                    //     }
+                    //     Err(e) => ResponseQuery {
+                    //         code: 0,
+                    //         log: e.to_string(),
+                    //         info: "".to_string(),
+                    //         index: 0,
+                    //         key: request.data,
+                    //         value: vec![].into(),
+                    //         proof_ops: None,
+                    //         height: self
+                    //             .get_block_height()
+                    //             .try_into()
+                    //             .expect("can't believe we made it this far"),
+                    //         codespace: "".to_string(),
+                    //     },
+                    // }
                 }
                 "/cosmos.auth.v1beta1.Query/Account" => {
                     let data = request.data.clone();

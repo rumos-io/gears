@@ -5,7 +5,9 @@ use rocket::{
     routes, Config, Request, Response as RocketResponse,
 };
 
-use super::handlers::{node_info, txs};
+use super::handlers::{
+    get_balances, get_balances_by_denom, node_info, staking_params, supply, txs,
+};
 use crate::app::BaseApp;
 
 const DEFAULT_SOCKET: u16 = 1317;
@@ -27,7 +29,17 @@ fn rocket_launch(app: BaseApp) {
 
     let rocket = rocket::custom(figment)
         .manage(app)
-        .mount("/", routes![node_info, txs,])
+        .mount(
+            "/",
+            routes![
+                node_info,
+                txs,
+                staking_params,
+                supply,
+                get_balances,
+                get_balances_by_denom
+            ],
+        )
         .attach(CORS)
         // Replace "accept" header to force rocket to return json errors rather than the default HTML.
         // Doesn't work if request is malformed (HTML is returned) see https://github.com/SergioBenitez/Rocket/issues/2129
