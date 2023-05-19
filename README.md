@@ -1,4 +1,8 @@
-# Gears ⚙⚙
+<div align="center">
+  <h1> Gears </h1>
+</div>
+
+![banner](assets/gears-logo.png)
 
 Gears will be a cosmos hub (gaia) node written in Rust. It will initially implement v7.1.0 of the gaia state machine as specified by the [golang implementation](https://github.com/cosmos/gaia/tree/v7.1.0).
 
