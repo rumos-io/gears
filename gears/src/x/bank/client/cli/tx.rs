@@ -24,7 +24,9 @@ use tokio::runtime::Runtime;
 
 use crate::{client::keys::key_store::DiskStore, x::auth::client::cli::query::get_account};
 
-// TODO: remove hard coded gas limit
+// TODO:
+// 1. remove hard coded gas limit
+// 2. remove hard coded chain_id
 
 pub fn get_bank_tx_command() -> Command {
     Command::new("bank")
@@ -109,7 +111,7 @@ pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()
     let res = client
         .broadcast_tx_commit(raw_tx.encode_to_vec())
         .await
-        .unwrap();
+        .unwrap(); //TODO: remove unwrap
 
     println!("{}", serde_json::to_string_pretty(&res)?);
     Ok(())
@@ -170,11 +172,11 @@ pub fn create_signed_send_tx(
     let sign_doc = SignDoc {
         body_bytes: tx_body.encode_to_vec(),
         auth_info_bytes: auth_info.encode_vec(),
-        chain_id: "localnet".into(),
+        chain_id: "test-chain".into(), //TODO: this should be passed in
         account_number,
     };
 
-    let signature = key.sign(&sign_doc.encode_to_vec()).unwrap();
+    let signature = key.sign(&sign_doc.encode_to_vec()).unwrap(); //TODO: remove unwrap
 
     Ok(TxRaw {
         body_bytes: sign_doc.body_bytes,

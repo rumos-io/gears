@@ -64,7 +64,7 @@ pub fn write_keys_and_genesis(
     // write genesis file
     let genesis = Genesis {
         genesis_time: Time::now(),
-        chain_id: "testnet".try_into().unwrap(), //TODO: this should be passed in
+        chain_id: "test-chain".try_into().unwrap(), //TODO: this should be passed in
         initial_height: 1,
         consensus_params: Params {
             block: Size {

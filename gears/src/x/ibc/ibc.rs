@@ -35,7 +35,10 @@ impl IBCMsg {
     }
 }
 
-pub fn _run_tx<'a, 'b, T: DB>(_ctx: &'a mut Context<'b, T>, _msg: IBCMsg) -> Result<(), AppError> {
+pub fn _run_tx<'a, 'b, T: DB>(
+    _ctx: &'a mut Context<'b, '_, T>,
+    _msg: IBCMsg,
+) -> Result<(), AppError> {
     //let mut _ibc_context = IBCExecutionContext { _app_ctx: ctx };
     // ibc_context
     //     .execute(msg.msg)

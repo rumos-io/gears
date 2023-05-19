@@ -11,6 +11,7 @@ use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
 use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
 use proto_messages::cosmos::tx::v1beta1::Msg;
 use tendermint_abci::Application;
+use tendermint_informal::block::Header;
 use tendermint_proto::abci::{
     RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
     RequestEndBlock, RequestInfo, RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot,
@@ -21,7 +22,7 @@ use tendermint_proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::types::GenesisState;
+use crate::types::{GenesisState, InitContext, TxContext};
 use crate::{
     app::{ante::AnteHandler, params},
     error::AppError,
@@ -40,6 +41,7 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 pub struct BaseApp {
     pub multi_store: Arc<RwLock<MultiStore<RocksDB>>>,
     height: Arc<RwLock<u64>>,
+    block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
 }
 
 impl BaseApp {
@@ -49,11 +51,27 @@ impl BaseApp {
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
             height: Arc::new(RwLock::new(height)),
+            block_header: Arc::new(RwLock::new(None)),
         }
     }
 
     pub fn get_block_height(&self) -> u64 {
         *self.height.read().expect("RwLock will not be poisoned")
+    }
+
+    fn get_block_header(&self) -> Option<Header> {
+        self.block_header
+            .read()
+            .expect("RwLock will not be poisoned")
+            .clone()
+    }
+
+    fn set_block_header(&self, header: Header) {
+        let mut current_header = self
+            .block_header
+            .write()
+            .expect("RwLock will not be poisoned");
+        *current_header = Some(header);
     }
 
     fn get_last_commit_hash(&self) -> [u8; 32] {
@@ -93,7 +111,7 @@ impl BaseApp {
         // Ok(())
 
         //#######################
-        let tx = DecodedTx::from_bytes(raw)?;
+        let tx = DecodedTx::from_bytes(raw.clone())?;
 
         Self::validate_basic_tx_msgs(tx.get_msgs())?;
 
@@ -101,9 +119,15 @@ impl BaseApp {
             .multi_store
             .write()
             .expect("RwLock will not be poisoned");
-        let mut ctx = Context::new(&mut multi_store, self.get_block_height());
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            raw.clone().into(),
+        );
 
-        match AnteHandler::run(&mut ctx, &tx) {
+        match AnteHandler::run(&mut ctx.as_any(), &tx) {
             Ok(_) => multi_store.write_then_clear_tx_caches(),
             Err(e) => {
                 multi_store.clear_tx_caches();
@@ -111,9 +135,15 @@ impl BaseApp {
             }
         };
 
-        let mut ctx = Context::new(&mut multi_store, self.get_block_height());
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            raw.into(),
+        );
 
-        match BaseApp::run_msgs(&mut ctx, tx.get_msgs()) {
+        match BaseApp::run_msgs(&mut ctx.as_any(), tx.get_msgs()) {
             Ok(_) => {
                 let events = ctx.events;
                 multi_store.write_then_clear_tx_caches();
@@ -161,10 +191,13 @@ impl Application for BaseApp {
             .multi_store
             .write()
             .expect("RwLock will not be poisoned");
-        let mut ctx = Context::new(&mut multi_store, self.get_block_height());
+
+        //TODO: handle request height > 1 as is done in SDK
+
+        let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), request.chain_id);
 
         if let Some(params) = request.consensus_params.clone() {
-            params::set_consensus_params(&mut ctx, params);
+            params::set_consensus_params(&mut ctx.as_any(), params);
         }
 
         let genesis = String::from_utf8(request.app_state_bytes.into())
@@ -178,8 +211,8 @@ impl Application for BaseApp {
                 std::process::exit(1)
             });
 
-        Bank::init_genesis(&mut ctx, genesis.bank);
-        Auth::init_genesis(&mut ctx, genesis.auth);
+        Bank::init_genesis(&mut ctx.as_any(), genesis.bank);
+        Auth::init_genesis(&mut ctx.as_any(), genesis.auth);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -411,8 +444,17 @@ impl Application for BaseApp {
         }
     }
 
-    fn begin_block(&self, _request: RequestBeginBlock) -> ResponseBeginBlock {
+    fn begin_block(&self, request: RequestBeginBlock) -> ResponseBeginBlock {
         info!("Got begin block request");
+
+        self.set_block_header(
+            request
+                .header
+                .expect("tendermint will never send nothing to the app")
+                .try_into()
+                .expect("tendermint will send a valid Header struct"),
+        );
+
         Default::default()
     }
 

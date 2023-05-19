@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 
 use bytes::Bytes;
-use ibc_proto::protobuf::Protobuf;
+use ibc_proto::{cosmos::tx::v1beta1::TxRaw, protobuf::Protobuf};
 
+use prost::Message;
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
     tx::v1beta1::{AuthInfo, Msg, PublicKey, Tx, TxBody},
@@ -19,22 +20,44 @@ use crate::error::AppError;
 // 2. Implement equality on AccAddress to avoid conversion to string in get_signers()
 // 3. Consider removing the "seen" hashset in get_signers()
 
+pub struct SignatureData {
+    pub signature: Vec<u8>,
+    pub sequence: u64,
+}
+
 pub struct DecodedTx {
     messages: Vec<Msg>,
     auth_info: AuthInfo,
     signatures: Vec<Vec<u8>>,
     body: TxBody,
+    signatures_data: Vec<SignatureData>,
+    pub tx_raw: TxRaw,
 }
 
 impl DecodedTx {
     pub fn from_bytes(raw: Bytes) -> Result<DecodedTx, AppError> {
-        let tx = Tx::decode(raw).map_err(|e| AppError::TxParseError(e.to_string()))?;
+        let tx = Tx::decode(raw.clone()).map_err(|e| AppError::TxParseError(e.to_string()))?;
+        let tx_raw = TxRaw::decode(raw).map_err(|e| AppError::TxParseError(e.to_string()))?;
+
+        // extract signatures data when decoding - this isn't done in the SDK
+        if tx.signatures.len() != tx.auth_info.signer_infos.len() {
+            return Err(AppError::TxValidation("signature list is empty".into()));
+        }
+        let mut signatures_data = Vec::with_capacity(tx.signatures.len());
+        for (i, signature) in tx.signatures.iter().enumerate() {
+            signatures_data.push(SignatureData {
+                signature: signature.clone(),
+                sequence: tx.auth_info.signer_infos[i].sequence,
+            })
+        }
 
         Ok(DecodedTx {
             messages: tx.body.messages.clone(),
             auth_info: tx.auth_info,
             signatures: tx.signatures,
             body: tx.body,
+            signatures_data,
+            tx_raw,
         })
     }
 
@@ -68,6 +91,10 @@ impl DecodedTx {
 
     pub fn get_signatures(&self) -> &Vec<Vec<u8>> {
         return &self.signatures;
+    }
+
+    pub fn get_signatures_data(&self) -> &Vec<SignatureData> {
+        &self.signatures_data
     }
 
     pub fn get_timeout_height(&self) -> u64 {
@@ -208,6 +235,12 @@ mod tests {
                 extension_options: vec![],
                 non_critical_extension_options: vec![],
             },
+            signatures_data: vec![],
+            tx_raw: TxRaw {
+                body_bytes: vec![],
+                auth_info_bytes: vec![],
+                signatures: vec![],
+            },
         };
         let signers = tx.get_signers();
         let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2];
@@ -262,6 +295,12 @@ mod tests {
                 extension_options: vec![],
                 non_critical_extension_options: vec![],
             },
+            signatures_data: vec![],
+            tx_raw: TxRaw {
+                body_bytes: vec![],
+                auth_info_bytes: vec![],
+                signatures: vec![],
+            },
         };
         let signers = tx.get_signers();
         let expected: Vec<&AccAddress> = vec![&from_addr_1_3, &from_addr_2, &fee_addr];
@@ -315,6 +354,12 @@ mod tests {
                 timeout_height: 0,
                 extension_options: vec![],
                 non_critical_extension_options: vec![],
+            },
+            signatures_data: vec![],
+            tx_raw: TxRaw {
+                body_bytes: vec![],
+                auth_info_bytes: vec![],
+                signatures: vec![],
             },
         };
         let signers = tx.get_signers();

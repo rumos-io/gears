@@ -273,7 +273,9 @@ mod tests {
 
     use std::{str::FromStr, vec};
 
-    use crate::{store::MultiStore, x::bank::_DEFAULT_PARAMS as DEFAULT_PARAMS};
+    use crate::{
+        store::MultiStore, types::InitContext, x::bank::_DEFAULT_PARAMS as DEFAULT_PARAMS,
+    };
     use database::MemDB;
     use proto_types::Denom;
 
@@ -304,8 +306,8 @@ mod tests {
             params: DEFAULT_PARAMS,
         };
 
-        let mut ctx = Context::new(&mut store, 0);
-        Bank::init_genesis(&mut ctx, genesis);
+        let mut ctx = InitContext::new(&mut store, 0, "".into());
+        Bank::init_genesis(&mut ctx.as_any(), genesis);
 
         let ctx = QueryContext::new(&store, 0);
 
@@ -349,8 +351,8 @@ mod tests {
             pagination: None,
         };
 
-        let mut ctx = Context::new(&mut store, 0);
-        Bank::init_genesis(&mut ctx, genesis);
+        let mut ctx = InitContext::new(&mut store, 0, "".into());
+        Bank::init_genesis(&mut ctx.as_any(), genesis);
         ctx.multi_store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
 
         let ctx = QueryContext::new(&store, 0);
@@ -389,8 +391,8 @@ mod tests {
             params: DEFAULT_PARAMS,
         };
 
-        let mut ctx = Context::new(&mut store, 0);
-        Bank::init_genesis(&mut ctx, genesis);
+        let mut ctx = InitContext::new(&mut store, 0, "".into());
+        Bank::init_genesis(&mut ctx.as_any(), genesis);
         ctx.multi_store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
 
         let ctx = QueryContext::new(&store, 0);

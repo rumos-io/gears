@@ -1,4 +1,8 @@
 use database::DB;
+use ibc_proto::cosmos::tx::v1beta1::SignDoc;
+use prost::Message;
+use proto_messages::cosmos::tx::v1beta1::PublicKey;
+use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 
 use crate::{
     error::AppError,
@@ -18,6 +22,7 @@ impl AnteHandler {
         validate_memo_ante_handler(ctx, tx)?;
         deduct_fee_ante_handler(ctx, tx)?;
         set_pub_key_ante_handler(ctx, tx)?;
+        sig_verification_handler(ctx, tx)?;
         increment_sequence_ante_handler(ctx, tx)?;
 
         //  ** ante.NewSetUpContextDecorator(),
@@ -32,7 +37,7 @@ impl AnteHandler {
         //  - ante.NewSetPubKeyDecorator(opts.AccountKeeper),
         //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
         //  ** ante.NewSigGasConsumeDecorator(opts.AccountKeeper, sigGasConsumer),
-        //  ** ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
+        //  - ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
         //  - ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
 
@@ -126,7 +131,7 @@ fn set_pub_key_ante_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Resu
         )));
     }
 
-    for (i, key) in public_keys.iter().enumerate() {
+    for (i, key) in public_keys.into_iter().enumerate() {
         if let Some(key) = key {
             let addr = key.get_address();
 
@@ -146,6 +151,66 @@ fn set_pub_key_ante_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Resu
     }
 
     Ok(())
+}
+
+fn sig_verification_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
+    let signers = tx.get_signers();
+    let signature_data = tx.get_signatures_data();
+
+    // NOTE: this is also checked in validate_basic_ante_handler
+    if signature_data.len() != signers.len() {
+        return Err(AppError::TxValidation(format!(
+            "wrong number of signatures; expected {}, got {}",
+            signers.len(),
+            signature_data.len()
+        )));
+    }
+
+    for (i, signature_data) in signature_data.into_iter().enumerate() {
+        let signer = signers[i];
+
+        // check sequence number
+        let acct = Auth::get_account(ctx, signer).ok_or(AppError::AccountNotFound)?;
+        let account_seq = acct.get_sequence();
+        if account_seq != signature_data.sequence {
+            return Err(AppError::TxValidation(format!(
+                "incorrect tx sequence; expected {}, got {}",
+                account_seq, signature_data.sequence
+            )));
+        }
+
+        // check signature
+        let sign_bytes = SignDoc {
+            body_bytes: tx.tx_raw.body_bytes.clone(),
+            auth_info_bytes: tx.tx_raw.auth_info_bytes.clone(),
+            chain_id: ctx.get_chain_id().to_owned(),
+            account_number: acct.get_account_number(),
+        }
+        .encode_to_vec();
+        let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
+
+        let public_key = acct
+            .get_public_key()
+            .as_ref()
+            .expect("account pub keys are set in set_pub_key_ante_handler");
+
+        match public_key {
+            PublicKey::Secp256k1(pub_key) => {
+                let public_key =
+                    Secp256k1PubKey::from_slice(&Vec::from(pub_key.to_owned())).unwrap(); //TODO: remove unwrap
+
+                let signature = ecdsa::Signature::from_compact(&signature_data.signature).unwrap(); //TODO: remove unwrap
+
+                Secp256k1::verification_only()
+                    .verify_ecdsa(&message, &signature, &public_key) //TODO: lib cannot be used for bitcoin sig verification
+                    .map_err(|_| {
+                        return AppError::TxValidation(format!("invalid signature"));
+                    })?;
+            }
+        }
+    }
+
+    return Ok(());
 }
 
 fn increment_sequence_ante_handler<T: DB>(

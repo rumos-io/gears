@@ -199,6 +199,7 @@ mod tests {
 
     use super::*;
     use crate::store::MultiStore;
+    use crate::types::InitContext;
 
     #[test]
     fn address_store_key_works() {
@@ -233,8 +234,8 @@ mod tests {
         let db = MemDB::new();
         let expected = 0;
         let mut store = MultiStore::new(db);
-        let mut ctx = Context::new(&mut store, 0);
-        let acct_num = Auth::get_next_account_number(&mut ctx);
+        let mut ctx = InitContext::new(&mut store, 0, "".into());
+        let acct_num = Auth::get_next_account_number(&mut ctx.as_any());
 
         assert_eq!(expected, acct_num);
     }
@@ -251,13 +252,13 @@ mod tests {
             expected.encode_to_vec(),
         );
 
-        let mut ctx = Context::new(&mut store, 0);
-        let acct_num = Auth::get_next_account_number(&mut ctx);
+        let mut ctx = InitContext::new(&mut store, 0, "".into());
+        let acct_num = Auth::get_next_account_number(&mut ctx.as_any());
 
         assert_eq!(expected, acct_num);
 
         // check account number is being incremented
-        let acct_num = Auth::get_next_account_number(&mut ctx);
+        let acct_num = Auth::get_next_account_number(&mut ctx.as_any());
         assert_eq!(expected + 1, acct_num);
     }
 
