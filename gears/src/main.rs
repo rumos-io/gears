@@ -50,6 +50,7 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
 
 fn build_cli() -> Command {
     Command::new(APP_NAME)
+        .version(env!("GIT_HASH"))
         .subcommand_required(true)
         .subcommand(get_init_command())
         .subcommand(get_run_command())
