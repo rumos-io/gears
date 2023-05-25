@@ -186,6 +186,8 @@ impl From<TxBody> for RawTxBody {
     }
 }
 
+impl Protobuf<RawTxBody> for TxBody {}
+
 /// AuthInfo describes the fee and signer modes that are used to sign a
 /// transaction.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -551,6 +553,17 @@ mod tests {
         assert_eq!(
             key,
             r#"{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"ApUOHN/LEz1gJBCf1In3NO60UCQY5TjChIHyK84nbySM"}"#
+        );
+    }
+
+    #[test]
+    fn deserialize_pubkey_works() {
+        let serialized = r#"{"@type":"/cosmos.crypto.secp256k1.PubKey","key":"ApUOHN/LEz1gJBCf1In3NO60UCQY5TjChIHyK84nbySM"}"#;
+        let key: PublicKey = serde_json::from_str(serialized).unwrap();
+        let PublicKey::Secp256k1(key) = key;
+        assert_eq!(
+            hex::encode(Vec::from(key)),
+            "02950e1cdfcb133d6024109fd489f734eeb4502418e538c28481f22bce276f248c"
         );
     }
 }

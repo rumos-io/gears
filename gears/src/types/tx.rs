@@ -47,6 +47,7 @@ impl DecodedTx {
         for (i, signature) in tx.signatures.iter().enumerate() {
             signatures_data.push(SignatureData {
                 signature: signature.clone(),
+                // the check above, tx.signatures.len() != tx.auth_info.signer_infos.len(), ensures that this indexing is safe
                 sequence: tx.auth_info.signer_infos[i].sequence,
             })
         }
@@ -125,42 +126,130 @@ impl DecodedTx {
             .map(|si| &si.public_key)
             .collect()
     }
-
-    // func (w *wrapper) GetPubKeys() ([]cryptotypes.PubKey, error) {
-    //     signerInfos := w.tx.AuthInfo.SignerInfos
-    //     pks := make([]cryptotypes.PubKey, len(signerInfos))
-
-    //     for i, si := range signerInfos {
-    //         // NOTE: it is okay to leave this nil if there is no PubKey in the SignerInfo.
-    //         // PubKey's can be left unset in SignerInfo.
-    //         if si.PublicKey == nil {
-    //             continue
-    //         }
-
-    //         pkAny := si.PublicKey.GetCachedValue()
-    //         pk, ok := pkAny.(cryptotypes.PubKey)
-    //         if ok {
-    //             pks[i] = pk
-    //         } else {
-    //             return nil, sdkerrors.Wrapf(sdkerrors.ErrLogic, "Expecting PubKey, got: %T", pkAny)
-    //         }
-    //     }
-
-    //     return pks, nil
-    // }
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
 
     use cosmwasm_std::Uint256;
+    use ibc_proto::cosmos::tx::v1beta1::SignDoc;
+    use ibc_relayer::keyring::{Secp256k1KeyPair, SigningKeyPair};
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
-        tx::v1beta1::Fee,
+        tx::v1beta1::{Fee, SignerInfo},
     };
 
     use super::*;
+
+    /// Generates a signed transaction. This is used by other modules.
+    pub fn get_signed_tx() -> DecodedTx {
+        let from_addr_1 =
+            AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".into())
+                .unwrap();
+
+        let to_addr =
+            AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut".into())
+                .unwrap();
+
+        let key_pair: Secp256k1KeyPair = serde_json::from_str(
+            r#"{
+            "private_key": "f6fdd0e88e3988cc108690e28184508471f48eba283eeb61fce858f7b7a9642f",
+            "public_key": "02f504b051dbb2be349d34a65a1ec25984591c6c1fe1ca512ed2656913b8540a2a",
+            "address": [
+              129,
+              58,
+              194,
+              42,
+              97,
+              73,
+              22,
+              85,
+              226,
+              120,
+              106,
+              224,
+              209,
+              39,
+              214,
+              153,
+              11,
+              251,
+              251,
+              222
+            ],
+            "address_type": "Cosmos",
+            "account": "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux"
+          }"#,
+        )
+        .unwrap();
+
+        let auth_info = AuthInfo {
+            signer_infos: vec![SignerInfo {
+                public_key: Some(PublicKey::Secp256k1(
+                    key_pair.public_key.serialize().to_vec().try_into().unwrap(),
+                )),
+                mode_info: None,
+                sequence: 1,
+            }],
+            fee: Fee {
+                amount: Some(
+                    SendCoins::new(vec![Coin {
+                        denom: String::from("atom").try_into().unwrap(),
+                        amount: cosmwasm_std::Uint256::one(),
+                    }])
+                    .unwrap(),
+                ),
+                gas_limit: 0,
+                payer: None,
+                granter: "granter".into(),
+            },
+            tip: None,
+        };
+
+        let messages = vec![Msg::Send(MsgSend {
+            from_address: from_addr_1.clone(),
+            to_address: to_addr.clone(),
+            amount: SendCoins::new(vec![Coin {
+                denom: String::from("atom").try_into().unwrap(),
+                amount: Uint256::one(),
+            }])
+            .unwrap(),
+        })];
+
+        let tx_body = TxBody {
+            messages: messages.clone(),
+            memo: "".into(),
+            timeout_height: 0,
+            extension_options: vec![],
+            non_critical_extension_options: vec![],
+        };
+
+        let sign_doc = SignDoc {
+            body_bytes: tx_body.encode_vec(),
+            auth_info_bytes: auth_info.encode_vec(),
+            chain_id: "unit-testing".into(),
+            account_number: 1,
+        };
+
+        let signature = key_pair.sign(&sign_doc.encode_to_vec()).unwrap();
+
+        DecodedTx {
+            messages,
+            auth_info: auth_info.clone(),
+            signatures: vec![signature.clone()],
+            body: tx_body.clone(),
+            signatures_data: vec![SignatureData {
+                signature: signature.clone(),
+                sequence: 1,
+            }],
+            tx_raw: TxRaw {
+                body_bytes: tx_body.encode_vec(),
+                auth_info_bytes: auth_info.encode_vec(),
+                signatures: vec![signature],
+            },
+        }
+    }
 
     #[test]
     fn get_signers_works() {

@@ -1,15 +1,18 @@
 pub mod v1beta1 {
+    use std::fmt;
+
+    use base64::{
+        engine::general_purpose::{self},
+        Engine,
+    };
     use ibc_proto::protobuf::Protobuf;
     use proto_types::AccAddress;
     use ripemd::Ripemd160;
-    use serde::{Deserialize, Serialize};
+    use secp256k1::PublicKey as Secp256k1PubKey;
+    use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
     use sha2::{Digest, Sha256};
 
     use crate::Error;
-
-    // PubKeySize is comprised of 32 bytes for one field element
-    // (the x-coordinate), plus one byte for the parity of the y-coordinate.
-    const PUB_KEY_SIZE: usize = 33;
 
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct RawPubKey {
@@ -19,24 +22,24 @@ pub mod v1beta1 {
 
     #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
     pub struct PubKey {
-        #[serde(with = "crate::utils::Base64Standard")]
-        key: Vec<u8>,
+        // a custom serde is needed since the Secp256k1 serde uses hex encoding and not base64
+        #[serde(serialize_with = "serialize_key", deserialize_with = "deserialize_key")]
+        key: Secp256k1PubKey,
     }
 
     impl TryFrom<RawPubKey> for PubKey {
         type Error = Error;
 
         fn try_from(raw: RawPubKey) -> Result<Self, Self::Error> {
-            if raw.key.len() != PUB_KEY_SIZE {
-                return Err(Error::DecodeGeneral("invalid key length".into()));
-            }
-            Ok(PubKey { key: raw.key })
+            PubKey::try_from(raw.key)
         }
     }
 
     impl From<PubKey> for RawPubKey {
         fn from(key: PubKey) -> RawPubKey {
-            RawPubKey { key: key.key }
+            RawPubKey {
+                key: Vec::from(key),
+            }
         }
     }
 
@@ -46,7 +49,7 @@ pub mod v1beta1 {
         /// Returns a Bitcoin style addresses: RIPEMD160(SHA256(pubkey))
         pub fn get_address(&self) -> AccAddress {
             let mut hasher = Sha256::new();
-            hasher.update(&self.key);
+            hasher.update(&Vec::from(self.to_owned()));
             let hash = hasher.finalize();
 
             let mut hasher = Ripemd160::new();
@@ -63,7 +66,54 @@ pub mod v1beta1 {
 
     impl From<PubKey> for Vec<u8> {
         fn from(key: PubKey) -> Vec<u8> {
-            key.key
+            key.key.serialize().to_vec()
+        }
+    }
+
+    impl TryFrom<Vec<u8>> for PubKey {
+        type Error = Error;
+
+        fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+            let key = Secp256k1PubKey::from_slice(&value)
+                .map_err(|e| Error::DecodeGeneral(format!("invalid key: {e}")))?;
+
+            Ok(PubKey { key })
+        }
+    }
+
+    fn serialize_key<S>(key: &Secp256k1PubKey, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        s.serialize_str(&general_purpose::STANDARD.encode(key.serialize()))
+    }
+
+    fn deserialize_key<'de, D>(deserializer: D) -> Result<Secp256k1PubKey, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_str(Secp256k1Visitor)
+    }
+
+    struct Secp256k1Visitor;
+
+    impl<'de> de::Visitor<'de> for Secp256k1Visitor {
+        type Value = Secp256k1PubKey;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("string-encoded secp256k1 public key")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            let key = general_purpose::STANDARD
+                .decode(v)
+                .map_err(|e| E::custom(format!("Error parsing public key '{}': {}", v, e)))?;
+
+            Secp256k1PubKey::from_slice(&key)
+                .map_err(|e| E::custom(format!("Error parsing public key '{}': {}", v, e)))
         }
     }
 }

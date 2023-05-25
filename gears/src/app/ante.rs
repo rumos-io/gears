@@ -194,6 +194,7 @@ fn sig_verification_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Resu
             .as_ref()
             .expect("account pub keys are set in set_pub_key_ante_handler");
 
+        //TODO: move sig verification into PublicKey
         match public_key {
             PublicKey::Secp256k1(pub_key) => {
                 let public_key =
@@ -224,4 +225,37 @@ fn increment_sequence_ante_handler<T: DB>(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use database::MemDB;
+    use proto_messages::cosmos::auth::v1beta1::{Account, BaseAccount};
+    use proto_types::AccAddress;
+
+    use crate::store::MultiStore;
+    use crate::types::tests::get_signed_tx;
+    use crate::types::InitContext;
+
+    use super::*;
+
+    #[test]
+    fn sig_verification_handler_works() {
+        // TODO: add tests for transactions that are expected to fail
+        let tx = get_signed_tx();
+
+        let db = MemDB::new();
+        let mut store = MultiStore::new(db);
+        let mut ctx = InitContext::new(&mut store, 0, "unit-testing".into());
+        let account = BaseAccount {
+            address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
+                .unwrap(),
+            pub_key: None,
+            account_number: 1,
+            sequence: 1,
+        };
+        Auth::set_account(&mut ctx.as_any(), Account::Base(account));
+        set_pub_key_ante_handler(&mut ctx.as_any(), &tx).unwrap();
+        sig_verification_handler(&mut ctx.as_any(), &tx).unwrap();
+    }
 }

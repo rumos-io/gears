@@ -2892,6 +2892,7 @@ dependencies = [
  "prost",
  "proto-types",
  "ripemd",
+ "secp256k1 0.25.0",
  "serde",
  "serde-aux",
  "serde_json",
