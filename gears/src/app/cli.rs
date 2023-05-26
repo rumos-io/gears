@@ -23,6 +23,11 @@ pub fn run_run_command(matches: &ArgMatches) {
         .get_one::<usize>("read_buf_size")
         .expect("Read buf size arg has a default value so this cannot be `None`.");
 
+    let rest_port = matches
+        .get_one::<u16>("rest_port")
+        .expect("REST port arg has a default value so this cannot be `None`")
+        .to_owned();
+
     let verbose = matches.get_flag("verbose");
     let quiet = matches.get_flag("quiet");
 
@@ -56,7 +61,7 @@ pub fn run_run_command(matches: &ArgMatches) {
 
     let app = BaseApp::new(db);
 
-    run_rest_server(app.clone());
+    run_rest_server(app.clone(), rest_port);
 
     let server = ServerBuilder::new(*read_buf_size)
         .bind(format!("{}:{}", host, port), app)
@@ -100,6 +105,13 @@ pub fn get_run_command() -> Command {
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(u16))
                 .default_value("26658"),
+        )
+        .arg(
+            arg!(--rest_port)
+                .help("Bind the REST server to this port")
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(u16))
+                .default_value("1317"),
         )
         .arg(
             arg!(-r - -read_buf_size)

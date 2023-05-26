@@ -10,9 +10,7 @@ use super::handlers::{
 };
 use crate::app::BaseApp;
 
-const DEFAULT_SOCKET: u16 = 1317;
-
-fn rocket_launch(app: BaseApp) {
+fn rocket_launch(app: BaseApp, port: u16) {
     // Disable rocket catching signals to prevent it interfering with the rest
     // of the app. e.g. If this isn't done then rocket shuts down when there's
     // an interrupt but the rest of the app keeps running.
@@ -25,7 +23,7 @@ fn rocket_launch(app: BaseApp) {
         },
         ..Config::default()
     })
-    .merge(("port", DEFAULT_SOCKET));
+    .merge(("port", port));
 
     let rocket = rocket::custom(figment)
         .manage(app)
@@ -54,8 +52,8 @@ fn rocket_launch(app: BaseApp) {
         .expect("the server will only stop when the application is terminated");
 }
 
-pub fn run_rest_server(app: BaseApp) {
-    std::thread::spawn(move || rocket_launch(app));
+pub fn run_rest_server(app: BaseApp, port: u16) {
+    std::thread::spawn(move || rocket_launch(app, port));
 }
 
 pub struct CORS;
