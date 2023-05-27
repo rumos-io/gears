@@ -8,7 +8,7 @@ use rocket::{
 use super::handlers::{
     get_balances, get_balances_by_denom, node_info, staking_params, supply, txs,
 };
-use crate::app::BaseApp;
+use crate::baseapp::BaseApp;
 
 fn rocket_launch(app: BaseApp, port: u16) {
     // Disable rocket catching signals to prevent it interfering with the rest

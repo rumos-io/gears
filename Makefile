@@ -8,10 +8,10 @@ test:
 	cargo test
 
 install:
-	cargo install --path ./gears
+	cargo install --path ./gaia-rs
 
 init:
-	./gears/scripts/init.sh
+	./gaia-rs/scripts/init.sh
 
 tendermint-start:
 	tendermint start --home ~/.gears

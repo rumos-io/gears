@@ -1,12 +1,12 @@
 use anyhow::Result;
-use app::{cli::get_run_command, APP_NAME};
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
-use client::{init::get_init_command, query::get_query_command, tx::get_tx_command};
+use gears::baseapp::{cli::get_run_command, APP_NAME};
+use gears::client::{init::get_init_command, query::get_query_command, tx::get_tx_command};
 use human_panic::setup_panic;
 
-use crate::{
-    app::cli::run_run_command,
+use gears::{
+    baseapp::cli::run_run_command,
     client::{
         init::run_init_command,
         keys::{get_keys_command, run_keys_command},
@@ -14,17 +14,6 @@ use crate::{
         tx::run_tx_command,
     },
 };
-
-mod app;
-mod client;
-mod crypto;
-mod error;
-mod store;
-mod types;
-mod utils;
-mod x;
-
-const TM_ADDRESS: &str = "http://localhost:26657"; // used by rest service when proxying requests to tendermint // TODO: this needs to be configurable
 
 fn get_completions_command() -> Command {
     Command::new("completions")

@@ -6,7 +6,7 @@ use tendermint_abci::ServerBuilder;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
-use crate::app::BaseApp;
+use crate::baseapp::BaseApp;
 use crate::client::rest::run_rest_server;
 use crate::utils::get_default_home_dir;
 

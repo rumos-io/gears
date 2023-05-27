@@ -6,4 +6,5 @@ members = [
     "trees",
     "database",
     "tendermint",
+    "gaia-rs",
 ]

@@ -24,7 +24,7 @@ use tracing::{error, info};
 
 use crate::types::{GenesisState, InitContext, TxContext};
 use crate::{
-    app::{ante::AnteHandler, params},
+    baseapp::{ante::AnteHandler, params},
     error::AppError,
     store::MultiStore,
     types::{Context, DecodedTx, QueryContext},
