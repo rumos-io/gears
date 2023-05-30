@@ -4,7 +4,7 @@ use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 
 use crate::{types::GenesisState, utils::get_default_home_dir};
 
-pub fn get_init_command() -> Command {
+pub fn get_init_command(app_name: &str) -> Command {
     Command::new("init")
         .about("Initialize configuration files")
         .arg(Arg::new("moniker").required(true))
@@ -12,7 +12,7 @@ pub fn get_init_command() -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir()
+                    get_default_home_dir(app_name)
                         .unwrap_or_default()
                         .display()
                         .to_string()
@@ -28,12 +28,12 @@ pub fn get_init_command() -> Command {
         )
 }
 
-pub fn run_init_command(sub_matches: &ArgMatches) {
+pub fn run_init_command(sub_matches: &ArgMatches, app_name: &str) {
     let moniker = sub_matches
         .get_one::<String>("moniker")
         .expect("moniker argument is required preventing `None`");
 
-    let default_home_directory = get_default_home_dir();
+    let default_home_directory = get_default_home_dir(app_name);
 
     let home = sub_matches
         .get_one::<PathBuf>("home")

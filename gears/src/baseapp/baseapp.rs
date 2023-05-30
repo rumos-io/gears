@@ -31,8 +31,8 @@ use crate::{
     x::{auth::Auth, bank::Bank},
 };
 
-pub const APP_NAME: &str = env!("CARGO_PKG_NAME"); // TODO: should this be moved to utils?
-const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+const APP_VERSION: &str = env!("CARGO_PKG_VERSION"); // TODO: this should be passed in
+
 //TODO:
 // 1. Remove unwraps
 // 2. Remove "hash goes here"
@@ -42,16 +42,18 @@ pub struct BaseApp {
     pub multi_store: Arc<RwLock<MultiStore<RocksDB>>>,
     height: Arc<RwLock<u64>>,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
+    app_name: &'static str,
 }
 
 impl BaseApp {
-    pub fn new(db: RocksDB) -> Self {
+    pub fn new(db: RocksDB, app_name: &'static str) -> Self {
         let multi_store = MultiStore::new(db);
         let height = multi_store.get_head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
             height: Arc::new(RwLock::new(height)),
             block_header: Arc::new(RwLock::new(None)),
+            app_name,
         }
     }
 
@@ -230,7 +232,7 @@ impl Application for BaseApp {
         );
 
         ResponseInfo {
-            data: APP_NAME.to_string(),
+            data: self.app_name.to_string(),
             version: APP_VERSION.to_string(),
             app_version: 1,
             last_block_height: self

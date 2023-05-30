@@ -20,14 +20,14 @@ lazy_static! {
     static ref HD_PATH: StandardHDPath = StandardHDPath::new(Purpose::Pubkey, 118, 0, 0, 0);
 }
 
-pub fn get_keys_command() -> Command {
+pub fn get_keys_command(app_name: &str) -> Command {
     Command::new("keys")
         .about("Manage your application's keys")
-        .subcommand(get_keys_sub_commands())
+        .subcommand(get_keys_sub_commands(app_name))
         .subcommand_required(true)
 }
 
-pub fn get_keys_sub_commands() -> Command {
+pub fn get_keys_sub_commands(app_name: &str) -> Command {
     Command::new("add")
         .about("Add a private key (either newly generated or recovered) saving it to <name> file")
         .arg(Arg::new("name").required(true))
@@ -42,7 +42,7 @@ pub fn get_keys_sub_commands() -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir()
+                    get_default_home_dir(app_name)
                         .unwrap_or_default()
                         .display()
                         .to_string()
@@ -52,7 +52,7 @@ pub fn get_keys_sub_commands() -> Command {
         )
 }
 
-pub fn run_keys_command(matches: &ArgMatches) -> Result<()> {
+pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
     match matches.subcommand() {
         Some(("add", sub_matches)) => {
             let name = sub_matches
@@ -62,7 +62,7 @@ pub fn run_keys_command(matches: &ArgMatches) -> Result<()> {
 
             let overwrite = sub_matches.get_flag("overwrite");
 
-            let default_home_directory = get_default_home_dir();
+            let default_home_directory = get_default_home_dir(app_name);
             let home = sub_matches
                 .get_one::<PathBuf>("home")
                 .or(default_home_directory.as_ref())

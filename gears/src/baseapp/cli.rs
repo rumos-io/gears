@@ -10,7 +10,7 @@ use crate::baseapp::BaseApp;
 use crate::client::rest::run_rest_server;
 use crate::utils::get_default_home_dir;
 
-pub fn run_run_command(matches: &ArgMatches) {
+pub fn run_run_command(matches: &ArgMatches, app_name: &'static str) {
     let host = matches
         .get_one::<String>("host")
         .expect("Host arg has a default value so this cannot be `None`");
@@ -41,7 +41,7 @@ pub fn run_run_command(matches: &ArgMatches) {
 
     tracing_subscriber::fmt().with_max_level(log_level).init();
 
-    let default_home_directory = get_default_home_dir();
+    let default_home_directory = get_default_home_dir(app_name);
     let home = matches
         .get_one::<PathBuf>("home")
         .or(default_home_directory.as_ref())
@@ -59,7 +59,7 @@ pub fn run_run_command(matches: &ArgMatches) {
         std::process::exit(1)
     });
 
-    let app = BaseApp::new(db);
+    let app = BaseApp::new(db, app_name);
 
     run_rest_server(app.clone(), rest_port);
 
@@ -77,14 +77,14 @@ pub fn run_run_command(matches: &ArgMatches) {
     unreachable!("server.listen() will not return `Ok`")
 }
 
-pub fn get_run_command() -> Command {
+pub fn get_run_command(app_name: &str) -> Command {
     Command::new("run")
         .about("Run the full node application")
         .arg(
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir()
+                    get_default_home_dir(app_name)
                         .unwrap_or_default()
                         .display()
                         .to_string()
