@@ -186,6 +186,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "auth"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "database",
+ "gears",
+ "hex",
+ "ibc-proto 0.31.0-alpha.2",
+ "proto-messages",
+ "proto-types",
+ "store",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -249,6 +263,21 @@ dependencies = [
  "miniz_oxide",
  "object",
  "rustc-demangle",
+]
+
+[[package]]
+name = "bank"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "database",
+ "gears",
+ "hex",
+ "ibc-proto 0.31.0-alpha.2",
+ "proto-messages",
+ "proto-types",
+ "serde",
+ "store",
 ]
 
 [[package]]
@@ -1413,6 +1442,8 @@ name = "gaia-rs"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "auth",
+ "bank",
  "bech32",
  "bytes",
  "clap",
@@ -1439,6 +1470,9 @@ dependencies = [
  "serde-aux",
  "serde_json",
  "sha2 0.10.6",
+ "store",
+ "strum",
+ "strum_macros",
  "tendermint 0.1.0",
  "tendermint 0.29.1 (git+https://github.com/joneskm/tendermint-rs)",
  "tendermint-abci",
@@ -1481,6 +1515,9 @@ dependencies = [
  "serde-aux",
  "serde_json",
  "sha2 0.10.6",
+ "store",
+ "strum",
+ "strum_macros",
  "tendermint 0.1.0",
  "tendermint 0.29.1 (git+https://github.com/joneskm/tendermint-rs)",
  "tendermint-abci",
@@ -3953,6 +3990,20 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "store"
+version = "0.1.0"
+dependencies = [
+ "database",
+ "hex",
+ "integer-encoding",
+ "sha2 0.10.6",
+ "strum",
+ "strum_macros",
+ "thiserror",
+ "trees",
+]
 
 [[package]]
 name = "strsim"

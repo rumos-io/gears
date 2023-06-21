@@ -1,5 +1,8 @@
 use bytes::Bytes;
 use ibc_proto::cosmos::base::query::v1beta1::PageResponse;
+use std::hash::Hash;
+use store_crate::StoreKey;
+use strum::IntoEnumIterator;
 
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::bank::v1beta1::{
@@ -116,58 +119,60 @@ fn map_responses(res_tx: Response) -> Result<GetTxsEventResponse, Error> {
     })
 }
 
-/// Gets the total supply of every denom
-#[get("/cosmos/bank/v1beta1/supply")]
-pub async fn supply(app: &State<BaseApp>) -> Json<QueryTotalSupplyResponse> {
-    let store = app.multi_store.read().expect("RwLock will not be poisoned");
-    let ctx = QueryContext::new(&store, app.get_block_height());
+//#########################################
 
-    let coins = bank::Bank::get_paginated_total_supply(&ctx);
+// /// Gets the total supply of every denom
+// #[get("/cosmos/bank/v1beta1/supply")]
+// pub async fn supply(app: &State<BaseApp>) -> Json<QueryTotalSupplyResponse> {
+//     let store = app.multi_store.read().expect("RwLock will not be poisoned");
+//     let ctx = QueryContext::new(&store, app.get_block_height());
 
-    Json(QueryTotalSupplyResponse {
-        supply: coins,
-        pagination: None,
-    })
-}
+//     let coins = bank::Bank::get_paginated_total_supply(&ctx);
 
-/// Get all balances for a given address
-#[get("/cosmos/bank/v1beta1/balances/<addr>?<pagination>")]
-#[allow(unused_variables)]
-pub async fn get_balances(
-    app: &State<BaseApp>,
-    addr: String,
-    pagination: Pagination,
-) -> Result<Json<QueryAllBalancesResponse>, Error> {
-    let req = QueryAllBalancesRequest {
-        address: AccAddress::from_bech32(&addr).map_err(|e| Error::bad_request(e.to_string()))?,
-        pagination: None,
-    };
+//     Json(QueryTotalSupplyResponse {
+//         supply: coins,
+//         pagination: None,
+//     })
+// }
 
-    let store = app.multi_store.read().expect("RwLock will not be poisoned");
-    let ctx = QueryContext::new(&store, app.get_block_height());
+// /// Get all balances for a given address
+// #[get("/cosmos/bank/v1beta1/balances/<addr>?<pagination>")]
+// #[allow(unused_variables)]
+// pub async fn get_balances(
+//     app: &State<BaseApp>,
+//     addr: String,
+//     pagination: Pagination,
+// ) -> Result<Json<QueryAllBalancesResponse>, Error> {
+//     let req = QueryAllBalancesRequest {
+//         address: AccAddress::from_bech32(&addr).map_err(|e| Error::bad_request(e.to_string()))?,
+//         pagination: None,
+//     };
 
-    Ok(Json(bank::Bank::query_all_balances(&ctx, req)))
-}
+//     let store = app.multi_store.read().expect("RwLock will not be poisoned");
+//     let ctx = QueryContext::new(&store, app.get_block_height());
 
-/// Get balance for a given address and denom
-#[get("/cosmos/bank/v1beta1/balances/<addr>/by_denom?<denom>")]
-pub async fn get_balances_by_denom(
-    app: &State<BaseApp>,
-    addr: String,
-    denom: String,
-) -> Result<Json<QueryBalanceResponse>, Error> {
-    let req = QueryBalanceRequest {
-        address: AccAddress::from_bech32(&addr).map_err(|e| Error::bad_request(e.to_string()))?,
-        denom: String::from(denom)
-            .try_into()
-            .map_err(|e: proto_types::Error| Error::bad_request(e.to_string()))?,
-    };
+//     Ok(Json(bank::Bank::query_all_balances(&ctx, req)))
+// }
 
-    let store = app.multi_store.read().expect("RwLock will not be poisoned");
-    let ctx = QueryContext::new(&store, app.get_block_height());
+// /// Get balance for a given address and denom
+// #[get("/cosmos/bank/v1beta1/balances/<addr>/by_denom?<denom>")]
+// pub async fn get_balances_by_denom(
+//     app: &State<BaseApp>,
+//     addr: String,
+//     denom: String,
+// ) -> Result<Json<QueryBalanceResponse>, Error> {
+//     let req = QueryBalanceRequest {
+//         address: AccAddress::from_bech32(&addr).map_err(|e| Error::bad_request(e.to_string()))?,
+//         denom: String::from(denom)
+//             .try_into()
+//             .map_err(|e: proto_types::Error| Error::bad_request(e.to_string()))?,
+//     };
 
-    Ok(Json(bank::Bank::query_balance(&ctx, req)))
-}
+//     let store = app.multi_store.read().expect("RwLock will not be poisoned");
+//     let ctx = QueryContext::new(&store, app.get_block_height());
+
+//     Ok(Json(bank::Bank::query_balance(&ctx, req)))
+// }
 
 // This is a hack for now to make the front end work
 // TODO: remove this once the staking module is implemented

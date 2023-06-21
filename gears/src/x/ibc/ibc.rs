@@ -1,4 +1,4 @@
-use database::DB;
+use database::Database;
 use ibc::core::ics26_routing::msgs::MsgEnvelope;
 use proto_types::AccAddress;
 
@@ -35,7 +35,7 @@ impl IBCMsg {
     }
 }
 
-pub fn _run_tx<'a, 'b, T: DB>(
+pub fn _run_tx<'a, 'b, T: Database>(
     _ctx: &'a mut Context<'b, '_, T>,
     _msg: IBCMsg,
 ) -> Result<(), AppError> {

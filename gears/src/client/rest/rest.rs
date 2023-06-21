@@ -4,10 +4,11 @@ use rocket::{
     http::{Accept, Header},
     routes, Config, Request, Response as RocketResponse,
 };
+use std::hash::Hash;
+use store_crate::StoreKey;
+use strum::IntoEnumIterator;
 
-use super::handlers::{
-    get_balances, get_balances_by_denom, node_info, staking_params, supply, txs,
-};
+use super::handlers::{node_info, staking_params, txs};
 use crate::baseapp::BaseApp;
 
 fn rocket_launch(app: BaseApp, port: u16) {
@@ -33,9 +34,9 @@ fn rocket_launch(app: BaseApp, port: u16) {
                 node_info,
                 txs,
                 staking_params,
-                supply,
-                get_balances,
-                get_balances_by_denom
+                // supply,
+                // get_balances,
+                // get_balances_by_denom
             ],
         )
         .attach(CORS)

@@ -1,4 +1,4 @@
-use database::DB;
+use database::Database;
 use ibc_proto::cosmos::tx::v1beta1::SignDoc;
 use prost::Message;
 use proto_messages::cosmos::tx::v1beta1::PublicKey;
@@ -16,7 +16,7 @@ use crate::{
 pub struct AnteHandler {}
 
 impl AnteHandler {
-    pub fn run<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
+    pub fn run<T: Database>(ctx: &mut Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
         validate_basic_ante_handler(tx)?;
         tx_timeout_height_ante_handler(ctx, tx)?;
         validate_memo_ante_handler(ctx, tx)?;
@@ -64,7 +64,10 @@ fn validate_basic_ante_handler(tx: &DecodedTx) -> Result<(), AppError> {
     return Ok(());
 }
 
-fn tx_timeout_height_ante_handler<T: DB>(ctx: &Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
+fn tx_timeout_height_ante_handler<T: Database>(
+    ctx: &Context<T>,
+    tx: &DecodedTx,
+) -> Result<(), AppError> {
     let timeout_height = tx.get_timeout_height();
 
     // timeout_height of zero means no timeout height
@@ -84,7 +87,10 @@ fn tx_timeout_height_ante_handler<T: DB>(ctx: &Context<T>, tx: &DecodedTx) -> Re
     Ok(())
 }
 
-fn validate_memo_ante_handler<T: DB>(ctx: &Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
+fn validate_memo_ante_handler<T: Database>(
+    ctx: &Context<T>,
+    tx: &DecodedTx,
+) -> Result<(), AppError> {
     let max_memo_chars = AuthParams::get(ctx).max_memo_characters;
     let memo_length: u64 = tx
         .get_memo()
@@ -98,7 +104,10 @@ fn validate_memo_ante_handler<T: DB>(ctx: &Context<T>, tx: &DecodedTx) -> Result
     Ok(())
 }
 
-fn deduct_fee_ante_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
+fn deduct_fee_ante_handler<T: Database>(
+    ctx: &mut Context<T>,
+    tx: &DecodedTx,
+) -> Result<(), AppError> {
     let fee = tx.get_fee();
     let fee_payer = tx.get_fee_payer();
 
@@ -118,7 +127,10 @@ fn deduct_fee_ante_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Resul
     Ok(())
 }
 
-fn set_pub_key_ante_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
+fn set_pub_key_ante_handler<T: Database>(
+    ctx: &mut Context<T>,
+    tx: &DecodedTx,
+) -> Result<(), AppError> {
     let public_keys = tx.get_public_keys();
     let signers = tx.get_signers();
 
@@ -153,7 +165,10 @@ fn set_pub_key_ante_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Resu
     Ok(())
 }
 
-fn sig_verification_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Result<(), AppError> {
+fn sig_verification_handler<T: Database>(
+    ctx: &mut Context<T>,
+    tx: &DecodedTx,
+) -> Result<(), AppError> {
     let signers = tx.get_signers();
     let signature_data = tx.get_signatures_data();
 
@@ -214,7 +229,7 @@ fn sig_verification_handler<T: DB>(ctx: &mut Context<T>, tx: &DecodedTx) -> Resu
     return Ok(());
 }
 
-fn increment_sequence_ante_handler<T: DB>(
+fn increment_sequence_ante_handler<T: Database>(
     ctx: &mut Context<T>,
     tx: &DecodedTx,
 ) -> Result<(), AppError> {

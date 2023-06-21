@@ -1,7 +1,8 @@
+use std::hash::Hash;
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-use database::{RocksDB, DB};
+use database::{Database, RocksDB};
 use ibc_proto::cosmos::tx::v1beta1::Tx;
 use ibc_proto::protobuf::Protobuf;
 use prost::Message;
@@ -10,6 +11,8 @@ use bytes::Bytes;
 use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
 use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
 use proto_messages::cosmos::tx::v1beta1::Msg;
+use store_crate::StoreKey;
+use strum::IntoEnumIterator;
 use tendermint_abci::Application;
 use tendermint_informal::block::Header;
 use tendermint_proto::abci::{
@@ -145,7 +148,7 @@ impl BaseApp {
             raw.into(),
         );
 
-        match BaseApp::run_msgs(&mut ctx.as_any(), tx.get_msgs()) {
+        match Self::run_msgs(&mut ctx.as_any(), tx.get_msgs()) {
             Ok(_) => {
                 let events = ctx.events;
                 multi_store.write_then_clear_tx_caches();
@@ -158,7 +161,7 @@ impl BaseApp {
         }
     }
 
-    fn run_msgs<T: DB>(ctx: &mut Context<T>, msgs: &Vec<Msg>) -> Result<(), AppError> {
+    fn run_msgs<T: Database>(ctx: &mut Context<T>, msgs: &Vec<Msg>) -> Result<(), AppError> {
         for msg in msgs {
             match msg {
                 Msg::Send(send_msg) => {

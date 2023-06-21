@@ -1,0 +1,17 @@
+[package]
+name = "bank"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+gears = { path = "../../gears" }
+store = { path = "../../store" }
+database = { path = "../../database" }
+proto-types = { path = "../../proto-types" }
+proto-messages = { path = "../../proto-messages" }
+ibc-proto = { git = "https://github.com/joneskm/ibc-proto-rs" }
+bytes = "1.2.1"
+serde = { version = "1.0", default-features = false }
+
+[dev-dependencies]
+hex = "0.4.3"

@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use database::DB;
+use database::Database;
 use ibc_proto::{cosmos::auth::v1beta1::QueryAccountResponse, protobuf::Protobuf};
 use prost::Message;
 use proto_messages::cosmos::auth::v1beta1::{
@@ -62,7 +62,7 @@ impl Module {
 pub struct Auth {}
 
 impl Auth {
-    pub fn init_genesis<T: DB>(ctx: &mut Context<T>, genesis: GenesisState) {
+    pub fn init_genesis<T: Database>(ctx: &mut Context<T>, genesis: GenesisState) {
         //TODO: sdk sanitizes accounts
         Params::set(ctx, genesis.params);
 
@@ -75,7 +75,7 @@ impl Auth {
         Auth::check_create_new_module_account(ctx, &Module::FeeCollector);
     }
 
-    pub fn query_account<T: DB>(
+    pub fn query_account<T: Database>(
         ctx: &QueryContext<T>,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
@@ -95,7 +95,7 @@ impl Auth {
         return Err(AppError::AccountNotFound);
     }
 
-    fn get_next_account_number<T: DB>(ctx: &mut Context<T>) -> u64 {
+    fn get_next_account_number<T: Database>(ctx: &mut Context<T>) -> u64 {
         let auth_store = ctx.get_mutable_kv_store(Store::Auth);
 
         // NOTE: The next available account number is what's stored in the KV store
@@ -116,20 +116,20 @@ impl Auth {
         return acct_num;
     }
 
-    pub fn has_account<T: DB>(ctx: &Context<T>, addr: &AccAddress) -> bool {
+    pub fn has_account<T: Database>(ctx: &Context<T>, addr: &AccAddress) -> bool {
         let auth_store = ctx.get_kv_store(Store::Auth);
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
     }
 
-    pub fn set_account<T: DB>(ctx: &mut Context<T>, acct: Account) {
+    pub fn set_account<T: Database>(ctx: &mut Context<T>, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(Store::Auth);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec());
     }
 
-    pub fn get_account<T: DB>(ctx: &Context<T>, addr: &AccAddress) -> Option<Account> {
+    pub fn get_account<T: Database>(ctx: &Context<T>, addr: &AccAddress) -> Option<Account> {
         let auth_store = ctx.get_kv_store(Store::Auth);
         let key = create_auth_store_key(addr.to_owned());
         let account = auth_store.get(&key);
@@ -145,7 +145,7 @@ impl Auth {
     }
 
     /// Overwrites existing account
-    pub fn create_new_base_account<T: DB>(ctx: &mut Context<T>, addr: &AccAddress) {
+    pub fn create_new_base_account<T: Database>(ctx: &mut Context<T>, addr: &AccAddress) {
         let acct = BaseAccount {
             address: addr.clone(),
             pub_key: None,
@@ -157,7 +157,7 @@ impl Auth {
     }
 
     /// Creates a new module account if it doesn't already exist
-    pub fn check_create_new_module_account<T: DB>(ctx: &mut Context<T>, module: &Module) {
+    pub fn check_create_new_module_account<T: Database>(ctx: &mut Context<T>, module: &Module) {
         let addr = module.get_address();
 
         if Auth::has_account(ctx, &addr) {

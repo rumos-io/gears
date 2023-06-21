@@ -1,22 +1,22 @@
 use std::sync::Arc;
 
-use crate::DB;
+use crate::Database;
 
 #[derive(Debug)]
 pub struct PrefixDB<T>
 where
-    T: DB,
+    T: Database,
 {
     db: Arc<T>,
     prefix: Vec<u8>,
 }
 
-impl<T: DB> PrefixDB<T> {
+impl<T: Database> PrefixDB<T> {
     pub fn new(db: Arc<T>, prefix: Vec<u8>) -> Self {
         PrefixDB { db, prefix }
     }
 }
-impl<T: DB> DB for PrefixDB<T> {
+impl<T: Database> Database for PrefixDB<T> {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         let key = [&self.prefix, key].concat();
         self.db.get(&key)

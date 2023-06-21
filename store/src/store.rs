@@ -1,89 +1,111 @@
 use std::{
     collections::BTreeMap,
+    marker::PhantomData,
     ops::{Bound, RangeBounds},
     sync::Arc,
 };
 
 use database::{Database, PrefixDB};
+use std::{collections::HashMap, hash::Hash};
+use strum::IntoEnumIterator;
 use trees::iavl::{Range, Tree};
 
-use crate::error::AppError;
+use crate::error::Error;
 
 use super::hash::{self, StoreInfo};
 
-pub enum Store {
-    Bank,
-    Auth,
-    Params,
-}
-
 //TODO:
-// 1. this overlaps with Auth::Module
-// 2. use strum crate to iterate over stores
-// 3. move prefix store into separate file
-impl Store {
-    pub fn name(&self) -> &str {
-        match self {
-            Store::Bank => "bank",
-            Store::Auth => "acc",
-            Store::Params => "params",
-        }
-    }
-}
+// 1. move prefix store into separate file
+// 2. remove unwraps
 
 #[derive(Debug)]
-pub struct MultiStore<T: Database> {
-    bank_store: KVStore<PrefixDB<T>>,
-    auth_store: KVStore<PrefixDB<T>>,
-    params_store: KVStore<PrefixDB<T>>,
+pub struct MultiStore<DB: Database, SK: StoreKey> {
     head_version: u32,
     head_commit_hash: [u8; 32],
+    stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
 }
 
-impl<T: Database> MultiStore<T> {
-    pub fn new(db: T) -> Self {
+pub trait StoreKey: Hash + Eq + IntoEnumIterator {
+    fn name(&self) -> &'static str;
+}
+
+impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
+    pub fn new(db: DB) -> Self {
         let db = Arc::new(db);
 
-        let bank_store = KVStore::new(
-            PrefixDB::new(db.clone(), Store::Bank.name().as_bytes().to_vec()),
-            None,
-        )
-        .unwrap();
-        let auth_store = KVStore::new(
-            PrefixDB::new(db.clone(), Store::Auth.name().as_bytes().to_vec()),
-            None,
-        )
-        .unwrap();
-        let params_store = KVStore::new(
-            PrefixDB::new(db, Store::Params.name().as_bytes().to_vec()),
-            None,
-        )
-        .unwrap();
+        // let bank_store = KVStore::new(
+        //     PrefixDB::new(db.clone(), StoreOLD::Bank.name().as_bytes().to_vec()),
+        //     None,
+        // )
+        // .unwrap();
+        // let auth_store = KVStore::new(
+        //     PrefixDB::new(db.clone(), StoreOLD::Auth.name().as_bytes().to_vec()),
+        //     None,
+        // )
+        // .unwrap();
+        // let params_store = KVStore::new(
+        //     PrefixDB::new(db.clone(), StoreOLD::Params.name().as_bytes().to_vec()),
+        //     None,
+        // )
+        // .unwrap();
 
-        let bank_info = StoreInfo {
-            name: Store::Bank.name().into(),
-            hash: bank_store.head_commit_hash(),
-        };
+        // let bank_info = StoreInfo {
+        //     name: StoreOLD::Bank.name().into(),
+        //     hash: bank_store.head_commit_hash(),
+        // };
 
-        let auth_info = StoreInfo {
-            name: Store::Auth.name().into(),
-            hash: auth_store.head_commit_hash(),
-        };
+        // let auth_info = StoreInfo {
+        //     name: StoreOLD::Auth.name().into(),
+        //     hash: auth_store.head_commit_hash(),
+        // };
 
-        let params_info = StoreInfo {
-            name: Store::Params.name().into(),
-            hash: params_store.head_commit_hash(),
-        };
+        // let params_info = StoreInfo {
+        //     name: StoreOLD::Params.name().into(),
+        //     hash: params_store.head_commit_hash(),
+        // };
 
-        let store_infos = [bank_info, auth_info, params_info].into();
+        // let store_infos = [bank_info, auth_info, params_info].into();
+
+        let mut store_infos = vec![];
+        let mut stores = HashMap::new();
+        let mut head_version = 0;
+
+        for store in SK::iter() {
+            // TODO: check that store names are not prefixes
+            let prefix = store.name().as_bytes().to_vec();
+            let kv_store = KVStore::new(PrefixDB::new(db.clone(), prefix), None).unwrap();
+
+            let store_info = StoreInfo {
+                name: store.name().into(),
+                hash: kv_store.head_commit_hash(),
+            };
+
+            head_version = kv_store.last_committed_version();
+
+            stores.insert(store, kv_store);
+            store_infos.push(store_info)
+        }
 
         MultiStore {
-            head_version: bank_store.last_committed_version(),
-            bank_store,
-            auth_store,
-            params_store,
+            head_version,
+            // bank_store,
+            // auth_store,
+            // params_store,
             head_commit_hash: hash::hash_store_infos(store_infos),
+            stores,
         }
+    }
+
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
+        self.stores
+            .get(store_key)
+            .expect("a store for every key is guaranteed to exist")
+    }
+
+    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
+        self.stores
+            .get_mut(store_key)
+            .expect("a store for every key is guaranteed to exist")
     }
 
     pub fn get_head_version(&self) -> u32 {
@@ -94,53 +116,66 @@ impl<T: Database> MultiStore<T> {
         self.head_commit_hash
     }
 
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
-        match store_key {
-            Store::Bank => &self.bank_store,
-            Store::Auth => &self.auth_store,
-            Store::Params => &self.params_store,
-        }
-    }
+    // pub fn get_kv_store(&self, store_key: StoreOLD) -> &KVStore<PrefixDB<T>> {
+    //     match store_key {
+    //         StoreOLD::Bank => &self.bank_store,
+    //         StoreOLD::Auth => &self.auth_store,
+    //         StoreOLD::Params => &self.params_store,
+    //     }
+    // }
 
-    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore<PrefixDB<T>> {
-        match store_key {
-            Store::Bank => &mut self.bank_store,
-            Store::Auth => &mut self.auth_store,
-            Store::Params => &mut self.params_store,
-        }
-    }
+    // pub fn get_mutable_kv_store(&mut self, store_key: StoreOLD) -> &mut KVStore<PrefixDB<T>> {
+    //     match store_key {
+    //         StoreOLD::Bank => &mut self.bank_store,
+    //         StoreOLD::Auth => &mut self.auth_store,
+    //         StoreOLD::Params => &mut self.params_store,
+    //     }
+    // }
 
     /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
     pub fn write_then_clear_tx_caches(&mut self) {
-        self.bank_store.write_then_clear_tx_cache();
-        self.auth_store.write_then_clear_tx_cache();
-        self.params_store.write_then_clear_tx_cache();
+        for (_, store) in &mut self.stores {
+            store.write_then_clear_tx_cache();
+            // self.bank_store.write_then_clear_tx_cache();
+            // self.auth_store.write_then_clear_tx_cache();
+            // self.params_store.write_then_clear_tx_cache();
+        }
     }
 
     /// Clears the tx caches
     pub fn clear_tx_caches(&mut self) {
-        self.bank_store.clear_tx_cache();
-        self.auth_store.clear_tx_cache();
-        self.params_store.clear_tx_cache();
+        for (_, store) in &mut self.stores {
+            store.clear_tx_cache();
+        }
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
-        let bank_info = StoreInfo {
-            name: Store::Bank.name().into(),
-            hash: self.bank_store.commit(),
-        };
+        let mut store_infos = vec![];
+        for (store, kv_store) in &mut self.stores {
+            let store_info = StoreInfo {
+                name: store.name().into(),
+                hash: kv_store.head_commit_hash(),
+            };
 
-        let auth_info = StoreInfo {
-            name: Store::Auth.name().into(),
-            hash: self.auth_store.commit(),
-        };
+            store_infos.push(store_info)
+        }
 
-        let params_info = StoreInfo {
-            name: Store::Params.name().into(),
-            hash: self.params_store.commit(),
-        };
+        // let bank_info = StoreInfo {
+        //     name: StoreOLD::Bank.name().into(),
+        //     hash: self.bank_store.commit(),
+        // };
 
-        let store_infos = [bank_info, auth_info, params_info].into();
+        // let auth_info = StoreInfo {
+        //     name: StoreOLD::Auth.name().into(),
+        //     hash: self.auth_store.commit(),
+        // };
+
+        // let params_info = StoreInfo {
+        //     name: StoreOLD::Params.name().into(),
+        //     hash: self.params_store.commit(),
+        // };
+
+        // let store_infos = [bank_info, auth_info, params_info].into();
         let hash = hash::hash_store_infos(store_infos);
 
         self.head_commit_hash = hash;
@@ -150,14 +185,14 @@ impl<T: Database> MultiStore<T> {
 }
 
 #[derive(Debug)]
-pub struct KVStore<T: Database> {
-    persistent_store: Tree<T>,
+pub struct KVStore<DB: Database> {
+    persistent_store: Tree<DB>,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
-impl<T: Database> KVStore<T> {
-    pub fn new(db: T, target_version: Option<u32>) -> Result<Self, AppError> {
+impl<DB: Database> KVStore<DB> {
+    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
         Ok(KVStore {
             persistent_store: Tree::new(db, target_version)?,
             block_cache: BTreeMap::new(),
@@ -190,21 +225,21 @@ impl<T: Database> KVStore<T> {
         self.tx_cache.insert(key, value);
     }
 
-    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<T> {
+    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<DB> {
         ImmutablePrefixStore {
             store: self,
             prefix,
         }
     }
 
-    pub fn get_mutable_prefix_store(&mut self, prefix: Vec<u8>) -> MutablePrefixStore<T> {
+    pub fn get_mutable_prefix_store(&mut self, prefix: Vec<u8>) -> MutablePrefixStore<DB> {
         MutablePrefixStore {
             store: self,
             prefix,
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R, T>
+    pub fn range<R>(&self, range: R) -> Range<R, DB>
     where
         R: RangeBounds<Vec<u8>>,
     {
@@ -264,18 +299,18 @@ impl<T: Database> KVStore<T> {
 }
 
 /// Wraps an immutable reference to a KVStore with a prefix
-pub struct ImmutablePrefixStore<'a, T: Database> {
-    store: &'a KVStore<T>,
+pub struct ImmutablePrefixStore<'a, DB: Database> {
+    store: &'a KVStore<DB>,
     prefix: Vec<u8>,
 }
 
-impl<'a, T: Database> ImmutablePrefixStore<'a, T> {
+impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
     pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
         let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>>>(&self, range: R) -> PrefixRange<'a, T> {
+    pub fn range<R: RangeBounds<Vec<u8>>>(&self, range: R) -> PrefixRange<'a, DB> {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
@@ -295,12 +330,12 @@ impl<'a, T: Database> ImmutablePrefixStore<'a, T> {
     }
 }
 
-pub struct PrefixRange<'a, T: Database> {
-    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), T>,
+pub struct PrefixRange<'a, DB: Database> {
+    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
     prefix_length: usize,
 }
 
-impl<'a, T: Database> Iterator for PrefixRange<'a, T> {
+impl<'a, DB: Database> Iterator for PrefixRange<'a, DB> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -337,12 +372,12 @@ fn prefix_end_bound(mut prefix: Vec<u8>) -> Bound<Vec<u8>> {
 }
 
 /// Wraps an mutable reference to a KVStore with a prefix
-pub struct MutablePrefixStore<'a, T: Database> {
-    store: &'a mut KVStore<T>,
+pub struct MutablePrefixStore<'a, DB: Database> {
+    store: &'a mut KVStore<DB>,
     prefix: Vec<u8>,
 }
 
-impl<'a, T: Database> MutablePrefixStore<'a, T> {
+impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
     pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
         let full_key = [&self.prefix, k].concat();
         self.store.get(&full_key)

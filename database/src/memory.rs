@@ -1,10 +1,6 @@
-use std::{
-    cell::RefCell,
-    collections::{ BTreeMap},
-    ops::Bound,
-};
+use std::{cell::RefCell, collections::BTreeMap, ops::Bound};
 
-use crate::DB;
+use crate::Database;
 
 pub struct MemDB {
     store: RefCell<BTreeMap<Vec<u8>, Vec<u8>>>, // we use a refcell because the set method on the DB trait doesn't take a mutable ref
@@ -18,7 +14,7 @@ impl MemDB {
     }
 }
 
-impl DB for MemDB {
+impl Database for MemDB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.store.borrow().get(key).cloned()
     }

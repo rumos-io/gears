@@ -1,4 +1,4 @@
-use crate::{error::Error, DB};
+use crate::{error::Error, Database};
 use std::path::Path;
 
 use rocksdb::{DBWithThreadMode, SingleThreaded};
@@ -21,7 +21,7 @@ impl RocksDB {
     }
 }
 
-impl DB for RocksDB {
+impl Database for RocksDB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.db
             .get(key)

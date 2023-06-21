@@ -1,19 +1,19 @@
 use database::{Database, PrefixDB};
 use tendermint_informal::{abci::Event, block::Header};
 
-use crate::store::{KVStore, MultiStore, Store};
+use store_crate::{KVStore, MultiStore, StoreKey};
 
-pub struct TxContext<'a, T: Database> {
-    pub multi_store: &'a mut MultiStore<T>,
+pub struct TxContext<'a, T: Database, SK: StoreKey> {
+    pub multi_store: &'a mut MultiStore<T, SK>,
     height: u64,
     pub events: Vec<Event>,
     header: Header,
     _tx_bytes: Vec<u8>,
 }
 
-impl<'a, T: Database> TxContext<'a, T> {
+impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
     pub fn new(
-        multi_store: &'a mut MultiStore<T>,
+        multi_store: &'a mut MultiStore<T, SK>,
         height: u64,
         header: Header,
         tx_bytes: Vec<u8>,
@@ -27,17 +27,17 @@ impl<'a, T: Database> TxContext<'a, T> {
         }
     }
 
-    pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T> {
+    pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T, SK> {
         Context::TxContext(self)
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
         return self.multi_store.get_kv_store(store_key);
     }
 
     /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore<PrefixDB<T>> {
+    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>> {
         return self.multi_store.get_mutable_kv_store(store_key);
     }
 
@@ -54,15 +54,15 @@ impl<'a, T: Database> TxContext<'a, T> {
     }
 }
 
-pub struct InitContext<'a, T: Database> {
-    pub multi_store: &'a mut MultiStore<T>,
+pub struct InitContext<'a, T: Database, SK: StoreKey> {
+    pub multi_store: &'a mut MultiStore<T, SK>,
     height: u64,
     pub events: Vec<Event>,
     pub chain_id: String,
 }
 
-impl<'a, T: Database> InitContext<'a, T> {
-    pub fn new(multi_store: &'a mut MultiStore<T>, height: u64, chain_id: String) -> Self {
+impl<'a, T: Database, SK: StoreKey> InitContext<'a, T, SK> {
+    pub fn new(multi_store: &'a mut MultiStore<T, SK>, height: u64, chain_id: String) -> Self {
         InitContext {
             multi_store,
             height,
@@ -71,17 +71,17 @@ impl<'a, T: Database> InitContext<'a, T> {
         }
     }
 
-    pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T> {
+    pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T, SK> {
         Context::InitContext(self)
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
         return self.multi_store.get_kv_store(store_key);
     }
 
     /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore<PrefixDB<T>> {
+    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>> {
         return self.multi_store.get_mutable_kv_store(store_key);
     }
 
@@ -99,14 +99,14 @@ impl<'a, T: Database> InitContext<'a, T> {
 }
 
 /// This is used when a method can be used in either a tx or init context
-pub enum Context<'a, 'b, T: Database> {
-    TxContext(&'a mut TxContext<'b, T>),
-    InitContext(&'a mut InitContext<'b, T>),
+pub enum Context<'a, 'b, T: Database, SK: StoreKey> {
+    TxContext(&'a mut TxContext<'b, T, SK>),
+    InitContext(&'a mut InitContext<'b, T, SK>),
 }
 
-impl<'a, 'b, T: Database> Context<'a, 'b, T> {
+impl<'a, 'b, T: Database, SK: StoreKey> Context<'a, 'b, T, SK> {
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
         match self {
             Context::TxContext(ctx) => return ctx.get_kv_store(store_key),
             Context::InitContext(ctx) => return ctx.multi_store.get_kv_store(store_key),
@@ -114,7 +114,7 @@ impl<'a, 'b, T: Database> Context<'a, 'b, T> {
     }
 
     /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: Store) -> &mut KVStore<PrefixDB<T>> {
+    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>> {
         match self {
             Context::TxContext(ctx) => return ctx.get_mutable_kv_store(store_key),
             Context::InitContext(ctx) => return ctx.multi_store.get_mutable_kv_store(store_key),
@@ -151,13 +151,13 @@ impl<'a, 'b, T: Database> Context<'a, 'b, T> {
 }
 
 /// A Context which holds an immutable reference to a MultiStore
-pub struct QueryContext<'a, T: Database> {
-    pub multi_store: &'a MultiStore<T>,
+pub struct QueryContext<'a, T: Database, SK: StoreKey> {
+    pub multi_store: &'a MultiStore<T, SK>,
     _height: u64,
 }
 
-impl<'a, T: Database> QueryContext<'a, T> {
-    pub fn new(multi_store: &'a MultiStore<T>, height: u64) -> Self {
+impl<'a, T: Database, SK: StoreKey> QueryContext<'a, T, SK> {
+    pub fn new(multi_store: &'a MultiStore<T, SK>, height: u64) -> Self {
         QueryContext {
             multi_store,
             _height: height,
@@ -165,7 +165,7 @@ impl<'a, T: Database> QueryContext<'a, T> {
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: Store) -> &KVStore<PrefixDB<T>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
         return self.multi_store.get_kv_store(store_key);
     }
 

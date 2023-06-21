@@ -1,14 +1,109 @@
+use std::hash::Hash;
 use std::path::PathBuf;
 
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
+use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
+use store_crate::StoreKey;
+use strum::IntoEnumIterator;
 use tendermint_abci::ServerBuilder;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
-use crate::baseapp::BaseApp;
+use crate::baseapp::{BaseApp, MicroBaseApp};
 use crate::client::rest::run_rest_server;
 use crate::utils::get_default_home_dir;
+
+use super::ante_v2::{AuthKeeper, BankKeeper};
+use super::Handler;
+
+//use super::{Decoder, Message};
+
+pub fn run_run_command_micro<
+    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
+    M: Message,
+    BK: BankKeeper + Clone + Send + Sync + 'static,
+    AK: AuthKeeper + Clone + Send + Sync + 'static,
+    H: Handler<M, SK> + 'static,
+    //D: Decoder<M>,
+>(
+    matches: &ArgMatches,
+    app_name: &'static str,
+    bank_keeper: BK,
+    auth_keeper: AK,
+    handler: H,
+    //decoder: D,
+) {
+    let host = matches
+        .get_one::<String>("host")
+        .expect("Host arg has a default value so this cannot be `None`");
+
+    let port = matches
+        .get_one::<u16>("port")
+        .expect("Port arg has a default value so this cannot be `None`");
+
+    let read_buf_size = matches
+        .get_one::<usize>("read_buf_size")
+        .expect("Read buf size arg has a default value so this cannot be `None`.");
+
+    let rest_port = matches
+        .get_one::<u16>("rest_port")
+        .expect("REST port arg has a default value so this cannot be `None`")
+        .to_owned();
+
+    let verbose = matches.get_flag("verbose");
+    let quiet = matches.get_flag("quiet");
+
+    let log_level = if quiet {
+        LevelFilter::OFF
+    } else if verbose {
+        LevelFilter::DEBUG
+    } else {
+        LevelFilter::INFO
+    };
+
+    tracing_subscriber::fmt().with_max_level(log_level).init();
+
+    let default_home_directory = get_default_home_dir(app_name);
+    let home = matches
+        .get_one::<PathBuf>("home")
+        .or(default_home_directory.as_ref())
+        .unwrap_or_else(|| {
+            error!("Home argument not provided and OS does not provide a default home directory");
+            std::process::exit(1)
+        });
+    info!("Using directory {} for config and data", home.display());
+
+    let mut db_dir = home.clone();
+    db_dir.push("data");
+    db_dir.push("application.db");
+    let db = RocksDB::new(db_dir).unwrap_or_else(|e| {
+        error!("Could not open database: {}", e);
+        std::process::exit(1)
+    });
+
+    let mut db_dir = home.clone();
+    db_dir.push("data");
+    db_dir.push("application2.db");
+
+    let app: MicroBaseApp<SK, M, BK, AK, H> =
+        MicroBaseApp::new(db, app_name, bank_keeper, auth_keeper, handler);
+
+    //run_rest_server(app.clone(), rest_port);
+
+    let server = ServerBuilder::new(*read_buf_size)
+        .bind(format!("{}:{}", host, port), app)
+        .unwrap_or_else(|e| {
+            error!("Error binding to host: {}", e);
+            std::process::exit(1)
+        });
+    server.listen().unwrap_or_else(|e| {
+        error!("Fatal server error: {}", e);
+        std::process::exit(1)
+    });
+
+    unreachable!("server.listen() will not return `Ok`")
+}
 
 pub fn run_run_command(matches: &ArgMatches, app_name: &'static str) {
     let host = matches
@@ -58,6 +153,10 @@ pub fn run_run_command(matches: &ArgMatches, app_name: &'static str) {
         error!("Could not open database: {}", e);
         std::process::exit(1)
     });
+
+    let mut db_dir = home.clone();
+    db_dir.push("data");
+    db_dir.push("application2.db");
 
     let app = BaseApp::new(db, app_name);
 

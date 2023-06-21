@@ -2,7 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use bytes::Bytes;
 use cosmwasm_std::Uint256;
-use database::DB;
+use database::Database;
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{
@@ -44,7 +44,7 @@ pub struct Balance {
 }
 
 impl Bank {
-    pub fn init_genesis<T: DB>(ctx: &mut Context<T>, genesis: GenesisState) {
+    pub fn init_genesis<T: Database>(ctx: &mut Context<T>, genesis: GenesisState) {
         // TODO:
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
@@ -78,7 +78,7 @@ impl Bank {
         }
     }
 
-    pub fn query_balance<T: DB>(
+    pub fn query_balance<T: Database>(
         ctx: &QueryContext<T>,
         req: QueryBalanceRequest,
     ) -> QueryBalanceResponse {
@@ -99,7 +99,7 @@ impl Bank {
         }
     }
 
-    pub fn query_all_balances<T: DB>(
+    pub fn query_all_balances<T: Database>(
         ctx: &QueryContext<T>,
         req: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
@@ -125,7 +125,7 @@ impl Bank {
     // TODO: should be paginated
     // TODO: should ignore coins with zero balance
     // TODO: does this method guarantee that coins are sorted?
-    pub fn get_paginated_total_supply<T: DB>(ctx: &QueryContext<T>) -> Vec<Coin> {
+    pub fn get_paginated_total_supply<T: Database>(ctx: &QueryContext<T>) -> Vec<Coin> {
         let bank_store = ctx.get_kv_store(Store::Bank);
         let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into());
 
@@ -141,7 +141,7 @@ impl Bank {
             .collect()
     }
 
-    pub fn send_coins_from_account_to_module<T: DB>(
+    pub fn send_coins_from_account_to_module<T: Database>(
         ctx: &mut Context<T>,
         from_address: AccAddress,
         to_module: Module,
@@ -158,7 +158,7 @@ impl Bank {
         Bank::send_coins(ctx, msg)
     }
 
-    pub fn send_coins_from_account_to_account<T: DB>(
+    pub fn send_coins_from_account_to_account<T: Database>(
         ctx: &mut Context<T>,
         msg: MsgSend,
     ) -> Result<(), AppError> {
@@ -172,7 +172,7 @@ impl Bank {
         Ok(())
     }
 
-    fn send_coins<T: DB>(ctx: &mut Context<T>, msg: MsgSend) -> Result<(), AppError> {
+    fn send_coins<T: Database>(ctx: &mut Context<T>, msg: MsgSend) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
@@ -235,7 +235,7 @@ impl Bank {
         return Ok(());
     }
 
-    pub fn set_supply<T: DB>(ctx: &mut Context<T>, coin: Coin) {
+    pub fn set_supply<T: Database>(ctx: &mut Context<T>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(Store::Bank);
@@ -247,7 +247,7 @@ impl Bank {
         );
     }
 
-    fn get_address_balances_store<'a, T: DB>(
+    fn get_address_balances_store<'a, T: Database>(
         bank_store: &'a mut KVStore<T>,
         address: &AccAddress,
     ) -> MutablePrefixStore<'a, T> {

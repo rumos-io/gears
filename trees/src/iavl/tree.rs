@@ -6,7 +6,7 @@ use std::{
     sync::Arc,
 };
 
-use database::DB;
+use database::Database;
 use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
@@ -27,7 +27,7 @@ pub(crate) struct InnerNode {
 }
 
 impl InnerNode {
-    fn get_mut_left_node<T: DB>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
+    fn get_mut_left_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         if self.left_node.is_none() {
             let node = node_db
                 .get_node(&self.left_hash)
@@ -44,7 +44,7 @@ impl InnerNode {
         }
     }
 
-    fn get_left_node<T: DB>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
+    fn get_left_node<T: Database>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
         match &self.left_node {
             Some(node) => return node.clone(),
             None => Arc::new(
@@ -55,7 +55,7 @@ impl InnerNode {
         }
     }
 
-    fn get_mut_right_node<T: DB>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
+    fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         if self.right_node.is_none() {
             let node = node_db
                 .get_node(&self.right_hash)
@@ -72,7 +72,7 @@ impl InnerNode {
         }
     }
 
-    fn get_right_node<T: DB>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
+    fn get_right_node<T: Database>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
         match &self.right_node {
             Some(node) => return node.clone(),
             None => Arc::new(
@@ -83,7 +83,7 @@ impl InnerNode {
         }
     }
 
-    fn get_balance_factor<T: DB>(&self, node_db: &NodeDB<T>) -> i16 {
+    fn get_balance_factor<T: Database>(&self, node_db: &NodeDB<T>) -> i16 {
         let left_height: i16 = self.get_left_node(node_db).get_height().into();
         let right_height: i16 = self.get_right_node(node_db).get_height().into();
         left_height - right_height
@@ -245,7 +245,7 @@ impl Node {
 #[derive(Debug)]
 pub struct Tree<T>
 where
-    T: DB,
+    T: Database,
 {
     root: Option<Arc<Node>>,
     node_db: NodeDB<T>,
@@ -255,7 +255,7 @@ where
 
 impl<T> Tree<T>
 where
-    T: DB,
+    T: Database,
 {
     pub fn new(db: T, target_version: Option<u32>) -> Result<Tree<T>, Error> {
         let node_db = NodeDB::new(db);
@@ -629,14 +629,14 @@ where
 
 pub struct Range<'a, R: RangeBounds<Vec<u8>>, T>
 where
-    T: DB,
+    T: Database,
 {
     range: R,
     delayed_nodes: Vec<Arc<Node>>,
     node_db: &'a NodeDB<T>,
 }
 
-impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
+impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
     fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         let node = self.delayed_nodes.pop()?;
 
@@ -675,7 +675,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Range<'a, T, R> {
     }
 }
 
-impl<'a, T: RangeBounds<Vec<u8>>, R: DB> Iterator for Range<'a, T, R> {
+impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Iterator for Range<'a, T, R> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {

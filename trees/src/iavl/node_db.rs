@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use database::DB;
+use database::Database;
 use integer_encoding::VarInt;
 
 use crate::{merkle::EMPTY_HASH, Error};
@@ -10,7 +10,7 @@ use super::Node;
 #[derive(Debug)]
 pub struct NodeDB<T>
 where
-    T: DB,
+    T: Database,
 {
     db: T,
 }
@@ -20,7 +20,7 @@ const NODES_PREFIX: [u8; 1] = [2];
 
 impl<T> NodeDB<T>
 where
-    T: DB,
+    T: Database,
 {
     pub fn new(db: T) -> NodeDB<T> {
         NodeDB { db }
