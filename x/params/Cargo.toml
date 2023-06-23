@@ -1,5 +1,5 @@
 [package]
-name = "bank"
+name = "params"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,7 +12,8 @@ proto-messages = { path = "../../proto-messages" }
 ibc-proto = { git = "https://github.com/joneskm/ibc-proto-rs" }
 bytes = "1.2.1"
 serde = { version = "1.0", default-features = false }
-params-module = { package = "params", path = "../params" }
+strum = "0.24.1"
+strum_macros = "0.24"
 
 [dev-dependencies]
 hex = "0.4.3"

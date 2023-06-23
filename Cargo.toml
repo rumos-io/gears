@@ -10,4 +10,5 @@ members = [
     "store",
     "x/bank",
     "x/auth",
+    "x/params",
 ]

@@ -1,13 +1,7 @@
 use database::Database;
 use gears::types::context_v2::Context;
-use serde::{Deserialize, Serialize};
+use params_module::ParamsSubspaceKey;
 use store::StoreKey;
-
-// NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Params {
-    pub default_send_enabled: bool,
-}
 
 const KEY_SEND_ENABLED: [u8; 11] = [083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100]; // "SendEnabled"
 const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [
@@ -16,42 +10,55 @@ const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [
 
 const SUBSPACE_NAME: &str = "bank/";
 
+// NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
+pub struct Params {
+    pub default_send_enabled: bool,
+}
+
 pub const _DEFAULT_PARAMS: Params = Params {
     default_send_enabled: true,
 };
 
-// impl Params {
-//     pub fn get<DB: Database, SK: StoreKey>(ctx: &Context<DB, SK>) -> Params {
-//         let store = ctx.get_kv_store(crate::store::Store::Params);
-//         let store = store.get_immutable_prefix_store(SUBSPACE_NAME.into());
+#[derive(Debug, Clone)]
+pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+    pub params_keeper: params_module::Keeper<SK, PSK>,
+    pub params_subspace_key: PSK,
+}
 
-//         let default_send_enabled: bool = String::from_utf8(
-//             store
-//                 .get(&KEY_DEFAULT_SEND_ENABLED)
-//                 .expect("key should be set in kv store")
-//                 .clone(),
-//         )
-//         .expect("should be valid utf-8")
-//         .parse()
-//         .expect("should be valid bool");
+// TODO: add a macro to create this?
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
+    pub fn get<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params {
+        let store = self
+            .params_keeper
+            .get_raw_subspace(ctx, &self.params_subspace_key);
 
-//         Params {
-//             default_send_enabled,
-//         }
-//     }
+        let default_send_enabled: bool = String::from_utf8(
+            store
+                .get(&KEY_DEFAULT_SEND_ENABLED)
+                .expect("key should be set in kv store")
+                .clone(),
+        )
+        .expect("should be valid utf-8")
+        .parse()
+        .expect("should be valid bool");
 
-//     pub fn set<T: Database>(ctx: &mut Context<T>, params: Params) {
-//         let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
-//         let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
+        Params {
+            default_send_enabled,
+        }
+    }
 
-//         store.set(
-//             KEY_DEFAULT_SEND_ENABLED.into(),
-//             params.default_send_enabled.to_string().into(),
-//         );
+    // pub fn set<T: Database>(ctx: &mut Context<T>, params: Params) {
+    //     let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
+    //     let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
-//         // The send_enabled field is hard coded to the empty list for now
-//         store.set(KEY_SEND_ENABLED.into(), "[]".to_string().into());
+    //     store.set(
+    //         KEY_DEFAULT_SEND_ENABLED.into(),
+    //         params.default_send_enabled.to_string().into(),
+    //     );
 
-//         return;
-//     }
-// }
+    //     // The send_enabled field is hard coded to the empty list for now
+    //     store.set(KEY_SEND_ENABLED.into(), "[]".to_string().into());
+
+    //     return;
+    // }
+}
