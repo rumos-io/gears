@@ -13,6 +13,7 @@ ibc-proto = { git = "https://github.com/joneskm/ibc-proto-rs" }
 bytes = "1.2.1"
 serde = { version = "1.0", default-features = false }
 params-module = { package = "params", path = "../params" }
+cosmwasm-std = "1.1.5"
 
 [dev-dependencies]
 hex = "0.4.3"

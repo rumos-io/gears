@@ -1,6 +1,7 @@
 use database::Database;
 use gears::types::context_v2::Context;
 use params_module::ParamsSubspaceKey;
+use serde::{Deserialize, Serialize};
 use store::StoreKey;
 
 const KEY_SEND_ENABLED: [u8; 11] = [083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100]; // "SendEnabled"
@@ -11,6 +12,7 @@ const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [
 const SUBSPACE_NAME: &str = "bank/";
 
 // NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Params {
     pub default_send_enabled: bool,
 }
@@ -47,18 +49,22 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
         }
     }
 
-    // pub fn set<T: Database>(ctx: &mut Context<T>, params: Params) {
-    //     let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
-    //     let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
+    pub fn set<DB: Database>(&self, ctx: &mut Context<DB, SK>, params: Params) {
+        // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
+        // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
-    //     store.set(
-    //         KEY_DEFAULT_SEND_ENABLED.into(),
-    //         params.default_send_enabled.to_string().into(),
-    //     );
+        let mut store = self
+            .params_keeper
+            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
 
-    //     // The send_enabled field is hard coded to the empty list for now
-    //     store.set(KEY_SEND_ENABLED.into(), "[]".to_string().into());
+        store.set(
+            KEY_DEFAULT_SEND_ENABLED.into(),
+            params.default_send_enabled.to_string().into(),
+        );
 
-    //     return;
-    // }
+        // The send_enabled field is hard coded to the empty list for now
+        store.set(KEY_SEND_ENABLED.into(), "[]".to_string().into());
+
+        return;
+    }
 }
