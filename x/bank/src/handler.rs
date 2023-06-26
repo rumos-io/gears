@@ -1,16 +1,17 @@
 use database::Database;
 use gears::{error::AppError, types::context_v2::Context};
+use params_module::ParamsSubspaceKey;
 use store::StoreKey;
 
 use crate::{Keeper, Message};
 
 #[derive(Debug, Clone)]
-pub struct Handler<SK: StoreKey> {
-    keeper: Keeper<SK>,
+pub struct Handler<SK: StoreKey, PSK: ParamsSubspaceKey> {
+    keeper: Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey> Handler<SK> {
-    pub fn new(keeper: Keeper<SK>) -> Self {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
+    pub fn new(keeper: Keeper<SK, PSK>) -> Self {
         Handler { keeper }
     }
 

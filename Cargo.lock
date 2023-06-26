@@ -1462,6 +1462,7 @@ dependencies = [
  "ibc-relayer-types",
  "integer-encoding",
  "lazy_static",
+ "params",
  "prost",
  "proto-messages",
  "proto-types",

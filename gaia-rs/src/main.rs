@@ -71,6 +71,7 @@ fn main() -> Result<()> {
     enum GaiaStoreKey {
         Bank,
         Auth,
+        Params,
     }
 
     impl StoreKey for GaiaStoreKey {
@@ -78,11 +79,13 @@ fn main() -> Result<()> {
             match self {
                 GaiaStoreKey::Bank => "bank",
                 GaiaStoreKey::Auth => "acc",
+                GaiaStoreKey::Params => "params",
             }
         }
     }
 
-    let bank_keeper = Keeper::new(GaiaStoreKey::Bank);
+    let params_keeper = params::Keeper::new(GaiaStoreKey::Params);
+    let bank_keeper = Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
     let auth_keeper = AuthKeeper::new(GaiaStoreKey::Auth);
 
     #[derive(Debug, Clone)]
@@ -128,15 +131,31 @@ fn main() -> Result<()> {
 
     //------------------------------------------
     // handler stuff
+
+    #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+    enum GaiaParamsStoreKey {
+        Bank,
+    }
+
+    impl params::ParamsSubspaceKey for GaiaParamsStoreKey {
+        fn name(&self) -> &'static str {
+            match self {
+                Self::Bank => "bank", //TODO: check name
+            }
+        }
+    }
+
     #[derive(Debug, Clone)]
     struct Handler {
-        bank_handler: bank::Handler<GaiaStoreKey>,
+        bank_handler: bank::Handler<GaiaStoreKey, GaiaParamsStoreKey>,
         //auth_handler: AuthHandler<GaiaStoreKey>,
     }
 
     impl Handler {
         pub fn new() -> Handler {
-            let bank_keeper = Keeper::new(GaiaStoreKey::Bank);
+            let params_keeper = params::Keeper::new(GaiaStoreKey::Params);
+            let bank_keeper =
+                Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
             Handler {
                 bank_handler: bank::Handler::new(bank_keeper),
             }
@@ -192,7 +211,7 @@ fn main() -> Result<()> {
             run_run_command_micro::<
                 GaiaStoreKey,
                 Message,
-                Keeper<GaiaStoreKey>,
+                Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
                 AuthKeeper<GaiaStoreKey>,
                 Handler,
             >(sub_matches, APP_NAME, bank_keeper, auth_keeper, handler)
