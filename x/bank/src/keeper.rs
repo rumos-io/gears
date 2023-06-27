@@ -1,14 +1,25 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
+use bytes::Bytes;
 use cosmwasm_std::Uint256;
 use database::Database;
 
-use gears::{error::AppError, types::context_v2::Context};
+use gears::{
+    error::AppError,
+    types::context_v2::{Context, QueryContext},
+};
 use ibc_proto::protobuf::Protobuf;
 use params_module::ParamsSubspaceKey;
-use proto_messages::cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin};
+use proto_messages::cosmos::{
+    bank::v1beta1::{
+        MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
+        QueryBalanceResponse,
+    },
+    base::v1beta1::Coin,
+};
 use proto_types::{AccAddress, Denom};
-use store::StoreKey;
+use store::{KVStore, MutablePrefixStore, StoreKey};
+use tendermint_informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{BankParamsKeeper, GenesisState};
 
@@ -73,6 +84,177 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
+    pub fn query_balance<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        req: QueryBalanceRequest,
+    ) -> QueryBalanceResponse {
+        let bank_store = ctx.get_kv_store(&self.store_key);
+        let prefix = create_denom_balance_prefix(req.address);
+
+        let account_store = bank_store.get_immutable_prefix_store(prefix);
+        let bal = account_store.get(req.denom.to_string().as_bytes());
+
+        match bal {
+            Some(amount) => QueryBalanceResponse {
+                balance: Some(
+                    Coin::decode::<Bytes>(amount.to_owned().into())
+                        .expect("invalid data in database - possible database corruption"),
+                ),
+            },
+            None => QueryBalanceResponse { balance: None },
+        }
+    }
+
+    pub fn query_all_balances<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        req: QueryAllBalancesRequest,
+    ) -> QueryAllBalancesResponse {
+        let bank_store = ctx.get_kv_store(&self.store_key);
+        let prefix = create_denom_balance_prefix(req.address);
+        let account_store = bank_store.get_immutable_prefix_store(prefix);
+
+        let mut balances = vec![];
+
+        for (_, coin) in account_store.range(..) {
+            let coin: Coin = Coin::decode::<Bytes>(coin.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
+            balances.push(coin);
+        }
+
+        QueryAllBalancesResponse {
+            balances,
+            pagination: None,
+        }
+    }
+
+    /// Gets the total supply of every denom
+    // TODO: should be paginated
+    // TODO: should ignore coins with zero balance
+    // TODO: does this method guarantee that coins are sorted?
+    pub fn get_paginated_total_supply<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+    ) -> Vec<Coin> {
+        let bank_store = ctx.get_kv_store(&self.store_key);
+        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into());
+
+        supply_store
+            .range(..)
+            .map(|raw_coin| {
+                let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
+                    .expect("invalid data in database - possible database corruption");
+                let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
+                    .expect("invalid data in database - possible database corruption");
+                Coin { denom, amount }
+            })
+            .collect()
+    }
+
+    // TODO: add this method
+    // pub fn send_coins_from_account_to_module<DB: Database>(
+    //     ctx: &mut Context<DB, SK>,
+    //     from_address: AccAddress,
+    //     to_module: Module,
+    //     amount: SendCoins,
+    // ) -> Result<(), AppError> {
+    //     Auth::check_create_new_module_account(ctx, &to_module);
+
+    //     let msg = MsgSend {
+    //         from_address,
+    //         to_address: to_module.get_address(),
+    //         amount,
+    //     };
+
+    //     Bank::send_coins(ctx, msg)
+    // }
+
+    pub fn send_coins_from_account_to_account<DB: Database>(
+        &self,
+        ctx: &mut Context<DB, SK>,
+        msg: &MsgSend,
+    ) -> Result<(), AppError> {
+        self.send_coins(ctx, msg.clone())?;
+
+        // Create account if recipient does not exist
+        // TODO: add auth keeper
+        // if !Auth::has_account(ctx, &msg.to_address) {
+        //     Auth::create_new_base_account(ctx, &msg.to_address);
+        // };
+
+        Ok(())
+    }
+
+    fn send_coins<DB: Database>(
+        &self,
+        ctx: &mut Context<DB, SK>,
+        msg: MsgSend,
+    ) -> Result<(), AppError> {
+        // TODO: refactor this to subtract all amounts before adding all amounts
+
+        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        let mut events = vec![];
+
+        let from_address = msg.from_address;
+        let to_address = msg.to_address;
+
+        for send_coin in msg.amount {
+            let mut from_account_store =
+                Self::get_address_balances_store(bank_store, &from_address);
+            let from_balance = from_account_store
+                .get(send_coin.denom.to_string().as_bytes())
+                .ok_or(AppError::Send("Insufficient funds".into()))?;
+
+            let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
+
+            if from_balance.amount < send_coin.amount {
+                return Err(AppError::Send("Insufficient funds".into()));
+            }
+
+            from_balance.amount = from_balance.amount - send_coin.amount;
+
+            from_account_store.set(
+                send_coin.denom.clone().to_string().into(),
+                from_balance.encode_vec(),
+            );
+
+            //TODO: if balance == 0 then denom should be removed from store
+
+            let mut to_account_store = Self::get_address_balances_store(bank_store, &to_address);
+            let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
+
+            let mut to_balance: Coin = match to_balance {
+                Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
+                    .expect("invalid data in database - possible database corruption"),
+                None => Coin {
+                    denom: send_coin.denom.clone(),
+                    amount: Uint256::zero(),
+                },
+            };
+
+            to_balance.amount = to_balance.amount + send_coin.amount;
+
+            to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
+
+            events.push(Event::new(
+                "transfer",
+                vec![
+                    ("recipient", String::from(to_address.clone())).index(),
+                    ("sender", String::from(from_address.clone())).index(),
+                    ("amount", send_coin.amount.into()).index(),
+                ],
+            ));
+        }
+
+        ctx.append_events(events);
+
+        return Ok(());
+    }
+
+    //#######
+
     pub fn set_supply<DB: Database>(&self, ctx: &mut Context<DB, SK>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
@@ -85,12 +267,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         );
     }
 
-    pub fn send_coins<DB: Database>(
-        &self,
-        ctx: &mut Context<DB, SK>,
-        msg: &MsgSend,
-    ) -> Result<(), AppError> {
-        Ok(())
+    fn get_address_balances_store<'a, DB: Database>(
+        bank_store: &'a mut KVStore<DB>,
+        address: &AccAddress,
+    ) -> MutablePrefixStore<'a, DB> {
+        let prefix = create_denom_balance_prefix(address.to_owned());
+        bank_store.get_mutable_prefix_store(prefix)
     }
 }
 

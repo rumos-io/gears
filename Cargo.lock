@@ -280,6 +280,7 @@ dependencies = [
  "proto-types",
  "serde",
  "store",
+ "tendermint 0.29.1 (git+https://github.com/joneskm/tendermint-rs)",
 ]
 
 [[package]]
