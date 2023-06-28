@@ -86,7 +86,9 @@ fn main() -> Result<()> {
 
     let params_keeper = params::Keeper::new(GaiaStoreKey::Params);
     let bank_keeper = Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
-    let auth_keeper = AuthKeeper::new(GaiaStoreKey::Auth);
+
+    let params_keeper = params::Keeper::new(GaiaStoreKey::Params);
+    let auth_keeper = AuthKeeper::new(GaiaStoreKey::Auth, params_keeper, GaiaParamsStoreKey::Auth);
 
     #[derive(Debug, Clone)]
     enum Message {
@@ -135,12 +137,14 @@ fn main() -> Result<()> {
     #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
     enum GaiaParamsStoreKey {
         Bank,
+        Auth,
     }
 
     impl params::ParamsSubspaceKey for GaiaParamsStoreKey {
         fn name(&self) -> &'static str {
             match self {
-                Self::Bank => "bank", //TODO: check name
+                Self::Bank => "bank/",
+                Self::Auth => "auth/",
             }
         }
     }
@@ -212,7 +216,7 @@ fn main() -> Result<()> {
                 GaiaStoreKey,
                 Message,
                 Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
-                AuthKeeper<GaiaStoreKey>,
+                AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
                 Handler,
             >(sub_matches, APP_NAME, bank_keeper, auth_keeper, handler)
         }

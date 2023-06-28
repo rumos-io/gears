@@ -287,3 +287,5 @@ fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
 
     return prefix;
 }
+
+//TODO: copy tests across

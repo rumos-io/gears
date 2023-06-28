@@ -17,7 +17,7 @@ pub struct Params {
     pub default_send_enabled: bool,
 }
 
-pub const _DEFAULT_PARAMS: Params = Params {
+pub const DEFAULT_PARAMS: Params = Params {
     default_send_enabled: true,
 };
 
