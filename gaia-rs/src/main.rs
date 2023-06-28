@@ -172,9 +172,9 @@ fn main() -> Result<()> {
 
             let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
             let auth_keeper = auth_crate::Keeper::new(
-                GaiaStoreKey::Bank,
+                GaiaStoreKey::Auth,
                 params_keeper,
-                GaiaParamsStoreKey::Bank,
+                GaiaParamsStoreKey::Auth,
             );
             Handler {
                 bank_handler: bank::Handler::new(bank_keeper),

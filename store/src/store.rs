@@ -154,7 +154,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
         for (store, kv_store) in &mut self.stores {
             let store_info = StoreInfo {
                 name: store.name().into(),
-                hash: kv_store.head_commit_hash(),
+                hash: kv_store.commit(),
             };
 
             store_infos.push(store_info)
