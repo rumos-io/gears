@@ -194,7 +194,6 @@ dependencies = [
  "gears",
  "hex",
  "ibc-proto 0.31.0-alpha.2",
- "params",
  "prost",
  "proto-messages",
  "proto-types",
@@ -279,7 +278,6 @@ dependencies = [
  "gears",
  "hex",
  "ibc-proto 0.31.0-alpha.2",
- "params",
  "proto-messages",
  "proto-types",
  "serde",
@@ -1468,7 +1466,6 @@ dependencies = [
  "ibc-relayer-types",
  "integer-encoding",
  "lazy_static",
- "params",
  "prost",
  "proto-messages",
  "proto-types",
@@ -2648,23 +2645,6 @@ name = "overload"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
-
-[[package]]
-name = "params"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "database",
- "gears",
- "hex",
- "ibc-proto 0.31.0-alpha.2",
- "proto-messages",
- "proto-types",
- "serde",
- "store",
- "strum",
- "strum_macros",
-]
 
 [[package]]
 name = "parity-scale-codec"

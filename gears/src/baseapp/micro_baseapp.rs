@@ -12,15 +12,21 @@ use store_crate::{MultiStore, StoreKey};
 use strum::IntoEnumIterator;
 use tendermint_abci::Application;
 use tendermint_informal::block::Header;
-use tendermint_proto::abci::{RequestDeliverTx, ResponseDeliverTx};
+use tendermint_proto::abci::{
+    RequestDeliverTx, RequestInitChain, ResponseDeliverTx, ResponseInitChain,
+};
 use tracing::info;
 
 use crate::{
     error::AppError,
-    types::context_v2::{Context, TxContext},
+    types::context_v2::{Context, InitContext, TxContext},
+    x::params::{Keeper, ParamsSubspaceKey},
 };
 
-use super::ante_v2::{AnteHandler, AuthKeeper, BankKeeper};
+use super::{
+    ante_v2::{AnteHandler, AuthKeeper, BankKeeper},
+    params::BaseAppParamsKeeper,
+};
 
 pub trait Handler<M: Message, SK: StoreKey>: Clone + Send + Sync {
     fn handle<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
@@ -28,16 +34,18 @@ pub trait Handler<M: Message, SK: StoreKey>: Clone + Send + Sync {
 
 #[derive(Debug, Clone)]
 pub struct MicroBaseApp<
-    S: StoreKey,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
     M: Message,
     BK: BankKeeper + Clone + Send + Sync + 'static,
     AK: AuthKeeper + Clone + Send + Sync + 'static,
-    H: Handler<M, S>,
+    H: Handler<M, SK>,
 > {
-    pub multi_store: Arc<RwLock<MultiStore<RocksDB, S>>>,
+    pub multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     base_ante_handler: AnteHandler<BK, AK>,
     handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
+    baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
     pub m: PhantomData<M>,
     // pub d: PhantomData<D>,
     // pub r: PhantomData<R>,
@@ -47,12 +55,53 @@ impl<
         M: Message + 'static,
         // D: Decoder<M> + 'static,
         // R: Router<M> + 'static,
-        S: StoreKey + Clone + Send + Sync + 'static,
+        SK: StoreKey + Clone + Send + Sync + 'static,
+        PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
         BK: BankKeeper + Clone + Send + Sync + 'static,
         AK: AuthKeeper + Clone + Send + Sync + 'static,
-        H: Handler<M, S> + 'static,
-    > Application for MicroBaseApp<S, M, BK, AK, H>
+        H: Handler<M, SK> + 'static,
+    > Application for MicroBaseApp<SK, PSK, M, BK, AK, H>
 {
+    fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
+        info!("Got init chain request");
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        //TODO: handle request height > 1 as is done in SDK
+
+        let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), request.chain_id);
+
+        if let Some(params) = request.consensus_params.clone() {
+            self.baseapp_params_keeper
+                .set_consensus_params(&mut ctx.as_any(), params);
+        }
+
+        // TODO: uncomment
+        // let genesis = String::from_utf8(request.app_state_bytes.into())
+        //     .map_err(|e| AppError::Genesis(e.to_string()))
+        //     .and_then(|f| GenesisState::from_str(&f))
+        //     .unwrap_or_else(|e| {
+        //         error!(
+        //             "Invalid genesis provided by Tendermint.\n{}\nTerminating process",
+        //             e.to_string()
+        //         );
+        //         std::process::exit(1)
+        //     });
+
+        // Bank::init_genesis(&mut ctx.as_any(), genesis.bank);
+        // Auth::init_genesis(&mut ctx.as_any(), genesis.auth);
+
+        multi_store.write_then_clear_tx_caches();
+
+        ResponseInitChain {
+            consensus_params: request.consensus_params,
+            validators: request.validators,
+            app_hash: "hash_goes_here".into(),
+        }
+    }
+
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
         //     match self.run_tx(request.tx) {
@@ -137,26 +186,34 @@ impl<
         M: Message,
         // D: Decoder<M>,
         // R: Router<M>,
-        S: StoreKey,
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
         BK: BankKeeper + Clone + Send + Sync + 'static,
         AK: AuthKeeper + Clone + Send + Sync + 'static,
-        H: Handler<M, S>,
-    > MicroBaseApp<S, M, BK, AK, H>
+        H: Handler<M, SK>,
+    > MicroBaseApp<SK, PSK, M, BK, AK, H>
 {
     pub fn new(
         db: RocksDB,
         app_name: &'static str,
         bank_keeper: BK,
         auth_keeper: AK,
+        params_keeper: Keeper<SK, PSK>,
+        params_subspace_key: PSK,
         handler: H,
     ) -> Self {
         let multi_store = MultiStore::new(db);
+        let baseapp_params_keeper = BaseAppParamsKeeper {
+            params_keeper,
+            params_subspace_key,
+        };
         //let height = multi_store.get_head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
             base_ante_handler: AnteHandler::new(bank_keeper, auth_keeper),
             handler,
             block_header: Arc::new(RwLock::new(None)),
+            baseapp_params_keeper,
             //height: Arc::new(RwLock::new(height)),
             //block_header: Arc::new(RwLock::new(None)),
             //app_name,
@@ -177,7 +234,7 @@ impl<
             .clone()
     }
 
-    fn run_msgs<T: Database>(ctx: &mut Context<T, S>, msgs: &Vec<M>) -> Result<(), AppError> {
+    fn run_msgs<T: Database>(ctx: &mut Context<T, SK>, msgs: &Vec<M>) -> Result<(), AppError> {
         // for msg in msgs {
         //     match msg {
         //         Msg::Send(send_msg) => {

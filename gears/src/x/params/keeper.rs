@@ -1,9 +1,10 @@
 use database::{Database, PrefixDB};
+use store_crate::StoreKey;
 
-use gears::types::context_v2::Context;
 use std::{hash::Hash, marker::PhantomData};
-use store::StoreKey;
 use strum::IntoEnumIterator;
+
+use crate::types::context_v2::Context;
 
 pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator {
     fn name(&self) -> &'static str;
@@ -27,7 +28,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &'a Context<DB, SK>,
         params_subspace_key: &PSK,
-    ) -> store::ImmutablePrefixStore<'a, PrefixDB<DB>> {
+    ) -> store_crate::ImmutablePrefixStore<'a, PrefixDB<DB>> {
         let params_store = ctx.get_kv_store(&self.store_key);
 
         params_store.get_immutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())
@@ -37,7 +38,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &'a mut Context<DB, SK>,
         params_subspace_key: &PSK,
-    ) -> store::MutablePrefixStore<'a, PrefixDB<DB>> {
+    ) -> store_crate::MutablePrefixStore<'a, PrefixDB<DB>> {
         let params_store = ctx.get_mutable_kv_store(&self.store_key);
 
         params_store.get_mutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())

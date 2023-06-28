@@ -7,9 +7,9 @@ use database::Database;
 use gears::{
     error::AppError,
     types::context_v2::{Context, QueryContext},
+    x::params::ParamsSubspaceKey,
 };
 use ibc_proto::protobuf::Protobuf;
-use params_module::ParamsSubspaceKey;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -37,7 +37,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::BankKeeper f
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     pub fn new(
         store_key: SK,
-        params_keeper: params_module::Keeper<SK, PSK>,
+        params_keeper: gears::x::params::Keeper<SK, PSK>,
         params_subspace_key: PSK,
     ) -> Self {
         let bank_params_keeper = BankParamsKeeper {

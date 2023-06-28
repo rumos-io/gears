@@ -4,9 +4,10 @@ use database::Database;
 use gears::{
     error::AppError,
     types::context_v2::{Context, QueryContext},
+    x::params::ParamsSubspaceKey,
 };
 use ibc_proto::protobuf::Protobuf;
-use params_module::ParamsSubspaceKey;
+//use params_module::ParamsSubspaceKey;
 use prost::Message;
 use proto_messages::cosmos::auth::v1beta1::{
     Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
@@ -42,7 +43,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::AuthKeeper
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK, PSK> {
     pub fn new(
         store_key: SK,
-        params_keeper: params_module::Keeper<SK, PSK>,
+        params_keeper: gears::x::params::Keeper<SK, PSK>,
         params_subspace_key: PSK,
     ) -> Self {
         let auth_params_keeper = AuthParamsKeeper {

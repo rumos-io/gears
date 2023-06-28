@@ -1,11 +1,13 @@
 use database::Database;
 use serde::{Deserialize, Serialize};
+use store_crate::StoreKey;
 use tendermint_proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
 
 use tendermint_proto::types::EvidenceParams as RawEvidenceParams;
 use tendermint_proto::types::ValidatorParams as RawValidatorParams;
 
-use crate::types::Context;
+use crate::types::context_v2::Context;
+use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
 const KEY_EVIDENCE_PARAMS: [u8; 14] = [
@@ -77,26 +79,43 @@ impl From<RawEvidenceParams> for EvidenceParams {
     }
 }
 
-pub fn set_consensus_params<T: Database>(ctx: &mut Context<T>, params: ConsensusParams) {
-    let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
-    let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
+#[derive(Debug, Clone)]
+pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+    pub params_keeper: Keeper<SK, PSK>,
+    pub params_subspace_key: PSK,
+}
 
-    if let Some(params) = params.block {
-        let block_params = serde_json::to_string(&BlockParams::from(params))
-            .expect("conversion to json won't fail");
-        store.set(KEY_BLOCK_PARAMS.into(), block_params.into_bytes());
-    }
+// TODO: add a macro to create this?
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
+    pub fn set_consensus_params<DB: Database>(
+        &self,
+        ctx: &mut Context<DB, SK>,
+        params: ConsensusParams,
+    ) {
+        // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
+        // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
-    if let Some(params) = params.evidence {
-        let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
-            .expect("conversion to json won't fail");
-        store.set(KEY_EVIDENCE_PARAMS.into(), evidence_params.into_bytes());
-    }
+        let mut store = self
+            .params_keeper
+            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
 
-    if let Some(params) = params.validator {
-        let params = serde_json::to_string(&ValidatorParams::from(params))
-            .expect("conversion to json won't fail");
-        store.set(KEY_VALIDATOR_PARAMS.into(), params.into_bytes());
+        if let Some(params) = params.block {
+            let block_params = serde_json::to_string(&BlockParams::from(params))
+                .expect("conversion to json won't fail");
+            store.set(KEY_BLOCK_PARAMS.into(), block_params.into_bytes());
+        }
+
+        if let Some(params) = params.evidence {
+            let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
+                .expect("conversion to json won't fail");
+            store.set(KEY_EVIDENCE_PARAMS.into(), evidence_params.into_bytes());
+        }
+
+        if let Some(params) = params.validator {
+            let params = serde_json::to_string(&ValidatorParams::from(params))
+                .expect("conversion to json won't fail");
+            store.set(KEY_VALIDATOR_PARAMS.into(), params.into_bytes());
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use database::Database;
-use gears::types::context_v2::Context;
-use params_module::ParamsSubspaceKey;
+use gears::{types::context_v2::Context, x::params::ParamsSubspaceKey};
+//use params_module::ParamsSubspaceKey;
 use proto_messages::utils::serialize_number_to_string;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -53,7 +53,7 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 #[derive(Debug, Clone)]
 pub struct AuthParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: params_module::Keeper<SK, PSK>,
+    pub params_keeper: gears::x::params::Keeper<SK, PSK>,
     pub params_subspace_key: PSK,
 }
 

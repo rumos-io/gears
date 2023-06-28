@@ -202,7 +202,8 @@ impl Application for BaseApp {
         let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), request.chain_id);
 
         if let Some(params) = request.consensus_params.clone() {
-            params::set_consensus_params(&mut ctx.as_any(), params);
+            // TODO: uncomment this:
+            //params::set_consensus_params(&mut ctx.as_any(), params);
         }
 
         let genesis = String::from_utf8(request.app_state_bytes.into())

@@ -10,6 +10,7 @@ use gears::baseapp::cli::get_run_command;
 use gears::client::{init::get_init_command, query::get_query_command, tx::get_tx_command};
 use gears::error::AppError;
 use gears::types::context_v2::Context;
+use gears::x::params::ParamsSubspaceKey;
 use human_panic::setup_panic;
 
 use gears::{
@@ -84,10 +85,10 @@ fn main() -> Result<()> {
         }
     }
 
-    let params_keeper = params::Keeper::new(GaiaStoreKey::Params);
+    let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
     let bank_keeper = Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
 
-    let params_keeper = params::Keeper::new(GaiaStoreKey::Params);
+    let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
     let auth_keeper = AuthKeeper::new(GaiaStoreKey::Auth, params_keeper, GaiaParamsStoreKey::Auth);
 
     #[derive(Debug, Clone)]
@@ -138,13 +139,15 @@ fn main() -> Result<()> {
     enum GaiaParamsStoreKey {
         Bank,
         Auth,
+        BaseApp,
     }
 
-    impl params::ParamsSubspaceKey for GaiaParamsStoreKey {
+    impl ParamsSubspaceKey for GaiaParamsStoreKey {
         fn name(&self) -> &'static str {
             match self {
                 Self::Bank => "bank/",
                 Self::Auth => "auth/",
+                Self::BaseApp => "baseapp/",
             }
         }
     }
@@ -157,7 +160,7 @@ fn main() -> Result<()> {
 
     impl Handler {
         pub fn new() -> Handler {
-            let params_keeper = params::Keeper::new(GaiaStoreKey::Params);
+            let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
             let bank_keeper =
                 Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
             Handler {
@@ -212,13 +215,24 @@ fn main() -> Result<()> {
     match matches.subcommand() {
         Some(("init", sub_matches)) => run_init_command(sub_matches, APP_NAME),
         Some(("run", sub_matches)) => {
+            let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
+
             run_run_command_micro::<
                 GaiaStoreKey,
+                GaiaParamsStoreKey,
                 Message,
                 Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
                 AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
                 Handler,
-            >(sub_matches, APP_NAME, bank_keeper, auth_keeper, handler)
+            >(
+                sub_matches,
+                APP_NAME,
+                bank_keeper,
+                auth_keeper,
+                params_keeper,
+                GaiaParamsStoreKey::BaseApp,
+                handler,
+            )
         }
         Some(("query", sub_matches)) => run_query_command(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches, APP_NAME)?,

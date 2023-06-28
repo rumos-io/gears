@@ -13,6 +13,7 @@ use tracing::{error, info};
 use crate::baseapp::{BaseApp, MicroBaseApp};
 use crate::client::rest::run_rest_server;
 use crate::utils::get_default_home_dir;
+use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 use super::ante_v2::{AuthKeeper, BankKeeper};
 use super::Handler;
@@ -21,6 +22,7 @@ use super::Handler;
 
 pub fn run_run_command_micro<
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
+    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
     M: Message,
     BK: BankKeeper + Clone + Send + Sync + 'static,
     AK: AuthKeeper + Clone + Send + Sync + 'static,
@@ -31,6 +33,8 @@ pub fn run_run_command_micro<
     app_name: &'static str,
     bank_keeper: BK,
     auth_keeper: AK,
+    params_keeper: Keeper<SK, PSK>,
+    params_subspace_key: PSK,
     handler: H,
     //decoder: D,
 ) {
@@ -86,8 +90,15 @@ pub fn run_run_command_micro<
     db_dir.push("data");
     db_dir.push("application2.db");
 
-    let app: MicroBaseApp<SK, M, BK, AK, H> =
-        MicroBaseApp::new(db, app_name, bank_keeper, auth_keeper, handler);
+    let app: MicroBaseApp<SK, PSK, M, BK, AK, H> = MicroBaseApp::new(
+        db,
+        app_name,
+        bank_keeper,
+        auth_keeper,
+        params_keeper,
+        params_subspace_key,
+        handler,
+    );
 
     //run_rest_server(app.clone(), rest_port);
 

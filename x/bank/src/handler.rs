@@ -1,6 +1,5 @@
 use database::Database;
-use gears::{error::AppError, types::context_v2::Context};
-use params_module::ParamsSubspaceKey;
+use gears::{error::AppError, types::context_v2::Context, x::params::ParamsSubspaceKey};
 use store::StoreKey;
 
 use crate::{Keeper, Message};

@@ -1,6 +1,5 @@
 use database::Database;
-use gears::types::context_v2::Context;
-use params_module::ParamsSubspaceKey;
+use gears::{types::context_v2::Context, x::params::ParamsSubspaceKey};
 use serde::{Deserialize, Serialize};
 use store::StoreKey;
 
@@ -23,7 +22,7 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 #[derive(Debug, Clone)]
 pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: params_module::Keeper<SK, PSK>,
+    pub params_keeper: gears::x::params::Keeper<SK, PSK>,
     pub params_subspace_key: PSK,
 }
 
