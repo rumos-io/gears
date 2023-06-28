@@ -2,5 +2,5 @@
 
 set -eux
 
-rm -rf ~/.gears
+rm -rf ~/.gaia-rs
 cargo run -- init test

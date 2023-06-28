@@ -13,7 +13,7 @@ use strum::IntoEnumIterator;
 use tendermint_abci::Application;
 use tendermint_informal::block::Header;
 use tendermint_proto::abci::{
-    RequestDeliverTx, RequestInitChain, ResponseDeliverTx, ResponseInitChain,
+    RequestDeliverTx, RequestInitChain, ResponseCommit, ResponseDeliverTx, ResponseInitChain,
 };
 use tracing::info;
 
@@ -30,6 +30,8 @@ use super::{
 
 pub trait Handler<M: Message, SK: StoreKey>: Clone + Send + Sync {
     fn handle<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
+
+    fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, raw: Bytes);
 }
 
 #[derive(Debug, Clone)]
@@ -42,6 +44,7 @@ pub struct MicroBaseApp<
     H: Handler<M, SK>,
 > {
     pub multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
+    height: Arc<RwLock<u64>>,
     base_ante_handler: AnteHandler<BK, AK>,
     handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
@@ -78,20 +81,8 @@ impl<
                 .set_consensus_params(&mut ctx.as_any(), params);
         }
 
-        // TODO: uncomment
-        // let genesis = String::from_utf8(request.app_state_bytes.into())
-        //     .map_err(|e| AppError::Genesis(e.to_string()))
-        //     .and_then(|f| GenesisState::from_str(&f))
-        //     .unwrap_or_else(|e| {
-        //         error!(
-        //             "Invalid genesis provided by Tendermint.\n{}\nTerminating process",
-        //             e.to_string()
-        //         );
-        //         std::process::exit(1)
-        //     });
-
-        // Bank::init_genesis(&mut ctx.as_any(), genesis.bank);
-        // Auth::init_genesis(&mut ctx.as_any(), genesis.auth);
+        self.handler
+            .init_genesis(&mut ctx.as_any(), request.app_state_bytes);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -180,6 +171,29 @@ impl<
         // R::route_msg(msg);
         ResponseDeliverTx::default()
     }
+
+    fn commit(&self) -> ResponseCommit {
+        info!("Got commit request");
+        let new_height = self.increment_block_height();
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        let hash = multi_store.commit();
+        info!(
+            "Committed state, block height: {} app hash: {}",
+            new_height,
+            hex::encode(hash)
+        );
+
+        ResponseCommit {
+            data: hash.to_vec().into(),
+            retain_height: (new_height - 1)
+                .try_into()
+                .expect("can't believe we made it this far"),
+        }
+    }
 }
 
 impl<
@@ -207,14 +221,14 @@ impl<
             params_keeper,
             params_subspace_key,
         };
-        //let height = multi_store.get_head_version().into();
+        let height = multi_store.get_head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
             base_ante_handler: AnteHandler::new(bank_keeper, auth_keeper),
             handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
-            //height: Arc::new(RwLock::new(height)),
+            height: Arc::new(RwLock::new(height)),
             //block_header: Arc::new(RwLock::new(None)),
             //app_name,
             m: PhantomData,
@@ -223,8 +237,8 @@ impl<
         }
     }
 
-    fn get_block_height(&self) -> u64 {
-        return 42;
+    pub fn get_block_height(&self) -> u64 {
+        *self.height.read().expect("RwLock will not be poisoned")
     }
 
     fn get_block_header(&self) -> Option<Header> {
@@ -244,6 +258,12 @@ impl<
         // }
 
         return Ok(());
+    }
+
+    fn increment_block_height(&self) -> u64 {
+        let mut height = self.height.write().expect("RwLock will not be poisoned");
+        *height += 1;
+        return *height;
     }
 
     //fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {}

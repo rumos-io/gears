@@ -52,5 +52,6 @@ strum_macros = "0.24"
 bank = { path = "../x/bank" }
 auth_crate = { package = "auth", path = "../x/auth" }
 
+
 [dev-dependencies]
 hex = "0.4.3"

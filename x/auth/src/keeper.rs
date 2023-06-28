@@ -23,14 +23,12 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 ]; // "globalAccountNumber"
 
 #[derive(Debug, Clone)]
-pub struct AuthKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     store_key: SK,
     auth_params_keeper: AuthParamsKeeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::AuthKeeper
-    for AuthKeeper<SK, PSK>
-{
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::AuthKeeper for Keeper<SK, PSK> {
     fn get_auth_params<DB: Database>(
         &self,
         ctx: &gears::types::Context<DB>,
@@ -40,7 +38,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::AuthKeeper
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     pub fn new(
         store_key: SK,
         params_keeper: gears::x::params::Keeper<SK, PSK>,
@@ -50,7 +48,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK, PSK> {
             params_keeper,
             params_subspace_key,
         };
-        AuthKeeper {
+        Keeper {
             store_key,
             auth_params_keeper,
         }

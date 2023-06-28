@@ -14,6 +14,6 @@ init:
 	./gaia-rs/scripts/init.sh
 
 tendermint-start:
-	tendermint start --home ~/.gears
+	tendermint start --home ~/.gaia-rs
 
 .PHONY: run run-debug test install init tendermint-start

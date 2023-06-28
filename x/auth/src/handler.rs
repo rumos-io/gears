@@ -20,9 +20,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {
-            Message::Send(msg_send) => self
-                .keeper
-                .send_coins_from_account_to_account(ctx, msg_send),
+            Message::Send(_) => Ok(()),
         }
     }
 
