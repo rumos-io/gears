@@ -15,6 +15,7 @@ serde = { version = "1.0", default-features = false }
 #params-module = { package = "params", path = "../params" }
 cosmwasm-std = "1.1.5"
 tendermint-informal = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs" }
+auth = { path = "../auth" }
 
 [dev-dependencies]
 hex = "0.4.3"

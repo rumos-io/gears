@@ -7,7 +7,7 @@ use database::Database;
 use gears::{
     error::AppError,
     types::context_v2::{Context, QueryContext},
-    x::params::ParamsSubspaceKey,
+    x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
@@ -15,7 +15,7 @@ use proto_messages::cosmos::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
         QueryBalanceResponse,
     },
-    base::v1beta1::Coin,
+    base::v1beta1::{Coin, SendCoins},
 };
 use proto_types::{AccAddress, Denom};
 use store::{KVStore, MutablePrefixStore, StoreKey};
@@ -30,15 +30,38 @@ const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     store_key: SK,
     bank_params_keeper: BankParamsKeeper<SK, PSK>,
+    auth_keeper: auth::Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::BankKeeper for Keeper<SK, PSK> {}
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::BankKeeper<SK>
+    for Keeper<SK, PSK>
+{
+    fn send_coins_from_account_to_module<DB: Database>(
+        &self,
+        ctx: &mut Context<DB, SK>,
+        from_address: AccAddress,
+        to_module: Module,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        self.auth_keeper
+            .check_create_new_module_account::<DB>(ctx, &to_module);
+
+        let msg = MsgSend {
+            from_address,
+            to_address: to_module.get_address(),
+            amount,
+        };
+
+        self.send_coins(ctx, msg)
+    }
+}
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     pub fn new(
         store_key: SK,
         params_keeper: gears::x::params::Keeper<SK, PSK>,
         params_subspace_key: PSK,
+        auth_keeper: auth::Keeper<SK, PSK>,
     ) -> Self {
         let bank_params_keeper = BankParamsKeeper {
             params_keeper,
@@ -47,6 +70,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Keeper {
             store_key,
             bank_params_keeper,
+            auth_keeper,
         }
     }
 
@@ -151,24 +175,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             })
             .collect()
     }
-
-    // TODO: add this method
-    // pub fn send_coins_from_account_to_module<DB: Database>(
-    //     ctx: &mut Context<DB, SK>,
-    //     from_address: AccAddress,
-    //     to_module: Module,
-    //     amount: SendCoins,
-    // ) -> Result<(), AppError> {
-    //     Auth::check_create_new_module_account(ctx, &to_module);
-
-    //     let msg = MsgSend {
-    //         from_address,
-    //         to_address: to_module.get_address(),
-    //         amount,
-    //     };
-
-    //     Bank::send_coins(ctx, msg)
-    // }
 
     pub fn send_coins_from_account_to_account<DB: Database>(
         &self,

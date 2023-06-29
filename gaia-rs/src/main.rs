@@ -90,8 +90,16 @@ fn main() -> Result<()> {
     }
 
     let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
-    let bank_keeper =
-        bank::Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
+    let auth_keeper =
+        auth_crate::Keeper::new(GaiaStoreKey::Auth, params_keeper, GaiaParamsStoreKey::Auth);
+
+    let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
+    let bank_keeper = bank::Keeper::new(
+        GaiaStoreKey::Bank,
+        params_keeper,
+        GaiaParamsStoreKey::Bank,
+        auth_keeper,
+    );
 
     let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
     let auth_keeper =
@@ -167,8 +175,18 @@ fn main() -> Result<()> {
     impl Handler {
         pub fn new() -> Handler {
             let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
-            let bank_keeper =
-                bank::Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
+            let auth_keeper = auth_crate::Keeper::new(
+                GaiaStoreKey::Auth,
+                params_keeper,
+                GaiaParamsStoreKey::Auth,
+            );
+            let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
+            let bank_keeper = bank::Keeper::new(
+                GaiaStoreKey::Bank,
+                params_keeper,
+                GaiaParamsStoreKey::Bank,
+                auth_keeper,
+            );
 
             let params_keeper = gears::x::params::Keeper::new(GaiaStoreKey::Params);
             let auth_keeper = auth_crate::Keeper::new(

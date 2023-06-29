@@ -2,7 +2,7 @@ use bytes::Bytes;
 use core::hash::Hash;
 use database::{Database, RocksDB};
 use ibc_proto::protobuf::Protobuf;
-use proto_messages::cosmos::tx::v1beta1::tx_v2::{self, Message};
+use proto_messages::cosmos::tx::v1beta1::tx_v2::{self, Message, TxWithRaw};
 use proto_types::AccAddress;
 use std::{
     marker::PhantomData,
@@ -39,13 +39,13 @@ pub struct MicroBaseApp<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper + Clone + Send + Sync + 'static,
-    AK: AuthKeeper + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
     H: Handler<M, SK>,
 > {
     pub multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
-    base_ante_handler: AnteHandler<BK, AK>,
+    base_ante_handler: AnteHandler<BK, AK, SK>,
     handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -60,8 +60,8 @@ impl<
         // R: Router<M> + 'static,
         SK: StoreKey + Clone + Send + Sync + 'static,
         PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
-        BK: BankKeeper + Clone + Send + Sync + 'static,
-        AK: AuthKeeper + Clone + Send + Sync + 'static,
+        BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+        AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
         H: Handler<M, SK> + 'static,
     > Application for MicroBaseApp<SK, PSK, M, BK, AK, H>
 {
@@ -95,53 +95,53 @@ impl<
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
-        //     match self.run_tx(request.tx) {
-        //         Ok(events) => ResponseDeliverTx {
-        //             code: 0,
-        //             data: Default::default(),
-        //             log: "".to_string(),
-        //             info: "".to_string(),
-        //             gas_wanted: 0,
-        //             gas_used: 0,
-        //             events: events.into_iter().map(|e| e.into()).collect(),
-        //             codespace: "".to_string(),
-        //         },
-        //         Err(e) => {
-        //             info!("Failed to process tx: {}", e);
-        //             ResponseDeliverTx {
-        //                 code: e.code(),
-        //                 data: Bytes::new(),
-        //                 log: e.to_string(),
-        //                 info: "".to_string(),
-        //                 gas_wanted: 0,
-        //                 gas_used: 0,
-        //                 events: vec![],
-        //                 codespace: "".to_string(),
-        //             }
-        //         }
-        //     }
-        // let raw = vec![];
-        // let msg = D::decode(raw);
-
-        let mut multi_store = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block"),
-            request.tx.clone().into(),
-        );
-
-        let tx: tx_v2::Tx<M> = tx_v2::Tx::decode(request.tx).unwrap();
-
-        let msgs = tx.get_msgs();
-
-        for msg in msgs {
-            self.handler.handle(&mut ctx.as_any(), msg);
+        match self.run_tx(request.tx) {
+            Ok(events) => ResponseDeliverTx {
+                code: 0,
+                data: Default::default(),
+                log: "".to_string(),
+                info: "".to_string(),
+                gas_wanted: 0,
+                gas_used: 0,
+                events: events.into_iter().map(|e| e.into()).collect(),
+                codespace: "".to_string(),
+            },
+            Err(e) => {
+                info!("Failed to process tx: {}", e);
+                ResponseDeliverTx {
+                    code: e.code(),
+                    data: Bytes::new(),
+                    log: e.to_string(),
+                    info: "".to_string(),
+                    gas_wanted: 0,
+                    gas_used: 0,
+                    events: vec![],
+                    codespace: "".to_string(),
+                }
+            }
         }
+
+        // info!("Got deliver tx request");
+
+        // let mut multi_store = self
+        //     .multi_store
+        //     .write()
+        //     .expect("RwLock will not be poisoned");
+        // let mut ctx = TxContext::new(
+        //     &mut multi_store,
+        //     self.get_block_height(),
+        //     self.get_block_header()
+        //         .expect("block header is set in begin block"),
+        //     request.tx.clone().into(),
+        // );
+
+        // let tx: tx_v2::Tx<M> = tx_v2::Tx::decode(request.tx).unwrap();
+
+        // let msgs = tx.get_msgs();
+
+        // for msg in msgs {
+        //     self.handler.handle(&mut ctx.as_any(), msg);
+        // }
 
         // match Self::run_msgs(&mut ctx.as_any(), tx.get_msgs()) {
         //     Ok(_) => {
@@ -169,7 +169,7 @@ impl<
         // let signers = msg.get_signers();
 
         // R::route_msg(msg);
-        ResponseDeliverTx::default()
+        //ResponseDeliverTx::default()
     }
 
     fn commit(&self) -> ResponseCommit {
@@ -202,8 +202,8 @@ impl<
         // R: Router<M>,
         SK: StoreKey,
         PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
-        BK: BankKeeper + Clone + Send + Sync + 'static,
-        AK: AuthKeeper + Clone + Send + Sync + 'static,
+        BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+        AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
         H: Handler<M, SK>,
     > MicroBaseApp<SK, PSK, M, BK, AK, H>
 {
@@ -248,14 +248,73 @@ impl<
             .clone()
     }
 
-    fn run_msgs<T: Database>(ctx: &mut Context<T, SK>, msgs: &Vec<M>) -> Result<(), AppError> {
-        // for msg in msgs {
-        //     match msg {
-        //         Msg::Send(send_msg) => {
-        //             Bank::send_coins_from_account_to_account(ctx, send_msg.clone())?
-        //         }
-        //     };
-        // }
+    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
+        // let tx: tx_v2::Tx<M> =
+        //     tx_v2::Tx::decode(raw.clone()).map_err(|e| AppError::TxParseError(e.to_string()))?;
+
+        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
+            .map_err(|e| AppError::TxParseError(e.to_string()))?;
+
+        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
+
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            raw.clone().into(),
+        );
+
+        match self.base_ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
+            Ok(_) => multi_store.write_then_clear_tx_caches(),
+            Err(e) => {
+                multi_store.clear_tx_caches();
+                return Err(e);
+            }
+        };
+
+        // match AnteHandler::run(&mut ctx.as_any(), &tx) {
+        //     Ok(_) => multi_store.write_then_clear_tx_caches(),
+        //     Err(e) => {
+        //         multi_store.clear_tx_caches();
+        //         return Err(e);
+        //     }
+        // };
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            raw.into(),
+        );
+
+        match self.run_msgs(&mut ctx.as_any(), tx_with_raw.tx.get_msgs()) {
+            Ok(_) => {
+                let events = ctx.events;
+                multi_store.write_then_clear_tx_caches();
+                Ok(events)
+            }
+            Err(e) => {
+                multi_store.clear_tx_caches();
+                Err(e)
+            }
+        }
+    }
+
+    fn run_msgs<T: Database>(
+        &self,
+        ctx: &mut Context<T, SK>,
+        msgs: &Vec<M>,
+    ) -> Result<(), AppError> {
+        for msg in msgs {
+            self.handler.handle(ctx, msg)?
+        }
 
         return Ok(());
     }
@@ -264,6 +323,21 @@ impl<
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
         return *height;
+    }
+
+    fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
+        if msgs.is_empty() {
+            return Err(AppError::InvalidRequest(
+                "must contain at least one message".into(),
+            ));
+        }
+
+        for msg in msgs {
+            msg.validate_basic()
+                .map_err(|e| AppError::TxValidation(e.to_string()))?
+        }
+
+        return Ok(());
     }
 
     //fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {}

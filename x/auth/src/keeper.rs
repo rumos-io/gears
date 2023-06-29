@@ -2,9 +2,10 @@ use bytes::Bytes;
 use database::Database;
 
 use gears::{
+    baseapp::ante_v2::AuthKeeper,
     error::AppError,
     types::context_v2::{Context, QueryContext},
-    x::params::ParamsSubspaceKey,
+    x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
 //use params_module::ParamsSubspaceKey;
@@ -28,13 +29,43 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     auth_params_keeper: AuthParamsKeeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::AuthKeeper for Keeper<SK, PSK> {
-    fn get_auth_params<DB: Database>(
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::AuthKeeper<SK>
+    for Keeper<SK, PSK>
+{
+    fn get_auth_params<DB: Database>(&self, ctx: &Context<DB, SK>) -> gears::x::auth::Params {
+        self.auth_params_keeper.get(ctx)
+    }
+
+    fn has_account<DB: Database>(&self, ctx: &Context<DB, SK>, addr: &AccAddress) -> bool {
+        let auth_store = ctx.get_kv_store(&self.store_key);
+        let key = create_auth_store_key(addr.to_owned());
+        auth_store.get(&key).is_some()
+    }
+
+    fn get_account<DB: Database>(
         &self,
-        ctx: &gears::types::Context<DB>,
-    ) -> gears::x::auth::Params {
-        //TODO
-        todo!()
+        ctx: &Context<DB, SK>,
+        addr: &AccAddress,
+    ) -> Option<Account> {
+        let auth_store = ctx.get_kv_store(&self.store_key);
+        let key = create_auth_store_key(addr.to_owned());
+        let account = auth_store.get(&key);
+
+        if let Some(buf) = account {
+            let account = Account::decode::<Bytes>(buf.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
+
+            return Some(account);
+        }
+
+        return None;
+    }
+
+    fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
+        let auth_store = ctx.get_mutable_kv_store(&self.store_key);
+        let key = create_auth_store_key(acct.get_address().to_owned());
+
+        auth_store.set(key, acct.encode_vec());
     }
 }
 
@@ -109,36 +140,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         return acct_num;
     }
 
-    pub fn has_account<DB: Database>(&self, ctx: &Context<DB, SK>, addr: &AccAddress) -> bool {
-        let auth_store = ctx.get_kv_store(&self.store_key);
-        let key = create_auth_store_key(addr.to_owned());
-        auth_store.get(&key).is_some()
-    }
-
     pub fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec());
-    }
-
-    pub fn get_account<DB: Database>(
-        &self,
-        ctx: &Context<DB, SK>,
-        addr: &AccAddress,
-    ) -> Option<Account> {
-        let auth_store = ctx.get_kv_store(&self.store_key);
-        let key = create_auth_store_key(addr.to_owned());
-        let account = auth_store.get(&key);
-
-        if let Some(buf) = account {
-            let account = Account::decode::<Bytes>(buf.to_owned().into())
-                .expect("invalid data in database - possible database corruption");
-
-            return Some(account);
-        }
-
-        return None;
     }
 
     /// Overwrites existing account
@@ -194,33 +200,33 @@ fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
 }
 
 // TODO: so we really need a Module type?
-pub enum Module {
-    FeeCollector,
-}
+// pub enum Module {
+//     FeeCollector,
+// }
 
-impl Module {
-    pub fn get_address(&self) -> AccAddress {
-        match self {
-            Module::FeeCollector => {
-                //TODO: construct address from Vec<u8> + make address constant
-                //TODO: where do these addresses come from?
-                AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
-                    .expect("hard coded address is valid")
-            }
-        }
-    }
+// impl Module {
+//     pub fn get_address(&self) -> AccAddress {
+//         match self {
+//             Module::FeeCollector => {
+//                 //TODO: construct address from Vec<u8> + make address constant
+//                 //TODO: where do these addresses come from?
+//                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
+//                     .expect("hard coded address is valid")
+//             }
+//         }
+//     }
 
-    pub fn get_name(&self) -> String {
-        match self {
-            Module::FeeCollector => "fee_collector".into(),
-        }
-    }
+//     pub fn get_name(&self) -> String {
+//         match self {
+//             Module::FeeCollector => "fee_collector".into(),
+//         }
+//     }
 
-    pub fn get_permissions(&self) -> Vec<String> {
-        match self {
-            Module::FeeCollector => vec![],
-        }
-    }
-}
+//     pub fn get_permissions(&self) -> Vec<String> {
+//         match self {
+//             Module::FeeCollector => vec![],
+//         }
+//     }
+// }
 
 //TODO: copy tests across

@@ -24,8 +24,8 @@ pub fn run_run_command_micro<
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
     PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
     M: Message,
-    BK: BankKeeper + Clone + Send + Sync + 'static,
-    AK: AuthKeeper + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
     H: Handler<M, SK> + 'static,
     //D: Decoder<M>,
 >(

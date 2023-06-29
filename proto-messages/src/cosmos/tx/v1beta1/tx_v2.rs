@@ -1,16 +1,16 @@
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 use cosmwasm_std::Uint256;
 use ibc_proto::{
     cosmos::base::v1beta1::Coin as RawCoin,
     cosmos::tx::v1beta1::{
         AuthInfo as RawAuthInfo, Fee as RawFee, ModeInfo, SignerInfo as RawSignerInfo,
-        Tip as RawTip, Tx as RawTx, TxBody as RawTxBody,
+        Tip as RawTip, Tx as RawTx, TxBody as RawTxBody, TxRaw,
     },
     google::protobuf::Any,
     protobuf::Protobuf,
 };
-use prost::bytes::Bytes;
+use prost::{bytes::Bytes, Message as ProstMessage};
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -25,7 +25,33 @@ use crate::{
     error::Error,
 };
 
+use super::PublicKey;
+
 pub const MAX_GAS_WANTED: u64 = 9223372036854775807; // = (1 << 63) -1 as specified in the cosmos SDK
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SignatureData {
+    pub signature: Vec<u8>,
+    pub sequence: u64,
+}
+
+/// Tx is the standard type used for broadcasting transactions.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TxWithRaw<M: Message> {
+    pub tx: Tx<M>,
+    pub raw: TxRaw,
+}
+
+impl<M: Message> TxWithRaw<M> {
+    pub fn from_bytes(raw: Bytes) -> Result<Self, Error> {
+        let tx = Tx::decode(raw.clone())
+            .map_err(|e| Error::DecodeGeneral(format!("{}", e.to_string())))?;
+
+        let raw =
+            TxRaw::decode(raw).map_err(|e| Error::DecodeGeneral(format!("{}", e.to_string())))?;
+        Ok(TxWithRaw { tx, raw })
+    }
+}
 
 /// Tx is the standard type used for broadcasting transactions.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -40,11 +66,78 @@ pub struct Tx<M: Message> {
     /// public key and signing mode by position.
     #[serde(serialize_with = "crate::utils::serialize_vec_of_vec_to_vec_of_base64")]
     pub signatures: Vec<Vec<u8>>,
+    pub signatures_data: Vec<SignatureData>,
 }
 
+// TODO:
+// 0. Make TxWithRaw the Tx - move methods to TxWithRaw and rename
+// 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
+// 2. Implement equality on AccAddress to avoid conversion to string in get_signers()
+// 3. Consider removing the "seen" hashset in get_signers()
 impl<M: Message> Tx<M> {
     pub fn get_msgs(&self) -> &Vec<M> {
         return &self.body.messages;
+    }
+
+    pub fn get_signers(&self) -> Vec<&AccAddress> {
+        let mut signers = vec![];
+        let mut seen = HashSet::new();
+
+        for msg in &self.body.messages {
+            for addr in msg.get_signers() {
+                if seen.insert(addr.to_string()) {
+                    signers.push(addr);
+                }
+            }
+        }
+
+        // ensure any specified fee payer is included in the required signers (at the end)
+        let fee_payer = &self.auth_info.fee.payer;
+
+        if let Some(addr) = fee_payer {
+            if seen.insert(addr.to_string()) {
+                signers.push(addr);
+            }
+        }
+
+        return signers;
+    }
+
+    pub fn get_signatures(&self) -> &Vec<Vec<u8>> {
+        return &self.signatures;
+    }
+
+    pub fn get_signatures_data(&self) -> &Vec<SignatureData> {
+        &self.signatures_data
+    }
+
+    pub fn get_timeout_height(&self) -> u64 {
+        self.body.timeout_height
+    }
+
+    pub fn get_memo(&self) -> &str {
+        &self.body.memo
+    }
+
+    pub fn get_fee(&self) -> &Option<SendCoins> {
+        return &self.auth_info.fee.amount;
+    }
+
+    pub fn get_fee_payer(&self) -> &AccAddress {
+        if let Some(payer) = &self.auth_info.fee.payer {
+            return payer;
+        } else {
+            // At least one signer exists due to Ante::validate_basic_ante_handler()
+            return self.get_signers()[0];
+        }
+    }
+
+    pub fn get_public_keys(&self) -> Vec<&Option<PublicKey>> {
+        self.auth_info
+            .signer_infos
+            .iter()
+            .map(|si| &si.public_key)
+            .collect()
     }
 }
 
@@ -68,13 +161,31 @@ impl<M: Message> TryFrom<RawTx> for Tx<M> {
             return Err(Error::DecodeGeneral("unknown extension options".into()));
         }
 
+        let auth_info: AuthInfo = raw
+            .auth_info
+            .ok_or(Error::MissingField("auth_info".into()))?
+            .try_into()?;
+
+        // extract signatures data when decoding - this isn't done in the SDK
+        if raw.signatures.len() != auth_info.signer_infos.len() {
+            return Err(Error::DecodeGeneral(
+                "signatures list does not match signer_infos length".into(),
+            ));
+        }
+        let mut signatures_data = Vec::with_capacity(raw.signatures.len());
+        for (i, signature) in raw.signatures.iter().enumerate() {
+            signatures_data.push(SignatureData {
+                signature: signature.clone(),
+                // the check above, tx.signatures.len() != tx.auth_info.signer_infos.len(), ensures that this indexing is safe
+                sequence: auth_info.signer_infos[i].sequence,
+            })
+        }
+
         Ok(Tx {
             body: body.try_into()?,
-            auth_info: raw
-                .auth_info
-                .ok_or(Error::MissingField("auth_info".into()))?
-                .try_into()?,
+            auth_info,
             signatures: raw.signatures,
+            signatures_data,
         })
     }
 }
@@ -270,52 +381,52 @@ impl From<AuthInfo> for RawAuthInfo {
 
 impl Protobuf<RawAuthInfo> for AuthInfo {}
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-#[serde(tag = "@type")]
-pub enum PublicKey {
-    #[serde(rename = "/cosmos.crypto.secp256k1.PubKey")]
-    Secp256k1(Secp256k1PubKey),
-    //Secp256r1(Vec<u8>),
-    //Ed25519(Vec<u8>),
-    //Multisig(Vec<u8>),
-}
+// #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+// #[serde(tag = "@type")]
+// pub enum PublicKey {
+//     #[serde(rename = "/cosmos.crypto.secp256k1.PubKey")]
+//     Secp256k1(Secp256k1PubKey),
+//     //Secp256r1(Vec<u8>),
+//     //Ed25519(Vec<u8>),
+//     //Multisig(Vec<u8>),
+// }
 
-impl PublicKey {
-    pub fn get_address(&self) -> AccAddress {
-        match self {
-            PublicKey::Secp256k1(key) => key.get_address(),
-        }
-    }
-}
+// impl PublicKey {
+//     pub fn get_address(&self) -> AccAddress {
+//         match self {
+//             PublicKey::Secp256k1(key) => key.get_address(),
+//         }
+//     }
+// }
 
-impl TryFrom<Any> for PublicKey {
-    type Error = Error;
+// impl TryFrom<Any> for PublicKey {
+//     type Error = Error;
 
-    fn try_from(any: Any) -> Result<Self, Self::Error> {
-        match any.type_url.as_str() {
-            "/cosmos.crypto.secp256k1.PubKey" => {
-                let key = Secp256k1PubKey::decode::<Bytes>(any.value.into())
-                    .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
-                Ok(PublicKey::Secp256k1(key))
-            }
-            _ => Err(Error::DecodeAny(format!(
-                "Key type not recognized: {}",
-                any.type_url
-            ))),
-        }
-    }
-}
+//     fn try_from(any: Any) -> Result<Self, Self::Error> {
+//         match any.type_url.as_str() {
+//             "/cosmos.crypto.secp256k1.PubKey" => {
+//                 let key = Secp256k1PubKey::decode::<Bytes>(any.value.into())
+//                     .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+//                 Ok(PublicKey::Secp256k1(key))
+//             }
+//             _ => Err(Error::DecodeAny(format!(
+//                 "Key type not recognized: {}",
+//                 any.type_url
+//             ))),
+//         }
+//     }
+// }
 
-impl From<PublicKey> for Any {
-    fn from(key: PublicKey) -> Self {
-        match key {
-            PublicKey::Secp256k1(key) => Any {
-                type_url: "/cosmos.crypto.secp256k1.PubKey".to_string(),
-                value: key.encode_vec(),
-            },
-        }
-    }
-}
+// impl From<PublicKey> for Any {
+//     fn from(key: PublicKey) -> Self {
+//         match key {
+//             PublicKey::Secp256k1(key) => Any {
+//                 type_url: "/cosmos.crypto.secp256k1.PubKey".to_string(),
+//                 value: key.encode_vec(),
+//             },
+//         }
+//     }
+// }
 
 /// SignerInfo describes the public key and signing mode of a single top-level
 /// signer.

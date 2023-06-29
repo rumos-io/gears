@@ -1,29 +1,32 @@
 use database::Database;
-use gears::{types::context_v2::Context, x::params::ParamsSubspaceKey};
+use gears::{
+    types::context_v2::Context,
+    x::{auth::Params, params::ParamsSubspaceKey},
+};
 //use params_module::ParamsSubspaceKey;
 use proto_messages::utils::serialize_number_to_string;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 use store::{ImmutablePrefixStore, StoreKey};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Params {
-    #[serde(serialize_with = "serialize_number_to_string")]
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub max_memo_characters: u64,
-    #[serde(serialize_with = "serialize_number_to_string")]
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub tx_sig_limit: u64,
-    #[serde(serialize_with = "serialize_number_to_string")]
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub tx_size_cost_per_byte: u64,
-    #[serde(serialize_with = "serialize_number_to_string")]
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub sig_verify_cost_ed25519: u64,
-    #[serde(serialize_with = "serialize_number_to_string")]
-    #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub sig_verify_cost_secp256k1: u64,
-}
+// #[derive(Debug, Clone, Deserialize, Serialize)]
+// pub struct Params {
+//     #[serde(serialize_with = "serialize_number_to_string")]
+//     #[serde(deserialize_with = "deserialize_number_from_string")]
+//     pub max_memo_characters: u64,
+//     #[serde(serialize_with = "serialize_number_to_string")]
+//     #[serde(deserialize_with = "deserialize_number_from_string")]
+//     pub tx_sig_limit: u64,
+//     #[serde(serialize_with = "serialize_number_to_string")]
+//     #[serde(deserialize_with = "deserialize_number_from_string")]
+//     pub tx_size_cost_per_byte: u64,
+//     #[serde(serialize_with = "serialize_number_to_string")]
+//     #[serde(deserialize_with = "deserialize_number_from_string")]
+//     pub sig_verify_cost_ed25519: u64,
+//     #[serde(serialize_with = "serialize_number_to_string")]
+//     #[serde(deserialize_with = "deserialize_number_from_string")]
+//     pub sig_verify_cost_secp256k1: u64,
+// }
 
 const KEY_MAX_MEMO_CHARACTERS: [u8; 17] = [
     077, 097, 120, 077, 101, 109, 111, 067, 104, 097, 114, 097, 099, 116, 101, 114, 115,
