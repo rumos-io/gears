@@ -5,6 +5,7 @@ use cosmwasm_std::Uint256;
 use database::Database;
 
 use gears::{
+    baseapp::ante_v2::AuthKeeper,
     error::AppError,
     types::context_v2::{Context, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
@@ -184,10 +185,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         self.send_coins(ctx, msg.clone())?;
 
         // Create account if recipient does not exist
-        // TODO: add auth keeper
-        // if !Auth::has_account(ctx, &msg.to_address) {
-        //     Auth::create_new_base_account(ctx, &msg.to_address);
-        // };
+
+        if !self.auth_keeper.has_account(ctx, &msg.to_address) {
+            self.auth_keeper
+                .create_new_base_account(ctx, &msg.to_address);
+        };
 
         Ok(())
     }

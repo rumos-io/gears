@@ -454,14 +454,6 @@ impl<
             }
         };
 
-        // match AnteHandler::run(&mut ctx.as_any(), &tx) {
-        //     Ok(_) => multi_store.write_then_clear_tx_caches(),
-        //     Err(e) => {
-        //         multi_store.clear_tx_caches();
-        //         return Err(e);
-        //     }
-        // };
-
         let mut ctx = TxContext::new(
             &mut multi_store,
             self.get_block_height(),
