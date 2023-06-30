@@ -12,6 +12,7 @@ use gears::error::AppError;
 use gears::types::context_v2::Context;
 use gears::x::params::ParamsSubspaceKey;
 use human_panic::setup_panic;
+use tendermint_proto::abci::RequestQuery;
 use tracing::error;
 
 use gears::{
@@ -230,6 +231,19 @@ fn main() -> Result<()> {
 
             self.bank_handler.init_genesis(ctx, genesis.bank);
             self.auth_handler.init_genesis(ctx, genesis.auth);
+        }
+
+        fn handle_query<DB: Database>(
+            &self,
+            ctx: &gears::types::context_v2::QueryContext<DB, GaiaStoreKey>,
+            query: tendermint_proto::abci::RequestQuery,
+        ) -> std::result::Result<bytes::Bytes, AppError> {
+            if query.path.starts_with("/cosmos.auth") {
+                self.auth_handler.handle_query(ctx, query)
+                //TODO: handle bank queries
+            } else {
+                Err(AppError::InvalidRequest("query path not found".into()))
+            }
         }
     }
 

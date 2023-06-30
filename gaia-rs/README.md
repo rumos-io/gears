@@ -56,7 +56,7 @@ The chain (consisting of one node) is now up and running.
 
 ## Querying the chain
 
-So far we've been running gaia-rs indirectly using make commnds and the rust build tool, Cargo. In this
+So far we've been running gaia-rs indirectly using make commands and the rust build tool, Cargo. In this
 section we'll install gaia-rs and use it to query the chain (just like cosmos-sdk based chains the gaia-rs binary serves as a
 node and client).
 

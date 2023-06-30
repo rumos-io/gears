@@ -15,6 +15,7 @@ serde = { version = "1.0", default-features = false }
 #params-module = { package = "params", path = "../params" }
 serde-aux = "4.2.0"
 prost = { version = "0.11" }
+tendermint-proto = { git = "https://github.com/joneskm/tendermint-rs" }
 
 [dev-dependencies]
 hex = "0.4.3"
