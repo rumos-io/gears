@@ -240,7 +240,8 @@ fn main() -> Result<()> {
         ) -> std::result::Result<bytes::Bytes, AppError> {
             if query.path.starts_with("/cosmos.auth") {
                 self.auth_handler.handle_query(ctx, query)
-                //TODO: handle bank queries
+            } else if query.path.starts_with("/cosmos.bank") {
+                self.bank_handler.handle_query(ctx, query)
             } else {
                 Err(AppError::InvalidRequest("query path not found".into()))
             }
