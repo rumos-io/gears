@@ -37,12 +37,10 @@ use super::{
     params::BaseAppParamsKeeper,
 };
 
-// TODO: rename to Module?
 pub trait Handler<M: Message, SK: StoreKey>: Clone + Send + Sync {
-    // TODO: rename to handle_tx
-    fn handle<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
+    fn handle_tx<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
 
-    fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, raw: Bytes);
+    fn handle_init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, raw: Bytes);
 
     fn handle_query<DB: Database>(
         &self,
@@ -102,7 +100,7 @@ impl<
         }
 
         self.handler
-            .init_genesis(&mut ctx.as_any(), request.app_state_bytes);
+            .handle_init_genesis(&mut ctx.as_any(), request.app_state_bytes);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -481,7 +479,7 @@ impl<
         msgs: &Vec<M>,
     ) -> Result<(), AppError> {
         for msg in msgs {
-            self.handler.handle(ctx, msg)?
+            self.handler.handle_tx(ctx, msg)?
         }
 
         return Ok(());

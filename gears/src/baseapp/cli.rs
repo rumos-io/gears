@@ -18,8 +18,6 @@ use crate::x::params::{Keeper, ParamsSubspaceKey};
 use super::ante_v2::{AuthKeeper, BankKeeper};
 use super::Handler;
 
-//use super::{Decoder, Message};
-
 pub fn run_run_command_micro<
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
     PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
@@ -27,7 +25,6 @@ pub fn run_run_command_micro<
     BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
     AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
     H: Handler<M, SK> + 'static,
-    //D: Decoder<M>,
 >(
     matches: &ArgMatches,
     app_name: &'static str,
@@ -36,7 +33,6 @@ pub fn run_run_command_micro<
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     handler: H,
-    //decoder: D,
 ) {
     let host = matches
         .get_one::<String>("host")

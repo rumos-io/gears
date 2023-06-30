@@ -50,7 +50,7 @@ store = { path = "../store" }
 strum = "0.24.1"
 strum_macros = "0.24"
 bank = { path = "../x/bank" }
-auth_crate = { package = "auth", path = "../x/auth" }
+auth = { path = "../x/auth" }
 
 
 [dev-dependencies]

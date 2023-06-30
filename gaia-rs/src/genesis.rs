@@ -3,12 +3,7 @@ use std::str::FromStr;
 use gears::error::AppError;
 use serde::{Deserialize, Serialize};
 
-// use crate::{
-//     error::AppError,
-//     x::{auth::GenesisState as AuthGenesis, bank::GenesisState as BankGenesis},
-// };
-
-use auth_crate::GenesisState as AuthGenesis;
+use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

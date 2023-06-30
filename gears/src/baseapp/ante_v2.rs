@@ -312,6 +312,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
     }
 }
 
+// TODO: uncomment tests
 // #[cfg(test)]
 // mod tests {
 //     use database::MemDB;
