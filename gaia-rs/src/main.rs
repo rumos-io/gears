@@ -18,10 +18,12 @@ use gears::{
     },
 };
 
+use crate::genesis::GenesisState;
 use crate::handler::Handler;
 use crate::message::Message;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 
+mod client;
 mod genesis;
 mod handler;
 mod message;
@@ -66,42 +68,46 @@ fn build_cli() -> Command {
 fn main() -> Result<()> {
     setup_panic!();
 
-    let params_keeper = ParamsKeeper::new(GaiaStoreKey::Params);
-
-    let auth_keeper = AuthKeeper::new(
-        GaiaStoreKey::Auth,
-        params_keeper.clone(),
-        GaiaParamsStoreKey::Auth,
-    );
-
-    let bank_keeper = BankKeeper::new(
-        GaiaStoreKey::Bank,
-        params_keeper.clone(),
-        GaiaParamsStoreKey::Bank,
-        auth_keeper.clone(),
-    );
-
     let cli = build_cli();
     let matches = cli.get_matches();
 
     match matches.subcommand() {
-        Some(("init", sub_matches)) => run_init_command(sub_matches, APP_NAME),
-        Some(("run", sub_matches)) => run_run_command_micro::<
-            GaiaStoreKey,
-            GaiaParamsStoreKey,
-            Message,
-            BankKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
-            AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
-            Handler,
-        >(
-            sub_matches,
-            APP_NAME,
-            bank_keeper,
-            auth_keeper,
-            params_keeper,
-            GaiaParamsStoreKey::BaseApp,
-            Handler::new(),
-        ),
+        Some(("init", sub_matches)) => {
+            run_init_command(sub_matches, APP_NAME, GenesisState::default())
+        }
+        Some(("run", sub_matches)) => {
+            let params_keeper = ParamsKeeper::new(GaiaStoreKey::Params);
+
+            let auth_keeper = AuthKeeper::new(
+                GaiaStoreKey::Auth,
+                params_keeper.clone(),
+                GaiaParamsStoreKey::Auth,
+            );
+
+            let bank_keeper = BankKeeper::new(
+                GaiaStoreKey::Bank,
+                params_keeper.clone(),
+                GaiaParamsStoreKey::Bank,
+                auth_keeper.clone(),
+            );
+
+            run_run_command_micro::<
+                GaiaStoreKey,
+                GaiaParamsStoreKey,
+                Message,
+                BankKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
+                AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
+                Handler,
+            >(
+                sub_matches,
+                APP_NAME,
+                bank_keeper,
+                auth_keeper,
+                params_keeper,
+                GaiaParamsStoreKey::BaseApp,
+                Handler::new(),
+            )
+        }
         Some(("query", sub_matches)) => run_query_command(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches, APP_NAME)?,
         Some(("tx", sub_matches)) => run_tx_command(sub_matches, APP_NAME)?,

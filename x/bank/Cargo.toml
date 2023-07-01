@@ -17,6 +17,15 @@ cosmwasm-std = "1.1.5"
 tendermint-informal = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs" }
 auth = { path = "../auth" }
 tendermint-proto = { git = "https://github.com/joneskm/tendermint-rs" }
+anyhow = "1.0.70"
+clap = { version = "4.2.2", features = ["derive"] }
+tendermint-rpc = { git = "https://github.com/joneskm/tendermint-rs", features = [
+    "http-client",
+] }
+tokio = "1.27.0"
+serde_json = "1.0.93"
+ibc-relayer = "0.23.0"
+prost = { version = "0.11" }
 
 [dev-dependencies]
 hex = "0.4.3"

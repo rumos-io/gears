@@ -1,8 +1,9 @@
 use std::{fs, path::PathBuf};
 
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
+use serde::Serialize;
 
-use crate::{types::GenesisState, utils::get_default_home_dir};
+use crate::utils::get_default_home_dir;
 
 pub fn get_init_command(app_name: &str) -> Command {
     Command::new("init")
@@ -28,7 +29,11 @@ pub fn get_init_command(app_name: &str) -> Command {
         )
 }
 
-pub fn run_init_command(sub_matches: &ArgMatches, app_name: &str) {
+pub fn run_init_command<G: Serialize>(
+    sub_matches: &ArgMatches,
+    app_name: &str,
+    app_genesis_state: G,
+) {
     let moniker = sub_matches
         .get_one::<String>("moniker")
         .expect("moniker argument is required preventing `None`");
@@ -96,44 +101,7 @@ pub fn run_init_command(sub_matches: &ArgMatches, app_name: &str) {
             std::process::exit(1)
         });
 
-    // Build genesis state
-    // TODO: get defaults from the modules
-    let app_state = GenesisState {
-        bank: crate::x::bank::GenesisState {
-            balances: vec![crate::x::bank::Balance {
-                address: proto_types::AccAddress::from_bech32(
-                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
-                )
-                .unwrap(),
-                coins: vec![proto_messages::cosmos::base::v1beta1::Coin {
-                    denom: proto_types::Denom::try_from(String::from("uatom")).unwrap(),
-                    amount: cosmwasm_std::Uint256::from_u128(34),
-                }],
-            }],
-            params: crate::x::bank::Params {
-                default_send_enabled: true,
-            },
-        },
-        auth: crate::x::auth::GenesisState {
-            accounts: vec![proto_messages::cosmos::auth::v1beta1::BaseAccount {
-                address: proto_types::AccAddress::from_bech32(
-                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
-                )
-                .unwrap(),
-                pub_key: None,
-                account_number: 0,
-                sequence: 0,
-            }],
-            params: crate::x::auth::Params {
-                max_memo_characters: 256,
-                tx_sig_limit: 7,
-                tx_size_cost_per_byte: 10,
-                sig_verify_cost_ed25519: 590,
-                sig_verify_cost_secp256k1: 1000,
-            },
-        },
-    };
-    let app_state = serde_json::to_value(app_state).unwrap();
+    let app_state = serde_json::to_value(app_genesis_state).unwrap();
 
     // Create genesis file
     let mut genesis_file_path = config_dir.clone();

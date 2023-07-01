@@ -16,3 +16,5 @@ pub struct Balance {
     pub address: AccAddress,
     pub coins: Vec<Coin>,
 }
+
+//TODO: implement default?
