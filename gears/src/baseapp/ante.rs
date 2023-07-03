@@ -8,8 +8,7 @@ use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
     tx::v1beta1::{
-        tx_v2::{Message, Tx, TxWithRaw},
-        PublicKey,
+        PublicKey, {Message, Tx, TxWithRaw},
     },
 };
 use proto_types::AccAddress;

@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use database::{Database, RocksDB};
-use proto_messages::cosmos::tx::v1beta1::tx_v2::{Message, TxWithRaw};
+use proto_messages::cosmos::tx::v1beta1::{Message, TxWithRaw};
 use serde::de::DeserializeOwned;
 use std::{
     marker::PhantomData,

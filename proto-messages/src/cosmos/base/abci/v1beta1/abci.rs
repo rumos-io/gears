@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 use tendermint_informal::abci::Event;
 
-use crate::cosmos::tx::v1beta1::AnyTx;
+use crate::cosmos::tx::v1beta1::{AnyTx, Message};
 
 /// TxResponse defines a structure containing relevant tx data and metadata. The
 /// tags are stringified and the log is JSON decoded.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
-pub struct TxResponse {
+pub struct TxResponse<M: Message> {
     /// The block height
     pub height: i64,
     /// The transaction hash.
@@ -29,7 +29,7 @@ pub struct TxResponse {
     /// Amount of gas consumed by transaction.
     pub gas_used: i64,
     /// The request transaction bytes.
-    pub tx: AnyTx,
+    pub tx: AnyTx<M>,
     /// Time of the previous block. For heights > 1, it's the weighted median of
     /// the timestamps of the valid votes in the block.LastCommit. For height == 1,
     /// it's genesis time.

@@ -1,16 +1,16 @@
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 use cosmwasm_std::Uint256;
 use ibc_proto::{
     cosmos::base::v1beta1::Coin as RawCoin,
     cosmos::tx::v1beta1::{
         AuthInfo as RawAuthInfo, Fee as RawFee, ModeInfo, SignerInfo as RawSignerInfo,
-        Tip as RawTip, Tx as RawTx, TxBody as RawTxBody,
+        Tip as RawTip, Tx as RawTx, TxBody as RawTxBody, TxRaw,
     },
     google::protobuf::Any,
     protobuf::Protobuf,
 };
-use prost::bytes::Bytes;
+use prost::{bytes::Bytes, Message as ProstMessage};
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -25,13 +25,39 @@ use crate::{
     error::Error,
 };
 
+//use super::PublicKey;
+
 pub const MAX_GAS_WANTED: u64 = 9223372036854775807; // = (1 << 63) -1 as specified in the cosmos SDK
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SignatureData {
+    pub signature: Vec<u8>,
+    pub sequence: u64,
+}
 
 /// Tx is the standard type used for broadcasting transactions.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct Tx {
+pub struct TxWithRaw<M: Message> {
+    pub tx: Tx<M>,
+    pub raw: TxRaw,
+}
+
+impl<M: Message> TxWithRaw<M> {
+    pub fn from_bytes(raw: Bytes) -> Result<Self, Error> {
+        let tx = Tx::decode(raw.clone())
+            .map_err(|e| Error::DecodeGeneral(format!("{}", e.to_string())))?;
+
+        let raw =
+            TxRaw::decode(raw).map_err(|e| Error::DecodeGeneral(format!("{}", e.to_string())))?;
+        Ok(TxWithRaw { tx, raw })
+    }
+}
+
+/// Tx is the standard type used for broadcasting transactions.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Tx<M: Message> {
     /// body is the processable content of the transaction
-    pub body: TxBody,
+    pub body: TxBody<M>,
     /// auth_info is the authorization related content of the transaction,
     /// specifically signers, signer modes and fee
     pub auth_info: AuthInfo,
@@ -40,17 +66,90 @@ pub struct Tx {
     /// public key and signing mode by position.
     #[serde(serialize_with = "crate::utils::serialize_vec_of_vec_to_vec_of_base64")]
     pub signatures: Vec<Vec<u8>>,
+    pub signatures_data: Vec<SignatureData>,
+}
+
+// TODO:
+// 0. Make TxWithRaw the Tx - move methods to TxWithRaw and rename
+// 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
+// 2. Implement equality on AccAddress to avoid conversion to string in get_signers()
+// 3. Consider removing the "seen" hashset in get_signers()
+impl<M: Message> Tx<M> {
+    pub fn get_msgs(&self) -> &Vec<M> {
+        return &self.body.messages;
+    }
+
+    pub fn get_signers(&self) -> Vec<&AccAddress> {
+        let mut signers = vec![];
+        let mut seen = HashSet::new();
+
+        for msg in &self.body.messages {
+            for addr in msg.get_signers() {
+                if seen.insert(addr.to_string()) {
+                    signers.push(addr);
+                }
+            }
+        }
+
+        // ensure any specified fee payer is included in the required signers (at the end)
+        let fee_payer = &self.auth_info.fee.payer;
+
+        if let Some(addr) = fee_payer {
+            if seen.insert(addr.to_string()) {
+                signers.push(addr);
+            }
+        }
+
+        return signers;
+    }
+
+    pub fn get_signatures(&self) -> &Vec<Vec<u8>> {
+        return &self.signatures;
+    }
+
+    pub fn get_signatures_data(&self) -> &Vec<SignatureData> {
+        &self.signatures_data
+    }
+
+    pub fn get_timeout_height(&self) -> u64 {
+        self.body.timeout_height
+    }
+
+    pub fn get_memo(&self) -> &str {
+        &self.body.memo
+    }
+
+    pub fn get_fee(&self) -> &Option<SendCoins> {
+        return &self.auth_info.fee.amount;
+    }
+
+    pub fn get_fee_payer(&self) -> &AccAddress {
+        if let Some(payer) = &self.auth_info.fee.payer {
+            return payer;
+        } else {
+            // At least one signer exists due to Ante::validate_basic_ante_handler()
+            return self.get_signers()[0];
+        }
+    }
+
+    pub fn get_public_keys(&self) -> Vec<&Option<PublicKey>> {
+        self.auth_info
+            .signer_infos
+            .iter()
+            .map(|si| &si.public_key)
+            .collect()
+    }
 }
 
 /// This enum is used where a Tx needs to be serialized like an Any
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(tag = "@type")]
-pub enum AnyTx {
+pub enum AnyTx<M: Message> {
     #[serde(rename = "/cosmos.tx.v1beta1.Tx")]
-    Tx(Tx),
+    Tx(Tx<M>),
 }
 
-impl TryFrom<RawTx> for Tx {
+impl<M: Message> TryFrom<RawTx> for Tx<M> {
     type Error = Error;
 
     fn try_from(raw: RawTx) -> Result<Self, Self::Error> {
@@ -62,19 +161,37 @@ impl TryFrom<RawTx> for Tx {
             return Err(Error::DecodeGeneral("unknown extension options".into()));
         }
 
+        let auth_info: AuthInfo = raw
+            .auth_info
+            .ok_or(Error::MissingField("auth_info".into()))?
+            .try_into()?;
+
+        // extract signatures data when decoding - this isn't done in the SDK
+        if raw.signatures.len() != auth_info.signer_infos.len() {
+            return Err(Error::DecodeGeneral(
+                "signatures list does not match signer_infos length".into(),
+            ));
+        }
+        let mut signatures_data = Vec::with_capacity(raw.signatures.len());
+        for (i, signature) in raw.signatures.iter().enumerate() {
+            signatures_data.push(SignatureData {
+                signature: signature.clone(),
+                // the check above, tx.signatures.len() != tx.auth_info.signer_infos.len(), ensures that this indexing is safe
+                sequence: auth_info.signer_infos[i].sequence,
+            })
+        }
+
         Ok(Tx {
             body: body.try_into()?,
-            auth_info: raw
-                .auth_info
-                .ok_or(Error::MissingField("auth_info".into()))?
-                .try_into()?,
+            auth_info,
             signatures: raw.signatures,
+            signatures_data,
         })
     }
 }
 
-impl From<Tx> for RawTx {
-    fn from(tx: Tx) -> RawTx {
+impl<M: Message> From<Tx<M>> for RawTx {
+    fn from(tx: Tx<M>) -> RawTx {
         RawTx {
             body: Some(tx.body.into()),
             auth_info: Some(tx.auth_info.into()),
@@ -83,44 +200,52 @@ impl From<Tx> for RawTx {
     }
 }
 
-impl Protobuf<RawTx> for Tx {}
+impl<M: Message> Protobuf<RawTx> for Tx<M> {}
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "@type")]
-pub enum Msg {
-    #[serde(rename = "/cosmos.bank.v1beta1.MsgSend")]
-    Send(MsgSend),
-}
+// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+// #[serde(tag = "@type")]
+// pub enum Msg {
+//     #[serde(rename = "/cosmos.bank.v1beta1.MsgSend")]
+//     Send(MsgSend),
+// }
 
-impl Msg {
-    pub fn get_signers(&self) -> Vec<&AccAddress> {
-        match &self {
-            Msg::Send(msg) => return vec![&msg.from_address],
-        }
-    }
+// impl Msg {
+//     pub fn get_signers(&self) -> Vec<&AccAddress> {
+//         match &self {
+//             Msg::Send(msg) => return vec![&msg.from_address],
+//         }
+//     }
 
-    pub fn validate_basic(&self) -> Result<(), Error> {
-        match &self {
-            Msg::Send(_) => Ok(()),
-        }
-    }
-}
+//     pub fn validate_basic(&self) -> Result<(), Error> {
+//         match &self {
+//             Msg::Send(_) => Ok(()),
+//         }
+//     }
+// }
 
-impl From<Msg> for Any {
-    fn from(msg: Msg) -> Self {
-        match msg {
-            Msg::Send(msg) => Any {
-                type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-                value: msg.encode_vec(),
-            },
-        }
-    }
+// impl From<Msg> for Any {
+//     fn from(msg: Msg) -> Self {
+//         match msg {
+//             Msg::Send(msg) => Any {
+//                 type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
+//                 value: msg.encode_vec(),
+//             },
+//         }
+//     }
+// }
+
+pub trait Message: Clone + Send + Sync + 'static + Into<Any> + TryFrom<Any, Error = Error> {
+    //fn decode(raw: &Any) -> Self; // TODO: could be From<Any>
+
+    fn get_signers(&self) -> Vec<&AccAddress>;
+
+    fn validate_basic(&self) -> Result<(), String>;
 }
 
 /// TxBody is the body of a transaction that all signers sign over.
 #[serde_as]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct TxBody {
+pub struct TxBody<M: Message> {
     /// messages is a list of messages to be executed. The required signers of
     /// those messages define the number and order of elements in AuthInfo's
     /// signer_infos and Tx's signatures. Each required signer address is added to
@@ -128,7 +253,7 @@ pub struct TxBody {
     /// By convention, the first required signer (usually from the first message)
     /// is referred to as the primary signer and pays the fee for the whole
     /// transaction.
-    pub messages: Vec<Msg>,
+    pub messages: Vec<M>,
     /// memo is any arbitrary note/comment to be added to the transaction.
     /// WARNING: in clients, any publicly exposed text should not be called memo,
     /// but should be called `note` instead (see <https://github.com/cosmos/cosmos-sdk/issues/9122>).
@@ -147,21 +272,14 @@ pub struct TxBody {
     pub non_critical_extension_options: Vec<Any>, //TODO: use a domain type here
 }
 
-impl TryFrom<RawTxBody> for TxBody {
+impl<M: Message> TryFrom<RawTxBody> for TxBody<M> {
     type Error = Error;
 
     fn try_from(raw: RawTxBody) -> Result<Self, Self::Error> {
-        let mut messages: Vec<Msg> = vec![];
+        let mut messages: Vec<M> = vec![];
 
         for msg in &raw.messages {
-            match msg.type_url.as_str() {
-                "/cosmos.bank.v1beta1.MsgSend" => {
-                    let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())
-                        .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
-                    messages.push(Msg::Send(msg));
-                }
-                _ => return Err(Error::DecodeGeneral("message type not recognized".into())), // If any message is not recognized then reject the entire Tx
-            };
+            messages.push(Any::try_into(msg.to_owned())?);
         }
 
         Ok(TxBody {
@@ -174,8 +292,8 @@ impl TryFrom<RawTxBody> for TxBody {
     }
 }
 
-impl From<TxBody> for RawTxBody {
-    fn from(tx_body: TxBody) -> RawTxBody {
+impl<M: Message> From<TxBody<M>> for RawTxBody {
+    fn from(tx_body: TxBody<M>) -> RawTxBody {
         RawTxBody {
             messages: tx_body.messages.into_iter().map(|m| m.into()).collect(),
             memo: tx_body.memo,
@@ -186,7 +304,7 @@ impl From<TxBody> for RawTxBody {
     }
 }
 
-impl Protobuf<RawTxBody> for TxBody {}
+impl<M: Message> Protobuf<RawTxBody> for TxBody<M> {}
 
 /// AuthInfo describes the fee and signer modes that are used to sign a
 /// transaction.
@@ -514,23 +632,23 @@ impl From<Tip> for RawTip {
 
 impl Protobuf<RawTip> for Tip {}
 
-/// GetTxsEventResponse is the response type for the Service.TxsByEvents
-/// RPC method.
-#[serde_as]
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
-pub struct GetTxsEventResponse {
-    /// txs is the list of queried transactions.
-    pub txs: Vec<Tx>,
-    /// tx_responses is the list of queried TxResponses.
-    pub tx_responses: Vec<TxResponse>,
-    /// pagination defines a pagination for the response.
-    /// Deprecated post v0.46.x: use total instead.
-    // TODO: doesn't serialize correctly - has been deprecated
-    pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
-    /// total is total number of results available
-    #[serde_as(as = "DisplayFromStr")]
-    pub total: u64,
-}
+// /// GetTxsEventResponse is the response type for the Service.TxsByEvents
+// /// RPC method.
+// #[serde_as]
+// #[derive(Clone, PartialEq, Serialize, Deserialize)]
+// pub struct GetTxsEventResponse {
+//     /// txs is the list of queried transactions.
+//     pub txs: Vec<Tx>,
+//     /// tx_responses is the list of queried TxResponses.
+//     pub tx_responses: Vec<TxResponse>,
+//     /// pagination defines a pagination for the response.
+//     /// Deprecated post v0.46.x: use total instead.
+//     // TODO: doesn't serialize correctly - has been deprecated
+//     pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
+//     /// total is total number of results available
+//     #[serde_as(as = "DisplayFromStr")]
+//     pub total: u64,
+// }
 
 #[cfg(test)]
 mod tests {

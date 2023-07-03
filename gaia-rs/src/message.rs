@@ -1,5 +1,5 @@
 use ibc_proto::google::protobuf::Any;
-use proto_messages::cosmos::tx::v1beta1::tx_v2::Message as SDKMessage;
+use proto_messages::cosmos::tx::v1beta1::Message as SDKMessage;
 use proto_types::AccAddress;
 
 #[derive(Debug, Clone)]

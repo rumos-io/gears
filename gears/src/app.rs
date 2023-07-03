@@ -9,7 +9,7 @@ use anyhow::Result;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
-use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
+use proto_messages::cosmos::tx::v1beta1::Message;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;

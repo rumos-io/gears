@@ -9,7 +9,7 @@ pub enum Message {
 }
 
 //TODO: the fact that this implements proto_messages::cosmos::tx::v1beta1::tx_v2::Message  is not used
-impl proto_messages::cosmos::tx::v1beta1::tx_v2::Message for Message {
+impl proto_messages::cosmos::tx::v1beta1::Message for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
         match &self {
             Message::Send(msg) => return vec![&msg.from_address],

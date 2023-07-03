@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
-use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
+use proto_messages::cosmos::tx::v1beta1::Message;
 use serde::de::DeserializeOwned;
 use store_crate::StoreKey;
 use strum::IntoEnumIterator;
