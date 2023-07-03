@@ -27,12 +27,6 @@ impl FromStr for GenesisState {
     }
 }
 
-impl From<GenesisState> for String {
-    fn from(value: GenesisState) -> Self {
-        serde_json::to_string(&value).expect("this cannot fail")
-    }
-}
-
 impl Default for GenesisState {
     fn default() -> Self {
         Self {

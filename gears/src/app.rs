@@ -1,44 +1,27 @@
 use crate::baseapp::ante_v2::{AuthKeeper, BankKeeper};
-use crate::baseapp::Handler;
-use crate::client::tx::get_tx_command_v2;
-use anyhow::Result;
-use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
-use serde::Serialize;
-use store_crate::StoreKey;
-use strum::IntoEnumIterator;
-// use auth::cli::query::get_auth_query_command;
-// use auth::Keeper as AuthKeeper;
-// use bank::cli::query::get_bank_query_command;
-// use bank::Keeper as BankKeeper;
 use crate::baseapp::cli::get_run_command;
+use crate::baseapp::Handler;
+use crate::client::init::get_init_command;
 use crate::client::query::get_query_command_v2;
-use crate::client::{init::get_init_command, query::get_query_command, tx::get_tx_command};
+use crate::client::tx::get_tx_command_v2;
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
+use anyhow::Result;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
+use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
+use serde::Serialize;
 use std::hash::Hash;
+use store_crate::StoreKey;
+use strum::IntoEnumIterator;
 
 use crate::{
     baseapp::cli::run_run_command_micro,
     client::{
         init::run_init_command,
         keys::{get_keys_command, run_keys_command},
-        query::run_query_command,
-        tx::run_tx_command,
     },
 };
-
-// use crate::genesis::GenesisState;
-// use crate::handler::Handler;
-// use crate::message::Message;
-// use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
-
-// mod client;
-// mod genesis;
-// mod handler;
-// mod message;
-// mod store_keys;
 
 fn get_completions_command() -> Command {
     Command::new("completions")
@@ -86,9 +69,9 @@ fn build_cli(
 }
 
 pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
+    app_name: &'static str,
     version: &'static str,
     genesis_state: G,
-    app_name: &'static str,
     bank_keeper: BK,
     auth_keeper: AK,
     params_keeper: ParamsKeeper<SK, PSK>,

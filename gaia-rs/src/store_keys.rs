@@ -9,6 +9,8 @@ pub enum GaiaStoreKey {
     Params,
 }
 
+/// WARNING: a key name must not be a prefix of another, there is currently
+/// no check in the SDK to prevent this.
 impl StoreKey for GaiaStoreKey {
     fn name(&self) -> &'static str {
         match self {
@@ -26,6 +28,8 @@ pub enum GaiaParamsStoreKey {
     BaseApp,
 }
 
+/// WARNING: a key name must not be a prefix of another, there is currently
+/// no check in the SDK to prevent this.
 impl ParamsSubspaceKey for GaiaParamsStoreKey {
     fn name(&self) -> &'static str {
         match self {

@@ -2,4 +2,4 @@ mod error;
 mod hash;
 mod store;
 
-pub use store::*;
+pub use crate::store::*;
