@@ -8,8 +8,6 @@ const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [
     068, 101, 102, 097, 117, 108, 116, 083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100,
 ]; // "DefaultSendEnabled"
 
-const SUBSPACE_NAME: &str = "bank/";
-
 // NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Params {

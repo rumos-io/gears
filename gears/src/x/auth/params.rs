@@ -1,4 +1,3 @@
-use database::Database;
 use proto_messages::utils::serialize_number_to_string;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -24,23 +23,23 @@ pub struct Params {
     pub sig_verify_cost_secp256k1: u64,
 }
 
-const KEY_MAX_MEMO_CHARACTERS: [u8; 17] = [
-    077, 097, 120, 077, 101, 109, 111, 067, 104, 097, 114, 097, 099, 116, 101, 114, 115,
-]; // "MaxMemoCharacters"
-const KEY_TX_SIG_LIMIT: [u8; 10] = [084, 120, 083, 105, 103, 076, 105, 109, 105, 116]; // "TxSigLimit"
-const KEY_TX_SIZE_COST_PER_BYTE: [u8; 17] = [
-    084, 120, 083, 105, 122, 101, 067, 111, 115, 116, 080, 101, 114, 066, 121, 116, 101,
-]; // "TxSizeCostPerByte"
-const KEY_SIG_VERIFY_COST_ED25519: [u8; 20] = [
-    083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 069, 068, 050, 053, 053, 049,
-    057,
-]; // "SigVerifyCostED25519"
-const KEY_SIG_VERIFY_COST_SECP256K1: [u8; 22] = [
-    083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 083, 101, 099, 112, 050, 053,
-    054, 107, 049,
-]; // "SigVerifyCostSecp256k1"
+// const KEY_MAX_MEMO_CHARACTERS: [u8; 17] = [
+//     077, 097, 120, 077, 101, 109, 111, 067, 104, 097, 114, 097, 099, 116, 101, 114, 115,
+// ]; // "MaxMemoCharacters"
+// const KEY_TX_SIG_LIMIT: [u8; 10] = [084, 120, 083, 105, 103, 076, 105, 109, 105, 116]; // "TxSigLimit"
+// const KEY_TX_SIZE_COST_PER_BYTE: [u8; 17] = [
+//     084, 120, 083, 105, 122, 101, 067, 111, 115, 116, 080, 101, 114, 066, 121, 116, 101,
+// ]; // "TxSizeCostPerByte"
+// const KEY_SIG_VERIFY_COST_ED25519: [u8; 20] = [
+//     083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 069, 068, 050, 053, 053, 049,
+//     057,
+// ]; // "SigVerifyCostED25519"
+// const KEY_SIG_VERIFY_COST_SECP256K1: [u8; 22] = [
+//     083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 083, 101, 099, 112, 050, 053,
+//     054, 107, 049,
+// ]; // "SigVerifyCostSecp256k1"
 
-const SUBSPACE_NAME: &str = "auth/";
+// const SUBSPACE_NAME: &str = "auth/";
 
 // pub const DEFAULT_PARAMS: Params = Params {
 //     max_memo_characters: 256,

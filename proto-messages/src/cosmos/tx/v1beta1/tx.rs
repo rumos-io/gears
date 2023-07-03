@@ -18,10 +18,7 @@ use serde_with::DisplayFromStr;
 
 use crate::{
     cosmos::base::v1beta1::{Coin, SendCoins},
-    cosmos::{
-        bank::v1beta1::MsgSend, base::abci::v1beta1::TxResponse,
-        crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
-    },
+    cosmos::crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
     error::Error,
 };
 

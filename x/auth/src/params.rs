@@ -4,9 +4,9 @@ use gears::{
     x::{auth::Params, params::ParamsSubspaceKey},
 };
 //use params_module::ParamsSubspaceKey;
-use proto_messages::utils::serialize_number_to_string;
-use serde::{Deserialize, Serialize};
-use serde_aux::prelude::deserialize_number_from_string;
+// use proto_messages::utils::serialize_number_to_string;
+// use serde::{Deserialize, Serialize};
+// use serde_aux::prelude::deserialize_number_from_string;
 use store::{ImmutablePrefixStore, StoreKey};
 
 // #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -43,8 +43,6 @@ const KEY_SIG_VERIFY_COST_SECP256K1: [u8; 22] = [
     083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 083, 101, 099, 112, 050, 053,
     054, 107, 049,
 ]; // "SigVerifyCostSecp256k1"
-
-const SUBSPACE_NAME: &str = "auth/";
 
 pub const DEFAULT_PARAMS: Params = Params {
     max_memo_characters: 256,

@@ -11,7 +11,7 @@ use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
 use proto_messages::cosmos::tx::v1beta1::Message;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::hash::Hash;
 use store_crate::StoreKey;
 use strum::IntoEnumIterator;

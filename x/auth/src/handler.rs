@@ -18,12 +18,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn handle<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
-        msg: &Message,
+        _ctx: &mut Context<DB, SK>,
+        _msg: &Message,
     ) -> Result<(), AppError> {
-        match msg {
-            Message::Send(_) => Ok(()),
-        }
+        Ok(())
     }
 
     pub fn handle_query<DB: Database>(
