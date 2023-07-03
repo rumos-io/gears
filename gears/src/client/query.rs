@@ -21,6 +21,25 @@ pub fn get_query_command() -> Command {
         )
 }
 
+pub fn get_query_command_v2(sub_commands: Vec<Command>) -> Command {
+    let mut cli = Command::new("query")
+        .about("Querying subcommands")
+        .subcommand_required(true)
+        .arg(
+            arg!(--node)
+                .help("<host>:<port> to Tendermint RPC interface for this chain")
+                .default_value("http://localhost:26657")
+                .action(ArgAction::Set)
+                .global(true),
+        );
+
+    for sub_command in sub_commands {
+        cli = cli.subcommand(sub_command);
+    }
+
+    cli
+}
+
 pub fn run_query_command(matches: &ArgMatches) -> Result<()> {
     let node = matches
         .get_one::<String>("node")

@@ -1,3 +1,4 @@
+pub mod app;
 pub mod baseapp;
 pub mod client;
 pub mod crypto;
