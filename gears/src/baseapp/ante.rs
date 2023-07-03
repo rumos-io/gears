@@ -18,15 +18,11 @@ use store_crate::StoreKey;
 
 use crate::{
     error::AppError,
-
-    types::context_v2::Context,
-    // x::{
-    //     auth::{Auth, Module, Params as AuthParams},
-    //     bank::Bank,
-    // },
+    types::context::Context,
     x::auth::{Module, Params},
 };
 
+// TODO: this doesn't belong here
 pub trait BankKeeper<SK: StoreKey> {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
@@ -37,6 +33,7 @@ pub trait BankKeeper<SK: StoreKey> {
     ) -> Result<(), AppError>;
 }
 
+// TODO: this doesn't belong here
 pub trait AuthKeeper<SK: StoreKey> {
     fn get_auth_params<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params;
 

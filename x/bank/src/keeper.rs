@@ -5,9 +5,9 @@ use cosmwasm_std::Uint256;
 use database::Database;
 
 use gears::{
-    baseapp::ante_v2::AuthKeeper,
+    baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context_v2::{Context, QueryContext},
+    types::context::{Context, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
@@ -34,7 +34,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     auth_keeper: auth::Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::BankKeeper<SK>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::BankKeeper<SK>
     for Keeper<SK, PSK>
 {
     fn send_coins_from_account_to_module<DB: Database>(

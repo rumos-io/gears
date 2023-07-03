@@ -21,12 +21,12 @@ use tracing::{error, info};
 
 use crate::{
     error::AppError,
-    types::context_v2::{Context, InitContext, QueryContext, TxContext},
+    types::context::{Context, InitContext, QueryContext, TxContext},
     x::params::{Keeper, ParamsSubspaceKey},
 };
 
 use super::{
-    ante_v2::{AnteHandler, AuthKeeper, BankKeeper},
+    ante::{AnteHandler, AuthKeeper, BankKeeper},
     params::BaseAppParamsKeeper,
 };
 

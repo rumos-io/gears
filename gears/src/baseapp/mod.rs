@@ -1,4 +1,4 @@
-pub mod ante_v2;
+pub mod ante;
 mod baseapp;
 pub mod cli;
 mod params;

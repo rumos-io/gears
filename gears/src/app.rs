@@ -1,9 +1,9 @@
-use crate::baseapp::ante_v2::{AuthKeeper, BankKeeper};
+use crate::baseapp::ante::{AuthKeeper, BankKeeper};
 use crate::baseapp::cli::get_run_command;
 use crate::baseapp::Handler;
 use crate::client::init::get_init_command;
-use crate::client::query::get_query_command_v2;
-use crate::client::tx::get_tx_command_v2;
+use crate::client::query::get_query_command;
+use crate::client::tx::get_tx_command;
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
@@ -63,9 +63,9 @@ fn build_cli(
         .subcommand_required(true)
         .subcommand(get_init_command(app_name))
         .subcommand(get_run_command(app_name))
-        .subcommand(get_query_command_v2(query_commands))
+        .subcommand(get_query_command(query_commands))
         .subcommand(get_keys_command(app_name))
-        .subcommand(get_tx_command_v2(app_name, tx_commands))
+        .subcommand(get_tx_command(app_name, tx_commands))
         .subcommand(get_completions_command())
 }
 

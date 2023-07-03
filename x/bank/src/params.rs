@@ -1,5 +1,5 @@
 use database::Database;
-use gears::{types::context_v2::Context, x::params::ParamsSubspaceKey};
+use gears::{types::context::Context, x::params::ParamsSubspaceKey};
 use serde::{Deserialize, Serialize};
 use store::StoreKey;
 

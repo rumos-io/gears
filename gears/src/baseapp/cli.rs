@@ -16,7 +16,7 @@ use crate::baseapp::BaseApp;
 use crate::utils::get_default_home_dir;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
-use super::ante_v2::{AuthKeeper, BankKeeper};
+use super::ante::{AuthKeeper, BankKeeper};
 use super::Handler;
 
 pub fn run_run_command_micro<

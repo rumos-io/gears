@@ -2,9 +2,9 @@ use bytes::Bytes;
 use database::Database;
 
 use gears::{
-    baseapp::ante_v2::AuthKeeper,
+    baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context_v2::{Context, QueryContext},
+    types::context::{Context, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
@@ -29,7 +29,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     auth_params_keeper: AuthParamsKeeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante_v2::AuthKeeper<SK>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     for Keeper<SK, PSK>
 {
     fn get_auth_params<DB: Database>(&self, ctx: &Context<DB, SK>) -> gears::x::auth::Params {

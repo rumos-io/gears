@@ -4,7 +4,7 @@ use tendermint_proto::abci::RequestQuery;
 use database::Database;
 use gears::{
     error::AppError,
-    types::context_v2::{Context, QueryContext},
+    types::context::{Context, QueryContext},
 };
 
 use crate::{

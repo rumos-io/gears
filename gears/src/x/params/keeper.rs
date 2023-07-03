@@ -4,7 +4,7 @@ use store_crate::StoreKey;
 use std::{hash::Hash, marker::PhantomData};
 use strum::IntoEnumIterator;
 
-use crate::types::context_v2::Context;
+use crate::types::context::Context;
 
 pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator {
     fn name(&self) -> &'static str;

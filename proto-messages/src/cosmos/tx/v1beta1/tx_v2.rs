@@ -279,18 +279,7 @@ impl<M: Message> TryFrom<RawTxBody> for TxBody<M> {
         let mut messages: Vec<M> = vec![];
 
         for msg in &raw.messages {
-            //messages.push(M::decode(msg));
-
             messages.push(Any::try_into(msg.to_owned())?);
-
-            // match msg.type_url.as_str() {
-            //     "/cosmos.bank.v1beta1.MsgSend" => {
-            //         let msg = MsgSend::decode::<Bytes>(msg.value.clone().into())
-            //             .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
-            //         messages.push(Msg::Send(msg));
-            //     }
-            //     _ => return Err(Error::DecodeGeneral("message type not recognized".into())), // If any message is not recognized then reject the entire Tx
-            // };
         }
 
         Ok(TxBody {
