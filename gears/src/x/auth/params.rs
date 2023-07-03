@@ -3,7 +3,7 @@ use proto_messages::utils::serialize_number_to_string;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 
-use crate::{store::ImmutablePrefixStore, types::Context};
+//use crate::{store::ImmutablePrefixStore, types::Context};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Params {
@@ -50,82 +50,82 @@ const SUBSPACE_NAME: &str = "auth/";
 //     sig_verify_cost_secp256k1: 1000,
 // };
 
-impl Params {
-    fn parse_param(value: Vec<u8>) -> u64 {
-        String::from_utf8(value)
-            .expect("should be valid utf-8")
-            .strip_suffix("\"")
-            .expect("should have suffix")
-            .strip_prefix("\"")
-            .expect("should have prefix")
-            .parse()
-            .expect("should be valid u64")
-    }
+// impl Params {
+//     fn parse_param(value: Vec<u8>) -> u64 {
+//         String::from_utf8(value)
+//             .expect("should be valid utf-8")
+//             .strip_suffix("\"")
+//             .expect("should have suffix")
+//             .strip_prefix("\"")
+//             .expect("should have prefix")
+//             .parse()
+//             .expect("should be valid u64")
+//     }
 
-    fn get_raw_param<T: Database>(key: &[u8], store: &ImmutablePrefixStore<T>) -> Vec<u8> {
-        store
-            .get(key)
-            .expect("key should be set in kv store")
-            .clone()
-    }
+//     fn get_raw_param<T: Database>(key: &[u8], store: &ImmutablePrefixStore<T>) -> Vec<u8> {
+//         store
+//             .get(key)
+//             .expect("key should be set in kv store")
+//             .clone()
+//     }
 
-    pub fn get<T: Database>(ctx: &Context<T>) -> Params {
-        let store = ctx.get_kv_store(crate::store::Store::Params);
-        let store = store.get_immutable_prefix_store(SUBSPACE_NAME.into());
+//     pub fn get<T: Database>(ctx: &Context<T>) -> Params {
+//         let store = ctx.get_kv_store(crate::store::Store::Params);
+//         let store = store.get_immutable_prefix_store(SUBSPACE_NAME.into());
 
-        let raw = Params::get_raw_param(&KEY_MAX_MEMO_CHARACTERS, &store);
-        let max_memo_characters = Params::parse_param(raw);
+//         let raw = Params::get_raw_param(&KEY_MAX_MEMO_CHARACTERS, &store);
+//         let max_memo_characters = Params::parse_param(raw);
 
-        let raw = Params::get_raw_param(&KEY_TX_SIG_LIMIT, &store);
-        let tx_sig_limit = Params::parse_param(raw);
+//         let raw = Params::get_raw_param(&KEY_TX_SIG_LIMIT, &store);
+//         let tx_sig_limit = Params::parse_param(raw);
 
-        let raw = Params::get_raw_param(&KEY_TX_SIZE_COST_PER_BYTE, &store);
-        let tx_size_cost_per_byte = Params::parse_param(raw);
+//         let raw = Params::get_raw_param(&KEY_TX_SIZE_COST_PER_BYTE, &store);
+//         let tx_size_cost_per_byte = Params::parse_param(raw);
 
-        let raw = Params::get_raw_param(&KEY_SIG_VERIFY_COST_ED25519, &store);
-        let sig_verify_cost_ed25519 = Params::parse_param(raw);
+//         let raw = Params::get_raw_param(&KEY_SIG_VERIFY_COST_ED25519, &store);
+//         let sig_verify_cost_ed25519 = Params::parse_param(raw);
 
-        let raw = Params::get_raw_param(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
-        let sig_verify_cost_secp256k1 = Params::parse_param(raw);
+//         let raw = Params::get_raw_param(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
+//         let sig_verify_cost_secp256k1 = Params::parse_param(raw);
 
-        Params {
-            max_memo_characters,
-            tx_sig_limit,
-            tx_size_cost_per_byte,
-            sig_verify_cost_ed25519,
-            sig_verify_cost_secp256k1,
-        }
-    }
+//         Params {
+//             max_memo_characters,
+//             tx_sig_limit,
+//             tx_size_cost_per_byte,
+//             sig_verify_cost_ed25519,
+//             sig_verify_cost_secp256k1,
+//         }
+//     }
 
-    pub fn set<T: Database>(ctx: &mut Context<T>, params: Params) {
-        let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
-        let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
+//     pub fn set<T: Database>(ctx: &mut Context<T>, params: Params) {
+//         let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
+//         let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
-        store.set(
-            KEY_MAX_MEMO_CHARACTERS.into(),
-            format!("\"{}\"", params.max_memo_characters.to_string()).into(),
-        );
+//         store.set(
+//             KEY_MAX_MEMO_CHARACTERS.into(),
+//             format!("\"{}\"", params.max_memo_characters.to_string()).into(),
+//         );
 
-        store.set(
-            KEY_TX_SIG_LIMIT.into(),
-            format!("\"{}\"", params.tx_sig_limit.to_string()).into(),
-        );
+//         store.set(
+//             KEY_TX_SIG_LIMIT.into(),
+//             format!("\"{}\"", params.tx_sig_limit.to_string()).into(),
+//         );
 
-        store.set(
-            KEY_TX_SIZE_COST_PER_BYTE.into(),
-            format!("\"{}\"", params.tx_size_cost_per_byte.to_string()).into(),
-        );
+//         store.set(
+//             KEY_TX_SIZE_COST_PER_BYTE.into(),
+//             format!("\"{}\"", params.tx_size_cost_per_byte.to_string()).into(),
+//         );
 
-        store.set(
-            KEY_SIG_VERIFY_COST_ED25519.into(),
-            format!("\"{}\"", params.sig_verify_cost_ed25519.to_string()).into(),
-        );
+//         store.set(
+//             KEY_SIG_VERIFY_COST_ED25519.into(),
+//             format!("\"{}\"", params.sig_verify_cost_ed25519.to_string()).into(),
+//         );
 
-        store.set(
-            KEY_SIG_VERIFY_COST_SECP256K1.into(),
-            format!("\"{}\"", params.sig_verify_cost_secp256k1.to_string()).into(),
-        );
+//         store.set(
+//             KEY_SIG_VERIFY_COST_SECP256K1.into(),
+//             format!("\"{}\"", params.sig_verify_cost_secp256k1.to_string()).into(),
+//         );
 
-        return;
-    }
-}
+//         return;
+//     }
+// }

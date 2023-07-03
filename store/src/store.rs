@@ -1,6 +1,5 @@
 use std::{
     collections::BTreeMap,
-    marker::PhantomData,
     ops::{Bound, RangeBounds},
     sync::Arc,
 };
@@ -32,40 +31,6 @@ pub trait StoreKey: Hash + Eq + IntoEnumIterator {
 impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
     pub fn new(db: DB) -> Self {
         let db = Arc::new(db);
-
-        // let bank_store = KVStore::new(
-        //     PrefixDB::new(db.clone(), StoreOLD::Bank.name().as_bytes().to_vec()),
-        //     None,
-        // )
-        // .unwrap();
-        // let auth_store = KVStore::new(
-        //     PrefixDB::new(db.clone(), StoreOLD::Auth.name().as_bytes().to_vec()),
-        //     None,
-        // )
-        // .unwrap();
-        // let params_store = KVStore::new(
-        //     PrefixDB::new(db.clone(), StoreOLD::Params.name().as_bytes().to_vec()),
-        //     None,
-        // )
-        // .unwrap();
-
-        // let bank_info = StoreInfo {
-        //     name: StoreOLD::Bank.name().into(),
-        //     hash: bank_store.head_commit_hash(),
-        // };
-
-        // let auth_info = StoreInfo {
-        //     name: StoreOLD::Auth.name().into(),
-        //     hash: auth_store.head_commit_hash(),
-        // };
-
-        // let params_info = StoreInfo {
-        //     name: StoreOLD::Params.name().into(),
-        //     hash: params_store.head_commit_hash(),
-        // };
-
-        // let store_infos = [bank_info, auth_info, params_info].into();
-
         let mut store_infos = vec![];
         let mut stores = HashMap::new();
         let mut head_version = 0;
@@ -88,9 +53,6 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
 
         MultiStore {
             head_version,
-            // bank_store,
-            // auth_store,
-            // params_store,
             head_commit_hash: hash::hash_store_infos(store_infos),
             stores,
         }
@@ -116,29 +78,10 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
         self.head_commit_hash
     }
 
-    // pub fn get_kv_store(&self, store_key: StoreOLD) -> &KVStore<PrefixDB<T>> {
-    //     match store_key {
-    //         StoreOLD::Bank => &self.bank_store,
-    //         StoreOLD::Auth => &self.auth_store,
-    //         StoreOLD::Params => &self.params_store,
-    //     }
-    // }
-
-    // pub fn get_mutable_kv_store(&mut self, store_key: StoreOLD) -> &mut KVStore<PrefixDB<T>> {
-    //     match store_key {
-    //         StoreOLD::Bank => &mut self.bank_store,
-    //         StoreOLD::Auth => &mut self.auth_store,
-    //         StoreOLD::Params => &mut self.params_store,
-    //     }
-    // }
-
     /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
     pub fn write_then_clear_tx_caches(&mut self) {
         for (_, store) in &mut self.stores {
             store.write_then_clear_tx_cache();
-            // self.bank_store.write_then_clear_tx_cache();
-            // self.auth_store.write_then_clear_tx_cache();
-            // self.params_store.write_then_clear_tx_cache();
         }
     }
 
@@ -160,22 +103,6 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
             store_infos.push(store_info)
         }
 
-        // let bank_info = StoreInfo {
-        //     name: StoreOLD::Bank.name().into(),
-        //     hash: self.bank_store.commit(),
-        // };
-
-        // let auth_info = StoreInfo {
-        //     name: StoreOLD::Auth.name().into(),
-        //     hash: self.auth_store.commit(),
-        // };
-
-        // let params_info = StoreInfo {
-        //     name: StoreOLD::Params.name().into(),
-        //     hash: self.params_store.commit(),
-        // };
-
-        // let store_infos = [bank_info, auth_info, params_info].into();
         let hash = hash::hash_store_infos(store_infos);
 
         self.head_commit_hash = hash;

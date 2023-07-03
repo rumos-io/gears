@@ -5,7 +5,6 @@ use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
 use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
 use serde::de::DeserializeOwned;
-use serde::Deserialize;
 use store_crate::StoreKey;
 use strum::IntoEnumIterator;
 use tendermint_abci::ServerBuilder;
@@ -50,7 +49,7 @@ pub fn run_run_command_micro<
         .get_one::<usize>("read_buf_size")
         .expect("Read buf size arg has a default value so this cannot be `None`.");
 
-    let rest_port = matches
+    let _rest_port = matches
         .get_one::<u16>("rest_port")
         .expect("REST port arg has a default value so this cannot be `None`")
         .to_owned();
