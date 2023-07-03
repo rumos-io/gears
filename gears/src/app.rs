@@ -1,5 +1,6 @@
 use crate::baseapp::ante_v2::{AuthKeeper, BankKeeper};
 use crate::baseapp::Handler;
+use crate::client::tx::get_tx_command_v2;
 use anyhow::Result;
 use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
 use serde::Serialize;
@@ -50,9 +51,15 @@ fn get_completions_command() -> Command {
         )
 }
 
-fn run_completions_command(matches: &ArgMatches, app_name: &'static str, version: &'static str) {
+fn run_completions_command(
+    matches: &ArgMatches,
+    app_name: &'static str,
+    version: &'static str,
+    query_commands: Vec<Command>,
+    tx_commands: Vec<Command>,
+) {
     if let Some(generator) = matches.get_one::<Shell>("shell").copied() {
-        let mut cmd = build_cli(app_name, version);
+        let mut cmd = build_cli(app_name, version, query_commands, tx_commands);
         print_completions(generator, &mut cmd);
     }
 }
@@ -61,22 +68,24 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
 }
 
-fn build_cli(app_name: &'static str, version: &'static str) -> Command {
+fn build_cli(
+    app_name: &'static str,
+    version: &'static str,
+    query_commands: Vec<Command>,
+    tx_commands: Vec<Command>,
+) -> Command {
     Command::new(app_name)
         .version(version)
         .subcommand_required(true)
         .subcommand(get_init_command(app_name))
         .subcommand(get_run_command(app_name))
-        // .subcommand(get_query_command_v2(vec![
-        //     get_bank_query_command(),
-        //     get_auth_query_command(),
-        // ]))
+        .subcommand(get_query_command_v2(query_commands))
         .subcommand(get_keys_command(app_name))
-        //.subcommand(get_tx_command(APP_NAME))
+        .subcommand(get_tx_command_v2(app_name, tx_commands))
         .subcommand(get_completions_command())
 }
 
-pub fn run<G, SK, PSK, M, BK, AK, H>(
+pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
     version: &'static str,
     genesis_state: G,
     app_name: &'static str,
@@ -85,8 +94,10 @@ pub fn run<G, SK, PSK, M, BK, AK, H>(
     params_keeper: ParamsKeeper<SK, PSK>,
     params_subspace_key: PSK,
     handler: H,
-    //query_commands: Vec<Command>,
-    //tx_commands: Vec<Command>,
+    query_commands: Vec<Command>,
+    query_command_handler: FQ,
+    tx_commands: Vec<Command>,
+    tx_command_handler: FT,
 ) -> Result<()>
 where
     G: Serialize,
@@ -96,10 +107,17 @@ where
     BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
     AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
     H: Handler<M, SK> + 'static,
+    FQ: FnOnce(&ArgMatches) -> Result<()>,
+    FT: FnOnce(&ArgMatches) -> Result<()>,
 {
     setup_panic!();
 
-    let cli = build_cli(app_name, version);
+    let cli = build_cli(
+        app_name,
+        version,
+        query_commands.clone(),
+        tx_commands.clone(),
+    );
     let matches = cli.get_matches();
 
     match matches.subcommand() {
@@ -113,11 +131,11 @@ where
             params_subspace_key,
             handler,
         ),
-        // Some(("query", sub_matches)) => run_query_command(sub_matches)?,
+        Some(("query", sub_matches)) => query_command_handler(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches, app_name)?,
-        //Some(("tx", sub_matches)) => run_tx_command(sub_matches, APP_NAME)?,
+        Some(("tx", sub_matches)) => tx_command_handler(sub_matches)?,
         Some(("completions", sub_matches)) => {
-            run_completions_command(sub_matches, app_name, version)
+            run_completions_command(sub_matches, app_name, version, query_commands, tx_commands)
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };
