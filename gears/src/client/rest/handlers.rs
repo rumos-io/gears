@@ -21,7 +21,7 @@ use tendermint_rpc::{endpoint::tx_search::Response, query::Query, Order};
 use tendermint_rpc::{Client, HttpClient};
 
 use super::pagination::parse_pagination;
-use crate::baseapp::BaseApp;
+//use crate::baseapp::BaseApp;
 use crate::types::QueryContext;
 use crate::x::bank;
 use crate::{

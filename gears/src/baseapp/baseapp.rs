@@ -1,18 +1,12 @@
-use std::hash::Hash;
-use std::str::FromStr;
-use std::sync::{Arc, RwLock};
-
-use database::{Database, RocksDB};
-use ibc_proto::cosmos::tx::v1beta1::Tx;
-use ibc_proto::protobuf::Protobuf;
-use prost::Message;
-
 use bytes::Bytes;
-use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
-use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
-use proto_messages::cosmos::tx::v1beta1::Msg;
-use store_crate::StoreKey;
-use strum::IntoEnumIterator;
+use database::{Database, RocksDB};
+use proto_messages::cosmos::tx::v1beta1::tx_v2::{Message, TxWithRaw};
+use serde::de::DeserializeOwned;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, RwLock},
+};
+use store_crate::{MultiStore, StoreKey};
 use tendermint_abci::Application;
 use tendermint_informal::block::Header;
 use tendermint_proto::abci::{
@@ -25,171 +19,61 @@ use tendermint_proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::types::{GenesisState, InitContext, TxContext};
 use crate::{
-    baseapp::{ante::AnteHandler, params},
     error::AppError,
-    store::MultiStore,
-    types::{Context, DecodedTx, QueryContext},
-    x::{auth::Auth, bank::Bank},
+    types::context_v2::{Context, InitContext, QueryContext, TxContext},
+    x::params::{Keeper, ParamsSubspaceKey},
 };
 
-const APP_VERSION: &str = env!("CARGO_PKG_VERSION"); // TODO: this should be passed in
+use super::{
+    ante_v2::{AnteHandler, AuthKeeper, BankKeeper},
+    params::BaseAppParamsKeeper,
+};
 
-//TODO:
-// 1. Remove unwraps
-// 2. Remove "hash goes here"
+pub trait Handler<M: Message, SK: StoreKey, G>: Clone + Send + Sync {
+    fn handle_tx<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
+
+    fn handle_init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: G);
+
+    fn handle_query<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: RequestQuery,
+    ) -> Result<Bytes, AppError>;
+}
 
 #[derive(Debug, Clone)]
-pub struct BaseApp {
-    pub multi_store: Arc<RwLock<MultiStore<RocksDB>>>,
+pub struct BaseApp<
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Message,
+    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
+    H: Handler<M, SK, G>,
+    G: DeserializeOwned + Clone + Send + Sync + 'static,
+> {
+    pub multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
+    base_ante_handler: AnteHandler<BK, AK, SK>,
+    handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
+    baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
     app_name: &'static str,
+    app_version: &'static str,
+    pub m: PhantomData<M>,
+    pub g: PhantomData<G>,
 }
 
-impl BaseApp {
-    pub fn new(db: RocksDB, app_name: &'static str) -> Self {
-        let multi_store = MultiStore::new(db);
-        let height = multi_store.get_head_version().into();
-        Self {
-            multi_store: Arc::new(RwLock::new(multi_store)),
-            height: Arc::new(RwLock::new(height)),
-            block_header: Arc::new(RwLock::new(None)),
-            app_name,
-        }
-    }
-
-    pub fn get_block_height(&self) -> u64 {
-        *self.height.read().expect("RwLock will not be poisoned")
-    }
-
-    fn get_block_header(&self) -> Option<Header> {
-        self.block_header
-            .read()
-            .expect("RwLock will not be poisoned")
-            .clone()
-    }
-
-    fn set_block_header(&self, header: Header) {
-        let mut current_header = self
-            .block_header
-            .write()
-            .expect("RwLock will not be poisoned");
-        *current_header = Some(header);
-    }
-
-    fn get_last_commit_hash(&self) -> [u8; 32] {
-        self.multi_store
-            .read()
-            .expect("RwLock will not be poisoned")
-            .get_head_commit_hash()
-    }
-
-    fn increment_block_height(&self) -> u64 {
-        let mut height = self.height.write().expect("RwLock will not be poisoned");
-        *height += 1;
-        return *height;
-    }
-
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
-        // TODO:
-        // 1. Check from address is signer + verify signature
-
-        //###########################
-        let tx = Tx::decode(raw.clone()).unwrap();
-
-        let public = tx.auth_info.clone().unwrap().signer_infos[0]
-            .clone()
-            .public_key
-            .unwrap()
-            .type_url;
-        println!("################# URL:  {}", public);
-        //cosmos.crypto.secp256k1.PubKey
-        // let msgs = tx.get_msgs();
-        // let msg = &msgs[0];
-
-        // let signers = msg.get_signers();
-
-        // println!("################### Signers: {}", signers);
-
-        // Ok(())
-
-        //#######################
-        let tx = DecodedTx::from_bytes(raw.clone())?;
-
-        Self::validate_basic_tx_msgs(tx.get_msgs())?;
-
-        let mut multi_store = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block"),
-            raw.clone().into(),
-        );
-
-        match AnteHandler::run(&mut ctx.as_any(), &tx) {
-            Ok(_) => multi_store.write_then_clear_tx_caches(),
-            Err(e) => {
-                multi_store.clear_tx_caches();
-                return Err(e);
-            }
-        };
-
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block"),
-            raw.into(),
-        );
-
-        match Self::run_msgs(&mut ctx.as_any(), tx.get_msgs()) {
-            Ok(_) => {
-                let events = ctx.events;
-                multi_store.write_then_clear_tx_caches();
-                Ok(events)
-            }
-            Err(e) => {
-                multi_store.clear_tx_caches();
-                Err(e)
-            }
-        }
-    }
-
-    fn run_msgs<T: Database>(ctx: &mut Context<T>, msgs: &Vec<Msg>) -> Result<(), AppError> {
-        for msg in msgs {
-            match msg {
-                Msg::Send(send_msg) => {
-                    Bank::send_coins_from_account_to_account(ctx, send_msg.clone())?
-                }
-            };
-        }
-
-        return Ok(());
-    }
-
-    fn validate_basic_tx_msgs(msgs: &Vec<Msg>) -> Result<(), AppError> {
-        if msgs.is_empty() {
-            return Err(AppError::InvalidRequest(
-                "must contain at least one message".into(),
-            ));
-        }
-
-        for msg in msgs {
-            msg.validate_basic()
-                .map_err(|e| AppError::TxValidation(e.to_string()))?
-        }
-
-        return Ok(());
-    }
-}
-
-impl Application for BaseApp {
+impl<
+        M: Message + 'static,
+        SK: StoreKey + Clone + Send + Sync + 'static,
+        PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+        BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+        AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
+        H: Handler<M, SK, G> + 'static,
+        G: DeserializeOwned + Clone + Send + Sync + 'static,
+    > Application for BaseApp<SK, PSK, M, BK, AK, H, G>
+{
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
         let mut multi_store = self
@@ -202,13 +86,13 @@ impl Application for BaseApp {
         let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), request.chain_id);
 
         if let Some(params) = request.consensus_params.clone() {
-            // TODO: uncomment this:
-            //params::set_consensus_params(&mut ctx.as_any(), params);
+            self.baseapp_params_keeper
+                .set_consensus_params(&mut ctx.as_any(), params);
         }
 
-        let genesis = String::from_utf8(request.app_state_bytes.into())
+        let genesis: G = String::from_utf8(request.app_state_bytes.into())
             .map_err(|e| AppError::Genesis(e.to_string()))
-            .and_then(|f| GenesisState::from_str(&f))
+            .and_then(|s| serde_json::from_str(&s).map_err(|e| AppError::Genesis(e.to_string())))
             .unwrap_or_else(|e| {
                 error!(
                     "Invalid genesis provided by Tendermint.\n{}\nTerminating process",
@@ -217,8 +101,7 @@ impl Application for BaseApp {
                 std::process::exit(1)
             });
 
-        Bank::init_genesis(&mut ctx.as_any(), genesis.bank);
-        Auth::init_genesis(&mut ctx.as_any(), genesis.auth);
+        self.handler.handle_init_genesis(&mut ctx.as_any(), genesis);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -237,7 +120,7 @@ impl Application for BaseApp {
 
         ResponseInfo {
             data: self.app_name.to_string(),
-            version: APP_VERSION.to_string(),
+            version: self.app_version.to_string(),
             app_version: 1,
             last_block_height: self
                 .get_block_height()
@@ -250,11 +133,32 @@ impl Application for BaseApp {
     fn query(&self, request: RequestQuery) -> ResponseQuery {
         info!("Got query request to: {}", request.path);
 
-        if request.path.starts_with("/ibc") {
-            //handle ibc queries
-            ResponseQuery {
+        let multi_store = self
+            .multi_store
+            .read()
+            .expect("RwLock will not be poisoned");
+
+        let ctx = QueryContext::new(&multi_store, self.get_block_height());
+        let res = self.handler.handle_query(&ctx, request.clone());
+
+        match res {
+            Ok(res) => ResponseQuery {
+                code: 0,
+                log: "exists".to_string(),
+                info: "".to_string(),
+                index: 0,
+                key: request.data,
+                value: res.into(),
+                proof_ops: None,
+                height: self
+                    .get_block_height()
+                    .try_into()
+                    .expect("can't believe we made it this far"),
+                codespace: "".to_string(),
+            },
+            Err(e) => ResponseQuery {
                 code: 1,
-                log: "not implemented".to_string(),
+                log: e.to_string(),
                 info: "".to_string(),
                 index: 0,
                 key: request.data,
@@ -262,115 +166,7 @@ impl Application for BaseApp {
                 proof_ops: None,
                 height: 0,
                 codespace: "".to_string(),
-            }
-        } else {
-            match request.path.as_str() {
-                "/cosmos.bank.v1beta1.Query/AllBalances" => {
-                    let data = request.data.clone();
-                    let req = QueryAllBalancesRequest::decode(data).unwrap();
-
-                    let store = self.multi_store.read().unwrap();
-                    let ctx = QueryContext::new(&store, self.get_block_height());
-
-                    let res = Bank::query_all_balances(&ctx, req).encode_vec();
-
-                    ResponseQuery {
-                        code: 0,
-                        log: "exists".to_string(),
-                        info: "".to_string(),
-                        index: 0,
-                        key: request.data,
-                        value: res.into(),
-                        proof_ops: None,
-                        height: self
-                            .get_block_height()
-                            .try_into()
-                            .expect("can't believe we made it this far"),
-                        codespace: "".to_string(),
-                    }
-
-                    // match res {
-                    //     Ok(res) => {
-                    //         let res = res.encode_vec();
-
-                    //         ResponseQuery {
-                    //             code: 0,
-                    //             log: "exists".to_string(),
-                    //             info: "".to_string(),
-                    //             index: 0,
-                    //             key: request.data,
-                    //             value: res.into(),
-                    //             proof_ops: None,
-                    //             height: self
-                    //                 .get_block_height()
-                    //                 .try_into()
-                    //                 .expect("can't believe we made it this far"),
-                    //             codespace: "".to_string(),
-                    //         }
-                    //     }
-                    //     Err(e) => ResponseQuery {
-                    //         code: 0,
-                    //         log: e.to_string(),
-                    //         info: "".to_string(),
-                    //         index: 0,
-                    //         key: request.data,
-                    //         value: vec![].into(),
-                    //         proof_ops: None,
-                    //         height: self
-                    //             .get_block_height()
-                    //             .try_into()
-                    //             .expect("can't believe we made it this far"),
-                    //         codespace: "".to_string(),
-                    //     },
-                    // }
-                }
-                "/cosmos.auth.v1beta1.Query/Account" => {
-                    let data = request.data.clone();
-                    let req = QueryAccountRequest::decode(data).unwrap();
-
-                    let store = self.multi_store.read().unwrap();
-                    let ctx = QueryContext::new(&store, self.get_block_height());
-
-                    let res = Auth::query_account(&ctx, req);
-
-                    match res {
-                        Ok(res) => ResponseQuery {
-                            code: 0,
-                            log: "exists".to_string(),
-                            info: "".to_string(),
-                            index: 0,
-                            key: request.data,
-                            value: res.encode_to_vec().into(),
-                            proof_ops: None,
-                            height: 0,
-                            codespace: "".to_string(),
-                        },
-                        Err(e) => ResponseQuery {
-                            code: 1,
-                            log: e.to_string(),
-                            info: "".to_string(),
-                            index: 0,
-                            key: request.data,
-                            value: vec![].into(),
-                            proof_ops: None,
-                            height: 0,
-                            codespace: "".to_string(),
-                        },
-                    }
-                }
-
-                _ => ResponseQuery {
-                    code: 1,
-                    log: "unrecognized query".to_string(),
-                    info: "".to_string(),
-                    index: 0,
-                    key: request.data,
-                    value: Default::default(),
-                    proof_ops: None,
-                    height: 0,
-                    codespace: "".to_string(),
-                },
-            }
+            },
         }
     }
 
@@ -500,5 +296,153 @@ impl Application for BaseApp {
     ) -> ResponseApplySnapshotChunk {
         info!("Got apply snapshot chunk request");
         Default::default()
+    }
+}
+
+impl<
+        M: Message,
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+        BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+        AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
+        H: Handler<M, SK, G>,
+        G: DeserializeOwned + Clone + Send + Sync + 'static,
+    > BaseApp<SK, PSK, M, BK, AK, H, G>
+{
+    pub fn new(
+        db: RocksDB,
+        app_name: &'static str,
+        version: &'static str,
+        bank_keeper: BK,
+        auth_keeper: AK,
+        params_keeper: Keeper<SK, PSK>,
+        params_subspace_key: PSK,
+        handler: H,
+    ) -> Self {
+        let multi_store = MultiStore::new(db);
+        let baseapp_params_keeper = BaseAppParamsKeeper {
+            params_keeper,
+            params_subspace_key,
+        };
+        let height = multi_store.get_head_version().into();
+        Self {
+            multi_store: Arc::new(RwLock::new(multi_store)),
+            base_ante_handler: AnteHandler::new(bank_keeper, auth_keeper),
+            handler,
+            block_header: Arc::new(RwLock::new(None)),
+            baseapp_params_keeper,
+            height: Arc::new(RwLock::new(height)),
+            app_name,
+            app_version: version,
+            m: PhantomData,
+            g: PhantomData,
+        }
+    }
+
+    pub fn get_block_height(&self) -> u64 {
+        *self.height.read().expect("RwLock will not be poisoned")
+    }
+
+    fn get_block_header(&self) -> Option<Header> {
+        self.block_header
+            .read()
+            .expect("RwLock will not be poisoned")
+            .clone()
+    }
+
+    fn set_block_header(&self, header: Header) {
+        let mut current_header = self
+            .block_header
+            .write()
+            .expect("RwLock will not be poisoned");
+        *current_header = Some(header);
+    }
+
+    fn get_last_commit_hash(&self) -> [u8; 32] {
+        self.multi_store
+            .read()
+            .expect("RwLock will not be poisoned")
+            .get_head_commit_hash()
+    }
+
+    fn increment_block_height(&self) -> u64 {
+        let mut height = self.height.write().expect("RwLock will not be poisoned");
+        *height += 1;
+        return *height;
+    }
+
+    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
+        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
+            .map_err(|e| AppError::TxParseError(e.to_string()))?;
+
+        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
+
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            raw.clone().into(),
+        );
+
+        match self.base_ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
+            Ok(_) => multi_store.write_then_clear_tx_caches(),
+            Err(e) => {
+                multi_store.clear_tx_caches();
+                return Err(e);
+            }
+        };
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            raw.into(),
+        );
+
+        match self.run_msgs(&mut ctx.as_any(), tx_with_raw.tx.get_msgs()) {
+            Ok(_) => {
+                let events = ctx.events;
+                multi_store.write_then_clear_tx_caches();
+                Ok(events)
+            }
+            Err(e) => {
+                multi_store.clear_tx_caches();
+                Err(e)
+            }
+        }
+    }
+
+    fn run_msgs<T: Database>(
+        &self,
+        ctx: &mut Context<T, SK>,
+        msgs: &Vec<M>,
+    ) -> Result<(), AppError> {
+        for msg in msgs {
+            self.handler.handle_tx(ctx, msg)?
+        }
+
+        return Ok(());
+    }
+
+    fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
+        if msgs.is_empty() {
+            return Err(AppError::InvalidRequest(
+                "must contain at least one message".into(),
+            ));
+        }
+
+        for msg in msgs {
+            msg.validate_basic()
+                .map_err(|e| AppError::TxValidation(e.to_string()))?
+        }
+
+        return Ok(());
     }
 }

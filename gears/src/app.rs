@@ -71,7 +71,7 @@ fn build_cli(
 
 pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
     app_name: &'static str,
-    version: &'static str,
+    app_version: &'static str,
     genesis_state: G,
     bank_keeper: BK,
     auth_keeper: AK,
@@ -98,7 +98,7 @@ where
 
     let cli = build_cli(
         app_name,
-        version,
+        app_version,
         query_commands.clone(),
         tx_commands.clone(),
     );
@@ -109,6 +109,7 @@ where
         Some(("run", sub_matches)) => run_run_command_micro(
             sub_matches,
             app_name,
+            app_version,
             bank_keeper,
             auth_keeper,
             params_keeper,
@@ -118,9 +119,13 @@ where
         Some(("query", sub_matches)) => query_command_handler(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches, app_name)?,
         Some(("tx", sub_matches)) => tx_command_handler(sub_matches)?,
-        Some(("completions", sub_matches)) => {
-            run_completions_command(sub_matches, app_name, version, query_commands, tx_commands)
-        }
+        Some(("completions", sub_matches)) => run_completions_command(
+            sub_matches,
+            app_name,
+            app_version,
+            query_commands,
+            tx_commands,
+        ),
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };
 
