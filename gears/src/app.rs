@@ -10,7 +10,8 @@ use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
 use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
-use serde::Serialize;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 use store_crate::StoreKey;
 use strum::IntoEnumIterator;
@@ -83,15 +84,15 @@ pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
     tx_command_handler: FT,
 ) -> Result<()>
 where
-    G: Serialize,
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
     PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
     M: Message,
     BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
     AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK> + 'static,
+    H: Handler<M, SK, G> + 'static,
     FQ: FnOnce(&ArgMatches) -> Result<()>,
     FT: FnOnce(&ArgMatches) -> Result<()>,
+    G: DeserializeOwned + Clone + Send + Sync + 'static + Serialize,
 {
     setup_panic!();
 

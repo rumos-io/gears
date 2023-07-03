@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
 use proto_messages::cosmos::tx::v1beta1::tx_v2::Message;
+use serde::de::DeserializeOwned;
+use serde::Deserialize;
 use store_crate::StoreKey;
 use strum::IntoEnumIterator;
 use tendermint_abci::ServerBuilder;
@@ -24,7 +26,8 @@ pub fn run_run_command_micro<
     M: Message,
     BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
     AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK> + 'static,
+    H: Handler<M, SK, G> + 'static,
+    G: DeserializeOwned + Clone + Send + Sync + 'static,
 >(
     matches: &ArgMatches,
     app_name: &'static str,
@@ -86,7 +89,7 @@ pub fn run_run_command_micro<
     db_dir.push("data");
     db_dir.push("application2.db");
 
-    let app: MicroBaseApp<SK, PSK, M, BK, AK, H> = MicroBaseApp::new(
+    let app: MicroBaseApp<SK, PSK, M, BK, AK, H, G> = MicroBaseApp::new(
         db,
         app_name,
         bank_keeper,

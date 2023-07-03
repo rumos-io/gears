@@ -8,6 +8,7 @@ use proto_messages::cosmos::{
     tx::v1beta1::tx_v2::{self, Message, TxWithRaw},
 };
 use proto_types::AccAddress;
+use serde::de::DeserializeOwned;
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
@@ -24,7 +25,7 @@ use tendermint_proto::abci::{
     ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
     ResponseQuery,
 };
-use tracing::info;
+use tracing::{error, info};
 
 use crate::{
     error::AppError,
@@ -37,10 +38,10 @@ use super::{
     params::BaseAppParamsKeeper,
 };
 
-pub trait Handler<M: Message, SK: StoreKey>: Clone + Send + Sync {
+pub trait Handler<M: Message, SK: StoreKey, G>: Clone + Send + Sync {
     fn handle_tx<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
 
-    fn handle_init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, raw: Bytes);
+    fn handle_init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: G);
 
     fn handle_query<DB: Database>(
         &self,
@@ -58,7 +59,8 @@ pub struct MicroBaseApp<
     M: Message,
     BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
     AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK>,
+    H: Handler<M, SK, G>,
+    G: DeserializeOwned + Clone + Send + Sync + 'static,
 > {
     pub multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
@@ -68,8 +70,8 @@ pub struct MicroBaseApp<
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
     app_name: &'static str,
     pub m: PhantomData<M>,
-    // pub d: PhantomData<D>,
-    // pub r: PhantomData<R>,
+    pub g: PhantomData<G>, // pub d: PhantomData<D>,
+                           // pub r: PhantomData<R>,
 }
 
 impl<
@@ -80,8 +82,9 @@ impl<
         PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
         BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
         AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-        H: Handler<M, SK> + 'static,
-    > Application for MicroBaseApp<SK, PSK, M, BK, AK, H>
+        H: Handler<M, SK, G> + 'static,
+        G: DeserializeOwned + Clone + Send + Sync + 'static,
+    > Application for MicroBaseApp<SK, PSK, M, BK, AK, H, G>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
@@ -99,8 +102,18 @@ impl<
                 .set_consensus_params(&mut ctx.as_any(), params);
         }
 
-        self.handler
-            .handle_init_genesis(&mut ctx.as_any(), request.app_state_bytes);
+        let genesis: G = String::from_utf8(request.app_state_bytes.into())
+            .map_err(|e| AppError::Genesis(e.to_string()))
+            .and_then(|s| serde_json::from_str(&s).map_err(|e| AppError::Genesis(e.to_string())))
+            .unwrap_or_else(|e| {
+                error!(
+                    "Invalid genesis provided by Tendermint.\n{}\nTerminating process",
+                    e.to_string()
+                );
+                std::process::exit(1)
+            });
+
+        self.handler.handle_init_genesis(&mut ctx.as_any(), genesis);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -356,8 +369,9 @@ impl<
         PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
         BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
         AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-        H: Handler<M, SK>,
-    > MicroBaseApp<SK, PSK, M, BK, AK, H>
+        H: Handler<M, SK, G>,
+        G: DeserializeOwned + Clone + Send + Sync + 'static,
+    > MicroBaseApp<SK, PSK, M, BK, AK, H, G>
 {
     pub fn new(
         db: RocksDB,
@@ -385,6 +399,7 @@ impl<
             //block_header: Arc::new(RwLock::new(None)),
             //app_name,
             m: PhantomData,
+            g: PhantomData,
             // d: PhantomData,
             // r: PhantomData,
         }
