@@ -18,7 +18,9 @@ use serde_with::DisplayFromStr;
 
 use crate::{
     cosmos::base::v1beta1::{Coin, SendCoins},
-    cosmos::crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
+    cosmos::{
+        base::abci::v1beta1::TxResponse, crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
+    },
     error::Error,
 };
 
@@ -629,23 +631,23 @@ impl From<Tip> for RawTip {
 
 impl Protobuf<RawTip> for Tip {}
 
-// /// GetTxsEventResponse is the response type for the Service.TxsByEvents
-// /// RPC method.
-// #[serde_as]
-// #[derive(Clone, PartialEq, Serialize, Deserialize)]
-// pub struct GetTxsEventResponse {
-//     /// txs is the list of queried transactions.
-//     pub txs: Vec<Tx>,
-//     /// tx_responses is the list of queried TxResponses.
-//     pub tx_responses: Vec<TxResponse>,
-//     /// pagination defines a pagination for the response.
-//     /// Deprecated post v0.46.x: use total instead.
-//     // TODO: doesn't serialize correctly - has been deprecated
-//     pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
-//     /// total is total number of results available
-//     #[serde_as(as = "DisplayFromStr")]
-//     pub total: u64,
-// }
+/// GetTxsEventResponse is the response type for the Service.TxsByEvents
+/// RPC method.
+#[serde_as]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct GetTxsEventResponse<M: Message> {
+    /// txs is the list of queried transactions.
+    pub txs: Vec<Tx<M>>,
+    /// tx_responses is the list of queried TxResponses.
+    pub tx_responses: Vec<TxResponse<M>>,
+    /// pagination defines a pagination for the response.
+    /// Deprecated post v0.46.x: use total instead.
+    // TODO: doesn't serialize correctly - has been deprecated
+    pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
+    /// total is total number of results available
+    #[serde_as(as = "DisplayFromStr")]
+    pub total: u64,
+}
 
 #[cfg(test)]
 mod tests {

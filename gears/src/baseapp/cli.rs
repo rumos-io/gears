@@ -12,6 +12,7 @@ use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
 use crate::baseapp::BaseApp;
+use crate::client::rest::run_rest_server;
 //use crate::client::rest::run_rest_server;
 use crate::utils::get_default_home_dir;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
@@ -19,7 +20,7 @@ use crate::x::params::{Keeper, ParamsSubspaceKey};
 use super::ante::{AuthKeeper, BankKeeper};
 use super::Handler;
 
-pub fn run_run_command_micro<
+pub fn run_run_command<
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
     PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
     M: Message,
@@ -49,7 +50,7 @@ pub fn run_run_command_micro<
         .get_one::<usize>("read_buf_size")
         .expect("Read buf size arg has a default value so this cannot be `None`.");
 
-    let _rest_port = matches
+    let rest_port = matches
         .get_one::<u16>("rest_port")
         .expect("REST port arg has a default value so this cannot be `None`")
         .to_owned();
@@ -100,7 +101,7 @@ pub fn run_run_command_micro<
         handler,
     );
 
-    //run_rest_server(app.clone(), rest_port);
+    run_rest_server(app.clone(), rest_port);
 
     let server = ServerBuilder::new(*read_buf_size)
         .bind(format!("{}:{}", host, port), app)

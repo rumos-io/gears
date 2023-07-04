@@ -17,7 +17,7 @@ use store_crate::StoreKey;
 use strum::IntoEnumIterator;
 
 use crate::{
-    baseapp::cli::run_run_command_micro,
+    baseapp::cli::run_run_command,
     client::{
         init::run_init_command,
         keys::{get_keys_command, run_keys_command},
@@ -106,7 +106,7 @@ where
 
     match matches.subcommand() {
         Some(("init", sub_matches)) => run_init_command(sub_matches, app_name, genesis_state),
-        Some(("run", sub_matches)) => run_run_command_micro(
+        Some(("run", sub_matches)) => run_run_command(
             sub_matches,
             app_name,
             app_version,
