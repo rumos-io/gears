@@ -1,4 +1,4 @@
-use axum::{body::Body, routing::get, Router};
+use axum::{body::Body, http::Method, routing::get, Router};
 use proto_messages::cosmos::tx::v1beta1::Message;
 
 use serde::de::DeserializeOwned;
@@ -6,6 +6,7 @@ use std::{hash::Hash, net::SocketAddr};
 use store_crate::StoreKey;
 use strum::IntoEnumIterator;
 use tokio::runtime::Runtime;
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
     baseapp::{
@@ -37,10 +38,9 @@ pub fn run_rest_server<
 }
 
 // TODO:
-// 1. CORS
-// 2. Replace "accept" header to force rocket to return json errors rather than the default HTML.
-// 3. what happens if a route panics?
-// 4. No error message unrecognized route - does return a 404 - can use a "fallback" route if necessary
+// 1. Replace "accept" header to force rocket to return json errors rather than the default HTML.
+// 2. what happens if a route panics?
+// 3. No error message unrecognized route - does return a 404 - can use a "fallback" route if necessary
 async fn launch<
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
     PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
@@ -54,9 +54,14 @@ async fn launch<
     port: u16,
     router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
 ) {
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST])
+        .allow_origin(Any);
+
     let app = Router::new()
         .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
         .nest("/cosmos", router)
+        .layer(cors)
         .with_state(app);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
