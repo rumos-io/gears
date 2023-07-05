@@ -1,7 +1,7 @@
 use database::Database;
 use gears::{error::AppError, types::context::Context, x::params::ParamsSubspaceKey};
 use ibc_proto::protobuf::Protobuf;
-use proto_messages::cosmos::bank::v1beta1::QueryAllBalancesRequest;
+use proto_messages::cosmos::bank::v1beta1::{QueryAllBalancesRequest, QueryTotalSupplyResponse};
 use store::StoreKey;
 
 use crate::{GenesisState, Keeper, Message};
@@ -44,6 +44,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
                     .encode_vec()
                     .into())
             }
+            "/cosmos.bank.v1beta1.Query/TotalSupply" => Ok(QueryTotalSupplyResponse {
+                supply: self.keeper.get_paginated_total_supply(&ctx),
+                pagination: None,
+            }
+            .encode_vec()
+            .into()),
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
     }

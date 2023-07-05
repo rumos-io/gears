@@ -8,6 +8,7 @@ use client::query_command_handler;
 use client::tx_command_handler;
 use gears::app::run;
 use gears::x::params::Keeper as ParamsKeeper;
+use rest::get_router;
 
 use crate::genesis::GenesisState;
 use crate::handler::Handler;
@@ -17,6 +18,7 @@ mod client;
 mod genesis;
 mod handler;
 mod message;
+mod rest;
 mod store_keys;
 
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
@@ -54,5 +56,6 @@ fn main() -> Result<()> {
         query_command_handler,
         tx_commands,
         tx_command_handler,
+        get_router(),
     )
 }

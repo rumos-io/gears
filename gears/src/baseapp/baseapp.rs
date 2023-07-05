@@ -52,7 +52,7 @@ pub struct BaseApp<
     H: Handler<M, SK, G>,
     G: DeserializeOwned + Clone + Send + Sync + 'static,
 > {
-    pub multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
+    multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
     base_ante_handler: AnteHandler<BK, AK, SK>,
     handler: H,

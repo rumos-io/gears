@@ -1,6 +1,8 @@
 use std::hash::Hash;
 use std::path::PathBuf;
 
+use axum::body::Body;
+use axum::Router;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
 use proto_messages::cosmos::tx::v1beta1::Message;
@@ -37,6 +39,7 @@ pub fn run_run_command<
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     handler: H,
+    router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
 ) {
     let host = matches
         .get_one::<String>("host")
@@ -101,7 +104,7 @@ pub fn run_run_command<
         handler,
     );
 
-    run_rest_server(app.clone(), rest_port);
+    run_rest_server(app.clone(), rest_port, router);
 
     let server = ServerBuilder::new(*read_buf_size)
         .bind(format!("{}:{}", host, port), app)

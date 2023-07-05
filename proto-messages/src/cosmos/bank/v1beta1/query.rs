@@ -4,6 +4,7 @@ use ibc_proto::{
         QueryAllBalancesResponse as RawQueryAllBalancesResponse,
         QueryBalanceRequest as RawQueryBalanceRequest,
         QueryBalanceResponse as RawQueryBalanceResponse,
+        QueryTotalSupplyResponse as RawQueryTotalSupplyResponse,
     },
     cosmos::base::v1beta1::Coin as RawCoin,
     protobuf::Protobuf,
@@ -163,3 +164,34 @@ pub struct QueryTotalSupplyResponse {
     /// Since: cosmos-sdk 0.43
     pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
 }
+
+impl TryFrom<RawQueryTotalSupplyResponse> for QueryTotalSupplyResponse {
+    type Error = Error;
+
+    fn try_from(raw: RawQueryTotalSupplyResponse) -> Result<Self, Self::Error> {
+        let supply: Result<Vec<Coin>, Error> = raw
+            .supply
+            .into_iter()
+            .map(|coin| Coin::try_from(coin))
+            .collect();
+
+        Ok(QueryTotalSupplyResponse {
+            supply: supply?,
+            pagination: raw.pagination,
+        })
+    }
+}
+
+impl From<QueryTotalSupplyResponse> for RawQueryTotalSupplyResponse {
+    fn from(query: QueryTotalSupplyResponse) -> RawQueryTotalSupplyResponse {
+        let supply: Vec<Coin> = query.supply.into();
+        let supply = supply.into_iter().map(|coin| RawCoin::from(coin)).collect();
+
+        RawQueryTotalSupplyResponse {
+            supply,
+            pagination: query.pagination,
+        }
+    }
+}
+
+impl Protobuf<RawQueryTotalSupplyResponse> for QueryTotalSupplyResponse {}

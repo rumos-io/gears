@@ -1,11 +1,13 @@
 use crate::baseapp::ante::{AuthKeeper, BankKeeper};
 use crate::baseapp::cli::get_run_command;
-use crate::baseapp::Handler;
+use crate::baseapp::{BaseApp, Handler};
 use crate::client::init::get_init_command;
 use crate::client::query::get_query_command;
 use crate::client::tx::get_tx_command;
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
+use axum::body::Body;
+use axum::Router;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
@@ -82,6 +84,7 @@ pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
     query_command_handler: FQ,
     tx_commands: Vec<Command>,
     tx_command_handler: FT,
+    router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
 ) -> Result<()>
 where
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
@@ -115,6 +118,7 @@ where
             params_keeper,
             params_subspace_key,
             handler,
+            router,
         ),
         Some(("query", sub_matches)) => query_command_handler(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches, app_name)?,

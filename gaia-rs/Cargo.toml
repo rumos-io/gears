@@ -20,5 +20,6 @@ strum = "0.24.1"
 strum_macros = "0.24"
 bank = { path = "../x/bank" }
 auth = { path = "../x/auth" }
+axum = "0.6.18"
 
 [dev-dependencies]
