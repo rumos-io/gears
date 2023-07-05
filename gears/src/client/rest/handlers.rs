@@ -113,3 +113,21 @@ pub async fn node_info() -> Result<Json<NodeInfoResponse>, Error> {
 //         tx_responses,
 //     })
 // }
+
+// This is a hack for now to make the front end work
+// TODO: remove this once the staking module is implemented
+//#[get("/cosmos/staking/v1beta1/params")]
+pub async fn staking_params() -> &'static str {
+    r#"
+    {
+        "params": {
+          "unbonding_time": "0",
+          "max_validators": 0,
+          "max_entries": 0,
+          "historical_entries": 0,
+          "bond_denom": "uatom",
+          "min_commission_rate": "0"
+        }
+      }
+    "#
+}

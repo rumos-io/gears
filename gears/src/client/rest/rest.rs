@@ -13,7 +13,7 @@ use crate::{
         ante::{AuthKeeper, BankKeeper},
         BaseApp, Handler,
     },
-    client::rest::handlers::node_info,
+    client::rest::handlers::{node_info, staking_params},
     x::params::ParamsSubspaceKey,
 };
 
@@ -60,6 +60,7 @@ async fn launch<
 
     let app = Router::new()
         .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
+        .route("/cosmos/staking/v1beta1/params", get(staking_params))
         .nest("/cosmos", router)
         .layer(cors)
         .with_state(app);
