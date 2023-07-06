@@ -233,7 +233,9 @@ impl<M: Message> Protobuf<RawTx> for Tx<M> {}
 //     }
 // }
 
-pub trait Message: Clone + Send + Sync + 'static + Into<Any> + TryFrom<Any, Error = Error> {
+pub trait Message:
+    Serialize + Clone + Send + Sync + 'static + Into<Any> + TryFrom<Any, Error = Error>
+{
     //fn decode(raw: &Any) -> Self; // TODO: could be From<Any>
 
     fn get_signers(&self) -> Vec<&AccAddress>;

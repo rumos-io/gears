@@ -1,8 +1,9 @@
 use ibc_proto::google::protobuf::Any;
 use proto_messages::cosmos::tx::v1beta1::Message as SDKMessage;
 use proto_types::AccAddress;
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Message {
     Bank(bank::Message),
 }

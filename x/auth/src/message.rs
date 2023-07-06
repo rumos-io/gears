@@ -1,7 +1,8 @@
 use ibc_proto::google::protobuf::Any;
 use proto_types::AccAddress;
+use serde::Serialize;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub enum Message {}
 
 //TODO: the fact that this implements proto_messages::cosmos::tx::v1beta1::Message  is not used

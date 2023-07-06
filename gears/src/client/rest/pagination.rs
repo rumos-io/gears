@@ -1,8 +1,11 @@
 //use rocket::FromForm;
 
+use serde::Deserialize;
+
 const QUERY_DEFAULT_LIMIT: u8 = 100;
 
 //#[derive(FromForm, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Pagination {
     offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.
