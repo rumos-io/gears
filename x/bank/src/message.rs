@@ -5,7 +5,9 @@ use proto_types::AccAddress;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(tag = "@type")]
 pub enum Message {
+    #[serde(rename = "/cosmos.bank.v1beta1.MsgSend")]
     Send(MsgSend),
 }
 

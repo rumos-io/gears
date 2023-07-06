@@ -109,4 +109,14 @@ mod tests {
         let denom: Denom = "atom".to_string().try_into().unwrap();
         assert_eq!("atom", denom.to_string());
     }
+
+    #[test]
+    fn serialize_success() {
+        let res: Denom = "abcd".to_string().try_into().unwrap();
+
+        assert_eq!(
+            serde_json::to_string(&res).unwrap(),
+            r#""abcd""#.to_string()
+        );
+    }
 }

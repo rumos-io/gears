@@ -4,6 +4,7 @@ use proto_types::AccAddress;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
 pub enum Message {
     Bank(bank::Message),
 }

@@ -18,10 +18,13 @@ use gears::{
     x::params::ParamsSubspaceKey,
 };
 use proto_messages::cosmos::{
-    bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse, QueryTotalSupplyResponse},
+    bank::v1beta1::{
+        QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
+        QueryBalanceResponse, QueryTotalSupplyResponse,
+    },
     tx::v1beta1::Message,
 };
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Deserialize};
 use store::StoreKey;
 use strum::IntoEnumIterator;
 use tendermint_proto::abci::RequestQuery;
@@ -87,6 +90,49 @@ pub async fn get_balances<
     ))
 }
 
+#[derive(Deserialize)]
+pub struct RawDenom {
+    denom: String,
+}
+
+// TODO: returns {"balance":null} if balance is zero, is this expected?
+/// Get balance for a given address and denom
+//#[get("/cosmos/bank/v1beta1/balances/<addr>/by_denom?<denom>")]
+pub async fn get_balances_by_denom<
+    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
+    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+    M: Message,
+    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
+    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
+    H: Handler<M, SK, G> + 'static,
+    G: DeserializeOwned + Clone + Send + Sync + 'static,
+>(
+    Path(address): Path<AccAddress>,
+    denom: Query<RawDenom>,
+    State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
+) -> Result<Json<QueryBalanceResponse>, Error> {
+    let req = QueryBalanceRequest {
+        address,
+        denom: String::from(denom.0.denom)
+            .try_into()
+            .map_err(|e: proto_types::Error| Error::bad_request(e.to_string()))?,
+    };
+
+    let request = RequestQuery {
+        data: req.encode_vec().into(),
+        path: "/cosmos.bank.v1beta1.Query/Balance".into(),
+        height: 0,
+        prove: false,
+    };
+
+    let response = app.query(request);
+
+    Ok(Json(
+        QueryBalanceResponse::decode(response.value)
+            .expect("should be a valid QueryBalanceResponse"),
+    ))
+}
+
 pub fn get_router<
     SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
     PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
@@ -99,4 +145,8 @@ pub fn get_router<
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))
+        .route(
+            "/v1beta1/balances/:address/by_denom",
+            get(get_balances_by_denom),
+        )
 }
