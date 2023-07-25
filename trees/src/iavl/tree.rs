@@ -500,7 +500,7 @@ where
                             .expect("Given the imbalance, expect rotation to always succeed");
                     } else {
                         // Case 2 - Left Right
-                        Self::left_rotate(node, version, node_db)
+                        Self::left_rotate(left_node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                         Self::right_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
@@ -538,13 +538,13 @@ where
 
             // Perform rotation on z and update height and hash
             z.left_node = t3;
+            z.left_hash = y.right_hash;
             z.height = 1 + cmp::max(
                 z.get_left_node(node_db).get_height(),
                 z.get_right_node(node_db).get_height(),
             );
             z.size = z.get_left_node(node_db).get_size() + z.get_right_node(node_db).get_size();
             z.version = version;
-            z.left_hash = y.right_hash;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
@@ -580,13 +580,13 @@ where
 
             // Perform rotation on z and update height and hash
             z.right_node = t2;
+            z.right_hash = y.left_hash;
             z.height = 1 + cmp::max(
                 z.get_left_node(node_db).get_height(),
                 z.get_right_node(node_db).get_height(),
             );
             z.size = z.get_left_node(node_db).get_size() + z.get_right_node(node_db).get_size();
             z.version = version;
-            z.right_hash = y.left_hash;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
@@ -1187,5 +1187,181 @@ mod tests {
         assert_eq!(node_bytes, [0, 1, 0, 1, 19, 3, 1, 2, 3]);
         let deserialized_node = Node::deserialize(node_bytes).unwrap();
         assert_eq!(deserialized_node, orig_node);
+    }
+
+    /// Testing that a previous bug has been fixed
+    #[test]
+    fn bug_scenario_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None).unwrap();
+        tree.set(vec![0], vec![8, 244, 162, 237, 1]);
+        tree.save_version().unwrap();
+        tree.set(vec![0], vec![8, 133, 164, 237, 1]);
+        tree.save_version().unwrap();
+        tree.set(vec![0], vec![8, 133, 164, 237, 1]);
+        tree.save_version().unwrap();
+        tree.set(vec![0], vec![8, 135, 164, 237, 1]);
+        tree.set(
+            vec![
+                1, 173, 86, 59, 0, 0, 0, 0, 0, 1, 129, 58, 194, 42, 97, 73, 22, 85, 226, 120, 106,
+                224, 209, 39, 214, 153, 11, 251, 251, 222,
+            ],
+            vec![
+                10, 45, 99, 111, 115, 109, 111, 115, 49, 115, 121, 97, 118, 121, 50, 110, 112, 102,
+                121, 116, 57, 116, 99, 110, 99, 100, 116, 115, 100, 122, 102, 55, 107, 110, 121,
+                57, 108, 104, 55, 55, 55, 112, 97, 104, 117, 117, 120, 16, 173, 173, 237, 1, 24, 1,
+                34, 3, 1, 2, 3,
+            ],
+        );
+        tree.set(
+            vec![2, 173, 86, 59, 0, 0, 0, 0, 0, 1],
+            vec![8, 173, 173, 237, 1, 16, 1],
+        );
+        tree.save_version().unwrap();
+        tree.set(vec![0], vec![8, 137, 164, 237, 1]);
+        tree.set(
+            vec![
+                1, 173, 86, 59, 0, 0, 0, 0, 0, 1, 133, 145, 191, 185, 82, 168, 56, 30, 164, 88, 69,
+                0, 206, 225, 190, 214, 210, 36, 231, 69,
+            ],
+            vec![
+                10, 45, 99, 111, 115, 109, 111, 115, 49, 115, 107, 103, 109, 108, 119, 50, 106, 52,
+                113, 117, 112, 97, 102, 122, 99, 103, 53, 113, 118, 97, 99, 100, 55, 54, 109, 102,
+                122, 102, 101, 54, 57, 108, 97, 48, 104, 120, 122, 16, 173, 173, 237, 1, 24, 1, 34,
+                3, 1, 2, 3,
+            ],
+        );
+        tree.set(
+            vec![2, 173, 86, 59, 0, 0, 0, 0, 0, 1],
+            vec![8, 173, 173, 237, 1, 16, 1],
+        );
+        tree.save_version().unwrap();
+        tree.set(vec![0], vec![8, 138, 164, 237, 1]);
+        tree.set(
+            vec![
+                1, 174, 86, 59, 0, 0, 0, 0, 0, 1, 133, 145, 191, 185, 82, 168, 56, 30, 164, 88, 69,
+                0, 206, 225, 190, 214, 210, 36, 231, 69,
+            ],
+            vec![
+                10, 45, 99, 111, 115, 109, 111, 115, 49, 115, 107, 103, 109, 108, 119, 50, 106, 52,
+                113, 117, 112, 97, 102, 122, 99, 103, 53, 113, 118, 97, 99, 100, 55, 54, 109, 102,
+                122, 102, 101, 54, 57, 108, 97, 48, 104, 120, 122, 16, 174, 173, 237, 1, 24, 1, 34,
+                3, 1, 2, 3,
+            ],
+        );
+        tree.set(
+            vec![2, 174, 86, 59, 0, 0, 0, 0, 0, 1],
+            vec![8, 174, 173, 237, 1, 16, 1],
+        );
+        tree.save_version().unwrap();
+        tree.set(vec![0], vec![8, 140, 164, 237, 1]);
+        tree.save_version().unwrap();
+        tree.set(vec![0], vec![8, 142, 164, 237, 1]);
+
+        tree.set(
+            vec![
+                1, 174, 86, 59, 0, 0, 0, 0, 0, 1, 129, 58, 194, 42, 97, 73, 22, 85, 226, 120, 106,
+                224, 209, 39, 214, 153, 11, 251, 251, 222,
+            ],
+            vec![
+                10, 45, 99, 111, 115, 109, 111, 115, 49, 115, 121, 97, 118, 121, 50, 110, 112, 102,
+                121, 116, 57, 116, 99, 110, 99, 100, 116, 115, 100, 122, 102, 55, 107, 110, 121,
+                57, 108, 104, 55, 55, 55, 112, 97, 104, 117, 117, 120, 16, 174, 173, 237, 1, 24, 1,
+                34, 3, 1, 2, 3,
+            ],
+        );
+
+        tree.save_version().unwrap();
+
+        let expected = [
+            136, 164, 1, 21, 163, 66, 127, 238, 197, 107, 178, 152, 75, 8, 254, 220, 62, 141, 140,
+            212, 4, 23, 213, 249, 34, 96, 132, 172, 166, 207, 48, 17,
+        ];
+
+        assert!(is_consistent(tree.root.clone().unwrap(), &tree.node_db));
+        assert_eq!(expected, tree.root_hash());
+    }
+
+    /// Testing that a previous bug has been fixed
+    #[test]
+    fn bug_scenario_2_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None).unwrap();
+        tree.set(
+            vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58,
+            ],
+            vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58,
+            ],
+        );
+
+        tree.set(
+            vec![
+                0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+            vec![
+                0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        );
+        tree.set(
+            vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 58, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+            vec![
+                0, 0, 0, 0, 0, 0, 0, 0, 58, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        );
+
+        tree.set(
+            vec![
+                0, 0, 0, 0, 0, 0, 0, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+            vec![
+                0, 0, 0, 0, 0, 0, 0, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            ],
+        );
+
+        tree.save_version().unwrap();
+
+        let expected = [
+            161, 141, 64, 164, 190, 244, 170, 230, 150, 211, 45, 54, 92, 136, 170, 253, 7, 176,
+            179, 212, 27, 116, 84, 160, 78, 92, 155, 245, 98, 143, 221, 105,
+        ];
+
+        assert!(is_consistent(tree.root.clone().unwrap(), &tree.node_db));
+        assert_eq!(expected, tree.root_hash());
+    }
+
+    /// Checks if left/right hash matches the left/right node hash for every inner node in a tree
+    fn is_consistent<T: Database, N>(root: N, node_db: &NodeDB<T>) -> bool
+    where
+        N: AsRef<Node>,
+    {
+        match root.as_ref() {
+            Node::Inner(node) => {
+                let left_node = node.get_left_node(node_db);
+                let right_node = node.get_right_node(node_db);
+
+                if left_node.hash() != node.left_hash {
+                    return false;
+                }
+
+                if right_node.hash() != node.right_hash {
+                    return false;
+                }
+
+                if !is_consistent(left_node, node_db) {
+                    return false;
+                }
+
+                if !is_consistent(right_node, node_db) {
+                    return false;
+                }
+
+                return true;
+            }
+            Node::Leaf(_) => return true,
+        }
     }
 }
