@@ -11,3 +11,10 @@ database = { path = "../database" }
 
 [dev-dependencies]
 hex = "0.4.3"
+criterion = "0.5.1"
+rand = "0.8.5"
+pprof = { version = "0.12", features = ["flamegraph", "criterion"] }
+
+[[bench]]
+name = "iavl_benchmark"
+harness = false
