@@ -1,7 +1,4 @@
-use std::{
-    fmt, fs,
-    path::{Path, PathBuf},
-};
+use std::{fmt, fs};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use database::RocksDB;
@@ -25,73 +22,92 @@ impl fmt::Display for Params {
     }
 }
 
+fn iavl_get_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
+    let mut group = c.benchmark_group("iavl-get");
+    for params in all_params {
+        let (tree, _) = prepare_tree(&params);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(&params),
+            &params,
+            |b, params| {
+                b.iter(|| {
+                    let key: Vec<u8> = rand::thread_rng()
+                        .sample_iter(Standard)
+                        .take(params.key_length)
+                        .collect();
+                    tree.get(black_box(&key));
+                })
+            },
+        );
+    }
+    group.finish();
+}
+
+fn iavl_update_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
+    let mut group = c.benchmark_group("iavl-update");
+    for params in all_params {
+        let (mut tree, keys) = prepare_tree(&params);
+        group.bench_with_input(
+            BenchmarkId::from_parameter(&params),
+            &params,
+            |b, params| {
+                b.iter(|| {
+                    let key: &Vec<u8> = keys
+                        .get(rand::thread_rng().gen_range(0..params.init_size))
+                        .unwrap();
+
+                    let mut data: Vec<u8> = rand::thread_rng()
+                        .sample_iter(Standard)
+                        .take(params.data_length)
+                        .collect();
+
+                    rand::thread_rng().fill(&mut data[..]);
+                    tree.set(black_box(key.clone()), black_box(data.to_vec()));
+                })
+            },
+        );
+    }
+    group.finish();
+}
+
+fn iavl_range_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
+    let mut group = c.benchmark_group("iavl-range");
+    for params in all_params {
+        let (tree, _) = prepare_tree(&params);
+        group.bench_with_input(BenchmarkId::from_parameter(&params), &params, |b, _| {
+            b.iter(|| {
+                let _range: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
+            })
+        });
+    }
+    group.finish();
+}
+
 pub fn iavl_benchmark(c: &mut Criterion) {
+    let all_params = vec![
+        Params {
+            init_size: 100_000,
+            key_length: 16,
+            data_length: 40,
+        },
+        Params {
+            init_size: 1_000_000,
+            key_length: 16,
+            data_length: 40,
+        },
+    ];
+
+    iavl_get_benchmark(c, &all_params);
+    iavl_update_benchmark(c, &all_params);
+    iavl_range_benchmark(c, &all_params);
+}
+
+fn prepare_tree(params: &Params) -> (Tree<RocksDB>, Vec<Vec<u8>>) {
     // remove previous test DBs
     fs::remove_dir_all(DB_DIR).unwrap();
     fs::create_dir(DB_DIR).unwrap();
 
-    let params = Params {
-        init_size: 100_000,
-        //block_size: 100,
-        key_length: 16,
-        data_length: 40,
-    };
-
-    let (tree, _) = prepare_tree(
-        &PathBuf::from(format!("{}{}", DB_DIR, "/iavl-get")),
-        &params,
-    );
-    c.bench_with_input(
-        BenchmarkId::new("iavl-get-miss", &params),
-        &params,
-        |b, params| {
-            b.iter(|| {
-                let key: Vec<u8> = rand::thread_rng()
-                    .sample_iter(Standard)
-                    .take(params.key_length)
-                    .collect();
-                tree.get(black_box(&key));
-            })
-        },
-    );
-
-    let (mut tree, keys) = prepare_tree(
-        &PathBuf::from(format!("{}{}", DB_DIR, "/iavl-update")),
-        &params,
-    );
-    c.bench_with_input(
-        BenchmarkId::new("iavl-update", &params),
-        &params,
-        |b, params| {
-            b.iter(|| {
-                let key: &Vec<u8> = keys
-                    .get(rand::thread_rng().gen_range(0..params.init_size))
-                    .unwrap();
-
-                let mut data: Vec<u8> = rand::thread_rng()
-                    .sample_iter(Standard)
-                    .take(params.data_length)
-                    .collect();
-
-                rand::thread_rng().fill(&mut data[..]);
-                tree.set(black_box(key.clone()), black_box(data.to_vec()));
-            })
-        },
-    );
-
-    // let (tree_range, _) = prepare_tree(
-    //     &PathBuf::from(format!("{}{}", DB_DIR, "/iavl_range")),
-    //     &params,
-    // );
-    // c.bench_function("iavl-range", |b| {
-    //     b.iter(|| {
-    //         let _range: Vec<(Vec<u8>, Vec<u8>)> = tree_range.range(..).collect();
-    //     })
-    // });
-}
-
-fn prepare_tree(path: &Path, params: &Params) -> (Tree<RocksDB>, Vec<Vec<u8>>) {
-    let db = RocksDB::new(path).unwrap();
+    let db = RocksDB::new(DB_DIR).unwrap();
     let mut tree = Tree::new(db, None).unwrap();
     let mut keys = Vec::with_capacity(params.init_size);
 
@@ -115,11 +131,12 @@ fn prepare_tree(path: &Path, params: &Params) -> (Tree<RocksDB>, Vec<Vec<u8>>) {
     (tree, keys)
 }
 
-// fn prepare_tree_v2(
-//     path: &Path,
-//     params: &Params,
-// ) -> (trees::iavl::tree_v2::Tree<RocksDB>, Vec<Vec<u8>>) {
-//     let db = RocksDB::new(path).unwrap();
+// fn prepare_tree_v2(params: &Params) -> (trees::iavl::tree_v2::Tree<RocksDB>, Vec<Vec<u8>>) {
+//     // remove previous test DBs
+//     fs::remove_dir_all(DB_DIR).unwrap();
+//     fs::create_dir(DB_DIR).unwrap();
+
+//     let db = RocksDB::new(DB_DIR).unwrap();
 //     let mut tree = trees::iavl::tree_v2::Tree::new(db, None).unwrap();
 //     let mut keys = Vec::with_capacity(params.init_size);
 
