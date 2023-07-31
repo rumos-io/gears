@@ -162,31 +162,31 @@ fn main() {
             let time = bench.mean.into();
 
             if bench.id.starts_with("query-miss/Params { _name: \"small") {
-                let ratio = BenchRatio::new(&time, &GO_QUERY_MISS_FAST_SMALL);
+                let ratio = BenchRatio::new(&time, &GO_QUERY_MISS_SLOW_SMALL);
                 full_results.small.query_miss = BenchResult { time, ratio };
             } else if bench.id.starts_with("query-miss/Params { _name: \"medium") {
-                let ratio = BenchRatio::new(&time, &GO_QUERY_MISS_FAST_MEDIUM);
+                let ratio = BenchRatio::new(&time, &GO_QUERY_MISS_SLOW_MEDIUM);
                 full_results.medium.query_miss = BenchResult { time, ratio };
             } else if bench.id.starts_with("query-miss/Params { _name: \"large") {
-                let ratio = BenchRatio::new(&time, &GO_QUERY_MISS_FAST_LARGE);
+                let ratio = BenchRatio::new(&time, &GO_QUERY_MISS_SLOW_LARGE);
                 full_results.large.query_miss = BenchResult { time, ratio };
             } else if bench.id.starts_with("query-hits/Params { _name: \"small") {
-                let ratio = BenchRatio::new(&time, &GO_QUERY_HIT_FAST_SMALL);
+                let ratio = BenchRatio::new(&time, &GO_QUERY_HIT_SLOW_SMALL);
                 full_results.small.query_hit = BenchResult { time, ratio };
             } else if bench.id.starts_with("query-hits/Params { _name: \"medium") {
-                let ratio = BenchRatio::new(&time, &GO_QUERY_HIT_FAST_MEDIUM);
+                let ratio = BenchRatio::new(&time, &GO_QUERY_HIT_SLOW_MEDIUM);
                 full_results.medium.query_hit = BenchResult { time, ratio };
             } else if bench.id.starts_with("query-hits/Params { _name: \"large") {
-                let ratio = BenchRatio::new(&time, &GO_QUERY_HIT_FAST_LARGE);
+                let ratio = BenchRatio::new(&time, &GO_QUERY_HIT_SLOW_LARGE);
                 full_results.large.query_hit = BenchResult { time, ratio };
             } else if bench.id.starts_with("iavl-range/Params { _name: \"small") {
-                let ratio = BenchRatio::new(&time, &GO_ITER_FAST_SMALL);
+                let ratio = BenchRatio::new(&time, &GO_ITER_SLOW_SMALL);
                 full_results.small.iter = BenchResult { time, ratio };
             } else if bench.id.starts_with("iavl-range/Params { _name: \"medium") {
-                let ratio = BenchRatio::new(&time, &GO_ITER_FAST_MEDIUM);
+                let ratio = BenchRatio::new(&time, &GO_ITER_SLOW_MEDIUM);
                 full_results.medium.iter = BenchResult { time, ratio };
             } else if bench.id.starts_with("iavl-range/Params { _name: \"large") {
-                let ratio = BenchRatio::new(&time, &GO_ITER_FAST_LARGE);
+                let ratio = BenchRatio::new(&time, &GO_ITER_SLOW_LARGE);
                 full_results.large.iter = BenchResult { time, ratio };
             } else if bench.id.starts_with("iavl-update/Params { _name: \"small") {
                 let ratio = BenchRatio::new(&time, &GO_UPDATE_SMALL);
@@ -351,12 +351,12 @@ fn get_bench_template(go_results: GoResult) -> String {
         r#"
 | Test              | Gears                      | Go           | Ratio                               |
 | :---------------- | :------------------------- | :----------  | :---------------------------------- |
-| Query miss (fast) | {{{{ query_miss.time }}}}  | {}           | {{{{{{ query_miss.ratio }}}}}}      |
-| Query miss (slow) |                            | {}           |                                     |
-| Query hit (fast)  |  {{{{ query_hit.time }}}}  | {}           | {{{{{{ query_hit.ratio }}}}}}       |
-| Query hit (slow)  |                            | {}           |                                     |
-| Iter (fast)       |  {{{{ iter.time }}}}       | {}           | {{{{{{ iter.ratio }}}}}}            |
-| Iter (slow)       |                            | {}           |                                     |
+| Query miss (fast) |                            | {}           |      |
+| Query miss (slow) |  {{{{ query_miss.time }}}} | {}           | {{{{{{ query_miss.ratio }}}}}}                                     |
+| Query hit (fast)  |                            | {}           |       |
+| Query hit (slow)  |  {{{{ query_hit.time }}}}  | {}           | {{{{{{ query_hit.ratio }}}}}}                                     |
+| Iter (fast)       |                            | {}           |            |
+| Iter (slow)       | {{{{ iter.time }}}}        | {}           | {{{{{{ iter.ratio }}}}}}                                     |
 | Update            |  {{{{ update.time }}}}     | {}           | {{{{{{ update.ratio }}}}}}          |
 | Run Blocks        |  {{{{ run_blocks.time }}}} | {}           | {{{{{{ run_blocks.ratio }}}}}}      |
 "#,
