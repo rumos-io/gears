@@ -230,35 +230,6 @@ fn prepare_tree(params: &Params) -> (Tree<RocksDB>, Vec<Vec<u8>>) {
     (tree, keys)
 }
 
-// fn prepare_tree_v2(params: &Params) -> (trees::iavl::tree_v2::Tree<RocksDB>, Vec<Vec<u8>>) {
-//     // remove previous test DBs
-//     fs::remove_dir_all(DB_DIR).unwrap();
-//     fs::create_dir(DB_DIR).unwrap();
-
-//     let db = RocksDB::new(DB_DIR).unwrap();
-//     let mut tree = trees::iavl::tree_v2::Tree::new(db, None).unwrap();
-//     let mut keys = Vec::with_capacity(params.init_size);
-
-//     for _ in 0..params.init_size {
-//         let key: Vec<u8> = rand::thread_rng()
-//             .sample_iter(Standard)
-//             .take(params.key_length)
-//             .collect();
-
-//         let data: Vec<u8> = rand::thread_rng()
-//             .sample_iter(Standard)
-//             .take(params.data_length)
-//             .collect();
-
-//         tree.set(key.clone(), data);
-//         keys.push(key);
-//     }
-
-//     tree.save_version().unwrap();
-
-//     (tree, keys)
-// }
-
 criterion_group! {
     name = benches;
     config = Criterion::default().sample_size(100).with_profiler(PProfProfiler::new(100, Output::Flamegraph(None)));

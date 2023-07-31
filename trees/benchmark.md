@@ -1,43 +1,34 @@
 # Benchmark
-
 ## Small
-
-| Test              | Gears       | Go           | Multiple                                        |
-| :---------------- | :------     | :----------  | :---------------------------------------------- |
-| Query miss (fast) |  5.4466 µs  | 0.5894 µs    | <mark style="background-color: red">9.2</mark>  |
-| Query miss (slow) |             | 1.617 µs     |                                                 |
-| Query hit (fast)  |  5.6332 µs  | 61.31 ns     | <mark style="background-color: red">91</mark>   |
-| Query hit (slow)  |             | 2.960 µs     |                                                 |
-| Iter (fast)       |  1.2397 ms  | 0.505801 ms  | <mark style="background-color: red">2.5</mark>  |
-| Iter (slow)       |             | 2.181263 ms  |                                                 |
-| Update            |  46.064 µs  | 29.918 µs    | <mark style="background-color: red">1.5</mark>  |
-| Run Blocks        |  12.215 ms  | 7.348834 ms  | <mark style="background-color: red">1.7</mark>  |
-
+| Test              | Gears                      | Go           | Ratio                               |
+| :---------------- | :------------------------- | :----------  | :---------------------------------- |
+| Query miss (fast) | 5.016µs  | 589ns           | <mark style="background-color: red">&nbsp;8.5&nbsp;</mark>      |
+| Query miss (slow) |                            | 1.617µs           |                                     |
+| Query hit (fast)  |  5.112µs  | 61ns           | <mark style="background-color: red">&nbsp;83.8&nbsp;</mark>       |
+| Query hit (slow)  |                            | 2.96µs           |                                     |
+| Iter (fast)       |  1.06313ms       | 505.801µs           | <mark style="background-color: red">&nbsp;2.1&nbsp;</mark>            |
+| Iter (slow)       |                            | 2.181263ms           |                                     |
+| Update            |  35.266µs     | 29.918µs           | <mark style="background-color: red">&nbsp;1.2&nbsp;</mark>          |
+| Run Blocks        |  10.764803ms | 7.348834ms           | <mark style="background-color: red">&nbsp;1.5&nbsp;</mark>      |
 ## Medium
-
-| Test              | Gears       | Go             | Multiple                                        |
-| :---------------- | :------     | :------------  | :---------------------------------------------- |
-| Query miss (fast) |   19.683 µs | 2.340 µs       | <mark style="background-color: red">8.4</mark>  |
-| Query miss (slow) |             | 9.099 µs       |                                                 |
-| Query hit (fast)  |   21.266 µs | 406.9 ns       | <mark style="background-color: red">52.3</mark> |
-| Query hit (slow)  |             | 12.909 µs      |                                                 |
-| Iter (fast)       |   299.24 ms | 41.978635 ms   | <mark style="background-color: red">7.1</mark>  |
-| Iter (slow)       |             | 964.896104 ms  |                                                 |
-| Update            |   168.92 µs | 116.014 µs     | <mark style="background-color: red">1.5</mark>  |
-| Run Blocks        |   18.922 ms | 16.063524 ms   | <mark style="background-color: red">1.2</mark>  |
-
+| Test              | Gears                      | Go           | Ratio                               |
+| :---------------- | :------------------------- | :----------  | :---------------------------------- |
+| Query miss (fast) | 19.178µs  | 2.34µs           | <mark style="background-color: red">&nbsp;8.2&nbsp;</mark>      |
+| Query miss (slow) |                            | 9.099µs           |                                     |
+| Query hit (fast)  |  19.992µs  | 406ns           | <mark style="background-color: red">&nbsp;49.2&nbsp;</mark>       |
+| Query hit (slow)  |                            | 12.909µs           |                                     |
+| Iter (fast)       |  279.375714ms       | 41.978635ms           | <mark style="background-color: red">&nbsp;6.7&nbsp;</mark>            |
+| Iter (slow)       |                            | 964.896104ms           |                                     |
+| Update            |  139.529µs     | 116.014µs           | <mark style="background-color: red">&nbsp;1.2&nbsp;</mark>          |
+| Run Blocks        |  17.022357ms | 16.063524ms           | <mark style="background-color: red">&nbsp;1.1&nbsp;</mark>      |
 ## Large
-
-| Test              | Gears       | Go             | Multiple                                          |
-| :---------------- | :------     | :------------  | :------------------------------------------------ |
-| Query miss (fast) |   114.15 µs | 5.139 µs       | <mark style="background-color: red">22.2</mark>   |
-| Query miss (slow) |             | 1.496849 ms    |                                                   |
-| Query hit (fast)  |   137.63 µs | 5.339 µs       | <mark style="background-color: red">25.8</mark>   |
-| Query hit (slow)  |             | 23.944 µs      |                                                   |
-| Iter (fast)       |   14.717 s  | 651.533418 ms  | <mark style="background-color: red">22.6</mark>     |
-| Iter (slow)       |             | 8.784634345 s  |                                                   |
-| Update            |   248.42 µs | 242.246 µs     | <mark style="background-color: orange">1.0</mark> |
-| Run Blocks        |   28.787 ms | 54.795291 ms   | <mark style="background-color: green">0.5</mark>  |
-
-
-
+| Test              | Gears                      | Go           | Ratio                               |
+| :---------------- | :------------------------- | :----------  | :---------------------------------- |
+| Query miss (fast) | 117.3µs  | 5.139µs           | <mark style="background-color: red">&nbsp;22.8&nbsp;</mark>      |
+| Query miss (slow) |                            | 1.496849ms           |                                     |
+| Query hit (fast)  |  130.857µs  | 5.339µs           | <mark style="background-color: red">&nbsp;24.5&nbsp;</mark>       |
+| Query hit (slow)  |                            | 23.944µs           |                                     |
+| Iter (fast)       |  14.441936665s       | 651.533418ms           | <mark style="background-color: red">&nbsp;22.2&nbsp;</mark>            |
+| Iter (slow)       |                            | 8.784634345s           |                                     |
+| Update            |  287.821µs     | 242.246µs           | <mark style="background-color: red">&nbsp;1.2&nbsp;</mark>          |
+| Run Blocks        |  24.938731ms | 54.795291ms           | <mark style="background-color: green">&nbsp;0.5&nbsp;</mark>      |

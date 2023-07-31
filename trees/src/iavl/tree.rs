@@ -3,7 +3,6 @@ use std::{
     collections::BTreeSet,
     mem,
     ops::{Bound, RangeBounds},
-    sync::Arc,
 };
 
 use database::Database;
@@ -16,8 +15,8 @@ use super::node_db::NodeDB;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct InnerNode {
-    pub(crate) left_node: Option<Arc<Node>>, // None means value is the same as what's in the DB
-    pub(crate) right_node: Option<Arc<Node>>,
+    pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
+    pub(crate) right_node: Option<Box<Node>>,
     key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
@@ -33,26 +32,12 @@ impl InnerNode {
                 .get_node(&self.left_hash)
                 .expect("invalid data in database - possible database corruption");
 
-            self.left_node = Some(Arc::new(node));
-        }
+            self.left_node = Some(Box::new(node));
+        };
 
-        match &mut self.left_node {
-            Some(node) => {
-                Arc::get_mut(node).expect("there are no other Arc pointers to this allocation")
-            }
-            None => panic!("it can't be None given the block above"),
-        }
-    }
-
-    fn get_left_node<T: Database>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
-        match &self.left_node {
-            Some(node) => return node.clone(),
-            None => Arc::new(
-                node_db
-                    .get_node(&self.left_hash)
-                    .expect("invalid data in database - possible database corruption"),
-            ),
-        }
+        self.left_node
+            .as_mut()
+            .expect("this can't be none since we just set it")
     }
 
     fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
@@ -61,32 +46,57 @@ impl InnerNode {
                 .get_node(&self.right_hash)
                 .expect("invalid data in database - possible database corruption");
 
-            self.right_node = Some(Arc::new(node));
+            self.right_node = Some(Box::new(node));
         }
 
-        match &mut self.right_node {
-            Some(node) => {
-                Arc::get_mut(node).expect("there are no other Arc pointers to this allocation")
+        self.right_node
+            .as_mut()
+            .expect("this can't be none since we just set it")
+    }
+
+    fn update_left_hash(&mut self) {
+        if let Some(left_node) = &self.left_node {
+            self.left_hash = left_node.hash();
+        }
+    }
+
+    fn update_right_hash(&mut self) {
+        if let Some(node) = &self.right_node {
+            self.right_hash = node.hash();
+        }
+    }
+
+    /// This does three things at once to prevent repeating the same process for getting the left and right nodes
+    fn update_height_and_size_get_balance_factor<T: Database>(
+        &mut self,
+        node_db: &NodeDB<T>,
+    ) -> i16 {
+        let (left_height, left_size) = match &self.left_node {
+            Some(left_node) => (left_node.get_height(), left_node.get_size()),
+            None => {
+                let left_node = node_db
+                    .get_node(&self.left_hash)
+                    .expect("node db should contain all nodes");
+
+                (left_node.get_height(), left_node.get_size())
             }
-            None => panic!("it can't be None given the block above"),
-        }
-    }
+        };
 
-    fn get_right_node<T: Database>(&self, node_db: &NodeDB<T>) -> Arc<Node> {
-        match &self.right_node {
-            Some(node) => return node.clone(),
-            None => Arc::new(
-                node_db
+        let (right_height, right_size) = match &self.right_node {
+            Some(right_node) => (right_node.get_height(), right_node.get_size()),
+            None => {
+                let right_node = node_db
                     .get_node(&self.right_hash)
-                    .expect("invalid data in database - possible database corruption"),
-            ),
-        }
-    }
+                    .expect("node db should contain all nodes");
 
-    fn get_balance_factor<T: Database>(&self, node_db: &NodeDB<T>) -> i16 {
-        let left_height: i16 = self.get_left_node(node_db).get_height().into();
-        let right_height: i16 = self.get_right_node(node_db).get_height().into();
-        left_height - right_height
+                (right_node.get_height(), right_node.get_size())
+            }
+        };
+
+        self.height = 1 + cmp::max(left_height, right_height);
+        self.size = left_size + right_size;
+
+        return left_height as i16 - right_height as i16;
     }
 }
 
@@ -247,7 +257,7 @@ pub struct Tree<T>
 where
     T: Database,
 {
-    root: Option<Arc<Node>>,
+    root: Option<Node>,
     node_db: NodeDB<T>,
     loaded_version: u32,
     versions: BTreeSet<u32>,
@@ -262,9 +272,7 @@ where
         let versions = node_db.get_versions();
 
         if let Some(target_version) = target_version {
-            let root = node_db
-                .get_root_node(target_version)?
-                .map(|node| Arc::new(node));
+            let root = node_db.get_root_node(target_version)?;
 
             Ok(Tree {
                 root,
@@ -278,8 +286,7 @@ where
                 Ok(Tree {
                     root: node_db
                         .get_root_node(*latest_version)
-                        .expect("invalid data in database - possible database corruption")
-                        .map(|n| Arc::new(n)),
+                        .expect("invalid data in database - possible database corruption"),
                     loaded_version: *latest_version,
                     node_db,
                     versions,
@@ -315,8 +322,6 @@ where
 
                 // clear the root node's left and right nodes if they exist
                 if let Some(node) = &mut self.root {
-                    let node = Arc::get_mut(node)
-                        .expect("there are no other Arc pointers to this allocation");
                     if let Node::Inner(inner) = node {
                         inner.left_node = None;
                         inner.right_node = None;
@@ -329,8 +334,6 @@ where
 
         let root = self.root.as_mut();
         let root_hash = if let Some(root) = root {
-            let root =
-                Arc::get_mut(root).expect("there are no other Arc pointers to this allocation");
             let root_hash = self.node_db.save_tree(root);
             self.node_db.save_version(version, &root_hash);
             root_hash
@@ -358,27 +361,52 @@ where
 
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         match &self.root {
-            Some(root) => Self::recursive_get(root.clone(), key, &self.node_db),
+            Some(root) => self.get_(key, root),
             None => None,
         }
     }
 
-    fn recursive_get<'a>(node: Arc<Node>, key: &[u8], node_db: &NodeDB<T>) -> Option<Vec<u8>> {
-        match &*node {
-            Node::Leaf(leaf) => {
-                if leaf.key == key {
-                    return Some(leaf.value.clone());
-                } else {
-                    return None;
+    fn get_(&self, key: &[u8], root: &Node) -> Option<Vec<u8>> {
+        let mut loop_node = root;
+        let mut cached_node;
+
+        loop {
+            match loop_node {
+                Node::Leaf(leaf) => {
+                    if leaf.key == key {
+                        return Some(leaf.value.clone());
+                    } else {
+                        return None;
+                    }
                 }
-            }
-            Node::Inner(node) => {
-                if key < &node.key {
-                    let left_node = node.get_left_node(node_db);
-                    return Self::recursive_get(left_node, key, node_db);
-                } else {
-                    let right_node = node.get_right_node(node_db);
-                    return Self::recursive_get(right_node, key, node_db);
+                Node::Inner(node) => {
+                    if key < &node.key {
+                        match &node.left_node {
+                            Some(left_node) => loop_node = left_node,
+                            None => {
+                                let left_node = self
+                                    .node_db
+                                    .get_node(&node.left_hash)
+                                    .expect("node db should contain all nodes");
+
+                                cached_node = left_node;
+                                loop_node = &cached_node;
+                            }
+                        }
+                    } else {
+                        match &node.right_node {
+                            Some(right_node) => loop_node = right_node,
+                            None => {
+                                let right_node = self
+                                    .node_db
+                                    .get_node(&node.right_hash)
+                                    .expect("node db should contain all nodes");
+
+                                cached_node = right_node;
+                                loop_node = &cached_node;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -386,19 +414,15 @@ where
 
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         match &mut self.root {
-            Some(root) => Self::recursive_set(
-                Arc::get_mut(root).expect("there are no other Arc pointers to this allocation"),
-                key,
-                value,
-                self.loaded_version + 1,
-                &mut self.node_db,
-            ),
+            Some(root) => {
+                Self::recursive_set(root, key, value, self.loaded_version + 1, &mut self.node_db)
+            }
             None => {
-                self.root = Some(Arc::new(Node::Leaf(LeafNode {
+                self.root = Some(Node::Leaf(LeafNode {
                     key,
                     value,
                     version: self.loaded_version + 1,
-                })));
+                }));
             }
         };
     }
@@ -421,8 +445,8 @@ where
 
                         *node = Node::Inner(InnerNode {
                             key: leaf_node.key.clone(),
-                            left_node: Some(Arc::new(left_node)),
-                            right_node: Some(Arc::new(right_node)),
+                            left_node: Some(Box::new(left_node)),
+                            right_node: Some(Box::new(right_node)),
                             height: 1,
                             size: 2,
                             version,
@@ -444,8 +468,8 @@ where
 
                         *node = Node::Inner(InnerNode {
                             key,
-                            left_node: Some(Arc::new(left_subtree)),
-                            right_node: Some(Arc::new(right_node)),
+                            left_node: Some(Box::new(left_subtree)),
+                            right_node: Some(Box::new(right_node)),
                             height: 1,
                             size: 2,
                             left_hash,
@@ -466,7 +490,7 @@ where
                         version,
                         node_db,
                     );
-                    root_node.left_hash = root_node.get_left_node(node_db).hash();
+                    root_node.update_left_hash();
                 } else {
                     Self::recursive_set(
                         root_node.get_mut_right_node(node_db),
@@ -475,22 +499,14 @@ where
                         version,
                         node_db,
                     );
-                    root_node.right_hash = root_node.get_right_node(node_db).hash();
+                    root_node.update_right_hash();
                 }
 
                 // Update height + size + version
-                root_node.height = 1 + cmp::max(
-                    root_node.get_left_node(node_db).get_height(),
-                    root_node.get_right_node(node_db).get_height(),
-                );
-
-                root_node.size = root_node.get_left_node(node_db).get_size()
-                    + root_node.get_right_node(node_db).get_size();
-
+                let balance_factor = root_node.update_height_and_size_get_balance_factor(node_db);
                 root_node.version = version;
 
                 // If the tree is unbalanced then try out the usual four cases
-                let balance_factor = root_node.get_balance_factor(node_db);
                 if balance_factor > 1 {
                     let left_node = root_node.get_mut_left_node(node_db);
 
@@ -539,22 +555,14 @@ where
             // Perform rotation on z and update height and hash
             z.left_node = t3;
             z.left_hash = y.right_hash;
-            z.height = 1 + cmp::max(
-                z.get_left_node(node_db).get_height(),
-                z.get_right_node(node_db).get_height(),
-            );
-            z.size = z.get_left_node(node_db).get_size() + z.get_right_node(node_db).get_size();
+            z.update_height_and_size_get_balance_factor(node_db);
             z.version = version;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.right_hash = z.hash();
-            y.right_node = Some(Arc::new(z));
-            y.height = 1 + cmp::max(
-                y.get_left_node(node_db).get_height(),
-                y.get_right_node(node_db).get_height(),
-            );
-            y.size = y.get_left_node(node_db).get_size() + y.get_right_node(node_db).get_size();
+            y.right_node = Some(Box::new(z));
+            y.update_height_and_size_get_balance_factor(node_db);
             y.version = version;
 
             *node = Node::Inner(y);
@@ -581,22 +589,14 @@ where
             // Perform rotation on z and update height and hash
             z.right_node = t2;
             z.right_hash = y.left_hash;
-            z.height = 1 + cmp::max(
-                z.get_left_node(node_db).get_height(),
-                z.get_right_node(node_db).get_height(),
-            );
-            z.size = z.get_left_node(node_db).get_size() + z.get_right_node(node_db).get_size();
+            z.update_height_and_size_get_balance_factor(node_db);
             z.version = version;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.left_hash = z.hash();
-            y.left_node = Some(Arc::new(z));
-            y.height = 1 + cmp::max(
-                y.get_left_node(node_db).get_height(),
-                y.get_right_node(node_db).get_height(),
-            );
-            y.size = y.get_left_node(node_db).get_size() + y.get_right_node(node_db).get_size();
+            y.left_node = Some(Box::new(z));
+            y.update_height_and_size_get_balance_factor(node_db);
             y.version = version;
 
             *node = Node::Inner(y);
@@ -615,7 +615,7 @@ where
         match &self.root {
             Some(root) => Range {
                 range,
-                delayed_nodes: vec![root.clone()],
+                delayed_nodes: vec![root.clone()], //TODO: remove clone
                 node_db: &self.node_db,
             },
             None => Range {
@@ -632,7 +632,7 @@ where
     T: Database,
 {
     range: R,
-    delayed_nodes: Vec<Arc<Node>>,
+    delayed_nodes: Vec<Node>,
     node_db: &'a NodeDB<T>,
 }
 
@@ -652,15 +652,38 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
             Bound::Unbounded => true,
         };
 
-        match &*node {
+        match node {
             Node::Inner(inner) => {
                 // Traverse through the left subtree, then the right subtree.
                 if before_end {
-                    self.delayed_nodes.push(inner.get_right_node(self.node_db));
+                    match inner.right_node {
+                        Some(right_node) => self.delayed_nodes.push(*right_node), //TODO: deref will cause a clone, remove
+                        None => {
+                            let right_node = self
+                                .node_db
+                                .get_node(&inner.right_hash)
+                                .expect("node db should contain all nodes");
+
+                            self.delayed_nodes.push(right_node);
+                        }
+                    }
                 }
 
                 if after_start {
-                    self.delayed_nodes.push(inner.get_left_node(self.node_db));
+                    match inner.left_node {
+                        Some(left_node) => self.delayed_nodes.push(*left_node), //TODO: deref will cause a clone, remove
+                        None => {
+                            let left_node = self
+                                .node_db
+                                .get_node(&inner.left_hash)
+                                .expect("node db should contain all nodes");
+
+                            //self.cached_nodes.push(left_node);
+                            self.delayed_nodes.push(left_node);
+                        }
+                    }
+
+                    //self.delayed_nodes.push(inner.get_left_node(self.node_db));
                 }
             }
             Node::Leaf(leaf) => {
@@ -699,18 +722,20 @@ fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), Error> {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Borrow;
+
     use super::*;
     use database::MemDB;
 
     #[test]
     fn right_rotate_works() {
         let t3 = InnerNode {
-            left_node: Some(Arc::new(Node::Leaf(LeafNode {
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![19],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            right_node: Some(Arc::new(Node::Leaf(LeafNode {
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![20],
                 value: vec![1, 6, 9],
                 version: 0,
@@ -730,12 +755,12 @@ mod tests {
         };
 
         let y = InnerNode {
-            left_node: Some(Arc::new(Node::Leaf(LeafNode {
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![18],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            right_node: Some(Arc::new(Node::Inner(t3))),
+            right_node: Some(Box::new(Node::Inner(t3))),
             key: vec![19],
             height: 2,
             size: 3,
@@ -751,8 +776,8 @@ mod tests {
         };
 
         let z = InnerNode {
-            left_node: Some(Arc::new(Node::Inner(y))),
-            right_node: Some(Arc::new(Node::Leaf(LeafNode {
+            left_node: Some(Box::new(Node::Inner(y))),
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![21],
                 value: vec![3, 2, 1],
                 version: 0,
@@ -787,12 +812,12 @@ mod tests {
     #[test]
     fn left_rotate_works() {
         let t2 = InnerNode {
-            left_node: Some(Arc::new(Node::Leaf(LeafNode {
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![19],
                 value: vec![3, 2, 1],
                 version: 0,
             }))),
-            right_node: Some(Arc::new(Node::Leaf(LeafNode {
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![20],
                 value: vec![1, 6, 9],
                 version: 0,
@@ -812,12 +837,12 @@ mod tests {
         };
 
         let y = InnerNode {
-            right_node: Some(Arc::new(Node::Leaf(LeafNode {
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![21],
                 value: vec![3, 2, 1, 1],
                 version: 0,
             }))),
-            left_node: Some(Arc::new(Node::Inner(t2))),
+            left_node: Some(Box::new(Node::Inner(t2))),
             key: vec![21],
             height: 2,
             size: 3,
@@ -833,8 +858,8 @@ mod tests {
         };
 
         let z = InnerNode {
-            right_node: Some(Arc::new(Node::Inner(y))),
-            left_node: Some(Arc::new(Node::Leaf(LeafNode {
+            right_node: Some(Box::new(Node::Inner(y))),
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![18],
                 value: vec![3, 2, 2],
                 version: 0,
@@ -1329,19 +1354,32 @@ mod tests {
             179, 212, 27, 116, 84, 160, 78, 92, 155, 245, 98, 143, 221, 105,
         ];
 
-        assert!(is_consistent(tree.root.clone().unwrap(), &tree.node_db));
+        let root = tree.root.as_ref().unwrap();
+
+        assert!(is_consistent(root, &tree.node_db));
         assert_eq!(expected, tree.root_hash());
     }
 
     /// Checks if left/right hash matches the left/right node hash for every inner node in a tree
     fn is_consistent<T: Database, N>(root: N, node_db: &NodeDB<T>) -> bool
     where
-        N: AsRef<Node>,
+        N: Borrow<Node>,
     {
-        match root.as_ref() {
+        match root.borrow() {
             Node::Inner(node) => {
-                let left_node = node.get_left_node(node_db);
-                let right_node = node.get_right_node(node_db);
+                let left_node = match &node.left_node {
+                    Some(left_node) => *left_node.clone(),
+                    None => node_db
+                        .get_node(&node.left_hash)
+                        .expect("node db should contain all nodes"),
+                };
+
+                let right_node = match &node.right_node {
+                    Some(right_node) => *right_node.clone(),
+                    None => node_db
+                        .get_node(&node.right_hash)
+                        .expect("node db should contain all nodes"),
+                };
 
                 if left_node.hash() != node.left_hash {
                     return false;
