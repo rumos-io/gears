@@ -45,7 +45,7 @@ fn iavl_query_miss_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
     group.finish();
 }
 
-/// Queries keys that are known to be in state
+/// Queries keys that are known to be in the tree
 fn iavl_query_hits_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
     let mut group = c.benchmark_group("query-hits");
     for params in all_params {
@@ -183,8 +183,8 @@ pub fn iavl_benchmark(c: &mut Criterion) {
 
     iavl_query_miss_benchmark(c, &all_params);
     iavl_query_hits_benchmark(c, &all_params);
-    iavl_update_benchmark(c, &all_params);
     //iavl_range_benchmark(c, &all_params); // TODO: uncomment if you have time on your hands
+    iavl_update_benchmark(c, &all_params);
     iavl_run_blocks_benchmark(c, &all_params);
 }
 

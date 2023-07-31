@@ -14,7 +14,14 @@ hex = "0.4.3"
 criterion = "0.5.1"
 rand = "0.8.5"
 pprof = { version = "0.12", features = ["flamegraph", "criterion"] }
+handlebars = "4.3.6"
+serde = "1.0.176"
+serde_json = "1.0.104"
 
 [[bench]]
 name = "iavl_benchmark"
 harness = false
+
+[[example]]
+name = "benchtable"
+test = true
