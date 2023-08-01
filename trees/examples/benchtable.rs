@@ -35,7 +35,7 @@ const GO_QUERY_BLOCKS_MEDIUM: UnitTime = UnitTime(Duration::from_nanos(16063524)
 
 // Large
 const GO_QUERY_MISS_FAST_LARGE: UnitTime = UnitTime(Duration::from_nanos(5139));
-const GO_QUERY_MISS_SLOW_LARGE: UnitTime = UnitTime(Duration::from_nanos(1496849));
+const GO_QUERY_MISS_SLOW_LARGE: UnitTime = UnitTime(Duration::from_nanos(17639));
 
 const GO_QUERY_HIT_FAST_LARGE: UnitTime = UnitTime(Duration::from_nanos(5339));
 const GO_QUERY_HIT_SLOW_LARGE: UnitTime = UnitTime(Duration::from_nanos(23944));

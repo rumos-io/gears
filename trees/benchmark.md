@@ -25,7 +25,7 @@
 | Test              | Gears                      | Go           | Ratio                               |
 | :---------------- | :------------------------- | :----------  | :---------------------------------- |
 | Query miss (fast) |                            | 5.139µs           |      |
-| Query miss (slow) |  117.3µs | 1.496849ms           | <mark style="background-color: green">&nbsp;0.1&nbsp;</mark>                                     |
+| Query miss (slow) |  117.3µs | 17.639µs         | <mark style="background-color: red">&nbsp;6.7&nbsp;</mark>                                     |
 | Query hit (fast)  |                            | 5.339µs           |       |
 | Query hit (slow)  |  130.857µs  | 23.944µs           | <mark style="background-color: red">&nbsp;5.5&nbsp;</mark>                                     |
 | Iter (fast)       |                            | 651.533418ms           |            |
