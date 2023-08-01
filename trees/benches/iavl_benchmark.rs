@@ -183,7 +183,7 @@ pub fn iavl_benchmark(c: &mut Criterion) {
 
     iavl_query_miss_benchmark(c, &all_params);
     iavl_query_hits_benchmark(c, &all_params);
-    //iavl_range_benchmark(c, &all_params); // TODO: uncomment if you have time on your hands
+    iavl_range_benchmark(c, &all_params);
     iavl_update_benchmark(c, &all_params);
     iavl_run_blocks_benchmark(c, &all_params);
 }
@@ -207,7 +207,7 @@ fn prepare_tree(params: &Params) -> (Tree<RocksDB>, Vec<Vec<u8>>) {
     fs::create_dir(DB_DIR).unwrap();
 
     let db = RocksDB::new(DB_DIR).unwrap();
-    let mut tree = Tree::new(db, None).unwrap();
+    let mut tree = Tree::new(db, None, params.init_size as u64).unwrap();
     let mut keys = Vec::with_capacity(params.init_size);
 
     for _ in 0..params.init_size {

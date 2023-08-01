@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 
 use database::Database;
 use integer_encoding::VarInt;
+use moka::sync::Cache;
 
 use crate::{merkle::EMPTY_HASH, Error};
 
@@ -13,17 +14,23 @@ where
     T: Database,
 {
     db: T,
+    cache: Cache<[u8; 32], Node>,
 }
 
 const ROOTS_PREFIX: [u8; 1] = [1];
 const NODES_PREFIX: [u8; 1] = [2];
 
+// TOOO: batch writes
+// TODO: fast nodes
 impl<T> NodeDB<T>
 where
     T: Database,
 {
-    pub fn new(db: T) -> NodeDB<T> {
-        NodeDB { db }
+    pub fn new(db: T, cache_size: u64) -> NodeDB<T> {
+        NodeDB {
+            db,
+            cache: Cache::new(cache_size),
+        }
     }
 
     pub fn get_versions(&self) -> BTreeSet<u32> {
@@ -69,16 +76,23 @@ where
     }
 
     pub(crate) fn get_node(&self, hash: &[u8; 32]) -> Option<Node> {
-        let node_bytes = self.db.get(&Self::get_node_key(hash))?;
+        let cache_node = self.cache.get(hash);
 
-        Some(
-            Node::deserialize(node_bytes)
-                .expect("invalid data in database - possible database corruption"),
-        )
+        if cache_node.is_some() {
+            return cache_node;
+        };
+
+        let node_bytes = self.db.get(&Self::get_node_key(hash))?;
+        let node = Node::deserialize(node_bytes)
+            .expect("invalid data in database - possible database corruption");
+
+        self.cache.insert(*hash, node.clone());
+        Some(node)
     }
 
     fn save_node(&mut self, node: &Node, hash: &[u8; 32]) {
         self.db.put(Self::get_node_key(hash), node.serialize());
+        self.cache.insert(*hash, node.shallow_clone());
     }
 
     fn recursive_tree_save(&mut self, node: &Node, hash: &[u8; 32]) {
@@ -144,7 +158,10 @@ mod tests {
     fn get_versions_works() {
         let db = MemDB::new();
         db.put(NodeDB::<MemDB>::get_root_key(1u32), vec![]);
-        let node_db = NodeDB { db };
+        let node_db = NodeDB {
+            db,
+            cache: Cache::new(10_000),
+        };
 
         let mut expected_versions = BTreeSet::new();
         expected_versions.insert(1);
@@ -161,7 +178,10 @@ mod tests {
         ];
         let db = MemDB::new();
         db.put(NodeDB::<MemDB>::get_root_key(1u32), root_hash.into());
-        let node_db = NodeDB { db };
+        let node_db = NodeDB {
+            db,
+            cache: Cache::new(10_000),
+        };
 
         let got_root_hash = node_db.get_root_hash(1).unwrap();
 
