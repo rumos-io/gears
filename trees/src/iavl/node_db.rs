@@ -1,8 +1,8 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, sync::Mutex};
 
+use caches::{Cache, DefaultHashBuilder, LRUCache};
 use database::Database;
 use integer_encoding::VarInt;
-use moka::sync::Cache;
 
 use crate::{merkle::EMPTY_HASH, Error};
 
@@ -14,22 +14,26 @@ where
     T: Database,
 {
     db: T,
-    cache: Cache<[u8; 32], Node>,
+    cache: Mutex<LRUCache<[u8; 32], Node, DefaultHashBuilder>>,
 }
 
 const ROOTS_PREFIX: [u8; 1] = [1];
 const NODES_PREFIX: [u8; 1] = [2];
 
-// TOOO: batch writes
+// TODO: batch writes
 // TODO: fast nodes
 impl<T> NodeDB<T>
 where
     T: Database,
 {
-    pub fn new(db: T, cache_size: u64) -> NodeDB<T> {
+    /// Panics if cache_size=0
+    pub fn new(db: T, cache_size: usize) -> NodeDB<T> {
+        assert!(cache_size > 0);
         NodeDB {
             db,
-            cache: Cache::new(cache_size),
+            cache: Mutex::new(
+                LRUCache::new(cache_size).expect("won't panic since cache_size > zero"),
+            ),
         }
     }
 
@@ -76,23 +80,27 @@ where
     }
 
     pub(crate) fn get_node(&self, hash: &[u8; 32]) -> Option<Node> {
-        let cache_node = self.cache.get(hash);
+        let cache = &mut self.cache.lock().expect("Lock will not be poisoned");
+        let cache_node = cache.get(hash);
 
         if cache_node.is_some() {
-            return cache_node;
+            return cache_node.map(|v| v.to_owned());
         };
 
         let node_bytes = self.db.get(&Self::get_node_key(hash))?;
         let node = Node::deserialize(node_bytes)
             .expect("invalid data in database - possible database corruption");
 
-        self.cache.insert(*hash, node.clone());
+        cache.put(*hash, node.clone());
         Some(node)
     }
 
     fn save_node(&mut self, node: &Node, hash: &[u8; 32]) {
         self.db.put(Self::get_node_key(hash), node.serialize());
-        self.cache.insert(*hash, node.shallow_clone());
+        self.cache
+            .lock()
+            .expect("Lock will not be poisoned")
+            .put(*hash, node.shallow_clone());
     }
 
     fn recursive_tree_save(&mut self, node: &Node, hash: &[u8; 32]) {
@@ -160,7 +168,7 @@ mod tests {
         db.put(NodeDB::<MemDB>::get_root_key(1u32), vec![]);
         let node_db = NodeDB {
             db,
-            cache: Cache::new(10_000),
+            cache: Mutex::new(LRUCache::new(2).unwrap()),
         };
 
         let mut expected_versions = BTreeSet::new();
@@ -180,7 +188,7 @@ mod tests {
         db.put(NodeDB::<MemDB>::get_root_key(1u32), root_hash.into());
         let node_db = NodeDB {
             db,
-            cache: Cache::new(10_000),
+            cache: Mutex::new(LRUCache::new(2).unwrap()),
         };
 
         let got_root_hash = node_db.get_root_hash(1).unwrap();

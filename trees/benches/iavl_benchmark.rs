@@ -207,7 +207,7 @@ fn prepare_tree(params: &Params) -> (Tree<RocksDB>, Vec<Vec<u8>>) {
     fs::create_dir(DB_DIR).unwrap();
 
     let db = RocksDB::new(DB_DIR).unwrap();
-    let mut tree = Tree::new(db, None, params.init_size as u64).unwrap();
+    let mut tree = Tree::new(db, None, params.init_size).unwrap();
     let mut keys = Vec::with_capacity(params.init_size);
 
     for _ in 0..params.init_size {

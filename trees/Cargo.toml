@@ -8,7 +8,7 @@ thiserror = "1.0.13"
 sha2 = "0.10.6"
 integer-encoding = "3.0.4"
 database = { path = "../database" }
-moka = "0.11.2"
+caches = "0.2.4"
 
 [dev-dependencies]
 hex = "0.4.3"
