@@ -9,9 +9,11 @@ use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
 use trees::iavl::{Range, Tree};
 
-use crate::error::Error;
+use crate::{error::Error, utils::MergedRange};
 
 use super::hash::{self, StoreInfo};
+
+const TREE_CACHE_SIZE: usize = 100_000;
 
 //TODO:
 // 1. move prefix store into separate file
@@ -121,7 +123,7 @@ pub struct KVStore<DB: Database> {
 impl<DB: Database> KVStore<DB> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
         Ok(KVStore {
-            persistent_store: Tree::new(db, target_version)?,
+            persistent_store: Tree::new(db, target_version, TREE_CACHE_SIZE)?,
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         })
@@ -168,9 +170,18 @@ impl<DB: Database> KVStore<DB> {
 
     pub fn range<R>(&self, range: R) -> Range<R, DB>
     where
-        R: RangeBounds<Vec<u8>>,
+        R: RangeBounds<Vec<u8>> + Clone,
     {
         //TODO: this doesn't iterate over cached values
+        // let tx_cached_values = self.tx_cache.range(range.clone());
+        // let block_cached_values = self.block_cache.range(range.clone());
+        // let persisted_values = self.persistent_store.range(range.clone());
+
+        // MergedRange::merge(
+        //     tx_cached_values,
+        //     MergedRange::merge(block_cached_values, persisted_values),
+        // );
+
         self.persistent_store.range(range)
     }
 
@@ -317,6 +328,12 @@ impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
     }
 }
 
+// TODO: the tests on iterators don't enforce the ordering? i.e.
+// assert!(expected_pairs.iter().all(|e| {
+//     let cmp = (e.0.clone(), e.1.clone());
+//     got_pairs.contains(&cmp)
+// }));
+
 #[cfg(test)]
 mod tests {
 
@@ -414,4 +431,51 @@ mod tests {
 
         assert!(matches!(prefix_end_bound(prefix), Bound::Unbounded));
     }
+
+    // TODO: uncomment this test once merged range works
+    // /// Tests whether kv range works with cached and persisted values
+    // #[test]
+    // fn kv_store_merged_range_works() {
+    //     let db = MemDB::new();
+    //     let mut store = KVStore::new(db, None).unwrap();
+
+    //     // values in this group will be in the persistent store
+    //     store.set(vec![1], vec![1]);
+    //     store.set(vec![7], vec![13]); // shadowed by value in tx cache
+    //     store.set(vec![10], vec![2]); // shadowed by value in block cache
+    //     store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
+    //     store.commit();
+
+    //     // values in this group will be in the block cache
+    //     store.set(vec![2], vec![3]);
+    //     store.set(vec![9], vec![4]); // shadowed by value in tx cache
+    //     store.set(vec![10], vec![7]); // shadows a persisted value
+    //     store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
+    //     store.write_then_clear_tx_cache();
+
+    //     // values in this group will be in the tx cache
+    //     store.set(vec![3], vec![5]);
+    //     store.set(vec![8], vec![6]);
+    //     store.set(vec![7], vec![5]); // shadows a persisted value
+    //     store.set(vec![9], vec![6]); // shadows a block cache value
+    //     store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
+
+    //     let start = vec![0];
+    //     let stop = vec![20];
+    //     let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
+    //         .range((Bound::Excluded(start), Bound::Excluded(stop)))
+    //         .collect();
+    //     let expected_pairs = vec![
+    //         (vec![1], vec![1]),
+    //         (vec![2], vec![3]),
+    //         (vec![3], vec![5]),
+    //         (vec![7], vec![5]),
+    //         (vec![8], vec![6]),
+    //         (vec![9], vec![6]),
+    //         (vec![10], vec![7]),
+    //         (vec![14], vec![212]),
+    //     ];
+
+    //     assert_eq!(expected_pairs, got_pairs);
+    // }
 }
