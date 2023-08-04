@@ -4,6 +4,7 @@ use clap::{Arg, ArgMatches, Command};
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse};
 use proto_types::AccAddress;
+use tendermint_informal::block::Height;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
@@ -22,7 +23,11 @@ pub fn get_bank_query_command() -> Command {
         .subcommand_required(true)
 }
 
-pub fn run_bank_query_command(matches: &ArgMatches, node: &str) -> Result<String> {
+pub fn run_bank_query_command(
+    matches: &ArgMatches,
+    node: &str,
+    height: Option<Height>,
+) -> Result<String> {
     let client = HttpClient::new(node)?;
 
     match matches.subcommand() {
@@ -34,13 +39,17 @@ pub fn run_bank_query_command(matches: &ArgMatches, node: &str) -> Result<String
 
             Runtime::new()
                 .expect("unclear why this would ever fail")
-                .block_on(get_balances(client, address))
+                .block_on(get_balances(client, address, height))
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     }
 }
 
-pub async fn get_balances(client: HttpClient, address: AccAddress) -> Result<String> {
+pub async fn get_balances(
+    client: HttpClient,
+    address: AccAddress,
+    height: Option<Height>,
+) -> Result<String> {
     let query = QueryAllBalancesRequest {
         address,
         pagination: None,
@@ -53,7 +62,7 @@ pub async fn get_balances(client: HttpClient, address: AccAddress) -> Result<Str
                     .expect("hard coded path will always succeed"),
             ),
             query.encode_vec(),
-            None,
+            height,
             false,
         )
         .await?;

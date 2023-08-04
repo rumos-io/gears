@@ -1,7 +1,9 @@
 use database::{Database, PrefixDB};
 use tendermint_informal::{abci::Event, block::Header};
 
-use store_crate::{KVStore, MultiStore, StoreKey};
+use store_crate::{KVStore, MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
+
+use crate::error::AppError;
 
 pub struct TxContext<'a, T: Database, SK: StoreKey> {
     pub multi_store: &'a mut MultiStore<T, SK>,
@@ -27,6 +29,7 @@ impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
         }
     }
 
+    //TODO: implement From on Context
     pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T, SK> {
         Context::TxContext(self)
     }
@@ -71,6 +74,7 @@ impl<'a, T: Database, SK: StoreKey> InitContext<'a, T, SK> {
         }
     }
 
+    //TODO: implement From on Context
     pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T, SK> {
         Context::InitContext(self)
     }
@@ -150,28 +154,29 @@ impl<'a, 'b, T: Database, SK: StoreKey> Context<'a, 'b, T, SK> {
     }
 }
 
-/// A Context which holds an immutable reference to a MultiStore
 pub struct QueryContext<'a, T: Database, SK: StoreKey> {
-    pub multi_store: &'a MultiStore<T, SK>,
-    _height: u64,
+    pub multi_store: QueryMultiStore<'a, T, SK>,
+    //_height: u64,
 }
 
 impl<'a, T: Database, SK: StoreKey> QueryContext<'a, T, SK> {
-    pub fn new(multi_store: &'a MultiStore<T, SK>, height: u64) -> Self {
-        QueryContext {
+    pub fn new(multi_store: &'a MultiStore<T, SK>, version: u32) -> Result<Self, AppError> {
+        let multi_store = QueryMultiStore::new(multi_store, version)
+            .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
+        Ok(QueryContext {
             multi_store,
-            _height: height,
-        }
+            //_height: height,
+        })
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &QueryKVStore<PrefixDB<T>> {
         return self.multi_store.get_kv_store(store_key);
     }
 
-    pub fn _get_height(&self) -> u64 {
-        self._height
-    }
+    // pub fn _get_height(&self) -> u64 {
+    //     self._height
+    // }
 }
 
 // type Context struct {

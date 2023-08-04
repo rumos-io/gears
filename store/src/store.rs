@@ -9,7 +9,7 @@ use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
 use trees::iavl::{Range, Tree};
 
-use crate::{error::Error, utils::MergedRange};
+use crate::{error::Error, QueryKVStore};
 
 use super::hash::{self, StoreInfo};
 
@@ -21,9 +21,9 @@ const TREE_CACHE_SIZE: usize = 100_000;
 
 #[derive(Debug)]
 pub struct MultiStore<DB: Database, SK: StoreKey> {
-    head_version: u32,
-    head_commit_hash: [u8; 32],
-    stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
+    pub(crate) head_version: u32,
+    pub(crate) head_commit_hash: [u8; 32],
+    pub(crate) stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
 }
 
 pub trait StoreKey: Hash + Eq + IntoEnumIterator {
@@ -115,7 +115,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
 
 #[derive(Debug)]
 pub struct KVStore<DB: Database> {
-    persistent_store: Tree<DB>,
+    pub(crate) persistent_store: Tree<DB>,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
@@ -156,7 +156,7 @@ impl<DB: Database> KVStore<DB> {
 
     pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<DB> {
         ImmutablePrefixStore {
-            store: self,
+            store: self.into(),
             prefix,
         }
     }
@@ -236,10 +236,46 @@ impl<DB: Database> KVStore<DB> {
     }
 }
 
+pub(crate) enum AnyKVStore<'a, DB: Database> {
+    KVStore(&'a KVStore<DB>),
+    QueryKVStore(&'a QueryKVStore<'a, DB>),
+}
+
+impl<'a, DB: Database> From<&'a KVStore<DB>> for AnyKVStore<'a, DB> {
+    fn from(kv_store: &'a KVStore<DB>) -> Self {
+        Self::KVStore(kv_store)
+    }
+}
+
+impl<'a, DB: Database> From<&'a QueryKVStore<'a, DB>> for AnyKVStore<'a, DB> {
+    fn from(kv_store: &'a QueryKVStore<'a, DB>) -> Self {
+        Self::QueryKVStore(kv_store)
+    }
+}
+
+impl<'a, DB: Database> AnyKVStore<'a, DB> {
+    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
+        match self {
+            AnyKVStore::KVStore(store) => store.get(k),
+            AnyKVStore::QueryKVStore(store) => store.get(k),
+        }
+    }
+
+    pub fn range<R>(&self, range: R) -> Range<R, DB>
+    where
+        R: RangeBounds<Vec<u8>> + Clone,
+    {
+        match self {
+            AnyKVStore::KVStore(store) => store.range(range),
+            AnyKVStore::QueryKVStore(store) => store.range(range),
+        }
+    }
+}
+
 /// Wraps an immutable reference to a KVStore with a prefix
 pub struct ImmutablePrefixStore<'a, DB: Database> {
-    store: &'a KVStore<DB>,
-    prefix: Vec<u8>,
+    pub(crate) store: AnyKVStore<'a, DB>,
+    pub(crate) prefix: Vec<u8>,
 }
 
 impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
@@ -248,7 +284,7 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
         self.store.get(&full_key)
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>>>(&self, range: R) -> PrefixRange<'a, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange<'a, DB> {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),

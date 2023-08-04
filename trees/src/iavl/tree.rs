@@ -17,7 +17,7 @@ use super::node_db::NodeDB;
 pub(crate) struct InnerNode {
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     pub(crate) right_node: Option<Box<Node>>,
-    key: Vec<u8>,
+    pub(crate) key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
     pub(crate) left_hash: [u8; 32],
@@ -115,8 +115,8 @@ impl InnerNode {
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct LeafNode {
-    key: Vec<u8>,
-    value: Vec<u8>,
+    pub(crate) key: Vec<u8>,
+    pub(crate) value: Vec<u8>,
     version: u32,
 }
 
@@ -271,15 +271,16 @@ impl Node {
     }
 }
 
+// TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T>
 where
     T: Database,
 {
     root: Option<Node>,
-    node_db: NodeDB<T>,
-    loaded_version: u32,
-    versions: BTreeSet<u32>,
+    pub(crate) node_db: NodeDB<T>,
+    pub(crate) loaded_version: u32,
+    pub(crate) versions: BTreeSet<u32>,
 }
 
 impl<T> Tree<T>
@@ -652,9 +653,9 @@ pub struct Range<'a, R: RangeBounds<Vec<u8>>, T>
 where
     T: Database,
 {
-    range: R,
-    delayed_nodes: Vec<Node>,
-    node_db: &'a NodeDB<T>,
+    pub(crate) range: R,
+    pub(crate) delayed_nodes: Vec<Node>,
+    pub(crate) node_db: &'a NodeDB<T>,
 }
 
 impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {

@@ -133,15 +133,7 @@ impl<
     fn query(&self, request: RequestQuery) -> ResponseQuery {
         info!("Got query request to: {}", request.path);
 
-        let multi_store = self
-            .multi_store
-            .read()
-            .expect("RwLock will not be poisoned");
-
-        let ctx = QueryContext::new(&multi_store, self.get_block_height());
-        let res = self.handler.handle_query(&ctx, request.clone());
-
-        match res {
+        match self.run_query(&request) {
             Ok(res) => ResponseQuery {
                 code: 0,
                 log: "exists".to_string(),
@@ -369,6 +361,20 @@ impl<
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
         return *height;
+    }
+
+    fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
+        let version: u32 = request.height.try_into().map_err(|_| {
+            AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
+        })?;
+
+        let multi_store = self
+            .multi_store
+            .read()
+            .expect("RwLock will not be poisoned");
+        let ctx = QueryContext::new(&multi_store, version)?;
+
+        self.handler.handle_query(&ctx, request.clone())
     }
 
     fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
