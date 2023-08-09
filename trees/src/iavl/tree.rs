@@ -27,31 +27,22 @@ pub(crate) struct InnerNode {
 
 impl InnerNode {
     fn get_mut_left_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
-        if self.left_node.is_none() {
+        self.left_node.get_or_insert_with(|| {
             let node = node_db
                 .get_node(&self.left_hash)
-                .expect("invalid data in database - possible database corruption");
-
-            self.left_node = Some(Box::new(node));
-        };
-
-        self.left_node
-            .as_mut()
-            .expect("this can't be none since we just set it")
+                .expect("node should be in db");
+            Box::new(node)
+        })
     }
 
     fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
-        if self.right_node.is_none() {
+        self.right_node.get_or_insert_with(|| {
             let node = node_db
                 .get_node(&self.right_hash)
-                .expect("invalid data in database - possible database corruption");
+                .expect("node should be in db");
 
-            self.right_node = Some(Box::new(node));
-        }
-
-        self.right_node
-            .as_mut()
-            .expect("this can't be none since we just set it")
+            Box::new(node)
+        })
     }
 
     fn update_left_hash(&mut self) {
