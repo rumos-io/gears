@@ -1,12 +1,14 @@
 use database::Database;
 use gears::{error::AppError, types::context::Context, x::params::ParamsSubspaceKey};
 use ibc_proto::protobuf::Protobuf;
-use proto_messages::cosmos::bank::v1beta1::{
-    QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse,
+use proto_messages::cosmos::{
+    bank::v1beta1::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse},
+    base::v1beta1::SendCoins,
 };
+use proto_types::AccAddress;
 use store::StoreKey;
 
-use crate::{GenesisState, Keeper, Message};
+use crate::{Balance, GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
 pub struct Handler<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -65,5 +67,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
+    }
+
+    /// NOTE: If the genesis_state already contains an entry for the given address then this method
+    /// will add another entry to the list i.e. it does not merge entries
+    pub fn handle_add_genesis_account(
+        &self,
+        genesis_state: &mut GenesisState,
+        address: AccAddress,
+        coins: SendCoins,
+    ) {
+        genesis_state.balances.push(Balance { address, coins })
     }
 }

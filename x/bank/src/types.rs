@@ -1,4 +1,4 @@
-use proto_messages::cosmos::base::v1beta1::Coin;
+use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
@@ -14,7 +14,7 @@ pub struct GenesisState {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Balance {
     pub address: AccAddress,
-    pub coins: Vec<Coin>,
+    pub coins: SendCoins,
 }
 
 //TODO: implement default?

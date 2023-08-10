@@ -1,6 +1,10 @@
 use bytes::Bytes;
 use database::{Database, RocksDB};
-use proto_messages::cosmos::tx::v1beta1::{Message, TxWithRaw};
+use proto_messages::cosmos::{
+    base::v1beta1::SendCoins,
+    tx::v1beta1::{Message, TxWithRaw},
+};
+use proto_types::AccAddress;
 use serde::de::DeserializeOwned;
 use std::{
     marker::PhantomData,
@@ -40,6 +44,13 @@ pub trait Handler<M: Message, SK: StoreKey, G>: Clone + Send + Sync {
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
     ) -> Result<Bytes, AppError>;
+
+    fn handle_add_genesis_account(
+        &self,
+        genesis_state: &mut G,
+        address: AccAddress,
+        coins: SendCoins,
+    ) -> Result<(), AppError>;
 }
 
 #[derive(Debug, Clone)]

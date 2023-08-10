@@ -130,6 +130,22 @@ impl IntoIterator for SendCoins {
     }
 }
 
+impl FromStr for SendCoins {
+    type Err = Error;
+
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let coin_strings = input.split(",");
+        let mut coins = vec![];
+
+        for coin in coin_strings {
+            let coin = Coin::from_str(coin)?;
+            coins.push(coin);
+        }
+
+        Self::new(coins)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -187,6 +203,15 @@ mod tests {
         raw.parse::<Coin>().unwrap_err();
 
         let raw = "-32454uatom";
+        raw.parse::<Coin>().unwrap_err();
+
+        let raw = " 54uatom";
+        raw.parse::<Coin>().unwrap_err();
+
+        let raw = "54 uatom";
+        raw.parse::<Coin>().unwrap_err();
+
+        let raw = "54uatom ";
         raw.parse::<Coin>().unwrap_err();
     }
 
@@ -346,5 +371,29 @@ mod tests {
                 "coins are not sorted and/or contain duplicates"
             ))
         );
+    }
+
+    #[test]
+    fn coins_from_string_successes() {
+        let raw_coins = "100atom,30uatom";
+        SendCoins::from_str(raw_coins).unwrap();
+    }
+
+    #[test]
+    fn coins_from_string_failure() {
+        let raw_coins = "100atom,30uatom,";
+        SendCoins::from_str(raw_coins).unwrap_err();
+
+        // no space at beginning
+        let raw_coins = " 100atom,30uatom";
+        SendCoins::from_str(raw_coins).unwrap_err();
+
+        // no space at separator
+        let raw_coins = "100atom, 30uatom";
+        SendCoins::from_str(raw_coins).unwrap_err();
+
+        // no space at end
+        let raw_coins = "100atom,30uatom ";
+        SendCoins::from_str(raw_coins).unwrap_err();
     }
 }

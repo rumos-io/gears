@@ -1,7 +1,8 @@
 use database::Database;
 use gears::{error::AppError, types::context::Context, x::params::ParamsSubspaceKey};
 use ibc_proto::protobuf::Protobuf;
-use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
+use proto_messages::cosmos::auth::v1beta1::{BaseAccount, QueryAccountRequest};
+use proto_types::AccAddress;
 use store::StoreKey;
 
 use crate::{GenesisState, Keeper, Message};
@@ -44,5 +45,34 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
+    }
+
+    pub fn handle_add_genesis_account(
+        &self,
+        genesis_state: &mut GenesisState,
+        address: AccAddress,
+    ) -> Result<(), AppError> {
+        let mut contains = false;
+        for acct in &genesis_state.accounts {
+            if acct.address == address {
+                contains = true;
+                break;
+            }
+        }
+
+        if !contains {
+            genesis_state.accounts.push(BaseAccount {
+                address,
+                pub_key: None,
+                account_number: 0, // This is ignored when initializing from genesis
+                sequence: 0,       //TODO: make a BaseAccount constructor
+            });
+            Ok(())
+        } else {
+            Err(AppError::Genesis(format!(
+                "cannot add account at existing address {}",
+                address
+            )))
+        }
     }
 }

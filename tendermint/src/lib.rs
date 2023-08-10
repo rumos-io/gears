@@ -3,6 +3,7 @@ use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 use ed25519_consensus::SigningKey;
 use error::Error;
 use rand::rngs::OsRng;
+use serde::de::DeserializeOwned;
 use tendermint_config::{
     AbciMode, ConsensusConfig, CorsHeader, CorsMethod, DbBackend, FastsyncConfig,
     InstrumentationConfig, LogFormat, MempoolConfig, NodeKey, P2PConfig, PrivValidatorKey,
@@ -28,7 +29,7 @@ pub fn write_keys_and_genesis(
     mut node_key_file: File,
     mut priv_validator_key_file: File,
     mut genesis_file: File,
-    app_state: serde_json::Value,
+    app_state: serde_json::Value, //TODO: make this a generic
 ) -> Result<(), Error> {
     // write node key
     let mut csprng = OsRng {};

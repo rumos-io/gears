@@ -4,4 +4,7 @@ use thiserror::Error;
 pub enum Error {
     #[error(transparent)]
     IO(#[from] std::io::Error),
+
+    #[error(transparent)]
+    Genesis(#[from] serde_json::Error),
 }

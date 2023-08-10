@@ -3,7 +3,7 @@ use std::{fs, path::PathBuf};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
 
-use crate::utils::get_default_home_dir;
+use crate::utils::{get_default_home_dir, get_genesis_file_from_home_dir};
 
 pub fn get_init_command(app_name: &str) -> Command {
     Command::new("init")
@@ -104,8 +104,8 @@ pub fn run_init_command<G: Serialize>(
     let app_state = serde_json::to_value(app_genesis_state).unwrap();
 
     // Create genesis file
-    let mut genesis_file_path = config_dir.clone();
-    genesis_file_path.push("genesis.json");
+    let mut genesis_file_path = home.clone();
+    get_genesis_file_from_home_dir(&mut genesis_file_path);
     let genesis_file = std::fs::File::create(&genesis_file_path).unwrap_or_else(|e| {
         println!("Could not create genesis file {}", e);
         std::process::exit(1)

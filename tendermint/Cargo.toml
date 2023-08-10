@@ -11,5 +11,6 @@ handlebars = "4.3.6"
 tendermint_crates = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs" }
 rand = "0.8"
 ed25519-consensus = { version = "2" }
+serde = { version = "1.0", default-features = false }
 
 [dev-dependencies]

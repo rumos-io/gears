@@ -1,6 +1,9 @@
 use crate::baseapp::ante::{AuthKeeper, BankKeeper};
 use crate::baseapp::cli::get_run_command;
 use crate::baseapp::{BaseApp, Handler};
+use crate::client::genesis_account::{
+    get_add_genesis_account_command, run_add_genesis_account_command,
+};
 use crate::client::init::get_init_command;
 use crate::client::query::get_query_command;
 use crate::client::tx::get_tx_command;
@@ -69,6 +72,7 @@ fn build_cli(
         .subcommand(get_keys_command(app_name))
         .subcommand(get_tx_command(app_name, tx_commands))
         .subcommand(get_completions_command())
+        .subcommand(get_add_genesis_account_command(app_name))
 }
 
 pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
@@ -130,6 +134,9 @@ where
             query_commands,
             tx_commands,
         ),
+        Some(("add-genesis-account", sub_matches)) => {
+            run_add_genesis_account_command::<G, H, SK, M>(sub_matches, app_name, handler)?
+        }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };
 
