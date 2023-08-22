@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use bip39::Mnemonic;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use hdpath::{Purpose, StandardHDPath};
 use ibc_relayer::keyring::SigningKeyPairSized;
@@ -39,6 +40,13 @@ pub fn get_keys_sub_commands(app_name: &str) -> Command {
                 .action(ArgAction::SetTrue),
         )
         .arg(
+            Arg::new("recover")
+                .short('r')
+                .long("recover")
+                .help("Provide seed phrase to recover existing key instead of creating")
+                .action(ArgAction::SetTrue),
+        )
+        .arg(
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
@@ -62,6 +70,8 @@ pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
 
             let overwrite = sub_matches.get_flag("overwrite");
 
+            let recover = sub_matches.get_flag("recover");
+
             let default_home_directory = get_default_home_dir(app_name);
             let home = sub_matches
                 .get_one::<PathBuf>("home")
@@ -75,15 +85,40 @@ pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
 
             check_key_exists(&key_store, &name, overwrite)?;
 
-            println!("> Enter your bip39 mnemonic");
-            let mnemonic: String = read!("{}\n");
+            let key_pair = if recover {
+                println!("> Enter your bip39 mnemonic");
+                let mnemonic: String = read!("{}\n");
 
-            let key_pair = Secp256k1KeyPair::from_mnemonic(
-                &mnemonic,
-                &HD_PATH,
-                &AddressType::Cosmos,
-                "cosmos",
-            )?;
+                Secp256k1KeyPair::from_mnemonic(
+                    &mnemonic,
+                    &HD_PATH,
+                    &AddressType::Cosmos,
+                    "cosmos",
+                )?
+            } else {
+                let mnemonic =
+                    Mnemonic::new(bip39::MnemonicType::Words24, bip39::Language::English);
+
+                let phrase = mnemonic.phrase();
+
+                let key_pair = Secp256k1KeyPair::from_mnemonic(
+                    phrase,
+                    &HD_PATH,
+                    &AddressType::Cosmos,
+                    "cosmos",
+                )?;
+
+                //TODO: need to prevent private key from being printed out
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&key_pair).expect("serialization will never fail")
+                );
+
+                println!("\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account.\n");
+                println!("{phrase}\n");
+
+                key_pair
+            };
 
             key_store.add_key(&name, key_pair.clone())?;
 

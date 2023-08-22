@@ -47,6 +47,7 @@ store_crate = { path = "../store", package = "store" }
 strum = "0.24.1"
 axum = "0.6.18"
 tower-http = { version = "0.4.1", features = ["cors"] }
+tiny-bip39 = "1.0.0"
 
 
 [dev-dependencies]
