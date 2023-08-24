@@ -91,7 +91,7 @@ The balance of this address was set to 34 in the genesis file.
 3. Import the key corresponding to the above address into the gaia-rs key store:
 
 ```console
-echo "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow" | gaia-rs keys add alice
+echo "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow" | gaia-rs keys add alice --recover
 ```
 
 4. Send tokens:
