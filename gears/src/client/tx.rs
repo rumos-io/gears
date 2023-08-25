@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
-use clap::{arg, value_parser, ArgAction, Command};
+use clap::{arg, value_parser, ArgAction, Command, Subcommand};
 
 use crate::utils::get_default_home_dir;
 
-pub fn get_tx_command(app_name: &str, sub_commands: Vec<Command>) -> Command {
-    let mut cli = Command::new("tx")
+pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
+    let cli = Command::new("tx")
         .about("Transaction subcommands")
         .subcommand_required(true)
         .arg(
@@ -28,9 +28,5 @@ pub fn get_tx_command(app_name: &str, sub_commands: Vec<Command>) -> Command {
                 .value_parser(value_parser!(PathBuf)),
         );
 
-    for sub_command in sub_commands {
-        cli = cli.subcommand(sub_command);
-    }
-
-    cli
+    TxSubcommand::augment_subcommands(cli)
 }

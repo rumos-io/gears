@@ -1,8 +1,8 @@
 use std::{path::PathBuf, str::FromStr};
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 use auth::cli::query::get_account;
-use clap::{arg, Arg, ArgAction, ArgMatches, Command};
+use clap::{arg, Args, Subcommand};
 
 use gears::client::keys::key_store::DiskStore;
 use ibc_proto::{
@@ -24,63 +24,40 @@ use proto_types::AccAddress;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
-//use crate::{client::keys::key_store::DiskStore, x::auth::client::cli::query::get_account};
-
 // TODO:
 // 1. remove hard coded gas limit
 // 2. remove hard coded chain_id
 
-pub fn get_bank_tx_command() -> Command {
-    Command::new("bank")
-        .about("Bank transaction subcommands")
-        .subcommand(
-            Command::new("send")
-                .about("Send funds from one account to another")
-                .arg(
-                    Arg::new("from_address")
-                        .required(true)
-                        .value_parser(clap::value_parser!(String)),
-                )
-                .arg(
-                    Arg::new("to_address")
-                        .required(true)
-                        .value_parser(clap::value_parser!(AccAddress)),
-                )
-                .arg(
-                    Arg::new("amount")
-                        .required(true)
-                        .value_parser(clap::value_parser!(Coin)),
-                )
-                .arg(
-                    arg!(--fee)
-                        .help(format!("Fee to pay along with transaction"))
-                        .action(ArgAction::Set)
-                        .value_parser(clap::value_parser!(Coin)),
-                ),
-        )
-        .subcommand_required(true)
+#[derive(Args, Debug)]
+pub struct Cli {
+    #[command(subcommand)]
+    command: BankCommands,
 }
 
-pub fn run_bank_tx_command(matches: &ArgMatches, node: &str, home: PathBuf) -> Result<()> {
-    match matches.subcommand() {
-        Some(("send", sub_matches)) => {
-            let from = sub_matches
-                .get_one::<String>("from_address")
-                .expect("from address argument is required preventing `None`")
-                .to_owned();
+#[derive(Subcommand, Debug)]
+pub enum BankCommands {
+    /// Send funds from one account to another
+    Send {
+        /// from
+        from: String,
+        /// to address
+        to_address: AccAddress,
+        /// amount
+        amount: Coin,
+        /// Fee to pay along with transaction
+        #[arg(short, long)]
+        fee: Option<Coin>,
+    },
+}
 
-            let to_address = sub_matches
-                .get_one::<AccAddress>("to_address")
-                .expect("to address argument is required preventing `None`")
-                .to_owned();
-
-            let amount = sub_matches
-                .get_one::<Coin>("amount")
-                .expect("amount argument is required preventing `None`")
-                .to_owned();
-
-            let fee = sub_matches.get_one::<Coin>("fee").cloned();
-
+pub fn run_bank_tx_command(args: Cli, node: &str, home: PathBuf) -> Result<()> {
+    match args.command {
+        BankCommands::Send {
+            from,
+            to_address,
+            amount,
+            fee,
+        } => {
             let key_store: DiskStore<Secp256k1KeyPair> = DiskStore::new(home)?;
 
             let key = key_store.get_key(&from)?;
@@ -105,7 +82,6 @@ pub fn run_bank_tx_command(matches: &ArgMatches, node: &str, home: PathBuf) -> R
                 .expect("unclear why this would ever fail")
                 .block_on(broadcast_tx_commit(client, tx_raw))
         }
-        _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     }
 }
 

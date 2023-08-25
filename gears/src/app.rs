@@ -7,17 +7,19 @@ use crate::client::genesis_account::{
 use crate::client::init::get_init_command;
 use crate::client::query::get_query_command;
 use crate::client::tx::get_tx_command;
+use crate::utils::get_default_home_dir;
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use axum::body::Body;
 use axum::Router;
-use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
+use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
 use proto_messages::cosmos::tx::v1beta1::Message;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::hash::Hash;
+use std::path::PathBuf;
 use store_crate::StoreKey;
 use strum::IntoEnumIterator;
 
@@ -40,15 +42,14 @@ fn get_completions_command() -> Command {
         )
 }
 
-fn run_completions_command(
+fn run_completions_command<TxSubcommand: Subcommand>(
     matches: &ArgMatches,
     app_name: &'static str,
     version: &'static str,
     query_commands: Vec<Command>,
-    tx_commands: Vec<Command>,
 ) {
     if let Some(generator) = matches.get_one::<Shell>("shell").copied() {
-        let mut cmd = build_cli(app_name, version, query_commands, tx_commands);
+        let mut cmd = build_cli::<TxSubcommand>(app_name, version, query_commands);
         print_completions(generator, &mut cmd);
     }
 }
@@ -57,11 +58,10 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
 }
 
-fn build_cli(
+fn build_cli<TxSubcommand: Subcommand>(
     app_name: &'static str,
     version: &'static str,
     query_commands: Vec<Command>,
-    tx_commands: Vec<Command>,
 ) -> Command {
     Command::new(app_name)
         .version(version)
@@ -70,12 +70,12 @@ fn build_cli(
         .subcommand(get_run_command(app_name))
         .subcommand(get_query_command(query_commands))
         .subcommand(get_keys_command(app_name))
-        .subcommand(get_tx_command(app_name, tx_commands))
+        .subcommand(get_tx_command::<TxSubcommand>(app_name))
         .subcommand(get_completions_command())
         .subcommand(get_add_genesis_account_command(app_name))
 }
 
-pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
+pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT, TxSubcommand>(
     app_name: &'static str,
     app_version: &'static str,
     genesis_state: G,
@@ -86,7 +86,6 @@ pub fn run<G, SK, PSK, M, BK, AK, H, FQ, FT>(
     handler: H,
     query_commands: Vec<Command>,
     query_command_handler: FQ,
-    tx_commands: Vec<Command>,
     tx_command_handler: FT,
     router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
 ) -> Result<()>
@@ -98,17 +97,14 @@ where
     AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
     H: Handler<M, SK, G> + 'static,
     FQ: FnOnce(&ArgMatches) -> Result<()>,
-    FT: FnOnce(&ArgMatches) -> Result<()>,
+    FT: FnOnce(TxSubcommand, &str, PathBuf) -> Result<()>,
     G: DeserializeOwned + Clone + Send + Sync + 'static + Serialize,
+    TxSubcommand: Subcommand,
 {
     setup_panic!();
 
-    let cli = build_cli(
-        app_name,
-        app_version,
-        query_commands.clone(),
-        tx_commands.clone(),
-    );
+    let cli = build_cli::<TxSubcommand>(app_name, app_version, query_commands.clone());
+
     let matches = cli.get_matches();
 
     match matches.subcommand() {
@@ -126,13 +122,28 @@ where
         ),
         Some(("query", sub_matches)) => query_command_handler(sub_matches)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches, app_name)?,
-        Some(("tx", sub_matches)) => tx_command_handler(sub_matches)?,
-        Some(("completions", sub_matches)) => run_completions_command(
+        Some(("tx", sub_matches)) => {
+            let node = matches
+                .get_one::<String>("node")
+                .expect("Node arg has a default value so this cannot be `None`.");
+
+            let default_home_directory = get_default_home_dir(app_name);
+            let home = matches
+                .get_one::<PathBuf>("home")
+                .or(default_home_directory.as_ref())
+                .ok_or(anyhow!(
+                    "Home argument not provided and OS does not provide a default home directory"
+                ))?
+                .to_owned();
+
+            let args = TxSubcommand::from_arg_matches(sub_matches).unwrap();
+            tx_command_handler(args, node, home)?
+        }
+        Some(("completions", sub_matches)) => run_completions_command::<TxSubcommand>(
             sub_matches,
             app_name,
             app_version,
             query_commands,
-            tx_commands,
         ),
         Some(("add-genesis-account", sub_matches)) => {
             run_add_genesis_account_command::<G, H, SK, M>(sub_matches, app_name, handler)?

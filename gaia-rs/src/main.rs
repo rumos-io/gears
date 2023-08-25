@@ -2,7 +2,6 @@ use anyhow::Result;
 use auth::cli::query::get_auth_query_command;
 use auth::Keeper as AuthKeeper;
 use bank::cli::query::get_bank_query_command;
-use bank::cli::tx::get_bank_tx_command;
 use bank::Keeper as BankKeeper;
 use client::query_command_handler;
 use client::tx_command_handler;
@@ -41,7 +40,6 @@ fn main() -> Result<()> {
     );
 
     let query_commands = vec![get_bank_query_command(), get_auth_query_command()];
-    let tx_commands = vec![get_bank_tx_command()];
 
     run(
         APP_NAME,
@@ -54,7 +52,6 @@ fn main() -> Result<()> {
         Handler::new(),
         query_commands,
         query_command_handler,
-        tx_commands,
         tx_command_handler,
         get_router(),
     )
