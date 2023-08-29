@@ -1,102 +1,81 @@
-use bytes::Bytes;
-use ibc_proto::cosmos::tx::v1beta1::{SignDoc, Tx, TxRaw};
+use ibc_proto::{
+    cosmos::tx::v1beta1::{
+        mode_info::{Single, Sum},
+        ModeInfo, SignDoc, TxRaw,
+    },
+    protobuf::Protobuf,
+};
+use ibc_relayer::keyring::{Secp256k1KeyPair, SigningKeyPair};
 use prost::Message;
-use secp256k1::{ecdsa, hashes::sha256, PublicKey, Secp256k1};
+use proto_messages::cosmos::{
+    crypto::secp256k1::v1beta1::{PubKey, RawPubKey},
+    tx::v1beta1::{AuthInfo, Fee, Message as SDKMessage, PublicKey, SignerInfo, Tip, TxBody},
+};
+use tendermint_informal::chain::Id;
 
-pub fn _verify_signature(tx: Tx, tx_raw: TxRaw) -> bool {
-    let sign_bytes = SignDoc {
-        body_bytes: tx_raw.body_bytes,
-        auth_info_bytes: tx_raw.auth_info_bytes,
-        chain_id: "localnet".to_string(),
-        account_number: 0,
-    }
-    .encode_to_vec();
-
-    let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
-
-    let public = tx.auth_info.clone().unwrap().signer_infos[0]
-        .clone()
-        .public_key
-        .unwrap()
-        .type_url;
-    println!("################# URL:  {}", public);
-
-    let public = tx.auth_info.clone().unwrap().signer_infos[0]
-        .clone()
-        .public_key
-        .unwrap()
-        .value;
-    let public = PubKey::decode::<Bytes>(public.into()).unwrap();
-    let public_key = PublicKey::from_slice(&public.key).unwrap();
-
-    let sig = ecdsa::Signature::from_compact(&tx_raw.signatures[0]).unwrap();
-
-    let secp = Secp256k1::verification_only();
-
-    assert!(secp.verify_ecdsa(&message, &sig, &public_key).is_ok());
-
-    let sig_res = secp.verify_ecdsa(&message, &sig, &public_key);
-
-    if sig_res.is_ok() {
-        println!("Sig is good!!!!")
-    }
-
-    match sig_res {
-        Ok(_) => return true,
-        Err(_) => return false,
-    }
+/// Contains info required to sign a Tx
+pub struct SigningInfo {
+    pub key: Secp256k1KeyPair,
+    pub sequence: u64,
+    pub account_number: u64,
 }
 
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct PubKey {
-    #[prost(bytes = "vec", tag = "1")]
-    pub key: ::prost::alloc::vec::Vec<u8>,
-}
+pub fn create_signed_transaction<M: SDKMessage>(
+    signing_infos: Vec<SigningInfo>,
+    tx_body: TxBody<M>,
+    fee: Fee,
+    tip: Option<Tip>,
+    chain_id: Id,
+) -> TxRaw {
+    let signer_infos: Vec<SignerInfo> = signing_infos
+        .iter()
+        .map(|s| {
+            let public_key = s.key.public_key.serialize().to_vec();
+            let public_key = RawPubKey { key: public_key }; //TODO: add method to PubKey to make this easier?
+            let public_key: PubKey = public_key
+                .try_into()
+                .expect("converting the secp256k1 library's public key will always succeed");
 
-#[cfg(test)]
-mod tests {
+            SignerInfo {
+                public_key: Some(PublicKey::Secp256k1(public_key)),
+                mode_info: Some(ModeInfo {
+                    sum: Some(Sum::Single(Single { mode: 1 })),
+                }),
+                sequence: s.sequence,
+            }
+        })
+        .collect();
 
-    // use ibc_proto::{
-    //     cosmos::{
-    //         auth,
-    //         tx::v1beta1::{AuthInfo, SignerInfo, TxBody},
-    //     },
-    //     google::protobuf::Any,
-    // };
+    let auth_info = AuthInfo {
+        signer_infos,
+        fee,
+        tip,
+    };
 
-    // use super::*;
+    let body_bytes = tx_body.encode_vec();
+    let auth_info_bytes = auth_info.encode_vec();
 
-    // #[test]
-    // fn verify_signature_test() {
-    //     let messages = vec![Any {
-    //         type_url: "/cosmos".to_string(),
-    //         value: vec![1, 23, 2],
-    //     }];
+    let mut sign_doc = SignDoc {
+        body_bytes: body_bytes.clone(),
+        auth_info_bytes: auth_info_bytes.clone(),
+        chain_id: chain_id.into(),
+        account_number: 0, // This gets overwritten
+    };
 
-    //     let body = TxBody {
-    //         messages,
-    //         memo: "".to_string(),
-    //         timeout_height: 0,
-    //         extension_options: vec![],
-    //         non_critical_extension_options: vec![],
-    //     };
+    let signatures: Vec<Vec<u8>> = signing_infos
+        .iter()
+        .map(|s| {
+            sign_doc.account_number = s.account_number;
 
-    //     let auth_info = AuthInfo {
-    //         signer_infos: vec![SignerInfo {
-    //             public_key: Some(Any {
-    //                 type_url: "".to_string(),
-    //                 value: vec![1, 23, 3],
-    //             }),
-    //             mode_info: None,
-    //             sequence: 0,
-    //         }],
-    //         fee: None,
-    //     };
-    //     let tx = Tx {
-    //         body: Some(body),
-    //         auth_info: Some(auth_info),
-    //         signatures: todo!(),
-    //     };
-    //     assert!(!verify_signature(tx))
-    // }
+            s.key
+                .sign(&sign_doc.encode_to_vec())
+                .expect("library method can never fail")
+        })
+        .collect();
+
+    TxRaw {
+        body_bytes,
+        auth_info_bytes,
+        signatures,
+    }
 }

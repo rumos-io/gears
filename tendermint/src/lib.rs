@@ -3,7 +3,6 @@ use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 use ed25519_consensus::SigningKey;
 use error::Error;
 use rand::rngs::OsRng;
-use serde::de::DeserializeOwned;
 use tendermint_config::{
     AbciMode, ConsensusConfig, CorsHeader, CorsMethod, DbBackend, FastsyncConfig,
     InstrumentationConfig, LogFormat, MempoolConfig, NodeKey, P2PConfig, PrivValidatorKey,
@@ -12,6 +11,7 @@ use tendermint_config::{
 };
 use tendermint_crates::{
     block::Size,
+    chain::Id,
     consensus::{params::ValidatorParams, Params},
     evidence::Duration as TmDuration,
     public_key::Algorithm,
@@ -23,13 +23,13 @@ mod error;
 
 //TOD0: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
 //TODO: expose write_tm_config_file args
-//TODO: pass in chain id
 
 pub fn write_keys_and_genesis(
     mut node_key_file: File,
     mut priv_validator_key_file: File,
     mut genesis_file: File,
     app_state: serde_json::Value, //TODO: make this a generic
+    chain_id: Id,
 ) -> Result<(), Error> {
     // write node key
     let mut csprng = OsRng {};
@@ -65,7 +65,7 @@ pub fn write_keys_and_genesis(
     // write genesis file
     let genesis = Genesis {
         genesis_time: Time::now(),
-        chain_id: "test-chain".try_into().unwrap(), //TODO: this should be passed in
+        chain_id,
         initial_height: 1,
         consensus_params: Params {
             block: Size {

@@ -42,6 +42,7 @@ pub fn run_auth_query_command(matches: &ArgMatches, node: &str) -> Result<String
     }
 }
 
+//TODO: this is duplicated in the SDK
 pub async fn get_account(client: HttpClient, address: AccAddress) -> Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
     let res = client

@@ -2,6 +2,7 @@ use std::{fs, path::PathBuf};
 
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
+use tendermint_informal::chain::Id;
 
 use crate::utils::{get_default_home_dir, get_genesis_file_from_home_dir};
 
@@ -22,10 +23,12 @@ pub fn get_init_command(app_name: &str) -> Command {
                 .value_parser(value_parser!(PathBuf)),
         )
         .arg(
-            arg!(--id)
+            Arg::new("chain-id")
+                .long("chain-id")
                 .help("Genesis file chain-id")
                 .default_value("test-chain")
-                .action(ArgAction::Set),
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(Id)),
         )
 }
 
@@ -48,9 +51,10 @@ pub fn run_init_command<G: Serialize>(
             std::process::exit(1)
         });
 
-    let _chain_id = sub_matches
-        .get_one::<String>("id")
-        .expect("has a default value so will never be None");
+    let chain_id = sub_matches
+        .get_one::<Id>("chain-id")
+        .expect("has a default value so will never be None")
+        .clone();
 
     // Create config directory
     let mut config_dir = home.clone();
@@ -117,6 +121,7 @@ pub fn run_init_command<G: Serialize>(
         priv_validator_key_file,
         genesis_file,
         app_state,
+        chain_id,
     )
     .unwrap_or_else(|e| {
         println!("Error writing key and genesis files {}", e);
