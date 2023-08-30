@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq, Eq)]
+#[derive(Error, Debug)]
 pub enum Error {
     #[error("invalid coins: `{0}`")]
     Coins(String),
@@ -8,6 +8,8 @@ pub enum Error {
     Coin(String),
     #[error(transparent)]
     Decode(#[from] prost::DecodeError),
+    #[error(transparent)]
+    DecodeProtobuf(#[from] ibc_proto::protobuf::Error),
     #[error("decode error: `{0}`")]
     DecodeAny(String),
     #[error("missing field: `{0}`")]

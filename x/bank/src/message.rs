@@ -25,27 +25,6 @@ impl proto_messages::cosmos::tx::v1beta1::Message for Message {
     }
 }
 
-// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(tag = "@type")]
-// pub enum Msg {
-//     #[serde(rename = "/cosmos.bank.v1beta1.MsgSend")]
-//     Send(MsgSend),
-// }
-
-//impl Msg {
-//     pub fn get_signers(&self) -> Vec<&AccAddress> {
-//         match &self {
-//             Msg::Send(msg) => return vec![&msg.from_address],
-//         }
-//     }
-
-//     pub fn validate_basic(&self) -> Result<(), Error> {
-//         match &self {
-//             Msg::Send(_) => Ok(()),
-//         }
-//     }
-// }
-
 impl From<Message> for Any {
     fn from(msg: Message) -> Self {
         match msg {
@@ -63,7 +42,7 @@ impl TryFrom<Any> for Message {
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
             "/cosmos.bank.v1beta1.MsgSend" => {
-                let msg = MsgSend::decode::<Bytes>(value.value.clone().into()).unwrap();
+                let msg = MsgSend::decode::<Bytes>(value.value.clone().into())?;
                 Ok(Message::Send(msg))
             }
             _ => Err(proto_messages::Error::DecodeGeneral(
