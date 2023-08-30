@@ -1,5 +1,9 @@
 use database::Database;
-use gears::{error::AppError, types::context::Context, x::params::ParamsSubspaceKey};
+use gears::{
+    error::AppError,
+    types::context::{Context, InitContext, TxContext},
+    x::params::ParamsSubspaceKey,
+};
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse},
@@ -22,13 +26,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn handle<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut TxContext<DB, SK>,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {
             Message::Send(msg_send) => self
                 .keeper
-                .send_coins_from_account_to_account(ctx, msg_send),
+                .send_coins_from_account_to_account(&mut ctx.as_any(), msg_send),
         }
     }
 
@@ -65,7 +69,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
     }
 

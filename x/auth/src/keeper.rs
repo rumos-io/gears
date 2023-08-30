@@ -4,7 +4,7 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{Context, QueryContext},
+    types::context::{Context, InitContext, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
@@ -85,17 +85,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
         //TODO: sdk sanitizes accounts
-        self.auth_params_keeper.set(ctx, genesis.params);
+        self.auth_params_keeper
+            .set(&mut ctx.as_any(), genesis.params);
 
         for mut acct in genesis.accounts {
-            acct.account_number = self.get_next_account_number(ctx);
-            self.set_account(ctx, Account::Base(acct));
+            acct.account_number = self.get_next_account_number(&mut ctx.as_any());
+            self.set_account(&mut ctx.as_any(), Account::Base(acct));
         }
 
         // Create the fee collector account
-        self.check_create_new_module_account(ctx, &Module::FeeCollector);
+        self.check_create_new_module_account(&mut ctx.as_any(), &Module::FeeCollector);
     }
 
     pub fn query_account<DB: Database>(

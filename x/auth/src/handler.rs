@@ -1,5 +1,9 @@
 use database::Database;
-use gears::{error::AppError, types::context::Context, x::params::ParamsSubspaceKey};
+use gears::{
+    error::AppError,
+    types::context::{Context, InitContext},
+    x::params::ParamsSubspaceKey,
+};
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::auth::v1beta1::{BaseAccount, QueryAccountRequest};
 use proto_types::AccAddress;
@@ -43,7 +47,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
     }
 

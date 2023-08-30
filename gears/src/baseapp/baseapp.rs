@@ -35,9 +35,10 @@ use super::{
 };
 
 pub trait Handler<M: Message, SK: StoreKey, G>: Clone + Send + Sync {
-    fn handle_tx<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
+    fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<DB, SK>, msg: &M)
+        -> Result<(), AppError>;
 
-    fn handle_init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: G);
+    fn handle_init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: G);
 
     fn handle_query<DB: Database>(
         &self,
@@ -112,7 +113,7 @@ impl<
                 std::process::exit(1)
             });
 
-        self.handler.handle_init_genesis(&mut ctx.as_any(), genesis);
+        self.handler.handle_init_genesis(&mut ctx, genesis);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -423,7 +424,7 @@ impl<
             raw.into(),
         );
 
-        match self.run_msgs(&mut ctx.as_any(), tx_with_raw.tx.get_msgs()) {
+        match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
             Ok(_) => {
                 let events = ctx.events;
                 multi_store.write_then_clear_tx_caches();
@@ -438,7 +439,7 @@ impl<
 
     fn run_msgs<T: Database>(
         &self,
-        ctx: &mut Context<T, SK>,
+        ctx: &mut TxContext<T, SK>,
         msgs: &Vec<M>,
     ) -> Result<(), AppError> {
         for msg in msgs {
