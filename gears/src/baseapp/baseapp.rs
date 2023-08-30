@@ -25,7 +25,7 @@ use tracing::{error, info};
 
 use crate::{
     error::AppError,
-    types::context::{Context, InitContext, QueryContext, TxContext},
+    types::context::{InitContext, QueryContext, TxContext},
     x::params::{Keeper, ParamsSubspaceKey},
 };
 

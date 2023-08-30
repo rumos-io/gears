@@ -60,3 +60,9 @@ impl From<trees::Error> for AppError {
         AppError::Tree(err)
     }
 }
+
+impl From<ibc_proto::protobuf::Error> for AppError {
+    fn from(err: ibc_proto::protobuf::Error) -> AppError {
+        AppError::InvalidRequest(err.to_string())
+    }
+}

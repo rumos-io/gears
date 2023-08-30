@@ -1,7 +1,7 @@
 use database::Database;
 use gears::{
     error::AppError,
-    types::context::{Context, InitContext, TxContext},
+    types::context::{InitContext, TxContext},
     x::params::ParamsSubspaceKey,
 };
 use ibc_proto::protobuf::Protobuf;
@@ -43,8 +43,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
             "/cosmos.bank.v1beta1.Query/AllBalances" => {
-                let req = QueryAllBalancesRequest::decode(query.data)
-                    .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
+                let req = QueryAllBalancesRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -59,8 +58,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
             .encode_vec()
             .into()),
             "/cosmos.bank.v1beta1.Query/Balance" => {
-                let req = QueryBalanceRequest::decode(query.data)
-                    .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
+                let req = QueryBalanceRequest::decode(query.data)?;
 
                 Ok(self.keeper.query_balance(&ctx, req).encode_vec().into())
             }
