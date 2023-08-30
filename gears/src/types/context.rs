@@ -29,6 +29,10 @@ impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
         }
     }
 
+    pub fn get_header(&self) -> &Header {
+        &self.header
+    }
+
     //TODO: implement From on Context
     pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T, SK> {
         Context::TxContext(self)
