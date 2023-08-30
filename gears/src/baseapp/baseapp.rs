@@ -38,6 +38,12 @@ pub trait Handler<M: Message, SK: StoreKey, G>: Clone + Send + Sync {
     fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<DB, SK>, msg: &M)
         -> Result<(), AppError>;
 
+    fn handle_begin_block<DB: Database>(
+        &self,
+        ctx: &mut TxContext<DB, SK>,
+        request: RequestBeginBlock,
+    );
+
     fn handle_init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: G);
 
     fn handle_query<DB: Database>(
@@ -256,12 +262,33 @@ impl<
         self.set_block_header(
             request
                 .header
+                .clone()
                 .expect("tendermint will never send nothing to the app")
                 .try_into()
                 .expect("tendermint will send a valid Header struct"),
         );
 
-        Default::default()
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            vec![],
+        );
+
+        self.handler.handle_begin_block(&mut ctx, request);
+
+        let events = ctx.events;
+        multi_store.write_then_clear_tx_caches();
+
+        ResponseBeginBlock {
+            events: events.into_iter().map(|e| e.into()).collect(),
+        }
     }
 
     fn end_block(&self, _request: RequestEndBlock) -> ResponseEndBlock {

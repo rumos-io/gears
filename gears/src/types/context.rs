@@ -6,7 +6,7 @@ use store_crate::{KVStore, MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
 use crate::error::AppError;
 
 pub struct TxContext<'a, T: Database, SK: StoreKey> {
-    pub multi_store: &'a mut MultiStore<T, SK>,
+    multi_store: &'a mut MultiStore<T, SK>,
     height: u64,
     pub events: Vec<Event>,
     header: Header,
