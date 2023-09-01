@@ -22,7 +22,7 @@ use crate::{
 };
 
 // TODO: this doesn't belong here
-pub trait BankKeeper<SK: StoreKey> {
+pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
         ctx: &mut Context<DB, SK>,
@@ -33,7 +33,7 @@ pub trait BankKeeper<SK: StoreKey> {
 }
 
 // TODO: this doesn't belong here
-pub trait AuthKeeper<SK: StoreKey> {
+pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_auth_params<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params;
 
     fn has_account<DB: Database>(&self, ctx: &Context<DB, SK>, addr: &AccAddress) -> bool;

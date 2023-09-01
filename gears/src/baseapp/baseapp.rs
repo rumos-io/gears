@@ -5,7 +5,7 @@ use proto_messages::cosmos::{
     tx::v1beta1::{Message, TxWithRaw},
 };
 use proto_types::AccAddress;
-use serde::de::DeserializeOwned;
+use serde::{de::DeserializeOwned, Serialize};
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
@@ -34,7 +34,9 @@ use super::{
     params::BaseAppParamsKeeper,
 };
 
-pub trait Handler<M: Message, SK: StoreKey, G>: Clone + Send + Sync {
+pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
+    Clone + Send + Sync + 'static
+{
     fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<DB, SK>, msg: &M)
         -> Result<(), AppError>;
 
@@ -60,15 +62,18 @@ pub trait Handler<M: Message, SK: StoreKey, G>: Clone + Send + Sync {
     ) -> Result<(), AppError>;
 }
 
+pub trait Genesis: DeserializeOwned + Serialize + Clone + Send + Sync + 'static {}
+impl<T: DeserializeOwned + Serialize + Clone + Send + Sync + 'static> Genesis for T {}
+
 #[derive(Debug, Clone)]
 pub struct BaseApp<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
+    G: Genesis,
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
@@ -83,13 +88,13 @@ pub struct BaseApp<
 }
 
 impl<
-        M: Message + 'static,
-        SK: StoreKey + Clone + Send + Sync + 'static,
-        PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
-        BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-        AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-        H: Handler<M, SK, G> + 'static,
-        G: DeserializeOwned + Clone + Send + Sync + 'static,
+        M: Message,
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        BK: BankKeeper<SK>,
+        AK: AuthKeeper<SK>,
+        H: Handler<M, SK, G>,
+        G: Genesis,
     > Application for BaseApp<SK, PSK, M, BK, AK, H, G>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
@@ -333,11 +338,11 @@ impl<
 impl<
         M: Message,
         SK: StoreKey,
-        PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
-        BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-        AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
+        PSK: ParamsSubspaceKey,
+        BK: BankKeeper<SK>,
+        AK: AuthKeeper<SK>,
         H: Handler<M, SK, G>,
-        G: DeserializeOwned + Clone + Send + Sync + 'static,
+        G: Genesis,
     > BaseApp<SK, PSK, M, BK, AK, H, G>
 {
     pub fn new(

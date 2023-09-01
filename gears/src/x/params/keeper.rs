@@ -6,7 +6,7 @@ use strum::IntoEnumIterator;
 
 use crate::types::context::Context;
 
-pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator {
+pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
 }
 

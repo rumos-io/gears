@@ -26,7 +26,7 @@ pub struct MultiStore<DB: Database, SK: StoreKey> {
     pub(crate) stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
 }
 
-pub trait StoreKey: Hash + Eq + IntoEnumIterator {
+pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
 }
 

@@ -1,35 +1,30 @@
-use std::hash::Hash;
-use std::path::PathBuf;
-
 use axum::body::Body;
 use axum::Router;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
 use proto_messages::cosmos::tx::v1beta1::Message;
-use serde::de::DeserializeOwned;
+use std::path::PathBuf;
 use store_crate::StoreKey;
-use strum::IntoEnumIterator;
 use tendermint_abci::ServerBuilder;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
 use crate::baseapp::BaseApp;
 use crate::client::rest::run_rest_server;
-//use crate::client::rest::run_rest_server;
 use crate::utils::get_default_home_dir;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 use super::ante::{AuthKeeper, BankKeeper};
-use super::Handler;
+use super::{Genesis, Handler};
 
 pub fn run_run_command<
-    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
-    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK, G> + 'static,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+    H: Handler<M, SK, G>,
+    G: Genesis,
 >(
     matches: &ArgMatches,
     app_name: &'static str,

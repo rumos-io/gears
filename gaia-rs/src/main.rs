@@ -5,7 +5,6 @@ use bank::cli::query::get_bank_query_command;
 use bank::Keeper as BankKeeper;
 use client::query_command_handler;
 use client::tx_command_handler;
-use gears::app::run;
 use gears::x::params::Keeper as ParamsKeeper;
 use rest::get_router;
 
@@ -41,7 +40,7 @@ fn main() -> Result<()> {
 
     let query_commands = vec![get_bank_query_command(), get_auth_query_command()];
 
-    run(
+    gears::app::run(
         APP_NAME,
         VERSION,
         GenesisState::default(),

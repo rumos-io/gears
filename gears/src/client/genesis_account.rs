@@ -8,11 +8,13 @@ use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 
 use proto_messages::cosmos::{base::v1beta1::SendCoins, tx::v1beta1::Message};
 use proto_types::AccAddress;
-use serde::{de::DeserializeOwned, Serialize};
 use store_crate::StoreKey;
 use tendermint_informal::Genesis;
 
-use crate::{baseapp::Handler, utils::get_default_genesis_file};
+use crate::{
+    baseapp::{Genesis as SDKGenesis, Handler},
+    utils::get_default_genesis_file,
+};
 
 pub fn get_add_genesis_account_command(app_name: &str) -> Command {
     Command::new("add-genesis-account")
@@ -46,7 +48,7 @@ pub fn get_add_genesis_account_command(app_name: &str) -> Command {
 }
 
 pub fn run_add_genesis_account_command<
-    G: DeserializeOwned + Serialize,
+    G: SDKGenesis,
     H: Handler<M, SK, G>,
     SK: StoreKey,
     M: Message,

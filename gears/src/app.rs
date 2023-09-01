@@ -1,6 +1,6 @@
 use crate::baseapp::ante::{AuthKeeper, BankKeeper};
 use crate::baseapp::cli::get_run_command;
-use crate::baseapp::{BaseApp, Handler};
+use crate::baseapp::{BaseApp, Genesis, Handler};
 use crate::client::genesis_account::{
     get_add_genesis_account_command, run_add_genesis_account_command,
 };
@@ -16,12 +16,8 @@ use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
 use proto_messages::cosmos::tx::v1beta1::Message;
 use proto_types::AccAddress;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use std::env;
-use std::hash::Hash;
 use store_crate::StoreKey;
-use strum::IntoEnumIterator;
 
 use crate::{
     baseapp::cli::run_run_command,
@@ -90,14 +86,14 @@ pub fn run<G, SK, PSK, M, BK, AK, H, FQ, TxSubcommand, TxCmdHandler>(
     router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
 ) -> Result<()>
 where
-    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
-    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK, G> + 'static,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+    H: Handler<M, SK, G>,
     FQ: FnOnce(&ArgMatches) -> Result<()>,
-    G: DeserializeOwned + Clone + Send + Sync + 'static + Serialize,
+    G: Genesis,
     TxSubcommand: Subcommand,
     TxCmdHandler: FnOnce(TxSubcommand, AccAddress) -> Result<M>,
 {

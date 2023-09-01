@@ -1,6 +1,5 @@
 use ibc_proto::protobuf::Protobuf;
 use proto_types::AccAddress;
-use std::hash::Hash;
 use tendermint_abci::Application;
 
 use axum::{
@@ -12,7 +11,7 @@ use axum::{
 use gears::{
     baseapp::{
         ante::{AuthKeeper, BankKeeper},
-        BaseApp, Handler,
+        BaseApp, Genesis, Handler,
     },
     client::rest::{error::Error, Pagination},
     x::params::ParamsSubspaceKey,
@@ -24,20 +23,19 @@ use proto_messages::cosmos::{
     },
     tx::v1beta1::Message,
 };
-use serde::{de::DeserializeOwned, Deserialize};
+use serde::Deserialize;
 use store::StoreKey;
-use strum::IntoEnumIterator;
 use tendermint_proto::abci::RequestQuery;
 
 /// Gets the total supply of every denom
 pub async fn supply<
-    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
-    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK, G> + 'static,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+    H: Handler<M, SK, G>,
+    G: Genesis,
 >(
     State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
@@ -58,13 +56,13 @@ pub async fn supply<
 
 /// Get all balances for a given address
 pub async fn get_balances<
-    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
-    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK, G> + 'static,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+    H: Handler<M, SK, G>,
+    G: Genesis,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
@@ -99,13 +97,13 @@ pub struct RawDenom {
 /// Get balance for a given address and denom
 //#[get("/cosmos/bank/v1beta1/balances/<addr>/by_denom?<denom>")]
 pub async fn get_balances_by_denom<
-    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
-    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK, G> + 'static,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+    H: Handler<M, SK, G>,
+    G: Genesis,
 >(
     Path(address): Path<AccAddress>,
     denom: Query<RawDenom>,
@@ -134,13 +132,13 @@ pub async fn get_balances_by_denom<
 }
 
 pub fn get_router<
-    SK: Hash + Eq + IntoEnumIterator + StoreKey + Clone + Send + Sync + 'static,
-    PSK: ParamsSubspaceKey + Clone + Send + Sync + 'static,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK> + Clone + Send + Sync + 'static,
-    AK: AuthKeeper<SK> + Clone + Send + Sync + 'static,
-    H: Handler<M, SK, G> + 'static,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+    H: Handler<M, SK, G>,
+    G: Genesis,
 >() -> Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
