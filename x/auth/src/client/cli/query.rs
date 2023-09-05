@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Args, Subcommand};
 
 use gears::client::query::run_query;
 use ibc_proto::protobuf::Protobuf;
@@ -10,33 +10,28 @@ use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse as RawQueryAccountRes
 use proto_messages::cosmos::auth::v1beta1::{QueryAccountRequest, QueryAccountResponse};
 use proto_types::AccAddress;
 
-pub fn get_auth_query_command() -> Command {
-    Command::new("auth")
-        .about("Querying commands for the auth module")
-        .subcommand(
-            Command::new("account")
-                .about("Query for account by address")
-                .arg(
-                    Arg::new("address")
-                        .required(true)
-                        .value_parser(clap::value_parser!(AccAddress)),
-                ),
-        )
-        .subcommand_required(true)
+#[derive(Args, Debug)]
+pub struct QueryCli {
+    #[command(subcommand)]
+    command: AuthCommands,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum AuthCommands {
+    /// Query for account by address
+    Account {
+        /// address
+        address: AccAddress,
+    },
 }
 
 pub fn run_auth_query_command(
-    matches: &ArgMatches,
+    args: QueryCli,
     node: &str,
     height: Option<Height>,
 ) -> Result<String> {
-    match matches.subcommand() {
-        Some(("account", sub_matches)) => {
-            let address = sub_matches
-                .get_one::<AccAddress>("address")
-                .expect("address argument is required preventing `None`")
-                .to_owned();
-
+    match args.command {
+        AuthCommands::Account { address } => {
             let query = QueryAccountRequest { address };
 
             let res = run_query::<QueryAccountResponse, RawQueryAccountResponse>(
@@ -48,6 +43,5 @@ pub fn run_auth_query_command(
 
             Ok(serde_json::to_string_pretty(&res)?)
         }
-        _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     }
 }

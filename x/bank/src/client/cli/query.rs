@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Args, Subcommand};
 
 use gears::client::query::run_query;
 use ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse as RawQueryAllBalancesResponse;
@@ -8,33 +8,28 @@ use proto_messages::cosmos::bank::v1beta1::{QueryAllBalancesRequest, QueryAllBal
 use proto_types::AccAddress;
 use tendermint_informal::block::Height;
 
-pub fn get_bank_query_command() -> Command {
-    Command::new("bank")
-        .about("Querying commands for the bank module")
-        .subcommand(
-            Command::new("balances")
-                .about("Query for account balances by address")
-                .arg(
-                    Arg::new("address")
-                        .required(true)
-                        .value_parser(clap::value_parser!(AccAddress)),
-                ),
-        )
-        .subcommand_required(true)
+#[derive(Args, Debug)]
+pub struct QueryCli {
+    #[command(subcommand)]
+    command: BankCommands,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum BankCommands {
+    /// Query for account balances by address
+    Balances {
+        /// address
+        address: AccAddress,
+    },
 }
 
 pub fn run_bank_query_command(
-    matches: &ArgMatches,
+    args: QueryCli,
     node: &str,
     height: Option<Height>,
 ) -> Result<String> {
-    match matches.subcommand() {
-        Some(("balances", sub_matches)) => {
-            let address = sub_matches
-                .get_one::<AccAddress>("address")
-                .expect("address argument is required preventing `None`")
-                .to_owned();
-
+    match args.command {
+        BankCommands::Balances { address } => {
             let query = QueryAllBalancesRequest {
                 address,
                 pagination: None,
@@ -49,6 +44,5 @@ pub fn run_bank_query_command(
 
             Ok(serde_json::to_string_pretty(&res)?)
         }
-        _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     }
 }

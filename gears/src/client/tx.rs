@@ -109,7 +109,7 @@ where
     let key_store: DiskStore<Secp256k1KeyPair> = DiskStore::new(home)?;
     let key = key_store.get_key(&from)?;
 
-    let args = TxSubcommand::from_arg_matches(matches).unwrap();
+    let args = TxSubcommand::from_arg_matches(matches).unwrap(); // TODO: remove unwrap
     let message = tx_command_handler(args, AccAddress::from_str(&key.account())?)?;
 
     let fee = Fee {
@@ -154,6 +154,7 @@ pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()
     Ok(())
 }
 
+// TODO: we're assuming here that the app has an auth module which handles this query
 fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 

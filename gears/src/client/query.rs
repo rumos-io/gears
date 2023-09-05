@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use clap::{arg, value_parser, ArgAction, Command};
+use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use ibc_proto::protobuf::Protobuf;
 use prost::Message;
 use serde::Serialize;
@@ -7,8 +7,8 @@ use tendermint_informal::block::Height;
 use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};
 use tokio::runtime::Runtime;
 
-pub fn get_query_command(sub_commands: Vec<Command>) -> Command {
-    let mut cli = Command::new("query")
+pub fn get_query_command<QuerySubcommand: Subcommand>() -> Command {
+    let cli = Command::new("query")
         .about("Querying subcommands")
         .subcommand_required(true)
         .arg(
@@ -19,21 +19,36 @@ pub fn get_query_command(sub_commands: Vec<Command>) -> Command {
                 .global(true),
         )
         .arg(
-            arg!(--height)
-                .help("Use a specific height to query state at (this can error if the node is pruning state)")
-                .default_value("0")
-                .value_parser(value_parser!(Height))
+            Arg::new("height")
+                .long("height")
                 .action(ArgAction::Set)
+                .value_parser(value_parser!(Height))
                 .global(true),
         );
 
-    for sub_command in sub_commands {
-        cli = cli.subcommand(sub_command);
-    }
-
-    cli
+    QuerySubcommand::augment_subcommands(cli)
 }
 
+pub fn run_query_command<QuerySubcommand: Subcommand, QueryCmdHandler>(
+    matches: &ArgMatches,
+    query_command_handler: QueryCmdHandler,
+) -> Result<()>
+where
+    QueryCmdHandler: FnOnce(QuerySubcommand, &str, Option<Height>) -> Result<()>,
+{
+    let args = QuerySubcommand::from_arg_matches(matches)
+        .expect("presumably this should work otherwise CLAP would have complained earlier");
+
+    let node = matches
+        .get_one::<String>("node")
+        .expect("Node arg has a default value so this cannot be `None`.");
+
+    let height = matches.get_one::<Height>("height");
+
+    query_command_handler(args, node, height.cloned())
+}
+
+/// Convenience method for running queries
 pub fn run_query<
     Response: Protobuf<Raw> + std::convert::TryFrom<Raw> + Serialize,
     Raw: Message + Default + std::convert::From<Response>,

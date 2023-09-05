@@ -1,7 +1,5 @@
 use anyhow::Result;
-use auth::cli::query::get_auth_query_command;
 use auth::Keeper as AuthKeeper;
-use bank::cli::query::get_bank_query_command;
 use bank::Keeper as BankKeeper;
 use client::query_command_handler;
 use client::tx_command_handler;
@@ -38,8 +36,6 @@ fn main() -> Result<()> {
         auth_keeper.clone(),
     );
 
-    let query_commands = vec![get_bank_query_command(), get_auth_query_command()];
-
     gears::app::run(
         APP_NAME,
         VERSION,
@@ -49,7 +45,6 @@ fn main() -> Result<()> {
         params_keeper,
         GaiaParamsStoreKey::BaseApp,
         Handler::new(),
-        query_commands,
         query_command_handler,
         tx_command_handler,
         get_router(),

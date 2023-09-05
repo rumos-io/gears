@@ -5,7 +5,7 @@ use crate::client::genesis_account::{
     get_add_genesis_account_command, run_add_genesis_account_command,
 };
 use crate::client::init::get_init_command;
-use crate::client::query::get_query_command;
+use crate::client::query::{get_query_command, run_query_command};
 use crate::client::tx::{get_tx_command, run_tx_command};
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
@@ -18,6 +18,7 @@ use proto_messages::cosmos::tx::v1beta1::Message;
 use proto_types::AccAddress;
 use std::env;
 use store_crate::StoreKey;
+use tendermint_informal::block::Height;
 
 use crate::{
     baseapp::cli::run_run_command,
@@ -38,14 +39,13 @@ fn get_completions_command() -> Command {
         )
 }
 
-fn run_completions_command<TxSubcommand: Subcommand>(
+fn run_completions_command<TxSubcommand: Subcommand, QuerySubcommand: Subcommand>(
     matches: &ArgMatches,
     app_name: &'static str,
     version: &'static str,
-    query_commands: Vec<Command>,
 ) {
     if let Some(generator) = matches.get_one::<Shell>("shell").copied() {
-        let mut cmd = build_cli::<TxSubcommand>(app_name, version, query_commands);
+        let mut cmd = build_cli::<TxSubcommand, QuerySubcommand>(app_name, version);
         print_completions(generator, &mut cmd);
     }
 }
@@ -54,24 +54,23 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
 }
 
-fn build_cli<TxSubcommand: Subcommand>(
+fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand>(
     app_name: &'static str,
     version: &'static str,
-    query_commands: Vec<Command>,
 ) -> Command {
     Command::new(app_name)
         .version(version)
         .subcommand_required(true)
         .subcommand(get_init_command(app_name))
         .subcommand(get_run_command(app_name))
-        .subcommand(get_query_command(query_commands))
+        .subcommand(get_query_command::<QuerySubcommand>())
         .subcommand(get_keys_command(app_name))
         .subcommand(get_tx_command::<TxSubcommand>(app_name))
         .subcommand(get_completions_command())
         .subcommand(get_add_genesis_account_command(app_name))
 }
 
-pub fn run<G, SK, PSK, M, BK, AK, H, FQ, TxSubcommand, TxCmdHandler>(
+pub fn run<G, SK, PSK, M, BK, AK, H, QuerySubcommand, QueryCmdHandler, TxSubcommand, TxCmdHandler>(
     app_name: &'static str,
     app_version: &'static str,
     genesis_state: G,
@@ -80,8 +79,7 @@ pub fn run<G, SK, PSK, M, BK, AK, H, FQ, TxSubcommand, TxCmdHandler>(
     params_keeper: ParamsKeeper<SK, PSK>,
     params_subspace_key: PSK,
     handler: H,
-    query_commands: Vec<Command>,
-    query_command_handler: FQ,
+    query_command_handler: QueryCmdHandler,
     tx_command_handler: TxCmdHandler,
     router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
 ) -> Result<()>
@@ -92,14 +90,15 @@ where
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
-    FQ: FnOnce(&ArgMatches) -> Result<()>,
     G: Genesis,
+    QuerySubcommand: Subcommand,
+    QueryCmdHandler: FnOnce(QuerySubcommand, &str, Option<Height>) -> Result<()>,
     TxSubcommand: Subcommand,
     TxCmdHandler: FnOnce(TxSubcommand, AccAddress) -> Result<M>,
 {
     setup_panic!();
 
-    let cli = build_cli::<TxSubcommand>(app_name, app_version, query_commands.clone());
+    let cli = build_cli::<TxSubcommand, QuerySubcommand>(app_name, app_version);
 
     let matches = cli.get_matches();
 
@@ -116,15 +115,13 @@ where
             handler,
             router,
         ),
-        Some(("query", sub_matches)) => query_command_handler(sub_matches)?,
+        Some(("query", sub_matches)) => run_query_command(sub_matches, query_command_handler)?,
         Some(("keys", sub_matches)) => run_keys_command(sub_matches, app_name)?,
         Some(("tx", sub_matches)) => run_tx_command(sub_matches, app_name, tx_command_handler)?,
-        Some(("completions", sub_matches)) => run_completions_command::<TxSubcommand>(
-            sub_matches,
-            app_name,
-            app_version,
-            query_commands,
-        ),
+        Some(("completions", sub_matches)) => run_completions_command::<
+            TxSubcommand,
+            QuerySubcommand,
+        >(sub_matches, app_name, app_version),
         Some(("add-genesis-account", sub_matches)) => {
             run_add_genesis_account_command::<G, H, SK, M>(sub_matches, app_name, handler)?
         }
