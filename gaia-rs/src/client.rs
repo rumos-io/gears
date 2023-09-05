@@ -35,7 +35,7 @@ pub fn query_command_handler(matches: &ArgMatches) -> Result<()> {
 
     let res = match matches.subcommand() {
         Some(("bank", sub_matches)) => run_bank_query_command(sub_matches, node, Some(height)),
-        Some(("auth", sub_matches)) => run_auth_query_command(sub_matches, node),
+        Some(("auth", sub_matches)) => run_auth_query_command(sub_matches, node, Some(height)),
 
         _ => unreachable!("Exhausted list of subcommands and subcommand_required prevents `None`"),
     }?;

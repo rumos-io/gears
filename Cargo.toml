@@ -11,3 +11,6 @@ members = [
     "x/bank",
     "x/auth",
 ]
+
+[workspace.dependencies]
+ibc-proto = { git = "https://github.com/joneskm/ibc-proto-rs" }

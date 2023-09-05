@@ -2,6 +2,7 @@ use std::{path::PathBuf, str::FromStr};
 
 use anyhow::{anyhow, Result};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
+use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse as RawQueryAccountResponse;
 use ibc_proto::{cosmos::tx::v1beta1::TxRaw, protobuf::Protobuf};
 use ibc_relayer::keyring::{Secp256k1KeyPair, SigningKeyPair};
 use prost::Message;
@@ -20,7 +21,7 @@ use crate::{
     utils::get_default_home_dir,
 };
 
-use super::keys::key_store::DiskStore;
+use super::{keys::key_store::DiskStore, query::run_query};
 
 pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
     let cli = Command::new("tx")
@@ -118,12 +119,7 @@ where
         granter: "".into(),   //TODO: remove hard coded granter
     };
 
-    //TODO use get signers to get all signers
-
-    let client = HttpClient::new(node)?;
-    let account = Runtime::new()
-        .expect("unclear why this would ever fail")
-        .block_on(get_account(client, AccAddress::from_str(&key.account())?))?;
+    let account = get_account_latest(AccAddress::from_str(&key.account())?, node)?;
 
     let signing_info = SigningInfo {
         key,
@@ -158,24 +154,13 @@ pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()
     Ok(())
 }
 
-pub async fn get_account(client: HttpClient, address: AccAddress) -> Result<QueryAccountResponse> {
+fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
-    let res = client
-        .abci_query(
-            Some(
-                "/cosmos.auth.v1beta1.Query/Account"
-                    .parse()
-                    .expect("hard coded path will always succeed"),
-            ),
-            query.encode_vec(),
-            None,
-            false,
-        )
-        .await?;
 
-    if res.code.is_err() {
-        return Err(anyhow!("node returned an error: {}", res.log));
-    }
-
-    Ok(QueryAccountResponse::decode(&*res.value)?)
+    run_query::<QueryAccountResponse, RawQueryAccountResponse>(
+        query.encode_vec(),
+        "/cosmos.auth.v1beta1.Query/Account".into(),
+        node,
+        None,
+    )
 }

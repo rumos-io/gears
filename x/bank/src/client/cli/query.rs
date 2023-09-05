@@ -1,12 +1,12 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 
+use gears::client::query::run_query;
+use ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse as RawQueryAllBalancesResponse;
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse};
 use proto_types::AccAddress;
 use tendermint_informal::block::Height;
-use tendermint_rpc::{Client, HttpClient};
-use tokio::runtime::Runtime;
 
 pub fn get_bank_query_command() -> Command {
     Command::new("bank")
@@ -28,8 +28,6 @@ pub fn run_bank_query_command(
     node: &str,
     height: Option<Height>,
 ) -> Result<String> {
-    let client = HttpClient::new(node)?;
-
     match matches.subcommand() {
         Some(("balances", sub_matches)) => {
             let address = sub_matches
@@ -37,40 +35,20 @@ pub fn run_bank_query_command(
                 .expect("address argument is required preventing `None`")
                 .to_owned();
 
-            Runtime::new()
-                .expect("unclear why this would ever fail")
-                .block_on(get_balances(client, address, height))
+            let query = QueryAllBalancesRequest {
+                address,
+                pagination: None,
+            };
+
+            let res = run_query::<QueryAllBalancesResponse, RawQueryAllBalancesResponse>(
+                query.encode_vec(),
+                "/cosmos.bank.v1beta1.Query/AllBalances".into(),
+                node,
+                height,
+            )?;
+
+            Ok(serde_json::to_string_pretty(&res)?)
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     }
-}
-
-pub async fn get_balances(
-    client: HttpClient,
-    address: AccAddress,
-    height: Option<Height>,
-) -> Result<String> {
-    let query = QueryAllBalancesRequest {
-        address,
-        pagination: None,
-    };
-    let res = client
-        .abci_query(
-            Some(
-                "/cosmos.bank.v1beta1.Query/AllBalances"
-                    .parse()
-                    .expect("hard coded path will always succeed"),
-            ),
-            query.encode_vec(),
-            height,
-            false,
-        )
-        .await?;
-
-    if res.code.is_err() {
-        return Err(anyhow!("node returned an error: {}", res.log));
-    }
-
-    let res = QueryAllBalancesResponse::decode(&*res.value)?;
-    Ok(serde_json::to_string_pretty(&res)?)
 }

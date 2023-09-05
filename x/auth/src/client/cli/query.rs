@@ -1,11 +1,14 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 
+use gears::client::query::run_query;
 use ibc_proto::protobuf::Protobuf;
+
+use tendermint_informal::block::Height;
+
+use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse as RawQueryAccountResponse;
 use proto_messages::cosmos::auth::v1beta1::{QueryAccountRequest, QueryAccountResponse};
 use proto_types::AccAddress;
-use tendermint_rpc::{Client, HttpClient};
-use tokio::runtime::Runtime;
 
 pub fn get_auth_query_command() -> Command {
     Command::new("auth")
@@ -22,9 +25,11 @@ pub fn get_auth_query_command() -> Command {
         .subcommand_required(true)
 }
 
-pub fn run_auth_query_command(matches: &ArgMatches, node: &str) -> Result<String> {
-    let client = HttpClient::new(node)?;
-
+pub fn run_auth_query_command(
+    matches: &ArgMatches,
+    node: &str,
+    height: Option<Height>,
+) -> Result<String> {
     match matches.subcommand() {
         Some(("account", sub_matches)) => {
             let address = sub_matches
@@ -32,35 +37,17 @@ pub fn run_auth_query_command(matches: &ArgMatches, node: &str) -> Result<String
                 .expect("address argument is required preventing `None`")
                 .to_owned();
 
-            let res = Runtime::new()
-                .expect("unclear why this would ever fail")
-                .block_on(get_account(client, address))?;
+            let query = QueryAccountRequest { address };
+
+            let res = run_query::<QueryAccountResponse, RawQueryAccountResponse>(
+                query.encode_vec(),
+                "/cosmos.auth.v1beta1.Query/Account".into(),
+                node,
+                height,
+            )?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     }
-}
-
-//TODO: this is duplicated in the SDK
-pub async fn get_account(client: HttpClient, address: AccAddress) -> Result<QueryAccountResponse> {
-    let query = QueryAccountRequest { address };
-    let res = client
-        .abci_query(
-            Some(
-                "/cosmos.auth.v1beta1.Query/Account"
-                    .parse()
-                    .expect("hard coded path will always succeed"),
-            ),
-            query.encode_vec(),
-            None,
-            false,
-        )
-        .await?;
-
-    if res.code.is_err() {
-        return Err(anyhow!("node returned an error: {}", res.log));
-    }
-
-    Ok(QueryAccountResponse::decode(&*res.value)?)
 }
