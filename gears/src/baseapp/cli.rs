@@ -10,7 +10,8 @@ use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
 use crate::baseapp::BaseApp;
-use crate::client::rest::run_rest_server;
+use crate::client::rest::{run_rest_server, RestState};
+use crate::config::Config;
 use crate::utils::get_default_home_dir;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
@@ -34,7 +35,7 @@ pub fn run_run_command<
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     handler: H,
-    router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
+    router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
 ) {
     let host = matches
         .get_one::<String>("host")
@@ -84,10 +85,6 @@ pub fn run_run_command<
         std::process::exit(1)
     });
 
-    let mut db_dir = home.clone();
-    db_dir.push("data");
-    db_dir.push("application2.db");
-
     let app: BaseApp<SK, PSK, M, BK, AK, H, G> = BaseApp::new(
         db,
         app_name,
@@ -99,7 +96,21 @@ pub fn run_run_command<
         handler,
     );
 
-    run_rest_server(app.clone(), rest_port, router);
+    let mut cfg_file = home.clone();
+    cfg_file.push("config"); //TODO: filenames + directories should be written as constants
+    cfg_file.push("app.toml");
+
+    let config = Config::new(cfg_file).unwrap_or_else(|err| {
+        error!("Error reading config file: {:?}", err);
+        std::process::exit(1)
+    });
+
+    run_rest_server(
+        app.clone(),
+        rest_port,
+        router,
+        config.tendermint_rpc_address,
+    );
 
     let server = ServerBuilder::new(*read_buf_size)
         .bind(format!("{}:{}", host, port), app)

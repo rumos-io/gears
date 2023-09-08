@@ -13,7 +13,7 @@ use gears::{
         ante::{AuthKeeper, BankKeeper},
         BaseApp, Genesis, Handler,
     },
-    client::rest::{error::Error, Pagination},
+    client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
 use proto_messages::cosmos::{
@@ -139,7 +139,7 @@ pub fn get_router<
     AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
->() -> Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body> {
+>() -> Router<RestState<SK, PSK, M, BK, AK, H, G>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))

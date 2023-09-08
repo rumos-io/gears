@@ -1,11 +1,12 @@
 use crate::baseapp::ante::{AuthKeeper, BankKeeper};
 use crate::baseapp::cli::get_run_command;
-use crate::baseapp::{BaseApp, Genesis, Handler};
+use crate::baseapp::{Genesis, Handler};
 use crate::client::genesis_account::{
     get_add_genesis_account_command, run_add_genesis_account_command,
 };
 use crate::client::init::get_init_command;
 use crate::client::query::{get_query_command, run_query_command};
+use crate::client::rest::RestState;
 use crate::client::tx::{get_tx_command, run_tx_command};
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
@@ -81,7 +82,7 @@ pub fn run<G, SK, PSK, M, BK, AK, H, QuerySubcommand, QueryCmdHandler, TxSubcomm
     handler: H,
     query_command_handler: QueryCmdHandler,
     tx_command_handler: TxCmdHandler,
-    router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
+    router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
 ) -> Result<()>
 where
     SK: StoreKey,

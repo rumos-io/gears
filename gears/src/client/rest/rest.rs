@@ -1,5 +1,6 @@
-use axum::{body::Body, http::Method, routing::get, Router};
+use axum::{body::Body, extract::FromRef, http::Method, routing::get, Router};
 use proto_messages::cosmos::tx::v1beta1::Message;
+use tendermint_rpc::Url;
 
 use std::net::SocketAddr;
 use store_crate::StoreKey;
@@ -26,13 +27,60 @@ pub fn run_rest_server<
 >(
     app: BaseApp<SK, PSK, M, BK, AK, H, G>,
     port: u16,
-    router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
+    router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
+    tendermint_rpc_address: Url,
 ) {
     std::thread::spawn(move || {
         Runtime::new()
             .expect("unclear why this would ever fail")
-            .block_on(launch(app, port, router));
+            .block_on(launch(app, port, router, tendermint_rpc_address));
     });
+}
+
+#[derive(Clone)]
+pub struct RestState<
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Message,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+    H: Handler<M, SK, G>,
+    G: Genesis,
+> {
+    app: BaseApp<SK, PSK, M, BK, AK, H, G>,
+    tendermint_rpc_address: Url,
+}
+
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Message,
+        BK: BankKeeper<SK>,
+        AK: AuthKeeper<SK>,
+        H: Handler<M, SK, G>,
+        G: Genesis,
+    > FromRef<RestState<SK, PSK, M, BK, AK, H, G>> for BaseApp<SK, PSK, M, BK, AK, H, G>
+{
+    fn from_ref(
+        rest_state: &RestState<SK, PSK, M, BK, AK, H, G>,
+    ) -> BaseApp<SK, PSK, M, BK, AK, H, G> {
+        rest_state.app.clone()
+    }
+}
+
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Message,
+        BK: BankKeeper<SK>,
+        AK: AuthKeeper<SK>,
+        H: Handler<M, SK, G>,
+        G: Genesis,
+    > FromRef<RestState<SK, PSK, M, BK, AK, H, G>> for Url
+{
+    fn from_ref(rest_state: &RestState<SK, PSK, M, BK, AK, H, G>) -> Url {
+        rest_state.tendermint_rpc_address.clone()
+    }
 }
 
 // TODO:
@@ -50,11 +98,17 @@ async fn launch<
 >(
     app: BaseApp<SK, PSK, M, BK, AK, H, G>,
     port: u16,
-    router: Router<BaseApp<SK, PSK, M, BK, AK, H, G>, Body>,
+    router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
+    tendermint_rpc_address: Url,
 ) {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
         .allow_origin(Any);
+
+    let rest_state = RestState {
+        app,
+        tendermint_rpc_address,
+    };
 
     let app = Router::new()
         .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
@@ -62,7 +116,7 @@ async fn launch<
         .route("/cosmos/tx/v1beta1/txs", get(txs::<M>))
         .nest("/cosmos", router)
         .layer(cors)
-        .with_state(app);
+        .with_state(rest_state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], port));
     tracing::debug!("listening on {}", addr);

@@ -21,7 +21,7 @@ use tendermint_crates::{
 
 mod error;
 
-//TOD0: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
+//TODO: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
 //TODO: expose write_tm_config_file args
 
 pub fn write_keys_and_genesis(
