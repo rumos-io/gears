@@ -12,7 +12,7 @@ pub struct QueryTree<'a, DB>
 where
     DB: Database,
 {
-    pub(crate) root: Node,
+    pub(crate) root: Option<Node>,
     pub(crate) node_db: &'a NodeDB<DB>,
 }
 
@@ -23,7 +23,7 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
         }
 
         if tree.versions.contains(&version) {
-            let root = tree.node_db.get_root_node(version)?.expect(
+            let root = tree.node_db.get_root_node(version).expect(
                 "the requested version is in the list of versions so the node should be in the db",
             );
 
@@ -36,9 +36,16 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
         }
     }
 
-    // TODO: can we share this function with a regular tree's get_ method by not requiring &self?
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        let mut loop_node = &self.root;
+        match &self.root {
+            Some(root) => self.get_(key, root),
+            None => None,
+        }
+    }
+
+    // TODO: can we share this function with a regular tree's get_ method?
+    fn get_(&self, key: &[u8], root: &Node) -> Option<Vec<u8>> {
+        let mut loop_node = root;
         let mut cached_node;
 
         loop {
@@ -87,14 +94,20 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
     where
         R: RangeBounds<Vec<u8>>,
     {
-        Range {
-            range,
-            delayed_nodes: vec![self.root.clone()], //TODO: remove clone
-            node_db: &self.node_db,
+        match &self.root {
+            Some(root) => Range {
+                range,
+                delayed_nodes: vec![root.clone()], //TODO: remove clone
+                node_db: &self.node_db,
+            },
+            None => Range {
+                range,
+                delayed_nodes: vec![],
+                node_db: &&self.node_db,
+            },
         }
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -116,6 +129,19 @@ mod tests {
 
         let result = tree.get(b"alice".as_slice()).unwrap();
         let expected = b"123".to_vec();
+        assert_eq!(expected, result);
+    }
+
+    #[test]
+    fn new_query_tree_works_empty_tree() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100).unwrap();
+        tree.save_version().unwrap();
+
+        let query_tree = QueryTree::new(&tree, 1).unwrap();
+        let result = query_tree.get(b"alice".as_slice());
+
+        let expected = None;
         assert_eq!(expected, result);
     }
 }
