@@ -1,5 +1,6 @@
 use std::error::Error;
 use std::fs;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use serde::Deserialize;
@@ -9,6 +10,8 @@ use tendermint_rpc::Url;
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub tendermint_rpc_address: Url,
+    pub rest_listen_addr: Option<SocketAddr>,
+    pub address: Option<SocketAddr>,
 }
 
 impl Config {

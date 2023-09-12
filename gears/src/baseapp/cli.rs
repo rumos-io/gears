@@ -3,6 +3,7 @@ use axum::Router;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
 use proto_messages::cosmos::tx::v1beta1::Message;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use store_crate::StoreKey;
 use tendermint_abci::ServerBuilder;
@@ -17,6 +18,9 @@ use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 use super::ante::{AuthKeeper, BankKeeper};
 use super::{Genesis, Handler};
+
+const DEFAULT_REST_LISTEN_ADDR: &str = "127.0.0.1:1317";
+const DEFAULT_ADDRESS: &str = "127.0.0.1:26658";
 
 pub fn run_run_command<
     SK: StoreKey,
@@ -37,22 +41,13 @@ pub fn run_run_command<
     handler: H,
     router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
 ) {
-    let host = matches
-        .get_one::<String>("host")
-        .expect("Host arg has a default value so this cannot be `None`");
-
-    let port = matches
-        .get_one::<u16>("port")
-        .expect("Port arg has a default value so this cannot be `None`");
+    let address = matches.get_one::<SocketAddr>("address").cloned();
 
     let read_buf_size = matches
         .get_one::<usize>("read_buf_size")
         .expect("Read buf size arg has a default value so this cannot be `None`.");
 
-    let rest_port = matches
-        .get_one::<u16>("rest_port")
-        .expect("REST port arg has a default value so this cannot be `None`")
-        .to_owned();
+    let rest_listen_addr = matches.get_one::<SocketAddr>("rest_listen_addr").cloned();
 
     let verbose = matches.get_flag("verbose");
     let quiet = matches.get_flag("quiet");
@@ -105,15 +100,27 @@ pub fn run_run_command<
         std::process::exit(1)
     });
 
+    let rest_listen_addr = rest_listen_addr.or(config.rest_listen_addr).unwrap_or(
+        DEFAULT_REST_LISTEN_ADDR
+            .parse::<SocketAddr>()
+            .expect("hard coded address should be valid"),
+    );
+
     run_rest_server(
         app.clone(),
-        rest_port,
+        rest_listen_addr,
         router,
         config.tendermint_rpc_address,
     );
 
+    let address = address.or(config.address).unwrap_or(
+        DEFAULT_ADDRESS
+            .parse::<SocketAddr>()
+            .expect("hard coded address should be valid"),
+    );
+
     let server = ServerBuilder::new(*read_buf_size)
-        .bind(format!("{}:{}", host, port), app)
+        .bind(address, app)
         .unwrap_or_else(|e| {
             error!("Error binding to host: {}", e);
             std::process::exit(1)
@@ -142,25 +149,16 @@ pub fn get_run_command(app_name: &str) -> Command {
                 .value_parser(value_parser!(PathBuf)),
         )
         .arg(
-            arg!(--host)
-                .help("Bind the TCP server to this host")
+            arg!(--address)
+                .help(format!("Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]",DEFAULT_ADDRESS ))
                 .action(ArgAction::Set)
-                .value_parser(value_parser!(String))
-                .default_value("127.0.0.1"),
+                .value_parser(value_parser!(SocketAddr))
         )
         .arg(
-            arg!(-p - -port)
-                .help("Bind the TCP server to this port")
+            arg!(--rest_listen_addr)
+                .help(format!("Bind the REST server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]",DEFAULT_REST_LISTEN_ADDR ))
                 .action(ArgAction::Set)
-                .value_parser(value_parser!(u16))
-                .default_value("26658"),
-        )
-        .arg(
-            arg!(--rest_port)
-                .help("Bind the REST server to this port")
-                .action(ArgAction::Set)
-                .value_parser(value_parser!(u16))
-                .default_value("1317"),
+                .value_parser(value_parser!(SocketAddr))
         )
         .arg(
             arg!(-r - -read_buf_size)

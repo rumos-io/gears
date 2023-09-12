@@ -26,14 +26,14 @@ pub fn run_rest_server<
     G: Genesis,
 >(
     app: BaseApp<SK, PSK, M, BK, AK, H, G>,
-    port: u16,
+    listen_addr: SocketAddr,
     router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
     tendermint_rpc_address: Url,
 ) {
     std::thread::spawn(move || {
         Runtime::new()
             .expect("unclear why this would ever fail")
-            .block_on(launch(app, port, router, tendermint_rpc_address));
+            .block_on(launch(app, listen_addr, router, tendermint_rpc_address));
     });
 }
 
@@ -97,7 +97,7 @@ async fn launch<
     G: Genesis,
 >(
     app: BaseApp<SK, PSK, M, BK, AK, H, G>,
-    port: u16,
+    listen_addr: SocketAddr,
     router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
     tendermint_rpc_address: Url,
 ) {
@@ -118,9 +118,8 @@ async fn launch<
         .layer(cors)
         .with_state(rest_state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], port));
-    tracing::debug!("listening on {}", addr);
-    axum::Server::bind(&addr)
+    tracing::info!("REST server running at {}", listen_addr);
+    axum::Server::bind(&listen_addr)
         .serve(app.into_make_service())
         .await
         .unwrap();
