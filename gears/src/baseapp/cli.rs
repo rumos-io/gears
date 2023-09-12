@@ -13,7 +13,7 @@ use tracing::{error, info};
 use crate::baseapp::BaseApp;
 use crate::client::rest::{run_rest_server, RestState};
 use crate::config::{Config, DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR};
-use crate::utils::get_default_home_dir;
+use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 use super::ante::{AuthKeeper, BankKeeper};
@@ -88,11 +88,9 @@ pub fn run_run_command<
         handler,
     );
 
-    let mut cfg_file = home.clone();
-    cfg_file.push("config"); //TODO: filenames + directories should be written as constants
-    cfg_file.push("app.toml");
-
-    let config = Config::new(cfg_file).unwrap_or_else(|err| {
+    let mut cfg_file_path = home.clone();
+    get_config_file_from_home_dir(&mut cfg_file_path);
+    let config = Config::from_file(cfg_file_path).unwrap_or_else(|err| {
         error!("Error reading config file: {:?}", err);
         std::process::exit(1)
     });

@@ -151,6 +151,7 @@ pub fn write_tm_config(
     file.write_all(tm_config.as_bytes()).map_err(|e| e.into())
 }
 
+// TODO implement Default
 fn get_default_tm_config() -> TendermintConfig {
     TendermintConfig {
         proxy_app: "tcp://127.0.0.1:26658"

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 const CONFIG_DIR: &str = "config";
 const GENESIS_FILE_NAME: &str = "genesis.json";
+const CONFIG_FILE_NAME: &str = "app.toml";
 
 pub fn get_default_home_dir(app_name: &str) -> Option<PathBuf> {
     dirs::home_dir().map(|mut h| {
@@ -19,6 +20,11 @@ pub fn get_default_genesis_file(app_name: &str) -> Option<PathBuf> {
 pub fn get_genesis_file_from_home_dir(home: &mut PathBuf) {
     get_config_dir_from_home_dir(home);
     home.push(GENESIS_FILE_NAME)
+}
+
+pub fn get_config_file_from_home_dir(home: &mut PathBuf) {
+    get_config_dir_from_home_dir(home);
+    home.push(CONFIG_FILE_NAME)
 }
 
 pub fn get_config_dir_from_home_dir(home: &mut PathBuf) {

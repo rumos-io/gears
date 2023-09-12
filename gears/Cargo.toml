@@ -1,55 +1,55 @@
 [package]
+edition = "2021"
 name = "gears"
 version = "0.1.0"
-edition = "2021"
 
 [dependencies]
-secp256k1 = { version = "0.25.0", features = ["bitcoin-hashes"] }
-prost = { version = "0.11" }
-tracing = { version = "0.1", default-features = false }
-proto-types = { path = "../proto-types" }
-proto-messages = { path = "../proto-messages" }
 cosmwasm-std = "1.1.5"
-ibc-proto = { workspace = true }
+ibc-proto = {workspace = true}
+prost = {version = "0.11"}
+proto-messages = {path = "../proto-messages"}
+proto-types = {path = "../proto-types"}
+secp256k1 = {version = "0.25.0", features = ["bitcoin-hashes"]}
+tracing = {version = "0.1", default-features = false}
 # It's not clear what version of the Tendermint API each version of tendermint-abci implements
 # this line suggests that v0.28.0 implements Tendermint API v0.34.x 
 # https://github.com/informalsystems/tendermint-rs/blob/560c852840ac58cb03b55fc376ff0dc2ac089d94/abci/src/codec.rs#L5
-tendermint-abci = { git = "https://github.com/joneskm/tendermint-rs" }
-tendermint-proto = { git = "https://github.com/joneskm/tendermint-rs" }
-tendermint-informal = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs" }
-tendermint-rpc = { git = "https://github.com/joneskm/tendermint-rs", features = [
-    "http-client",
-] }
-clap = { version = "4.2.2", features = ["derive"] }
-tracing-subscriber = { version = "0.2", optional = false, default-features = true }
-bytes = "1.2.1"
-sha2 = "0.10.6"
-integer-encoding = "3.0.4"
-bech32 = "0.9.1"
-serde = { version = "1.0", default-features = false }
-trees = { path = "../trees" }
-serde_json = "1.0.93"
-hex = "0.4.3"
-database = { path = "../database" }
-dirs = "4.0.0"
-ibc = "0.36.0"
-serde-aux = "4.2.0"
-tendermint = { path = "../tendermint" }
-tokio = "1.27.0"
-human-panic = "1.1.4"
 anyhow = "1.0.70"
-text_io = "0.1.12"
-ibc-relayer = "0.23.0"
-hdpath = "0.6.2"
-lazy_static = "1.4.0"
-clap_complete = "4.2.1"
-store_crate = { path = "../store", package = "store" }
-strum = "0.24.1"
 axum = "0.6.18"
-tower-http = { version = "0.4.1", features = ["cors"] }
+bech32 = "0.9.1"
+bytes = "1.2.1"
+clap = {version = "4.2.2", features = ["derive"]}
+clap_complete = "4.2.1"
+database = {path = "../database"}
+dirs = "4.0.0"
+handlebars = "4.3.6"
+hdpath = "0.6.2"
+hex = "0.4.3"
+human-panic = "1.1.4"
+ibc = "0.36.0"
+ibc-relayer = "0.23.0"
+integer-encoding = "3.0.4"
+lazy_static = "1.4.0"
+serde = {version = "1.0", default-features = false}
+serde-aux = "4.2.0"
+serde_json = "1.0.93"
+sha2 = "0.10.6"
+store_crate = {path = "../store", package = "store"}
+strum = "0.24.1"
+tendermint = {path = "../tendermint"}
+tendermint-abci = {git = "https://github.com/joneskm/tendermint-rs"}
+tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
+tendermint-proto = {git = "https://github.com/joneskm/tendermint-rs"}
+tendermint-rpc = {git = "https://github.com/joneskm/tendermint-rs", features = [
+  "http-client",
+]}
+text_io = "0.1.12"
 tiny-bip39 = "1.0.0"
+tokio = "1.27.0"
 toml = "0.7.7"
-
+tower-http = {version = "0.4.1", features = ["cors"]}
+tracing-subscriber = {version = "0.2", optional = false, default-features = true}
+trees = {path = "../trees"}
 
 [dev-dependencies]
 hex = "0.4.3"

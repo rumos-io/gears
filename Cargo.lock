@@ -1582,6 +1582,7 @@ dependencies = [
  "cosmwasm-std",
  "database",
  "dirs",
+ "handlebars",
  "hdpath",
  "hex",
  "human-panic",

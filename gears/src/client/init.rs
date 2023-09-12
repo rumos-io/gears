@@ -4,7 +4,10 @@ use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
 use tendermint_informal::chain::Id;
 
-use crate::utils::{get_default_home_dir, get_genesis_file_from_home_dir};
+use crate::{
+    config::Config,
+    utils::{get_config_file_from_home_dir, get_default_home_dir, get_genesis_file_from_home_dir},
+};
 
 pub fn get_init_command(app_name: &str) -> Command {
     Command::new("init")
@@ -115,6 +118,19 @@ pub fn run_init_command<G: Serialize>(
         std::process::exit(1)
     });
 
+    // Create config file
+    let mut cfg_file_path = home.clone();
+    get_config_file_from_home_dir(&mut cfg_file_path);
+    let cfg_file = std::fs::File::create(&cfg_file_path).unwrap_or_else(|e| {
+        println!("Could not create config file {}", e);
+        std::process::exit(1)
+    });
+    Config::write_default(cfg_file).unwrap_or_else(|e| {
+        println!("Error writing config file {}", e);
+        std::process::exit(1)
+    });
+    println!("Config file written to {}", cfg_file_path.display());
+
     // Write key and genesis
     tendermint::write_keys_and_genesis(
         node_key_file,
@@ -132,9 +148,9 @@ pub fn run_init_command<G: Serialize>(
         node_key_file_path.display(),
         priv_validator_key_file_path.display()
     );
-    println!("Genesis file written to {}", genesis_file_path.display(),);
+    println!("Genesis file written to {}", genesis_file_path.display());
 
-    // Write write private validator state file
+    // Write private validator state file
     let mut state_file_path = data_dir.clone();
     state_file_path.push("priv_validator_state.json");
     let state_file = std::fs::File::create(&state_file_path).unwrap_or_else(|e| {
