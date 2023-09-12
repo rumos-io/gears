@@ -11,17 +11,16 @@ use crate::error::AddressError;
 #[derive(Debug, PartialEq, Clone)]
 pub struct AccAddress(Vec<u8>);
 
+const ACCOUNT_ADDRESS_PREFIX: &str = env!("ACCOUNT_ADDRESS_PREFIX");
 const MAX_ADDR_LEN: u8 = 255;
-const BECH32_MAIN_PREFIX: &str = "cosmos";
-const BECH32_PREFIX_ACC_ADDR: &str = BECH32_MAIN_PREFIX;
 
 impl AccAddress {
     pub fn from_bech32(address: &str) -> Result<Self, AddressError> {
         let (hrp, data, variant) = bech32::decode(address)?;
 
-        if hrp != BECH32_PREFIX_ACC_ADDR {
+        if hrp != ACCOUNT_ADDRESS_PREFIX {
             return Err(AddressError::InvalidPrefix {
-                expected: BECH32_PREFIX_ACC_ADDR.into(),
+                expected: ACCOUNT_ADDRESS_PREFIX.into(),
                 found: hrp,
             });
         };
@@ -128,14 +127,14 @@ impl TryFrom<&[u8]> for AccAddress {
 
 impl From<AccAddress> for String {
     fn from(v: AccAddress) -> String {
-        bech32::encode(BECH32_PREFIX_ACC_ADDR, v.0.to_base32(), Variant::Bech32)
+        bech32::encode(ACCOUNT_ADDRESS_PREFIX, v.0.to_base32(), Variant::Bech32)
             .expect("method can only error if HRP is not valid, hard coded HRP is valid")
     }
 }
 
 impl Display for AccAddress {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let addr = bech32::encode(BECH32_PREFIX_ACC_ADDR, self.0.to_base32(), Variant::Bech32)
+        let addr = bech32::encode(ACCOUNT_ADDRESS_PREFIX, self.0.to_base32(), Variant::Bech32)
             .expect("method can only error if HRP is not valid, hard coded HRP is valid");
         write!(f, "{}", addr)
     }
@@ -157,7 +156,12 @@ mod tests {
     #[test]
     fn from_bech32_success() {
         let input_address = vec![0x00, 0x01, 0x02];
-        let encoded = bech32::encode("cosmos", input_address.to_base32(), Variant::Bech32).unwrap();
+        let encoded = bech32::encode(
+            ACCOUNT_ADDRESS_PREFIX,
+            input_address.to_base32(),
+            Variant::Bech32,
+        )
+        .unwrap();
         let expected_address = AccAddress(input_address);
 
         let address = AccAddress::from_bech32(&encoded).unwrap();
@@ -168,8 +172,12 @@ mod tests {
     #[test]
     fn from_bech32_failure_checksum() {
         let input_address = vec![0x00, 0x01, 0x02];
-        let mut encoded =
-            bech32::encode("cosmos", input_address.to_base32(), Variant::Bech32).unwrap();
+        let mut encoded = bech32::encode(
+            ACCOUNT_ADDRESS_PREFIX,
+            input_address.to_base32(),
+            Variant::Bech32,
+        )
+        .unwrap();
         encoded.pop();
 
         let err = AccAddress::from_bech32(&encoded).unwrap_err();
@@ -179,16 +187,18 @@ mod tests {
 
     #[test]
     fn from_bech32_failure_wrong_prefix() {
+        let mut hrp = ACCOUNT_ADDRESS_PREFIX.to_string();
+        hrp.push_str("atom"); // adding to the ACCOUNT_ADDRESS_PREFIX ensures that hrp is different
         let encoded =
-            bech32::encode("atom", vec![0x00, 0x01, 0x02].to_base32(), Variant::Bech32).unwrap();
+            bech32::encode(&hrp, vec![0x00, 0x01, 0x02].to_base32(), Variant::Bech32).unwrap();
 
         let err = AccAddress::from_bech32(&encoded).unwrap_err();
 
         assert_eq!(
             err,
             AddressError::InvalidPrefix {
-                expected: "cosmos".into(),
-                found: "atom".into()
+                expected: ACCOUNT_ADDRESS_PREFIX.into(),
+                found: hrp,
             }
         );
     }
@@ -196,7 +206,7 @@ mod tests {
     #[test]
     fn from_bech32_failure_wrong_variant() {
         let encoded = bech32::encode(
-            "cosmos",
+            ACCOUNT_ADDRESS_PREFIX,
             vec![0x00, 0x01, 0x02].to_base32(),
             Variant::Bech32m,
         )
@@ -215,8 +225,12 @@ mod tests {
 
     #[test]
     fn from_bech32_failure_too_long() {
-        let encoded =
-            bech32::encode("cosmos", vec![0x00; 300].to_base32(), Variant::Bech32).unwrap();
+        let encoded = bech32::encode(
+            ACCOUNT_ADDRESS_PREFIX,
+            vec![0x00; 300].to_base32(),
+            Variant::Bech32,
+        )
+        .unwrap();
 
         let err = AccAddress::from_bech32(&encoded).unwrap_err();
 
