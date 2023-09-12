@@ -12,15 +12,12 @@ use tracing::{error, info};
 
 use crate::baseapp::BaseApp;
 use crate::client::rest::{run_rest_server, RestState};
-use crate::config::Config;
+use crate::config::{Config, DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR};
 use crate::utils::get_default_home_dir;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 use super::ante::{AuthKeeper, BankKeeper};
 use super::{Genesis, Handler};
-
-const DEFAULT_REST_LISTEN_ADDR: &str = "127.0.0.1:1317";
-const DEFAULT_ADDRESS: &str = "127.0.0.1:26658";
 
 pub fn run_run_command<
     SK: StoreKey,
@@ -100,11 +97,7 @@ pub fn run_run_command<
         std::process::exit(1)
     });
 
-    let rest_listen_addr = rest_listen_addr.or(config.rest_listen_addr).unwrap_or(
-        DEFAULT_REST_LISTEN_ADDR
-            .parse::<SocketAddr>()
-            .expect("hard coded address should be valid"),
-    );
+    let rest_listen_addr = rest_listen_addr.unwrap_or(config.rest_listen_addr);
 
     run_rest_server(
         app.clone(),
@@ -113,11 +106,7 @@ pub fn run_run_command<
         config.tendermint_rpc_address,
     );
 
-    let address = address.or(config.address).unwrap_or(
-        DEFAULT_ADDRESS
-            .parse::<SocketAddr>()
-            .expect("hard coded address should be valid"),
-    );
+    let address = address.unwrap_or(config.address);
 
     let server = ServerBuilder::new(*read_buf_size)
         .bind(address, app)
