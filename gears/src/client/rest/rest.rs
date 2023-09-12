@@ -114,7 +114,7 @@ async fn launch<
         .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
         .route("/cosmos/staking/v1beta1/params", get(staking_params))
         .route("/cosmos/tx/v1beta1/txs", get(txs::<M>))
-        .nest("/cosmos", router)
+        .merge(router)
         .layer(cors)
         .with_state(rest_state);
 
