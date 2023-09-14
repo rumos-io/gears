@@ -12,7 +12,7 @@ use tracing::{error, info};
 
 use crate::baseapp::BaseApp;
 use crate::client::rest::{run_rest_server, RestState};
-use crate::config::{Config, DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR};
+use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR};
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
@@ -26,7 +26,9 @@ pub fn run_run_command<
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
+    HandlerBuilder,
     G: Genesis,
+    AC: ApplicationConfig,
 >(
     matches: &ArgMatches,
     app_name: &'static str,
@@ -35,9 +37,11 @@ pub fn run_run_command<
     auth_keeper: AK,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
-    handler: H,
+    handler_builder: HandlerBuilder,
     router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
-) {
+) where
+    HandlerBuilder: FnOnce(Config<AC>) -> H,
+{
     let address = matches.get_one::<SocketAddr>("address").cloned();
 
     let read_buf_size = matches
@@ -77,6 +81,16 @@ pub fn run_run_command<
         std::process::exit(1)
     });
 
+    let mut cfg_file_path = home.clone();
+    get_config_file_from_home_dir(&mut cfg_file_path);
+
+    let config: Config<AC> = Config::from_file(cfg_file_path).unwrap_or_else(|err| {
+        error!("Error reading config file: {:?}", err);
+        std::process::exit(1)
+    });
+
+    let handler = handler_builder(config.clone());
+
     let app: BaseApp<SK, PSK, M, BK, AK, H, G> = BaseApp::new(
         db,
         app_name,
@@ -87,13 +101,6 @@ pub fn run_run_command<
         params_subspace_key,
         handler,
     );
-
-    let mut cfg_file_path = home.clone();
-    get_config_file_from_home_dir(&mut cfg_file_path);
-    let config = Config::from_file(cfg_file_path).unwrap_or_else(|err| {
-        error!("Error reading config file: {:?}", err);
-        std::process::exit(1)
-    });
 
     let rest_listen_addr = rest_listen_addr.unwrap_or(config.rest_listen_addr);
 

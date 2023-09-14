@@ -8,6 +8,7 @@ use crate::client::init::get_init_command;
 use crate::client::query::{get_query_command, run_query_command};
 use crate::client::rest::RestState;
 use crate::client::tx::{get_tx_command, run_tx_command};
+use crate::config::{ApplicationConfig, Config};
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
 use axum::body::Body;
@@ -71,7 +72,21 @@ fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand>(
         .subcommand(get_add_genesis_account_command(app_name))
 }
 
-pub fn run<G, SK, PSK, M, BK, AK, H, QuerySubcommand, QueryCmdHandler, TxSubcommand, TxCmdHandler>(
+pub fn run<
+    G,
+    SK,
+    PSK,
+    M,
+    BK,
+    AK,
+    H,
+    HandlerBuilder,
+    QuerySubcommand,
+    QueryCmdHandler,
+    TxSubcommand,
+    TxCmdHandler,
+    AC: ApplicationConfig,
+>(
     app_name: &'static str,
     app_version: &'static str,
     genesis_state: G,
@@ -79,7 +94,7 @@ pub fn run<G, SK, PSK, M, BK, AK, H, QuerySubcommand, QueryCmdHandler, TxSubcomm
     auth_keeper: AK,
     params_keeper: ParamsKeeper<SK, PSK>,
     params_subspace_key: PSK,
-    handler: H,
+    handler_builder: HandlerBuilder,
     query_command_handler: QueryCmdHandler,
     tx_command_handler: TxCmdHandler,
     router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
@@ -96,6 +111,7 @@ where
     QueryCmdHandler: FnOnce(QuerySubcommand, &str, Option<Height>) -> Result<()>,
     TxSubcommand: Subcommand,
     TxCmdHandler: FnOnce(TxSubcommand, AccAddress) -> Result<M>,
+    HandlerBuilder: FnOnce(Config<AC>) -> H,
 {
     setup_panic!();
 
@@ -104,8 +120,10 @@ where
     let matches = cli.get_matches();
 
     match matches.subcommand() {
-        Some(("init", sub_matches)) => run_init_command(sub_matches, app_name, genesis_state),
-        Some(("run", sub_matches)) => run_run_command(
+        Some(("init", sub_matches)) => {
+            run_init_command::<_, AC>(sub_matches, app_name, genesis_state)
+        }
+        Some(("run", sub_matches)) => run_run_command::<_, _, _, _, _, _, _, _, AC>(
             sub_matches,
             app_name,
             app_version,
@@ -113,7 +131,7 @@ where
             auth_keeper,
             params_keeper,
             params_subspace_key,
-            handler,
+            handler_builder,
             router,
         ),
         Some(("query", sub_matches)) => run_query_command(sub_matches, query_command_handler)?,
@@ -124,7 +142,7 @@ where
             QuerySubcommand,
         >(sub_matches, app_name, app_version),
         Some(("add-genesis-account", sub_matches)) => {
-            run_add_genesis_account_command::<G, H, SK, M>(sub_matches, app_name, handler)?
+            run_add_genesis_account_command(sub_matches, app_name, handler_builder)?
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };

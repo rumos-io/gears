@@ -1,4 +1,5 @@
 use gears::{
+    config::Config,
     types::context::{InitContext, TxContext},
     x::params::Keeper as ParamsKeeper,
 };
@@ -10,6 +11,7 @@ use database::Database;
 use gears::{error::AppError, types::context::QueryContext};
 
 use crate::{
+    config::AppConfig,
     genesis::GenesisState,
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
@@ -22,7 +24,7 @@ pub struct Handler {
 }
 
 impl Handler {
-    pub fn new() -> Handler {
+    pub fn new(_cfg: Config<AppConfig>) -> Handler {
         let params_keeper = ParamsKeeper::new(GaiaStoreKey::Params);
 
         let auth_keeper = auth::Keeper::new(
@@ -79,6 +81,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
         }
     }
 
+    // TODO: move this into the SDK
     fn handle_add_genesis_account(
         &self,
         genesis_state: &mut GenesisState,

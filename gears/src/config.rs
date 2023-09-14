@@ -4,6 +4,7 @@ use std::io::Write;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tendermint_rpc::Url;
 
@@ -11,17 +12,21 @@ pub const DEFAULT_REST_LISTEN_ADDR: &str = "127.0.0.1:1317";
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:26658";
 pub const DEFAULT_TENDERMINT_RPC_ADDRESS: &str = "http://localhost:26657";
 
-#[derive(Deserialize, Serialize)]
+pub trait ApplicationConfig: Serialize + DeserializeOwned + Default + Clone {}
+impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T {}
+
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
 #[serde(default)]
-pub struct Config {
+pub struct Config<AC: Default + Clone> {
     pub tendermint_rpc_address: Url,
     pub rest_listen_addr: SocketAddr,
     pub address: SocketAddr,
+    pub app_config: AC,
 }
 
-impl Config {
-    pub fn from_file(filename: PathBuf) -> Result<Config, Box<dyn Error>> {
+impl<AC: ApplicationConfig> Config<AC> {
+    pub fn from_file(filename: PathBuf) -> Result<Config<AC>, Box<dyn Error>> {
         let s = fs::read_to_string(filename)?;
         Ok(toml::from_str(&s)?)
     }
@@ -32,18 +37,23 @@ impl Config {
             .register_template_string("config", CONFIG_TEMPLATE)
             .expect("hard coded config template is valid");
 
-        let cfg = Config::default();
+        let cfg: Config<AC> = Config::default();
 
         let config = handlebars
             .render("config", &cfg)
             .expect("Config will always work with the CONFIG_TEMPLATE");
 
-        file.write_all(config.as_bytes()).map_err(|e| e.into())
+        let app_cfg = toml::to_string(&cfg.app_config).unwrap();
+
+        file.write_all(config.as_bytes())?;
+        writeln!(file, "")?;
+        writeln!(file, "[app_config]")?;
+        file.write_all(app_cfg.as_bytes()).map_err(|e| e.into())
     }
 }
 
-impl Default for Config {
-    fn default() -> Self {
+impl<AC: ApplicationConfig> Default for Config<AC> {
+    fn default() -> Config<AC> {
         Self {
             tendermint_rpc_address: DEFAULT_TENDERMINT_RPC_ADDRESS
                 .parse::<Url>()
@@ -54,6 +64,7 @@ impl Default for Config {
             address: DEFAULT_ADDRESS
                 .parse::<SocketAddr>()
                 .expect("hard coded address should be valid"),
+            app_config: AC::default(),
         }
     }
 }

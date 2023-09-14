@@ -5,7 +5,7 @@ use serde::Serialize;
 use tendermint_informal::chain::Id;
 
 use crate::{
-    config::Config,
+    config::{ApplicationConfig, Config},
     utils::{get_config_file_from_home_dir, get_default_home_dir, get_genesis_file_from_home_dir},
 };
 
@@ -35,7 +35,7 @@ pub fn get_init_command(app_name: &str) -> Command {
         )
 }
 
-pub fn run_init_command<G: Serialize>(
+pub fn run_init_command<G: Serialize, AC: ApplicationConfig>(
     sub_matches: &ArgMatches,
     app_name: &str,
     app_genesis_state: G,
@@ -125,7 +125,7 @@ pub fn run_init_command<G: Serialize>(
         println!("Could not create config file {}", e);
         std::process::exit(1)
     });
-    Config::write_default(cfg_file).unwrap_or_else(|e| {
+    Config::<AC>::write_default(cfg_file).unwrap_or_else(|e| {
         println!("Error writing config file {}", e);
         std::process::exit(1)
     });

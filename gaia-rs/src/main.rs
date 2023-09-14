@@ -11,6 +11,7 @@ use crate::handler::Handler;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 
 mod client;
+mod config;
 mod genesis;
 mod handler;
 mod message;
@@ -44,7 +45,7 @@ fn main() -> Result<()> {
         auth_keeper,
         params_keeper,
         GaiaParamsStoreKey::BaseApp,
-        Handler::new(),
+        |cfg| Handler::new(cfg),
         query_command_handler,
         tx_command_handler,
         get_router(),
