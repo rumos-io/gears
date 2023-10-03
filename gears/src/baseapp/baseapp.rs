@@ -185,21 +185,39 @@ impl<
         }
     }
 
-    fn check_tx(&self, _request: RequestCheckTx) -> ResponseCheckTx {
+    /// CheckTx implements the ABCI interface and executes a tx in CheckTx mode. In
+    /// CheckTx mode, messages are not executed. This means messages are only validated
+    /// and only the AnteHandler is executed. State is persisted to the BaseApp's
+    /// internal CheckTx state if the AnteHandler passes. Otherwise, the ResponseCheckTx
+    /// will contain relevant error information. Regardless of tx execution outcome,
+    /// the ResponseCheckTx will contain relevant gas execution context.
+    fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
         info!("Got check tx request");
-        ResponseCheckTx {
-            code: 0,
-            data: Default::default(),
-            log: "".to_string(),
-            info: "".to_string(),
-            gas_wanted: 1,
-            gas_used: 0,
-            events: vec![],
-            codespace: "".to_string(),
-            mempool_error: "".to_string(),
-            priority: 0,
-            sender: "".to_string(),
-        }
+
+        let _exec_mode = match request.r#type {
+            0 => (),                        //NEW
+            1 => (),                        //RECHECK
+            _ => return Default::default(), // TODO: Create error like
+        };
+
+        let result = match self.run_tx(request.tx /* exec_mode*/) {
+            Ok(_) => ResponseCheckTx {
+                code: 0,
+                data: Default::default(),
+                log: "".to_string(),
+                info: "".to_string(),
+                gas_wanted: 1,
+                gas_used: 0,
+                events: vec![],
+                codespace: "".to_string(),
+                mempool_error: "".to_string(),
+                priority: 0,
+                sender: "".to_string(),
+            },
+            Err(_) => Default::default(), // TODO: Create error like
+        };
+
+        result
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
