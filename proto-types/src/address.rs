@@ -52,6 +52,10 @@ impl AccAddress {
             .try_into()
             .expect("MAX_ADDR_LEN is a u8 so this can't fail")
     }
+
+    pub fn as_hex(&self) -> String {
+        hex::encode(&self.0)
+    }
 }
 
 impl Serialize for AccAddress {

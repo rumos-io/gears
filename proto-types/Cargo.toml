@@ -1,20 +1,21 @@
 [package]
+edition = "2021"
 name = "proto-types"
 version = "0.1.0"
-edition = "2021"
 
 [dependencies]
+bech32 = "0.9.1"
 cosmwasm-std = "1.1.5"
 forward_ref = "1"
-schemars = "0.8.3"
-serde = { version = "1.0.103", default-features = false, features = [
-    "derive",
-    "alloc",
-] }
-thiserror = "1.0.13"
-bech32 = "0.9.1"
+hex = "0.4.3"
 lazy_static = "1.4.0"
 regex = "1.7.1"
+schemars = "0.8.3"
+serde = {version = "1.0.103", default-features = false, features = [
+  "derive",
+  "alloc",
+]}
+thiserror = "1.0.13"
 
 [dev-dependencies]
 serde_json = "1.0.93"
