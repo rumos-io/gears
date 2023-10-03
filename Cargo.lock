@@ -3069,6 +3069,7 @@ dependencies = [
  "bech32",
  "cosmwasm-std",
  "forward_ref",
+ "hex",
  "lazy_static",
  "regex",
  "schemars",
