@@ -17,7 +17,7 @@ use store_crate::StoreKey;
 
 use crate::{
     error::AppError,
-    types::context::Context,
+    types::context::context::Context,
     x::auth::{Module, Params},
 };
 

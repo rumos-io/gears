@@ -1,7 +1,6 @@
 use database::Database;
 use gears::{
-    types::context::Context,
-    x::{auth::Params, params::ParamsSubspaceKey},
+    x::{auth::Params, params::ParamsSubspaceKey}, types::context::context::Context,
 };
 use ibc_relayer::util::lock::LockExt;
 //use params_module::ParamsSubspaceKey;
