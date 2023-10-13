@@ -139,6 +139,10 @@ impl CacheMultiStore //TODO: Replace with actual implementation
     pub fn tracing_context_set(&self) {
         unimplemented!()
     }
+
+    pub fn write(&self) {
+        unimplemented!()
+    }
 }
 
 #[derive(Debug)]

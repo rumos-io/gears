@@ -7,7 +7,7 @@ use tendermint_proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParam
 use tendermint_proto::types::EvidenceParams as RawEvidenceParams;
 use tendermint_proto::types::ValidatorParams as RawValidatorParams;
 
-use crate::types::context::Context;
+use crate::types::context::context::Context;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"

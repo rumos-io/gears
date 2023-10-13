@@ -4,7 +4,7 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{Context, ContextTrait, InitContext, QueryContext},
+    types::context::{context::Context, init_context::InitContext, query_context::QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
