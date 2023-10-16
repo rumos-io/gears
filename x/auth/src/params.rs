@@ -72,7 +72,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .expect("should be valid u64")
     }
 
-    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<DB>) -> Vec<u8> {
+    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<'_, DB>) -> Vec<u8> {
         store
             .get(key)
             .expect("key should be set in kv store")

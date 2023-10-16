@@ -1,3 +1,5 @@
+#![ warn( rust_2018_idioms ) ]
+
 mod address;
 mod decimal256;
 mod denom;

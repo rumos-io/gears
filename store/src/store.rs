@@ -187,21 +187,21 @@ impl<DB: Database> KVStore<DB> {
         self.tx_cache.insert(key, value);
     }
 
-    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<DB> {
+    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
             prefix,
         }
     }
 
-    pub fn get_mutable_prefix_store(&mut self, prefix: Vec<u8>) -> MutablePrefixStore<DB> {
+    pub fn get_mutable_prefix_store(&mut self, prefix: Vec<u8>) -> MutablePrefixStore<'_, DB> {
         MutablePrefixStore {
             store: self,
             prefix,
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R, DB>
+    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {
@@ -294,7 +294,7 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R, DB>
+    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {

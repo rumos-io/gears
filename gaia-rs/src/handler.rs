@@ -69,7 +69,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_query<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, GaiaStoreKey>,
+        ctx: &QueryContext<'_, DB, GaiaStoreKey>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         if query.path.starts_with("/cosmos.auth") {

@@ -58,7 +58,7 @@ pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send +
 
     fn handle_query<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         query: RequestQuery,
     ) -> Result<Bytes, AppError>;
 

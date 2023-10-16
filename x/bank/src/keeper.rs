@@ -115,7 +115,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn query_balance<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         req: QueryBalanceRequest,
     ) -> QueryBalanceResponse {
         let bank_store = ctx.get_kv_store(&self.store_key);
@@ -137,7 +137,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn query_all_balances<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         req: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
         let bank_store = ctx.get_kv_store(&self.store_key);
@@ -164,7 +164,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     // TODO: does this method guarantee that coins are sorted?
     pub fn get_paginated_total_supply<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
     ) -> Vec<Coin> {
         let bank_store = ctx.get_kv_store(&self.store_key);
         let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into());

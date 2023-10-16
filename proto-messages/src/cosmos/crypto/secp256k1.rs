@@ -100,7 +100,7 @@ pub mod v1beta1 {
     impl<'de> de::Visitor<'de> for Secp256k1Visitor {
         type Value = Secp256k1PubKey;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             formatter.write_str("string-encoded secp256k1 public key")
         }
 

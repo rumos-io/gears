@@ -19,7 +19,7 @@ impl<'a, T: Database, SK: StoreKey> QueryContext<'a, T, SK> {
     }
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: &SK) -> &QueryKVStore<PrefixDB<T>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &QueryKVStore<'_, PrefixDB<T>> {
         return self.multi_store.get_kv_store(store_key);
     }
 

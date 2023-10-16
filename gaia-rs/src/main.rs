@@ -1,3 +1,5 @@
+#![ warn( rust_2018_idioms ) ]
+
 use anyhow::Result;
 use auth::Keeper as AuthKeeper;
 use bank::Keeper as BankKeeper;
