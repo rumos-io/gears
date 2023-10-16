@@ -5,8 +5,9 @@ use store_crate::StoreKey;
 
 use crate::types::gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter};
 
-use super::context::{ContextTrait, EventManager, MS};
+use super::{context::{ContextTrait, EventManager, MS, Context}, tx_context::TxContext};
 
+#[derive(Debug)]
 pub struct InitContext<T: Database, SK: StoreKey> {
     pub multi_store: MS<T, SK>,
     height: u64,
@@ -70,5 +71,17 @@ impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for InitContext<T, SK> {
 
     fn append_events(&mut self, mut events: Vec<Event>) {
         self.events.append(&mut events)
+    }
+}
+
+impl<T : Database, SK : StoreKey> TryFrom<Context<T, SK>> for InitContext<T, SK>
+{
+    type Error = TxContext<T, SK>;
+
+    fn try_from(value: Context<T, SK>) -> Result<Self, Self::Error> {
+       match value {
+        Context::TxContext(var) => Err(var),
+        Context::InitContext(var) => Ok(var),
+    }
     }
 }

@@ -1,6 +1,6 @@
 use gears::{
     config::Config,
-    x::params::Keeper as ParamsKeeper, types::context::{tx_context::TxContext, init_context::InitContext, query_context::QueryContext},
+    x::params::Keeper as ParamsKeeper, types::context::{tx_context::TxContext, init_context::InitContext, query_context::QueryContext, context::Context},
 };
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
@@ -49,7 +49,7 @@ impl Handler {
 impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
     fn handle_tx<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, GaiaStoreKey>,
+        ctx: &mut Context<DB, GaiaStoreKey>,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {
@@ -59,7 +59,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_init_genesis<DB: Database>(
         &self,
-        ctx: &mut InitContext<DB, GaiaStoreKey>,
+        ctx: &mut Context<DB, GaiaStoreKey>,
         genesis: GenesisState,
     ) {
         self.bank_handler.init_genesis(ctx, genesis.bank);
@@ -97,7 +97,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_begin_block<DB: Database>(
         &self,
-        _ctx: &mut TxContext<DB, GaiaStoreKey>,
+        _ctx: &mut Context<DB, GaiaStoreKey>,
         _request: RequestBeginBlock,
     ) {
         // do nothing

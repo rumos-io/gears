@@ -75,12 +75,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
         // TODO:
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
-        self.bank_params_keeper.set(&mut ctx.into(), genesis.params);
+        self.bank_params_keeper.set(ctx, genesis.params);
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         {
@@ -103,7 +103,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // TODO: does the SDK sort these?
         for coin in total_supply {
             self.set_supply(
-                &mut ctx.into(),
+                ctx,
                 Coin {
                     denom: coin.0,
                     amount: coin.1,

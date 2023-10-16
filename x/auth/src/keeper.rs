@@ -92,17 +92,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
         //TODO: sdk sanitizes accounts
-        self.auth_params_keeper.set(&mut ctx.into(), genesis.params);
+        
+        self.auth_params_keeper.set( ctx, genesis.params);
 
         for mut acct in genesis.accounts {
-            acct.account_number = self.get_next_account_number(&mut ctx.into());
-            self.set_account(&mut ctx.into(), Account::Base(acct));
+            acct.account_number = self.get_next_account_number(ctx);
+            self.set_account(ctx, Account::Base(acct));
         }
 
         // Create the fee collector account
-        self.check_create_new_module_account(&mut ctx.into(), &Module::FeeCollector);
+        self.check_create_new_module_account(ctx, &Module::FeeCollector);
     }
 
     pub fn query_account<DB: Database>(

@@ -3,6 +3,7 @@ use std::fmt::Display;
 use super::gas_meter::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter};
 
 /// Gas meter without consumption limit
+#[derive(Debug)]
 pub struct InfiniteGasMeter {
     consumed: Gas,
 }

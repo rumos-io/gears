@@ -1,7 +1,7 @@
 use std::{
     collections::BTreeMap,
     ops::{Bound, RangeBounds},
-    sync::Arc,
+    sync::Arc, fmt::Debug,
 };
 
 use database::{Database, PrefixDB};
@@ -26,7 +26,7 @@ pub struct MultiStore<DB: Database, SK: StoreKey> {
     pub(crate) stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
 }
 
-pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
+pub trait StoreKey: Hash + Debug + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
 }
 

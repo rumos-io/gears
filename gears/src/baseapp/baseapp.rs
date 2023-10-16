@@ -46,16 +46,16 @@ use super::{
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<DB, SK>, msg: &M)
+    fn handle_tx<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M)
         -> Result<(), AppError>;
 
     fn handle_begin_block<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, SK>,
+        ctx: &mut Context<DB, SK>,
         request: RequestBeginBlock,
     );
 
-    fn handle_init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: G);
+    fn handle_init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: G);
 
     fn handle_query<DB: Database>(
         &self,
@@ -116,15 +116,17 @@ impl<
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let mut ctx = InitContext::new(
-            Arc::clone(&self.multi_store),
-            self.get_block_height(),
-            request.chain_id,
+        let mut ctx = Context::InitContext(
+            InitContext::new(
+                Arc::clone(&self.multi_store),
+                self.get_block_height(),
+                request.chain_id,
+            )
         );
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
-                .set_consensus_params(&mut (&mut ctx).into(), params);
+                .set_consensus_params(&mut ctx, params);
         }
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
@@ -138,7 +140,8 @@ impl<
                 std::process::exit(1)
             });
 
-        self.handler.handle_init_genesis(&mut ctx, genesis);
+            // Its okay to expect here 'cause we already know context inner type
+        self.handler.handle_init_genesis(&mut ctx.try_into().expect( "Invalid context"), genesis);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -310,17 +313,17 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        let mut ctx = TxContext::new(
+        let mut ctx = Context::TxContext(TxContext::new(
             Arc::clone(&self.multi_store),
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block"),
             vec![],
-        );
+        ));
 
         self.handler.handle_begin_block(&mut ctx, request);
 
-        let events = ctx.events;
+        let events = ctx.events();
         multi_store.write_then_clear_tx_caches();
 
         ResponseBeginBlock {
@@ -489,17 +492,17 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        let mut ctx = TxContext::new(
+        let mut ctx = Context::from( TxContext::new(
             Arc::clone(&self.multi_store),
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block"),
             raw.clone().into(),
-        );
+        ));
 
         match self
             .base_ante_handler
-            .run(&mut (&mut ctx).into(), &tx_with_raw)
+            .run(&mut ctx, &tx_with_raw)
         {
             Ok(_) => multi_store_lock.write_then_clear_tx_caches(),
             Err(e) => {
@@ -507,14 +510,6 @@ impl<
                 return Err(e);
             }
         };
-
-        let mut ctx = TxContext::new(
-            Arc::clone(&self.multi_store),
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block"),
-            raw.clone().into(),
-        );
 
         // only run the tx if there is block gas remaining
         if mode == ExecMode::ExecModeFinalize && ctx.block_gas_meter().is_out_of_gas() {
@@ -524,23 +519,28 @@ impl<
         // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
         // TODO
 
-        let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
-            Ok(_) => {
-                let events = ctx.events.clone(); //TODO: Think how to remove clone
-                multi_store_lock.write_then_clear_tx_caches();
-                Ok(events)
-            }
-            Err(e) => {
-                multi_store_lock.clear_tx_caches();
-                Err(e)
-            }
+        let events= {
+            let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
+                Ok(_) => {
+                    let events = ctx.events_get().clone(); //TODO: Think how to remove clone
+                    multi_store_lock.write_then_clear_tx_caches();
+                    Ok(events)
+                }
+                Err(e) => {
+                    multi_store_lock.clear_tx_caches();
+                    Err(e)
+                }
+            };
+
+            events
         };
+
+        
 
         let _gas_wanted = {
             // 863 - 901
-            let mut ctx_innter = (&mut ctx).into(); // fixes drop tmp value issue
 
-            let (mut ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx_innter, &raw);
+            let (mut ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx, &raw);
             ante_ctx.event_manager_set(EventManager); // In cosmos sdk it returns new pointer with empty event
 
             // newCtx, err := app.anteHandler(anteCtx, tx, mode == execModeSimulate)
@@ -549,7 +549,7 @@ impl<
 
             // let events = ctx_innter.events;
             // GasMeter expected to be set in AnteHandler
-            let gas_wanted = ctx_innter.gas_meter().limit();
+            let gas_wanted = ctx.gas_meter().limit();
 
             ms_cache.write();
             // anteEvents = events.ToABCIEvents()
@@ -559,9 +559,8 @@ impl<
 
         // 903 - 914
         if mode == ExecMode::ExecModeCheck {
-            let ctx_inner = (&mut ctx).into();
 
-            if let Err(_val) = self.mempool.insert_tx(&ctx_inner, &tx_with_raw.tx) {
+            if let Err(_val) = self.mempool.insert_tx(&ctx, &tx_with_raw.tx) {
                 // return gInfo, nil, anteEvents, err
             }
         } else if mode == ExecMode::ExecModeFinalize {
@@ -575,7 +574,7 @@ impl<
         // in case message processing fails. At this point, the MultiStore
         // is a branch of a branch.
         {
-            let mut ctx_inner = (&mut ctx).into(); // fixes drop tmp value issue
+            let mut ctx_inner = ctx.into(); // fixes drop tmp value issue
 
             let (mut _ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx_inner, &raw);
 
@@ -620,7 +619,7 @@ impl<
 
     fn run_msgs<T: Database>(
         &self,
-        ctx: &mut TxContext<T, SK>,
+        ctx: &mut Context<T, SK>,
         msgs: &Vec<M>,
     ) -> Result<(), AppError> {
         for msg in msgs {

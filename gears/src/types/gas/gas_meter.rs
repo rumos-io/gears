@@ -1,4 +1,4 @@
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct Gas(pub u64);
 
 #[derive(Debug)]

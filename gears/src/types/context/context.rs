@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use database::Database;
+use database::{Database, RocksDB};
 use tendermint_informal::abci::Event;
 
 use store_crate::{StoreKey, MultiStore};
@@ -28,6 +28,7 @@ pub enum ExecMode {
     ExecModeFinalize,
 }
 
+#[derive(Debug)]
 pub struct EventManager; //TODO: Replace with implementation
 
 pub type MS<T, SK> = Arc<RwLock<MultiStore<T, SK>>>;
@@ -42,13 +43,18 @@ pub trait ContextTrait<T: Database, SK: StoreKey> {
     fn append_events(&mut self, events: Vec<Event>);
 }
 
+/// The context is a data structure intended to be passed from function to function that 
+/// carries information about the current state of the application. 
+/// It provides access to a branched storage (a safe branch of the entire state) 
+/// as well as useful objects and information like gasMeter, block height, consensus parameters and more. \
 /// This is used when a method can be used in either a tx or init context
-pub enum Context<'a, T: Database, SK: StoreKey> {
-    TxContext(&'a mut TxContext<T, SK>),
-    InitContext(&'a mut InitContext<T, SK>),
+#[derive(Debug)]
+pub enum Context<T: Database, SK: StoreKey> {
+    TxContext(TxContext<T, SK>),
+    InitContext(InitContext<T, SK>),
 }
 
-impl<'a, T: Database, SK: StoreKey> Context<'a, T, SK> {
+impl<'a, T: Database, SK: StoreKey> Context<T, SK> {
     pub fn get_height(&self) -> u64 {
         match self {
             Context::TxContext(ctx) => ctx.height(),
@@ -122,16 +128,32 @@ impl<'a, T: Database, SK: StoreKey> Context<'a, T, SK> {
     pub fn with_multi_store(&self) -> Self {
         unimplemented!() //TODO
     }
+
+    pub fn events_get(&self ) -> &Vec<Event>
+    {
+        match self {
+            Context::TxContext( ctx) => &ctx.events,
+            Context::InitContext(ctx) => &ctx.events,
+        }
+    }
+
+    pub fn events(self ) -> Vec<Event>
+    {
+        match self {
+            Context::TxContext( ctx) => ctx.events,
+            Context::InitContext(ctx) => ctx.events,
+        }
+    }
 }
 
-impl<'a, T: Database, SK: StoreKey> From<&'a mut TxContext<T, SK>> for Context<'a, T, SK> {
-    fn from(value: &'a mut TxContext<T, SK>) -> Self {
+impl<T: Database, SK: StoreKey> From<TxContext<T, SK>> for Context<T, SK> {
+    fn from(value: TxContext<T, SK>) -> Self {
         Self::TxContext(value)
     }
 }
 
-impl<'a, T: Database, SK: StoreKey> From<&'a mut InitContext<T, SK>> for Context<'a, T, SK> {
-    fn from(value: &'a mut InitContext<T, SK>) -> Self {
+impl<T: Database, SK: StoreKey> From<InitContext<T, SK>> for Context<T, SK> {
+    fn from(value: InitContext<T, SK>) -> Self {
         Self::InitContext(value)
     }
 }
