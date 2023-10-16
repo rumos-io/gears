@@ -1,8 +1,5 @@
 use database::Database;
-use gears::{
-    error::AppError,
-    x::params::ParamsSubspaceKey, types::context::{context::Context, init_context::InitContext},
-};
+use gears::{error::AppError, types::context::context::Context, x::params::ParamsSubspaceKey};
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::auth::v1beta1::{BaseAccount, QueryAccountRequest};
 use proto_types::AccAddress;

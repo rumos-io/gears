@@ -4,7 +4,7 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{context::Context, init_context::InitContext, query_context::QueryContext},
+    types::context::{context::Context, query_context::QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
@@ -94,8 +94,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn init_genesis<DB: Database>(&self, ctx: &mut Context<DB, SK>, genesis: GenesisState) {
         //TODO: sdk sanitizes accounts
-        
-        self.auth_params_keeper.set( ctx, genesis.params);
+
+        self.auth_params_keeper.set(ctx, genesis.params);
 
         for mut acct in genesis.accounts {
             acct.account_number = self.get_next_account_number(ctx);

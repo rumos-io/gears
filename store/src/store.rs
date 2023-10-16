@@ -1,7 +1,8 @@
 use std::{
     collections::BTreeMap,
+    fmt::Debug,
     ops::{Bound, RangeBounds},
-    sync::Arc, fmt::Debug,
+    sync::Arc,
 };
 
 use database::{Database, PrefixDB};

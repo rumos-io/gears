@@ -5,7 +5,10 @@ use store_crate::StoreKey;
 
 use crate::types::gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter};
 
-use super::{context::{ContextTrait, EventManager, MS, Context}, init_context::InitContext};
+use super::{
+    context::{Context, ContextTrait, EventManager, MS},
+    init_context::InitContext,
+};
 
 #[derive(Debug)]
 pub struct TxContext<T: Database, SK: StoreKey> {
@@ -80,14 +83,13 @@ impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for TxContext<T, SK> {
     }
 }
 
-impl<T : Database, SK : StoreKey> TryFrom<Context<T, SK>> for TxContext<T, SK>
-{
+impl<T: Database, SK: StoreKey> TryFrom<Context<T, SK>> for TxContext<T, SK> {
     type Error = InitContext<T, SK>;
 
     fn try_from(value: Context<T, SK>) -> Result<Self, Self::Error> {
         match value {
-            Context::TxContext( var ) => Ok(var),
-            Context::InitContext( var ) => Err(var),
+            Context::TxContext(var) => Ok(var),
+            Context::InitContext(var) => Err(var),
         }
     }
 }

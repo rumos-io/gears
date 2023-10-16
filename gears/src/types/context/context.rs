@@ -1,9 +1,9 @@
 use std::sync::{Arc, RwLock};
 
-use database::{Database, RocksDB};
+use database::Database;
 use tendermint_informal::abci::Event;
 
-use store_crate::{StoreKey, MultiStore};
+use store_crate::{MultiStore, StoreKey};
 
 use crate::types::gas::gas_meter::GasMeter;
 
@@ -43,9 +43,9 @@ pub trait ContextTrait<T: Database, SK: StoreKey> {
     fn append_events(&mut self, events: Vec<Event>);
 }
 
-/// The context is a data structure intended to be passed from function to function that 
-/// carries information about the current state of the application. 
-/// It provides access to a branched storage (a safe branch of the entire state) 
+/// The context is a data structure intended to be passed from function to function that
+/// carries information about the current state of the application.
+/// It provides access to a branched storage (a safe branch of the entire state)
 /// as well as useful objects and information like gasMeter, block height, consensus parameters and more. \
 /// This is used when a method can be used in either a tx or init context
 #[derive(Debug)]
@@ -129,18 +129,16 @@ impl<'a, T: Database, SK: StoreKey> Context<T, SK> {
         unimplemented!() //TODO
     }
 
-    pub fn events_get(&self ) -> &Vec<Event>
-    {
+    pub fn events_get(&self) -> &Vec<Event> {
         match self {
-            Context::TxContext( ctx) => &ctx.events,
+            Context::TxContext(ctx) => &ctx.events,
             Context::InitContext(ctx) => &ctx.events,
         }
     }
 
-    pub fn events(self ) -> Vec<Event>
-    {
+    pub fn events(self) -> Vec<Event> {
         match self {
-            Context::TxContext( ctx) => ctx.events,
+            Context::TxContext(ctx) => ctx.events,
             Context::InitContext(ctx) => ctx.events,
         }
     }

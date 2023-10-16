@@ -26,7 +26,7 @@ use tracing::{error, info};
 
 use crate::types::{
     context::{
-        context::{Context, ContextTrait, EventManager, ExecMode},
+        context::{Context, EventManager, ExecMode},
         init_context::InitContext,
         query_context::QueryContext,
         tx_context::TxContext,
@@ -46,8 +46,7 @@ use super::{
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn handle_tx<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M)
-        -> Result<(), AppError>;
+    fn handle_tx<DB: Database>(&self, ctx: &mut Context<DB, SK>, msg: &M) -> Result<(), AppError>;
 
     fn handle_begin_block<DB: Database>(
         &self,
@@ -116,13 +115,11 @@ impl<
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let mut ctx = Context::InitContext(
-            InitContext::new(
-                Arc::clone(&self.multi_store),
-                self.get_block_height(),
-                request.chain_id,
-            )
-        );
+        let mut ctx = Context::InitContext(InitContext::new(
+            Arc::clone(&self.multi_store),
+            self.get_block_height(),
+            request.chain_id,
+        ));
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
@@ -140,8 +137,9 @@ impl<
                 std::process::exit(1)
             });
 
-            // Its okay to expect here 'cause we already know context inner type
-        self.handler.handle_init_genesis(&mut ctx.try_into().expect( "Invalid context"), genesis);
+        // Its okay to expect here 'cause we already know context inner type
+        self.handler
+            .handle_init_genesis(&mut ctx.try_into().expect("Invalid context"), genesis);
 
         multi_store.write_then_clear_tx_caches();
 
@@ -416,25 +414,16 @@ impl<
     }
 
     fn get_block_header(&self) -> Option<Header> {
-        self.block_header
-            .read()
-            .expect("RwLock will not be poisoned")
-            .clone()
+        self.block_header.acquire_read().clone()
     }
 
     fn set_block_header(&self, header: Header) {
-        let mut current_header = self
-            .block_header
-            .write()
-            .expect("RwLock will not be poisoned");
+        let mut current_header = self.block_header.acquire_write();
         *current_header = Some(header);
     }
 
     fn get_last_commit_hash(&self) -> [u8; 32] {
-        self.multi_store
-            .read()
-            .expect("RwLock will not be poisoned")
-            .get_head_commit_hash()
+        self.multi_store.acquire_read().get_head_commit_hash()
     }
 
     fn increment_block_height(&self) -> u64 {
@@ -458,20 +447,12 @@ impl<
         (ctx.with_multi_store( /* ms_cache */ ), ms_cache)
     }
 
-    // // https://github.com/cosmos/cosmos-sdk/blob/3a04a9f7d7e4beca67e6690c5c717c20863894aa/baseapp/baseapp.go#L611
-    // fn get_state(&self, mode: ExecMode) -> StateEnum {
-    //     todo!()
-    // }
-
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
         let version: u32 = request.height.try_into().map_err(|_| {
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;
 
-        let multi_store = self
-            .multi_store
-            .read()
-            .expect("RwLock will not be poisoned");
+        let multi_store = self.multi_store.acquire_read();
         let ctx = QueryContext::new(&multi_store, version)?;
 
         self.handler.handle_query(&ctx, request.clone())
@@ -487,12 +468,9 @@ impl<
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
 
-        let mut multi_store_lock = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
+        let mut multi_store_lock = self.multi_store.acquire_write();
 
-        let mut ctx = Context::from( TxContext::new(
+        let mut ctx = Context::from(TxContext::new(
             Arc::clone(&self.multi_store),
             self.get_block_height(),
             self.get_block_header()
@@ -500,10 +478,7 @@ impl<
             raw.clone().into(),
         ));
 
-        match self
-            .base_ante_handler
-            .run(&mut ctx, &tx_with_raw)
-        {
+        match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
             Ok(_) => multi_store_lock.write_then_clear_tx_caches(),
             Err(e) => {
                 multi_store_lock.clear_tx_caches();
@@ -519,7 +494,7 @@ impl<
         // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
         // TODO
 
-        let events= {
+        let events = {
             let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
                 Ok(_) => {
                     let events = ctx.events_get().clone(); //TODO: Think how to remove clone
@@ -535,15 +510,13 @@ impl<
             events
         };
 
-        
-
         let _gas_wanted = {
             // 863 - 901
 
             let (mut ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx, &raw);
             ante_ctx.event_manager_set(EventManager); // In cosmos sdk it returns new pointer with empty event
 
-            // newCtx, err := app.anteHandler(anteCtx, tx, mode == execModeSimulate)
+            // let new_ctx = self.handler.handle_tx(&mut ante_ctx, tx_with_raw.tx.get_msgs());
 
             // ctx = newCtx.WithMultiStore(ms)
 
@@ -559,7 +532,6 @@ impl<
 
         // 903 - 914
         if mode == ExecMode::ExecModeCheck {
-
             if let Err(_val) = self.mempool.insert_tx(&ctx, &tx_with_raw.tx) {
                 // return gInfo, nil, anteEvents, err
             }

@@ -1,5 +1,5 @@
 use database::Database;
-use gears::{x::params::ParamsSubspaceKey, types::context::context::Context};
+use gears::{types::context::context::Context, x::params::ParamsSubspaceKey};
 use ibc_relayer::util::lock::LockExt;
 use serde::{Deserialize, Serialize};
 use store::StoreKey;

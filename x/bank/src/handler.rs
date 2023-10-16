@@ -1,8 +1,5 @@
 use database::Database;
-use gears::{
-    error::AppError,
-    x::params::ParamsSubspaceKey, types::context::{init_context::InitContext, context::Context},
-};
+use gears::{error::AppError, types::context::context::Context, x::params::ParamsSubspaceKey};
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse},
