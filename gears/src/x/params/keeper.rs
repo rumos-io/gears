@@ -37,13 +37,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &'a Context<DB, SK>,
         params_subspace_key: &PSK,
     ) -> store_crate::ImmutablePrefixStore<'a, PrefixDB<DB>> {
-        let params_store = ctx
-        .multi_store()
-        .get_kv_store(&self.store_key);
+        let params_store = ctx.multi_store().get_kv_store(&self.store_key);
 
         let params: Vec<u8> = params_subspace_key.name().as_bytes().to_vec();
 
-        params_store.get_immutable_prefix_store( params )
+        params_store.get_immutable_prefix_store(params)
     }
 
     pub fn get_mutable_raw_subspace<'a, DB: Database>(
@@ -51,9 +49,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &'a mut Context<DB, SK>,
         params_subspace_key: &PSK,
     ) -> store_crate::MutablePrefixStore<'a, PrefixDB<DB>> {
-        let params_store = ctx
-        .multi_store_mut()
-        .get_mutable_kv_store(&self.store_key);
+        let params_store = ctx.multi_store_mut().get_mutable_kv_store(&self.store_key);
 
         let params: Vec<u8> = params_subspace_key.name().as_bytes().to_vec();
 
