@@ -26,7 +26,7 @@ use tracing::{error, info};
 
 use crate::types::{
     context::{
-        context::{ContextTrait, ExecMode},
+        context::{Context, ExecMode},
         init_context::InitContext,
         query_context::QueryContext,
         tx_context::TxContext,
@@ -40,6 +40,7 @@ use crate::{
 
 use super::{
     ante::{AnteHandler, AuthKeeper, BankKeeper},
+    errors::{TxValidationError, RunTxError},
     params::BaseAppParamsKeeper,
 };
 
@@ -283,6 +284,9 @@ impl<
         }
     }
 
+    // #[ tracing::instrument(
+    //     name = "Got echo request",
+    //     skip_all, )] //TODO: Ask
     fn echo(&self, request: RequestEcho) -> ResponseEcho {
         info!("Got echo request");
         ResponseEcho {
@@ -361,6 +365,7 @@ impl<
     }
 }
 
+#[allow(dead_code)] // TODO: Remove
 impl<
         M: Message,
         SK: StoreKey,
@@ -466,15 +471,14 @@ impl<
         &self,
         raw: Bytes,
         mode: ExecMode,
-    ) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
-        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e| AppError::TxParseError(e.to_string()))?;
+    ) -> Result<Vec<tendermint_informal::abci::Event>, RunTxError> {
+        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
 
         let mut multi_store_lock = self.multi_store.acquire_write();
 
-        let mut ctx = TxContext::new(
+        let mut inner_ctx = TxContext::new(
             &mut multi_store_lock,
             self.get_block_height(),
             self.get_block_header()
@@ -482,24 +486,15 @@ impl<
             raw.clone().into(),
         );
 
-        // match self
-        //     .base_ante_handler
-        //     .run(&mut (&mut ctx).into(), &tx_with_raw)
-        // {
-        //     Ok(_) => multi_store_lock.write_then_clear_tx_caches(),
-        //     Err(e) => {
-        //         multi_store_lock.clear_tx_caches();
-        //         return Err(e);
-        //     }
-        // };
+        let mut ctx = Context::TxContext(&mut inner_ctx);
 
-        // ctx = TxContext::new(
-        //     &mut multi_store_lock,
-        //     self.get_block_height(),
-        //     self.get_block_header()
-        //         .expect("block header is set in begin block"),
-        //     raw.clone().into(),
-        // );
+        match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
+            Ok(_) => ctx.multi_store_mut().write_then_clear_tx_caches(),
+            Err(e) => {
+                ctx.multi_store_mut().clear_tx_caches();
+                return Err(RunTxError::AnteError(e));
+            }
+        }; // TODO I don't like how this block looks
 
         // only run the tx if there is block gas remaining
         if mode == ExecMode::ModeFinalize && ctx.block_gas_meter().is_out_of_gas() {
@@ -509,17 +504,17 @@ impl<
         // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
         // TODO
 
-        let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
-            Ok(_) => {
-                let events = ctx.events.clone(); //TODO: Think how to remove clone
-                multi_store_lock.write_then_clear_tx_caches();
-                Ok(events)
-            }
-            Err(e) => {
-                multi_store_lock.clear_tx_caches();
-                Err(e)
-            }
-        };
+        // let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
+        //     Ok(_) => {
+        //         let events = ctx.events.clone(); //TODO: Think how to remove clone
+        //         multi_store_lock.write_then_clear_tx_caches();
+        //         Ok(events)
+        //     }
+        //     Err(e) => {
+        //         multi_store_lock.clear_tx_caches();
+        //         Err(e)
+        //     }
+        // };
 
         let _gas_wanted = {
             // 863 - 901
@@ -601,7 +596,7 @@ impl<
             // }
         }
 
-        events
+        Ok(Vec::new())
     }
 
     fn run_msgs<T: Database>(
@@ -616,16 +611,14 @@ impl<
         return Ok(());
     }
 
-    fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
+    fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), TxValidationError> {
         if msgs.is_empty() {
-            return Err(AppError::InvalidRequest(
-                "must contain at least one message".into(),
-            ));
+            Err(TxValidationError::InvalidRequest)?
         }
 
         for msg in msgs {
             msg.validate_basic()
-                .map_err(|e| AppError::TxValidation(e.to_string()))?
+                .map_err(|e| TxValidationError::CustomError(e))?
         }
 
         return Ok(());
