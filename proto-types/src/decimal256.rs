@@ -474,7 +474,7 @@ impl FromStr for Decimal256 {
 }
 
 impl fmt::Display for Decimal256 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let whole = (self.0) / Self::DECIMAL_FRACTIONAL;
         let fractional = (self.0).checked_rem(Self::DECIMAL_FRACTIONAL).unwrap();
 
@@ -669,7 +669,7 @@ struct Decimal256Visitor;
 impl<'de> de::Visitor<'de> for Decimal256Visitor {
     type Value = Decimal256;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("string-encoded decimal")
     }
 
