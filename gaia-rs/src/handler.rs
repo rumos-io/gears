@@ -1,6 +1,9 @@
 use gears::{
     config::Config,
-    x::params::Keeper as ParamsKeeper, types::context::{tx_context::TxContext, init_context::InitContext, query_context::QueryContext},
+    types::context::{
+        init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
+    },
+    x::params::Keeper as ParamsKeeper,
 };
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;

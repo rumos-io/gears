@@ -1,5 +1,5 @@
 use database::{Database, PrefixDB};
-use store_crate::{QueryMultiStore, StoreKey, MultiStore, QueryKVStore};
+use store_crate::{MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
 
 use crate::error::AppError;
 

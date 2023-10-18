@@ -112,7 +112,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
         hash
     }
 
-    pub fn cache_multi_store(&self) -> CacheMultiStore {
+    pub fn cache_multi_store(&self) -> CacheMS {
         // https://github.com/cosmos/cosmos-sdk/blob/c3bc5c82eb43f4cca91144c375f104b03b333f5a/store/rootmulti/store.go#L539C6-L539C6
         unimplemented!() // TODO
                          //     stores := make(map[types.StoreKey]types.CacheWrapper)
@@ -129,9 +129,9 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
     }
 }
 
-pub struct CacheMultiStore; //TODO: Replace with actual implementation
+pub struct CacheMS; //TODO: Replace with actual implementation
 
-impl CacheMultiStore //TODO: Replace with actual implementation
+impl CacheMS //TODO: Replace with actual implementation
 {
     pub fn is_tracing_enabled(&self) -> bool {
         unimplemented!()
