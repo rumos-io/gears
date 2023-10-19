@@ -1,7 +1,8 @@
+use bytes::Bytes;
 use database::Database;
 use tendermint_informal::{abci::Event, block::Header};
 
-use store_crate::{MultiStore, StoreKey};
+use store_crate::{MultiStore, StoreKey, CacheMS};
 
 use crate::types::gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter};
 
@@ -54,9 +55,27 @@ impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
         self.height
     }
 
-    pub fn events(&self) -> &Vec<Event>
-    {
+    pub fn events(&self) -> &Vec<Event> {
         &self.events
+    }
+
+
+    pub fn cache_tx_context(
+        &self,
+        _tx_bytes: &Bytes,
+    ) -> (TxContext<'_, T, SK>, CacheMS) {
+        let ms_cache = self.multi_store.cache_multi_store();
+
+        if ms_cache.is_tracing_enabled() {
+            ms_cache.tracing_context_set();
+        }
+
+        (self.with_multi_store( /* ms_cache */ ), ms_cache)
+    }
+
+    pub fn with_multi_store(&self ) -> Self
+    {
+        unimplemented!()
     }
 }
 

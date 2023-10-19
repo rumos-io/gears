@@ -33,7 +33,7 @@ pub enum TxValidationError {
 }
 
 impl TxValidationError {
-    pub const fn code(&self) ->  u32 {
+    pub const fn code(&self) -> u32 {
         1
     }
 }
@@ -60,20 +60,21 @@ pub enum AnteErrors {
 
 #[derive(Error, Debug)]
 
-pub enum RunTxError{
+pub enum RunTxError {
     #[error("{0}")]
     CustomError(String),
     #[error("{0}")]
-    AnteError( #[from] AnteErrors ),
+    AnteError(#[from] AnteErrors),
     #[error("tx parse error: {0}")]
-    TxParseError( #[from] proto_messages::Error ),
+    TxParseError(#[from] proto_messages::Error),
     #[error("{0}")]
     TxValidation(#[from] TxValidationError),
+    #[error("no block gas left to run tx")]
+    OutOfGas,
 }
 
-
 impl RunTxError {
-    pub const fn code(&self) ->  u32 {
+    pub const fn code(&self) -> u32 {
         1
     }
 }

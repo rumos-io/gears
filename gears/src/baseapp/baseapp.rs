@@ -27,12 +27,12 @@ use tracing::{error, info};
 
 use crate::types::{
     context::{
-        context::{Context, ExecMode},
+        context::{Context, ContextTrait, ExecMode},
         init_context::InitContext,
         query_context::QueryContext,
         tx_context::TxContext,
     },
-    mempool::MemPool,
+    mempool::{MemPool, MempoolTrait},
 };
 use crate::{
     error::AppError,
@@ -41,7 +41,7 @@ use crate::{
 
 use super::{
     ante::{AnteHandler, AuthKeeper, BankKeeper},
-    errors::{TxValidationError, RunTxError},
+    errors::{RunTxError, TxValidationError},
     params::BaseAppParamsKeeper,
 };
 
@@ -440,20 +440,6 @@ impl<
         return *height;
     }
 
-    // fn cache_tx_context<'a, T: Database>(
-    //     &'a self,
-    //     ctx: &'a mut Context<T, SK>,
-    //     _tx_bytes: &Bytes,
-    // ) -> (Context<T, SK>, CacheMS) {
-    //     let ms_cache = ctx.multi_store().cache_multi_store();
-
-    //     if ms_cache.is_tracing_enabled() {
-    //         ms_cache.tracing_context_set();
-    //     }
-
-    //     (ctx.with_multi_store( /* ms_cache */ ), ms_cache)
-    // }
-
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
         let version: u32 = request.height.try_into().map_err(|_| {
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
@@ -487,42 +473,55 @@ impl<
             raw.clone().into(),
         );
 
-        let mut ctx = Context::TxContext(&mut inner_ctx);
+        // only run the tx if there is block gas remaining
+        if mode == ExecMode::ModeFinalize && inner_ctx.block_gas_meter().is_out_of_gas() {
+            return Err(RunTxError::OutOfGas);
+        }
 
+        // defer func() {
+        //     if r := recover(); r != nil {
+        //         recoveryMW := newOutOfGasRecoveryMiddleware(gasWanted, ctx, app.runTxRecoveryMiddleware)
+        //         err, result = processRecovery(r, recoveryMW), nil
+        //     }
+    
+        //     gInfo = sdk.GasInfo{GasWanted: gasWanted, GasUsed: ctx.GasMeter().GasConsumed()}
+        // }()
+        
         {
+            let mut ctx = Context::TxContext(&mut inner_ctx);
+
             match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
                 Ok(_) => {
                     ctx.multi_store_mut().write_then_clear_tx_caches();
                     Ok(())
-                },
+                }
                 Err(e) => {
                     ctx.multi_store_mut().clear_tx_caches();
                     Err(e)
-                },
+                }
             }?
         }
 
-        // only run the tx if there is block gas remaining
-        if mode == ExecMode::ModeFinalize && ctx.block_gas_meter().is_out_of_gas() {
-            // return gInfo, nil, nil, errorsmod.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
-            todo!()
-        }
+        
+
         // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
         // TODO
 
-        let events = match self.run_msgs(&mut inner_ctx, tx_with_raw.tx.get_msgs()) {
-            Ok(_) => {
-                let events = inner_ctx.events().clone(); //TODO: Think how to remove clone
-                multi_store_lock.write_then_clear_tx_caches();
-                Ok(events)
-            }
-            Err(e) => {
-                multi_store_lock.clear_tx_caches();
-                Err(RunTxError::CustomError(e.to_string())) //TODO proper error for ante
-            }
-        }?;
+        let events = {
+            match self.run_msgs(&mut inner_ctx, tx_with_raw.tx.get_msgs()) {
+                Ok(_) => {
+                    let events = inner_ctx.events().clone();
+                    inner_ctx.multi_store_mut().write_then_clear_tx_caches();
+                    Ok(events)
+                }
+                Err(e) => {
+                    inner_ctx.multi_store_mut().clear_tx_caches();
+                    Err(RunTxError::CustomError(e.to_string())) //TODO proper error for ante
+                }
+            }?
+        };
 
-        let _gas_wanted = {
+        let _gas_wanted = { 
             // 863 - 901
             // let mut ctx_innter = (&mut ctx).into(); // fixes drop tmp value issue
 
@@ -544,29 +543,35 @@ impl<
             1
         };
 
-        // 903 - 914
-        // if mode == ExecMode::Check {
-        //     let ctx_inner = (&mut ctx).into();
 
-        //     if let Err(_val) = self.mempool.insert_tx(&ctx_inner, &tx_with_raw.tx) {
-        //         // return gInfo, nil, anteEvents, err
-        //     }
-        // } else if mode == ExecMode::ModeFinalize {
-        //     if let Err(_val) = self.mempool.remove_tx(&tx_with_raw.tx) {
-        //         // if var == ExNotFound...
-        //         // return gInfo, nil, anteEvents, fmt.Errorf("failed to remove tx from mempool: %w", err)
-        //     }
-        // }
-
-        // Create a new Context based off of the existing Context with a MultiStore branch
-        // in case message processing fails. At this point, the MultiStore
-        // is a branch of a branch.
         {
-            // let mut ctx_inner = (&mut ctx).into(); // fixes drop tmp value issue
+            if mode == ExecMode::Check {
+                let ctx = Context::TxContext(&mut inner_ctx);
 
-            // let (mut _ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx_inner, &raw);
+                if let Err(val) = self.mempool.insert_tx(&ctx, &tx_with_raw.tx) {
+                    return Err(RunTxError::CustomError(val.to_string()));
+                }
+            } else if mode == ExecMode::ModeFinalize {
+                if let Err(_val) = self.mempool.remove_tx(&tx_with_raw.tx) {
+                    // if var == ExNotFound...
+                    {
+                        return Err(RunTxError::CustomError(
+                            "failed to remove tx from mempool".to_string(),
+                        )); //TODO: mempool errors
+                    }
+                }
+            }
+        }
 
-            // let _msg = tx_with_raw.tx.get_msgs(); // TODO: Cosmos uses v2
+        
+
+        // Cosmos.sdk creates a new Context based off of the existing Context with a MultiStore branch
+        // in case message processing fails. At this point, the MultiStore is a branch of a branch.
+        {
+            // let mut ctx = Context::TxContext(&mut inner_ctx);
+            let (mut _ante_ctx, _ms_cache) = inner_ctx.cache_tx_context(&raw);
+
+            let _msg = tx_with_raw.tx.get_msgs(); // TODO: Cosmos uses v2 is there difference?
 
             // if app.postHandler != nil {
             //     // The runMsgCtx context currently contains events emitted by the ante handler.
@@ -602,7 +607,16 @@ impl<
             // }
         }
 
-        Ok(( GasInfo{ gas_wanted: 1 , gas_used : 1}, Product::default() , events))
+
+
+        Ok((
+            GasInfo {
+                gas_wanted: 1,
+                gas_used: 1,
+            },
+            Product::default(),
+            events,
+        ))
     }
 
     fn run_msgs<T: Database>(
