@@ -1,5 +1,6 @@
 use bytes::Bytes;
 use database::{Database, RocksDB};
+use ibc_proto::cosmos::base::abci::v1beta1::{GasInfo, Result as Product};
 use ibc_relayer::util::lock::LockExt;
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
@@ -235,7 +236,7 @@ impl<
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
         match self.run_tx(request.tx, ExecMode::ModeFinalize) {
-            Ok(events) => ResponseDeliverTx {
+            Ok((_gas_info, _product, events)) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
@@ -471,7 +472,7 @@ impl<
         &self,
         raw: Bytes,
         mode: ExecMode,
-    ) -> Result<Vec<tendermint_informal::abci::Event>, RunTxError> {
+    ) -> Result<(GasInfo, Product, Vec<tendermint_informal::abci::Event>), RunTxError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
@@ -488,13 +489,18 @@ impl<
 
         let mut ctx = Context::TxContext(&mut inner_ctx);
 
-        match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
-            Ok(_) => ctx.multi_store_mut().write_then_clear_tx_caches(),
-            Err(e) => {
-                ctx.multi_store_mut().clear_tx_caches();
-                return Err(RunTxError::AnteError(e));
-            }
-        }; // TODO I don't like how this block looks
+        {
+            match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
+                Ok(_) => {
+                    ctx.multi_store_mut().write_then_clear_tx_caches();
+                    Ok(())
+                },
+                Err(e) => {
+                    ctx.multi_store_mut().clear_tx_caches();
+                    Err(e)
+                },
+            }?
+        }
 
         // only run the tx if there is block gas remaining
         if mode == ExecMode::ModeFinalize && ctx.block_gas_meter().is_out_of_gas() {
@@ -504,17 +510,17 @@ impl<
         // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
         // TODO
 
-        // let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
-        //     Ok(_) => {
-        //         let events = ctx.events.clone(); //TODO: Think how to remove clone
-        //         multi_store_lock.write_then_clear_tx_caches();
-        //         Ok(events)
-        //     }
-        //     Err(e) => {
-        //         multi_store_lock.clear_tx_caches();
-        //         Err(e)
-        //     }
-        // };
+        let events = match self.run_msgs(&mut inner_ctx, tx_with_raw.tx.get_msgs()) {
+            Ok(_) => {
+                let events = inner_ctx.events().clone(); //TODO: Think how to remove clone
+                multi_store_lock.write_then_clear_tx_caches();
+                Ok(events)
+            }
+            Err(e) => {
+                multi_store_lock.clear_tx_caches();
+                Err(RunTxError::CustomError(e.to_string())) //TODO proper error for ante
+            }
+        }?;
 
         let _gas_wanted = {
             // 863 - 901
@@ -596,7 +602,7 @@ impl<
             // }
         }
 
-        Ok(Vec::new())
+        Ok(( GasInfo{ gas_wanted: 1 , gas_used : 1}, Product::default() , events))
     }
 
     fn run_msgs<T: Database>(
