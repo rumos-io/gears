@@ -5,12 +5,33 @@ use store_crate::{KVStore, MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
 
 use crate::error::AppError;
 
+/// Execution mode of transaction
+#[derive(Debug, PartialEq)]
+pub enum ExecMode {
+    /// Check a transaction
+    ExecModeCheck,
+    /// Recheck a (pending) transaction after a commit
+    ExecModeReCheck,
+    /// Simulate a transaction
+    ExecModeSimulate,
+    /// Prepare a block proposal
+    ExecModePrepareProposal,
+    /// Process a block proposal
+    ExecModeProcessProposal,
+    /// Extend or verify a pre-commit vote
+    ExecModeVoteExtension,
+    /// Finalize a block proposal
+    ExecModeFinalize,
+}
+
 pub struct TxContext<'a, T: Database, SK: StoreKey> {
     multi_store: &'a mut MultiStore<T, SK>,
     height: u64,
     pub events: Vec<Event>,
     header: Header,
     _tx_bytes: Vec<u8>,
+    // gas_meter             : GasMeter,
+    // block_gas_meter        : GasMeter,
 }
 
 impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
