@@ -50,7 +50,7 @@ impl Handler {
 impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
     fn handle_tx<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, GaiaStoreKey>,
+        ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {
@@ -60,7 +60,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_init_genesis<DB: Database>(
         &self,
-        ctx: &mut InitContext<DB, GaiaStoreKey>,
+        ctx: &mut InitContext<'_, DB, GaiaStoreKey>,
         genesis: GenesisState,
     ) {
         self.bank_handler.init_genesis(ctx, genesis.bank);
@@ -69,7 +69,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_query<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, GaiaStoreKey>,
+        ctx: &QueryContext<'_, DB, GaiaStoreKey>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         if query.path.starts_with("/cosmos.auth") {
@@ -98,7 +98,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_begin_block<DB: Database>(
         &self,
-        _ctx: &mut TxContext<DB, GaiaStoreKey>,
+        _ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         _request: RequestBeginBlock,
     ) {
         // do nothing
