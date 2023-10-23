@@ -1,14 +1,14 @@
 use database::Database;
 use tendermint_informal::{abci::Event, block::Header};
 
-use store_crate::StoreKey;
+use store_crate::{MultiStore, StoreKey};
 
 use crate::types::gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter};
 
-use super::context::{ContextTrait, EventManager, MS};
+use super::context::{ContextTrait, EventManager};
 
-pub struct TxContext<T: Database, SK: StoreKey> {
-    multi_store: MS<T, SK>,
+pub struct TxContext<'a, T: Database, SK: StoreKey> {
+    multi_store: &'a mut MultiStore<T, SK>,
     height: u64,
     pub events: Vec<Event>,
     header: Header,
@@ -18,8 +18,14 @@ pub struct TxContext<T: Database, SK: StoreKey> {
     event_manager: EventManager,       //TODO: Trait
 }
 
-impl<T: Database, SK: StoreKey> TxContext<T, SK> {
-    pub fn new(multi_store: MS<T, SK>, height: u64, header: Header, tx_bytes: Vec<u8>) -> Self {
+impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
+    /// Creates a new [`TxContext<T, SK>`].
+    pub fn new(
+        multi_store: &'a mut MultiStore<T, SK>,
+        height: u64,
+        header: Header,
+        tx_bytes: Vec<u8>,
+    ) -> Self {
         TxContext {
             multi_store,
             height,
@@ -36,7 +42,7 @@ impl<T: Database, SK: StoreKey> TxContext<T, SK> {
         &self.header
     }
 
-    pub fn multi_store(&self) -> &MS<T, SK> {
+    pub fn multi_store(&self) -> &MultiStore<T, SK> {
         &self.multi_store
     }
 
@@ -49,7 +55,7 @@ impl<T: Database, SK: StoreKey> TxContext<T, SK> {
     }
 }
 
-impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for TxContext<T, SK> {
+impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for TxContext<'a, T, SK> {
     fn gas_meter(&self) -> &dyn GasMeter {
         &self.gas_meter
     }
@@ -76,5 +82,9 @@ impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for TxContext<T, SK> {
 
     fn append_events(&mut self, mut events: Vec<Event>) {
         self.events.append(&mut events)
+    }
+
+    fn multi_store_mut(&mut self) -> &mut MultiStore<T, SK> {
+        &mut self.multi_store
     }
 }

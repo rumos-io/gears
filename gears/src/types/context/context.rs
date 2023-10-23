@@ -1,9 +1,7 @@
-use std::sync::{Arc, RwLock};
-
 use database::Database;
 use tendermint_informal::abci::Event;
 
-use store_crate::{StoreKey, MultiStore};
+use store_crate::{MultiStore, StoreKey};
 
 use crate::types::gas::gas_meter::GasMeter;
 
@@ -13,42 +11,43 @@ use super::{init_context::InitContext, tx_context::TxContext};
 #[derive(Debug, PartialEq)]
 pub enum ExecMode {
     /// Check a transaction
-    ExecModeCheck,
+    Check,
     /// Recheck a (pending) transaction after a commit
-    ExecModeReCheck,
+    ReCheck,
     /// Simulate a transaction
-    ExecModeSimulate,
+    Simulate,
     /// Prepare a block proposal
-    ExecModePrepareProposal,
+    PrepareProposal,
     /// Process a block proposal
-    ExecModeProcessProposal,
+    ProcessProposal,
     /// Extend or verify a pre-commit vote
-    ExecModeVoteExtension,
+    VoteExtension,
     /// Finalize a block proposal
-    ExecModeFinalize,
+    ModeFinalize,
 }
 
 pub struct EventManager; //TODO: Replace with implementation
-
-pub type MS<T, SK> = Arc<RwLock<MultiStore<T, SK>>>;
 
 pub trait ContextTrait<T: Database, SK: StoreKey> {
     fn gas_meter(&self) -> &dyn GasMeter;
     fn block_gas_meter(&self) -> &dyn GasMeter;
     fn gas_meter_mut(&mut self) -> &mut dyn GasMeter;
     fn block_gas_meter_mut(&mut self) -> &mut dyn GasMeter;
+
+    fn multi_store_mut(&mut self) -> &mut MultiStore<T, SK>;
+
     fn get_height(&self) -> u64;
     fn push_event(&mut self, event: Event);
     fn append_events(&mut self, events: Vec<Event>);
 }
 
 /// This is used when a method can be used in either a tx or init context
-pub enum Context<'a, T: Database, SK: StoreKey> {
-    TxContext(&'a mut TxContext<T, SK>),
-    InitContext(&'a mut InitContext<T, SK>),
+pub enum Context<'a, 'b, T: Database, SK: StoreKey> {
+    TxContext(&'a mut TxContext<'b, T, SK>),
+    InitContext(&'a mut InitContext<'b, T, SK>),
 }
 
-impl<'a, T: Database, SK: StoreKey> Context<'a, T, SK> {
+impl<T: Database, SK: StoreKey> Context<'_, '_, T, SK> {
     pub fn get_height(&self) -> u64 {
         match self {
             Context::TxContext(ctx) => ctx.height(),
@@ -91,7 +90,7 @@ impl<'a, T: Database, SK: StoreKey> Context<'a, T, SK> {
         }
     }
 
-    pub fn multi_store(&self) -> &MS<T, SK> {
+    pub fn multi_store(&self) -> &MultiStore<T, SK> {
         match self {
             Context::TxContext(ctx) => ctx.multi_store(),
             Context::InitContext(ctx) => ctx.multi_store(),
@@ -119,19 +118,30 @@ impl<'a, T: Database, SK: StoreKey> Context<'a, T, SK> {
         }
     }
 
+    pub fn multi_store_mut(&mut self) -> &mut MultiStore<T, SK> {
+        match self {
+            Context::TxContext(ctx) => ctx.multi_store_mut(),
+            Context::InitContext(ctx) => ctx.multi_store_mut(),
+        }
+    }
+
     pub fn with_multi_store(&self) -> Self {
         unimplemented!() //TODO
     }
 }
 
-impl<'a, T: Database, SK: StoreKey> From<&'a mut TxContext<T, SK>> for Context<'a, T, SK> {
-    fn from(value: &'a mut TxContext<T, SK>) -> Self {
+impl<'a, 'b, T: Database, SK: StoreKey> From<&'a mut TxContext<'b, T, SK>>
+    for Context<'a, 'b, T, SK>
+{
+    fn from(value: &'a mut TxContext<'b, T, SK>) -> Self {
         Self::TxContext(value)
     }
 }
 
-impl<'a, T: Database, SK: StoreKey> From<&'a mut InitContext<T, SK>> for Context<'a, T, SK> {
-    fn from(value: &'a mut InitContext<T, SK>) -> Self {
+impl<'a, 'b, T: Database, SK: StoreKey> From<&'a mut InitContext<'b, T, SK>>
+    for Context<'a, 'b, T, SK>
+{
+    fn from(value: &'a mut InitContext<'b, T, SK>) -> Self {
         Self::InitContext(value)
     }
 }

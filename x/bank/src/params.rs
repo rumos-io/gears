@@ -1,6 +1,5 @@
 use database::Database;
-use gears::{x::params::ParamsSubspaceKey, types::context::context::Context};
-use ibc_relayer::util::lock::LockExt;
+use gears::{types::context::context::Context, x::params::ParamsSubspaceKey};
 use serde::{Deserialize, Serialize};
 use store::StoreKey;
 
@@ -28,8 +27,9 @@ pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
     pub fn get<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params {
-        let binding = ctx.multi_store().acquire_read();
-        let params_store = binding.get_kv_store(self.params_keeper.store_key_get());
+        let params_store = ctx
+            .multi_store()
+            .get_kv_store(self.params_keeper.store_key_get());
 
         let store = params_store
             .get_immutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());
@@ -53,8 +53,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
-        let mut binding = ctx.multi_store().acquire_write();
-        let params_store = binding.get_mutable_kv_store(self.params_keeper.store_key_get());
+        let params_store = ctx
+            .multi_store_mut()
+            .get_mutable_kv_store(self.params_keeper.store_key_get());
 
         let mut store = params_store
             .get_mutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());

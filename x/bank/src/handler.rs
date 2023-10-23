@@ -1,7 +1,8 @@
 use database::Database;
 use gears::{
     error::AppError,
-    x::params::ParamsSubspaceKey, types::context::{tx_context::TxContext, init_context::InitContext},
+    types::context::{init_context::InitContext, tx_context::TxContext},
+    x::params::ParamsSubspaceKey,
 };
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
