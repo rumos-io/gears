@@ -89,7 +89,7 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
     pub fn set_consensus_params<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         params: ConsensusParams,
     ) {
         let mut store = self
