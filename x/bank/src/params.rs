@@ -28,8 +28,8 @@ pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
     pub fn get<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params {
         let store = self
-        .params_keeper
-        .get_raw_subspace(&ctx, &self.params_subspace_key);
+            .params_keeper
+            .get_raw_subspace(&ctx, &self.params_subspace_key);
 
         let default_send_enabled: bool = String::from_utf8(
             store
