@@ -11,6 +11,7 @@ proto-types = {path = "../proto-types"}
 database = {path = "../database"}
 trees = {path = "../trees"}
 
+thiserror = "1.0.49"
 cosmwasm-std = "1.1.5"
 ibc-proto = {workspace = true}
 prost = {version = "0.11"}
