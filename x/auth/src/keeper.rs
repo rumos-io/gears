@@ -17,7 +17,6 @@ use proto_types::AccAddress;
 use store::StoreKey;
 
 use crate::{AuthParamsKeeper, GenesisState};
-use ibc_relayer::util::lock::LockExt;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
@@ -38,8 +37,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     }
 
     fn has_account<DB: Database>(&self, ctx: &Context<DB, SK>, addr: &AccAddress) -> bool {
-        let lock = ctx.multi_store().acquire_read();
-        let auth_store = lock.get_kv_store(&self.store_key);
+        let auth_store = ctx.multi_store().get_kv_store(&self.store_key);
 
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
@@ -50,8 +48,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
         ctx: &Context<DB, SK>,
         addr: &AccAddress,
     ) -> Option<Account> {
-        let lock = ctx.multi_store().acquire_read();
-        let auth_store = lock.get_kv_store(&self.store_key);
+        let auth_store = ctx.multi_store().get_kv_store(&self.store_key);
 
         let key = create_auth_store_key(addr.to_owned());
         let account = auth_store.get(&key);
@@ -67,8 +64,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     }
 
     fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
-        let mut lock = ctx.multi_store().acquire_write();
-        let auth_store = lock.get_mutable_kv_store(&self.store_key);
+        let auth_store = ctx.multi_store_mut().get_mutable_kv_store(&self.store_key);
 
         let key = create_auth_store_key(acct.get_address().to_owned());
 
@@ -127,8 +123,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     fn get_next_account_number<DB: Database>(&self, ctx: &mut Context<DB, SK>) -> u64 {
-        let mut lock = ctx.multi_store().acquire_write();
-        let auth_store = lock.get_mutable_kv_store(&self.store_key);
+        let auth_store = ctx.multi_store_mut().get_mutable_kv_store(&self.store_key);
 
         // NOTE: The next available account number is what's stored in the KV store
         let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
@@ -149,8 +144,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     pub fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
-        let mut lock = ctx.multi_store().acquire_write();
-        let auth_store = lock.get_mutable_kv_store(&self.store_key);
+        let auth_store = ctx.multi_store_mut().get_mutable_kv_store(&self.store_key);
 
         let key = create_auth_store_key(acct.get_address().to_owned());
 

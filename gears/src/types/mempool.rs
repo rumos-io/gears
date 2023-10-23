@@ -8,9 +8,9 @@ pub struct Error;
 
 pub trait MempoolTrait {
     /// Insert attempts to insert a `Tx` into the app-side mempool returning an error upon failure.
-    fn insert_tx<'a, T: Database, SK: StoreKey, M: Message>(
+    fn insert_tx<'a, 'b, T: Database, SK: StoreKey, M: Message>(
         &self,
-        ctx: &Context<'a, T, SK>,
+        ctx: &Context<'a, 'b, T, SK>,
         tx: &Tx<M>,
     ) -> Result<(), Error>;
     // Select returns an Iterator over the app-side mempool. If txs are specified,
@@ -27,9 +27,9 @@ pub trait MempoolTrait {
 pub struct MemPool; //TODO: Discuss real implementation
 
 impl MempoolTrait for MemPool {
-    fn insert_tx<'a, T: Database, SK: StoreKey, M: Message>(
+    fn insert_tx<'a, 'b, T: Database, SK: StoreKey, M: Message>(
         &self,
-        _ctx: &Context<'a, T, SK>,
+        _ctx: &Context<'a, 'b, T, SK>,
         _tx: &Tx<M>,
     ) -> Result<(), Error> {
         todo!()

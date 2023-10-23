@@ -4,6 +4,7 @@
         "./x/auth/Cargo.toml",
         "./x/auth/Cargo.toml",
         "./gears/Cargo.toml",
-        "./x/auth/Cargo.toml"
+        "./x/auth/Cargo.toml",
+        "./gears/Cargo.toml"
     ]
 }

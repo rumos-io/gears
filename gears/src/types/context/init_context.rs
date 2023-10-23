@@ -1,14 +1,14 @@
 use database::Database;
 use tendermint_informal::abci::Event;
 
-use store_crate::StoreKey;
+use store_crate::{MultiStore, StoreKey};
 
 use crate::types::gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter};
 
-use super::context::{ContextTrait, EventManager, MS};
+use super::context::{ContextTrait, EventManager};
 
-pub struct InitContext<T: Database, SK: StoreKey> {
-    pub multi_store: MS<T, SK>,
+pub struct InitContext<'a, T: Database, SK: StoreKey> {
+    pub multi_store: &'a mut MultiStore<T, SK>,
     height: u64,
     pub events: Vec<Event>,
     pub chain_id: String,
@@ -17,8 +17,8 @@ pub struct InitContext<T: Database, SK: StoreKey> {
     event_manager: EventManager,       //TODO: Trait
 }
 
-impl<'a, T: Database, SK: StoreKey> InitContext<T, SK> {
-    pub fn new(multi_store: MS<T, SK>, height: u64, chain_id: String) -> Self {
+impl<'a, T: Database, SK: StoreKey> InitContext<'a, T, SK> {
+    pub fn new(multi_store: &'a mut MultiStore<T, SK>, height: u64, chain_id: String) -> Self {
         InitContext {
             multi_store,
             height,
@@ -30,7 +30,7 @@ impl<'a, T: Database, SK: StoreKey> InitContext<T, SK> {
         }
     }
 
-    pub fn multi_store(&self) -> &MS<T, SK> {
+    pub fn multi_store(&self) -> &MultiStore<T, SK> {
         &self.multi_store
     }
 
@@ -43,7 +43,7 @@ impl<'a, T: Database, SK: StoreKey> InitContext<T, SK> {
     }
 }
 
-impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for InitContext<T, SK> {
+impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for InitContext<'a, T, SK> {
     fn gas_meter(&self) -> &dyn GasMeter {
         &self.gas_meter
     }
@@ -70,5 +70,9 @@ impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for InitContext<T, SK> {
 
     fn append_events(&mut self, mut events: Vec<Event>) {
         self.events.append(&mut events)
+    }
+
+    fn multi_store_mut(&mut self) -> &mut MultiStore<T, SK> {
+        &mut self.multi_store
     }
 }
