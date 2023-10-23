@@ -27,7 +27,7 @@ use tracing::{error, info};
 
 use crate::types::{
     context::{
-        context::{Context, ContextTrait, ExecMode},
+        context::{Context, ContextTrait, EventManager, ExecMode},
         init_context::InitContext,
         query_context::QueryContext,
         tx_context::TxContext,
@@ -236,7 +236,7 @@ impl<
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
         match self.run_tx(request.tx, ExecMode::ModeFinalize) {
-            Ok((_gas_info, _product, events)) => ResponseDeliverTx {
+            Ok((_gas_info, _product, events, _priority)) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
@@ -454,11 +454,13 @@ impl<
         self.handler.handle_query(&ctx, request.clone())
     }
 
+
+
     fn run_tx(
         &self,
         raw: Bytes,
         mode: ExecMode,
-    ) -> Result<(GasInfo, Product, Vec<tendermint_informal::abci::Event>), RunTxError> {
+    ) -> Result<(GasInfo, Product, Vec<tendermint_informal::abci::Event>, Priority), RunTxError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
@@ -478,71 +480,68 @@ impl<
             return Err(RunTxError::OutOfGas);
         }
 
-        // defer func() {
-        //     if r := recover(); r != nil {
-        //         recoveryMW := newOutOfGasRecoveryMiddleware(gasWanted, ctx, app.runTxRecoveryMiddleware)
-        //         err, result = processRecovery(r, recoveryMW), nil
-        //     }
-    
-        //     gInfo = sdk.GasInfo{GasWanted: gasWanted, GasUsed: ctx.GasMeter().GasConsumed()}
-        // }()
-        
-        {
-            let mut ctx = Context::TxContext(&mut inner_ctx);
-
-            match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
-                Ok(_) => {
-                    ctx.multi_store_mut().write_then_clear_tx_caches();
-                    Ok(())
-                }
-                Err(e) => {
-                    ctx.multi_store_mut().clear_tx_caches();
-                    Err(e)
-                }
-            }?
-        }
-
-        
-
         // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
-        // TODO
+        // TODO recovery. GO code uses recover on panic.
+
+        let ( _gas_wanted, priority, _abci_events) = {
+            let (mut ante_ctx, ms_cache) = inner_ctx.cache_tx_context(&raw);
+            ante_ctx.event_manager_set(EventManager);
+
+            let _msg = tx_with_raw.tx.get_msgs();
+
+            // self.handler.handle_tx(&mut ante_ctx, &msg[0])
+            // .map_err(|e| RunTxError::CustomError(e.to_string()))?; // should return new ctx
+
+            // At this point, newCtx.MultiStore() is a store branch, or something else
+            // replaced by the AnteHandler. We want the original multistore.
+            //
+            // Also, in the case of the tx aborting, we need to track gas consumed via
+            // the instantiated gas meter in the AnteHandler, so we update the context prior to returning.
+
+            // if !newCtx.IsZero() {
+            //     ctx = newCtx.WithMultiStore(ms)
+            // }
+
+            // GasMeter expected to be set in AnteHandler
+            let gas_wanted = ante_ctx.gas_meter().limit();
+
+            ms_cache.write();
+
+            (gas_wanted, Priority( ante_ctx.priority ), ante_ctx.events)
+        };
 
         let events = {
-            match self.run_msgs(&mut inner_ctx, tx_with_raw.tx.get_msgs()) {
-                Ok(_) => {
-                    let events = inner_ctx.events().clone();
-                    inner_ctx.multi_store_mut().write_then_clear_tx_caches();
-                    Ok(events)
-                }
-                Err(e) => {
-                    inner_ctx.multi_store_mut().clear_tx_caches();
-                    Err(RunTxError::CustomError(e.to_string())) //TODO proper error for ante
-                }
-            }?
+            let (mut run_msg_ctx, _ms_cache) = inner_ctx.cache_tx_context(&raw);
+
+            {
+                let mut ctx = Context::TxContext(&mut run_msg_ctx);
+
+                match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
+                    Ok(_) => {
+                        ctx.multi_store_mut().write_then_clear_tx_caches();
+                        Ok(())
+                    }
+                    Err(e) => {
+                        ctx.multi_store_mut().clear_tx_caches();
+                        Err(e)
+                    }
+                }?
+            }
+
+            {
+                match self.run_msgs(&mut run_msg_ctx, tx_with_raw.tx.get_msgs()) {
+                    Ok(_) => {
+                        let events = run_msg_ctx.events().clone();
+                        run_msg_ctx.multi_store_mut().write_then_clear_tx_caches();
+                        Ok(events)
+                    }
+                    Err(e) => {
+                        run_msg_ctx.multi_store_mut().clear_tx_caches();
+                        Err(RunTxError::CustomError(e.to_string())) //TODO proper error for ante
+                    }
+                }?
+            }
         };
-
-        let _gas_wanted = { 
-            // 863 - 901
-            // let mut ctx_innter = (&mut ctx).into(); // fixes drop tmp value issue
-
-            // let (mut ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx_innter, &raw);
-            // ante_ctx.event_manager_set(EventManager); // In cosmos sdk it returns new pointer with empty event
-
-            // newCtx, err := app.anteHandler(anteCtx, tx, mode == execModeSimulate)
-
-            // ctx = newCtx.WithMultiStore(ms)
-
-            // let events = ctx_innter.events;
-            // GasMeter expected to be set in AnteHandler
-            // let gas_wanted = ctx_innter.gas_meter().limit();
-
-            // ms_cache.write();
-            // anteEvents = events.ToABCIEvents()
-
-            // gas_wanted
-            1
-        };
-
 
         {
             if mode == ExecMode::Check {
@@ -563,51 +562,12 @@ impl<
             }
         }
 
-        
-
-        // Cosmos.sdk creates a new Context based off of the existing Context with a MultiStore branch
-        // in case message processing fails. At this point, the MultiStore is a branch of a branch.
-        {
-            // let mut ctx = Context::TxContext(&mut inner_ctx);
-            let (mut _ante_ctx, _ms_cache) = inner_ctx.cache_tx_context(&raw);
-
-            let _msg = tx_with_raw.tx.get_msgs(); // TODO: Cosmos uses v2 is there difference?
-
-            // if app.postHandler != nil {
-            //     // The runMsgCtx context currently contains events emitted by the ante handler.
-            //     // We clear this to correctly order events without duplicates.
-            //     // Note that the state is still preserved.
-            //     postCtx := runMsgCtx.WithEventManager(sdk.NewEventManager())
-
-            //     newCtx, err := app.postHandler(postCtx, tx, mode == execModeSimulate, err == nil)
-            //     if err != nil {
-            //         return gInfo, nil, anteEvents, err
-            //     }
-
-            //     result.Events = append(result.Events, newCtx.EventManager().ABCIEvents()...)
-            // }
-
-            // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L808C3-L808C3
-            if mode == ExecMode::ModeFinalize {
-                // ctx_inner
-                // .block_gas_meter_mut()
-                // .consume_gas
-                // (
-                //     ctx.gas_meter().gas_consumed_to_limit(), "block gas meter".to_string(),
-                // );
-
-                // ms_cache.write();
-
-                // TODO: borrow issue
-            }
-
-            // if len(anteEvents) > 0 && (mode == execModeFinalize || mode == execModeSimulate) {
-            // 	// append the events in the order of occurrence
-            // 	result.Events = append(anteEvents, result.Events...)
-            // }
+        if mode == ExecMode::Deliver {
+            let gas = inner_ctx.gas_meter().gas_consumed_to_limit();
+            inner_ctx
+                .block_gas_meter_mut()
+                .consume_gas(gas, "block gas meter".to_string())?;
         }
-
-
 
         Ok((
             GasInfo {
@@ -616,6 +576,7 @@ impl<
             },
             Product::default(),
             events,
+            priority,
         ))
     }
 
@@ -644,3 +605,5 @@ impl<
         return Ok(());
     }
 }
+
+pub struct Priority(pub i64); // TODO: Move newtype to other place

@@ -71,6 +71,8 @@ pub enum RunTxError {
     TxValidation(#[from] TxValidationError),
     #[error("no block gas left to run tx")]
     OutOfGas,
+    #[error("{0}")]
+    GasErrors(#[from] crate::types::gas::gas_meter::GasErrors),
 }
 
 impl RunTxError {

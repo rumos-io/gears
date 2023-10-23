@@ -115,17 +115,6 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
     pub fn cache_multi_store(&self) -> CacheMS {
         // https://github.com/cosmos/cosmos-sdk/blob/c3bc5c82eb43f4cca91144c375f104b03b333f5a/store/rootmulti/store.go#L539C6-L539C6
         unimplemented!() // TODO
-                         //     stores := make(map[types.StoreKey]types.CacheWrapper)
-                         // for k, v := range rs.stores {
-                         // 	store := types.KVStore(v)
-                         // 	// Wire the listenkv.Store to allow listeners to observe the writes from the cache store,
-                         // 	// set same listeners on cache store will observe duplicated writes.
-                         // 	if rs.ListeningEnabled(k) {
-                         // 		store = listenkv.NewStore(store, k, rs.listeners[k])
-                         // 	}
-                         // 	stores[k] = store
-                         // }
-                         // return cachemulti.NewStore(rs.db, stores, rs.keysByName, rs.traceWriter, rs.getTracingContext())
     }
 }
 

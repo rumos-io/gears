@@ -24,6 +24,8 @@ pub enum ExecMode {
     VoteExtension,
     /// Finalize a block proposal
     ModeFinalize,
+    /// Deliver a transaction
+    Deliver,
 }
 
 pub struct EventManager; //TODO: Replace with implementation

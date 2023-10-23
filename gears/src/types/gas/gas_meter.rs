@@ -1,9 +1,11 @@
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd)]
 pub struct Gas(pub u64);
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum GasErrors {
+    #[error("{0}")]
     ErrorOutOfGas(String),
+    #[error("{0}")]
     ErrorGasOverflow(String),
 }
 

@@ -2,7 +2,7 @@ use bytes::Bytes;
 use database::Database;
 use tendermint_informal::{abci::Event, block::Header};
 
-use store_crate::{MultiStore, StoreKey, CacheMS};
+use store_crate::{CacheMS, MultiStore, StoreKey};
 
 use crate::types::gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter};
 
@@ -12,6 +12,7 @@ pub struct TxContext<'a, T: Database, SK: StoreKey> {
     multi_store: &'a mut MultiStore<T, SK>,
     height: u64,
     pub events: Vec<Event>,
+    pub priority: i64,
     header: Header,
     _tx_bytes: Vec<u8>,
     gas_meter: InfiniteGasMeter,       //TODO: Trait
@@ -36,6 +37,7 @@ impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
             gas_meter: InfiniteGasMeter::new(),
             block_gas_meter: InfiniteGasMeter::new(),
             event_manager: EventManager,
+            priority: 0,
         }
     }
 
@@ -59,11 +61,7 @@ impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
         &self.events
     }
 
-
-    pub fn cache_tx_context(
-        &self,
-        _tx_bytes: &Bytes,
-    ) -> (TxContext<'_, T, SK>, CacheMS) {
+    pub fn cache_tx_context(&self, _tx_bytes: &Bytes) -> (TxContext<'_, T, SK>, CacheMS) {
         let ms_cache = self.multi_store.cache_multi_store();
 
         if ms_cache.is_tracing_enabled() {
@@ -73,8 +71,7 @@ impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
         (self.with_multi_store( /* ms_cache */ ), ms_cache)
     }
 
-    pub fn with_multi_store(&self ) -> Self
-    {
+    pub fn with_multi_store(&self) -> Self {
         unimplemented!()
     }
 }
