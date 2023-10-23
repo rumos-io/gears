@@ -111,12 +111,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
     }
 
     pub fn set<DB: Database>(&self, ctx: &mut Context<DB, SK>, params: Params) {
-        let params_store = ctx
-            .multi_store_mut()
-            .get_mutable_kv_store(self.params_keeper.store_key_get());
-
-        let mut store = params_store
-            .get_mutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());
+        let mut store = self
+            .params_keeper
+            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
 
         store.set(
             KEY_MAX_MEMO_CHARACTERS.into(),
