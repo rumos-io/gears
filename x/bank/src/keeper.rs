@@ -11,6 +11,7 @@ use gears::{
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
+use ibc_relayer::util::lock::LockExt;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -80,28 +81,30 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
-        self.bank_params_keeper
-            .set(&mut ctx.as_any(), genesis.params);
-
-        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        self.bank_params_keeper.set(&mut ctx.into(), genesis.params);
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
-        for balance in genesis.balances {
-            let prefix = create_denom_balance_prefix(balance.address);
-            let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
+        {
+            let mut lock = ctx.multi_store().acquire_write();
+            let bank_store = lock.get_mutable_kv_store(&self.store_key);
 
-            for coin in balance.coins {
-                denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
-                let zero = Uint256::zero();
-                let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
-                total_supply.insert(coin.denom, coin.amount + current_balance);
+            for balance in genesis.balances {
+                let prefix = create_denom_balance_prefix(balance.address);
+                let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
+
+                for coin in balance.coins {
+                    denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
+                    let zero = Uint256::zero();
+                    let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
+                    total_supply.insert(coin.denom, coin.amount + current_balance);
+                }
             }
         }
 
         // TODO: does the SDK sort these?
         for coin in total_supply {
             self.set_supply(
-                &mut ctx.as_any(),
+                &mut ctx.into(),
                 Coin {
                     denom: coin.0,
                     amount: coin.1,
@@ -202,59 +205,64 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     ) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
-        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
         let mut events = vec![];
 
         let from_address = msg.from_address;
         let to_address = msg.to_address;
 
-        for send_coin in msg.amount {
-            let mut from_account_store =
-                Self::get_address_balances_store(bank_store, &from_address);
-            let from_balance = from_account_store
-                .get(send_coin.denom.to_string().as_bytes())
-                .ok_or(AppError::Send("Insufficient funds".into()))?;
+        {
+            let mut lock = ctx.multi_store().acquire_write();
+            let bank_store = lock.get_mutable_kv_store(&self.store_key);
 
-            let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
-                .expect("invalid data in database - possible database corruption");
+            for send_coin in msg.amount {
+                let mut from_account_store =
+                    Self::get_address_balances_store(bank_store, &from_address);
+                let from_balance = from_account_store
+                    .get(send_coin.denom.to_string().as_bytes())
+                    .ok_or(AppError::Send("Insufficient funds".into()))?;
 
-            if from_balance.amount < send_coin.amount {
-                return Err(AppError::Send("Insufficient funds".into()));
+                let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
+                    .expect("invalid data in database - possible database corruption");
+
+                if from_balance.amount < send_coin.amount {
+                    return Err(AppError::Send("Insufficient funds".into()));
+                }
+
+                from_balance.amount = from_balance.amount - send_coin.amount;
+
+                from_account_store.set(
+                    send_coin.denom.clone().to_string().into(),
+                    from_balance.encode_vec(),
+                );
+
+                //TODO: if balance == 0 then denom should be removed from store
+
+                let mut to_account_store =
+                    Self::get_address_balances_store(bank_store, &to_address);
+                let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
+
+                let mut to_balance: Coin = match to_balance {
+                    Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
+                        .expect("invalid data in database - possible database corruption"),
+                    None => Coin {
+                        denom: send_coin.denom.clone(),
+                        amount: Uint256::zero(),
+                    },
+                };
+
+                to_balance.amount = to_balance.amount + send_coin.amount;
+
+                to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
+
+                events.push(Event::new(
+                    "transfer",
+                    vec![
+                        ("recipient", String::from(to_address.clone())).index(),
+                        ("sender", String::from(from_address.clone())).index(),
+                        ("amount", send_coin.amount.into()).index(),
+                    ],
+                ));
             }
-
-            from_balance.amount = from_balance.amount - send_coin.amount;
-
-            from_account_store.set(
-                send_coin.denom.clone().to_string().into(),
-                from_balance.encode_vec(),
-            );
-
-            //TODO: if balance == 0 then denom should be removed from store
-
-            let mut to_account_store = Self::get_address_balances_store(bank_store, &to_address);
-            let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
-
-            let mut to_balance: Coin = match to_balance {
-                Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
-                    .expect("invalid data in database - possible database corruption"),
-                None => Coin {
-                    denom: send_coin.denom.clone(),
-                    amount: Uint256::zero(),
-                },
-            };
-
-            to_balance.amount = to_balance.amount + send_coin.amount;
-
-            to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
-
-            events.push(Event::new(
-                "transfer",
-                vec![
-                    ("recipient", String::from(to_address.clone())).index(),
-                    ("sender", String::from(from_address.clone())).index(),
-                    ("amount", send_coin.amount.into()).index(),
-                ],
-            ));
         }
 
         ctx.append_events(events);
@@ -267,7 +275,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     pub fn set_supply<DB: Database>(&self, ctx: &mut Context<DB, SK>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
-        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        let mut lock = ctx.multi_store().acquire_write();
+        let bank_store = lock.get_mutable_kv_store(&self.store_key);
+
         let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
 
         supply_store.set(

@@ -1,4 +1,5 @@
 use database::Database;
+use ibc_relayer::util::lock::LockExt;
 use serde::{Deserialize, Serialize};
 use store_crate::StoreKey;
 use tendermint_proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
@@ -95,9 +96,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
-        let mut store = self
-            .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+        let mut binding = ctx.multi_store().acquire_write();
+        let params_store = binding.get_mutable_kv_store(self.params_keeper.store_key_get());
+
+        let mut store = params_store
+            .get_mutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());
 
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))

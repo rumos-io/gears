@@ -1,7 +1,7 @@
 use database::Database;
 use gears::{
     error::AppError,
-    types::context::{InitContext, TxContext},
+    types::context::{ContextTrait, InitContext, TxContext},
     x::params::ParamsSubspaceKey,
 };
 use ibc_proto::protobuf::Protobuf;
@@ -32,7 +32,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         match msg {
             Message::Send(msg_send) => self
                 .keeper
-                .send_coins_from_account_to_account(&mut ctx.as_any(), msg_send),
+                .send_coins_from_account_to_account(&mut ctx.into(), msg_send),
         }
     }
 

@@ -4,7 +4,7 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{Context, InitContext, QueryContext},
+    types::context::{Context, ContextTrait, InitContext, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
@@ -17,6 +17,7 @@ use proto_types::AccAddress;
 use store::StoreKey;
 
 use crate::{AuthParamsKeeper, GenesisState};
+use ibc_relayer::util::lock::LockExt;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
@@ -37,7 +38,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     }
 
     fn has_account<DB: Database>(&self, ctx: &Context<DB, SK>, addr: &AccAddress) -> bool {
-        let auth_store = ctx.get_kv_store(&self.store_key);
+        let lock = ctx.multi_store().acquire_read();
+        let auth_store = lock.get_kv_store(&self.store_key);
+
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
     }
@@ -47,7 +50,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
         ctx: &Context<DB, SK>,
         addr: &AccAddress,
     ) -> Option<Account> {
-        let auth_store = ctx.get_kv_store(&self.store_key);
+        let lock = ctx.multi_store().acquire_read();
+        let auth_store = lock.get_kv_store(&self.store_key);
+
         let key = create_auth_store_key(addr.to_owned());
         let account = auth_store.get(&key);
 
@@ -62,7 +67,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     }
 
     fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
-        let auth_store = ctx.get_mutable_kv_store(&self.store_key);
+        let mut lock = ctx.multi_store().acquire_write();
+        let auth_store = lock.get_mutable_kv_store(&self.store_key);
+
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec());
@@ -87,16 +94,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
         //TODO: sdk sanitizes accounts
-        self.auth_params_keeper
-            .set(&mut ctx.as_any(), genesis.params);
+        self.auth_params_keeper.set(&mut ctx.into(), genesis.params);
 
         for mut acct in genesis.accounts {
-            acct.account_number = self.get_next_account_number(&mut ctx.as_any());
-            self.set_account(&mut ctx.as_any(), Account::Base(acct));
+            acct.account_number = self.get_next_account_number(&mut ctx.into());
+            self.set_account(&mut ctx.into(), Account::Base(acct));
         }
 
         // Create the fee collector account
-        self.check_create_new_module_account(&mut ctx.as_any(), &Module::FeeCollector);
+        self.check_create_new_module_account(&mut ctx.into(), &Module::FeeCollector);
     }
 
     pub fn query_account<DB: Database>(
@@ -121,7 +127,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     fn get_next_account_number<DB: Database>(&self, ctx: &mut Context<DB, SK>) -> u64 {
-        let auth_store = ctx.get_mutable_kv_store(&self.store_key);
+        let mut lock = ctx.multi_store().acquire_write();
+        let auth_store = lock.get_mutable_kv_store(&self.store_key);
 
         // NOTE: The next available account number is what's stored in the KV store
         let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
@@ -142,7 +149,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     pub fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
-        let auth_store = ctx.get_mutable_kv_store(&self.store_key);
+        let mut lock = ctx.multi_store().acquire_write();
+        let auth_store = lock.get_mutable_kv_store(&self.store_key);
+
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec());

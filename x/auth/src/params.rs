@@ -3,6 +3,7 @@ use gears::{
     types::context::Context,
     x::{auth::Params, params::ParamsSubspaceKey},
 };
+use ibc_relayer::util::lock::LockExt;
 //use params_module::ParamsSubspaceKey;
 // use proto_messages::utils::serialize_number_to_string;
 // use serde::{Deserialize, Serialize};
@@ -79,9 +80,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
     }
 
     pub fn get<T: Database>(&self, ctx: &Context<T, SK>) -> Params {
-        let store = self
-            .params_keeper
-            .get_raw_subspace(ctx, &self.params_subspace_key);
+        let binding = ctx.multi_store().acquire_read();
+        let params_store = binding.get_kv_store(self.params_keeper.store_key_get());
+
+        let store = params_store
+            .get_immutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());
 
         let raw = Self::get_raw_param(&KEY_MAX_MEMO_CHARACTERS, &store);
         let max_memo_characters = Self::parse_param(raw);
@@ -108,9 +111,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
     }
 
     pub fn set<DB: Database>(&self, ctx: &mut Context<DB, SK>, params: Params) {
-        let mut store = self
-            .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+        let mut binding = ctx.multi_store().acquire_write();
+        let params_store = binding.get_mutable_kv_store(self.params_keeper.store_key_get());
+
+        let mut store = params_store
+            .get_mutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());
 
         store.set(
             KEY_MAX_MEMO_CHARACTERS.into(),

@@ -12,6 +12,10 @@ use store::StoreKey;
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
+/// ## AnteHandler
+/// The AnteHandler is a special handler that implements the AnteHandler interface
+/// and is used to authenticate the transaction before the transaction's internal messages are processed.
+/// The AnteHandler is run for every transaction during CheckTx and FinalizeBlock
 pub struct Handler<SK: StoreKey, PSK: ParamsSubspaceKey> {
     keeper: Keeper<SK, PSK>,
 }
