@@ -53,6 +53,11 @@ impl<'a, T: Database, SK: StoreKey> TxContext<'a, T, SK> {
     pub fn height(&self) -> u64 {
         self.height
     }
+
+    pub fn events(&self) -> &Vec<Event>
+    {
+        &self.events
+    }
 }
 
 impl<'a, T: Database, SK: StoreKey> ContextTrait<T, SK> for TxContext<'a, T, SK> {

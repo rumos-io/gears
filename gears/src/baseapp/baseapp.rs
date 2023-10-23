@@ -26,7 +26,7 @@ use tracing::{error, info};
 
 use crate::types::{
     context::{
-        context::{ContextTrait, EventManager, ExecMode},
+        context::{ContextTrait, EventManager, ExecMode, Context},
         init_context::InitContext,
         query_context::QueryContext,
         tx_context::TxContext,
@@ -470,7 +470,7 @@ impl<
 
         let mut multi_store_lock = self.multi_store.acquire_write();
 
-        let mut ctx = TxContext::new(
+        let mut inner_ctx = TxContext::new(
             &mut multi_store_lock,
             self.get_block_height(),
             self.get_block_header()
@@ -478,36 +478,29 @@ impl<
             raw.clone().into(),
         );
 
-        // match self
-        //     .base_ante_handler
-        //     .run(&mut (&mut ctx).into(), &tx_with_raw)
-        // {
-        //     Ok(_) => multi_store_lock.write_then_clear_tx_caches(),
-        //     Err(e) => {
-        //         multi_store_lock.clear_tx_caches();
-        //         return Err(e);
-        //     }
-        // };
+       {
+        let mut ctx = Context::TxContext(&mut inner_ctx);
 
-        // ctx = TxContext::new(
-        //     &mut multi_store_lock,
-        //     self.get_block_height(),
-        //     self.get_block_header()
-        //         .expect("block header is set in begin block"),
-        //     raw.clone().into(),
-        // );
+        match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
+            Ok(_) => ctx.multi_store_mut().write_then_clear_tx_caches(),
+            Err(e) => {
+                ctx.multi_store_mut().clear_tx_caches();
+                return Err(e);
+            }
+        };
+       }
 
         // only run the tx if there is block gas remaining
-        if mode == ExecMode::ModeFinalize && ctx.block_gas_meter().is_out_of_gas() {
+        if mode == ExecMode::ModeFinalize && inner_ctx.block_gas_meter().is_out_of_gas() {
             // return gInfo, nil, nil, errorsmod.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
             todo!()
         }
         // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
         // TODO
 
-        let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
+        let events = match self.run_msgs(&mut inner_ctx, tx_with_raw.tx.get_msgs()) {
             Ok(_) => {
-                let events = ctx.events.clone(); //TODO: Think how to remove clone
+                let events = inner_ctx.events().clone(); //TODO: Think how to remove clone
                 multi_store_lock.write_then_clear_tx_caches();
                 Ok(events)
             }

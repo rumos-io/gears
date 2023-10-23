@@ -62,6 +62,14 @@ impl<T: Database, SK: StoreKey> Context<'_, '_, T, SK> {
         }
     }
 
+    pub fn events(&self) -> &Vec<Event>
+    {
+        match self {
+            Context::TxContext(ctx) => &ctx.events,
+            Context::InitContext(ctx) => &ctx.events,
+        }
+    }
+
     pub fn push_event(&mut self, event: Event) {
         match self {
             Context::TxContext(ctx) => ctx.push_event(event),
