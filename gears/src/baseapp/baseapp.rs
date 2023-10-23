@@ -6,6 +6,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
+use sha2::digest::typenum::Mod;
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
@@ -23,6 +24,8 @@ use tendermint_proto::abci::{
 };
 use tracing::{error, info};
 
+use crate::types::context::Context;
+use crate::{baseapp::state::StateEnum, types::context::ExecMode};
 use crate::{
     error::AppError,
     types::context::{InitContext, QueryContext, TxContext},
@@ -185,7 +188,7 @@ impl<
         }
     }
 
-    /// CheckTx implements the ABCI interface and executes a tx in CheckTx mode. In
+    /// CheckTx implements the `ABCI` interface and executes a tx in CheckTx mode. In
     /// CheckTx mode, messages are not executed. This means messages are only validated
     /// and only the AnteHandler is executed. State is persisted to the BaseApp's
     /// internal CheckTx state if the AnteHandler passes. Otherwise, the ResponseCheckTx
@@ -194,14 +197,14 @@ impl<
     fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
         info!("Got check tx request");
 
-        let _exec_mode = match request.r#type {
-            0 => (),                        //NEW
-            1 => (),                        //RECHECK
-            _ => return Default::default(), // TODO: Create error like
+        let exec_mode = match request.r#type {
+            0 => ExecMode::ExecModeCheck,   //NEW
+            1 => ExecMode::ExecModeReCheck, //RECHECK
+            _ => return Default::default(), // TODO: Create error like or Error for this case
         };
 
-        let result = match self.run_tx(request.tx /* exec_mode*/) {
-            Ok(_) => ResponseCheckTx {
+        let result = match self.run_tx(request.tx, exec_mode) {
+            Ok(result) => ResponseCheckTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
@@ -222,7 +225,7 @@ impl<
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
-        match self.run_tx(request.tx) {
+        match self.run_tx(request.tx, ExecMode::ExecModeFinalize) {
             Ok(events) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
@@ -425,6 +428,40 @@ impl<
         return *height;
     }
 
+    // https://github.com/cosmos/cosmos-sdk/blob/3a04a9f7d7e4beca67e6690c5c717c20863894aa/baseapp/baseapp.go#L611
+    fn get_state(&self, mode: ExecMode) -> StateEnum {
+        todo!()
+    }
+
+    // https://github.com/cosmos/cosmos-sdk/blob/4929cb3e3ce5ce5eac7ce9c3a75e67c9379b4724/baseapp/baseapp.go#L636
+    fn get_context_for_tx(
+        &self,
+        mode: ExecMode,
+        raw: Bytes,
+    ) -> Result<Context<RocksDB, SK>, AppError> {
+        // let model_state = self.get_state( mode );
+        // if model_state == StateEnum::None
+        // {
+        //     return  Err( AppError::TxValidation( "".to_string() ) )
+        // }
+        //
+        // //ctx := modeState.ctx.
+        // // 		WithTxBytes(txBytes)
+        //
+        // //ctx = ctx.WithConsensusParams(app.GetConsensusParams(ctx))
+        //
+        // if mode == ExecMode::ExecModeReCheck{
+        //     // ctx = ctx.WithIsReCheckTx(true)
+        // }
+        //
+        // if mode == ExecMode::ExecModeSimulate
+        // {
+        //     // ctx, _ = ctx.CacheContext()
+        // }
+
+        todo!();
+    }
+
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
         let version: u32 = request.height.try_into().map_err(|_| {
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
@@ -439,7 +476,11 @@ impl<
         self.handler.handle_query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
+    fn run_tx(
+        &self,
+        raw: Bytes,
+        mode: ExecMode,
+    ) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e| AppError::TxParseError(e.to_string()))?;
 
@@ -473,6 +514,20 @@ impl<
                 .expect("block header is set in begin block"),
             raw.into(),
         );
+
+        // only run the tx if there is block gas remaining
+        // if mode == ExecMode::ExecModeFinalize && ctx.BlockGasMeter().IsOutOfGas() {
+        //     return gInfo, nil, nil, errorsmod.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
+        // } //TODO
+
+        let _deref_gas_consume = if mode == ExecMode::ExecModeFinalize {
+            // ctx.BlockGasMeter().ConsumeGas(
+            //     ctx.GasMeter().GasConsumedToLimit(), "block gas meter",
+            // )
+            //Some
+        } else {
+            //None
+        };
 
         match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
             Ok(_) => {
