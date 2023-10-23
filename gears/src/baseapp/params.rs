@@ -93,8 +93,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
         params: ConsensusParams,
     ) {
         let mut store = self
-        .params_keeper
-        .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+            .params_keeper
+            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
 
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))
