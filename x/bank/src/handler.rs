@@ -1,8 +1,7 @@
 use database::Database;
 use gears::{
     error::AppError,
-    types::context::{ContextTrait, InitContext, TxContext},
-    x::params::ParamsSubspaceKey,
+    x::params::ParamsSubspaceKey, types::context::{tx_context::TxContext, init_context::InitContext},
 };
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
@@ -38,7 +37,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn handle_query<DB: Database>(
         &self,
-        ctx: &gears::types::context::QueryContext<DB, SK>,
+        ctx: &gears::types::context::query_context::QueryContext<DB, SK>,
         query: tendermint_proto::abci::RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {

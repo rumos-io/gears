@@ -1,5 +1,6 @@
 use super::gas_meter::Gas;
 
+#[allow(dead_code)]
 pub struct GasConfig {
     has_cost: Gas,
     delete_cost: Gas,
