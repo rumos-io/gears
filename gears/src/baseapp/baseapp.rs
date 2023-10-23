@@ -482,32 +482,11 @@ impl<
             raw.clone().into(),
         );
 
-        // match self
-        //     .base_ante_handler
-        //     .run(&mut (&mut ctx).into(), &tx_with_raw)
-        // {
-        //     Ok(_) => multi_store_lock.write_then_clear_tx_caches(),
-        //     Err(e) => {
-        //         multi_store_lock.clear_tx_caches();
-        //         return Err(e);
-        //     }
-        // };
-
-        // ctx = TxContext::new(
-        //     &mut multi_store_lock,
-        //     self.get_block_height(),
-        //     self.get_block_header()
-        //         .expect("block header is set in begin block"),
-        //     raw.clone().into(),
-        // );
-
         // only run the tx if there is block gas remaining
         if mode == ExecMode::ModeFinalize && ctx.block_gas_meter().is_out_of_gas() {
             // return gInfo, nil, nil, errorsmod.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
             todo!()
         }
-        // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
-        // TODO
 
         let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
             Ok(_) => {
@@ -521,85 +500,6 @@ impl<
             }
         };
 
-        let _gas_wanted = {
-            // 863 - 901
-            // let mut ctx_innter = (&mut ctx).into(); // fixes drop tmp value issue
-
-            // let (mut ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx_innter, &raw);
-            // ante_ctx.event_manager_set(EventManager); // In cosmos sdk it returns new pointer with empty event
-
-            // newCtx, err := app.anteHandler(anteCtx, tx, mode == execModeSimulate)
-
-            // ctx = newCtx.WithMultiStore(ms)
-
-            // let events = ctx_innter.events;
-            // GasMeter expected to be set in AnteHandler
-            // let gas_wanted = ctx_innter.gas_meter().limit();
-
-            // ms_cache.write();
-            // anteEvents = events.ToABCIEvents()
-
-            // gas_wanted
-            1
-        };
-
-        // 903 - 914
-        // if mode == ExecMode::Check {
-        //     let ctx_inner = (&mut ctx).into();
-
-        //     if let Err(_val) = self.mempool.insert_tx(&ctx_inner, &tx_with_raw.tx) {
-        //         // return gInfo, nil, anteEvents, err
-        //     }
-        // } else if mode == ExecMode::ModeFinalize {
-        //     if let Err(_val) = self.mempool.remove_tx(&tx_with_raw.tx) {
-        //         // if var == ExNotFound...
-        //         // return gInfo, nil, anteEvents, fmt.Errorf("failed to remove tx from mempool: %w", err)
-        //     }
-        // }
-
-        // Create a new Context based off of the existing Context with a MultiStore branch
-        // in case message processing fails. At this point, the MultiStore
-        // is a branch of a branch.
-        {
-            // let mut ctx_inner = (&mut ctx).into(); // fixes drop tmp value issue
-
-            // let (mut _ante_ctx, ms_cache) = self.cache_tx_context(&mut ctx_inner, &raw);
-
-            // let _msg = tx_with_raw.tx.get_msgs(); // TODO: Cosmos uses v2
-
-            // if app.postHandler != nil {
-            //     // The runMsgCtx context currently contains events emitted by the ante handler.
-            //     // We clear this to correctly order events without duplicates.
-            //     // Note that the state is still preserved.
-            //     postCtx := runMsgCtx.WithEventManager(sdk.NewEventManager())
-
-            //     newCtx, err := app.postHandler(postCtx, tx, mode == execModeSimulate, err == nil)
-            //     if err != nil {
-            //         return gInfo, nil, anteEvents, err
-            //     }
-
-            //     result.Events = append(result.Events, newCtx.EventManager().ABCIEvents()...)
-            // }
-
-            // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L808C3-L808C3
-            if mode == ExecMode::ModeFinalize {
-                // ctx_inner
-                // .block_gas_meter_mut()
-                // .consume_gas
-                // (
-                //     ctx.gas_meter().gas_consumed_to_limit(), "block gas meter".to_string(),
-                // );
-
-                // ms_cache.write();
-
-                // TODO: borrow issue
-            }
-
-            // if len(anteEvents) > 0 && (mode == execModeFinalize || mode == execModeSimulate) {
-            // 	// append the events in the order of occurrence
-            // 	result.Events = append(anteEvents, result.Events...)
-            // }
-        }
 
         events
     }
