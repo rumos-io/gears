@@ -71,14 +71,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .expect("should be valid u64")
     }
 
-    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<DB>) -> Vec<u8> {
+    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<'_, DB>) -> Vec<u8> {
         store
             .get(key)
             .expect("key should be set in kv store")
             .clone()
     }
 
-    pub fn get<T: Database>(&self, ctx: &Context<T, SK>) -> Params {
+    pub fn get<T: Database>(&self, ctx: &Context<'_, '_, T, SK>) -> Params {
         let params_store = ctx
             .multi_store()
             .get_kv_store(self.params_keeper.store_key_get());
@@ -110,7 +110,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database>(&self, ctx: &mut Context<DB, SK>, params: Params) {
+    pub fn set<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, params: Params) {
         let mut store = self
             .params_keeper
             .get_mutable_raw_subspace(ctx, &self.params_subspace_key);

@@ -11,6 +11,7 @@ members = [
     "x/bank",
     "x/auth",
 ]
+resolver = "2"
 
 [workspace.dependencies]
 ibc-proto = { git = "https://github.com/joneskm/ibc-proto-rs" }

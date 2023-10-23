@@ -26,12 +26,12 @@ use tracing::{error, info};
 
 use crate::types::{
     context::{
-        context::{ContextTrait, EventManager, ExecMode},
+        context::{ContextTrait, ExecMode},
         init_context::InitContext,
         query_context::QueryContext,
         tx_context::TxContext,
     },
-    mempool::{MemPool, MempoolTrait},
+    mempool::MemPool,
 };
 use crate::{
     error::AppError,
@@ -46,20 +46,23 @@ use super::{
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<DB, SK>, msg: &M)
-        -> Result<(), AppError>;
+    fn handle_tx<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &M,
+    ) -> Result<(), AppError>;
 
     fn handle_begin_block<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
         request: RequestBeginBlock,
     );
 
-    fn handle_init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: G);
+    fn handle_init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
 
     fn handle_query<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         query: RequestQuery,
     ) -> Result<Bytes, AppError>;
 
@@ -74,6 +77,7 @@ pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send +
 pub trait Genesis: DeserializeOwned + Serialize + Clone + Send + Sync + 'static {}
 impl<T: DeserializeOwned + Serialize + Clone + Send + Sync + 'static> Genesis for T {}
 
+#[allow(dead_code)] //TODO: Remove
 #[derive(Debug, Clone)]
 pub struct BaseApp<
     SK: StoreKey,
@@ -602,7 +606,7 @@ impl<
 
     fn run_msgs<T: Database>(
         &self,
-        ctx: &mut TxContext<T, SK>,
+        ctx: &mut TxContext<'_, T, SK>,
         msgs: &Vec<M>,
     ) -> Result<(), AppError> {
         for msg in msgs {
