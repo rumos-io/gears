@@ -7,8 +7,7 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{Context, InitContext, QueryContext},
-    x::{auth::Module, params::ParamsSubspaceKey},
+    x::{auth::Module, params::ParamsSubspaceKey}, types::context::{context::Context, init_context::InitContext, query_context::QueryContext},
 };
 use ibc_proto::protobuf::Protobuf;
 use ibc_relayer::util::lock::LockExt;
