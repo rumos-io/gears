@@ -27,12 +27,9 @@ pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
     pub fn get<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params {
-        let params_store = ctx
-            .multi_store()
-            .get_kv_store(self.params_keeper.store_key_get());
-
-        let store = params_store
-            .get_immutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());
+        let store = self
+        .params_keeper
+        .get_raw_subspace(&ctx, &self.params_subspace_key);
 
         let default_send_enabled: bool = String::from_utf8(
             store
@@ -50,15 +47,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
     }
 
     pub fn set<DB: Database>(&self, ctx: &mut Context<DB, SK>, params: Params) {
-        // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
-        // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
-
-        let params_store = ctx
-            .multi_store_mut()
-            .get_mutable_kv_store(self.params_keeper.store_key_get());
-
-        let mut store = params_store
-            .get_mutable_prefix_store(self.params_subspace_key.name().as_bytes().to_vec());
+        let mut store = self
+            .params_keeper
+            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
 
         store.set(
             KEY_DEFAULT_SEND_ENABLED.into(),
