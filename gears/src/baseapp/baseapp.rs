@@ -1,17 +1,17 @@
 use bytes::Bytes;
 use database::{Database, RocksDB};
+use ibc_relayer::util::lock::LockExt;
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
     tx::v1beta1::{Message, TxWithRaw},
 };
 use proto_types::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
-use sha2::digest::typenum::Mod;
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
 };
-use store_crate::{MultiStore, StoreKey};
+use store_crate::{CacheMultiStore, MultiStore, StoreKey};
 use tendermint_abci::Application;
 use tendermint_informal::block::Header;
 use tendermint_proto::abci::{
@@ -24,7 +24,10 @@ use tendermint_proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::types::context::Context;
+use crate::types::{
+    context::{Context, ContextTrait},
+    gas::gas_meter::GasMeter,
+};
 use crate::{baseapp::state::StateEnum, types::context::ExecMode};
 use crate::{
     error::AppError,
@@ -109,11 +112,15 @@ impl<
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), request.chain_id);
+        let mut ctx = InitContext::new(
+            Arc::clone(&self.multi_store),
+            self.get_block_height(),
+            request.chain_id,
+        );
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
-                .set_consensus_params(&mut ctx.as_any(), params);
+                .set_consensus_params(&mut (&mut ctx).into(), params);
         }
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
@@ -300,7 +307,7 @@ impl<
             .expect("RwLock will not be poisoned");
 
         let mut ctx = TxContext::new(
-            &mut multi_store,
+            Arc::clone(&self.multi_store),
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block"),
@@ -428,38 +435,24 @@ impl<
         return *height;
     }
 
+    fn cache_tx_context<'a, T: Database>(
+        &'a self,
+        ctx: &'a mut Context<T, SK>,
+        tx_bytes: &Bytes,
+    ) -> (Context<T, SK>, CacheMultiStore) {
+        let ms = ctx.multi_store();
+        let ms_cache = ms.acquire_write().cache_multi_store();
+
+        if ms_cache.is_tracing_enabled() {
+            ms_cache.tracing_context_set();
+        }
+
+        (ctx.with_multi_store( /* ms_cache */ ), ms_cache)
+    }
+
     // https://github.com/cosmos/cosmos-sdk/blob/3a04a9f7d7e4beca67e6690c5c717c20863894aa/baseapp/baseapp.go#L611
     fn get_state(&self, mode: ExecMode) -> StateEnum {
         todo!()
-    }
-
-    // https://github.com/cosmos/cosmos-sdk/blob/4929cb3e3ce5ce5eac7ce9c3a75e67c9379b4724/baseapp/baseapp.go#L636
-    fn get_context_for_tx(
-        &self,
-        mode: ExecMode,
-        raw: Bytes,
-    ) -> Result<Context<RocksDB, SK>, AppError> {
-        // let model_state = self.get_state( mode );
-        // if model_state == StateEnum::None
-        // {
-        //     return  Err( AppError::TxValidation( "".to_string() ) )
-        // }
-        //
-        // //ctx := modeState.ctx.
-        // // 		WithTxBytes(txBytes)
-        //
-        // //ctx = ctx.WithConsensusParams(app.GetConsensusParams(ctx))
-        //
-        // if mode == ExecMode::ExecModeReCheck{
-        //     // ctx = ctx.WithIsReCheckTx(true)
-        // }
-        //
-        // if mode == ExecMode::ExecModeSimulate
-        // {
-        //     // ctx, _ = ctx.CacheContext()
-        // }
-
-        todo!();
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
@@ -486,60 +479,74 @@ impl<
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
 
-        let mut multi_store = self
+        let mut multi_store_lock = self
             .multi_store
             .write()
             .expect("RwLock will not be poisoned");
 
         let mut ctx = TxContext::new(
-            &mut multi_store,
+            Arc::clone(&self.multi_store),
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block"),
             raw.clone().into(),
         );
 
-        match self.base_ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
-            Ok(_) => multi_store.write_then_clear_tx_caches(),
+        match self
+            .base_ante_handler
+            .run(&mut (&mut ctx).into(), &tx_with_raw)
+        {
+            Ok(_) => multi_store_lock.write_then_clear_tx_caches(),
             Err(e) => {
-                multi_store.clear_tx_caches();
+                multi_store_lock.clear_tx_caches();
                 return Err(e);
             }
         };
 
         let mut ctx = TxContext::new(
-            &mut multi_store,
+            Arc::clone(&self.multi_store),
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block"),
-            raw.into(),
+            raw.clone().into(),
         );
 
         // only run the tx if there is block gas remaining
-        // if mode == ExecMode::ExecModeFinalize && ctx.BlockGasMeter().IsOutOfGas() {
-        //     return gInfo, nil, nil, errorsmod.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
-        // } //TODO
+        if mode == ExecMode::ExecModeFinalize && ctx.block_gas_meter().is_out_of_gas() {
+            // return gInfo, nil, nil, errorsmod.Wrap(sdkerrors.ErrOutOfGas, "no block gas left to run tx")
+            todo!()
+        }
+        // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L812
+        // TODO
 
-        let _deref_gas_consume = if mode == ExecMode::ExecModeFinalize {
-            // ctx.BlockGasMeter().ConsumeGas(
-            //     ctx.GasMeter().GasConsumedToLimit(), "block gas meter",
-            // )
-            //Some
-        } else {
-            //None
-        };
+        // https://github.com/cosmos/cosmos-sdk/blob/faca642586821f52e3492f6f1cdf044034afcbcc/baseapp/baseapp.go#L808C3-L808C3
+        // if mode == ExecMode::ExecModeFinalize
+        // {
+        //     ctx //TODO: find a way to delay and issue with borrowing
+        //     .block_gas_meter_mut()
+        //     .consume_gas
+        //     (
+        //         ctx.gas_meter().gas_consumed_to_limit(), "block gas meter".to_string(),
+        //     );
+        // }
 
-        match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
+        let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
             Ok(_) => {
-                let events = ctx.events;
-                multi_store.write_then_clear_tx_caches();
+                let events = ctx.events.clone(); //TODO: Think how to remove clone
+                multi_store_lock.write_then_clear_tx_caches();
                 Ok(events)
             }
             Err(e) => {
-                multi_store.clear_tx_caches();
+                multi_store_lock.clear_tx_caches();
                 Err(e)
             }
+        };
+
+        {
+            let (ant_ctx, ms_cache) = self.cache_tx_context(&mut (&mut ctx).into(), &raw);
         }
+
+        events
     }
 
     fn run_msgs<T: Database>(

@@ -199,6 +199,7 @@ dependencies = [
  "gears",
  "hex",
  "ibc-proto 0.31.0-alpha.2",
+ "ibc-relayer",
  "prost",
  "proto-messages",
  "proto-types",
