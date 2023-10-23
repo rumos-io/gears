@@ -7,10 +7,14 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    x::{auth::Module, params::ParamsSubspaceKey}, types::context::{context::Context, init_context::InitContext, query_context::QueryContext},
+    types::context::{
+        context::{Context, ContextTrait},
+        init_context::InitContext,
+        query_context::QueryContext,
+    },
+    x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
-use ibc_relayer::util::lock::LockExt;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -84,8 +88,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         {
-            let mut lock = ctx.multi_store().acquire_write();
-            let bank_store = lock.get_mutable_kv_store(&self.store_key);
+            let bank_store = ctx.multi_store_mut().get_mutable_kv_store(&self.store_key);
 
             for balance in genesis.balances {
                 let prefix = create_denom_balance_prefix(balance.address);
@@ -210,8 +213,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let to_address = msg.to_address;
 
         {
-            let mut lock = ctx.multi_store().acquire_write();
-            let bank_store = lock.get_mutable_kv_store(&self.store_key);
+            let bank_store = ctx.multi_store_mut().get_mutable_kv_store(&self.store_key);
 
             for send_coin in msg.amount {
                 let mut from_account_store =
@@ -274,8 +276,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     pub fn set_supply<DB: Database>(&self, ctx: &mut Context<DB, SK>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
-        let mut lock = ctx.multi_store().acquire_write();
-        let bank_store = lock.get_mutable_kv_store(&self.store_key);
+        let bank_store = ctx.multi_store_mut().get_mutable_kv_store(&self.store_key);
 
         let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
 
