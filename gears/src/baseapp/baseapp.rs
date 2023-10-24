@@ -23,6 +23,7 @@ use tendermint_proto::abci::{
 };
 use tracing::{error, info};
 
+use crate::baseapp::errors::{RunTxError, TxValidationError};
 use crate::{
     error::AppError,
     types::context::{InitContext, QueryContext, TxContext},
@@ -421,9 +422,8 @@ impl<
         self.handler.handle_query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
-        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e| AppError::TxParseError(e.to_string()))?;
+    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, RunTxError> {
+        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
 
@@ -441,12 +441,15 @@ impl<
         );
 
         match self.base_ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
-            Ok(_) => multi_store.write_then_clear_tx_caches(),
+            Ok(_) => {
+                multi_store.write_then_clear_tx_caches();
+                Ok(())
+            }
             Err(e) => {
                 multi_store.clear_tx_caches();
-                return Err(e);
+                Err(e)
             }
-        };
+        }?;
 
         let mut ctx = TxContext::new(
             &mut multi_store,
@@ -464,7 +467,7 @@ impl<
             }
             Err(e) => {
                 multi_store.clear_tx_caches();
-                Err(e)
+                Err(RunTxError::CustomError(e.to_string())) //TODO proper error for ante
             }
         }
     }
@@ -478,21 +481,19 @@ impl<
             self.handler.handle_tx(ctx, msg)?
         }
 
-        return Ok(());
+        Ok(())
     }
 
-    fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
+    fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), TxValidationError> {
         if msgs.is_empty() {
-            return Err(AppError::InvalidRequest(
-                "must contain at least one message".into(),
-            ));
+            Err(TxValidationError::InvalidRequest)?
         }
 
         for msg in msgs {
             msg.validate_basic()
-                .map_err(|e| AppError::TxValidation(e.to_string()))?
+                .map_err(TxValidationError::CustomError)?
         }
 
-        return Ok(());
+        Ok(())
     }
 }

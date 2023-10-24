@@ -21,6 +21,8 @@ use crate::{
     x::auth::{Module, Params},
 };
 
+use super::errors::{AnteErrors, TimeoutError, TxValidationError};
+
 // TODO: this doesn't belong here
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
@@ -66,7 +68,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         &self,
         ctx: &mut Context<DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteErrors> {
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
@@ -94,30 +96,30 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         Ok(())
     }
 
-    fn validate_basic_ante_handler<M: Message>(&self, tx: &Tx<M>) -> Result<(), AppError> {
+    fn validate_basic_ante_handler<M: Message>(&self, tx: &Tx<M>) -> Result<(), TxValidationError> {
         // Not sure if we need to explicitly check this given the check which follows.
         // We'll leave it in for now since it's in the SDK.
         let sigs = tx.get_signatures();
         if sigs.is_empty() {
-            return Err(AppError::TxValidation("signature list is empty".into()));
+            return Err(TxValidationError::EmptySignList);
         }
 
-        if sigs.len() != tx.get_signers().len() {
-            return Err(AppError::TxValidation(format!(
-                "wrong number of signatures; expected {}, got {}",
-                tx.get_signers().len(),
-                sigs.len()
-            )));
+        let signers_list_len = tx.get_signers().len();
+        if sigs.len() != signers_list_len {
+            return Err(TxValidationError::WrongSignaturesNum {
+                expected: signers_list_len,
+                got: sigs.len(),
+            });
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn tx_timeout_height_ante_handler<DB: Database, M: Message>(
         &self,
         ctx: &Context<DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TimeoutError> {
         let timeout_height = tx.get_timeout_height();
 
         // timeout_height of zero means no timeout height
@@ -127,53 +129,55 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
         let block_height = ctx.get_height();
 
-        if ctx.get_height() > timeout_height {
-            return Err(AppError::Timeout {
+        match ctx.get_height() > timeout_height {
+            true => Err(TimeoutError {
                 timeout: timeout_height,
                 current: block_height,
-            });
+            }),
+            false => Ok(()),
         }
-
-        Ok(())
     }
 
     fn validate_memo_ante_handler<DB: Database, M: Message>(
         &self,
         ctx: &Context<DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteErrors> {
         let max_memo_chars = self.auth_keeper.get_auth_params(ctx).max_memo_characters;
         let memo_length: u64 = tx
             .get_memo()
             .len()
             .try_into()
-            .map_err(|_| AppError::Memo(max_memo_chars))?;
+            .map_err(|_| AnteErrors::Memo(max_memo_chars))?;
 
         if memo_length > max_memo_chars {
-            return Err(AppError::Memo(max_memo_chars));
-        };
-        Ok(())
+            Err(AnteErrors::Memo(max_memo_chars))
+        } else {
+            Ok(())
+        }
     }
 
     fn deduct_fee_ante_handler<DB: Database, M: Message>(
         &self,
         ctx: &mut Context<DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteErrors> {
         let fee = tx.get_fee();
         let fee_payer = tx.get_fee_payer();
 
         if !self.auth_keeper.has_account(ctx, fee_payer) {
-            return Err(AppError::AccountNotFound);
+            Err(TxValidationError::AccountNotFound)?
         }
 
         if let Some(fee) = fee {
-            self.bank_keeper.send_coins_from_account_to_module(
-                ctx,
-                fee_payer.to_owned(),
-                Module::FeeCollector,
-                fee.to_owned(),
-            )?;
+            self.bank_keeper
+                .send_coins_from_account_to_module(
+                    ctx,
+                    fee_payer.to_owned(),
+                    Module::FeeCollector,
+                    fee.to_owned(),
+                )
+                .map_err(|e| AnteErrors::CustomError(e.to_string()))?;
         }
 
         Ok(())
@@ -183,17 +187,17 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         &self,
         ctx: &mut Context<DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteErrors> {
         let public_keys = tx.get_public_keys();
         let signers = tx.get_signers();
 
         // additional check not found in the sdk - this prevents a panic
         if signers.len() != public_keys.len() {
-            return Err(AppError::TxValidation(format!(
-                "wrong number of signer info; expected {}, got {}",
-                signers.len(),
-                public_keys.len()
-            )));
+            return Err(TxValidationError::WrongNumSignerInfo {
+                expected: signers.len(),
+                got: public_keys.len(),
+            }
+            .into());
         }
 
         for (i, key) in public_keys.into_iter().enumerate() {
@@ -201,13 +205,13 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
                 let addr = key.get_address();
 
                 if &addr != signers[i] {
-                    return Err(AppError::InvalidPublicKey);
+                    Err(TxValidationError::InvalidPublicKey)?
                 }
 
                 let mut acct = self
                     .auth_keeper
                     .get_account(ctx, &addr)
-                    .ok_or(AppError::AccountNotFound)?;
+                    .ok_or(TxValidationError::AccountNotFound)?;
 
                 if acct.get_public_key().is_some() {
                     continue;
@@ -225,17 +229,16 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         &self,
         ctx: &mut Context<DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxValidationError> {
         let signers = tx.tx.get_signers();
         let signature_data = tx.tx.get_signatures_data();
 
         // NOTE: this is also checked in validate_basic_ante_handler
         if signature_data.len() != signers.len() {
-            return Err(AppError::TxValidation(format!(
-                "wrong number of signatures; expected {}, got {}",
-                signers.len(),
-                signature_data.len()
-            )));
+            return Err(TxValidationError::WrongSignaturesNum {
+                expected: signers.len(),
+                got: signature_data.len(),
+            });
         }
 
         for (i, signature_data) in signature_data.into_iter().enumerate() {
@@ -245,13 +248,13 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
             let acct = self
                 .auth_keeper
                 .get_account(ctx, signer)
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(TxValidationError::AccountNotFound)?;
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
-                return Err(AppError::TxValidation(format!(
-                    "incorrect tx sequence; expected {}, got {}",
-                    account_seq, signature_data.sequence
-                )));
+                return Err(TxValidationError::IncorrectSequence {
+                    expected: account_seq,
+                    got: signature_data.sequence,
+                });
             }
 
             // check signature
@@ -272,34 +275,32 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
             //TODO: move sig verification into PublicKey
             match public_key {
                 PublicKey::Secp256k1(pub_key) => {
-                    let public_key =
-                        Secp256k1PubKey::from_slice(&Vec::from(pub_key.to_owned())).unwrap(); //TODO: remove unwrap
+                    let public_key = Secp256k1PubKey::from_slice(&Vec::from(pub_key.to_owned()))?;
 
-                    let signature =
-                        ecdsa::Signature::from_compact(&signature_data.signature).unwrap(); //TODO: remove unwrap
+                    let signature = ecdsa::Signature::from_compact(&signature_data.signature)?;
 
-                    Secp256k1::verification_only()
-                        .verify_ecdsa(&message, &signature, &public_key) //TODO: lib cannot be used for bitcoin sig verification
-                        .map_err(|_| {
-                            return AppError::TxValidation(format!("invalid signature"));
-                        })?;
+                    Secp256k1::verification_only().verify_ecdsa(
+                        &message,
+                        &signature,
+                        &public_key,
+                    )?; //TODO: lib cannot be used for bitcoin sig verification
                 }
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn increment_sequence_ante_handler<DB: Database, M: Message>(
         &self,
         ctx: &mut Context<DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteErrors> {
         for signer in tx.get_signers() {
             let mut acct = self
                 .auth_keeper
                 .get_account(ctx, signer)
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(TxValidationError::AccountNotFound)?;
             acct.increment_sequence();
             self.auth_keeper.set_account(ctx, acct)
         }
