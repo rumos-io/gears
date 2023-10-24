@@ -35,6 +35,7 @@ use super::{
     ante::{AnteHandler, AuthKeeper, BankKeeper},
     params::BaseAppParamsKeeper,
 };
+use crate::baseapp::errors::{RunTxError, TxValidationError};
 
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
