@@ -10,6 +10,7 @@ use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
 };
+use ibc_proto::cosmos::base::abci::v1beta1::{GasInfo, Result as Product};
 use store_crate::{MultiStore, StoreKey};
 use tendermint_abci::Application;
 use tendermint_informal::block::Header;
@@ -205,7 +206,7 @@ impl<
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
         match self.run_tx(request.tx) {
-            Ok(events) => ResponseDeliverTx {
+            Ok((_, _, events,_)) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
@@ -421,7 +422,7 @@ impl<
         self.handler.handle_query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
+    fn run_tx(&self, raw: Bytes) -> Result<(GasInfo, Product, Vec<tendermint_informal::abci::Event>, Priority), AppError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e| AppError::TxParseError(e.to_string()))?;
 
@@ -456,7 +457,7 @@ impl<
             raw.into(),
         );
 
-        match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
+        let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
             Ok(_) => {
                 let events = ctx.events;
                 multi_store.write_then_clear_tx_caches();
@@ -466,7 +467,9 @@ impl<
                 multi_store.clear_tx_caches();
                 Err(e)
             }
-        }
+        }?;
+        
+        Ok( (GasInfo::default(), Product::default(), events, Priority(1)))
     }
 
     fn run_msgs<T: Database>(
@@ -496,3 +499,5 @@ impl<
         return Ok(());
     }
 }
+
+pub struct Priority(pub i64); // TODO: Move newtype to other place
