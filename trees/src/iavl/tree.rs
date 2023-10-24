@@ -621,7 +621,7 @@ where
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R, T>
+    pub fn range<R>(&self, range: R) -> Range<'_, R, T>
     where
         R: RangeBounds<Vec<u8>>,
     {

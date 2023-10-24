@@ -90,7 +90,7 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R, DB>
+    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
     where
         R: RangeBounds<Vec<u8>>,
     {
