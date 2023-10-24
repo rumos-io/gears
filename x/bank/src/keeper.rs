@@ -4,10 +4,12 @@ use bytes::Bytes;
 use cosmwasm_std::Uint256;
 use database::Database;
 
+use gears::types::context::context::Context;
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{Context, InitContext, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
