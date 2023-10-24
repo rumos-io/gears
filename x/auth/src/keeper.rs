@@ -32,11 +32,11 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     for Keeper<SK, PSK>
 {
-    fn get_auth_params<DB: Database>(&self, ctx: &Context<DB, SK>) -> gears::x::auth::Params {
+    fn get_auth_params<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> gears::x::auth::Params {
         self.auth_params_keeper.get(ctx)
     }
 
-    fn has_account<DB: Database>(&self, ctx: &Context<DB, SK>, addr: &AccAddress) -> bool {
+    fn has_account<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>, addr: &AccAddress) -> bool {
         let auth_store = ctx.get_kv_store(&self.store_key);
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
@@ -44,7 +44,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
 
     fn get_account<DB: Database>(
         &self,
-        ctx: &Context<DB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
         addr: &AccAddress,
     ) -> Option<Account> {
         let auth_store = ctx.get_kv_store(&self.store_key);
@@ -61,7 +61,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
         return None;
     }
 
-    fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
+    fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
@@ -85,7 +85,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         //TODO: sdk sanitizes accounts
         self.auth_params_keeper
             .set(&mut ctx.as_any(), genesis.params);
@@ -101,7 +101,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn query_account<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
         let auth_store = ctx.get_kv_store(&self.store_key);
@@ -120,7 +120,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         return Err(AppError::AccountNotFound);
     }
 
-    fn get_next_account_number<DB: Database>(&self, ctx: &mut Context<DB, SK>) -> u64 {
+    fn get_next_account_number<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>) -> u64 {
         let auth_store = ctx.get_mutable_kv_store(&self.store_key);
 
         // NOTE: The next available account number is what's stored in the KV store
@@ -141,7 +141,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         return acct_num;
     }
 
-    pub fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account) {
+    pub fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
@@ -151,7 +151,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     /// Overwrites existing account
     pub fn create_new_base_account<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         addr: &AccAddress,
     ) {
         let acct = BaseAccount {
@@ -167,7 +167,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     /// Creates a new module account if it doesn't already exist
     pub fn check_create_new_module_account<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         module: &Module,
     ) {
         let addr = module.get_address();

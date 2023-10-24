@@ -26,7 +26,7 @@ pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params {
+    pub fn get<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> Params {
         let store = self
             .params_keeper
             .get_raw_subspace(ctx, &self.params_subspace_key);
@@ -46,7 +46,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database>(&self, ctx: &mut Context<DB, SK>, params: Params) {
+    pub fn set<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, params: Params) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
