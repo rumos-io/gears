@@ -6,7 +6,7 @@ enum BTreeMap<K: Clone, V: Clone> {
 }
 
 impl<K: Clone, V: Clone> BTreeMap<K, V> {
-    fn iter(&self) -> BTreeMapIterator<K, V> {
+    fn iter(&self) -> BTreeMapIterator<'_, K, V> {
         BTreeMapIterator::new(&self)
     }
 }

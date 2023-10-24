@@ -25,7 +25,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
         })
     }
 
-    pub fn get_kv_store(&self, store_key: &SK) -> &QueryKVStore<PrefixDB<DB>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &QueryKVStore<'_, PrefixDB<DB>> {
         self.stores
             .get(store_key)
             .expect("a store for every key is guaranteed to exist")
@@ -47,14 +47,14 @@ impl<'a, DB: Database> QueryKVStore<'a, DB> {
         })
     }
 
-    pub fn range<R>(&self, range: R) -> Range<R, DB>
+    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {
         self.persistent_store.range(range)
     }
 
-    pub fn get_immutable_prefix_store(&'a self, prefix: Vec<u8>) -> ImmutablePrefixStore<DB> {
+    pub fn get_immutable_prefix_store(&'a self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
             prefix,
