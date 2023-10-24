@@ -1,14 +1,13 @@
-use gears::{
-    config::Config,
-    types::context::{InitContext, TxContext},
-    x::params::Keeper as ParamsKeeper,
-};
+use gears::{config::Config, x::params::Keeper as ParamsKeeper};
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use tendermint_proto::abci::{RequestBeginBlock, RequestQuery};
 
 use database::Database;
-use gears::{error::AppError, types::context::QueryContext};
+use gears::error::AppError;
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
+use gears::types::context::tx_context::TxContext;
 
 use crate::{
     config::AppConfig,

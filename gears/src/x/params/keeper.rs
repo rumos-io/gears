@@ -1,10 +1,9 @@
 use database::{Database, PrefixDB};
 use store_crate::StoreKey;
 
+use crate::types::context::context::Context;
 use std::{hash::Hash, marker::PhantomData};
 use strum::IntoEnumIterator;
-
-use crate::types::context::Context;
 
 pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;

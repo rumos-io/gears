@@ -15,9 +15,9 @@ use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 use store_crate::StoreKey;
 
+use crate::types::context::context::Context;
 use crate::{
     error::AppError,
-    types::context::Context,
     x::auth::{Module, Params},
 };
 
