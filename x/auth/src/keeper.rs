@@ -4,11 +4,13 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{Context, InitContext, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
 //use params_module::ParamsSubspaceKey;
+use gears::types::context::context::Context;
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
 use prost::Message;
 use proto_messages::cosmos::auth::v1beta1::{
     Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,

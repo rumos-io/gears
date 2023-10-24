@@ -1,9 +1,8 @@
 use database::Database;
-use gears::{
-    error::AppError,
-    types::context::{InitContext, TxContext},
-    x::params::ParamsSubspaceKey,
-};
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
+use gears::types::context::tx_context::TxContext;
+use gears::{error::AppError, x::params::ParamsSubspaceKey};
 use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse},
@@ -38,7 +37,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn handle_query<DB: Database>(
         &self,
-        ctx: &gears::types::context::QueryContext<DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         query: tendermint_proto::abci::RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
