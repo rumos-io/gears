@@ -1,10 +1,13 @@
-use crate::{types::{
-    context::context::Priority,
-    gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter},
-}, place_holder::EventManager};
+use crate::{
+    place_holder::EventManager,
+    types::{
+        context::context::Priority,
+        gas::{gas_meter::GasMeter, infinite_meter::InfiniteGasMeter},
+    },
+};
 use bytes::Bytes;
 use database::{Database, PrefixDB};
-use store_crate::{KVStore, MultiStore, StoreKey, place_holders::CacheMS};
+use store_crate::{place_holders::CacheMS, KVStore, MultiStore, StoreKey};
 use tendermint_informal::{abci::Event, block::Header};
 
 use super::context::ContextTrait;

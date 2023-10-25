@@ -9,7 +9,7 @@ use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
 use trees::iavl::{Range, Tree};
 
-use crate::{error::Error, QueryKVStore, place_holders::CacheMS};
+use crate::{error::Error, place_holders::CacheMS, QueryKVStore};
 
 use super::hash::{self, StoreInfo};
 

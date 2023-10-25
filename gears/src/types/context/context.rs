@@ -7,7 +7,6 @@ use tendermint_informal::abci::Event;
 
 pub struct Priority(pub i64);
 
-
 pub trait ContextTrait<T: Database, SK: StoreKey> {
     fn gas_meter(&self) -> &dyn GasMeter;
     fn block_gas_meter(&self) -> &dyn GasMeter;
