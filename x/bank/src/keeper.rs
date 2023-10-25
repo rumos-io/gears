@@ -77,7 +77,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         // TODO:
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)

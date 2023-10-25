@@ -21,7 +21,7 @@ use crate::{
     x::auth::{Module, Params},
 };
 
-use super::errors::{AnteErrors, TimeoutError, TxValidationError};
+use super::errors::{AnteErrors, TxValidationError};
 
 // TODO: this doesn't belong here
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
@@ -96,20 +96,20 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         Ok(())
     }
 
-    fn validate_basic_ante_handler<M: Message>(&self, tx: &Tx<M>) -> Result<(), TxValidationError> {
+    fn validate_basic_ante_handler<M: Message>(&self, tx: &Tx<M>) -> Result<(), AnteErrors> {
         // Not sure if we need to explicitly check this given the check which follows.
         // We'll leave it in for now since it's in the SDK.
         let sigs = tx.get_signatures();
         if sigs.is_empty() {
-            return Err(TxValidationError::EmptySignList);
+            Err(TxValidationError::EmptySignList)?;
         }
 
         let signers_list_len = tx.get_signers().len();
         if sigs.len() != signers_list_len {
-            return Err(TxValidationError::WrongSignaturesNum {
+            Err(TxValidationError::WrongSignaturesNum {
                 expected: signers_list_len,
                 got: sigs.len(),
-            });
+            })?;
         }
 
         Ok(())
@@ -119,7 +119,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         &self,
         ctx: &Context<'_, '_, DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), TimeoutError> {
+    ) -> Result<(), AnteErrors> {
         let timeout_height = tx.get_timeout_height();
 
         // timeout_height of zero means no timeout height
@@ -130,7 +130,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         let block_height = ctx.get_height();
 
         match ctx.get_height() > timeout_height {
-            true => Err(TimeoutError {
+            true => Err(AnteErrors::Timeout {
                 timeout: timeout_height,
                 current: block_height,
             }),
@@ -229,16 +229,16 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), TxValidationError> {
+    ) -> Result<(), AnteErrors> {
         let signers = tx.tx.get_signers();
         let signature_data = tx.tx.get_signatures_data();
 
         // NOTE: this is also checked in validate_basic_ante_handler
         if signature_data.len() != signers.len() {
-            return Err(TxValidationError::WrongSignaturesNum {
+            Err(TxValidationError::WrongSignaturesNum {
                 expected: signers.len(),
                 got: signature_data.len(),
-            });
+            })?;
         }
 
         for (i, signature_data) in signature_data.into_iter().enumerate() {
@@ -251,10 +251,10 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
                 .ok_or(TxValidationError::AccountNotFound)?;
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
-                return Err(TxValidationError::IncorrectSequence {
+                Err(TxValidationError::IncorrectSequence {
                     expected: account_seq,
                     got: signature_data.sequence,
-                });
+                })?;
             }
 
             // check signature
@@ -275,15 +275,15 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
             //TODO: move sig verification into PublicKey
             match public_key {
                 PublicKey::Secp256k1(pub_key) => {
-                    let public_key = Secp256k1PubKey::from_slice(&Vec::from(pub_key.to_owned()))?;
+                    let public_key = Secp256k1PubKey::from_slice(&Vec::from(pub_key.to_owned()))
+                        .map_err(TxValidationError::Secp256Error)?;
 
-                    let signature = ecdsa::Signature::from_compact(&signature_data.signature)?;
+                    let signature = ecdsa::Signature::from_compact(&signature_data.signature)
+                        .map_err(TxValidationError::Secp256Error)?;
 
-                    Secp256k1::verification_only().verify_ecdsa(
-                        &message,
-                        &signature,
-                        &public_key,
-                    )?; //TODO: lib cannot be used for bitcoin sig verification
+                    Secp256k1::verification_only()
+                        .verify_ecdsa(&message, &signature, &public_key)
+                        .map_err(TxValidationError::Secp256Error)?; //TODO: lib cannot be used for bitcoin sig verification
                 }
             }
         }

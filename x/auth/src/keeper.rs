@@ -34,7 +34,10 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     for Keeper<SK, PSK>
 {
-    fn get_auth_params<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> gears::x::auth::Params {
+    fn get_auth_params<DB: Database>(
+        &self,
+        ctx: &Context<'_, '_, DB, SK>,
+    ) -> gears::x::auth::Params {
         self.auth_params_keeper.get(ctx)
     }
 
@@ -87,7 +90,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         //TODO: sdk sanitizes accounts
         self.auth_params_keeper
             .set(&mut ctx.as_any(), genesis.params);

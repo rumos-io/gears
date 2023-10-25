@@ -40,8 +40,11 @@ use crate::baseapp::errors::{RunTxError, TxValidationError};
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M)
-        -> Result<(), AppError>;
+    fn handle_tx<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &M,
+    ) -> Result<(), AppError>;
 
     fn handle_begin_block<DB: Database>(
         &self,

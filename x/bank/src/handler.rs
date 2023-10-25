@@ -66,7 +66,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         self.keeper.init_genesis(ctx, genesis)
     }
 

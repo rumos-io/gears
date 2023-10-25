@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::baseapp::errors::{TimeoutError, TxValidationError};
+use crate::baseapp::errors::TxValidationError;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum AppError {
@@ -18,8 +18,6 @@ pub enum AppError {
     Coins(String),
     #[error("invalid transaction: {0}")]
     TxValidation(#[from] TxValidationError),
-    #[error("{0}")]
-    Timeout(#[from] TimeoutError),
     #[error("memo is too long, max length is {0}")]
     Memo(u64),
     #[error("public key is invalid")]

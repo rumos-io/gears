@@ -38,22 +38,14 @@ impl TxValidationError {
     }
 }
 
-/// Error for timed out cases in tx
-#[derive(Error, Debug, PartialEq)]
-#[error("tx has timed out; timeout height: {timeout}, current height: {current}")]
-pub struct TimeoutError {
-    pub timeout: u64,
-    pub current: u64,
-}
-
 #[derive(Error, Debug, PartialEq)]
 pub enum AnteErrors {
     #[error("{0}")]
     CustomError(String),
     #[error("{0}")]
     TxValidation(#[from] TxValidationError),
-    #[error("{0}")]
-    Timeout(#[from] TimeoutError),
+    #[error("tx has timed out; timeout height: {timeout}, current height: {current}")]
+    Timeout { timeout: u64, current: u64 },
     #[error("memo is too long, max length is {0}")]
     Memo(u64),
 }
