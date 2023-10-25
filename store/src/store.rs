@@ -9,7 +9,7 @@ use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
 use trees::iavl::{Range, Tree};
 
-use crate::{error::Error, QueryKVStore};
+use crate::{error::Error, QueryKVStore, place_holders::CacheMS};
 
 use super::hash::{self, StoreInfo};
 
@@ -110,6 +110,11 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
         self.head_commit_hash = hash;
         self.head_version += 1;
         hash
+    }
+
+    pub fn cache_multi_store(&self) -> CacheMS {
+        // https://github.com/cosmos/cosmos-sdk/blob/c3bc5c82eb43f4cca91144c375f104b03b333f5a/store/rootmulti/store.go#L539C6-L539C6
+        unimplemented!() // TODO
     }
 }
 

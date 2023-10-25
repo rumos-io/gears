@@ -1,4 +1,3 @@
-use crate::types::context::context::Context;
 use database::{Database, PrefixDB};
 use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint_informal::abci::Event;
@@ -20,18 +19,14 @@ impl<'a, T: Database, SK: StoreKey> InitContext<'a, T, SK> {
         }
     }
 
-    pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, T, SK> {
-        Context::InitContext(self)
-    }
-
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
     pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
-        return self.multi_store.get_kv_store(store_key);
+        self.multi_store.get_kv_store(store_key)
     }
 
     /// Fetches a mutable ref to a KVStore from the MultiStore.
     pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>> {
-        return self.multi_store.get_mutable_kv_store(store_key);
+        self.multi_store.get_mutable_kv_store(store_key)
     }
 
     pub fn get_height(&self) -> u64 {

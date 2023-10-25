@@ -1,16 +1,19 @@
+use axum::body::HttpBody;
 use bytes::Bytes;
 use database::{Database, RocksDB};
+use ibc_proto::cosmos::base::abci::v1beta1::{GasInfo, Result as Product};
+use ibc_relayer::util::lock::LockExt;
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
     tx::v1beta1::{Message, TxWithRaw},
 };
 use proto_types::AccAddress;
+use scopeguard::defer;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
 };
-use ibc_proto::cosmos::base::abci::v1beta1::{GasInfo, Result as Product};
 use store_crate::{MultiStore, StoreKey};
 use tendermint_abci::Application;
 use tendermint_informal::block::Header;
@@ -24,9 +27,13 @@ use tendermint_proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::types::context::init_context::InitContext;
+use crate::{types::context::context::{ExecMode, Priority}, place_holder::EventManager};
 use crate::types::context::query_context::QueryContext;
 use crate::types::context::tx_context::TxContext;
+use crate::types::context::{
+    context::{Context, ContextTrait},
+    init_context::InitContext,
+};
 use crate::{
     error::AppError,
     x::params::{Keeper, ParamsSubspaceKey},
@@ -112,8 +119,9 @@ impl<
         let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), request.chain_id);
 
         if let Some(params) = request.consensus_params.clone() {
+            let mut ctx = Context::InitContext(&mut ctx);
             self.baseapp_params_keeper
-                .set_consensus_params(&mut ctx.as_any(), params);
+                .set_consensus_params(&mut ctx, params);
         }
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
@@ -188,8 +196,15 @@ impl<
         }
     }
 
-    fn check_tx(&self, _request: RequestCheckTx) -> ResponseCheckTx {
+    fn check_tx(&self, request: RequestCheckTx) -> ResponseCheckTx {
         info!("Got check tx request");
+
+        let _exec_mode = match request.r#type {
+            0 => ExecMode::Check,   //NEW
+            1 => ExecMode::ReCheck, //RECHECK
+            _ => panic!("unknown RequestCheckTx type: {}", request.r#type),
+        };
+
         ResponseCheckTx {
             code: 0,
             data: Default::default(),
@@ -207,8 +222,8 @@ impl<
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
-        match self.run_tx(request.tx) {
-            Ok((_, _, events,_)) => ResponseDeliverTx {
+        match self.run_tx(ExecMode::Deliver, request.tx) {
+            Ok((_, _, events, _)) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
@@ -424,18 +439,27 @@ impl<
         self.handler.handle_query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<(GasInfo, Product, Vec<tendermint_informal::abci::Event>, Priority), AppError> {
+    fn run_tx(
+        &self,
+        mode: ExecMode,
+        raw: Bytes,
+    ) -> Result<
+        (
+            GasInfo,
+            Product,
+            Vec<tendermint_informal::abci::Event>,
+            Priority,
+        ),
+        AppError,
+    > {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e| AppError::TxParseError(e.to_string()))?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
 
-        let mut multi_store = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
+        let mut multi_store = self.multi_store.acquire_write();
 
-        let mut ctx = TxContext::new(
+        let mut inner_ctx = TxContext::new(
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
@@ -443,35 +467,78 @@ impl<
             raw.clone().into(),
         );
 
-        match self.base_ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
-            Ok(_) => multi_store.write_then_clear_tx_caches(),
-            Err(e) => {
-                multi_store.clear_tx_caches();
-                return Err(e);
-            }
+        // only run the tx if there is block gas remaining
+        if mode == ExecMode::Finalize && inner_ctx.block_gas_meter().is_out_of_gas() {
+            // TODO: return Err
+        }
+
+        // Think how to consume gas at most once and must be execute even if tx processing fails in deliver mode.
+        // let _guard = scopeguard::guard_on_unwind(&mut inner_ctx, | this |{
+        //     let gas = inner_ctx.gas_meter().gas_consumed_to_limit();
+        //     inner_ctx
+        //         .block_gas_meter_mut()
+        //         .consume_gas(gas, "block gas meter".to_string())
+        //         .map_err(|_| AppError::InvalidRequest("".to_string()));
+        // });
+
+        let ( _gas_wanted, priority, mut abci_events) = {
+        let (mut ante_ctx, ms_cache) = inner_ctx.cache_tx_context(&raw);
+        ante_ctx.event_manager_set(EventManager);
+
+        self.base_ante_handler.run(&mut Context::TxContext(&mut ante_ctx), &tx_with_raw)?; // Is this validates tx only or creates new?
+
+        // GasMeter expected to be set in AnteHandler
+        let gas_wanted = ante_ctx.gas_meter().limit();
+
+        ms_cache.write();
+
+        (gas_wanted, ante_ctx.priority, ante_ctx.events)
         };
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block"),
-            raw.into(),
-        );
+        {
+            let mut ctx: Context<'_, '_, RocksDB, SK> = Context::TxContext(&mut inner_ctx);
 
-        let events = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
-            Ok(_) => {
-                let events = ctx.events;
-                multi_store.write_then_clear_tx_caches();
-                Ok(events)
+            match self.base_ante_handler.run(&mut ctx, &tx_with_raw) {
+                Ok(_) => ctx.multi_store_mut().write_then_clear_tx_caches(),
+                Err(e) => {
+                    ctx.multi_store_mut().clear_tx_caches();
+                    return Err(e);
+                }
+            };
+        }
+
+        let mut events = {
+            match self.run_msgs(&mut inner_ctx, tx_with_raw.tx.get_msgs()) {
+                Ok(_) => {
+                    let events = inner_ctx.events.clone();
+                    inner_ctx.multi_store_mut().write_then_clear_tx_caches();
+                    Ok(events)
+                }
+                Err(e) => {
+                    inner_ctx.multi_store_mut().clear_tx_caches();
+                    Err(e)
+                }
+            }?
+        };
+
+        let (mut ctx, ms_cache) = inner_ctx.cache_tx_context(&raw);
+
+        if mode == ExecMode::Deliver {
+            let gas = ctx.gas_meter().gas_consumed_to_limit();
+            ctx
+                .block_gas_meter_mut()
+                .consume_gas(gas, "block gas meter".to_string())
+                .map_err(|_| AppError::InvalidRequest("".to_string()))?;
+
+            ms_cache.write();
+
+            if abci_events.len() > 0 
+            {
+                events.append( &mut abci_events );
             }
-            Err(e) => {
-                multi_store.clear_tx_caches();
-                Err(e)
-            }
-        }?;
-        
-        Ok( (GasInfo::default(), Product::default(), events, Priority(1)))
+        }
+
+        Ok((GasInfo::default(), Product::default(), events, priority))
     }
 
     fn run_msgs<T: Database>(
@@ -501,5 +568,3 @@ impl<
         return Ok(());
     }
 }
-
-pub struct Priority(pub i64); // TODO: Move newtype to other place

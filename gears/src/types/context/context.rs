@@ -1,8 +1,28 @@
 use crate::types::context::init_context::InitContext;
 use crate::types::context::tx_context::TxContext;
+use crate::types::gas::gas_meter::GasMeter;
 use database::{Database, PrefixDB};
-use store_crate::{KVStore, StoreKey};
+use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint_informal::abci::Event;
+
+pub struct Priority(pub i64);
+
+
+pub trait ContextTrait<T: Database, SK: StoreKey> {
+    fn gas_meter(&self) -> &dyn GasMeter;
+    fn block_gas_meter(&self) -> &dyn GasMeter;
+    fn gas_meter_mut(&mut self) -> &mut dyn GasMeter;
+    fn block_gas_meter_mut(&mut self) -> &mut dyn GasMeter;
+
+    fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>>;
+    fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>>;
+
+    fn multi_store_mut(&mut self) -> &mut MultiStore<T, SK>;
+
+    fn get_height(&self) -> u64;
+    fn push_event(&mut self, event: Event);
+    fn append_events(&mut self, events: Vec<Event>);
+}
 
 /// This is used when a method can be used in either a tx or init context
 pub enum Context<'a, 'b, T: Database, SK: StoreKey> {
@@ -52,6 +72,13 @@ impl<'a, 'b, T: Database, SK: StoreKey> Context<'a, 'b, T, SK> {
         match self {
             Context::TxContext(ctx) => ctx.append_events(events),
             Context::InitContext(ctx) => ctx.events.append(&mut events),
+        }
+    }
+
+    pub fn multi_store_mut(&mut self) -> &mut MultiStore<T, SK> {
+        match self {
+            Context::TxContext(ctx) => ctx.multi_store_mut(),
+            Context::InitContext(ctx) => &mut ctx.multi_store,
         }
     }
 }

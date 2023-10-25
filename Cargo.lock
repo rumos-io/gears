@@ -1595,6 +1595,7 @@ dependencies = [
  "prost",
  "proto-messages",
  "proto-types",
+ "scopeguard",
  "secp256k1 0.25.0",
  "serde",
  "serde-aux",

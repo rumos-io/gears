@@ -1,4 +1,5 @@
 use database::Database;
+use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
@@ -28,10 +29,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         ctx: &mut TxContext<DB, SK>,
         msg: &Message,
     ) -> Result<(), AppError> {
+        let mut ctx = Context::TxContext(ctx);
+
         match msg {
             Message::Send(msg_send) => self
                 .keeper
-                .send_coins_from_account_to_account(&mut ctx.as_any(), msg_send),
+                .send_coins_from_account_to_account(&mut ctx, msg_send),
         }
     }
 
