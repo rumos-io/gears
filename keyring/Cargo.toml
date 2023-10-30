@@ -1,0 +1,15 @@
+[package]
+edition = "2021"
+name = "keystore"
+version = "0.1.0"
+
+[dependencies]
+argon2 = {version = "0.5.2", features = ["std"]}
+bip32 = "0.5.1"
+k256 = {version = "0.13.1", features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"]}
+pkcs8 = {version = "0.10.2", features = ["pem", "alloc", "std", "encryption"]}
+proto-messages = {path = "../proto-messages"}
+proto-types = {path = "../proto-types"}
+thiserror = "1.0.48"
+
+[dev-dependencies]
