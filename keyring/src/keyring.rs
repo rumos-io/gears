@@ -10,6 +10,7 @@ use k256::elliptic_curve::rand_core;
 
 use rand_core::OsRng;
 
+/// Used to specify the type of key to generate.
 pub enum KeyType {
     Secp256k1,
 }
@@ -20,25 +21,31 @@ enum KeyStore {
     Test(FileStore),
 }
 
+/// A keyring. Used to store and retrieve keys.
 #[derive(Debug)]
 pub struct Keyring {
     store: KeyStore,
 }
 
 impl Keyring {
+    /// Opens a keyring from a directory, using the password provided.
+    /// If the keyring does not exist, it will be created if create is true.
     pub fn open_file(path: PathBuf, password: String, create: bool) -> Result<Self, Error> {
         Ok(Self {
             store: KeyStore::File(FileStore::open(path, Some(password), create)?),
         })
     }
 
+    /// Opens a test keyring from a directory. The keys are not encrypted, so this
+    /// should only be used for testing. If the keyring does not exist, it will be
+    /// created if create is true.
     pub fn open_test(path: PathBuf, create: bool) -> Result<Self, Error> {
         Ok(Self {
             store: KeyStore::Test(FileStore::open(path, None, create)?),
         })
     }
 
-    /// Generates a key pair from the mnemonic provided and stores the keypair
+    /// Generates a key pair from the mnemonic provided and stores the keypair.
     pub fn add_key<S>(&self, name: S, mnemonic: &Mnemonic, key_type: KeyType) -> Result<(), Error>
     where
         S: AsRef<str>,
@@ -64,7 +71,7 @@ impl Keyring {
         Ok(mnemonic)
     }
 
-    /// Get a key by name
+    /// Get a key by name.
     pub fn get_key_by_name<S>(&self, name: S) -> Result<KeyPair, Error>
     where
         S: AsRef<str>,
@@ -76,6 +83,7 @@ impl Keyring {
         }
     }
 
+    /// Delete a key by name.
     pub fn delete_key_by_name<S>(&self, name: S) -> Result<(), Error>
     where
         S: AsRef<str>,

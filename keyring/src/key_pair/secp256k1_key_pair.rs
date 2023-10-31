@@ -7,20 +7,21 @@ use sha2::{Digest, Sha256};
 
 const HDPATH: &str = "m/44'/118'/0'/0/0";
 
+/// A secp256k1 key pair.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Secp256k1KeyPair {
     secret_key: SecretKey,
 }
 
 impl Secp256k1KeyPair {
-    /// Returns PKCS8 PEM encoded private key
+    /// Returns PKCS8 PEM encoded private key.
     pub fn to_pkcs8_pem(&self) -> k256::elliptic_curve::zeroize::Zeroizing<String> {
         self.secret_key
             .to_pkcs8_pem(LineEnding::default())
             .expect("this can't fail")
     }
 
-    /// Returns PKCS8 PEM encoded private key encrypted with password
+    /// Returns PKCS8 PEM encoded private key encrypted with password.
     pub fn to_pkcs8_encrypted_pem(
         &self,
         password: impl AsRef<[u8]>,
@@ -30,14 +31,14 @@ impl Secp256k1KeyPair {
             .expect("this can't fail")
     }
 
-    /// Returns a key pair from a PKCS8 PEM encoded private key
+    /// Returns a key pair from a PKCS8 PEM encoded private key.
     pub fn from_pkcs8_pem(s: &str) -> Result<Self, k256::pkcs8::Error> {
         Ok(Self {
             secret_key: SecretKey::from_pkcs8_pem(s)?,
         })
     }
 
-    /// Returns a key pair from a PKCS8 PEM encoded private key encrypted with password
+    /// Returns a key pair from a PKCS8 PEM encoded private key encrypted with password.
     pub fn from_pkcs8_encrypted_pem(
         s: &str,
         password: impl AsRef<[u8]>,
@@ -47,7 +48,7 @@ impl Secp256k1KeyPair {
         })
     }
 
-    /// Returns a key pair from a mnemonic
+    /// Returns a key pair from a mnemonic.
     pub fn from_mnemonic(mnemonic: &Mnemonic) -> Self {
         let seed = mnemonic.to_seed("");
         let child_path: DerivationPath = HDPATH.parse().expect("hard coded path will never fail");
@@ -60,7 +61,7 @@ impl Secp256k1KeyPair {
         }
     }
 
-    /// Returns a Bitcoin style addresses: RIPEMD160(SHA256(pubkey))
+    /// Returns a Bitcoin style addresses: RIPEMD160(SHA256(pubkey)).
     pub fn get_address(&self) -> AccAddress {
         let pub_key = self.secret_key.public_key().to_bytes().to_vec();
 

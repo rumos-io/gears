@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+/// Error type for keyring.
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("there was an error accessing the file at {path}: {msg}")]

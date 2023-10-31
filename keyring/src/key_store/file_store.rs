@@ -15,6 +15,7 @@ use argon2::{
 
 use std::os::unix::fs::PermissionsExt;
 
+/// A key store that stores keys in files.
 #[derive(Debug)]
 pub struct FileStore {
     path: PathBuf,
