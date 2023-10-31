@@ -10,9 +10,9 @@ pub enum KeyPair {
 }
 
 impl KeyPair {
-    pub fn get_address(&self) -> &AccAddress {
+    pub fn get_address(&self) -> AccAddress {
         match self {
-            KeyPair::Secp256k1(key) => &key.address,
+            KeyPair::Secp256k1(key) => key.get_address(),
         }
     }
 

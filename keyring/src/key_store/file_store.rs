@@ -21,7 +21,7 @@ pub struct FileStore {
     password: Option<String>, //TODO: needs to be a secret
 }
 
-pub const PEM_SUFFIX: &str = "pem";
+pub const PEM_EXTENSION: &str = "pem";
 const KEY_HASH_FILE: &str = "key_hash";
 
 impl FileStore {
@@ -128,9 +128,8 @@ impl FileStore {
     /// Returns an [`Error`] if an entry with the same name already exists. If an entry already exists for
     /// the given key but with a different name then a new separate entry will be created.
     pub fn set_key_pair<S: AsRef<str>>(&self, key_name: S, key_pair: KeyPair) -> Result<(), Error> {
-        let path = self
-            .path
-            .join(format!("{}.{}", key_name.as_ref(), PEM_SUFFIX));
+        let mut path = self.path.join(key_name.as_ref());
+        path.set_extension(PEM_EXTENSION);
 
         let mut file = OpenOptions::new()
             .create_new(true)
@@ -199,7 +198,8 @@ impl FileStore {
     where
         S: AsRef<str>,
     {
-        let path = self.path.join(format!("{}.{}", name.as_ref(), PEM_SUFFIX));
+        let mut path = self.path.join(name.as_ref());
+        path.set_extension(PEM_EXTENSION);
 
         fs::read(&path)
             .map_err(|e| {
@@ -242,7 +242,9 @@ impl FileStore {
     where
         S: AsRef<str>,
     {
-        let path = self.path.join(format!("{}.{}", name.as_ref(), PEM_SUFFIX));
+        let mut path = self.path.join(name.as_ref());
+        path.set_extension(PEM_EXTENSION);
+
         remove_file(&path).map_err(|e| {
             if e.kind() == ErrorKind::NotFound {
                 Error::DoesNotExist {
