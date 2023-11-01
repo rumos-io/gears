@@ -1,5 +1,5 @@
 use database::RocksDB;
-use gears::types::context::Context;
+use gears::types::context::context::Context;
 use store::StoreKey;
 
 use super::{errors::SigningErrors, types::screen::Screen};
