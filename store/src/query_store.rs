@@ -15,7 +15,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
     pub fn new(multi_store: &'a MultiStore<DB, SK>, version: u32) -> Result<Self, Error> {
         let mut stores = HashMap::new();
         for (store, kv_store) in &multi_store.stores {
-            stores.insert(store, QueryKVStore::new(&kv_store, version)?);
+            stores.insert(store, QueryKVStore::new(kv_store, version)?);
         }
 
         Ok(Self {

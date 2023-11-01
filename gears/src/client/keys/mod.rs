@@ -50,10 +50,7 @@ pub fn get_keys_sub_commands(app_name: &str) -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name)
-                        .unwrap_or_default()
-                        .display()
-                        .to_string()
+                    get_default_home_dir(app_name).unwrap_or_default().display()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),

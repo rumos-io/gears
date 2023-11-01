@@ -45,17 +45,15 @@ impl FromStr for Coin {
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         // get the index at which amount ends and denom starts
-        let i = input
-            .find(|c: char| !c.is_numeric())
-            .unwrap_or_else(|| input.len());
+        let i = input.find(|c: char| !c.is_numeric()).unwrap_or(input.len());
 
         let amount = input[..i]
             .parse::<Uint256>()
-            .map_err(|e| Error::Coin(String::from(format!("coin error: {}", e))))?;
+            .map_err(|e| Error::Coin(format!("coin error: {}", e)))?;
 
         let denom = input[i..]
             .parse::<Denom>()
-            .map_err(|e| Error::Coin(String::from(format!("coin error: {}", e))))?;
+            .map_err(|e| Error::Coin(format!("coin error: {}", e)))?;
 
         Ok(Coin { denom, amount })
     }
@@ -111,7 +109,7 @@ impl SendCoins {
             previous_denom = coin.denom.to_string();
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -134,7 +132,7 @@ impl FromStr for SendCoins {
     type Err = Error;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let coin_strings = input.split(",");
+        let coin_strings = input.split(',');
         let mut coins = vec![];
 
         for coin in coin_strings {

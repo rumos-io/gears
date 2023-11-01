@@ -6,7 +6,7 @@ use std::{
 use anyhow::Result;
 use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 
-use proto_messages::cosmos::{base::v1beta1::SendCoins, tx::v1beta1::Message};
+use proto_messages::cosmos::{base::v1beta1::SendCoins, tx::v1beta1::message::Message};
 use proto_types::AccAddress;
 use store_crate::StoreKey;
 use tendermint_informal::Genesis;
@@ -38,10 +38,7 @@ pub fn get_add_genesis_account_command(app_name: &str) -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name)
-                        .unwrap_or_default()
-                        .display()
-                        .to_string()
+                    get_default_home_dir(app_name).unwrap_or_default().display()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(clap::value_parser!(PathBuf)),
@@ -99,6 +96,6 @@ where
     let raw_genesis = fs::read_to_string(genesis_file_path.clone())?;
     let mut genesis: Genesis<G> = serde_json::from_str(&raw_genesis)?;
     handler.handle_add_genesis_account(&mut genesis.app_state, address, coins)?;
-    std::fs::write(genesis_file_path, &serde_json::to_string_pretty(&genesis)?)?;
+    std::fs::write(genesis_file_path, serde_json::to_string_pretty(&genesis)?)?;
     Ok(())
 }

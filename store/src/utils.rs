@@ -43,7 +43,7 @@ where
                 Some(peek_b) => {
                     // Both are valid.  Compare keys.
                     if peek_a.0 < peek_b.0 {
-                        return self.a.next();
+                        self.a.next()
                     } else if peek_a.0 == peek_b.0 {
                         self.b.next(); // effectively skip this
                         return self.a.next();
@@ -51,9 +51,9 @@ where
                         return self.b.next();
                     }
                 }
-                None => return self.a.next(),
+                None => self.a.next(),
             },
-            None => return self.b.next(),
+            None => self.b.next(),
         }
     }
 }

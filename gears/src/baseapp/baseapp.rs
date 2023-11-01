@@ -2,7 +2,7 @@ use bytes::Bytes;
 use database::{Database, RocksDB};
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
-    tx::v1beta1::{Message, TxWithRaw},
+    tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
 };
 use proto_types::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
@@ -39,8 +39,11 @@ use super::{
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M)
-        -> Result<(), AppError>;
+    fn handle_tx<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &M,
+    ) -> Result<(), AppError>;
 
     fn handle_begin_block<DB: Database>(
         &self,
@@ -165,7 +168,7 @@ impl<
                 info: "".to_string(),
                 index: 0,
                 key: request.data,
-                value: res.into(),
+                value: res,
                 proof_ops: None,
                 height: self
                     .get_block_height()
@@ -406,7 +409,7 @@ impl<
     fn increment_block_height(&self) -> u64 {
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
-        return *height;
+        *height
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
@@ -480,7 +483,7 @@ impl<
             self.handler.handle_tx(ctx, msg)?
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
@@ -495,6 +498,6 @@ impl<
                 .map_err(|e| AppError::TxValidation(e.to_string()))?
         }
 
-        return Ok(());
+        Ok(())
     }
 }

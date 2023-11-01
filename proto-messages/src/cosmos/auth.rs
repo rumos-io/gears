@@ -14,7 +14,9 @@ pub mod v1beta1 {
     use serde::{Deserialize, Serialize};
     use serde_aux::prelude::deserialize_number_from_string;
 
-    use crate::{cosmos::tx::v1beta1::PublicKey, utils::serialize_number_to_string, Error};
+    use crate::{
+        cosmos::tx::v1beta1::public_key::PublicKey, utils::serialize_number_to_string, Error,
+    };
 
     /// BaseAccount defines a base account type. It contains all the necessary fields
     /// for basic account functionality. Any custom account type should extend this
@@ -57,10 +59,7 @@ pub mod v1beta1 {
 
     impl From<BaseAccount> for RawBaseAccount {
         fn from(acct: BaseAccount) -> RawBaseAccount {
-            let pub_key = match acct.pub_key {
-                Some(key) => Some(key.into()),
-                None => None,
-            };
+            let pub_key = acct.pub_key.map(|key| key.into());
             RawBaseAccount {
                 address: acct.address.into(),
                 pub_key,

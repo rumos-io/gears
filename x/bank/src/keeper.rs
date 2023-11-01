@@ -77,7 +77,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         // TODO:
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
@@ -224,7 +228,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 return Err(AppError::Send("Insufficient funds".into()));
             }
 
-            from_balance.amount = from_balance.amount - send_coin.amount;
+            from_balance.amount -= send_coin.amount;
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
@@ -245,7 +249,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 },
             };
 
-            to_balance.amount = to_balance.amount + send_coin.amount;
+            to_balance.amount += send_coin.amount;
 
             to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
 
@@ -261,7 +265,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         ctx.append_events(events);
 
-        return Ok(());
+        Ok(())
     }
 
     //#######
@@ -296,7 +300,7 @@ fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
     prefix.push(addr_len);
     prefix.append(&mut addr);
 
-    return prefix;
+    prefix
 }
 
 //TODO: copy tests across

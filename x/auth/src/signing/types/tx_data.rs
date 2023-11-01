@@ -12,7 +12,7 @@ pub struct AuthBytes(pub Bytes);
 #[derive(Debug)]
 pub struct TxData {
     /// `body` is the `TxBody` that will be part of the transaction.
-    pub body: TxBody, //TODO:  which crate to use? proto_messages or ibc_proto
+    pub body: TxBody,
 
     /// `auth_info` is the `AuthInfo` that will be part of the transaction.
     pub auth_info: AuthInfo, // Same here

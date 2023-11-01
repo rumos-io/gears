@@ -43,7 +43,7 @@ impl Display for AppError {
 
 impl AppError {
     pub fn code(&self) -> u32 {
-        return 1;
+        1
     }
 }
 

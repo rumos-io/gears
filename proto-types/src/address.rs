@@ -43,7 +43,7 @@ impl AccAddress {
             });
         }
 
-        return Ok(Self(address));
+        Ok(Self(address))
     }
 
     pub fn len(&self) -> u8 {

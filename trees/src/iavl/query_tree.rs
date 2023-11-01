@@ -98,12 +98,12 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
             Some(root) => Range {
                 range,
                 delayed_nodes: vec![root.clone()], //TODO: remove clone
-                node_db: &self.node_db,
+                node_db: self.node_db,
             },
             None => Range {
                 range,
                 delayed_nodes: vec![],
-                node_db: &&self.node_db,
+                node_db: self.node_db,
             },
         }
     }

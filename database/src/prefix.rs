@@ -67,8 +67,8 @@ mod tests {
         db.put(vec![2, 1], vec![2]);
         let prefix_db = PrefixDB::new(Arc::new(db), vec![2]);
 
-        assert!(prefix_db.get(&vec![1, 1]).is_none());
-        assert_eq!(prefix_db.get(&vec![1]), Some(vec![2]));
+        assert!(prefix_db.get(&[1, 1]).is_none());
+        assert_eq!(prefix_db.get(&[1]), Some(vec![2]));
     }
 
     #[test]
@@ -77,7 +77,7 @@ mod tests {
         let prefix_db = PrefixDB::new(Arc::new(db), vec![2]);
         prefix_db.put(vec![2], vec![1, 2, 3]);
 
-        assert_eq!(prefix_db.get(&vec![2]), Some(vec![1, 2, 3]));
+        assert_eq!(prefix_db.get(&[2]), Some(vec![1, 2, 3]));
     }
 
     #[test]

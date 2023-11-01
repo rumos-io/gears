@@ -276,7 +276,7 @@ impl serde::Serialize for BenchRatio {
         S: serde::Serializer,
     {
         let s = if self.0 == f64::INFINITY {
-            format!("<mark style=\"background-color: red\">&nbsp;NOT RUN&nbsp;</mark>")
+            "<mark style=\"background-color: red\">&nbsp;NOT RUN&nbsp;</mark>".to_string()
         } else if self.0 > 1.0 {
             format!(
                 "<mark style=\"background-color: red\">&nbsp;{:.1}&nbsp;</mark>",

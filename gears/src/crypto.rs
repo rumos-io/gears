@@ -9,7 +9,10 @@ use ibc_relayer::keyring::{Secp256k1KeyPair, SigningKeyPair};
 use prost::Message;
 use proto_messages::cosmos::{
     crypto::secp256k1::v1beta1::{PubKey, RawPubKey},
-    tx::v1beta1::{AuthInfo, Fee, Message as SDKMessage, PublicKey, SignerInfo, Tip, TxBody},
+    tx::v1beta1::{
+        auth_info::AuthInfo, fee::Fee, message::Message as SDKMessage, public_key::PublicKey,
+        signer::SignerInfo, tip::Tip, tx_body::TxBody,
+    },
 };
 use tendermint_informal::chain::Id;
 

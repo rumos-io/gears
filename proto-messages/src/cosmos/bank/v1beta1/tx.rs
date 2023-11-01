@@ -28,15 +28,11 @@ impl TryFrom<RawMsgSend> for MsgSend {
         let to_address = AccAddress::from_bech32(&raw.to_address)
             .map_err(|e| Error::DecodeAddress(e.to_string()))?;
 
-        let coins: Result<Vec<Coin>, Error> = raw
-            .amount
-            .into_iter()
-            .map(|coin| Coin::try_from(coin))
-            .collect();
+        let coins: Result<Vec<Coin>, Error> = raw.amount.into_iter().map(Coin::try_from).collect();
 
         Ok(MsgSend {
-            from_address: from_address,
-            to_address: to_address,
+            from_address,
+            to_address,
             amount: SendCoins::new(coins?)?,
         })
     }
@@ -45,7 +41,7 @@ impl TryFrom<RawMsgSend> for MsgSend {
 impl From<MsgSend> for RawMsgSend {
     fn from(msg: MsgSend) -> RawMsgSend {
         let coins: Vec<Coin> = msg.amount.into();
-        let coins = coins.into_iter().map(|coin| RawCoin::from(coin)).collect();
+        let coins = coins.into_iter().map(RawCoin::from).collect();
 
         RawMsgSend {
             from_address: msg.from_address.into(),

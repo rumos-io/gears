@@ -44,14 +44,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
             "/cosmos.bank.v1beta1.Query/AllBalances" => {
                 let req = QueryAllBalancesRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_all_balances(&ctx, req)
-                    .encode_vec()
-                    .into())
+                Ok(self.keeper.query_all_balances(ctx, req).encode_vec().into())
             }
             "/cosmos.bank.v1beta1.Query/TotalSupply" => Ok(QueryTotalSupplyResponse {
-                supply: self.keeper.get_paginated_total_supply(&ctx),
+                supply: self.keeper.get_paginated_total_supply(ctx),
                 pagination: None,
             }
             .encode_vec()
@@ -59,14 +55,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
             "/cosmos.bank.v1beta1.Query/Balance" => {
                 let req = QueryBalanceRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_balance(&ctx, req).encode_vec().into())
+                Ok(self.keeper.query_balance(ctx, req).encode_vec().into())
             }
 
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         self.keeper.init_genesis(ctx, genesis)
     }
 

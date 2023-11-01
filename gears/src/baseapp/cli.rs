@@ -2,7 +2,7 @@ use axum::body::Body;
 use axum::Router;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
-use proto_messages::cosmos::tx::v1beta1::Message;
+use proto_messages::cosmos::tx::v1beta1::message::Message;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use store_crate::StoreKey;
@@ -137,7 +137,6 @@ pub fn get_run_command(app_name: &str) -> Command {
                     get_default_home_dir(app_name)
                         .unwrap_or_default()
                         .display()
-                        .to_string()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),

@@ -47,7 +47,7 @@ fn main() -> Result<()> {
         auth_keeper,
         params_keeper,
         GaiaParamsStoreKey::BaseApp,
-        |cfg| Handler::new(cfg),
+        Handler::new,
         query_command_handler,
         tx_command_handler,
         get_router(),

@@ -35,6 +35,6 @@ impl<T: ProtoFileResolver> SignModeHandler<T> {
             data.value_get(), /*protoreflect.ValueOf(data.ProtoReflect())) */
         )?;
 
-        Ok(encode(screens)?)
+        encode(screens)
     }
 }
