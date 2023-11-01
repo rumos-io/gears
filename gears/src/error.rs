@@ -18,7 +18,7 @@ pub enum AppError {
 }
 
 impl Display for AppError {
-    fn fmt(&self, f: &mut Formatter) -> Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
             AppError::Bech32(err) => err.fmt(f),
             AppError::InvalidRequest(msg) => write!(f, "invalid request: {}", msg),

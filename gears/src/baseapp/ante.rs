@@ -15,9 +15,9 @@ use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 use store_crate::StoreKey;
 
+use crate::types::context::context::Context;
 use crate::{
     error::AppError,
-    types::context::Context,
     x::auth::{Module, Params},
 };
 
@@ -25,7 +25,7 @@ use crate::{
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         from_address: AccAddress,
         to_module: Module,
         amount: SendCoins,
@@ -34,17 +34,17 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 
 // TODO: this doesn't belong here
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn get_auth_params<DB: Database>(&self, ctx: &Context<DB, SK>) -> Params;
+    fn get_auth_params<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> Params;
 
-    fn has_account<DB: Database>(&self, ctx: &Context<DB, SK>, addr: &AccAddress) -> bool;
+    fn has_account<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>, addr: &AccAddress) -> bool;
 
     fn get_account<DB: Database>(
         &self,
-        ctx: &Context<DB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
         addr: &AccAddress,
     ) -> Option<Account>;
 
-    fn set_account<DB: Database>(&self, ctx: &mut Context<DB, SK>, acct: Account);
+    fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account);
 }
 
 #[derive(Debug, Clone)]
@@ -64,7 +64,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
     }
     pub fn run<DB: Database, M: Message>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
         self.validate_basic_ante_handler(&tx.tx)?;
@@ -115,7 +115,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
     fn tx_timeout_height_ante_handler<DB: Database, M: Message>(
         &self,
-        ctx: &Context<DB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let timeout_height = tx.get_timeout_height();
@@ -139,7 +139,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
     fn validate_memo_ante_handler<DB: Database, M: Message>(
         &self,
-        ctx: &Context<DB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let max_memo_chars = self.auth_keeper.get_auth_params(ctx).max_memo_characters;
@@ -157,7 +157,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
     fn deduct_fee_ante_handler<DB: Database, M: Message>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let fee = tx.get_fee();
@@ -181,7 +181,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
     fn set_pub_key_ante_handler<DB: Database, M: Message>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let public_keys = tx.get_public_keys();
@@ -223,7 +223,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
     fn sig_verification_handler<DB: Database, M: Message>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
         let signers = tx.tx.get_signers();
@@ -292,7 +292,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
     fn increment_sequence_ante_handler<DB: Database, M: Message>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         for signer in tx.get_signers() {

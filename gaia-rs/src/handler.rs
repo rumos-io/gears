@@ -1,14 +1,13 @@
-use gears::{
-    config::Config,
-    types::context::{InitContext, TxContext},
-    x::params::Keeper as ParamsKeeper,
-};
+use gears::{config::Config, x::params::Keeper as ParamsKeeper};
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use tendermint_proto::abci::{RequestBeginBlock, RequestQuery};
 
 use database::Database;
-use gears::{error::AppError, types::context::QueryContext};
+use gears::error::AppError;
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
+use gears::types::context::tx_context::TxContext;
 
 use crate::{
     config::AppConfig,
@@ -50,7 +49,7 @@ impl Handler {
 impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
     fn handle_tx<DB: Database>(
         &self,
-        ctx: &mut TxContext<DB, GaiaStoreKey>,
+        ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {
@@ -60,7 +59,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_init_genesis<DB: Database>(
         &self,
-        ctx: &mut InitContext<DB, GaiaStoreKey>,
+        ctx: &mut InitContext<'_, DB, GaiaStoreKey>,
         genesis: GenesisState,
     ) {
         self.bank_handler.init_genesis(ctx, genesis.bank);
@@ -69,7 +68,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_query<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, GaiaStoreKey>,
+        ctx: &QueryContext<'_, DB, GaiaStoreKey>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         if query.path.starts_with("/cosmos.auth") {
@@ -98,7 +97,7 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
 
     fn handle_begin_block<DB: Database>(
         &self,
-        _ctx: &mut TxContext<DB, GaiaStoreKey>,
+        _ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         _request: RequestBeginBlock,
     ) {
         // do nothing
