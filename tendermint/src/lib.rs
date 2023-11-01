@@ -1,3 +1,5 @@
+#![warn(rust_2018_idioms)]
+
 use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 
 use ed25519_consensus::SigningKey;

@@ -22,7 +22,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn handle<DB: Database>(
         &self,
-        _ctx: &mut Context<DB, SK>,
+        _ctx: &mut Context<'_, '_, DB, SK>,
         _msg: &Message,
     ) -> Result<(), AppError> {
         Ok(())
@@ -30,7 +30,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
     pub fn handle_query<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         query: tendermint_proto::abci::RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
@@ -46,7 +46,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
     }
 

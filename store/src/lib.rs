@@ -1,3 +1,5 @@
+#![warn(rust_2018_idioms)]
+
 mod error;
 mod hash;
 pub mod place_holders;

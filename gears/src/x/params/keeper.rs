@@ -25,7 +25,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn get_raw_subspace<'a, DB: Database>(
         &self,
-        ctx: &'a Context<DB, SK>,
+        ctx: &'a Context<'_, '_, DB, SK>,
         params_subspace_key: &PSK,
     ) -> store_crate::ImmutablePrefixStore<'a, PrefixDB<DB>> {
         let params_store = ctx.get_kv_store(&self.store_key);
@@ -35,7 +35,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn get_mutable_raw_subspace<'a, DB: Database>(
         &self,
-        ctx: &'a mut Context<DB, SK>,
+        ctx: &'a mut Context<'_, '_, DB, SK>,
         params_subspace_key: &PSK,
     ) -> store_crate::MutablePrefixStore<'a, PrefixDB<DB>> {
         let params_store = ctx.get_mutable_kv_store(&self.store_key);
