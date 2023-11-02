@@ -30,7 +30,6 @@ impl KeyPair {
         &self,
         password: impl AsRef<[u8]>,
     ) -> k256::elliptic_curve::zeroize::Zeroizing<String> {
-        // TODO: display "progress" bar
         match self {
             KeyPair::Secp256k1(key) => key.to_pkcs8_encrypted_pem(password),
         }
