@@ -6,4 +6,6 @@ pub enum SigningErrors {
     CustomError(String),
     #[error("EncodeError")]
     EncodeError,
+    #[error("{0}")]
+    IoError(#[from] std::io::Error),
 }

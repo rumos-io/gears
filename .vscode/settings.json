@@ -3,5 +3,8 @@
         "./x/auth/Cargo.toml",
         "./x/auth/Cargo.toml",
         "./x/auth/Cargo.toml"
+    ],
+    "cSpell.words": [
+        "cbor"
     ]
 }

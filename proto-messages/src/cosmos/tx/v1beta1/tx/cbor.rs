@@ -23,7 +23,7 @@ fn first_byte_encode(major: u8, extra: u8) -> u8 {
     (major << 5) | extra & 0x1F
 }
 
-fn prefix_encode<W: Write>(major: u8, arg: u64, writter: &mut W) -> Result<(), std::io::Error> {
+fn prefix_encode(major: u8, arg: u64, writter: &mut impl Write) -> Result<(), std::io::Error> {
     const U8_MAX: u64 = u8::MAX as u64;
     const U16_MAX: u64 = u16::MAX as u64;
     const U32_MAX: u64 = u32::MAX as u64;
@@ -47,23 +47,40 @@ fn prefix_encode<W: Write>(major: u8, arg: u64, writter: &mut W) -> Result<(), s
 }
 
 pub trait Cbor {
-    fn encode<W: Write>(&self, writter: &mut W) -> Result<(), std::io::Error>;
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error>;
+}
+
+#[derive(Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum CborPrimitivies<'a> {
+    Uint64(u64),
+    String(&'a str),
+    Bool(bool),
+}
+
+impl<'a> Cbor for CborPrimitivies<'_> {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
+        match self {
+            CborPrimitivies::Uint64(var) => var.encode(writter),
+            CborPrimitivies::String(var) => var.encode(writter),
+            CborPrimitivies::Bool(var) => var.encode(writter),
+        }
+    }
 }
 
 impl Cbor for u64 {
-    fn encode<W: Write>(&self, writter: &mut W) -> Result<(), std::io::Error> {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         prefix_encode(MAJOR_U64, *self, writter)
     }
 }
 
 impl Cbor for &str {
-    fn encode<W: Write>(&self, writter: &mut W) -> Result<(), std::io::Error> {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         prefix_encode(MAJOR_TEXT_STRING, self.len() as u64, writter)
     }
 }
 
 impl<T: Cbor> Cbor for &[T] {
-    fn encode<W: Write>(&self, writter: &mut W) -> Result<(), std::io::Error> {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         prefix_encode(MAJOR_ARRAY, self.len() as u64, writter)?;
 
         for item in self.iter() {
@@ -74,8 +91,14 @@ impl<T: Cbor> Cbor for &[T] {
     }
 }
 
-impl<T: Cbor + Eq + PartialEq + Hash + Ord, U: Cbor> Cbor for HashMap<T, U> {
-    fn encode<W: Write>(&self, writter: &mut W) -> Result<(), std::io::Error> {
+impl<T: Cbor> Cbor for Vec<T> {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
+        AsRef::<[T]>::as_ref(self).encode(writter)
+    }
+}
+
+impl<T: Cbor + Eq + PartialEq + Hash + Ord, V: Cbor> Cbor for HashMap<T, V> {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         prefix_encode(MAJOR_MAP, self.len() as u64, writter)?;
 
         // For deterministic encoding, map entries must be sorted by their
@@ -117,7 +140,7 @@ impl<T: Cbor + Eq + PartialEq + Hash + Ord, U: Cbor> Cbor for HashMap<T, U> {
 }
 
 impl Cbor for bool {
-    fn encode<W: Write>(&self, writter: &mut W) -> Result<(), std::io::Error> {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         let arg =
             u64::try_from(*self).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
 

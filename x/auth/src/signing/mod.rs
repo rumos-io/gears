@@ -1,4 +1,3 @@
-pub mod encode;
 pub mod errors;
 #[allow(dead_code)] //TODO: remove
 pub mod handler;
