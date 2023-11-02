@@ -4,11 +4,14 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("there was an error accessing the file at {path}: {msg}")]
-    IO {
+    FileIO {
         source: std::io::Error,
         path: String,
         msg: String,
     },
+
+    #[error("there was an error reading the password from stdin: {msg}")]
+    IO { source: std::io::Error, msg: String },
 
     #[error("a key with the name {name} already exists at {location}")]
     AlreadyExists { name: String, location: String },
@@ -54,5 +57,12 @@ pub enum Error {
         source: std::io::Error,
         path: String,
         msg: String,
+    },
+
+    #[error("unexpected keyring type found at {path}, expected: {expected}, found: {found}")]
+    IncorrectBackend {
+        path: String,
+        expected: String,
+        found: String,
     },
 }
