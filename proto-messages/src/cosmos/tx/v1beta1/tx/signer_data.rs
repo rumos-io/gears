@@ -1,5 +1,7 @@
 use nutype::nutype;
 
+use crate::cosmos::crypto::secp256k1::v1beta1::PubKey;
+
 #[nutype(validate(not_empty))]
 #[derive(*)]
 pub struct ChainId(String);
@@ -27,5 +29,6 @@ pub struct SignerData {
     ///
     /// In case of multisigs, this should be the multisig sequence.
     pub sequence: u64,
-    // pub pub_key :AnyKey
+
+    pub pub_key: PubKey,
 }

@@ -1,10 +1,9 @@
 use database::RocksDB;
 use gears::types::context::context::Context;
+use proto_messages::cosmos::tx::v1beta1::{screen::Screen, textual_data::Value};
 use store::StoreKey;
 
-use super::{errors::SigningErrors, types::screen::Screen};
-
-pub struct Value; // TODO:  protoreflect.Value?
+use super::errors::SigningErrors;
 
 /// ValueRenderer is an interface to produce formatted output for all
 /// protobuf types as well as parse a string into those protobuf types.

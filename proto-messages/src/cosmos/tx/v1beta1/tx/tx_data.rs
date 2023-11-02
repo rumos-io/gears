@@ -1,5 +1,8 @@
-use bytes::Bytes;
-use ibc_proto::cosmos::tx::v1beta1::{AuthInfo, TxBody};
+use prost::bytes::Bytes;
+
+use crate::cosmos::tx::v1beta1::message::Message;
+
+use super::{auth_info::AuthInfo, tx_body::TxBody};
 
 /// Nutype struct for body bytes
 #[derive(Debug)]
@@ -10,9 +13,9 @@ pub struct AuthBytes(pub Bytes);
 
 /// TxData is the data about a transaction that is necessary to generate sign bytes.
 #[derive(Debug)]
-pub struct TxData {
+pub struct TxData<M: Message> {
     /// `body` is the `TxBody` that will be part of the transaction.
-    pub body: TxBody,
+    pub body: TxBody<M>,
 
     /// `auth_info` is the `AuthInfo` that will be part of the transaction.
     pub auth_info: AuthInfo, // Same here

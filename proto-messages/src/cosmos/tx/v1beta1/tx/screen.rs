@@ -6,8 +6,8 @@ use nutype::nutype;
 #[derive(*)]
 pub struct Content(String);
 
-// Indent is the indentation level of the screen.
-// Zero indicates top-level.
+/// Indent is the indentation level of the screen.
+/// Zero indicates top-level.
 #[nutype(validate(max = 16))]
 #[derive(*)]
 pub struct Indent(u8);
@@ -16,7 +16,7 @@ pub struct Indent(u8);
 #[derive(Debug)]
 pub struct Screen {
     /// `title` is the text (sequence of Unicode code points) to display first,
-    //. generally on the device's title section. It can be empty.
+    /// generally on the device's title section. It can be empty.
     title: String,
 
     /// `content` is the text (sequence of Unicode code points) to display after

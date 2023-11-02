@@ -1,9 +1,9 @@
-use crate::signing::renderer::Value;
-
 use super::{
     signer_data::SignerData,
     tx_data::{AuthBytes, BodyBytes},
 };
+
+pub struct Value; // TODO:  protoreflect.Value?
 
 /// `TextualData` represents all the information needed to generate
 /// the textual SignDoc (which is []Screen encoded to XBOR). It is meant to be
