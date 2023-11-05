@@ -15,12 +15,12 @@ use tendermint_informal::chain::Id;
 use tendermint_rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
+use crate::client::keys::KeyringBackend;
 use crate::{
     crypto::{create_signed_transaction, SigningInfo},
     utils::get_default_home_dir,
 };
 
-use super::keys::KEYRING_SUB_DIR;
 use super::query::run_query;
 
 pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
@@ -67,6 +67,13 @@ pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
                 .action(ArgAction::Set)
                 .value_parser(clap::value_parser!(SendCoins))
                 .global(true),
+        )
+        .arg(
+            Arg::new("keyring-backend")
+                .long("keyring-backend")
+                .help("Select keyring's backend (file|test) (default \"file\")")
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(KeyringBackend)),
         );
     TxSubcommand::augment_subcommands(cli)
 }
@@ -104,7 +111,12 @@ where
         .expect("has a default value so will never be None")
         .clone();
 
-    let keyring_home = home.join(KEYRING_SUB_DIR);
+    let backend = matches
+        .get_one::<KeyringBackend>("keyring-backend")
+        .cloned()
+        .unwrap_or_default();
+
+    let keyring_home = home.join(backend.get_sub_dir());
 
     let fee_amount = matches.get_one::<SendCoins>("fee").cloned();
 
