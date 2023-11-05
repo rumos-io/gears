@@ -1,8 +1,6 @@
 use database::Database;
-use gears::{
-    types::context::Context,
-    x::{auth::Params, params::ParamsSubspaceKey},
-};
+use gears::types::context::context::Context;
+use gears::x::{auth::Params, params::ParamsSubspaceKey};
 //use params_module::ParamsSubspaceKey;
 // use proto_messages::utils::serialize_number_to_string;
 // use serde::{Deserialize, Serialize};
@@ -71,14 +69,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .expect("should be valid u64")
     }
 
-    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<DB>) -> Vec<u8> {
+    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<'_, DB>) -> Vec<u8> {
         store
             .get(key)
             .expect("key should be set in kv store")
             .clone()
     }
 
-    pub fn get<T: Database>(&self, ctx: &Context<T, SK>) -> Params {
+    pub fn get<T: Database>(&self, ctx: &Context<'_, '_, T, SK>) -> Params {
         let store = self
             .params_keeper
             .get_raw_subspace(ctx, &self.params_subspace_key);
@@ -107,7 +105,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database>(&self, ctx: &mut Context<DB, SK>, params: Params) {
+    pub fn set<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, params: Params) {
         let mut store = self
             .params_keeper
             .get_mutable_raw_subspace(ctx, &self.params_subspace_key);

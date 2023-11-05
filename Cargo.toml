@@ -12,6 +12,7 @@ members = [
   "x/auth",
   "keyring",
 ]
+resolver="2"
 
 [workspace.dependencies]
 ibc-proto = {git = "https://github.com/joneskm/ibc-proto-rs"}

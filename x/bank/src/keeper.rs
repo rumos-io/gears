@@ -4,10 +4,12 @@ use bytes::Bytes;
 use cosmwasm_std::Uint256;
 use database::Database;
 
+use gears::types::context::context::Context;
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::{Context, InitContext, QueryContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
@@ -39,7 +41,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::BankKeeper<SK>
 {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         from_address: AccAddress,
         to_module: Module,
         amount: SendCoins,
@@ -75,7 +77,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         // TODO:
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
@@ -112,7 +114,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn query_balance<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         req: QueryBalanceRequest,
     ) -> QueryBalanceResponse {
         let bank_store = ctx.get_kv_store(&self.store_key);
@@ -134,7 +136,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn query_all_balances<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         req: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
         let bank_store = ctx.get_kv_store(&self.store_key);
@@ -161,7 +163,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     // TODO: does this method guarantee that coins are sorted?
     pub fn get_paginated_total_supply<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
     ) -> Vec<Coin> {
         let bank_store = ctx.get_kv_store(&self.store_key);
         let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into());
@@ -180,7 +182,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn send_coins_from_account_to_account<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         msg: &MsgSend,
     ) -> Result<(), AppError> {
         self.send_coins(ctx, msg.clone())?;
@@ -197,7 +199,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     fn send_coins<DB: Database>(
         &self,
-        ctx: &mut Context<DB, SK>,
+        ctx: &mut Context<'_, '_, DB, SK>,
         msg: MsgSend,
     ) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
@@ -264,7 +266,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     //#######
 
-    pub fn set_supply<DB: Database>(&self, ctx: &mut Context<DB, SK>, coin: Coin) {
+    pub fn set_supply<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
