@@ -81,7 +81,7 @@ struct AccAddressVisitor;
 impl<'de> serde::de::Visitor<'de> for AccAddressVisitor {
     type Value = AccAddress;
 
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("bech32 encoded address")
     }
 
