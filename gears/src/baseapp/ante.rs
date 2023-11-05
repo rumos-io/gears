@@ -267,7 +267,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
             let public_key = acct
                 .get_public_key()
                 .as_ref()
-                .expect("account pub keys are set in set_pub_key_ante_handler");
+                .expect("account pub keys are set in set_pub_key_ante_handler"); //TODO: but can't they be set to None?
 
             //TODO: move sig verification into PublicKey
             match public_key {
