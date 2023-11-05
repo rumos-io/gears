@@ -244,7 +244,7 @@ where
 /// the given key but with a different name then a new separate entry will be created.
 pub fn set_key_pair<S: AsRef<str>>(
     key_name: S,
-    key_pair: KeyPair,
+    key_pair: &KeyPair,
     path: impl AsRef<Path>,
     backend: Backend,
 ) -> Result<(), Error> {

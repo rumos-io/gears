@@ -1,5 +1,6 @@
 pub mod secp256k1_key_pair;
 
+use proto_messages::cosmos::tx::v1beta1::PublicKey;
 use proto_types::AccAddress;
 
 use self::secp256k1_key_pair::Secp256k1KeyPair;
@@ -48,5 +49,19 @@ impl KeyPair {
         Ok(Self::Secp256k1(Secp256k1KeyPair::from_pkcs8_encrypted_pem(
             s, password,
         )?))
+    }
+
+    ///Returns a gears public key
+    pub fn get_gears_public_key(&self) -> PublicKey {
+        match self {
+            KeyPair::Secp256k1(key) => key.get_gears_public_key(),
+        }
+    }
+
+    /// Signs a message.
+    pub fn sign(&self, message: &[u8]) -> Vec<u8> {
+        match self {
+            KeyPair::Secp256k1(key) => key.sign(message),
+        }
     }
 }

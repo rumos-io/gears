@@ -1,4 +1,6 @@
 use bip32::{DerivationPath, Mnemonic, PublicKey, XPrv};
+use k256::ecdsa::signature::Signer;
+use k256::ecdsa::SigningKey;
 use k256::SecretKey;
 use pkcs8::der::pem::PemLabel;
 use pkcs8::{
@@ -6,6 +8,8 @@ use pkcs8::{
     rand_core::{OsRng, RngCore},
     DecodePrivateKey, EncodePrivateKey, EncryptedPrivateKeyInfo, LineEnding, PrivateKeyInfo,
 };
+use proto_messages::cosmos::crypto::secp256k1::v1beta1::PubKey;
+use proto_messages::cosmos::tx::v1beta1::PublicKey as GearsPublicKey;
 use proto_types::AccAddress;
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
@@ -14,14 +18,12 @@ const HDPATH: &str = "m/44'/118'/0'/0/0";
 
 /// A secp256k1 key pair.
 #[derive(Clone, Debug, PartialEq)]
-pub struct Secp256k1KeyPair {
-    secret_key: SecretKey,
-}
+pub struct Secp256k1KeyPair(SecretKey);
 
 impl Secp256k1KeyPair {
     /// Returns PKCS8 PEM encoded private key.
     pub fn to_pkcs8_pem(&self) -> k256::elliptic_curve::zeroize::Zeroizing<String> {
-        self.secret_key
+        self.0
             .to_pkcs8_pem(LineEnding::default())
             .expect("this can't fail")
     }
@@ -51,7 +53,7 @@ impl Secp256k1KeyPair {
         let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap();
         let pbes2_params = pbes2::Parameters::scrypt_aes256cbc(scrypt_params, &salt, &iv).unwrap();
 
-        let plain_text_der = self.secret_key.to_pkcs8_der().unwrap();
+        let plain_text_der = self.0.to_pkcs8_der().unwrap();
         let private_key_info = PrivateKeyInfo::try_from(plain_text_der.as_bytes()).unwrap();
 
         let secret_doc = private_key_info
@@ -65,9 +67,7 @@ impl Secp256k1KeyPair {
 
     /// Returns a key pair from a PKCS8 PEM encoded private key.
     pub fn from_pkcs8_pem(s: &str) -> Result<Self, k256::pkcs8::Error> {
-        Ok(Self {
-            secret_key: SecretKey::from_pkcs8_pem(s)?,
-        })
+        Ok(Self(SecretKey::from_pkcs8_pem(s)?))
     }
 
     /// Returns a key pair from a PKCS8 PEM encoded private key encrypted with password.
@@ -75,9 +75,7 @@ impl Secp256k1KeyPair {
         s: &str,
         password: impl AsRef<[u8]>,
     ) -> Result<Self, k256::pkcs8::Error> {
-        Ok(Self {
-            secret_key: SecretKey::from_pkcs8_encrypted_pem(s, password)?,
-        })
+        Ok(Self(SecretKey::from_pkcs8_encrypted_pem(s, password)?))
     }
 
     /// Returns a key pair from a mnemonic.
@@ -88,14 +86,12 @@ impl Secp256k1KeyPair {
             .expect("seed has length 64 so this will never return an error");
         let signing_key = child_xprv.private_key();
 
-        Secp256k1KeyPair {
-            secret_key: signing_key.into(),
-        }
+        Secp256k1KeyPair(signing_key.into())
     }
 
     /// Returns a Bitcoin style addresses: RIPEMD160(SHA256(pubkey)).
     pub fn get_address(&self) -> AccAddress {
-        let pub_key = self.secret_key.public_key().to_bytes().to_vec();
+        let pub_key = self.0.public_key().to_bytes().to_vec();
 
         // sha256 hash
         let mut hasher = Sha256::new();
@@ -110,6 +106,23 @@ impl Secp256k1KeyPair {
         hash.as_slice().try_into().expect(
             "ripemd160 digest size is 160 bytes which is less than AccAddress::MAX_ADDR_LEN",
         )
+    }
+
+    /// Returns a Gears public key.
+    pub fn get_gears_public_key(&self) -> GearsPublicKey {
+        let raw_public_key = self.0.public_key().to_bytes().to_vec();
+        let public_key: PubKey = raw_public_key
+            .try_into()
+            .expect("raw public key is a valid secp256k1 public key so this will always succeed");
+
+        GearsPublicKey::Secp256k1(public_key)
+    }
+
+    /// Signs a message.
+    pub fn sign(&self, message: &[u8]) -> Vec<u8> {
+        let signing_key: SigningKey = SigningKey::from(&self.0);
+        let signature: k256::ecdsa::Signature = signing_key.sign(message);
+        signature.to_vec()
     }
 }
 

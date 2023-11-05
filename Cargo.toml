@@ -1,16 +1,18 @@
 [workspace]
 members = [
-    "proto-types",
-    "proto-messages",
-    "gears",
-    "trees",
-    "database",
-    "tendermint",
-    "gaia-rs",
-    "store",
-    "x/bank",
-    "x/auth",
+  "proto-types",
+  "proto-messages",
+  "gears",
+  "trees",
+  "database",
+  "tendermint",
+  "gaia-rs",
+  "store",
+  "x/bank",
+  "x/auth",
+  "keyring",
 ]
 
 [workspace.dependencies]
-ibc-proto = { git = "https://github.com/joneskm/ibc-proto-rs" }
+ibc-proto = {git = "https://github.com/joneskm/ibc-proto-rs"}
+secp256k1 = {version = "0.27.0", features = ["rand-std", "bitcoin-hashes"]}

@@ -1,25 +1,12 @@
 use anyhow::{anyhow, Result};
-use bip39::Mnemonic;
+use bip32::Mnemonic;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
-use hdpath::{Purpose, StandardHDPath};
-use ibc_relayer::keyring::SigningKeyPairSized;
-use ibc_relayer::{
-    config::AddressType,
-    keyring::{Secp256k1KeyPair, SigningKeyPair},
-};
-use lazy_static::lazy_static;
 use std::path::PathBuf;
 use text_io::read;
 
-use crate::{client::keys::key_store::DiskStore, utils::get_default_home_dir};
+use crate::utils::get_default_home_dir;
 
-pub mod key_store;
-
-// Values for the HD_PATH copied from
-// https://github.com/informalsystems/hermes/blob/d5fa30db6d4a3dcce84435354f3ce4af932c0141/crates/relayer-cli/src/commands/keys/add.rs#L85
-lazy_static! {
-    static ref HD_PATH: StandardHDPath = StandardHDPath::new(Purpose::Pubkey, 118, 0, 0, 0);
-}
+pub const KEYRING_SUB_DIR: &str = "keyring-file";
 
 pub fn get_keys_command(app_name: &str) -> Command {
     Command::new("keys")
@@ -32,13 +19,6 @@ pub fn get_keys_sub_commands(app_name: &str) -> Command {
     Command::new("add")
         .about("Add a private key (either newly generated or recovered) saving it to <name> file")
         .arg(Arg::new("name").required(true))
-        .arg(
-            Arg::new("overwrite")
-                .short('o')
-                .long("overwrite")
-                .help("Overwrite existing key with same name")
-                .action(ArgAction::SetTrue),
-        )
         .arg(
             Arg::new("recover")
                 .short('r')
@@ -68,8 +48,6 @@ pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
                 .expect("name argument is required preventing None")
                 .to_owned();
 
-            let overwrite = sub_matches.get_flag("overwrite");
-
             let recover = sub_matches.get_flag("recover");
 
             let default_home_directory = get_default_home_dir(app_name);
@@ -80,67 +58,37 @@ pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
                     "Home argument not provided and OS does not provide a default home directory"
                 ))?
                 .to_owned();
+            let keyring_home = home.join(KEYRING_SUB_DIR);
 
-            let mut key_store = DiskStore::new(home)?;
-
-            check_key_exists(&key_store, &name, overwrite)?;
-
-            let key_pair = if recover {
+            if recover {
                 println!("> Enter your bip39 mnemonic");
-                let mnemonic: String = read!("{}\n");
+                let phrase: String = read!("{}\n");
 
-                Secp256k1KeyPair::from_mnemonic(
+                let mnemonic = Mnemonic::new(phrase, bip32::Language::English)?;
+
+                keyring::add_key(
+                    &name,
                     &mnemonic,
-                    &HD_PATH,
-                    &AddressType::Cosmos,
-                    "cosmos",
-                )?
-            } else {
-                let mnemonic =
-                    Mnemonic::new(bip39::MnemonicType::Words24, bip39::Language::English);
-
-                let phrase = mnemonic.phrase();
-
-                let key_pair = Secp256k1KeyPair::from_mnemonic(
-                    phrase,
-                    &HD_PATH,
-                    &AddressType::Cosmos,
-                    "cosmos",
+                    keyring::KeyType::Secp256k1,
+                    keyring::Backend::File(&keyring_home),
                 )?;
 
-                //TODO: need to prevent private key from being printed out
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&key_pair).expect("serialization will never fail")
-                );
+                Ok(())
+            } else {
+                let (mnemonic, key_pair) = keyring::create_key(
+                    &name,
+                    keyring::KeyType::Secp256k1,
+                    keyring::Backend::File(&keyring_home),
+                )?;
+
+                println!("Created key {}\nAddress: {}", name, key_pair.get_address());
 
                 println!("\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account.\n");
-                println!("{phrase}\n");
+                println!("{}\n", mnemonic.phrase());
 
-                key_pair
-            };
-
-            key_store.add_key(&name, key_pair.clone())?;
-
-            Ok(())
+                Ok(())
+            }
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents None"),
     }
-}
-
-fn check_key_exists<S: SigningKeyPairSized>(
-    keystore: &DiskStore<S>,
-    key_name: &str,
-    overwrite: bool,
-) -> Result<()> {
-    if keystore.get_key(key_name).is_ok() {
-        if overwrite {
-            println!("key {} will be overwritten", key_name);
-            return Ok(());
-        } else {
-            return Err(anyhow!("A key with name '{key_name}' already exists"));
-        }
-    }
-
-    Ok(())
 }

@@ -1,10 +1,9 @@
-use std::{path::PathBuf, str::FromStr};
+use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse as RawQueryAccountResponse;
 use ibc_proto::{cosmos::tx::v1beta1::TxRaw, protobuf::Protobuf};
-use ibc_relayer::keyring::{Secp256k1KeyPair, SigningKeyPair};
 use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
@@ -21,7 +20,8 @@ use crate::{
     utils::get_default_home_dir,
 };
 
-use super::{keys::key_store::DiskStore, query::run_query};
+use super::keys::KEYRING_SUB_DIR;
+use super::query::run_query;
 
 pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
     let cli = Command::new("tx")
@@ -104,13 +104,15 @@ where
         .expect("has a default value so will never be None")
         .clone();
 
+    let keyring_home = home.join(KEYRING_SUB_DIR);
+
     let fee_amount = matches.get_one::<SendCoins>("fee").cloned();
 
-    let key_store: DiskStore<Secp256k1KeyPair> = DiskStore::new(home)?;
-    let key = key_store.get_key(&from)?;
+    let key = keyring::get_key_by_name(&from, keyring::Backend::File(&keyring_home))?;
+    let address = key.get_address();
 
     let args = TxSubcommand::from_arg_matches(matches).unwrap(); // TODO: remove unwrap
-    let message = tx_command_handler(args, AccAddress::from_str(&key.account())?)?;
+    let message = tx_command_handler(args, address.clone())?;
 
     let fee = Fee {
         amount: fee_amount,
@@ -119,7 +121,7 @@ where
         granter: "".into(),   //TODO: remove hard coded granter
     };
 
-    let account = get_account_latest(AccAddress::from_str(&key.account())?, node)?;
+    let account = get_account_latest(address, node)?;
 
     let signing_info = SigningInfo {
         key,

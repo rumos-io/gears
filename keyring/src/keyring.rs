@@ -26,7 +26,7 @@ pub fn add_key<S>(
     mnemonic: &Mnemonic,
     key_type: KeyType,
     backend: Backend,
-) -> Result<(), Error>
+) -> Result<KeyPair, Error>
 where
     S: AsRef<str>,
 {
@@ -36,23 +36,29 @@ where
 
     match backend {
         Backend::File(path) => {
-            file_store::set_key_pair(name, key_pair, path, file_store::Backend::Encrypted)
+            file_store::set_key_pair(name, &key_pair, path, file_store::Backend::Encrypted)?;
         }
         Backend::Test(path) => {
-            file_store::set_key_pair(name, key_pair, path, file_store::Backend::Test)
+            file_store::set_key_pair(name, &key_pair, path, file_store::Backend::Test)?;
         }
-    }
+    };
+
+    Ok(key_pair)
 }
 
 /// Generates a new random mnemonic and key pair, stores the new key pair and
 /// returns the generated mnemonic.
-pub fn create_key<S>(name: S, key_type: KeyType, backend: Backend) -> Result<Mnemonic, Error>
+pub fn create_key<S>(
+    name: S,
+    key_type: KeyType,
+    backend: Backend,
+) -> Result<(Mnemonic, KeyPair), Error>
 where
     S: AsRef<str>,
 {
     let mnemonic = Mnemonic::random(&mut OsRng, bip32::Language::English);
-    add_key(name, &mnemonic, key_type, backend)?;
-    Ok(mnemonic)
+    let key_pair = add_key(name, &mnemonic, key_type, backend)?;
+    Ok((mnemonic, key_pair))
 }
 
 /// Get a key by name.
