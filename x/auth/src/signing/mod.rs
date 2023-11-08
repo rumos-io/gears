@@ -1,5 +1,5 @@
 pub mod errors;
 #[allow(dead_code)] //TODO: remove
 pub mod handler;
-pub mod proto_file_resolver;
+mod hasher;
 pub mod renderer;

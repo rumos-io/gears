@@ -5,10 +5,10 @@ use crate::cosmos::tx::v1beta1::message::Message;
 use super::{auth_info::AuthInfo, tx_body::TxBody};
 
 /// Nutype struct for body bytes
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BodyBytes(pub Bytes);
 /// Nutype struct for auth info bytes
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AuthBytes(pub Bytes);
 
 /// TxData is the data about a transaction that is necessary to generate sign bytes.

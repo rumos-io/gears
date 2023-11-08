@@ -28,24 +28,24 @@ pub struct Indent(u8);
 pub struct Screen {
     /// `title` is the text (sequence of Unicode code points) to display first,
     /// generally on the device's title section. It can be empty.
-    title: String,
+    pub title: String,
 
     /// `content` is the text (sequence of Unicode code points) to display after
     /// the `title`, generally on the device's content section. It must be
     /// ***non-empty***.
-    content: Content,
+    pub content: Content,
 
     /// `indent` is the indentation level of the screen.
     /// Zero indicates top-level.
-    indent: Indent,
+    pub indent: Indent,
 
     /// `expert` indicates that the screen should only be displayed
     /// via an opt-in from the user.
-    expert: bool,
+    pub expert: bool,
 }
 
 impl Screen {
-    pub fn cbor_map<'a>(&self) -> HashMap<u64, CborPrimitivies<'_>> {
+    pub fn cbor_map(&self) -> HashMap<u64, CborPrimitivies<'_>> {
         let mut map = HashMap::new();
         if !self.title.is_empty() {
             let _ = map.insert(TITLE_KEY, CborPrimitivies::String(&self.title));

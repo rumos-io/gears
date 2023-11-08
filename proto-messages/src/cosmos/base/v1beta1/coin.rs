@@ -64,7 +64,7 @@ impl FromStr for Coin {
 // - All coin amounts are positive
 // - No duplicate denominations
 // - Sorted lexicographically
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Default)]
 pub struct SendCoins(Vec<Coin>);
 
 impl SendCoins {
@@ -110,6 +110,10 @@ impl SendCoins {
         }
 
         Ok(())
+    }
+
+    pub fn into_inner(self) -> Vec<Coin> {
+        self.0
     }
 }
 

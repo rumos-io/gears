@@ -199,12 +199,15 @@ dependencies = [
  "gears",
  "hex",
  "ibc-proto 0.31.0-alpha.2",
+ "once_cell",
  "prost",
  "proto-messages",
  "proto-types",
+ "regex",
  "serde",
  "serde-aux",
  "serde_json",
+ "sha2 0.10.8",
  "store",
  "tendermint 0.29.1 (git+https://github.com/joneskm/tendermint-rs)",
  "tendermint-proto 0.29.1 (git+https://github.com/joneskm/tendermint-rs)",
@@ -804,7 +807,7 @@ dependencies = [
  "schemars",
  "serde",
  "serde-json-wasm",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "thiserror",
 ]
 
@@ -1254,7 +1257,7 @@ dependencies = [
  "derivation-path",
  "ed25519-dalek",
  "hmac",
- "sha2 0.10.7",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -1360,6 +1363,12 @@ checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
 dependencies = [
  "version_check",
 ]
+
+[[package]]
+name = "ethnum"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b90ca2580b73ab6a1f724b76ca11ab632df820fd6040c336200d2c1df7b3c82c"
 
 [[package]]
 name = "eyre"
@@ -1600,7 +1609,7 @@ dependencies = [
  "serde",
  "serde-aux",
  "serde_json",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "store",
  "strum",
  "tendermint 0.1.0",
@@ -2018,7 +2027,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "subtle-encoding",
  "tendermint 0.29.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tendermint-light-client-verifier 0.29.1",
@@ -2119,7 +2128,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "signature 1.6.4",
  "strum",
  "subtle-encoding",
@@ -2178,7 +2187,7 @@ dependencies = [
  "hex",
  "prost",
  "ripemd",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "sha3",
 ]
 
@@ -2356,7 +2365,7 @@ dependencies = [
  "cfg-if 1.0.0",
  "ecdsa 0.14.8",
  "elliptic-curve 0.12.3",
- "sha2 0.10.7",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -2369,7 +2378,7 @@ dependencies = [
  "ecdsa 0.16.8",
  "elliptic-curve 0.13.5",
  "once_cell",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "signature 2.1.0",
 ]
 
@@ -2521,6 +2530,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "micromarshal"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6793011b42fc5acf43fd594545720a69df9a81be80352d57304abf93f3865e9"
+dependencies = [
+ "ethnum",
+ "ordered-float",
 ]
 
 [[package]]
@@ -2728,6 +2747,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
+name = "ordered-float"
+version = "3.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1e1c390732d15f1d48471625cd92d154e66db2c56645e29a9cd26f4699f72dc"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
 name = "os_info"
 version = "3.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2883,7 +2911,7 @@ checksum = "b42f0394d3123e33353ca5e1e89092e533d2cc490389f2bd6131c43c634ebc5f"
 dependencies = [
  "once_cell",
  "pest",
- "sha2 0.10.7",
+ "sha2 0.10.8",
 ]
 
 [[package]]
@@ -3082,6 +3110,7 @@ dependencies = [
  "cosmwasm-std",
  "hex",
  "ibc-proto 0.31.0-alpha.2",
+ "micromarshal",
  "nutype",
  "prost",
  "proto-types",
@@ -3091,7 +3120,7 @@ dependencies = [
  "serde-aux",
  "serde_json",
  "serde_with",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "tendermint 0.29.1 (git+https://github.com/joneskm/tendermint-rs)",
  "thiserror",
 ]
@@ -3296,14 +3325,14 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.9.5"
+version = "1.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "697061221ea1b4a94a624f67d0ae2bfe4e22b8a17b6a192afb11046542cc8c47"
+checksum = "380b951a9c5e80ddfd6136919eef32310721aa4aacd4889a8d39124b026ab343"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata 0.3.8",
- "regex-syntax 0.7.5",
+ "regex-automata 0.4.3",
+ "regex-syntax 0.8.2",
 ]
 
 [[package]]
@@ -3317,13 +3346,13 @@ dependencies = [
 
 [[package]]
 name = "regex-automata"
-version = "0.3.8"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c2f401f4955220693b56f8ec66ee9c78abffd8d1c4f23dc41a23839eb88f0795"
+checksum = "5f804c7828047e88b2d32e2d7fe5a105da8ee3264f01902f796c8e067dc2483f"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-syntax 0.7.5",
+ "regex-syntax 0.8.2",
 ]
 
 [[package]]
@@ -3334,9 +3363,9 @@ checksum = "f162c6dd7b008981e4d40210aca20b4bd0f9b60ca9271061b07f78537722f2e1"
 
 [[package]]
 name = "regex-syntax"
-version = "0.7.5"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbb5fb1acd8a1a18b3dd5be62d25485eb770e05afb408a9627d14d451bae12da"
+checksum = "c08c74e62047bb2de4ff487b251e4a92e24f48745648451635cec7d591162d9f"
 
 [[package]]
 name = "retry"
@@ -3943,9 +3972,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.7"
+version = "0.10.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "479fb9d862239e610720565ca91403019f2f00410f1864c5aa7479b950a76ed8"
+checksum = "793db75ad2bcafc3ffa7c68b215fee268f537982cd901d132f89c6343f3a3dc8"
 dependencies = [
  "cfg-if 1.0.0",
  "cpufeatures",
@@ -4088,7 +4117,7 @@ dependencies = [
  "database",
  "hex",
  "integer-encoding",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "strum",
  "thiserror",
  "trees",
@@ -4259,7 +4288,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "serde_repr",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "signature 1.6.4",
  "subtle",
  "subtle-encoding",
@@ -4287,7 +4316,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "serde_repr",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "signature 1.6.4",
  "subtle",
  "subtle-encoding",
@@ -4318,7 +4347,7 @@ dependencies = [
  "serde_bytes",
  "serde_json",
  "serde_repr",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "signature 1.6.4",
  "subtle",
  "subtle-encoding",
@@ -4625,7 +4654,7 @@ dependencies = [
  "pbkdf2",
  "rand 0.8.5",
  "rustc-hash",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "thiserror",
  "unicode-normalization",
  "wasm-bindgen",
@@ -5008,7 +5037,7 @@ dependencies = [
  "rand 0.8.5",
  "serde",
  "serde_json",
- "sha2 0.10.7",
+ "sha2 0.10.8",
  "thiserror",
 ]
 

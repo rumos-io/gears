@@ -1,43 +1,37 @@
-use bytes::Bytes;
-use database::RocksDB;
-use gears::types::context::context::Context;
-use proto_messages::cosmos::tx::v1beta1::{
-    cbor::Cbor, message::Message, signer_data::SignerData, textual_data::TextualData,
-    tx_data::TxData,
-};
-use store::StoreKey;
+// use database::RocksDB;
+// use gears::types::context::context::Context;
+// use proto_messages::cosmos::tx::v1beta1::{
+//     cbor::Cbor, message::Message, signer_data::SignerData, textual_data::TextualData,
+//     tx_data::TxData,
+// };
+// use store::StoreKey;
 
-use super::{
-    errors::SigningErrors, proto_file_resolver::ProtoFileResolver, renderer::ValueRenderer,
-};
+// use super::{errors::SigningErrors, renderer::ValueRendererTrait};
 
-#[derive(Debug)]
-pub struct SignModeHandler<T> {
-    file_resolver: T,
-}
+// #[derive(Debug)]
+// pub struct SignModeHandler {}
 
-impl<T: ProtoFileResolver> SignModeHandler<T> {
-    pub fn sign_bytes_get<M: Message, SK: StoreKey, VR: ValueRenderer>(
-        &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
-        signer_data: SignerData,
-        tx_data: TxData<M>,
-    ) -> Result<Vec<u8>, SigningErrors> {
-        let data = TextualData {
-            body_bytes: tx_data.body_bytes,
-            auth_info_bytes: tx_data.auth_info_bytes,
-            signer_data,
-        };
+// impl SignModeHandler {
+//     pub fn sign_bytes_get<M: Message, SK: StoreKey, VR: ValueRendererTrait>(
+//         &self,
+//         ctx: &Context<'_, '_, RocksDB, SK>,
+//         signer_data: SignerData,
+//         tx_data: TxData<M>,
+//     ) -> Result<Vec<u8>, SigningErrors> {
+//         let data = TextualData {
+//             body_bytes: tx_data.body_bytes.0,
+//             auth_info_bytes: tx_data.auth_info_bytes.0,
+//             signer_data,
+//             body: tx_data.body,
+//             auth_info: tx_data.auth_info,
+//         }; // *Note:* smth we need bytes so I save bytes and serealized version too.
 
-        let screens = VR::format(
-            ctx,
-            data.value_get(), /*protoreflect.ValueOf(data.ProtoReflect())) */
-        )?;
+//         let screens = VR::format(ctx, data)?;
 
-        let mut bytes = Vec::new();
+//         let mut bytes = Vec::new();
 
-        screens.encode(&mut bytes)?;
+//         screens.encode(&mut bytes)?;
 
-        Ok(bytes)
-    }
-}
+//         Ok(bytes)
+//     }
+// }

@@ -46,7 +46,9 @@ fn prefix_encode(major: u8, arg: u64, writter: &mut impl Write) -> Result<(), st
     }
 }
 
+// Cbor is a CBOR (RFC8949) data item that can be encoded to a stream.
 pub trait Cbor {
+    // `encode` deterministically writes the CBOR-encoded data to the stream.
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error>;
 }
 

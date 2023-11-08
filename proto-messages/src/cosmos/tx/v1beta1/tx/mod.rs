@@ -1,6 +1,7 @@
 pub mod any_tx;
 pub mod auth_info;
 pub mod cbor;
+pub mod envelope;
 pub mod fee;
 pub mod public_key;
 #[allow(dead_code)]
