@@ -3113,6 +3113,7 @@ dependencies = [
  "base64 0.21.3",
  "base64-serde",
  "byteorder",
+ "ciborium",
  "cosmwasm-std",
  "data-encoding",
  "hex",
