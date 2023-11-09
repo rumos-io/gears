@@ -22,7 +22,7 @@ static MSG_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("([0-9]+) Any").expect("
 // static INVERSE_MSG_REG: Lazy<Regex> =
 //     Lazy::new(|| Regex::new("This transaction has ([0-9]+) Messages?").expect("Invalid regex"));
 
-pub trait TxValueRendererTrait<SK, M>: ValueRendererTrait<TextualData<M>, SK, M>
+pub trait TxValueRendererTrait<SK, M>: ValueRendererTrait<TextualData<M>, SK>
 where
     SK: StoreKey,
     M: Message,
@@ -33,15 +33,15 @@ pub struct TxValueRenderer<MR>(PhantomData<MR>);
 
 impl<MR, SK, M> TxValueRendererTrait<SK, M> for TxValueRenderer<MR>
 where
-    MR: MessageValueRendererTrait<Envelope, SK, M>,
+    MR: MessageValueRendererTrait<Envelope, SK>,
     SK: StoreKey,
     M: Message,
 {
 }
 
-impl<MR, SK, M> ValueRendererTrait<TextualData<M>, SK, M> for TxValueRenderer<MR>
+impl<MR, SK, M> ValueRendererTrait<TextualData<M>, SK> for TxValueRenderer<MR>
 where
-    MR: MessageValueRendererTrait<Envelope, SK, M>,
+    MR: MessageValueRendererTrait<Envelope, SK>,
     SK: StoreKey,
     M: Message,
 {
@@ -103,27 +103,11 @@ where
             )
         })?;
 
+        expertify(screens.iter_mut());
+
         for screen in &mut screens {
             if screen.indent.clone().into_inner() != 0 {
                 continue;
-            }
-
-            static EXPERT: [&'static str; 10] = [
-                "Address",
-                "Public key",
-                "Fee payer",
-                "Fee granter",
-                "Gas limit",
-                "Timeout height",
-                "Other signer",
-                "Extension options",
-                "Non critical extension options",
-                "Hash of raw bytes",
-            ];
-
-            // Do expert fields.
-            if EXPERT.contains(&screen.title.as_str()) {
-                todo!()
             }
 
             // Replace:
@@ -171,5 +155,36 @@ where
         _screens: impl IntoIterator<Item = Screen>,
     ) -> Result<TextualData<M>, SigningErrors> {
         todo!()
+    }
+}
+
+/// `expertify` marks all screens starting from `fromIdx` as expert, and stops
+/// just before it finds the next screen with Indent==0 (unless it's a "End of"
+/// termination screen). It modifies screens in-place.
+fn expertify<'a>(screens: impl Iterator<Item = &'a mut Screen>) {
+    for screen in screens {
+        if screen.indent.clone().into_inner() != 0
+            && screen.content.as_ref() == &format!("End of {}", screen.title)
+        {
+            continue;
+        }
+
+        static EXPERT: [&'static str; 10] = [
+            "Address",
+            "Public key",
+            "Fee payer",
+            "Fee granter",
+            "Gas limit",
+            "Timeout height",
+            "Other signer",
+            "Extension options",
+            "Non critical extension options",
+            "Hash of raw bytes",
+        ];
+
+        // Do expert fields.
+        if EXPERT.contains(&screen.title.as_str()) {
+            screen.expert = true;
+        }
     }
 }

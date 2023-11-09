@@ -1,6 +1,6 @@
 use database::RocksDB;
 use gears::types::context::context::Context;
-use proto_messages::cosmos::tx::v1beta1::{message::Message, screen::Screen};
+use proto_messages::cosmos::tx::v1beta1::screen::Screen;
 use store::StoreKey;
 
 use crate::signing::errors::SigningErrors;
@@ -12,7 +12,7 @@ use crate::signing::errors::SigningErrors;
 /// a default spec for value renderers. However, we define it as an interface
 /// here, so that optionally more value renderers could be built, for example, a
 /// separate one for a different language.
-pub trait ValueRendererTrait<V, SK: StoreKey, M: Message> {
+pub trait ValueRendererTrait<V, SK: StoreKey> {
     /// Format renders the Protobuf value to a list of Screens.
     fn format(ctx: &Context<'_, '_, RocksDB, SK>, value: V) -> Result<Vec<Screen>, SigningErrors>;
 
