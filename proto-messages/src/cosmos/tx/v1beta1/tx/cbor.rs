@@ -150,4 +150,99 @@ impl Cbor for bool {
     }
 }
 
-// TODO: tests
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use super::Cbor;
+
+    #[test]
+    fn check_unsigned_int() {
+        // Examples come from RFC8949, Appendix A
+        let var = [
+            (0_u64, "00"),
+            (1, "01"),
+            (10, "0a"),
+            (23, "17"),
+            (24, "1818"),
+            (25, "1819"),
+            (100, "1864"),
+            (1000, "1903e8"),
+            (1000000, "1a000f4240"),
+            (1000000000000, "1b000000e8d4a51000"),
+            (18446744073709551615, "1bffffffffffffffff"),
+        ];
+
+        validate_result(var)
+    }
+
+    #[test]
+    fn check_bool() {
+        // Examples come from RFC8949, Appendix A
+        let var = [(false, "f4"), (true, "f5")];
+
+        validate_result(var)
+    }
+
+    #[test]
+    fn check_str() {
+        // Examples come from RFC8949, Appendix A
+        let var = [
+            ("", "60"),
+            ("a", "6161"),
+            ("IETF", "6449455446"),
+            (r#"\"\\"#, "62225c"),
+            (r#"\u00fc"#, "62c3bc"),
+            (r#"\u6c34"#, "63e6b0b4"),
+        ];
+
+        validate_result(var)
+    }
+
+    #[test]
+    fn check_array() {
+        // Examples come from RFC8949, Appendix A
+        let var = [
+            ([].as_ref(), "80"),
+            (&[1_u64, 2, 3], "83010203"),
+            (
+                &[
+                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+                    23, 24, 25,
+                ],
+                "98190102030405060708090a0b0c0d0e0f101112131415161718181819",
+            ),
+        ];
+
+        validate_result(var)
+    }
+
+    #[test]
+    fn check_hashmap() {
+        // Examples come from RFC8949, Appendix A
+        let mut var = HashMap::new();
+
+        var.insert( 1, 2);
+        var.insert( 3, 4);
+
+        let mut buf = Vec::new();
+
+        var.encode( &mut buf).expect("Failed to write buffer");
+
+        let hex = data_encoding::HEXLOWER.encode(&buf);
+
+        assert_eq!( &hex, "a201020304")
+    }
+
+    fn validate_result<'a, T: Cbor>(value: impl IntoIterator<Item = (T, &'a str)>) {
+        for (i, expected) in value {
+            let mut buf = Vec::new();
+
+            i.encode(&mut buf)
+                .expect("Failed to write buffer");
+
+            let expected = data_encoding::HEXLOWER.decode(expected.as_bytes()).unwrap();
+            assert_eq!(buf, expected, "{buf:02x?} != {expected:02x?}");
+        }
+    }
+}

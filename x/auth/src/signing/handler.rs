@@ -9,17 +9,10 @@ use store::StoreKey;
 use super::{errors::SigningErrors, renderer::vr_trait::ValueRendererTrait};
 
 #[derive(Debug)]
-pub struct SignModeHandler
-{
-
-}
+pub struct SignModeHandler {}
 
 impl SignModeHandler {
-    pub fn sign_bytes_get<
-        M: Message,
-        SK: StoreKey,
-        VR: ValueRendererTrait<TextualData<M>, SK>,
-    >(
+    pub fn sign_bytes_get<M: Message, SK: StoreKey, VR: ValueRendererTrait<TextualData<M>, SK>>(
         &self,
         ctx: &Context<'_, '_, RocksDB, SK>,
         signer_data: SignerData,
