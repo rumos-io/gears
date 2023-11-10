@@ -1,7 +1,6 @@
 use anyhow::{anyhow, Result};
 use bip32::Mnemonic;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, ValueEnum};
-use serde::de;
 use std::path::PathBuf;
 use text_io::read;
 

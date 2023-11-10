@@ -33,7 +33,7 @@ impl Secp256k1KeyPair {
         &self,
         password: impl AsRef<[u8]>,
     ) -> k256::elliptic_curve::zeroize::Zeroizing<String> {
-        // The pkcs8 crate doesn't directly support encrypting with the same scrypt params as openssl.
+        // TODO: The pkcs8 crate doesn't directly support encrypting with the same scrypt params as openssl.
         // The following implementation is a workaround to achieve the same result.
         // See https://github.com/RustCrypto/formats/issues/1205
         // Once this is fixed, we can replace the following code with:

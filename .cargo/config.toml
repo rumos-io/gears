@@ -1,2 +1,2 @@
 [env]
-ACCOUNT_ADDRESS_PREFIX = "cosmos"
+BECH_32_MAIN_PREFIX = "cosmos"
