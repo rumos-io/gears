@@ -195,6 +195,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "clap",
+ "data-encoding",
  "database",
  "gears",
  "hex",

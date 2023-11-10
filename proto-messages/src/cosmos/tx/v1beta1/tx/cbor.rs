@@ -34,7 +34,7 @@ fn prefix_encode(major: u8, arg: u64, writter: &mut impl Write) -> Result<(), st
     const U8_MAX: u64 = u8::MAX as u64;
     const U16_MAX: u64 = u16::MAX as u64;
     const U32_MAX: u64 = u32::MAX as u64;
-    
+
     match arg {
         ..=U8_MAX => (arg as u8).encode(writter),
         ..=U16_MAX => {
@@ -52,23 +52,22 @@ fn prefix_encode(major: u8, arg: u64, writter: &mut impl Write) -> Result<(), st
     }
 }
 
-impl Cbor for u8
-{
+impl Cbor for u8 {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         match *self {
-           ..=23 => writter.write_u8(first_byte_encode(MAJOR_U64, *self) ),
-           _ =>  writter.write_all(&[first_byte_encode(MAJOR_U64, 24), *self]),
+            ..=23 => writter.write_u8(first_byte_encode(MAJOR_U64, *self)),
+            _ => writter.write_all(&[first_byte_encode(MAJOR_U64, 24), *self]),
         }
     }
 }
 
-impl Cbor for u16{
+impl Cbor for u16 {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
-       (*self as u64).encode(writter)
+        (*self as u64).encode(writter)
     }
 }
 
-impl Cbor for u32{
+impl Cbor for u32 {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         (*self as u64).encode(writter)
     }
@@ -83,10 +82,7 @@ impl Cbor for u64 {
 impl Cbor for bool {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         ciborium::into_writer(self, writter)
-        .map_err( | e | std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string()
-        ))
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
     }
 }
 
@@ -116,20 +112,14 @@ impl<'a> Cbor for CborPrimitivies<'_> {
 impl Cbor for &str {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         ciborium::into_writer(self, writter)
-        .map_err( | e | std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string()
-        ))
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
     }
 }
 
 impl<T: Serialize> Cbor for &[T] {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         ciborium::into_writer(self, writter)
-        .map_err( | e | std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string()
-        ))
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
     }
 }
 
@@ -142,10 +132,7 @@ impl<T: Serialize> Cbor for Vec<T> {
 impl<T: Serialize + Eq + PartialEq + Hash + Ord, V: Serialize> Cbor for HashMap<T, V> {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         ciborium::into_writer(self, writter)
-        .map_err( | e | std::io::Error::new(
-            std::io::ErrorKind::Other,
-            e.to_string()
-        ))
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
     }
 }
 
@@ -272,24 +259,23 @@ mod tests {
         // Examples come from RFC8949, Appendix A
         let mut var = HashMap::new();
 
-        var.insert( 1_u64, 2_u64);
-        var.insert( 3, 4);
+        var.insert(1_u64, 2_u64);
+        var.insert(3, 4);
 
         let mut buf = Vec::new();
 
-        var.encode( &mut buf).expect("Failed to write buffer");
+        var.encode(&mut buf).expect("Failed to write buffer");
 
         let hex = data_encoding::HEXLOWER.encode(&buf);
 
-        assert_eq!( &hex, "a201020304")
+        assert_eq!(&hex, "a201020304")
     }
 
     fn validate_result<'a, T: Cbor>(value: impl IntoIterator<Item = (T, &'a str)>) {
         for (i, expected) in value {
             let mut buf = Vec::new();
 
-            i.encode(&mut buf)
-                .expect("Failed to write buffer");
+            i.encode(&mut buf).expect("Failed to write buffer");
 
             let expected = data_encoding::HEXLOWER.decode(expected.as_bytes()).unwrap();
             assert_eq!(buf, expected, "{buf:02x?} != {expected:02x?}");

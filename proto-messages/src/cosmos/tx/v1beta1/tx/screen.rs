@@ -24,11 +24,11 @@ pub struct Content(String);
 #[derive(*, Deserialize)]
 pub struct Indent(u8);
 
-impl Default for Indent {
-    fn default() -> Self {
-        Self::new(0).expect("Default should be valid")
-    }
-}
+// impl Default for Indent {
+//     fn default() -> Self {
+//         Self::new(0).expect("Default should be valid")
+//     }
+// }
 
 /// Screen is the abstract unit of Textual rendering.
 #[derive(Debug, Deserialize)]
@@ -46,7 +46,7 @@ pub struct Screen {
     /// `indent` is the indentation level of the screen.
     /// Zero indicates top-level.
     #[serde(default)]
-    pub indent: Indent,
+    pub indent: Option<Indent>,
 
     /// `expert` indicates that the screen should only be displayed
     /// via an opt-in from the user.
@@ -64,11 +64,13 @@ impl Screen {
 
         let _ = map.insert(CONTENT_KEY, CborPrimitivies::String(self.content.as_ref())); // nutype made validation that content is not empty
 
-        if self.indent.into_inner() > 0 {
-            let _ = map.insert(
-                INDENT_KEY,
-                CborPrimitivies::Uint64(self.indent.into_inner() as u64),
-            );
+        if let Some(indent) = self.indent {
+            if indent.into_inner() > 0 {
+                let _ = map.insert(
+                    INDENT_KEY,
+                    CborPrimitivies::Uint64(indent.into_inner() as u64),
+                );
+            }
         }
         if self.expert {
             let _ = map.insert(EXPERT_KEY, CborPrimitivies::Bool(self.expert));
@@ -180,17 +182,16 @@ mod tests {
         validate_result(screens, CBOR)
     }
 
-    fn validate_result(value: impl IntoIterator<Item = Screen>, expected : &'static str ) {
-
+    fn validate_result(value: impl IntoIterator<Item = Screen>, expected: &'static str) {
         let vec = value.into_iter().collect::<Vec<_>>();
 
         let mut buf = Vec::new();
 
-        vec
-            .encode(&mut buf)
-            .expect("Failed to encode");
+        vec.encode(&mut buf).expect("Failed to encode");
 
-        let expected = data_encoding::HEXLOWER.decode(expected.as_bytes()).expect( "Failed to decode");
+        let expected = data_encoding::HEXLOWER
+            .decode(expected.as_bytes())
+            .expect("Failed to decode");
         assert_eq!(buf, expected, "{buf:02x?} != {expected:02x?}");
     }
 }
