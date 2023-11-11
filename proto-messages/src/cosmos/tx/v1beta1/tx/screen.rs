@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::cbor::{Cbor, CborPrimitivies};
 use nutype::nutype;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
 const SCREENS_KEY: u64 = 1;
@@ -15,13 +15,13 @@ const EXPERT_KEY: u64 = 4;
 /// Content is the text (sequence of Unicode code points) to display after
 /// the Title, generally on the device's content section.
 #[nutype(validate(not_empty))]
-#[derive(*, Deserialize)]
+#[derive(*, Deserialize, Serialize)]
 pub struct Content(String);
 
 /// Indent is the indentation level of the screen.
 /// Zero indicates top-level.
 #[nutype(validate(max = 16))]
-#[derive(*, Deserialize)]
+#[derive(*, Deserialize, Serialize)]
 pub struct Indent(u8);
 
 // impl Default for Indent {
@@ -31,7 +31,7 @@ pub struct Indent(u8);
 // }
 
 /// Screen is the abstract unit of Textual rendering.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct Screen {
     /// `title` is the text (sequence of Unicode code points) to display first,
     /// generally on the device's title section. It can be empty.
@@ -80,16 +80,16 @@ impl Screen {
     }
 }
 
-impl Cbor for &[Screen] {
-    fn encode(&self, writter: &mut impl std::io::Write) -> Result<(), std::io::Error> {
-        let items = self.iter().map(|this| this.cbor_map()).collect::<Vec<_>>();
+// impl Cbor for &[Screen] {
+//     fn encode(&self, writter: &mut impl std::io::Write) -> Result<(), std::io::Error> {
+//         let items = self.iter().map(|this| this.cbor_map()).collect::<Vec<_>>();
 
-        let mut hash_map = HashMap::with_capacity(1);
-        let _ = hash_map.insert(SCREENS_KEY, items); // ignore returned
+//         let mut hash_map = HashMap::with_capacity(1);
+//         let _ = hash_map.insert(SCREENS_KEY, items); // ignore returned
 
-        hash_map.encode(writter)
-    }
-}
+//         hash_map.encode(writter)
+//     }
+// }
 
 impl Cbor for Vec<Screen> {
     fn encode(&self, writter: &mut impl std::io::Write) -> Result<(), std::io::Error> {

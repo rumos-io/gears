@@ -1,17 +1,15 @@
 //! Default formating implementation for `i64`
-use crate::signing::renderer::value_renderer::{DefaultRenderer, PrimitiveValueRenderer};
+use crate::signing::renderer::value_renderer::{PrimitiveDefaultRenderer, PrimitiveValueRenderer};
 
 const THOUSAND_SEPARATOR: &str = "'";
 
-impl PrimitiveValueRenderer<i64> for DefaultRenderer {
-
+impl PrimitiveValueRenderer<i64> for PrimitiveDefaultRenderer {
     fn format(value: i64) -> String {
         let mut value = {
-            if value.is_positive()
-            {
+            if value.is_positive() {
                 value.to_string()
-            }
-            else { //omit sign char
+            } else {
+                //omit sign char
                 value.to_string()[1..].to_string()
             }
         };
@@ -40,8 +38,6 @@ impl PrimitiveValueRenderer<i64> for DefaultRenderer {
         }
 
         // 3. By this point v is entirely multiples of 3 hence we just insert the separator at every 3 digit.
-        
-
 
         // for i := 0; i < len(v); i += 3 {
         //     end := i + 3

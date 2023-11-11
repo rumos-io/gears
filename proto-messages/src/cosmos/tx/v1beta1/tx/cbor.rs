@@ -123,11 +123,11 @@ impl<T: Serialize> Cbor for &[T] {
     }
 }
 
-impl<T: Serialize> Cbor for Vec<T> {
-    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
-        AsRef::<[T]>::as_ref(self).encode(writter)
-    }
-}
+// impl<T: Serialize> Cbor for Vec<T> {
+//     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
+//         AsRef::<[T]>::as_ref(self).encode(writter)
+//     }
+// }
 
 impl<T: Serialize + Eq + PartialEq + Hash + Ord, V: Serialize> Cbor for HashMap<T, V> {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
