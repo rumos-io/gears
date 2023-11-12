@@ -39,8 +39,11 @@ use super::{
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M)
-        -> Result<(), AppError>;
+    fn handle_tx<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &M,
+    ) -> Result<(), AppError>;
 
     fn handle_begin_block<DB: Database>(
         &self,
@@ -133,7 +136,7 @@ impl<
         ResponseInitChain {
             consensus_params: request.consensus_params,
             validators: request.validators,
-            app_hash: "hash_goes_here".into(),
+            app_hash: "hash_goes_here".into(), //TODO: set app hash
         }
     }
 
