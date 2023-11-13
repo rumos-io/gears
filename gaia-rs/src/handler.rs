@@ -1,6 +1,4 @@
 use gears::{config::Config, x::params::Keeper as ParamsKeeper};
-use proto_messages::cosmos::base::v1beta1::SendCoins;
-use proto_types::AccAddress;
 use tendermint_proto::abci::{RequestBeginBlock, RequestQuery};
 
 use database::Database;
@@ -78,21 +76,6 @@ impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
         } else {
             Err(AppError::InvalidRequest("query path not found".into()))
         }
-    }
-
-    // TODO: move this into the SDK
-    fn handle_add_genesis_account(
-        &self,
-        genesis_state: &mut GenesisState,
-        address: AccAddress,
-        coins: SendCoins,
-    ) -> Result<(), AppError> {
-        self.auth_handler
-            .handle_add_genesis_account(&mut genesis_state.auth, address.clone())?;
-        self.bank_handler
-            .handle_add_genesis_account(&mut genesis_state.bank, address, coins);
-
-        Ok(())
     }
 
     fn handle_begin_block<DB: Database>(

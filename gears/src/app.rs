@@ -142,7 +142,7 @@ where
             QuerySubcommand,
         >(sub_matches, app_name, app_version),
         Some(("add-genesis-account", sub_matches)) => {
-            run_add_genesis_account_command(sub_matches, app_name, handler_builder)?
+            run_add_genesis_account_command::<G>(sub_matches, app_name)?
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents `None`"),
     };

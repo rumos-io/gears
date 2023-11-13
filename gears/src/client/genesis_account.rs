@@ -6,15 +6,13 @@ use std::{
 use anyhow::Result;
 use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 
-use proto_messages::cosmos::{base::v1beta1::SendCoins, tx::v1beta1::Message};
+use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
-use store_crate::StoreKey;
 use tendermint_informal::Genesis;
 
 use crate::{
-    baseapp::{Genesis as SDKGenesis, Handler},
-    config::{ApplicationConfig, Config},
-    utils::{get_config_file_from_home_dir, get_default_home_dir, get_genesis_file_from_home_dir},
+    baseapp::Genesis as SDKGenesis,
+    utils::{get_default_home_dir, get_genesis_file_from_home_dir},
 };
 
 pub fn get_add_genesis_account_command(app_name: &str) -> Command {
@@ -48,21 +46,10 @@ pub fn get_add_genesis_account_command(app_name: &str) -> Command {
         )
 }
 
-pub fn run_add_genesis_account_command<
-    G: SDKGenesis,
-    H: Handler<M, SK, G>,
-    HandlerBuilder,
-    SK: StoreKey,
-    M: Message,
-    AC: ApplicationConfig,
->(
+pub fn run_add_genesis_account_command<G: SDKGenesis>(
     sub_matches: &ArgMatches,
     app_name: &str,
-    handler_builder: HandlerBuilder,
-) -> Result<()>
-where
-    HandlerBuilder: FnOnce(Config<AC>) -> H,
-{
+) -> Result<()> {
     let default_home_directory = get_default_home_dir(app_name);
 
     let home = sub_matches
@@ -83,22 +70,13 @@ where
         .expect("coin argument is required preventing `None`")
         .to_owned();
 
-    let mut cfg_file_path = home.clone();
-    get_config_file_from_home_dir(&mut cfg_file_path);
-
-    let config: Config<AC> = Config::from_file(cfg_file_path).unwrap_or_else(|err| {
-        tracing::error!("Error reading config file: {:?}", err);
-        std::process::exit(1)
-    });
-
-    let handler = handler_builder(config);
-
     let mut genesis_file_path = home.clone();
     get_genesis_file_from_home_dir(&mut genesis_file_path);
 
     let raw_genesis = fs::read_to_string(genesis_file_path.clone())?;
     let mut genesis: Genesis<G> = serde_json::from_str(&raw_genesis)?;
-    handler.handle_add_genesis_account(&mut genesis.app_state, address, coins)?;
+    genesis.app_state.add_genesis_account(address, coins)?;
+
     std::fs::write(genesis_file_path, &serde_json::to_string_pretty(&genesis)?)?;
     Ok(())
 }
