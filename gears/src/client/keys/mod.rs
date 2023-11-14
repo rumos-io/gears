@@ -1,25 +1,13 @@
 use anyhow::{anyhow, Result};
-use bip39::Mnemonic;
-use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
-use hdpath::{Purpose, StandardHDPath};
-use ibc_relayer::keyring::SigningKeyPairSized;
-use ibc_relayer::{
-    config::AddressType,
-    keyring::{Secp256k1KeyPair, SigningKeyPair},
-};
-use lazy_static::lazy_static;
+use bip32::Mnemonic;
+use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, ValueEnum};
 use std::path::PathBuf;
 use text_io::read;
 
-use crate::{client::keys::key_store::DiskStore, utils::get_default_home_dir};
+use crate::utils::get_default_home_dir;
 
-pub mod key_store;
-
-// Values for the HD_PATH copied from
-// https://github.com/informalsystems/hermes/blob/d5fa30db6d4a3dcce84435354f3ce4af932c0141/crates/relayer-cli/src/commands/keys/add.rs#L85
-lazy_static! {
-    static ref HD_PATH: StandardHDPath = StandardHDPath::new(Purpose::Pubkey, 118, 0, 0, 0);
-}
+const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
+const KEYRING_SUB_DIR_TEST: &str = "keyring-test";
 
 pub fn get_keys_command(app_name: &str) -> Command {
     Command::new("keys")
@@ -28,17 +16,33 @@ pub fn get_keys_command(app_name: &str) -> Command {
         .subcommand_required(true)
 }
 
+#[derive(ValueEnum, Clone, Default)]
+pub enum KeyringBackend {
+    #[default]
+    File,
+    Test,
+}
+
+impl KeyringBackend {
+    pub fn get_sub_dir(&self) -> &str {
+        match self {
+            KeyringBackend::File => KEYRING_SUB_DIR_FILE,
+            KeyringBackend::Test => KEYRING_SUB_DIR_TEST,
+        }
+    }
+
+    fn to_keyring_backend<'a>(&self, path: &'a PathBuf) -> keyring::Backend<'a> {
+        match self {
+            KeyringBackend::File => keyring::Backend::File(&path),
+            KeyringBackend::Test => keyring::Backend::Test(&path),
+        }
+    }
+}
+
 pub fn get_keys_sub_commands(app_name: &str) -> Command {
     Command::new("add")
         .about("Add a private key (either newly generated or recovered) saving it to <name> file")
         .arg(Arg::new("name").required(true))
-        .arg(
-            Arg::new("overwrite")
-                .short('o')
-                .long("overwrite")
-                .help("Overwrite existing key with same name")
-                .action(ArgAction::SetTrue),
-        )
         .arg(
             Arg::new("recover")
                 .short('r')
@@ -55,6 +59,13 @@ pub fn get_keys_sub_commands(app_name: &str) -> Command {
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),
         )
+        .arg(
+            Arg::new("keyring-backend")
+                .long("keyring-backend")
+                .help("Select keyring's backend (file|test) (default \"file\")")
+                .action(ArgAction::Set)
+                .value_parser(value_parser!(KeyringBackend)),
+        )
 }
 
 pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
@@ -64,8 +75,6 @@ pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
                 .get_one::<String>("name")
                 .expect("name argument is required preventing None")
                 .to_owned();
-
-            let overwrite = sub_matches.get_flag("overwrite");
 
             let recover = sub_matches.get_flag("recover");
 
@@ -78,66 +87,36 @@ pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
                 ))?
                 .to_owned();
 
-            let mut key_store = DiskStore::new(home)?;
+            let backend = sub_matches
+                .get_one::<KeyringBackend>("keyring-backend")
+                .cloned()
+                .unwrap_or_default();
 
-            check_key_exists(&key_store, &name, overwrite)?;
+            let keyring_home = home.join(backend.get_sub_dir());
 
-            let key_pair = if recover {
+            let backend = backend.to_keyring_backend(&keyring_home);
+
+            if recover {
                 println!("> Enter your bip39 mnemonic");
-                let mnemonic: String = read!("{}\n");
+                let phrase: String = read!("{}\n");
 
-                Secp256k1KeyPair::from_mnemonic(
-                    &mnemonic,
-                    &HD_PATH,
-                    &AddressType::Cosmos,
-                    "cosmos",
-                )?
+                let mnemonic = Mnemonic::new(phrase, bip32::Language::English)?;
+
+                keyring::add_key(&name, &mnemonic, keyring::KeyType::Secp256k1, backend)?;
+
+                Ok(())
             } else {
-                let mnemonic =
-                    Mnemonic::new(bip39::MnemonicType::Words24, bip39::Language::English);
+                let (mnemonic, key_pair) =
+                    keyring::create_key(&name, keyring::KeyType::Secp256k1, backend)?;
 
-                let phrase = mnemonic.phrase();
-
-                let key_pair = Secp256k1KeyPair::from_mnemonic(
-                    phrase,
-                    &HD_PATH,
-                    &AddressType::Cosmos,
-                    "cosmos",
-                )?;
-
-                //TODO: need to prevent private key from being printed out
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&key_pair).expect("serialization will never fail")
-                );
+                println!("Created key {}\nAddress: {}", name, key_pair.get_address());
 
                 println!("\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account.\n");
-                println!("{phrase}\n");
+                println!("{}", mnemonic.phrase());
 
-                key_pair
-            };
-
-            key_store.add_key(&name, key_pair.clone())?;
-
-            Ok(())
+                Ok(())
+            }
         }
         _ => unreachable!("exhausted list of subcommands and subcommand_required prevents None"),
     }
-}
-
-fn check_key_exists<S: SigningKeyPairSized>(
-    keystore: &DiskStore<S>,
-    key_name: &str,
-    overwrite: bool,
-) -> Result<()> {
-    if keystore.get_key(key_name).is_ok() {
-        if overwrite {
-            println!("key {} will be overwritten", key_name);
-            return Ok(());
-        } else {
-            return Err(anyhow!("A key with name '{key_name}' already exists"));
-        }
-    }
-
-    Ok(())
 }

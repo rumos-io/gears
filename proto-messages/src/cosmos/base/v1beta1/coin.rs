@@ -271,7 +271,10 @@ mod tests {
         // empty
         let coins = vec![];
         let err = SendCoins::new(coins).unwrap_err();
-        assert_eq!(err.to_string(), String::from("list of coins is empty"));
+        assert_eq!(
+            err.to_string(),
+            String::from("invalid coins: `list of coins is empty`")
+        );
 
         // not sorted
         let coins = vec![
@@ -291,7 +294,7 @@ mod tests {
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coins are not sorted and/or contain duplicates")
+            String::from("invalid coins: `coins are not sorted and/or contain duplicates`")
         );
 
         // not sorted 2
@@ -312,7 +315,7 @@ mod tests {
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coins are not sorted and/or contain duplicates")
+            String::from("invalid coins: `coins are not sorted and/or contain duplicates`")
         );
 
         // not positive
@@ -323,7 +326,7 @@ mod tests {
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coin amount must be positive")
+            String::from("invalid coins: `coin amount must be positive`")
         );
 
         // not all positive
@@ -344,7 +347,7 @@ mod tests {
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coin amount must be positive")
+            String::from("invalid coins: `coin amount must be positive`")
         );
 
         // duplicate denomination
@@ -365,7 +368,7 @@ mod tests {
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coins are not sorted and/or contain duplicates")
+            String::from("invalid coins: `coins are not sorted and/or contain duplicates`")
         );
     }
 

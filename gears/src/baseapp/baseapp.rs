@@ -58,17 +58,15 @@ pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send +
         ctx: &QueryContext<'_, DB, SK>,
         query: RequestQuery,
     ) -> Result<Bytes, AppError>;
+}
 
-    fn handle_add_genesis_account(
-        &self,
-        genesis_state: &mut G,
+pub trait Genesis: Default + DeserializeOwned + Serialize + Clone + Send + Sync + 'static {
+    fn add_genesis_account(
+        &mut self,
         address: AccAddress,
         coins: SendCoins,
     ) -> Result<(), AppError>;
 }
-
-pub trait Genesis: DeserializeOwned + Serialize + Clone + Send + Sync + 'static {}
-impl<T: DeserializeOwned + Serialize + Clone + Send + Sync + 'static> Genesis for T {}
 
 #[derive(Debug, Clone)]
 pub struct BaseApp<
@@ -136,7 +134,7 @@ impl<
         ResponseInitChain {
             consensus_params: request.consensus_params,
             validators: request.validators,
-            app_hash: "hash_goes_here".into(),
+            app_hash: "hash_goes_here".into(), //TODO: set app hash
         }
     }
 

@@ -6,9 +6,9 @@ use bank::Keeper as BankKeeper;
 use client::query_command_handler;
 use client::tx_command_handler;
 use gears::x::params::Keeper as ParamsKeeper;
+use gears::Application;
 use rest::get_router;
 
-use crate::genesis::GenesisState;
 use crate::handler::Handler;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 
@@ -39,10 +39,9 @@ fn main() -> Result<()> {
         auth_keeper.clone(),
     );
 
-    gears::app::run(
+    let app: Application<_, _, _, _, _, _, _, _, _, _, _, _, _> = Application::new(
         APP_NAME,
         VERSION,
-        GenesisState::default(),
         bank_keeper,
         auth_keeper,
         params_keeper,
@@ -51,5 +50,6 @@ fn main() -> Result<()> {
         query_command_handler,
         tx_command_handler,
         get_router(),
-    )
+    );
+    app.run_command()
 }

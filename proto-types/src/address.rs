@@ -37,7 +37,7 @@ impl AccAddress {
         }
 
         // It's unclear whether the conversion from base32 can ever fail. Since this method
-        // returns a Result there's no harm in returning an error here.
+        // already returns a Result there's no harm in returning an error here.
         let address = Vec::<u8>::from_base32(&data)?;
 
         if address.len() > MAX_ADDR_LEN.into() {

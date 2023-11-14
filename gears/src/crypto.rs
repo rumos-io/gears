@@ -5,20 +5,16 @@ use ibc_proto::{
     },
     protobuf::Protobuf,
 };
-use ibc_relayer::keyring::{Secp256k1KeyPair, SigningKeyPair};
+use keyring::key_pair::KeyPair;
 use prost::Message;
-use proto_messages::cosmos::{
-    crypto::secp256k1::v1beta1::{PubKey, RawPubKey},
-    tx::v1beta1::{
-        auth_info::AuthInfo, fee::Fee, message::Message as SDKMessage, public_key::PublicKey,
-        signer::SignerInfo, tip::Tip, tx_body::TxBody,
-    },
+use proto_messages::cosmos::tx::v1beta1::{
+    AuthInfo, Fee, Message as SDKMessage, SignerInfo, Tip, TxBody,
 };
 use tendermint_informal::chain::Id;
 
 /// Contains info required to sign a Tx
 pub struct SigningInfo {
-    pub key: Secp256k1KeyPair,
+    pub key: KeyPair,
     pub sequence: u64,
     pub account_number: u64,
 }
@@ -33,14 +29,10 @@ pub fn create_signed_transaction<M: SDKMessage>(
     let signer_infos: Vec<SignerInfo> = signing_infos
         .iter()
         .map(|s| {
-            let public_key = s.key.public_key.serialize().to_vec();
-            let public_key = RawPubKey { key: public_key }; //TODO: add method to PubKey to make this easier?
-            let public_key: PubKey = public_key
-                .try_into()
-                .expect("converting the secp256k1 library's public key will always succeed");
+            let public_key = Some(s.key.get_gears_public_key());
 
             SignerInfo {
-                public_key: Some(PublicKey::Secp256k1(public_key)),
+                public_key,
                 mode_info: Some(ModeInfo {
                     sum: Some(Sum::Single(Single { mode: 1 })),
                 }),
@@ -70,9 +62,7 @@ pub fn create_signed_transaction<M: SDKMessage>(
         .map(|s| {
             sign_doc.account_number = s.account_number;
 
-            s.key
-                .sign(&sign_doc.encode_to_vec())
-                .expect("library method can never fail")
+            s.key.sign(&sign_doc.encode_to_vec())
         })
         .collect();
 

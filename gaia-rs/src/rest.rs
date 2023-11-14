@@ -19,5 +19,5 @@ pub fn get_router<
     H: Handler<M, SK, G>,
     G: Genesis,
 >() -> Router<RestState<SK, PSK, M, BK, AK, H, G>, Body> {
-    Router::new().nest("/bank", bank::rest::get_router())
+    Router::new().nest("/cosmos/bank", bank::rest::get_router())
 }
