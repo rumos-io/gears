@@ -7,7 +7,6 @@ mod keeper;
 mod message;
 mod params;
 pub mod signing;
-mod types;
 
 pub use client::*;
 pub use genesis::*;

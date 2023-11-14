@@ -60,17 +60,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(
-        &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
-    ) {
-        self.keeper.init_genesis(ctx, genesis)
-    }
-
     /// NOTE: If the genesis_state already contains an entry for the given address then this method
     /// will add another entry to the list i.e. it does not merge entries
-    pub fn handle_add_genesis_account(
     pub fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
