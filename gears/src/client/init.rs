@@ -38,7 +38,7 @@ pub fn get_init_command(app_name: &str) -> Command {
 pub fn run_init_command<G: Serialize, AC: ApplicationConfig>(
     sub_matches: &ArgMatches,
     app_name: &str,
-    app_genesis_state: G,
+    app_genesis_state: &G,
 ) {
     let moniker = sub_matches
         .get_one::<String>("moniker")

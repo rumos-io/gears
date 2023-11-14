@@ -60,7 +60,7 @@ pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send +
     ) -> Result<Bytes, AppError>;
 }
 
-pub trait Genesis: DeserializeOwned + Serialize + Clone + Send + Sync + 'static {
+pub trait Genesis: Default + DeserializeOwned + Serialize + Clone + Send + Sync + 'static {
     fn add_genesis_account(
         &mut self,
         address: AccAddress,

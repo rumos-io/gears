@@ -18,9 +18,9 @@ use crate::{
 pub fn get_add_genesis_account_command(app_name: &str) -> Command {
     Command::new("add-genesis-account")
         .about(
-            "Add a genesis account to genesis.json. The provided account must specify
-        the account address and a list of initial coins. The list of initial tokens must
-        contain valid denominations.",
+            "Add a genesis account to genesis.json. The provided account must specify the
+account address and a list of initial coins. The list of initial tokens must
+contain valid denominations.",
         )
         .arg(
             Arg::new("address")
