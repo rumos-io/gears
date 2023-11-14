@@ -14,6 +14,7 @@ pub mod tip;
 pub mod tx;
 pub mod tx_body;
 pub mod tx_data;
+pub mod tx_metadata;
 pub mod tx_raw;
 
 #[cfg(test)]

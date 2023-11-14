@@ -18,4 +18,6 @@ pub enum Error {
     DecodeAddress(String),
     #[error("decode error: `{0}`")]
     DecodeGeneral(String),
+    #[error("{0}")]
+    Custom(String),
 }

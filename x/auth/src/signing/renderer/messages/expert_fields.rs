@@ -1,7 +1,7 @@
 //! Expert fields of messages
 
 /// Expert fields of messages
-pub static EXPERT: [&'static str; 10] = [
+pub static _EXPERT: [&'static str; 10] = [
     "Address",
     "Public key",
     "Fee payer",

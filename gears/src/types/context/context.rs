@@ -1,6 +1,7 @@
 use crate::types::context::init_context::InitContext;
 use crate::types::context::tx_context::TxContext;
 use database::{Database, PrefixDB};
+use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, StoreKey};
 use tendermint_informal::abci::Event;
 
@@ -52,6 +53,32 @@ impl<'a, 'b, T: Database, SK: StoreKey> Context<'a, 'b, T, SK> {
         match self {
             Context::TxContext(ctx) => ctx.append_events(events),
             Context::InitContext(ctx) => ctx.events.append(&mut events),
+        }
+    }
+
+    // TODO: Placeholder for tests
+    #[deprecated = "Need to be implemented fully"]
+    pub fn metadata_get(&self) -> Metadata {
+        Metadata {
+            description: String::new(),
+            denom_units: vec![
+                DenomUnit {
+                    denom: "ATOM".into(),
+                    exponent: 6,
+                    aliases: Vec::new(),
+                },
+                DenomUnit {
+                    denom: "uatom".into(),
+                    exponent: 0,
+                    aliases: Vec::new(),
+                },
+            ],
+            base: "uatom".into(),
+            display: "ATOM".into(),
+            name: String::new(),
+            symbol: String::new(),
+            uri: String::new(),
+            uri_hash: None,
         }
     }
 }

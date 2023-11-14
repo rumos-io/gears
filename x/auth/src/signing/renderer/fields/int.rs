@@ -1,52 +1,91 @@
 //! Default formating implementation for `i64`
-use crate::signing::renderer::value_renderer::{PrimitiveDefaultRenderer, PrimitiveValueRenderer};
+
+use num_format::{Buffer, CustomFormat, Grouping};
+use once_cell::sync::OnceCell;
+
+use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
 const THOUSAND_SEPARATOR: &str = "'";
 
-impl PrimitiveValueRenderer<i64> for PrimitiveDefaultRenderer {
+/// Get reference to defined format
+fn format_get() -> &'static CustomFormat {
+    static FORMAT: OnceCell<CustomFormat> = OnceCell::new();
+
+    FORMAT.get_or_init(|| {
+        CustomFormat::builder()
+            .grouping(Grouping::Standard)
+            .minus_sign("-")
+            .separator(THOUSAND_SEPARATOR)
+            .plus_sign("")
+            .build()
+            .expect("Failed to build formatter")
+    })
+}
+
+impl PrimitiveValueRenderer<i64> for DefaultPrimitiveRenderer {
     fn format(value: i64) -> String {
-        let mut value = {
-            if value.is_positive() {
-                value.to_string()
-            } else {
-                //omit sign char
-                value.to_string()[1..].to_string()
-            }
-        };
+        let mut buf = Buffer::new();
+        buf.write_formatted(&value, format_get());
 
-        let chars_length = value.chars().count();
+        buf.to_string()
+    }
 
-        // 1. Less than 4 digits don't need any formatting.
-        if chars_length <= 3 {
-            return value;
+    fn format_try(value: i64) -> Result<String, Box<dyn std::error::Error>> {
+        Ok(Self::format(value))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::signing::renderer::value_renderer::{
+        DefaultPrimitiveRenderer, PrimitiveValueRenderer,
+    };
+
+    #[test]
+    fn test_positive() {
+        let test_data = [
+            (1, "1"),
+            (2, "2"),
+            (10, "10"),
+            (30, "30"),
+            (100, "100"),
+            (500, "500"),
+            (1000, "1'000"),
+            (5000, "5'000"),
+            (10_000, "10'000"),
+            (100_000, "100'000"),
+            (5_000_000, "5'000'000"),
+            (50_000_000, "50'000'000"),
+        ];
+
+        for (i, expected) in test_data {
+            let actual = DefaultPrimitiveRenderer::format(i);
+
+            assert_eq!(expected, &actual);
         }
+    }
 
-        let mut result = String::new();
+    #[test]
+    fn test_negative() {
+        let test_data = [
+            (-1, "-1"),
+            (-2, "-2"),
+            (-10, "-10"),
+            (-30, "-30"),
+            (-100, "-100"),
+            (-500, "-500"),
+            (-1000, "-1'000"),
+            (-5000, "-5'000"),
+            (-10_000, "-10'000"),
+            (-100_000, "-100'000"),
+            (-5_000_000, "-5'000'000"),
+            (-50_000_000, "-50'000'000"),
+        ];
 
-        // 2. If the length of v is not a multiple of 3 e.g. 1234 or 12345, to achieve 1'234 or 12'345,
-        // we can simply slide to the first mod3 values of v that aren't the multiples of 3 then insert in
-        // the thousands separator so in this case: write(12'); then the remaining v will be entirely multiple
-        // of 3 hence v = 34*
+        for (i, expected) in test_data {
+            let actual = DefaultPrimitiveRenderer::format(i);
 
-        let mod3 = chars_length % 3;
-        if mod3 != 0 {
-            result.push_str(&value[..mod3]);
-
-            value = String::from(&value[mod3..]);
-
-            result.push_str(THOUSAND_SEPARATOR);
+            assert_eq!(expected, &actual);
         }
-
-        // 3. By this point v is entirely multiples of 3 hence we just insert the separator at every 3 digit.
-
-        // for i := 0; i < len(v); i += 3 {
-        //     end := i + 3
-        //     sb.WriteString(v[i:end])
-        //     if end < len(v) {
-        //         sb.WriteString(thousandSeparator)
-        //     }
-        // }
-
-        result
     }
 }
