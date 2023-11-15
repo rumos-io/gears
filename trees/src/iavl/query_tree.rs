@@ -9,8 +9,6 @@ use super::{node_db::NodeDB, Node, Range, Tree};
 /// QueryTree is a "checked out" Tree at a given height which
 /// borrows a Tree's NodeDb
 pub struct QueryTree<'a, DB>
-where
-    DB: Database,
 {
     pub(crate) root: Option<Node>,
     pub(crate) node_db: &'a NodeDB<DB>,

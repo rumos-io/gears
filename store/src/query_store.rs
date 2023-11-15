@@ -5,7 +5,7 @@ use trees::iavl::{QueryTree, Range};
 
 use crate::{error::Error, ImmutablePrefixStore, KVStore, MultiStore, StoreKey};
 
-pub struct QueryMultiStore<'a, DB: Database, SK: StoreKey> {
+pub struct QueryMultiStore<'a, DB, SK> {
     //head_version: u32,
     //head_commit_hash: [u8; 32],
     stores: HashMap<&'a SK, QueryKVStore<'a, PrefixDB<DB>>>,
@@ -32,7 +32,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
     }
 }
 
-pub struct QueryKVStore<'a, DB: Database> {
+pub struct QueryKVStore<'a, DB> {
     persistent_store: QueryTree<'a, DB>,
 }
 

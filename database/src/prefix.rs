@@ -4,8 +4,6 @@ use crate::Database;
 
 #[derive(Debug)]
 pub struct PrefixDB<T>
-where
-    T: Database,
 {
     db: Arc<T>,
     prefix: Vec<u8>,

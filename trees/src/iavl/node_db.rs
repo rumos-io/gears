@@ -10,8 +10,6 @@ use super::Node;
 
 #[derive(Debug)]
 pub struct NodeDB<T>
-where
-    T: Database,
 {
     db: T,
     cache: Mutex<LRUCache<[u8; 32], Node, DefaultHashBuilder>>,
