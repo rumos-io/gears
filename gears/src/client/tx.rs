@@ -71,9 +71,10 @@ pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
         .arg(
             Arg::new("keyring-backend")
                 .long("keyring-backend")
-                .help("Select keyring's backend (file|test) (default \"file\")")
+                .help("Select keyring's backend (default \"file\")")
                 .action(ArgAction::Set)
-                .value_parser(value_parser!(KeyringBackend)),
+                .value_parser(value_parser!(KeyringBackend))
+                .global(true),
         );
     TxSubcommand::augment_subcommands(cli)
 }
@@ -120,7 +121,7 @@ where
 
     let fee_amount = matches.get_one::<SendCoins>("fee").cloned();
 
-    let key = keyring::get_key_by_name(&from, keyring::Backend::File(&keyring_home))?;
+    let key = keyring::get_key_by_name(&from, backend.to_keyring_backend(&keyring_home))?;
     let address = key.get_address();
 
     let args = TxSubcommand::from_arg_matches(matches).unwrap(); // TODO: remove unwrap
