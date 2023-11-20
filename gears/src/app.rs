@@ -100,35 +100,16 @@ pub trait Application {
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
 
-    // fn get_router(
-    //     &self,
-    // ) -> Router<
-    //     RestState<
-    //         Self::StoreKey,
-    //         Self::ParamsSubspaceKey,
-    //         Self::Message,
-    //         Self::BankKeeper,
-    //         Self::AuthKeeper,
-    //         Self::Handler,
-    //         Self::Genesis,
-    //     >,
-    //     Body,
-    // >;
-
     fn get_params_store_key(&self) -> Self::StoreKey;
 
     fn get_params_subspace_key(&self) -> Self::ParamsSubspaceKey;
 
-    fn get_handler(&self, cfg: Config<Self::ApplicationConfig>) -> Self::Handler;
-
-    // TODO: pass self
     fn handle_tx_command(
         &self,
         command: Self::TxSubcommand,
         from_address: AccAddress,
     ) -> Result<Self::Message>;
 
-    // TODO: pass self
     fn handle_query_command(
         &self,
         command: Self::QuerySubcommand,
@@ -142,7 +123,7 @@ pub trait Application {
     }
 }
 
-pub struct Node<App: Application> {
+pub struct Node<'a, App: Application> {
     app: App,
     bank_keeper: App::BankKeeper,
     auth_keeper: App::AuthKeeper,
@@ -158,9 +139,10 @@ pub struct Node<App: Application> {
         >,
         Body,
     >,
+    handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
 }
 
-impl<App: Application> Node<App> {
+impl<'a, App: Application> Node<'a, App> {
     pub fn new(
         bank_keeper: App::BankKeeper,
         auth_keeper: App::AuthKeeper,
@@ -177,12 +159,14 @@ impl<App: Application> Node<App> {
             >,
             Body,
         >,
+        handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
     ) -> Self {
         Self {
             app,
             bank_keeper,
             auth_keeper,
             router,
+            handler_builder,
         }
     }
 
@@ -204,7 +188,7 @@ impl<App: Application> Node<App> {
                 &App::Genesis::default(),
             ),
             Some(("run", sub_matches)) => {
-                run_run_command::<_, _, _, _, _, _, _, _, App::ApplicationConfig>(
+                run_run_command::<_, _, _, _, _, _, _, App::ApplicationConfig>(
                     sub_matches,
                     App::APP_NAME,
                     App::APP_VERSION,
@@ -212,7 +196,7 @@ impl<App: Application> Node<App> {
                     self.auth_keeper,
                     ParamsKeeper::new(self.app.get_params_store_key()),
                     self.app.get_params_subspace_key(),
-                    |cfg| self.app.get_handler(cfg),
+                    self.handler_builder,
                     self.router,
                 )
             }

@@ -48,10 +48,6 @@ impl Application for GaiaApplication {
         Self::ParamsSubspaceKey::BaseApp
     }
 
-    fn get_handler(&self, cfg: gears::config::Config<Self::ApplicationConfig>) -> Self::Handler {
-        Handler::new(cfg)
-    }
-
     fn handle_tx_command(
         &self,
         command: Self::TxSubcommand,
@@ -86,5 +82,14 @@ fn main() -> Result<()> {
         auth_keeper.clone(),
     );
 
-    Node::new(bank_keeper, auth_keeper, GaiaApplication, get_router()).run_command()
+    let handler_builder = |cfg| Handler::new(cfg);
+
+    Node::new(
+        bank_keeper,
+        auth_keeper,
+        GaiaApplication,
+        get_router(),
+        &handler_builder,
+    )
+    .run_command()
 }

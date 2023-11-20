@@ -20,13 +20,13 @@ use super::ante::{AuthKeeper, BankKeeper};
 use super::{Genesis, Handler};
 
 pub fn run_run_command<
+    'a,
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
-    HandlerBuilder,
     G: Genesis,
     AC: ApplicationConfig,
 >(
@@ -37,11 +37,9 @@ pub fn run_run_command<
     auth_keeper: AK,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
-    handler_builder: HandlerBuilder,
+    handler_builder: &'a dyn Fn(Config<AC>) -> H,
     router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
-) where
-    HandlerBuilder: FnOnce(Config<AC>) -> H,
-{
+) {
     let address = matches.get_one::<SocketAddr>("address").cloned();
 
     let read_buf_size = matches
