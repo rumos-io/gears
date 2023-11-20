@@ -40,23 +40,6 @@ impl Application for GaiaApplication {
     type ApplicationConfig = config::AppConfig;
     type AuxCommands = NilAuxCommand;
 
-    fn get_router(
-        &self,
-    ) -> axum::Router<
-        gears::client::rest::RestState<
-            Self::StoreKey,
-            Self::ParamsSubspaceKey,
-            Self::Message,
-            Self::BankKeeper,
-            Self::AuthKeeper,
-            Self::Handler,
-            Self::Genesis,
-        >,
-        axum::body::Body,
-    > {
-        get_router()
-    }
-
     fn get_params_store_key(&self) -> Self::StoreKey {
         Self::StoreKey::Params
     }
@@ -103,5 +86,5 @@ fn main() -> Result<()> {
         auth_keeper.clone(),
     );
 
-    Node::new(bank_keeper, auth_keeper, GaiaApplication).run_command()
+    Node::new(bank_keeper, auth_keeper, GaiaApplication, get_router()).run_command()
 }

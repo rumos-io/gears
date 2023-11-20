@@ -100,20 +100,20 @@ pub trait Application {
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
 
-    fn get_router(
-        &self,
-    ) -> Router<
-        RestState<
-            Self::StoreKey,
-            Self::ParamsSubspaceKey,
-            Self::Message,
-            Self::BankKeeper,
-            Self::AuthKeeper,
-            Self::Handler,
-            Self::Genesis,
-        >,
-        Body,
-    >;
+    // fn get_router(
+    //     &self,
+    // ) -> Router<
+    //     RestState<
+    //         Self::StoreKey,
+    //         Self::ParamsSubspaceKey,
+    //         Self::Message,
+    //         Self::BankKeeper,
+    //         Self::AuthKeeper,
+    //         Self::Handler,
+    //         Self::Genesis,
+    //     >,
+    //     Body,
+    // >;
 
     fn get_params_store_key(&self) -> Self::StoreKey;
 
@@ -146,14 +146,43 @@ pub struct Node<App: Application> {
     app: App,
     bank_keeper: App::BankKeeper,
     auth_keeper: App::AuthKeeper,
+    router: Router<
+        RestState<
+            App::StoreKey,
+            App::ParamsSubspaceKey,
+            App::Message,
+            App::BankKeeper,
+            App::AuthKeeper,
+            App::Handler,
+            App::Genesis,
+        >,
+        Body,
+    >,
 }
 
 impl<App: Application> Node<App> {
-    pub fn new(bank_keeper: App::BankKeeper, auth_keeper: App::AuthKeeper, app: App) -> Self {
+    pub fn new(
+        bank_keeper: App::BankKeeper,
+        auth_keeper: App::AuthKeeper,
+        app: App,
+        router: Router<
+            RestState<
+                App::StoreKey,
+                App::ParamsSubspaceKey,
+                App::Message,
+                App::BankKeeper,
+                App::AuthKeeper,
+                App::Handler,
+                App::Genesis,
+            >,
+            Body,
+        >,
+    ) -> Self {
         Self {
             app,
             bank_keeper,
             auth_keeper,
+            router,
         }
     }
 
@@ -184,7 +213,7 @@ impl<App: Application> Node<App> {
                     ParamsKeeper::new(self.app.get_params_store_key()),
                     self.app.get_params_subspace_key(),
                     |cfg| self.app.get_handler(cfg),
-                    self.app.get_router(),
+                    self.router,
                 )
             }
             Some(("query", sub_matches)) => {
