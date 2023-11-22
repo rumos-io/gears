@@ -16,7 +16,7 @@ use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LIS
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
-use super::ante::{AuthKeeper, BankKeeper};
+use super::ante::AnteHandler;
 use super::{Genesis, Handler};
 
 pub fn run_run_command<
@@ -24,21 +24,19 @@ pub fn run_run_command<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
     AC: ApplicationConfig,
+    Ante: AnteHandler<SK>,
 >(
     matches: &ArgMatches,
     app_name: &'static str,
     app_version: &'static str,
-    bank_keeper: BK,
-    auth_keeper: AK,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     handler_builder: &'a dyn Fn(Config<AC>) -> H,
-    router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
+    router: Router<RestState<SK, PSK, M, H, G, Ante>, Body>,
+    ante_handler: Ante,
 ) {
     let address = matches.get_one::<SocketAddr>("address").cloned();
 
@@ -89,15 +87,14 @@ pub fn run_run_command<
 
     let handler = handler_builder(config.clone());
 
-    let app: BaseApp<SK, PSK, M, BK, AK, H, G> = BaseApp::new(
+    let app: BaseApp<SK, PSK, M, H, G, Ante> = BaseApp::new(
         db,
         app_name,
         app_version,
-        bank_keeper,
-        auth_keeper,
         params_keeper,
         params_subspace_key,
         handler,
+        ante_handler,
     );
 
     let rest_listen_addr = rest_listen_addr.unwrap_or(config.rest_listen_addr);

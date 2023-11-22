@@ -47,16 +47,39 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account);
 }
 
+pub trait AnteHandler<SK: StoreKey>: Clone + Send + Sync + 'static {
+    fn run<DB: Database, M: Message>(
+        &self,
+        ctx: &mut Context<'_, '_, DB, SK>,
+        tx: &TxWithRaw<M>,
+    ) -> Result<(), AppError>;
+}
+
 #[derive(Debug, Clone)]
-pub struct AnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> {
+pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> {
     bank_keeper: BK,
     auth_keeper: AK,
     sk: PhantomData<SK>,
 }
 
-impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, SK> {
-    pub fn new(bank_keeper: BK, auth_keeper: AK) -> AnteHandler<BK, AK, SK> {
-        AnteHandler {
+impl<SK, BK, AK> AnteHandler<SK> for BaseAnteHandler<BK, AK, SK>
+where
+    SK: StoreKey,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+{
+    fn run<DB: Database, M: Message>(
+        &self,
+        ctx: &mut Context<'_, '_, DB, SK>,
+        tx: &TxWithRaw<M>,
+    ) -> Result<(), AppError> {
+        BaseAnteHandler::run(self, ctx, tx)
+    }
+}
+
+impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, AK, SK> {
+    pub fn new(bank_keeper: BK, auth_keeper: AK) -> BaseAnteHandler<BK, AK, SK> {
+        BaseAnteHandler {
             bank_keeper,
             auth_keeper,
             sk: PhantomData,

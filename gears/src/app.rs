@@ -1,4 +1,4 @@
-use crate::baseapp::ante::{AuthKeeper, BankKeeper};
+use crate::baseapp::ante::AnteHandler;
 use crate::baseapp::cli::get_run_command;
 use crate::baseapp::{Genesis, Handler};
 use crate::client::genesis_account::{
@@ -92,13 +92,12 @@ pub trait Application {
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
     type Message: Message;
-    type BankKeeper: BankKeeper<Self::StoreKey>;
-    type AuthKeeper: AuthKeeper<Self::StoreKey>;
     type Handler: Handler<Self::Message, Self::StoreKey, Self::Genesis>;
     type QuerySubcommand: Subcommand;
     type TxSubcommand: Subcommand;
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
+    type AnteHandler: AnteHandler<Self::StoreKey>;
 
     fn get_params_store_key(&self) -> Self::StoreKey;
 
@@ -125,48 +124,43 @@ pub trait Application {
 
 pub struct Node<'a, App: Application> {
     app: App,
-    bank_keeper: App::BankKeeper,
-    auth_keeper: App::AuthKeeper,
     router: Router<
         RestState<
             App::StoreKey,
             App::ParamsSubspaceKey,
             App::Message,
-            App::BankKeeper,
-            App::AuthKeeper,
             App::Handler,
             App::Genesis,
+            App::AnteHandler,
         >,
         Body,
     >,
     handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
+    ante_handler: App::AnteHandler,
 }
 
 impl<'a, App: Application> Node<'a, App> {
     pub fn new(
-        bank_keeper: App::BankKeeper,
-        auth_keeper: App::AuthKeeper,
         app: App,
         router: Router<
             RestState<
                 App::StoreKey,
                 App::ParamsSubspaceKey,
                 App::Message,
-                App::BankKeeper,
-                App::AuthKeeper,
                 App::Handler,
                 App::Genesis,
+                App::AnteHandler,
             >,
             Body,
         >,
         handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
+        ante_handler: App::AnteHandler,
     ) -> Self {
         Self {
             app,
-            bank_keeper,
-            auth_keeper,
             router,
             handler_builder,
+            ante_handler,
         }
     }
 
@@ -188,16 +182,15 @@ impl<'a, App: Application> Node<'a, App> {
                 &App::Genesis::default(),
             ),
             Some(("run", sub_matches)) => {
-                run_run_command::<_, _, _, _, _, _, _, App::ApplicationConfig>(
+                run_run_command::<_, _, _, _, _, App::ApplicationConfig, _>(
                     sub_matches,
                     App::APP_NAME,
                     App::APP_VERSION,
-                    self.bank_keeper,
-                    self.auth_keeper,
                     ParamsKeeper::new(self.app.get_params_store_key()),
                     self.app.get_params_subspace_key(),
                     self.handler_builder,
                     self.router,
+                    self.ante_handler,
                 )
             }
             Some(("query", sub_matches)) => {

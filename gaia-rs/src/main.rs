@@ -5,6 +5,7 @@ use auth::Keeper as AuthKeeper;
 use bank::Keeper as BankKeeper;
 use client::query_command_handler;
 use client::tx_command_handler;
+use gears::baseapp::ante::BaseAnteHandler;
 use gears::x::params::Keeper as ParamsKeeper;
 use gears::Application;
 use gears::NilAuxCommand;
@@ -32,13 +33,16 @@ impl Application for GaiaApplication {
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
     type Message = message::Message;
-    type BankKeeper = BankKeeper<GaiaStoreKey, GaiaParamsStoreKey>;
-    type AuthKeeper = AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>;
     type Handler = Handler;
     type QuerySubcommand = client::QueryCommands;
     type TxSubcommand = client::Commands;
     type ApplicationConfig = config::AppConfig;
     type AuxCommands = NilAuxCommand;
+    type AnteHandler = BaseAnteHandler<
+        BankKeeper<Self::StoreKey, Self::ParamsSubspaceKey>,
+        AuthKeeper<Self::StoreKey, Self::ParamsSubspaceKey>,
+        Self::StoreKey,
+    >;
 
     fn get_params_store_key(&self) -> Self::StoreKey {
         Self::StoreKey::Params
@@ -84,12 +88,13 @@ fn main() -> Result<()> {
 
     let handler_builder = |cfg| Handler::new(cfg);
 
+    let ante_handler = BaseAnteHandler::new(bank_keeper, auth_keeper);
+
     Node::new(
-        bank_keeper,
-        auth_keeper,
         GaiaApplication,
         get_router(),
         &handler_builder,
+        ante_handler,
     )
     .run_command()
 }

@@ -1,9 +1,6 @@
 use axum::{body::Body, Router};
 use gears::{
-    baseapp::{
-        ante::{AuthKeeper, BankKeeper},
-        Genesis, Handler,
-    },
+    baseapp::{ante::AnteHandler, Genesis, Handler},
     client::rest::RestState,
     x::params::ParamsSubspaceKey,
 };
@@ -14,10 +11,9 @@ pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
->() -> Router<RestState<SK, PSK, M, BK, AK, H, G>, Body> {
+    Ante: AnteHandler<SK>,
+>() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {
     Router::new().nest("/cosmos/bank", bank::rest::get_router())
 }
