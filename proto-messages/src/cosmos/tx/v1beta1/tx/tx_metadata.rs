@@ -3,28 +3,31 @@ use ibc_proto::cosmos::bank::v1beta1::Metadata as RawMetadata;
 use nutype::nutype;
 use prost::bytes::Bytes;
 use prost::Message;
+use proto_types::Denom;
 
 use crate::Error;
 
 pub struct DenomUnit {
-    pub denom: String,
+    pub denom: Denom,
     pub exponent: u32,
     pub aliases: Vec<String>,
 }
 
-impl From<RawDenomUnit> for DenomUnit {
-    fn from(value: RawDenomUnit) -> Self {
+impl TryFrom<RawDenomUnit> for DenomUnit {
+    type Error = proto_types::Error;
+
+    fn try_from(value: RawDenomUnit) -> Result<Self, Self::Error> {
         let RawDenomUnit {
             denom,
             exponent,
             aliases,
         } = value;
 
-        Self {
-            denom,
+        Ok(Self {
+            denom: Denom::try_from(denom)?,
             exponent,
             aliases,
-        }
+        })
     }
 }
 
@@ -37,7 +40,7 @@ impl From<DenomUnit> for RawDenomUnit {
         } = value;
 
         Self {
-            denom,
+            denom: denom.into_inner(),
             exponent,
             aliases,
         }
@@ -92,16 +95,17 @@ impl TryFrom<RawMetadata> for Metadata {
             uri_hash,
         } = value;
 
+        let mut mapped_denom: Vec<DenomUnit> = Vec::with_capacity(denom_units.len());
+        for unit in denom_units {
+            mapped_denom.push(
+                DenomUnit::try_from(unit)
+                    .map_err(|e: proto_types::Error| Error::Custom(e.to_string()))?,
+            );
+        }
+
         Ok(Self {
             description,
-            denom_units: denom_units
-                .into_iter()
-                .map(|this| DenomUnit {
-                    denom: this.denom,
-                    exponent: this.exponent,
-                    aliases: this.aliases,
-                })
-                .collect(),
+            denom_units: mapped_denom,
             base,
             display,
             name,

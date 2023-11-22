@@ -1,6 +1,6 @@
 use crate::types::context::context::Context;
 use database::{Database, PrefixDB};
-use proto_messages::cosmos::tx::v1beta1::tx_metadata::{Metadata, DenomUnit};
+use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint_informal::{abci::Event, block::Header};
 
@@ -63,12 +63,12 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
             description: String::new(),
             denom_units: vec![
                 DenomUnit {
-                    denom: "ATOM".into(),
+                    denom: "ATOM".try_into().unwrap(),
                     exponent: 6,
                     aliases: Vec::new(),
                 },
                 DenomUnit {
-                    denom: "uatom".into(),
+                    denom: "uatom".try_into().unwrap(),
                     exponent: 0,
                     aliases: Vec::new(),
                 },

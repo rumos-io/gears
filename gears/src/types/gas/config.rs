@@ -1,4 +1,4 @@
-#![ allow( dead_code )] // TODO: Remove
+#![allow(dead_code)] // TODO: Remove
 
 use super::gas_meter::Gas;
 

@@ -2,7 +2,10 @@ use std::error::Error;
 
 use gears::types::context::context::Context;
 use ibc_proto::cosmos::bank::v1beta1::MsgSend;
-use proto_messages::cosmos::tx::v1beta1::screen::{Content, Indent, Screen};
+use proto_messages::cosmos::{
+    base::v1beta1::Coin,
+    tx::v1beta1::screen::{Content, Indent, Screen},
+};
 use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
@@ -56,11 +59,13 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
             expert: false,
         });
 
-        for coin in &self.amount {
-            screens_vec.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-                coin, ctx,
-            )?)
-        }
+        // for coin_raw in &self.amount {
+        //     let coin: Coin = coin_raw.try_into()?;
+
+        //     screens_vec.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+        //         coin_raw, ctx,
+        //     )?)
+        // }
 
         Ok(screens_vec)
     }

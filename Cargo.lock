@@ -390,6 +390,7 @@ dependencies = [
  "gears",
  "hex",
  "ibc-proto 0.31.0-alpha.2",
+ "num-bigint",
  "num-format",
  "once_cell",
  "prost",
@@ -3217,6 +3218,7 @@ checksum = "a652d9771a63711fd3c3deb670acfbe5c30a4072e664d7a3bf5a9e1056ac72c3"
 dependencies = [
  "arrayvec",
  "itoa",
+ "num-bigint",
 ]
 
 [[package]]

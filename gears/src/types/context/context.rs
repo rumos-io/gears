@@ -5,7 +5,7 @@ use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use store_crate::{KVStore, StoreKey};
 use tendermint_informal::abci::Event;
 
-pub trait ContextTrait<T, SK>  {
+pub trait ContextTrait<T, SK> {
     fn height(&self) -> u64;
     fn chain_id(&self) -> &str;
     fn push_event(&mut self, event: Event);
@@ -20,7 +20,7 @@ pub trait ContextTrait<T, SK>  {
 pub enum Context<'a, 'b, T: Database, SK: StoreKey> {
     TxContext(&'a mut TxContext<'b, T, SK>),
     InitContext(&'a mut InitContext<'b, T, SK>),
-    DynamicContext(&'a mut dyn ContextTrait<T, SK> ),
+    DynamicContext(&'a mut dyn ContextTrait<T, SK>),
 }
 
 impl<'a, 'b, T: Database, SK: StoreKey> Context<'a, 'b, T, SK> {

@@ -8,7 +8,7 @@ use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, Primiti
 const THOUSAND_SEPARATOR: &str = "'";
 
 /// Get reference to defined format
-fn format_get() -> &'static CustomFormat {
+pub(super) fn format_get() -> &'static CustomFormat {
     static FORMAT: OnceCell<CustomFormat> = OnceCell::new();
 
     FORMAT.get_or_init(|| {
