@@ -1,5 +1,6 @@
 use crate::types::context::context::Context;
 use database::{Database, PrefixDB};
+use proto_messages::cosmos::tx::v1beta1::tx_metadata::{Metadata, DenomUnit};
 use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint_informal::{abci::Event, block::Header};
 
@@ -45,7 +46,7 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
         return self.multi_store.get_mutable_kv_store(store_key);
     }
 
-    pub fn get_height(&self) -> u64 {
+    pub fn height(&self) -> u64 {
         self.height
     }
 
@@ -55,5 +56,29 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
 
     pub fn append_events(&mut self, mut events: Vec<Event>) {
         self.events.append(&mut events);
+    }
+
+    pub fn metadata_get(&self) -> Metadata {
+        Metadata {
+            description: String::new(),
+            denom_units: vec![
+                DenomUnit {
+                    denom: "ATOM".into(),
+                    exponent: 6,
+                    aliases: Vec::new(),
+                },
+                DenomUnit {
+                    denom: "uatom".into(),
+                    exponent: 0,
+                    aliases: Vec::new(),
+                },
+            ],
+            base: "uatom".into(),
+            display: "ATOM".into(),
+            name: String::new(),
+            symbol: String::new(),
+            uri: String::new(),
+            uri_hash: None,
+        }
     }
 }

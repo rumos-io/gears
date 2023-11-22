@@ -9,8 +9,7 @@ use crate::{merkle::EMPTY_HASH, Error};
 use super::Node;
 
 #[derive(Debug)]
-pub struct NodeDB<T>
-{
+pub struct NodeDB<T> {
     db: T,
     cache: Mutex<LRUCache<[u8; 32], Node, DefaultHashBuilder>>,
 }

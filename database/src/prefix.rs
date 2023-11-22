@@ -3,8 +3,7 @@ use std::sync::Arc;
 use crate::Database;
 
 #[derive(Debug)]
-pub struct PrefixDB<T>
-{
+pub struct PrefixDB<T> {
     db: Arc<T>,
     prefix: Vec<u8>,
 }

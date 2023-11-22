@@ -33,3 +33,6 @@ data-encoding = "2.4.0" #replace hex with this crate
 num-format = "0.4.4"
 rust_decimal = { version = "1.32", features = [ "maths"]}
 rust_decimal_macros = "1.32"
+
+[dev-dependencies]
+strum = { version = "0.25", features = ["derive"] }
