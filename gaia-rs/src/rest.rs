@@ -1,6 +1,6 @@
 use axum::{body::Body, Router};
 use gears::{
-    baseapp::{ante::AnteHandler, Genesis, Handler},
+    baseapp::{ante::AnteHandler, ABCIHandler, Genesis},
     client::rest::RestState,
     x::params::ParamsSubspaceKey,
 };
@@ -11,7 +11,7 @@ pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandler<SK>,
 >() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {

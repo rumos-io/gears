@@ -1,6 +1,6 @@
 use crate::baseapp::ante::AnteHandler;
 use crate::baseapp::cli::get_run_command;
-use crate::baseapp::{Genesis, Handler};
+use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::genesis_account::{
     get_add_genesis_account_command, run_add_genesis_account_command,
 };
@@ -92,7 +92,7 @@ pub trait Application {
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
     type Message: Message;
-    type Handler: Handler<Self::Message, Self::StoreKey, Self::Genesis>;
+    type ABCIHandler: ABCIHandler<Self::Message, Self::StoreKey, Self::Genesis>;
     type QuerySubcommand: Subcommand;
     type TxSubcommand: Subcommand;
     type ApplicationConfig: ApplicationConfig;
@@ -129,13 +129,13 @@ pub struct Node<'a, App: Application> {
             App::StoreKey,
             App::ParamsSubspaceKey,
             App::Message,
-            App::Handler,
+            App::ABCIHandler,
             App::Genesis,
             App::AnteHandler,
         >,
         Body,
     >,
-    handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
+    abci_handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::ABCIHandler,
     ante_handler: App::AnteHandler,
 }
 
@@ -147,19 +147,19 @@ impl<'a, App: Application> Node<'a, App> {
                 App::StoreKey,
                 App::ParamsSubspaceKey,
                 App::Message,
-                App::Handler,
+                App::ABCIHandler,
                 App::Genesis,
                 App::AnteHandler,
             >,
             Body,
         >,
-        handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
+        abci_handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::ABCIHandler,
         ante_handler: App::AnteHandler,
     ) -> Self {
         Self {
             app,
             router,
-            handler_builder,
+            abci_handler_builder,
             ante_handler,
         }
     }
@@ -188,7 +188,7 @@ impl<'a, App: Application> Node<'a, App> {
                     App::APP_VERSION,
                     ParamsKeeper::new(self.app.get_params_store_key()),
                     self.app.get_params_subspace_key(),
-                    self.handler_builder,
+                    self.abci_handler_builder,
                     self.router,
                     self.ante_handler,
                 )

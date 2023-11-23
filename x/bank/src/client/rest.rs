@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{ante::AnteHandler, BaseApp, Genesis, Handler},
+    baseapp::{ante::AnteHandler, ABCIHandler, BaseApp, Genesis},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
@@ -29,7 +29,7 @@ pub async fn supply<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandler<SK>,
 >(
@@ -55,7 +55,7 @@ pub async fn get_balances<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandler<SK>,
 >(
@@ -95,7 +95,7 @@ pub async fn get_balances_by_denom<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandler<SK>,
 >(
@@ -129,7 +129,7 @@ pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandler<SK>,
 >() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {

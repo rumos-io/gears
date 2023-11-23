@@ -13,13 +13,13 @@ use gears::Node;
 use genesis::GenesisState;
 use rest::get_router;
 
-use crate::handler::Handler;
+use crate::abci_handler::ABCIHandler;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 
+mod abci_handler;
 mod client;
 mod config;
 mod genesis;
-mod handler;
 mod message;
 mod rest;
 mod store_keys;
@@ -33,7 +33,7 @@ impl Application for GaiaApplication {
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
     type Message = message::Message;
-    type Handler = Handler;
+    type ABCIHandler = ABCIHandler;
     type QuerySubcommand = client::QueryCommands;
     type TxSubcommand = client::Commands;
     type ApplicationConfig = config::AppConfig;
@@ -72,28 +72,24 @@ impl Application for GaiaApplication {
 
 fn main() -> Result<()> {
     let params_keeper = ParamsKeeper::new(GaiaStoreKey::Params);
-
     let auth_keeper = AuthKeeper::new(
         GaiaStoreKey::Auth,
         params_keeper.clone(),
         GaiaParamsStoreKey::Auth,
     );
-
     let bank_keeper = BankKeeper::new(
         GaiaStoreKey::Bank,
         params_keeper.clone(),
         GaiaParamsStoreKey::Bank,
         auth_keeper.clone(),
     );
-
-    let handler_builder = |cfg| Handler::new(cfg);
-
+    let abci_handler_builder = |cfg| ABCIHandler::new(cfg);
     let ante_handler = BaseAnteHandler::new(bank_keeper, auth_keeper);
 
     Node::new(
         GaiaApplication,
         get_router(),
-        &handler_builder,
+        &abci_handler_builder,
         ante_handler,
     )
     .run_command()
