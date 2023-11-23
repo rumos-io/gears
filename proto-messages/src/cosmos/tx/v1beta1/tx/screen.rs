@@ -35,7 +35,7 @@ pub struct Indent(u8);
 pub struct Screen {
     /// `title` is the text (sequence of Unicode code points) to display first,
     /// generally on the device's title section. It can be empty.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub title: String,
 
     /// `content` is the text (sequence of Unicode code points) to display after
@@ -45,13 +45,19 @@ pub struct Screen {
 
     /// `indent` is the indentation level of the screen.
     /// Zero indicates top-level.
-    #[serde(default)] // , skip_serializing_if = "Option::is_none"
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub indent: Option<Indent>,
 
     /// `expert` indicates that the screen should only be displayed
     /// via an opt-in from the user.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "bool_skip")]
     pub expert: bool,
+}
+
+/// To make sure that we 1:1 compatible with Cosmos.SDK we skip field if it has `false` value
+fn bool_skip( var : &bool ) -> bool
+{
+    *var == false
 }
 
 impl Screen {
