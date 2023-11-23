@@ -3836,6 +3836,8 @@ dependencies = [
  "hex",
  "ibc-proto 0.31.0-alpha.2",
  "micromarshal",
+ "num-bigint",
+ "num-traits",
  "nutype",
  "prost",
  "proto-types",

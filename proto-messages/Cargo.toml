@@ -22,6 +22,8 @@ nutype = { version = "0.3.1" , features = [ "serde"]}
 byteorder = "1.5.0"
 micromarshal = "0.4.1"
 ciborium = "0.2.1"
+num-bigint = { version = "0.4.4", features = ["serde"]}
+num-traits = "0.2.17"
 
 [dev-dependencies]
 hex = "0.4.3"
