@@ -77,12 +77,4 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
             Err(AppError::InvalidRequest("query path not found".into()))
         }
     }
-
-    fn begin_block<DB: Database>(
-        &self,
-        _ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
-        _request: RequestBeginBlock,
-    ) {
-        // do nothing
-    }
 }

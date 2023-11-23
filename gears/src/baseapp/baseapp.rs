@@ -19,7 +19,7 @@ use tendermint_proto::abci::{
     RequestQuery, ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
     ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
     ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
-    ResponseQuery,
+    ResponseQuery, ValidatorUpdate,
 };
 use tracing::{error, info};
 
@@ -38,11 +38,22 @@ pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Se
 {
     fn tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M) -> Result<(), AppError>;
 
+    #[allow(unused_variables)]
     fn begin_block<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         request: RequestBeginBlock,
-    );
+    ) {
+    }
+
+    #[allow(unused_variables)]
+    fn end_block<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        request: RequestEndBlock,
+    ) -> Vec<ValidatorUpdate> {
+        vec![]
+    }
 
     fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
 
@@ -290,9 +301,35 @@ impl<
         }
     }
 
-    fn end_block(&self, _request: RequestEndBlock) -> ResponseEndBlock {
+    fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         info!("Got end block request");
-        Default::default()
+
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            vec![],
+        );
+
+        let validator_updates = self.abci_handler.end_block(&mut ctx, request);
+
+        let events = ctx.events;
+        multi_store.write_then_clear_tx_caches();
+
+        ResponseEndBlock {
+            events: events.into_iter().map(|e| e.into()).collect(),
+            validator_updates,
+            consensus_param_updates: None,
+            // TODO: there is only one call to BaseAppParamsKeeper::set_consensus_params,
+            // which is made during init. This means that these params cannot change.
+            // However a get method should be implemented in future.
+        }
     }
 
     /// Signals that messages queued on the client should be flushed to the server.
