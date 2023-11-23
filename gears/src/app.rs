@@ -1,4 +1,4 @@
-use crate::baseapp::ante::{AuthKeeper, BankKeeper};
+use crate::baseapp::ante::AnteHandler;
 use crate::baseapp::cli::get_run_command;
 use crate::baseapp::{Genesis, Handler};
 use crate::client::genesis_account::{
@@ -13,6 +13,7 @@ use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
 use axum::body::Body;
 use axum::Router;
+use clap::FromArgMatches;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
@@ -78,203 +79,147 @@ fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands:
     AuxCommands::augment_subcommands(cli)
 }
 
-/// A default type for the AuxCommands parameter if the user does not want to add auxillary commands.
+/// An empty AUX command if the user does not want to add auxillary commands.
 #[derive(Subcommand, Debug)]
-pub enum DefaultAuxCommandParam {}
+pub enum NilAuxCommand {}
 
-/// The main application struct.
-pub struct Application<
-    G,
-    SK,
-    PSK,
-    M,
-    BK,
-    AK,
-    H,
-    HandlerBuilder,
-    QuerySubcommand,
-    QueryCmdHandler,
-    TxSubcommand,
-    TxCmdHandler,
-    AC,
-    AuxCommands = DefaultAuxCommandParam,
-    AuxCommandsHandler = fn(AuxCommands) -> Result<()>,
-> where
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
-    M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
-    G: Genesis,
-    QuerySubcommand: Subcommand,
-    QueryCmdHandler: FnOnce(QuerySubcommand, &str, Option<Height>) -> Result<()>,
-    TxSubcommand: Subcommand,
-    TxCmdHandler: FnOnce(TxSubcommand, AccAddress) -> Result<M>,
-    AC: ApplicationConfig,
-    HandlerBuilder: FnOnce(Config<AC>) -> H,
-    AuxCommands: Subcommand,
-    AuxCommandsHandler: FnOnce(AuxCommands) -> Result<()>,
-{
-    app_name: &'static str,
-    app_version: &'static str,
-    bank_keeper: BK,
-    auth_keeper: AK,
-    params_keeper: ParamsKeeper<SK, PSK>,
-    params_subspace_key: PSK,
-    handler_builder: HandlerBuilder,
-    query_command_handler: QueryCmdHandler,
-    tx_command_handler: TxCmdHandler,
-    router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
-    aux_commands_handler: Option<AuxCommandsHandler>,
-    phantom: std::marker::PhantomData<AC>,
-    phantom2: std::marker::PhantomData<TxSubcommand>,
-    phantom3: std::marker::PhantomData<QuerySubcommand>,
-    phantom4: std::marker::PhantomData<AuxCommands>,
+/// A Gears application.
+pub trait Application {
+    const APP_NAME: &'static str;
+    const APP_VERSION: &'static str;
+
+    type Genesis: Genesis;
+    type StoreKey: StoreKey;
+    type ParamsSubspaceKey: ParamsSubspaceKey;
+    type Message: Message;
+    type Handler: Handler<Self::Message, Self::StoreKey, Self::Genesis>;
+    type QuerySubcommand: Subcommand;
+    type TxSubcommand: Subcommand;
+    type ApplicationConfig: ApplicationConfig;
+    type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
+    type AnteHandler: AnteHandler<Self::StoreKey>;
+
+    fn get_params_store_key(&self) -> Self::StoreKey;
+
+    fn get_params_subspace_key(&self) -> Self::ParamsSubspaceKey;
+
+    fn handle_tx_command(
+        &self,
+        command: Self::TxSubcommand,
+        from_address: AccAddress,
+    ) -> Result<Self::Message>;
+
+    fn handle_query_command(
+        &self,
+        command: Self::QuerySubcommand,
+        node: &str,
+        height: Option<Height>,
+    ) -> Result<()>;
+
+    #[allow(unused_variables)]
+    fn handle_aux_commands(&self, command: Self::AuxCommands) -> Result<()> {
+        Ok(())
+    }
 }
 
-impl<
-        G,
-        SK,
-        PSK,
-        M,
-        BK,
-        AK,
-        H,
-        HandlerBuilder,
-        QuerySubcommand,
-        QueryCmdHandler,
-        TxSubcommand,
-        TxCmdHandler,
-        AC: ApplicationConfig,
-        AuxCommands,
-        AuxCommandsHandler,
-    >
-    Application<
-        G,
-        SK,
-        PSK,
-        M,
-        BK,
-        AK,
-        H,
-        HandlerBuilder,
-        QuerySubcommand,
-        QueryCmdHandler,
-        TxSubcommand,
-        TxCmdHandler,
-        AC,
-        AuxCommands,
-        AuxCommandsHandler,
-    >
-where
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
-    M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
-    G: Genesis,
-    QuerySubcommand: Subcommand,
-    QueryCmdHandler: FnOnce(QuerySubcommand, &str, Option<Height>) -> Result<()>,
-    TxSubcommand: Subcommand,
-    TxCmdHandler: FnOnce(TxSubcommand, AccAddress) -> Result<M>,
-    AC: ApplicationConfig,
-    HandlerBuilder: FnOnce(Config<AC>) -> H,
-    AuxCommands: Subcommand,
-    AuxCommandsHandler: FnOnce(AuxCommands) -> Result<()>,
-{
-    /// Creates a new application.
+pub struct Node<'a, App: Application> {
+    app: App,
+    router: Router<
+        RestState<
+            App::StoreKey,
+            App::ParamsSubspaceKey,
+            App::Message,
+            App::Handler,
+            App::Genesis,
+            App::AnteHandler,
+        >,
+        Body,
+    >,
+    handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
+    ante_handler: App::AnteHandler,
+}
+
+impl<'a, App: Application> Node<'a, App> {
     pub fn new(
-        app_name: &'static str,
-        app_version: &'static str,
-        bank_keeper: BK,
-        auth_keeper: AK,
-        params_keeper: ParamsKeeper<SK, PSK>,
-        params_subspace_key: PSK,
-        handler_builder: HandlerBuilder,
-        query_command_handler: QueryCmdHandler,
-        tx_command_handler: TxCmdHandler,
-        router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
+        app: App,
+        router: Router<
+            RestState<
+                App::StoreKey,
+                App::ParamsSubspaceKey,
+                App::Message,
+                App::Handler,
+                App::Genesis,
+                App::AnteHandler,
+            >,
+            Body,
+        >,
+        handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::Handler,
+        ante_handler: App::AnteHandler,
     ) -> Self {
         Self {
-            app_name,
-            app_version,
-            bank_keeper,
-            auth_keeper,
-            params_keeper,
-            params_subspace_key,
-            handler_builder,
-            query_command_handler,
-            tx_command_handler,
+            app,
             router,
-            aux_commands_handler: None,
-            phantom: std::marker::PhantomData,
-            phantom2: std::marker::PhantomData,
-            phantom3: std::marker::PhantomData,
-            phantom4: std::marker::PhantomData,
+            handler_builder,
+            ante_handler,
         }
-    }
-
-    /// Add custom commands to the application.
-    pub fn add_aux_commands(mut self, aux_commands_handler: AuxCommandsHandler) -> Self {
-        self.aux_commands_handler = Some(aux_commands_handler);
-        self
     }
 
     /// Runs the command passed on the command line.
     pub fn run_command(self) -> Result<()> {
         setup_panic!();
 
-        let cli = build_cli::<TxSubcommand, QuerySubcommand, AuxCommands>(
-            self.app_name,
-            self.app_version,
+        let cli = build_cli::<App::TxSubcommand, App::QuerySubcommand, App::AuxCommands>(
+            App::APP_NAME,
+            App::APP_VERSION,
         );
 
         let matches = cli.get_matches();
 
         match matches.subcommand() {
-            Some(("init", sub_matches)) => {
-                run_init_command::<_, AC>(sub_matches, self.app_name, &G::default())
-            }
-            Some(("run", sub_matches)) => run_run_command::<_, _, _, _, _, _, _, _, AC>(
+            Some(("init", sub_matches)) => run_init_command::<_, App::ApplicationConfig>(
                 sub_matches,
-                self.app_name,
-                self.app_version,
-                self.bank_keeper,
-                self.auth_keeper,
-                self.params_keeper,
-                self.params_subspace_key,
-                self.handler_builder,
-                self.router,
+                App::APP_NAME,
+                &App::Genesis::default(),
             ),
-            Some(("query", sub_matches)) => {
-                run_query_command(sub_matches, self.query_command_handler)?
+            Some(("run", sub_matches)) => {
+                run_run_command::<_, _, _, _, _, App::ApplicationConfig, _>(
+                    sub_matches,
+                    App::APP_NAME,
+                    App::APP_VERSION,
+                    ParamsKeeper::new(self.app.get_params_store_key()),
+                    self.app.get_params_subspace_key(),
+                    self.handler_builder,
+                    self.router,
+                    self.ante_handler,
+                )
             }
-            Some(("keys", sub_matches)) => run_keys_command(sub_matches, self.app_name)?,
+            Some(("query", sub_matches)) => {
+                run_query_command(sub_matches, |command, node, height| {
+                    self.app.handle_query_command(command, node, height)
+                })?
+            }
+            Some(("keys", sub_matches)) => run_keys_command(sub_matches, App::APP_NAME)?,
             Some(("tx", sub_matches)) => {
-                run_tx_command(sub_matches, self.app_name, self.tx_command_handler)?
+                run_tx_command(sub_matches, App::APP_NAME, |command, from_address| {
+                    self.app.handle_tx_command(command, from_address)
+                })?
             }
             Some(("completions", sub_matches)) => {
-                run_completions_command::<TxSubcommand, QuerySubcommand, AuxCommands>(
+                run_completions_command::<App::TxSubcommand, App::QuerySubcommand, App::AuxCommands>(
                     sub_matches,
-                    self.app_name,
-                    self.app_version,
+                    App::APP_NAME,
+                    App::APP_VERSION,
                 )
             }
             Some(("add-genesis-account", sub_matches)) => {
-                run_add_genesis_account_command::<G>(sub_matches, self.app_name)?
+                run_add_genesis_account_command::<App::Genesis>(sub_matches, App::APP_NAME)?
             }
             _ => {
-                if let Some(aux_commands_handler) = self.aux_commands_handler {
-                    aux_commands_handler(AuxCommands::from_arg_matches(&matches).expect(
+                self.app.handle_aux_commands(
+                    App::AuxCommands::from_arg_matches(&matches).expect(
                         "exhausted list of subcommands and subcommand_required prevents `None`",
-                    ))?;
-                } else {
-                    unreachable!(
-                        "exhausted list of subcommands and subcommand_required prevents `None`"
-                    )
-                }
+                    ),
+                )?;
             }
         };
 

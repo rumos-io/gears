@@ -10,4 +10,4 @@ pub mod types;
 pub mod utils;
 pub mod x;
 
-pub use app::Application;
+pub use app::*;

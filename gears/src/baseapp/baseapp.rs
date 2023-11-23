@@ -31,10 +31,7 @@ use crate::{
     x::params::{Keeper, ParamsSubspaceKey},
 };
 
-use super::{
-    ante::{AnteHandler, AuthKeeper, BankKeeper},
-    params::BaseAppParamsKeeper,
-};
+use super::{ante::AnteHandler, params::BaseAppParamsKeeper};
 
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
@@ -73,14 +70,13 @@ pub struct BaseApp<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
+    Ante,
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
-    base_ante_handler: AnteHandler<BK, AK, SK>,
+    ante_handler: Ante,
     handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -94,11 +90,10 @@ impl<
         M: Message,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        BK: BankKeeper<SK>,
-        AK: AuthKeeper<SK>,
         H: Handler<M, SK, G>,
         G: Genesis,
-    > Application for BaseApp<SK, PSK, M, BK, AK, H, G>
+        Ante: AnteHandler<SK>,
+    > Application for BaseApp<SK, PSK, M, H, G, Ante>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
@@ -342,21 +337,19 @@ impl<
         M: Message,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        BK: BankKeeper<SK>,
-        AK: AuthKeeper<SK>,
         H: Handler<M, SK, G>,
         G: Genesis,
-    > BaseApp<SK, PSK, M, BK, AK, H, G>
+        Ante: AnteHandler<SK>,
+    > BaseApp<SK, PSK, M, H, G, Ante>
 {
     pub fn new(
         db: RocksDB,
         app_name: &'static str,
         version: &'static str,
-        bank_keeper: BK,
-        auth_keeper: AK,
         params_keeper: Keeper<SK, PSK>,
         params_subspace_key: PSK,
         handler: H,
+        ante_handler: Ante,
     ) -> Self {
         let multi_store = MultiStore::new(db);
         let baseapp_params_keeper = BaseAppParamsKeeper {
@@ -366,7 +359,7 @@ impl<
         let height = multi_store.get_head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
-            base_ante_handler: AnteHandler::new(bank_keeper, auth_keeper),
+            ante_handler,
             handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
@@ -443,7 +436,7 @@ impl<
             raw.clone().into(),
         );
 
-        match self.base_ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
+        match self.ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
             Ok(_) => multi_store.write_then_clear_tx_caches(),
             Err(e) => {
                 multi_store.clear_tx_caches();

@@ -9,10 +9,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{
-        ante::{AuthKeeper, BankKeeper},
-        BaseApp, Genesis, Handler,
-    },
+    baseapp::{ante::AnteHandler, BaseApp, Genesis, Handler},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
@@ -32,12 +29,11 @@ pub async fn supply<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
+    Ante: AnteHandler<SK>,
 >(
-    State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
     let request = RequestQuery {
         data: Default::default(),
@@ -59,14 +55,13 @@ pub async fn get_balances<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
+    Ante: AnteHandler<SK>,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
-    State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
 ) -> Result<Json<QueryAllBalancesResponse>, Error> {
     let req = QueryAllBalancesRequest {
         address,
@@ -100,14 +95,13 @@ pub async fn get_balances_by_denom<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
+    Ante: AnteHandler<SK>,
 >(
     Path(address): Path<AccAddress>,
     denom: Query<RawDenom>,
-    State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
 ) -> Result<Json<QueryBalanceResponse>, Error> {
     let req = QueryBalanceRequest {
         address,
@@ -137,11 +131,10 @@ pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
     H: Handler<M, SK, G>,
     G: Genesis,
->() -> Router<RestState<SK, PSK, M, BK, AK, H, G>, Body> {
+    Ante: AnteHandler<SK>,
+>() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))

@@ -5,8 +5,12 @@ use auth::Keeper as AuthKeeper;
 use bank::Keeper as BankKeeper;
 use client::query_command_handler;
 use client::tx_command_handler;
+use gears::baseapp::ante::BaseAnteHandler;
 use gears::x::params::Keeper as ParamsKeeper;
 use gears::Application;
+use gears::NilAuxCommand;
+use gears::Node;
+use genesis::GenesisState;
 use rest::get_router;
 
 use crate::handler::Handler;
@@ -20,8 +24,51 @@ mod message;
 mod rest;
 mod store_keys;
 
-pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
-pub const VERSION: &str = env!("GIT_HASH");
+struct GaiaApplication;
+
+impl Application for GaiaApplication {
+    const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
+    const APP_VERSION: &'static str = env!("GIT_HASH");
+    type Genesis = GenesisState;
+    type StoreKey = GaiaStoreKey;
+    type ParamsSubspaceKey = GaiaParamsStoreKey;
+    type Message = message::Message;
+    type Handler = Handler;
+    type QuerySubcommand = client::QueryCommands;
+    type TxSubcommand = client::Commands;
+    type ApplicationConfig = config::AppConfig;
+    type AuxCommands = NilAuxCommand;
+    type AnteHandler = BaseAnteHandler<
+        BankKeeper<Self::StoreKey, Self::ParamsSubspaceKey>,
+        AuthKeeper<Self::StoreKey, Self::ParamsSubspaceKey>,
+        Self::StoreKey,
+    >;
+
+    fn get_params_store_key(&self) -> Self::StoreKey {
+        Self::StoreKey::Params
+    }
+
+    fn get_params_subspace_key(&self) -> Self::ParamsSubspaceKey {
+        Self::ParamsSubspaceKey::BaseApp
+    }
+
+    fn handle_tx_command(
+        &self,
+        command: Self::TxSubcommand,
+        from_address: proto_types::AccAddress,
+    ) -> Result<Self::Message> {
+        tx_command_handler(command, from_address)
+    }
+
+    fn handle_query_command(
+        &self,
+        command: Self::QuerySubcommand,
+        node: &str,
+        height: Option<tendermint_informal::block::Height>,
+    ) -> Result<()> {
+        query_command_handler(command, node, height)
+    }
+}
 
 fn main() -> Result<()> {
     let params_keeper = ParamsKeeper::new(GaiaStoreKey::Params);
@@ -39,17 +86,15 @@ fn main() -> Result<()> {
         auth_keeper.clone(),
     );
 
-    let app: Application<_, _, _, _, _, _, _, _, _, _, _, _, _> = Application::new(
-        APP_NAME,
-        VERSION,
-        bank_keeper,
-        auth_keeper,
-        params_keeper,
-        GaiaParamsStoreKey::BaseApp,
-        Handler::new,
-        query_command_handler,
-        tx_command_handler,
+    let handler_builder = |cfg| Handler::new(cfg);
+
+    let ante_handler = BaseAnteHandler::new(bank_keeper, auth_keeper);
+
+    Node::new(
+        GaiaApplication,
         get_router(),
-    );
-    app.run_command()
+        &handler_builder,
+        ante_handler,
+    )
+    .run_command()
 }
