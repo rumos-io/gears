@@ -44,7 +44,7 @@ mod tests {
     #[test]
     fn test_positive() {
         let test_data = [
-            (1, "1"),
+            (1_i64, "1"),
             (2, "2"),
             (10, "10"),
             (30, "30"),
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn test_negative() {
         let test_data = [
-            (-1, "-1"),
+            (-1_i64, "-1"),
             (-2, "-2"),
             (-10, "-10"),
             (-30, "-30"),

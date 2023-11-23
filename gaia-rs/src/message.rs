@@ -43,4 +43,10 @@ impl SDKMessage for Message {
             Message::Bank(msg) => msg.validate_basic(),
         }
     }
+
+    fn type_url(&self) -> &'static str {
+        match self {
+            Message::Bank(bank) => bank.type_url(),
+        }
+    }
 }

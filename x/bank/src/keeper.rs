@@ -259,7 +259,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 vec![
                     ("recipient", String::from(to_address.clone())).index(),
                     ("sender", String::from(from_address.clone())).index(),
-                    ("amount", send_coin.amount.to_string() ).index(),
+                    ("amount", send_coin.amount.to_string()).index(),
                 ],
             ));
         }

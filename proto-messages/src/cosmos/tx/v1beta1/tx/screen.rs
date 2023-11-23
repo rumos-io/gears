@@ -31,7 +31,7 @@ pub struct Indent(u8);
 // }
 
 /// Screen is the abstract unit of Textual rendering.
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Screen {
     /// `title` is the text (sequence of Unicode code points) to display first,
     /// generally on the device's title section. It can be empty.
@@ -45,7 +45,7 @@ pub struct Screen {
 
     /// `indent` is the indentation level of the screen.
     /// Zero indicates top-level.
-    #[serde(default)]
+    #[serde(default)] // , skip_serializing_if = "Option::is_none"
     pub indent: Option<Indent>,
 
     /// `expert` indicates that the screen should only be displayed

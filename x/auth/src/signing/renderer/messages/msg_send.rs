@@ -76,11 +76,14 @@ mod tests {
     use database::{Database, PrefixDB};
     use gears::types::context::context::{Context, ContextTrait};
     use ibc_proto::cosmos::bank::v1beta1::MsgSend;
-    use proto_messages::cosmos::tx::v1beta1::{screen::Screen, tx_metadata::{Metadata, DenomUnit}};
+    use proto_messages::cosmos::tx::v1beta1::{
+        screen::Screen,
+        tx_metadata::{DenomUnit, Metadata},
+    };
     use store::StoreKey;
     use strum::EnumIter;
 
-    use crate::signing::renderer::value_renderer::{ValueRenderer, DefaultValueRenderer};
+    use crate::signing::renderer::value_renderer::{DefaultValueRenderer, ValueRenderer};
 
     #[test]
     fn screen_result_no_coins() -> anyhow::Result<()> {
@@ -104,7 +107,7 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screens = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&msg, &context );
+        let actual_screens = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&msg, &context);
 
         assert!(actual_screens.is_ok(), "Failed to retrieve screens");
         assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
@@ -170,12 +173,12 @@ mod tests {
                 description: String::new(),
                 denom_units: vec![
                     DenomUnit {
-                        denom: "ATOM".parse().expect( "Test data should be valid" ),
+                        denom: "ATOM".parse().expect("Test data should be valid"),
                         exponent: 6,
                         aliases: Vec::new(),
                     },
                     DenomUnit {
-                        denom: "uatom".parse().expect( "Test data should be valid" ),
+                        denom: "uatom".parse().expect("Test data should be valid"),
                         exponent: 0,
                         aliases: Vec::new(),
                     },

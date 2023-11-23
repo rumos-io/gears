@@ -12,4 +12,6 @@ pub trait Message:
     fn get_signers(&self) -> Vec<&AccAddress>;
 
     fn validate_basic(&self) -> Result<(), String>;
+
+    fn type_url(&self) -> &'static str;
 }

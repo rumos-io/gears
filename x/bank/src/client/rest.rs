@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{BaseApp, Genesis, Handler, ante::AnteHandlerTrait},
+    baseapp::{ante::AnteHandlerTrait, BaseApp, Genesis, Handler},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
@@ -112,7 +112,7 @@ pub async fn get_balances_by_denom<
             .map_err(|e: proto_types::Error| Error::bad_request(e.to_string()))?,
     };
 
-    let request = RequestQuery {
+    let request: RequestQuery = RequestQuery {
         data: req.encode_vec().into(),
         path: "/cosmos.bank.v1beta1.Query/Balance".into(),
         height: 0,

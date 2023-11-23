@@ -5,3 +5,4 @@ pub mod bytes;
 pub mod decimal;
 pub mod int;
 pub mod string;
+pub mod uint;

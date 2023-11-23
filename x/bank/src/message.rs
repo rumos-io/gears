@@ -23,6 +23,12 @@ impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {
             Message::Send(_) => Ok(()),
         }
     }
+
+    fn type_url(&self) -> &'static str {
+        match self {
+            Message::Send(_) => "/cosmos.bank.v1beta1.MsgSend",
+        }
+    }
 }
 
 impl From<Message> for Any {
