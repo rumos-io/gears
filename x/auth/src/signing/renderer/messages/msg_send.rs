@@ -59,13 +59,13 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
             expert: false,
         });
 
-        // for coin_raw in &self.amount {
-        //     let coin: Coin = coin_raw.try_into()?;
+        for coin_raw in self.amount.clone() {
+            let coin: Coin = coin_raw.try_into()?;
 
-        //     screens_vec.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-        //         coin_raw, ctx,
-        //     )?)
-        // }
+            screens_vec.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+                &coin, ctx,
+            )?)
+        }
 
         Ok(screens_vec)
     }
@@ -73,59 +73,145 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 
 #[cfg(test)]
 mod tests {
-    // use ibc_proto::cosmos::bank::v1beta1::MsgSend;
-    // use proto_messages::cosmos::tx::v1beta1::screen::Screen;
+    use database::{Database, PrefixDB};
+    use gears::types::context::context::{Context, ContextTrait};
+    use ibc_proto::cosmos::bank::v1beta1::MsgSend;
+    use proto_messages::cosmos::tx::v1beta1::{screen::Screen, tx_metadata::{Metadata, DenomUnit}};
+    use store::StoreKey;
+    use strum::EnumIter;
 
-    // use crate::signing::renderer::value_renderer::{MessageDefaultRenderer, MessageValueRenderer};
+    use crate::signing::renderer::value_renderer::{ValueRenderer, DefaultValueRenderer};
 
-    // #[test]
-    // fn screen_result_no_coins() -> anyhow::Result<()> {
-    //     const MESSAGE: &str = r#"{
-    //         "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-    //         "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
-    //         "amount": []
-    //     }"#;
+    #[test]
+    fn screen_result_no_coins() -> anyhow::Result<()> {
+        const MESSAGE: &str = r#"{
+            "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
+            "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
+            "amount": []
+        }"#;
 
-    //     let msg: MsgSend = serde_json::from_str(MESSAGE)?;
+        let msg: MsgSend = serde_json::from_str(MESSAGE)?;
 
-    //     const SCREENS: &str = r#"[
-    // 		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
-    // 		{ "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 }
-    // 	]"#;
+        const SCREENS: &str = r#"[
+    		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
+    		{ "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 }
+    	]"#;
 
-    //     let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
+        let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
 
-    //     let actual_screens = MessageValueRenderer::<MessageDefaultRenderer>::format(&msg);
+        let mut ctx = MockContext;
 
-    //     assert!(actual_screens.is_ok(), "Failed to retrieve screens");
-    //     assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
+        let context: Context<'_, '_, database::RocksDB, KeyMock> =
+            Context::DynamicContext(&mut ctx);
 
-    //     Ok(())
-    // }
+        let actual_screens = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&msg, &context );
 
-    // #[test]
-    // fn screen_result_with_coin() -> anyhow::Result<()> {
-    //     const MESSAGE: &str = r#"{
-    //         "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-    //         "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
-    //         "amount": [{ "denom": "uatom", "amount": "10000000" }]
-    //     }"#;
+        assert!(actual_screens.is_ok(), "Failed to retrieve screens");
+        assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
 
-    //     let msg: MsgSend = serde_json::from_str(MESSAGE)?;
+        Ok(())
+    }
 
-    //     const SCREENS: &str = r#"[
-    // 		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
-    // 		{ "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 },
-    //         { "title": "Amount", "content": "10 ATOM", "indent": 2 }
-    // 	]"#;
+    #[test]
+    fn screen_result_with_coin() -> anyhow::Result<()> {
+        const MESSAGE: &str = r#"{
+            "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
+            "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
+            "amount": [{ "denom": "uatom", "amount": "10000000" }]
+        }"#;
 
-    //     let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
+        let msg: MsgSend = serde_json::from_str(MESSAGE)?;
 
-    //     let actual_screens = MessageValueRenderer::<MessageDefaultRenderer>::format(&msg);
+        const SCREENS: &str = r#"[
+    		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
+    		{ "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 },
+            { "title": "Amount", "content": "10 ATOM", "indent": 2 }
+    	]"#;
 
-    //     assert!(actual_screens.is_ok(), "Failed to retrieve screens");
-    //     assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
+        let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
 
-    //     Ok(())
-    // }
+        let mut ctx = MockContext;
+
+        let context: Context<'_, '_, database::RocksDB, KeyMock> =
+            Context::DynamicContext(&mut ctx);
+
+        let actual_screens = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&msg, &context);
+
+        assert!(actual_screens.is_ok(), "Failed to retrieve screens");
+        assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
+
+        Ok(())
+    }
+
+    // We use custom implementation instead of mock
+    // 1. Mockall requires generic parameters to be 'static
+    // 2. Diffuclties exporting mock on other crates
+    pub struct MockContext;
+
+    impl<T: Database, SK: StoreKey> ContextTrait<T, SK> for MockContext {
+        fn height(&self) -> u64 {
+            unimplemented!()
+        }
+
+        fn chain_id(&self) -> &str {
+            unimplemented!()
+        }
+
+        fn push_event(&mut self, _: tendermint_informal::abci::Event) {
+            unimplemented!()
+        }
+
+        fn append_events(&mut self, _: Vec<tendermint_informal::abci::Event>) {
+            unimplemented!()
+        }
+
+        fn metadata_get(&self) -> Metadata {
+            Metadata {
+                description: String::new(),
+                denom_units: vec![
+                    DenomUnit {
+                        denom: "ATOM".parse().expect( "Test data should be valid" ),
+                        exponent: 6,
+                        aliases: Vec::new(),
+                    },
+                    DenomUnit {
+                        denom: "uatom".parse().expect( "Test data should be valid" ),
+                        exponent: 0,
+                        aliases: Vec::new(),
+                    },
+                ],
+                base: "uatom".into(),
+                display: "ATOM".into(),
+                name: String::new(),
+                symbol: String::new(),
+                uri: String::new(),
+                uri_hash: None,
+            }
+        }
+
+        fn get_kv_store(&self, _: &SK) -> &store::KVStore<PrefixDB<T>> {
+            unimplemented!()
+        }
+
+        fn get_mutable_kv_store(&mut self, _: &SK) -> &mut store::KVStore<PrefixDB<T>> {
+            unimplemented!()
+        }
+    }
+
+    #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+    pub enum KeyMock {
+        Bank,
+        Auth,
+        Params,
+    }
+
+    impl StoreKey for KeyMock {
+        fn name(&self) -> &'static str {
+            match self {
+                KeyMock::Bank => "bank",
+                KeyMock::Auth => "acc",
+                KeyMock::Params => "params",
+            }
+        }
+    }
 }
