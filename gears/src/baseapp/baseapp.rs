@@ -31,7 +31,7 @@ use crate::{
     x::params::{Keeper, ParamsSubspaceKey},
 };
 
-use super::{ante::AnteHandler, params::BaseAppParamsKeeper};
+use super::{ante::AnteHandlerTrait, params::BaseAppParamsKeeper};
 
 pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
@@ -92,7 +92,7 @@ impl<
         PSK: ParamsSubspaceKey,
         H: Handler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > Application for BaseApp<SK, PSK, M, H, G, Ante>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
@@ -339,7 +339,7 @@ impl<
         PSK: ParamsSubspaceKey,
         H: Handler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > BaseApp<SK, PSK, M, H, G, Ante>
 {
     pub fn new(

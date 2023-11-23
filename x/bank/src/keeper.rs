@@ -1,7 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
 use bytes::Bytes;
-use cosmwasm_std::Uint256;
 use database::Database;
 
 use gears::types::context::context::Context;
@@ -13,6 +12,8 @@ use gears::{
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
+use num_bigint::BigUint;
+use num_traits::Zero;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -91,14 +92,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
 
-        let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
+        let mut total_supply: HashMap<Denom, BigUint> = HashMap::new();
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
                 denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
-                let zero = Uint256::zero();
+                let zero = Zero::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount + current_balance);
             }
@@ -177,7 +178,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .expect("invalid data in database - possible database corruption");
-                let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
+                let amount = BigUint::from_str(&String::from_utf8_lossy(&raw_coin.1))
                     .expect("invalid data in database - possible database corruption");
                 Coin { denom, amount }
             })
@@ -228,7 +229,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 return Err(AppError::Send("Insufficient funds".into()));
             }
 
-            from_balance.amount -= send_coin.amount;
+            from_balance.amount -= send_coin.amount.clone();
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
@@ -245,11 +246,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     .expect("invalid data in database - possible database corruption"),
                 None => Coin {
                     denom: send_coin.denom.clone(),
-                    amount: Uint256::zero(),
+                    amount: BigUint::zero(),
                 },
             };
 
-            to_balance.amount += send_coin.amount;
+            to_balance.amount += send_coin.amount.clone();
 
             to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
 
@@ -258,7 +259,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 vec![
                     ("recipient", String::from(to_address.clone())).index(),
                     ("sender", String::from(from_address.clone())).index(),
-                    ("amount", send_coin.amount.into()).index(),
+                    ("amount", send_coin.amount.to_string() ).index(),
                 ],
             ));
         }

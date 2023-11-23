@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{ante::AnteHandler, BaseApp, Genesis, Handler},
+    baseapp::{BaseApp, Genesis, Handler, ante::AnteHandlerTrait},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
@@ -31,7 +31,7 @@ pub async fn supply<
     M: Message,
     H: Handler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
@@ -57,7 +57,7 @@ pub async fn get_balances<
     M: Message,
     H: Handler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
@@ -97,7 +97,7 @@ pub async fn get_balances_by_denom<
     M: Message,
     H: Handler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     Path(address): Path<AccAddress>,
     denom: Query<RawDenom>,
@@ -133,7 +133,7 @@ pub fn get_router<
     M: Message,
     H: Handler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))

@@ -16,7 +16,7 @@ use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LIS
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
-use super::ante::AnteHandler;
+use super::ante::AnteHandlerTrait;
 use super::{Genesis, Handler};
 
 pub fn run_run_command<
@@ -27,7 +27,7 @@ pub fn run_run_command<
     H: Handler<M, SK, G>,
     G: Genesis,
     AC: ApplicationConfig,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     matches: &ArgMatches,
     app_name: &'static str,

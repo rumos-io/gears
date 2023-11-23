@@ -8,7 +8,7 @@ use tokio::runtime::Runtime;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    baseapp::{ante::AnteHandler, BaseApp, Genesis, Handler},
+    baseapp::{ante::AnteHandlerTrait, BaseApp, Genesis, Handler},
     client::rest::handlers::{node_info, staking_params, txs},
     x::params::ParamsSubspaceKey,
 };
@@ -19,7 +19,7 @@ pub fn run_rest_server<
     M: Message,
     H: Handler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     app: BaseApp<SK, PSK, M, H, G, Ante>,
     listen_addr: SocketAddr,
@@ -40,7 +40,7 @@ pub struct RestState<
     M: Message,
     H: Handler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 > {
     app: BaseApp<SK, PSK, M, H, G, Ante>,
     tendermint_rpc_address: Url,
@@ -52,7 +52,7 @@ impl<
         M: Message,
         H: Handler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > FromRef<RestState<SK, PSK, M, H, G, Ante>> for BaseApp<SK, PSK, M, H, G, Ante>
 {
     fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, Ante>) -> BaseApp<SK, PSK, M, H, G, Ante> {
@@ -66,7 +66,7 @@ impl<
         M: Message,
         H: Handler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > FromRef<RestState<SK, PSK, M, H, G, Ante>> for Url
 {
     fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, Ante>) -> Url {
@@ -84,7 +84,7 @@ async fn launch<
     M: Message,
     H: Handler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     app: BaseApp<SK, PSK, M, H, G, Ante>,
     listen_addr: SocketAddr,

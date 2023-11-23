@@ -45,7 +45,7 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account);
 }
 
-pub trait AnteHandler<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn run<DB: Database, M: Message>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
@@ -60,7 +60,7 @@ pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey>
     sk: PhantomData<SK>,
 }
 
-impl<SK, BK, AK> AnteHandler<SK> for BaseAnteHandler<BK, AK, SK>
+impl<SK, BK, AK> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK>
 where
     SK: StoreKey,
     BK: BankKeeper<SK>,

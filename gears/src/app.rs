@@ -1,4 +1,4 @@
-use crate::baseapp::ante::AnteHandler;
+use crate::baseapp::ante::AnteHandlerTrait;
 use crate::baseapp::cli::get_run_command;
 use crate::baseapp::{Genesis, Handler};
 use crate::client::genesis_account::{
@@ -97,7 +97,7 @@ pub trait Application {
     type TxSubcommand: Subcommand;
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
-    type AnteHandler: AnteHandler<Self::StoreKey>;
+    type AnteHandler: AnteHandlerTrait<Self::StoreKey>;
 
     fn get_params_store_key(&self) -> Self::StoreKey;
 
