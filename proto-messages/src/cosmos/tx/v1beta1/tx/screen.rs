@@ -55,8 +55,7 @@ pub struct Screen {
 }
 
 /// To make sure that we 1:1 compatible with Cosmos.SDK we skip field if it has `false` value
-fn bool_skip( var : &bool ) -> bool
-{
+fn bool_skip(var: &bool) -> bool {
     *var == false
 }
 
