@@ -1,8 +1,8 @@
 use std::error::Error;
 
 use gears::types::context::context::Context;
-use ibc_proto::cosmos::bank::v1beta1::MsgSend;
 use proto_messages::cosmos::{
+    bank::v1beta1::MsgSend,
     base::v1beta1::Coin,
     tx::v1beta1::screen::{Content, Indent, Screen},
 };
@@ -40,10 +40,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
         &self,
         ctx: &Context<'_, '_, database::RocksDB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn Error>> {
-        let mut screens_vec = Vec::with_capacity(match self.amount.is_empty() {
-            true => 2,
-            false => self.amount.len() + 2,
-        });
+        let mut screens_vec = Vec::new();
 
         screens_vec.push(Screen {
             title: "From address".to_string(),
@@ -75,10 +72,13 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 mod tests {
     use database::{Database, PrefixDB};
     use gears::types::context::context::{Context, ContextTrait};
-    use ibc_proto::cosmos::bank::v1beta1::MsgSend;
-    use proto_messages::cosmos::tx::v1beta1::{
-        screen::Screen,
-        tx_metadata::{DenomUnit, Metadata},
+    use ibc_proto::cosmos::bank::v1beta1::MsgSend as MsgSendRaw;
+    use proto_messages::cosmos::{
+        bank::v1beta1::MsgSend,
+        tx::v1beta1::{
+            screen::Screen,
+            tx_metadata::{DenomUnit, Metadata},
+        },
     };
     use store::StoreKey;
     use strum::EnumIter;
@@ -93,7 +93,8 @@ mod tests {
             "amount": []
         }"#;
 
-        let msg: MsgSend = serde_json::from_str(MESSAGE)?;
+        let msg: MsgSendRaw = serde_json::from_str(MESSAGE)?;
+        let msg: MsgSend = msg.try_into()?;
 
         const SCREENS: &str = r#"[
     		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
@@ -123,7 +124,8 @@ mod tests {
             "amount": [{ "denom": "uatom", "amount": "10000000" }]
         }"#;
 
-        let msg: MsgSend = serde_json::from_str(MESSAGE)?;
+        let msg: MsgSendRaw = serde_json::from_str(MESSAGE)?;
+        let msg: MsgSend = msg.try_into()?;
 
         const SCREENS: &str = r#"[
     		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },

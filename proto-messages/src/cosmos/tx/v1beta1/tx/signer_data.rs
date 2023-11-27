@@ -1,6 +1,7 @@
 use ibc_proto::protobuf::Protobuf;
 use nutype::nutype;
 use prost::Message;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     cosmos::crypto::secp256k1::v1beta1::{PubKey, RawPubKey},
@@ -67,12 +68,12 @@ impl From<SignerData> for SignerDataRaw {
 impl Protobuf<SignerDataRaw> for SignerData {}
 
 #[nutype(validate(not_empty))]
-#[derive(*)]
+#[derive(*, Serialize, Deserialize)]
 pub struct ChainId(String);
 
 /// SignerData is the specific information needed to sign a transaction that generally
 /// isn't included in the transaction body itself
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SignerData {
     /// The address of the signer.
     ///

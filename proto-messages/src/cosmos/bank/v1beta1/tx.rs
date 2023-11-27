@@ -2,11 +2,15 @@ use ibc_proto::{
     cosmos::bank::v1beta1::MsgSend as RawMsgSend, cosmos::base::v1beta1::Coin as RawCoin,
     google::protobuf::Any, protobuf::Protobuf,
 };
+use prost::bytes::Bytes;
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cosmos::base::v1beta1::{Coin, SendCoins},
+    cosmos::{
+        base::v1beta1::{Coin, SendCoins},
+        tx::v1beta1::message::Message,
+    },
     error::Error,
 };
 
@@ -60,5 +64,28 @@ impl From<MsgSend> for Any {
             type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
             value: msg.encode_vec(),
         }
+    }
+}
+
+impl Message for MsgSend {
+    fn get_signers(&self) -> Vec<&AccAddress> {
+        todo!()
+    }
+
+    fn validate_basic(&self) -> Result<(), String> {
+        todo!()
+    }
+
+    fn type_url(&self) -> &'static str {
+        "/cosmos.bank.v1beta1.MsgSend"
+    }
+}
+
+impl TryFrom<Any> for MsgSend {
+    type Error = Error;
+
+    fn try_from(value: Any) -> Result<Self, Self::Error> {
+        MsgSend::decode::<Bytes>(value.value.clone().into())
+            .map_err(|e| Error::DecodeAny(e.to_string()))
     }
 }

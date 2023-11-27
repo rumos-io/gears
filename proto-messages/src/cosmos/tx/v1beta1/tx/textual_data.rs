@@ -3,6 +3,7 @@ use ibc_proto::{
     protobuf::Protobuf,
 };
 use prost::{bytes::Bytes, Message as ProstMessage};
+use serde::{Deserialize, Serialize};
 
 use crate::{cosmos::tx::v1beta1::message::Message, Error};
 
@@ -69,7 +70,7 @@ impl<M: Message> Protobuf<TextualDataRaw> for TextualData<M> {}
 /// `TextualData` represents all the information needed to generate
 /// the textual SignDoc (which is []Screen encoded to XBOR). It is meant to be
 /// used as an internal type in Textual's implementations.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TextualData<M: Message> {
     /// body_bytes is a protobuf serialization of a TxBody that matches the
     /// representation in SignDoc.

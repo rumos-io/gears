@@ -11,7 +11,7 @@ pub mod textual_data;
 pub mod tip;
 
 #[cfg(test)]
-mod test_mocks {
+pub(super) mod test_mocks {
     //! This module shares test implementation of context and `StoreKey`
     //!
     use database::{Database, PrefixDB};
@@ -23,7 +23,7 @@ mod test_mocks {
     // We use custom implementation instead of mock
     // 1. Mockall requires generic parameters to be 'static
     // 2. Diffuclties exporting mock on other crates
-    pub(super) struct MockContext;
+    pub struct MockContext;
 
     impl<T: Database, SK: StoreKey> ContextTrait<T, SK> for MockContext {
         fn height(&self) -> u64 {
@@ -76,7 +76,7 @@ mod test_mocks {
     }
 
     #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
-    pub(super) enum KeyMock {
+    pub enum KeyMock {
         Bank,
         Auth,
         Params,
