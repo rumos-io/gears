@@ -1,11 +1,9 @@
-use std::ops::Div;
-
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
+use bnum::types::U256;
 use database::RocksDB;
 use gears::types::context::context::Context;
-use num_bigint::ToBigUint;
 use proto_messages::cosmos::{
     base::v1beta1::Coin,
     tx::v1beta1::{
@@ -39,11 +37,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                     false => denom_exp.exponent - coin_exp.exponent,
                 };
 
-                let disp_amount = self.amount.clone().div(
-                    10.to_biguint()
-                        .expect("Should be able to parse number")
-                        .pow(power),
-                );
+                let disp_amount = self.amount.clone().div(U256::from_digit(10).pow(power));
 
                 let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
 
@@ -75,9 +69,9 @@ mod tests {
         value_renderer::{DefaultValueRenderer, ValueRenderer},
         values::test_mocks::{KeyMock, MockContext},
     };
-    use anyhow::{anyhow, Ok};
+    use anyhow::Ok;
+    use bnum::types::U256;
     use gears::types::context::context::Context;
-    use num_bigint::ToBigUint;
     use proto_messages::cosmos::{
         base::v1beta1::Coin,
         tx::v1beta1::screen::{Content, Indent, Screen},
@@ -87,9 +81,7 @@ mod tests {
     fn coin_formatting() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: 10000000_u64
-                .to_biguint()
-                .ok_or(anyhow!("Failed to parse to biguint"))?,
+            amount: U256::from_digit(10000000_u64),
         };
 
         let expected_screens = Screen {

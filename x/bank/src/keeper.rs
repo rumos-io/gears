@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
+use bnum::types::U256;
 use bytes::Bytes;
 use database::Database;
 
@@ -12,8 +13,6 @@ use gears::{
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use ibc_proto::protobuf::Protobuf;
-use num_bigint::BigUint;
-use num_traits::Zero;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -92,14 +91,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
 
-        let mut total_supply: HashMap<Denom, BigUint> = HashMap::new();
+        let mut total_supply: HashMap<Denom, U256> = HashMap::new();
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
                 denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
-                let zero = Zero::zero();
+                let zero = U256::ZERO;
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount + current_balance);
             }
@@ -178,7 +177,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .expect("invalid data in database - possible database corruption");
-                let amount = BigUint::from_str(&String::from_utf8_lossy(&raw_coin.1))
+                let amount = U256::from_str(&String::from_utf8_lossy(&raw_coin.1))
                     .expect("invalid data in database - possible database corruption");
                 Coin { denom, amount }
             })
@@ -246,7 +245,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     .expect("invalid data in database - possible database corruption"),
                 None => Coin {
                     denom: send_coin.denom.clone(),
-                    amount: BigUint::zero(),
+                    amount: U256::ZERO,
                 },
             };
 

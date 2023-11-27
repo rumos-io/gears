@@ -383,6 +383,7 @@ name = "auth"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bnum 0.10.0",
  "bytes",
  "clap",
  "data-encoding",
@@ -392,6 +393,7 @@ dependencies = [
  "ibc-proto 0.31.0-alpha.2",
  "num-bigint",
  "num-format",
+ "num-traits",
  "once_cell",
  "prost",
  "proto-messages",
@@ -489,6 +491,7 @@ dependencies = [
  "anyhow",
  "auth",
  "axum",
+ "bnum 0.10.0",
  "bytes",
  "clap",
  "cosmwasm-std",
@@ -497,8 +500,6 @@ dependencies = [
  "hex",
  "ibc-proto 0.31.0-alpha.2",
  "ibc-relayer",
- "num-bigint",
- "num-traits",
  "prost",
  "proto-messages",
  "proto-types",
@@ -717,6 +718,16 @@ name = "bnum"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "128a44527fc0d6abf05f9eda748b9027536e12dff93f5acc8449f51583309350"
+
+[[package]]
+name = "bnum"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56953345e39537a3e18bdaeba4cb0c58a78c1f61f361dc0fa7c5c7340ae87c5f"
+dependencies = [
+ "serde",
+ "serde-big-array",
+]
 
 [[package]]
 name = "borsh"
@@ -1190,7 +1201,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d89d680fb60439b7c5947b15f9c84b961b88d1f8a3b20c4bd178a3f87db8bae"
 dependencies = [
  "base64 0.21.5",
- "bnum",
+ "bnum 0.8.0",
  "cosmwasm-crypto",
  "cosmwasm-derive",
  "derivative",
@@ -3831,6 +3842,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.21.5",
  "base64-serde",
+ "bnum 0.10.0",
  "byteorder",
  "ciborium",
  "cosmwasm-std",
@@ -3838,7 +3850,6 @@ dependencies = [
  "hex",
  "ibc-proto 0.31.0-alpha.2",
  "micromarshal",
- "num-bigint",
  "num-traits",
  "nutype",
  "prost",
@@ -4725,6 +4736,15 @@ dependencies = [
  "chrono",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

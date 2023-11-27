@@ -1,8 +1,6 @@
-use std::ops::Div;
-
+use bnum::types::U256;
 use database::RocksDB;
 use gears::types::context::context::Context;
-use num_bigint::ToBigUint;
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
     tx::v1beta1::{
@@ -15,7 +13,6 @@ use store::StoreKey;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
-// TODO: FIX:
 impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for SendCoins {
     fn format(
         &self,
@@ -44,15 +41,35 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                         false => denom_exp.exponent - coin_exp.exponent,
                     };
 
-                    let disp_amount = coin.amount.clone().div(
-                        10.to_biguint()
-                            .expect("Should be able to parse number")
-                            .pow(power),
-                    );
+                    let denominator = U256::from_digit(10).pow(power);
 
-                    let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
+                    let amount = coin.amount;
 
-                    format!("{formated_amount} {display}")
+                    let disp_amount = amount.div(denominator);
+
+                    if disp_amount.is_zero() {
+                        let reminder = amount % denominator;
+                        let padding = power - amount.trailing_zeros();
+                        let padding_str = {
+                            let mut var = String::with_capacity(padding as usize);
+                            for _ in 0..padding {
+                                var.push('0');
+                            }
+                            var
+                        };
+
+                        let mut formated_string = format!("0.{}{}", padding_str, reminder);
+
+                        while formated_string.ends_with('0') {
+                            let _ = formated_string.pop();
+                        }
+
+                        format!("{formated_string} {display}")
+                    } else {
+                        let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
+
+                        format!("{formated_amount} {display}")
+                    }
                 }
                 _ => format!(
                     "{} {display}",
@@ -78,8 +95,8 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 
 #[cfg(test)]
 mod tests {
+    use bnum::types::U256;
     use gears::types::context::context::Context;
-    use num_bigint::ToBigUint;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::screen::{Content, Screen},
@@ -94,9 +111,7 @@ mod tests {
     fn check_formate() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: 2000
-                .to_biguint()
-                .ok_or(anyhow::anyhow!("Failed to parse to biguint"))?,
+            amount: U256::from_digit(2000),
         };
 
         let expected_screens = Screen {
