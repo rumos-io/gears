@@ -1,7 +1,5 @@
-use bytes::Bytes;
 use database::RocksDB;
 use gears::types::context::context::Context;
-use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::{
     cbor::Cbor, message::Message, signer_data::SignerData, textual_data::TextualData,
     tx_data::TxData,
@@ -23,19 +21,8 @@ impl SignModeHandler {
         signer_data: SignerData,
         tx_data: TxData<impl Message + ValueRenderer<DefaultValueRenderer, SK>>,
     ) -> Result<Vec<u8>, SigningErrors> {
-        // encode bytes early and flatten struct
-        let mut body_bytes = Vec::new();
-        tx_data.body.encode(&mut body_bytes)?;
-        let mut auth_info_bytes = Vec::new();
-        tx_data.auth_info.encode(&mut auth_info_bytes)?;
-
-        let data = TextualData {
-            body_bytes: Bytes::from_iter(body_bytes),
-            auth_info_bytes: Bytes::from_iter(auth_info_bytes),
-            signer_data,
-            body: tx_data.body,
-            auth_info: tx_data.auth_info,
-        }; // *Note:* smth we need bytes so I save bytes and serialized version too.
+        let data = TextualData::new(signer_data, tx_data)
+            .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
 
         let screens = data
             .format(ctx)

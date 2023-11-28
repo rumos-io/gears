@@ -179,7 +179,7 @@ mod tests {
                 content: Content::new("End of Other signer")?,
                 indent: None,
                 expert: true,
-            }
+            },
         ];
 
         Ok(result)
