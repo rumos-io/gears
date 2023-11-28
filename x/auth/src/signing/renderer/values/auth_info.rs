@@ -30,35 +30,38 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
             )?);
         }
 
-        let signer_count = signer_infos.len();
-        final_screens.push(Screen {
-            title: "Other signer".to_string(),
-            content: Content::new(match signer_count {
-                1 => format!("1 SignerInfo"),
-                _ => format!("{signer_count} SignerInfos"),
-            })?,
-            indent: None,
-            expert: true,
-        });
-
-        for (i, info) in signer_infos.iter().enumerate() {
+        if !signer_infos.is_empty()
+        {
+            let signer_count = signer_infos.len();
             final_screens.push(Screen {
-                title: format!("Other signer ({}/{signer_count})", i + 1),
-                content: Content::new("SignerInfo object")?,
-                indent: Some(Indent::new(1)?),
+                title: "Other signer".to_string(),
+                content: Content::new(match signer_count {
+                    1 => format!("1 SignerInfo"),
+                    _ => format!("{signer_count} SignerInfos"),
+                })?,
+                indent: None,
                 expert: true,
             });
-            final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-                info, ctx,
-            )?);
+    
+            for (i, info) in signer_infos.iter().enumerate() {
+                final_screens.push(Screen {
+                    title: format!("Other signer ({}/{signer_count})", i + 1),
+                    content: Content::new("SignerInfo object")?,
+                    indent: Some(Indent::new(1)?),
+                    expert: true,
+                });
+                final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+                    info, ctx,
+                )?);
+            }
+    
+            final_screens.push(Screen {
+                title: String::new(),
+                content: Content::new("End of Other signer")?,
+                indent: None,
+                expert: true,
+            });
         }
-
-        final_screens.push(Screen {
-            title: String::new(),
-            content: Content::new("End of Other signer")?,
-            indent: None,
-            expert: true,
-        });
 
         Ok(final_screens)
     }

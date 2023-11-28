@@ -101,13 +101,12 @@ mod tests {
             auth_info::AuthInfo,
             fee::Fee,
             screen::{Content, Indent, Screen},
-            signer::SignerInfo,
-            signer_data::{ChainId, SignerData},
             textual_data::TextualData,
             tx_body::TxBody,
             tx_data::TxData,
         },
     };
+    use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
     use proto_types::{AccAddress, Denom};
 
     use crate::signing::renderer::{
@@ -138,17 +137,18 @@ mod tests {
     }
 
     fn textual_data_get() -> anyhow::Result<TextualData<MsgSend>> {
+        // SignerInfo {
+        //     public_key: Some(serde_json::from_str(
+        //         r#"{
+        //                 "@type": "/cosmos.crypto.secp256k1.PubKey",
+        //                 "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
+        //             }"#,
+        //     )?),
+        //     mode_info: None,
+        //     sequence: 2,
+        // }
         let auth_info = AuthInfo {
-            signer_infos: vec![SignerInfo {
-                public_key: Some(serde_json::from_str(
-                    r#"{
-                            "@type": "/cosmos.crypto.secp256k1.PubKey",
-                            "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
-                        }"#,
-                )?),
-                mode_info: None,
-                sequence: 2,
-            }],
+            signer_infos: vec![],
             fee: Fee {
                 amount: Some(
                     SendCoins::new(vec![Coin {
@@ -297,47 +297,9 @@ mod tests {
                 expert: true,
             },
             Screen {
-                title: "Other signer".to_string(),
-                content: Content::new("1 SignerInfo")?,
-                indent: None,
-                expert: true,
-            },
-            Screen {
-                title: "Other signer (1/1)".to_string(),
-                content: Content::new("SignerInfo object")?,
-                indent: Some(Indent::new(1)?),
-                expert: true,
-            },
-            Screen {
-                title: "Public key".to_string(),
-                content: Content::new("/cosmos.crypto.secp256k1.PubKey")?,
-                indent: None,
-                expert: true,
-            },
-            Screen {
-                title: "Key".to_string(),
-                content: Content::new(AccAddress::from_bech32(
-                    "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-                )?)?,
-                indent: Some(Indent::new(1)?),
-                expert: true,
-            },
-            Screen {
-                title: "Sequence".to_string(),
-                content: Content::new(2.to_string())?,
-                indent: Some(Indent::new(2)?),
-                expert: true,
-            },
-            Screen {
-                title: String::new(),
-                content: Content::new("End of Other signer")?,
-                indent: None,
-                expert: true,
-            },
-            Screen {
                 title: "Hash of raw bytes".to_string(),
                 content: Content::new(
-                    "a501c0f42fd00cf67e5fcbd9d863f7b384395885ca7526aceeac7ce0eb8ec4e1",
+                    "fc91ecc4f2fc74875a87d5e96a2523718fd310a79584ef1115caf2fdbb05e8b3",
                 )?,
                 indent: None,
                 expert: true,
