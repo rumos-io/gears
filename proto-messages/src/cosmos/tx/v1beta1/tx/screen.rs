@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use super::cbor::{Cbor, CborPrimitivies};
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
-use std::hash::Hash;
 
 const SCREENS_KEY: u64 = 1;
 
@@ -14,14 +13,12 @@ const EXPERT_KEY: u64 = 4;
 
 /// Content is the text (sequence of Unicode code points) to display after
 /// the Title, generally on the device's content section.
-#[nutype(validate(not_empty))]
-#[derive(*, Deserialize, Serialize)]
+#[nutype(validate(not_empty), derive(Eq, PartialEq, AsRef, Debug, Clone, Deserialize, Serialize))]
 pub struct Content(String);
 
 /// Indent is the indentation level of the screen.
 /// Zero indicates top-level.
-#[nutype(validate(max = 16))]
-#[derive(*, Deserialize, Serialize)]
+#[nutype(validate(less_or_equal = 16), derive(Eq, PartialEq, Debug, Clone, Copy, Deserialize, Serialize))]
 pub struct Indent(u8);
 
 // impl Default for Indent {

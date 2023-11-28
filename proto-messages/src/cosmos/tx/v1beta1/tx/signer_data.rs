@@ -67,8 +67,7 @@ impl From<SignerData> for SignerDataRaw {
 
 impl Protobuf<SignerDataRaw> for SignerData {}
 
-#[nutype(validate(not_empty))]
-#[derive(*, Serialize, Deserialize)]
+#[nutype(validate(not_empty), derive(Debug, Clone, Serialize, Deserialize))]
 pub struct ChainId(String);
 
 /// SignerData is the specific information needed to sign a transaction that generally
