@@ -1,6 +1,6 @@
-use ibc_proto::{
-    cosmos::base::v1beta1::Coin as RawCoin, cosmos::tx::v1beta1::Tip as RawTip, protobuf::Protobuf,
-};
+use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, protobuf::Protobuf};
+
+pub use ibc_proto::cosmos::tx::v1beta1::Tip as RawTip;
 
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
