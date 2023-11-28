@@ -8,11 +8,12 @@ pub mod v1beta1 {
     use ibc_proto::protobuf::Protobuf;
     use proto_types::AccAddress;
     use ripemd::Ripemd160;
-    use secp256k1::PublicKey as Secp256k1PubKey;
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
     use sha2::{Digest, Sha256};
 
     use crate::Error;
+
+    pub use secp256k1::PublicKey as Secp256k1PubKey;
 
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct RawPubKey {
@@ -61,6 +62,12 @@ pub mod v1beta1 {
             );
 
             res
+        }
+
+        #[cfg(feature = "testing")]
+        /// Function for creating of test object
+        pub fn new(key: Secp256k1PubKey) -> Self {
+            Self { key }
         }
     }
 

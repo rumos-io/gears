@@ -1,10 +1,12 @@
-use ibc_proto::{cosmos::tx::v1beta1::AuthInfo as RawAuthInfo, protobuf::Protobuf};
+use ibc_proto::protobuf::Protobuf;
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 
 use super::{fee::Fee, signer::SignerInfo, tip::Tip};
+
+pub use ibc_proto::cosmos::tx::v1beta1::AuthInfo as RawAuthInfo;
 
 /// AuthInfo describes the fee and signer modes that are used to sign a
 /// transaction.

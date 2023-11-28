@@ -38,4 +38,7 @@ rust_decimal = { version = "1.32", features = [ "maths"]}
 rust_decimal_macros = "1.32"
 
 [dev-dependencies]
+proto-messages = { path = "../../proto-messages" ,features = ["testing"]}
+rand = "0.8.5"
 strum = { version = "0.25", features = ["derive"] }
+secp256k1 = { version = "0.25.0", features = ["bitcoin-hashes", "rand", "global-context"] } # for tests we need rand feature

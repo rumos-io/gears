@@ -398,9 +398,11 @@ dependencies = [
  "prost",
  "proto-messages",
  "proto-types",
+ "rand 0.8.5",
  "regex",
  "rust_decimal",
  "rust_decimal_macros",
+ "secp256k1 0.25.0",
  "serde",
  "serde-aux",
  "serde_json",
@@ -4646,6 +4648,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "550fc3b723a478be77bf74718947cdcdd75144d508aaa70f0a320036905df2a8"
 dependencies = [
  "bitcoin_hashes",
+ "rand 0.8.5",
  "secp256k1-sys 0.7.0",
 ]
 
