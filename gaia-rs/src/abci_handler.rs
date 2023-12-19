@@ -1,5 +1,5 @@
 use gears::{config::Config, x::params::Keeper as ParamsKeeper};
-use tendermint_proto::abci::{RequestBeginBlock, RequestQuery};
+use tendermint_proto::abci::RequestQuery;
 
 use database::Database;
 use gears::error::AppError;
