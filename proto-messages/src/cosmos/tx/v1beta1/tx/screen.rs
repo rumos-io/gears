@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use super::cbor::{Cbor, CborPrimitivies};
+use super::cbor::Cbor;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 
@@ -13,12 +11,18 @@ const EXPERT_KEY: u64 = 4;
 
 /// Content is the text (sequence of Unicode code points) to display after
 /// the Title, generally on the device's content section.
-#[nutype(validate(not_empty), derive(Eq, PartialEq, AsRef, Debug, Clone, Deserialize, Serialize))]
+#[nutype(
+    validate(not_empty),
+    derive(Eq, PartialEq, AsRef, Debug, Clone, Deserialize, Serialize)
+)]
 pub struct Content(String);
 
 /// Indent is the indentation level of the screen.
 /// Zero indicates top-level.
-#[nutype(validate(less_or_equal = 16), derive(Eq, PartialEq, Debug, Clone, Copy, Deserialize, Serialize))]
+#[nutype(
+    validate(less_or_equal = 16),
+    derive(Eq, PartialEq, Debug, Clone, Copy, Deserialize, Serialize)
+)]
 pub struct Indent(u8);
 
 // impl Default for Indent {
@@ -57,25 +61,28 @@ fn bool_skip(var: &bool) -> bool {
 }
 
 impl Screen {
-    pub fn cbor_map(&self) -> HashMap<u64, CborPrimitivies<'_>> {
-        let mut map = HashMap::new();
+    pub fn cbor_map(&self) -> ordered_hash_map::OrderedHashMap<u64, ciborium::Value> {
+        let mut map = ordered_hash_map::OrderedHashMap::new();
         if !self.title.is_empty() {
-            let _ = map.insert(TITLE_KEY, CborPrimitivies::String(&self.title));
+            let _ = map.insert(TITLE_KEY, ciborium::Value::Text(self.title.clone()));
             // ignore returned
         }
 
-        let _ = map.insert(CONTENT_KEY, CborPrimitivies::String(self.content.as_ref())); // nutype made validation that content is not empty
+        let _ = map.insert(
+            CONTENT_KEY,
+            ciborium::Value::Text(self.content.clone().into_inner()),
+        ); // nutype made validation that content is not empty
 
         if let Some(indent) = self.indent {
             if indent.into_inner() > 0 {
                 let _ = map.insert(
                     INDENT_KEY,
-                    CborPrimitivies::Uint64(indent.into_inner() as u64),
+                    ciborium::Value::Integer(indent.into_inner().into()),
                 );
             }
         }
         if self.expert {
-            let _ = map.insert(EXPERT_KEY, CborPrimitivies::Bool(self.expert));
+            let _ = map.insert(EXPERT_KEY, ciborium::Value::Bool(self.expert));
         }
 
         map
@@ -84,12 +91,16 @@ impl Screen {
 
 // impl Cbor for &[Screen] {
 //     fn encode(&self, writter: &mut impl std::io::Write) -> Result<(), std::io::Error> {
-//         let items = self.iter().map(|this| this.cbor_map()).collect::<Vec<_>>();
+//         let map = self.iter().map( Screen::cbor_map ).collect::<Vec<_>>();
 
-//         let mut hash_map = HashMap::with_capacity(1);
-//         let _ = hash_map.insert(SCREENS_KEY, items); // ignore returned
+//         let mut final_map = HashMap::new();
 
-//         hash_map.encode(writter)
+//         final_map.insert( 1, map);
+//         let mut bytes = Vec::new();
+
+//         final_map.encode(&mut bytes)?;
+
+//         Ok( bytes )
 //     }
 // }
 
@@ -101,6 +112,8 @@ impl Cbor for Vec<Screen> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use serde_json::json;
 
     use crate::cosmos::tx::v1beta1::cbor::Cbor;
@@ -131,10 +144,16 @@ mod tests {
 
         const CBOR : &str = "a1018fa20168436861696e20696402686d792d636861696ea2016e4163636f756e74206e756d626572026131a2016853657175656e6365026132a301674164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e767161386579687304f5a3016a5075626c6963206b657902781f2f636f736d6f732e63727970746f2e736563703235366b312e5075624b657904f5a401634b657902785230324542204444374620453446442045423736204443384120323035452046363544203739304320443330452038413337203541354320323532382045423341203932334120463146422034443739203444030104f5a102781e54686973207472616e73616374696f6e206861732031204d657373616765a3016d4d6573736167652028312f312902781c2f636f736d6f732e62616e6b2e763162657461312e4d736753656e640301a3016c46726f6d206164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e76716138657968730302a3016a546f206164647265737302782d636f736d6f7331656a726634637572327779366b667572673966326a707070326833616665356836706b6835740302a30166416d6f756e74026731302041544f4d0302a1026e456e64206f66204d657373616765a2016446656573026a302e3030322041544f4da30169476173206c696d697402673130302730303004f5a3017148617368206f66207261772062797465730278403738356264333036656138393632636462393630303038396264643635663364633032396531616561313132646565363965313935343663396164616438366504f5";
 
-        let mut buf = Vec::new();    
-        screens.encode( &mut buf).unwrap();
+        let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        validate_result([ (buf, CBOR )])
+        let mut final_map = HashMap::new();
+
+        final_map.insert(1, map);
+        let mut bytes = Vec::new();
+
+        final_map.encode(&mut bytes).expect("Failed to encode");
+
+        validate_result([(bytes, CBOR)])
     }
 
     #[test]
@@ -158,11 +177,16 @@ mod tests {
         let screens: Vec<Screen> = serde_json::from_value(value).expect("Invalid json");
 
         const CBOR : &str = "a1018da20168436861696e20696402686d792d636861696ea2016e4163636f756e74206e756d626572026131a2016853657175656e6365026132a301674164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e767161386579687304f5a3016a5075626c6963206b657902781f2f636f736d6f732e63727970746f2e736563703235366b312e5075624b657904f5a401634b657902785230324542204444374620453446442045423736204443384120323035452046363544203739304320443330452038413337203541354320323532382045423341203932334120463146422034443739203444030104f5a102781e54686973207472616e73616374696f6e206861732031204d657373616765a3016d4d6573736167652028312f312902622f410301a3016542595445530278575348412d3235363d333242412035343543204430373020334530392030464643204438304620323045372031373239203944313220354434362033373238203838373120324232442042324437204346443220414138300302a1026e456e64206f66204d657373616765a2016446656573026a302e3030322041544f4da30169476173206c696d697402673130302730303004f5a3017148617368206f66207261772062797465730278403034323431666266613333366238326237666139643361643564383730363839313739386161396134393738646139653064393934353130643236363463643404f5";
+        let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut buf = Vec::new();    
-        screens.encode( &mut buf).unwrap();
+        let mut final_map = HashMap::new();
 
-        validate_result([ (buf, CBOR )])
+        final_map.insert(1, map);
+        let mut bytes = Vec::new();
+
+        final_map.encode(&mut bytes).expect("Failed to encode");
+
+        validate_result([(bytes, CBOR)])
     }
 
     #[test]
@@ -187,10 +211,16 @@ mod tests {
 
         const CBOR : &str = "a1018da20168436861696e20696402686d792d636861696ea2016e4163636f756e74206e756d626572026131a2016853657175656e6365026132a301674164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e767161386579687304f5a3016a5075626c6963206b657902781f2f636f736d6f732e63727970746f2e736563703235366b312e5075624b657904f5a401634b657902785230324542204444374620453446442045423736204443384120323035452046363544203739304320443330452038413337203541354320323532382045423341203932334120463146422034443739203444030104f5a102781e54686973207472616e73616374696f6e206861732031204d657373616765a3016d4d6573736167652028312f312902622f410301a301654259544553026e44333144203736444620354442370302a1026e456e64206f66204d657373616765a2016446656573026a302e3030322041544f4da30169476173206c696d697402673130302730303004f5a3017148617368206f66207261772062797465730278403664633961376139366330393038333830646330363766323036366434333834346235356634333061636533363964633136356366613938313036316438636604f5";
 
-        let mut buf = Vec::new();    
-        screens.encode( &mut buf).unwrap();
+        let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        validate_result([ (buf, CBOR )])
+        let mut final_map = HashMap::new();
+
+        final_map.insert(1, map);
+        let mut bytes = Vec::new();
+
+        final_map.encode(&mut bytes).expect("Failed to encode");
+
+        validate_result([(bytes, CBOR)])
     }
 
     // fn validate_result(value: impl IntoIterator<Item = Screen>, expected: &'static str) {
@@ -208,7 +238,7 @@ mod tests {
 
     fn validate_result<'a>(value: impl IntoIterator<Item = (Vec<u8>, &'a str)>) {
         for (i, expected) in value {
-            let actual = data_encoding::HEXLOWER.encode( &i );
+            let actual = data_encoding::HEXLOWER.encode(&i);
             assert_eq!(actual, expected.to_string());
         }
     }

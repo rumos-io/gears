@@ -1,4 +1,4 @@
-use bnum::types::U256;
+use bnum::types::U256 as BU256;
 use database::RocksDB;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
@@ -41,15 +41,15 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                         false => denom_exp.exponent - coin_exp.exponent,
                     };
 
-                    let denominator = U256::from_digit(10).pow(power);
+                    let denominator = BU256::from_digit(10).pow(power);
 
                     let amount = coin.amount;
 
-                    let disp_amount = amount.div(denominator);
+                    let disp_amount = amount.0.div(denominator);
 
                     if disp_amount.is_zero() {
-                        let reminder = amount % denominator;
-                        let padding = power - amount.trailing_zeros();
+                        let reminder = amount.0 % denominator;
+                        let padding = power - amount.0.trailing_zeros();
                         let padding_str = {
                             let mut var = String::with_capacity(padding as usize);
                             for _ in 0..padding {
@@ -73,7 +73,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                 }
                 _ => format!(
                     "{} {display}",
-                    DefaultPrimitiveRenderer::format(coin.amount.clone())
+                    DefaultPrimitiveRenderer::format(coin.amount.0.clone())
                 ),
             };
 
@@ -95,7 +95,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256;
+    use bnum::types::U256 as BU256;
     use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
@@ -111,7 +111,7 @@ mod tests {
     fn check_formate() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: U256::from_digit(2000),
+            amount: BU256::from_digit(2000).into(),
         };
 
         let expected_screens = Screen {

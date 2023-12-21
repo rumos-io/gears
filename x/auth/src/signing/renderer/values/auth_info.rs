@@ -30,8 +30,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
             )?);
         }
 
-        if !signer_infos.is_empty()
-        {
+        if !signer_infos.is_empty() {
             let signer_count = signer_infos.len();
             final_screens.push(Screen {
                 title: "Other signer".to_string(),
@@ -42,7 +41,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                 indent: None,
                 expert: true,
             });
-    
+
             for (i, info) in signer_infos.iter().enumerate() {
                 final_screens.push(Screen {
                     title: format!("Other signer ({}/{signer_count})", i + 1),
@@ -54,7 +53,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                     info, ctx,
                 )?);
             }
-    
+
             final_screens.push(Screen {
                 title: String::new(),
                 content: Content::new("End of Other signer")?,
@@ -104,7 +103,7 @@ mod tests {
                 amount: Some(
                     SendCoins::new(vec![Coin {
                         denom: Denom::try_from("uatom".to_owned())?,
-                        amount: U256::from_digit(2000),
+                        amount: U256::from_digit(2000).into(),
                     }])
                     .unwrap(),
                 ),

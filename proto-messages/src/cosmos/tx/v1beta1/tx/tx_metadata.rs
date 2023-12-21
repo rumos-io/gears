@@ -47,7 +47,7 @@ impl From<DenomUnit> for RawDenomUnit {
     }
 }
 
-#[nutype(validate(not_empty), derive( Debug, Clone, Deserialize, Serialize))]
+#[nutype(validate(not_empty), derive(Debug, Clone, Deserialize, Serialize))]
 pub struct UriHash(String);
 
 pub struct Metadata {

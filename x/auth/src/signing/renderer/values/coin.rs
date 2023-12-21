@@ -37,7 +37,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                     false => denom_exp.exponent - coin_exp.exponent,
                 };
 
-                let disp_amount = self.amount.clone().div(U256::from_digit(10).pow(power));
+                let disp_amount = self.amount.0.clone().div(U256::from_digit(10).pow(power));
 
                 let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
 
@@ -54,7 +54,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                 title: "Amount".to_string(),
                 content: Content::new(format!(
                     "{} {display}",
-                    DefaultPrimitiveRenderer::format(self.amount.clone())
+                    DefaultPrimitiveRenderer::format(self.amount.0.clone())
                 ))?,
                 indent: Some(Indent::new(2)?),
                 expert: false,
@@ -81,7 +81,7 @@ mod tests {
     fn coin_formatting() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: U256::from_digit(10000000_u64),
+            amount: U256::from_digit(10000000_u64).into(),
         };
 
         let expected_screens = Screen {

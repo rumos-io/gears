@@ -23,14 +23,9 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 mod tests {
     use gears::types::context::context::Context;
     use proto_messages::cosmos::{
-        crypto::secp256k1::v1beta1::{PubKey, Secp256k1PubKey},
-        tx::v1beta1::{
-            public_key::PublicKey,
-            screen::{Content, Indent, Screen},
-        },
+        crypto::secp256k1::v1beta1::PubKey,
+        tx::v1beta1::screen::{Content, Indent, Screen},
     };
-    use rand::thread_rng;
-    use secp256k1::KeyPair;
 
     use crate::signing::renderer::{
         value_renderer::{DefaultValueRenderer, ValueRenderer},
@@ -39,10 +34,12 @@ mod tests {
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {
-        let mut rand = thread_rng();
-        let keypair = KeyPair::new_global(&mut rand);
-        let secp_key = Secp256k1PubKey::from_keypair(&keypair);
-        let key = PublicKey::Secp256k1(PubKey::new(secp_key));
+        let key: PubKey = serde_json::from_str(
+            r#"{
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
+        }"#,
+        )?;
 
         let expected_screens = vec![
             Screen {
@@ -53,7 +50,7 @@ mod tests {
             },
             Screen {
                 title: "Key".to_string(),
-                content: Content::new(key.get_address())?,
+                content: Content::new("02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D")?,
                 indent: Some(Indent::new(1)?),
                 expert: true,
             },

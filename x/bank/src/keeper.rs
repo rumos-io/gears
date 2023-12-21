@@ -100,7 +100,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
                 let zero = U256::ZERO;
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
-                total_supply.insert(coin.denom, coin.amount + current_balance);
+                total_supply.insert(coin.denom, coin.amount.0 + current_balance );
             }
         }
 
@@ -110,7 +110,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 &mut ctx.as_any(),
                 Coin {
                     denom: coin.0,
-                    amount: coin.1,
+                    amount: coin.1.into(),
                 },
             );
         }
@@ -178,7 +178,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .expect("invalid data in database - possible database corruption");
                 let amount = U256::from_str(&String::from_utf8_lossy(&raw_coin.1))
-                    .expect("invalid data in database - possible database corruption");
+                    .expect("invalid data in database - possible database corruption").into();
                 Coin { denom, amount }
             })
             .collect()
@@ -228,7 +228,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 return Err(AppError::Send("Insufficient funds".into()));
             }
 
-            from_balance.amount -= send_coin.amount.clone();
+            from_balance.amount.0 -= send_coin.amount.0;
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
@@ -245,11 +245,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     .expect("invalid data in database - possible database corruption"),
                 None => Coin {
                     denom: send_coin.denom.clone(),
-                    amount: U256::ZERO,
+                    amount: U256::ZERO.into(),
                 },
             };
 
-            to_balance.amount += send_coin.amount.clone();
+            to_balance.amount.0 += send_coin.amount.0;
 
             to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
 

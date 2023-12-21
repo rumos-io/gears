@@ -77,7 +77,7 @@ mod tests {
         let tip = Tip {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000),
+                amount: U256::from_digit(2000).into(),
             }])?),
             tipper: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
         };

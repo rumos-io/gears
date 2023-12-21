@@ -1,8 +1,10 @@
+use std::collections::HashMap;
+
 use database::RocksDB;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
-    cbor::Cbor, message::Message, signer_data::SignerData, textual_data::TextualData,
-    tx_data::TxData,
+    cbor::Cbor, message::Message, screen::Screen, signer_data::SignerData,
+    textual_data::TextualData, tx_data::TxData,
 };
 use store::StoreKey;
 
@@ -28,9 +30,14 @@ impl SignModeHandler {
             .format(ctx)
             .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
 
+        let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
+
+        let mut final_map = HashMap::new();
+
+        final_map.insert(1, map);
         let mut bytes = Vec::new();
 
-        screens.encode(&mut bytes)?;
+        final_map.encode(&mut bytes)?;
 
         Ok(bytes)
     }
@@ -38,21 +45,23 @@ impl SignModeHandler {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use bnum::types::U256;
     use gears::types::context::context::Context;
 
-    use ibc_proto::protobuf::Protobuf;
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::{
             auth_info::AuthInfo,
+            cbor::Cbor,
             fee::Fee,
-            signer::SignerInfo,
+            screen::{Content, Indent, Screen},
             signer_data::{ChainId, SignerData},
             tx_body::TxBody,
-            tx_data::TxData, screen::{Screen, Content, Indent}, cbor::Cbor,
-        }, crypto::secp256k1::v1beta1::PubKey,
+            tx_data::TxData,
+        },
     };
     use proto_types::{AccAddress, Denom};
 
@@ -64,21 +73,12 @@ mod tests {
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {
         let auth_inf = AuthInfo {
-            signer_infos: vec![SignerInfo {
-                public_key: Some(serde_json::from_str(
-                    r#"{
-                            "@type": "/cosmos.crypto.secp256k1.PubKey",
-                            "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
-                        }"#,
-                )?),
-                mode_info: None,
-                sequence: 2,
-            }],
+            signer_infos: vec![],
             fee: Fee {
                 amount: Some(
                     SendCoins::new(vec![Coin {
                         denom: Denom::try_from("uatom".to_owned())?,
-                        amount: U256::from_digit(2000),
+                        amount: U256::from_digit(2000).into(),
                     }])
                     .unwrap(),
                 ),
@@ -112,7 +112,7 @@ mod tests {
                 )?,
                 amount: SendCoins::new(vec![Coin {
                     denom: Denom::try_from("uatom".to_string())?,
-                    amount: U256::from_digit(10000000),
+                    amount: U256::from_digit(10000000).into(),
                 }])
                 .unwrap(),
             }],
@@ -175,16 +175,14 @@ mod tests {
             },
             Screen {
                 title: "Public key".to_string(),
-                content: Content::new(
-                    serde_json::from_str::<PubKey>(
-                        r#"{
-                    "@type": "/cosmos.crypto.secp256k1.PubKey",
-                    "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
-                }"#,
-                    )?
-                    .encode_to_hex_string(),
-                )?,
+                content: Content::new("/cosmos.crypto.secp256k1.PubKey")?,
                 indent: None,
+                expert: true,
+            },
+            Screen {
+                title: "Key".to_string(),
+                content: Content::new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
+                indent: Some(Indent::new(1)?),
                 expert: true,
             },
             Screen {
@@ -196,7 +194,7 @@ mod tests {
             Screen {
                 title: "Message (1/1)".to_string(),
                 content: Content::new("/cosmos.bank.v1beta1.MsgSend")?,
-                indent: None,
+                indent: Some(Indent::new(1)?),
                 expert: false,
             },
             Screen {
@@ -238,25 +236,30 @@ mod tests {
             Screen {
                 title: "Hash of raw bytes".to_string(),
                 content: Content::new(
-                    "fc91ecc4f2fc74875a87d5e96a2523718fd310a79584ef1115caf2fdbb05e8b3",
+                    "785bd306ea8962cdb9600089bdd65f3dc029e1aea112dee69e19546c9adad86e",
                 )?,
                 indent: None,
                 expert: true,
             },
         ];
 
+        let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
+
+        let mut final_map = HashMap::new();
+
+        final_map.insert(1, map);
         let mut bytes = Vec::new();
 
-        screens.encode(&mut bytes)?;
+        final_map.encode(&mut bytes)?;
 
         validate_result([(bytes, EXPECTED_CBOR)]);
-        
+
         Ok(())
     }
 
     fn validate_result<'a>(value: impl IntoIterator<Item = (Vec<u8>, &'a str)>) {
         for (i, expected) in value {
-            let actual = data_encoding::HEXLOWER.encode( &i );
+            let actual = data_encoding::HEXLOWER.encode(&i);
             assert_eq!(actual, expected.to_string());
         }
     }

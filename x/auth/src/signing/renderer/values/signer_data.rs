@@ -1,6 +1,5 @@
 use database::RocksDB;
 use gears::types::context::context::Context;
-use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::{
     screen::{Content, Screen},
     signer_data::SignerData,
@@ -12,9 +11,9 @@ use crate::signing::renderer::value_renderer::ValueRenderer;
 impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for SignerData {
     fn format(
         &self,
-        _: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, RocksDB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
-        let screens = vec![
+        let mut screens = vec![
             Screen {
                 title: "Chain id".to_string(),
                 content: Content::new(self.chain_id.clone().into_inner())?,
@@ -39,13 +38,12 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                 indent: None,
                 expert: true,
             },
-            Screen {
-                title: "Public key".to_string(),
-                content: Content::new(self.pub_key.encode_to_hex_string())?,
-                indent: None,
-                expert: true,
-            },
         ];
+
+        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+            &self.pub_key,
+            ctx,
+        )?);
 
         Ok(screens)
     }
@@ -56,7 +54,7 @@ mod tests {
     use gears::types::context::context::Context;
     use ibc_proto::protobuf::Protobuf;
     use proto_messages::cosmos::tx::v1beta1::{
-        screen::{Content, Screen},
+        screen::{Content, Indent, Screen},
         signer_data::{ChainId, SignerData},
     };
 
@@ -107,8 +105,14 @@ mod tests {
             },
             Screen {
                 title: "Public key".to_string(),
-                content: Content::new(signer_data.pub_key.encode_to_hex_string())?,
+                content: Content::new("/cosmos.crypto.secp256k1.PubKey")?,
                 indent: None,
+                expert: true,
+            },
+            Screen {
+                title: "Key".to_string(),
+                content: Content::new(signer_data.pub_key.encode_to_hex_string())?,
+                indent: Some(Indent::new(1)?),
                 expert: true,
             },
         ];

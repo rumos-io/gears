@@ -87,16 +87,16 @@ impl Cbor for bool {
 }
 
 #[derive(Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
-pub enum CborPrimitivies<'a> {
+pub enum CborPrimitivies {
     Uint8(u8),
     Uint16(u16),
     Uint32(u32),
     Uint64(u64),
-    String(&'a str),
+    String(String),
     Bool(bool),
 }
 
-impl<'a> Cbor for CborPrimitivies<'_> {
+impl Cbor for CborPrimitivies {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         match self {
             CborPrimitivies::Uint8(var) => var.encode(writter),
@@ -115,6 +115,20 @@ impl Cbor for &str {
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
     }
 }
+
+impl Cbor for String {
+    fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
+        ciborium::into_writer(self, writter)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+    }
+}
+
+// impl<T: Serialize, U: Iterator<Item = T>> Cbor for U{
+//     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
+//         ciborium::into_writer(self, writter)
+//         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+//     }
+// }
 
 impl<T: Serialize> Cbor for &[T] {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {

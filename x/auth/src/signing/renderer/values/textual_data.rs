@@ -2,7 +2,7 @@ use database::RocksDB;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     message::Message,
-    screen::{Content, Screen},
+    screen::{Content, Indent, Screen},
     textual_data::TextualData,
 };
 use store::StoreKey;
@@ -49,7 +49,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
             screens.push(Screen {
                 title: format!("Message ({}/{messages_count})", i + 1),
                 content: Content::new(ms.type_url().to_string())?,
-                indent: None,
+                indent: Some(Indent::new(1)?),
                 expert: false,
             });
             screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
@@ -92,7 +92,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
 mod tests {
     use bnum::types::U256;
     use gears::types::context::context::Context;
-    use ibc_proto::protobuf::Protobuf;
+    use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
@@ -106,7 +106,6 @@ mod tests {
             tx_data::TxData,
         },
     };
-    use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
     use proto_types::{AccAddress, Denom};
 
     use crate::signing::renderer::{
@@ -153,7 +152,7 @@ mod tests {
                 amount: Some(
                     SendCoins::new(vec![Coin {
                         denom: Denom::try_from("uatom".to_owned())?,
-                        amount: U256::from_digit(2000),
+                        amount: U256::from_digit(2000).into(),
                     }])
                     .unwrap(),
                 ),
@@ -187,7 +186,7 @@ mod tests {
                 )?,
                 amount: SendCoins::new(vec![Coin {
                     denom: Denom::try_from("uatom".to_string())?,
-                    amount: U256::from_digit(10000000),
+                    amount: U256::from_digit(10000000).into(),
                 }])
                 .unwrap(),
             }],
@@ -243,7 +242,7 @@ mod tests {
                     "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                 }"#,
                     )?
-                    .encode_to_hex_string(),
+                    .get_address_cosmos(),
                 )?,
                 indent: None,
                 expert: true,
@@ -258,7 +257,7 @@ mod tests {
                 title: "Message (1/1)".to_string(),
                 content: Content::new("/cosmos.bank.v1beta1.MsgSend")?,
                 indent: None,
-                expert: false,
+                expert: true,
             },
             Screen {
                 title: "From address".to_string(),
@@ -299,7 +298,7 @@ mod tests {
             Screen {
                 title: "Hash of raw bytes".to_string(),
                 content: Content::new(
-                    "fc91ecc4f2fc74875a87d5e96a2523718fd310a79584ef1115caf2fdbb05e8b3",
+                    "785bd306ea8962cdb9600089bdd65f3dc029e1aea112dee69e19546c9adad86e",
                 )?,
                 indent: None,
                 expert: true,

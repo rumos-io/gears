@@ -64,10 +64,22 @@ pub mod v1beta1 {
             res
         }
 
-        #[cfg(feature = "testing")]
-        /// Function for creating of test object
-        pub fn new(key: Secp256k1PubKey) -> Self {
-            Self { key }
+        pub fn get_address_cosmos(&self) -> String {
+            let address = self.get_address();
+            let hex = address.as_hex();
+            let mut result = String::new();
+
+            let mut counter = 0;
+            for ch in hex.chars() {
+                if counter == 4 {
+                    result.push(' ');
+                    counter = 0;
+                }
+                result.push(ch);
+                counter += 1;
+            }
+
+            result.to_ascii_uppercase()
         }
     }
 

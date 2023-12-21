@@ -60,6 +60,10 @@ impl AccAddress {
     pub fn as_hex(&self) -> String {
         hex::encode(&self.0)
     }
+
+    pub fn as_upper_hex(&self) -> String {
+        data_encoding::HEXUPPER.encode(&self.0)
+    }
 }
 
 impl Serialize for AccAddress {

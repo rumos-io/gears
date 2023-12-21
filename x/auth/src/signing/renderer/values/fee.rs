@@ -109,7 +109,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000),
+                amount: U256::from_digit(2000).into(),
             }])?),
             gas_limit: 1,
             payer: None,
@@ -150,7 +150,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000),
+                amount: U256::from_digit(2000).into(),
             }])?),
             gas_limit: 1,
             payer: Some(AccAddress::from_bech32(
@@ -199,7 +199,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000),
+                amount: U256::from_digit(2000).into(),
             }])?),
             gas_limit: 1,
             payer: Some(AccAddress::from_bech32(
