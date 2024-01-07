@@ -48,6 +48,12 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     Self::#i(msg) => msg.validate_basic()
                 }
             });
+
+            let into_any = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
+                quote! {
+                    #name ::#i(msg) => msg.into()
+                }
+            });
             //let variant_name = "Blah";
 
             //for variant in enum_data.variants.iter() {}
@@ -77,6 +83,14 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     // fn validate_basic(&self) -> Result<(), String> {
                     //     Ok(())
                     // }
+                }
+
+                impl From<#name> for Any {
+                    fn from(msg: #name) -> Self {
+                        match msg {
+                            #(#into_any),*
+                        }
+                    }
                 }
             };
             gen.into()
