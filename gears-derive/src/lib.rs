@@ -1,9 +1,15 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn;
+use syn::{self};
+use syner::Syner;
+
+#[derive(Syner)]
+struct Gears {
+    pub url: String,
+}
 
 // TODO: rename to AppMessage or MessageRouter?
-#[proc_macro_derive(Message)]
+#[proc_macro_derive(Message, attributes(gears))]
 pub fn message_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
 
@@ -18,25 +24,6 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
     match data {
         syn::Data::Struct(_) => panic!("Message can only be derived for enums"),
         syn::Data::Enum(enum_data) => {
-            // for variant in enum_data.variants.iter() {
-            //     let variant_name = &variant.ident;
-            //     let variant_fields = &variant.fields;
-
-            //     match variant_fields {
-            //         syn::Fields::Named(fields_named) => {
-            //             let named_field = fields_named.named.first().unwrap();
-            //         }
-            //         syn::Fields::Unnamed(_) => {
-            //             panic!("Message can only be derived for enums with named fields")
-            //         }
-            //         syn::Fields::Unit => {
-            //             panic!("Message can only be derived for enums with named fields")
-            //         }
-            //     }
-            // }
-
-            //let variant_name = enum_data.variants.first().unwrap().clone().ident;
-
             let get_signers = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                 quote! {
                     Self::#i(msg) => proto_messages::cosmos::tx::v1beta1::Message::get_signers(msg)
@@ -54,14 +41,27 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     #name ::#i(msg) => msg.into()
                 }
             });
-            //let variant_name = "Blah";
 
-            //for variant in enum_data.variants.iter() {}
+            let from_any = enum_data.variants.iter().map(|v| {
+                let attr = &v.attrs;
+                let ident = &v.ident;
+
+                let attrs = Gears::parse_attrs(attr).unwrap();
+                let url = attrs.url;
+
+                quote! {
+                    if value.type_url.starts_with(#url) {
+                        Ok(Self::#ident(Any::try_into(value)?))
+                    }
+                }
+            });
 
             let gen = quote! {
                 impl proto_messages::cosmos::tx::v1beta1::Message for #name {
 
+
                     fn get_signers(&self) -> Vec<&AccAddress> {
+
                         match self {
                             //Self::Bank(msg) => msg.get_signers(),
                             //Self::#variant_name(msg) => msg.get_signers(),
@@ -92,6 +92,23 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                         }
                     }
                 }
+
+                impl TryFrom<Any> for #name {
+                    type Error = proto_messages::Error;
+
+                    fn try_from(value: Any) -> Result<Self, Self::Error> {
+
+                        #(#from_any) else*
+
+                         else {
+                            Err(proto_messages::Error::DecodeGeneral(
+                                "message type not recognized".into(),
+                            ))
+                        }
+                    }
+                }
+
+
             };
             gen.into()
         }
