@@ -24,7 +24,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
             },
             Screen {
                 title: "Key".to_string(),
-                content: Content::new(self.get_address_cosmos())?,
+                content: Content::new(self.formatted_address())?,
                 indent: Some(Indent::new(1)?),
                 expert: true,
             },

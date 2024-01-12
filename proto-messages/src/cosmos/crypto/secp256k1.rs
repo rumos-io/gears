@@ -64,11 +64,11 @@ pub mod v1beta1 {
             res
         }
 
-        pub fn get_address_cosmos(&self) -> String {
-            let address = self.get_address();
-            let hex = address.as_hex();
-            let mut result = String::new();
+        pub fn formatted_address(&self) -> String {
+            let pub_key = self.key.serialize().to_vec();
+            let hex = data_encoding::HEXUPPER.encode( &pub_key );
 
+            let mut result = String::new();
             let mut counter = 0;
             for ch in hex.chars() {
                 if counter == 4 {

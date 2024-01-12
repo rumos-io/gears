@@ -242,7 +242,7 @@ mod tests {
                     "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                 }"#,
                     )?
-                    .get_address_cosmos(),
+                    .formatted_address(),
                 )?,
                 indent: None,
                 expert: true,
