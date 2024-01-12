@@ -1,5 +1,6 @@
 use database::RocksDB;
 use gears::types::context::context::Context;
+use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::{
     message::Message,
     screen::{Content, Indent, Screen},
@@ -20,8 +21,6 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
             body,
             auth_info,
             signer_data,
-            body_bytes,
-            auth_info_bytes,
         } = &self; // we need to remember using all fields
 
         let messages_count = body.messages.len();
@@ -77,9 +76,12 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
         )?);
 
         // =========================
+        let body_bytes = body.encode_vec();
+        let auth_info_bytes = auth_info.encode_vec();
+
         screens.push(Screen {
             title: "Hash of raw bytes".to_string(),
-            content: Content::new(hash_get(body_bytes, auth_info_bytes))?,
+            content: Content::new(hash_get( &body_bytes, &auth_info_bytes) )?,
             indent: None,
             expert: true,
         });
@@ -127,10 +129,10 @@ mod tests {
             ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&data, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-        assert_eq!(
-            expected_screens, actuals_screens,
-            "{expected_screens:#?} != {actuals_screens:#?}"
-        );
+        if expected_screens != actuals_screens
+        {
+            panic!( "Expected: {expected_screens:#?} \n !=\n Actual: {actuals_screens:#?}" )
+        }
 
         Ok(())
     }

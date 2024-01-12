@@ -260,7 +260,7 @@ mod tests {
     fn validate_result<'a>(value: impl IntoIterator<Item = (Vec<u8>, &'a str)>) {
         for (i, expected) in value {
             let actual = data_encoding::HEXLOWER.encode(&i);
-            assert_eq!(actual, expected.to_string());
+            assert_eq!(actual, expected.to_string(), "actual != expected");
         }
     }
 }

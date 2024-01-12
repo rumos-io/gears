@@ -38,8 +38,6 @@ impl<M: Message> TryFrom<TextualDataRaw> for TextualData<M> {
         let auth_info: RawAuthInfo = prost::Message::decode(auth_info_bytes.clone())?;
 
         let var = Self {
-            body_bytes: body_bytes,
-            auth_info_bytes: auth_info_bytes,
             signer_data: signer_data.try_into()?,
             body: body.try_into()?,
             auth_info: auth_info.try_into()?,
@@ -52,15 +50,14 @@ impl<M: Message> TryFrom<TextualDataRaw> for TextualData<M> {
 impl<M: Message> From<TextualData<M>> for TextualDataRaw {
     fn from(value: TextualData<M>) -> Self {
         let TextualData {
-            body_bytes,
-            auth_info_bytes,
             signer_data,
-            ..
+            body,
+            auth_info,
         } = value;
 
         Self {
-            body_bytes: body_bytes.into(),
-            auth_info_bytes: auth_info_bytes.into(),
+            body_bytes: Bytes::from_iter( body.encode_vec() ),
+            auth_info_bytes: Bytes::from_iter( auth_info.encode_vec() ),
             signer_data: signer_data.into(),
         }
     }
@@ -82,20 +79,11 @@ pub struct TextualData<M: Message> {
     // signer_data represents all data in Textual's SignDoc that are not
     // inside the Tx body and auth_info.
     pub signer_data: SignerData,
-    pub body_bytes: Bytes,
-    pub auth_info_bytes: Bytes,
 }
 
 impl<M: Message> TextualData<M> {
     pub fn new(signer_data: SignerData, tx_data: TxData<M>) -> Result<Self, Error> {
-        let mut body_bytes = Vec::new();
-        tx_data.body.encode(&mut body_bytes)?;
-        let mut auth_info_bytes = Vec::new();
-        tx_data.auth_info.encode(&mut auth_info_bytes)?;
-
         let data = TextualData {
-            body_bytes: Bytes::from_iter(body_bytes),
-            auth_info_bytes: Bytes::from_iter(auth_info_bytes),
             signer_data,
             body: tx_data.body,
             auth_info: tx_data.auth_info,
