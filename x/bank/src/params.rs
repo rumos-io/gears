@@ -62,7 +62,5 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
 
         // The send_enabled field is hard coded to the empty list for now
         store.set(KEY_SEND_ENABLED.into(), "[]".to_string().into());
-
-        return;
     }
 }

@@ -9,10 +9,7 @@ use crate::{merkle::EMPTY_HASH, Error};
 use super::Node;
 
 #[derive(Debug)]
-pub struct NodeDB<T>
-where
-    T: Database,
-{
+pub struct NodeDB<T> {
     db: T,
     cache: Mutex<LRUCache<[u8; 32], Node, DefaultHashBuilder>>,
 }
@@ -106,10 +103,10 @@ where
     fn recursive_tree_save(&mut self, node: &Node, hash: &[u8; 32]) {
         if let Node::Inner(inner) = node {
             if let Some(left_node) = &inner.left_node {
-                self.recursive_tree_save(&*left_node, &inner.left_hash);
+                self.recursive_tree_save(left_node, &inner.left_hash);
             }
             if let Some(right_node) = &inner.right_node {
-                self.recursive_tree_save(&*right_node, &inner.right_hash);
+                self.recursive_tree_save(right_node, &inner.right_hash);
             }
         }
 
@@ -127,7 +124,7 @@ where
             inner.right_node = None;
         }
 
-        return root_hash;
+        root_hash
     }
 
     pub(crate) fn save_version(&mut self, version: u32, hash: &[u8; 32]) {

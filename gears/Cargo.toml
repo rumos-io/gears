@@ -36,7 +36,7 @@ serde-aux = "4.2.0"
 serde_json = "1.0.93"
 sha2 = "0.10.6"
 store_crate = {path = "../store", package = "store"}
-strum = "0.24.1"
+strum = { version = "0.25", features = [] } # "derive"
 tendermint = {path = "../tendermint"}
 tendermint-abci = {git = "https://github.com/joneskm/tendermint-rs"}
 tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
@@ -54,3 +54,4 @@ trees = {path = "../trees"}
 
 [dev-dependencies]
 hex = "0.4.3"
+# mockiato = "0.9.5"

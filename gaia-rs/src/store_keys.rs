@@ -1,6 +1,6 @@
 use gears::x::params::ParamsSubspaceKey;
 use store::StoreKey;
-use strum_macros::EnumIter;
+use strum::EnumIter;
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum GaiaStoreKey {

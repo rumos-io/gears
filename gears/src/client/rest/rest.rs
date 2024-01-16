@@ -1,5 +1,5 @@
 use axum::{body::Body, extract::FromRef, http::Method, routing::get, Router};
-use proto_messages::cosmos::tx::v1beta1::Message;
+use proto_messages::cosmos::tx::v1beta1::message::Message;
 use tendermint_rpc::Url;
 
 use std::net::SocketAddr;
@@ -8,7 +8,7 @@ use tokio::runtime::Runtime;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    baseapp::{ante::AnteHandler, ABCIHandler, BaseApp, Genesis},
+    baseapp::{ante::AnteHandlerTrait, ABCIHandler, BaseApp, Genesis},
     client::rest::handlers::{node_info, staking_params, txs},
     x::params::ParamsSubspaceKey,
 };
@@ -19,7 +19,7 @@ pub fn run_rest_server<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     app: BaseApp<SK, PSK, M, H, G, Ante>,
     listen_addr: SocketAddr,
@@ -40,7 +40,7 @@ pub struct RestState<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 > {
     app: BaseApp<SK, PSK, M, H, G, Ante>,
     tendermint_rpc_address: Url,
@@ -52,7 +52,7 @@ impl<
         M: Message,
         H: ABCIHandler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > FromRef<RestState<SK, PSK, M, H, G, Ante>> for BaseApp<SK, PSK, M, H, G, Ante>
 {
     fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, Ante>) -> BaseApp<SK, PSK, M, H, G, Ante> {
@@ -66,7 +66,7 @@ impl<
         M: Message,
         H: ABCIHandler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > FromRef<RestState<SK, PSK, M, H, G, Ante>> for Url
 {
     fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, Ante>) -> Url {
@@ -84,7 +84,7 @@ async fn launch<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >(
     app: BaseApp<SK, PSK, M, H, G, Ante>,
     listen_addr: SocketAddr,

@@ -2,7 +2,7 @@ use bytes::Bytes;
 use database::{Database, RocksDB};
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
-    tx::v1beta1::{Message, TxWithRaw},
+    tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
 };
 use proto_types::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
@@ -31,7 +31,7 @@ use crate::{
     x::params::{Keeper, ParamsSubspaceKey},
 };
 
-use super::{ante::AnteHandler, params::BaseAppParamsKeeper};
+use super::{ante::AnteHandlerTrait, params::BaseAppParamsKeeper};
 
 pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
@@ -99,7 +99,7 @@ impl<
         PSK: ParamsSubspaceKey,
         H: ABCIHandler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > Application for BaseApp<SK, PSK, M, H, G, Ante>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
@@ -168,7 +168,7 @@ impl<
                 info: "".to_string(),
                 index: 0,
                 key: request.data,
-                value: res.into(),
+                value: res,
                 proof_ops: None,
                 height: self
                     .get_block_height()
@@ -372,7 +372,7 @@ impl<
         PSK: ParamsSubspaceKey,
         H: ABCIHandler<M, SK, G>,
         G: Genesis,
-        Ante: AnteHandler<SK>,
+        Ante: AnteHandlerTrait<SK>,
     > BaseApp<SK, PSK, M, H, G, Ante>
 {
     pub fn new(
@@ -433,7 +433,7 @@ impl<
     fn increment_block_height(&self) -> u64 {
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
-        return *height;
+        *height
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
@@ -507,7 +507,7 @@ impl<
             self.abci_handler.tx(ctx, msg)?
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
@@ -522,6 +522,6 @@ impl<
                 .map_err(|e| AppError::TxValidation(e.to_string()))?
         }
 
-        return Ok(());
+        Ok(())
     }
 }

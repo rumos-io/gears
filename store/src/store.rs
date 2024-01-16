@@ -20,7 +20,7 @@ const TREE_CACHE_SIZE: usize = 100_000;
 // 2. remove unwraps
 
 #[derive(Debug)]
-pub struct MultiStore<DB: Database, SK: StoreKey> {
+pub struct MultiStore<DB, SK> {
     pub(crate) head_version: u32,
     pub(crate) head_commit_hash: [u8; 32],
     pub(crate) stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
@@ -114,7 +114,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
 }
 
 #[derive(Debug)]
-pub struct KVStore<DB: Database> {
+pub struct KVStore<DB> {
     pub(crate) persistent_store: Tree<DB>,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,

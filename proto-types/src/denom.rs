@@ -19,6 +19,18 @@ lazy_static! {
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Eq, Hash)]
 pub struct Denom(String);
 
+impl Denom {
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+}
+
+impl AsRef<str> for Denom {
+    fn as_ref(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
 impl TryFrom<String> for Denom {
     type Error = Error;
 
@@ -28,6 +40,18 @@ impl TryFrom<String> for Denom {
         };
 
         Ok(Denom(v))
+    }
+}
+
+impl TryFrom<&str> for Denom {
+    type Error = Error;
+
+    fn try_from(v: &str) -> Result<Self, Self::Error> {
+        if !RE.is_match(&v) {
+            return Err(Error::InvalidDenom);
+        };
+
+        Ok(Denom(v.to_string()))
     }
 }
 

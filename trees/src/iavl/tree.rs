@@ -87,7 +87,7 @@ impl InnerNode {
         self.height = 1 + cmp::max(left_height, right_height);
         self.size = left_size + right_size;
 
-        return left_height as i16 - right_height as i16;
+        left_height as i16 - right_height as i16
     }
 
     fn shallow_clone(&self) -> Self {
@@ -95,11 +95,11 @@ impl InnerNode {
             left_node: None,
             right_node: None,
             key: self.key.clone(),
-            height: self.height.clone(),
-            size: self.size.clone(),
-            left_hash: self.left_hash.clone(),
-            right_hash: self.right_hash.clone(),
-            version: self.version.clone(),
+            height: self.height,
+            size: self.size,
+            left_hash: self.left_hash,
+            right_hash: self.right_hash,
+            version: self.version,
         }
     }
 }
@@ -145,11 +145,11 @@ impl Node {
     }
 
     pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
-        return Node::Leaf(LeafNode {
+        Node::Leaf(LeafNode {
             key,
             value,
             version,
-        });
+        })
     }
 
     pub fn hash(&self) -> [u8; 32] {
@@ -172,7 +172,7 @@ impl Node {
                 serialized.extend(encode_bytes(&node.key));
                 serialized.extend(encode_bytes(&hashed_value));
 
-                return serialized;
+                serialized
             }
             Node::Inner(node) => {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
@@ -186,7 +186,7 @@ impl Node {
                 serialized.extend(encode_bytes(&node.left_hash));
                 serialized.extend(encode_bytes(&node.right_hash));
 
-                return serialized;
+                serialized
             }
         }
     }
@@ -203,7 +203,7 @@ impl Node {
                 serialized.extend(encode_bytes(&node.key));
                 serialized.extend(encode_bytes(&node.value));
 
-                return serialized;
+                serialized
             }
             Node::Inner(node) => {
                 let mut serialized = node.height.encode_var_vec();
@@ -213,7 +213,7 @@ impl Node {
                 serialized.extend(encode_bytes(&node.left_hash));
                 serialized.extend(encode_bytes(&node.right_hash));
 
-                return serialized;
+                serialized
             }
         }
     }
@@ -264,10 +264,7 @@ impl Node {
 
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
-pub struct Tree<T>
-where
-    T: Database,
-{
+pub struct Tree<T> {
     root: Option<Node>,
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
@@ -448,51 +445,46 @@ where
         node_db: &mut NodeDB<T>,
     ) {
         match &mut node {
-            Node::Leaf(leaf_node) => {
-                match key.cmp(&leaf_node.key) {
-                    cmp::Ordering::Less => {
-                        let left_node = Node::new_leaf(key, value, version);
-                        let left_hash = left_node.hash();
-                        let right_node = Node::Leaf(leaf_node.clone());
-                        let right_hash = right_node.hash();
+            Node::Leaf(leaf_node) => match key.cmp(&leaf_node.key) {
+                cmp::Ordering::Less => {
+                    let left_node = Node::new_leaf(key, value, version);
+                    let left_hash = left_node.hash();
+                    let right_node = Node::Leaf(leaf_node.clone());
+                    let right_hash = right_node.hash();
 
-                        *node = Node::Inner(InnerNode {
-                            key: leaf_node.key.clone(),
-                            left_node: Some(Box::new(left_node)),
-                            right_node: Some(Box::new(right_node)),
-                            height: 1,
-                            size: 2,
-                            version,
-                            left_hash,
-                            right_hash,
-                        });
-                        return;
-                    }
-                    cmp::Ordering::Equal => {
-                        leaf_node.value = value;
-                        leaf_node.version = version;
-                        return;
-                    }
-                    cmp::Ordering::Greater => {
-                        let right_node = Node::new_leaf(key.clone(), value, version);
-                        let right_hash = right_node.hash();
-                        let left_subtree = node.clone();
-                        let left_hash = left_subtree.hash();
+                    *node = Node::Inner(InnerNode {
+                        key: leaf_node.key.clone(),
+                        left_node: Some(Box::new(left_node)),
+                        right_node: Some(Box::new(right_node)),
+                        height: 1,
+                        size: 2,
+                        version,
+                        left_hash,
+                        right_hash,
+                    });
+                }
+                cmp::Ordering::Equal => {
+                    leaf_node.value = value;
+                    leaf_node.version = version;
+                }
+                cmp::Ordering::Greater => {
+                    let right_node = Node::new_leaf(key.clone(), value, version);
+                    let right_hash = right_node.hash();
+                    let left_subtree = node.clone();
+                    let left_hash = left_subtree.hash();
 
-                        *node = Node::Inner(InnerNode {
-                            key,
-                            left_node: Some(Box::new(left_subtree)),
-                            right_node: Some(Box::new(right_node)),
-                            height: 1,
-                            size: 2,
-                            left_hash,
-                            right_hash,
-                            version,
-                        });
-                        return;
-                    }
-                };
-            }
+                    *node = Node::Inner(InnerNode {
+                        key,
+                        left_node: Some(Box::new(left_subtree)),
+                        right_node: Some(Box::new(right_node)),
+                        height: 1,
+                        size: 2,
+                        left_hash,
+                        right_hash,
+                        version,
+                    });
+                }
+            },
             Node::Inner(root_node) => {
                 // Perform normal BST
                 if key < root_node.key {
@@ -550,7 +542,7 @@ where
                     }
                 }
             }
-        };
+        }
     }
 
     fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
@@ -580,10 +572,10 @@ where
 
             *node = Node::Inner(y);
 
-            return Ok(());
+            Ok(())
         } else {
             // Can't rotate a leaf node
-            return Err(Error::RotateError);
+            Err(Error::RotateError)
         }
     }
 
@@ -614,10 +606,10 @@ where
 
             *node = Node::Inner(y);
 
-            return Ok(());
+            Ok(())
         } else {
             // Can't rotate a leaf node
-            return Err(Error::RotateError);
+            Err(Error::RotateError)
         }
     }
 
@@ -634,7 +626,7 @@ where
             None => Range {
                 range,
                 delayed_nodes: vec![],
-                node_db: &&self.node_db,
+                node_db: &self.node_db,
             },
         }
     }
@@ -723,14 +715,14 @@ fn encode_bytes(bz: &[u8]) -> Vec<u8> {
     let mut enc_bytes = bz.len().encode_var_vec();
     enc_bytes.extend_from_slice(bz);
 
-    return enc_bytes;
+    enc_bytes
 }
 
 fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), Error> {
-    let (bz_length, n_consumed) = usize::decode_var(&bz).ok_or(Error::NodeDeserialize)?;
+    let (bz_length, n_consumed) = usize::decode_var(bz).ok_or(Error::NodeDeserialize)?;
     let bytes = bz[n_consumed..n_consumed + bz_length].to_vec();
 
-    return Ok((bytes, n_consumed + bz_length));
+    Ok((bytes, n_consumed + bz_length))
 }
 
 #[cfg(test)]
@@ -1410,9 +1402,9 @@ mod tests {
                     return false;
                 }
 
-                return true;
+                true
             }
-            Node::Leaf(_) => return true,
+            Node::Leaf(_) => true,
         }
     }
 }

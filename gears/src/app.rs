@@ -1,4 +1,4 @@
-use crate::baseapp::ante::AnteHandler;
+use crate::baseapp::ante::AnteHandlerTrait;
 use crate::baseapp::cli::get_run_command;
 use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::genesis_account::{
@@ -17,7 +17,7 @@ use clap::FromArgMatches;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
-use proto_messages::cosmos::tx::v1beta1::Message;
+use proto_messages::cosmos::tx::v1beta1::message::Message;
 use proto_types::AccAddress;
 use std::env;
 use store_crate::StoreKey;
@@ -97,7 +97,7 @@ pub trait Application {
     type TxSubcommand: Subcommand;
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
-    type AnteHandler: AnteHandler<Self::StoreKey>;
+    type AnteHandler: AnteHandlerTrait<Self::StoreKey>;
 
     fn get_params_store_key(&self) -> Self::StoreKey;
 

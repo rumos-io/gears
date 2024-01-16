@@ -1,10 +1,10 @@
 use axum::{body::Body, Router};
 use gears::{
-    baseapp::{ante::AnteHandler, ABCIHandler, Genesis},
+    baseapp::{ante::AnteHandlerTrait, Genesis, ABCIHandler},
     client::rest::RestState,
     x::params::ParamsSubspaceKey,
 };
-use proto_messages::cosmos::tx::v1beta1::Message;
+use proto_messages::cosmos::tx::v1beta1::message::Message;
 use store::StoreKey;
 
 pub fn get_router<
@@ -13,7 +13,7 @@ pub fn get_router<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
+    Ante: AnteHandlerTrait<SK>,
 >() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {
     Router::new().nest("/cosmos/bank", bank::rest::get_router())
 }

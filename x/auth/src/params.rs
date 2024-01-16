@@ -61,9 +61,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
     fn parse_param(value: Vec<u8>) -> u64 {
         String::from_utf8(value)
             .expect("should be valid utf-8")
-            .strip_suffix("\"")
+            .strip_suffix('\"')
             .expect("should have suffix")
-            .strip_prefix("\"")
+            .strip_prefix('\"')
             .expect("should have prefix")
             .parse()
             .expect("should be valid u64")
@@ -112,29 +112,27 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
 
         store.set(
             KEY_MAX_MEMO_CHARACTERS.into(),
-            format!("\"{}\"", params.max_memo_characters.to_string()).into(),
+            format!("\"{}\"", params.max_memo_characters).into(),
         );
 
         store.set(
             KEY_TX_SIG_LIMIT.into(),
-            format!("\"{}\"", params.tx_sig_limit.to_string()).into(),
+            format!("\"{}\"", params.tx_sig_limit).into(),
         );
 
         store.set(
             KEY_TX_SIZE_COST_PER_BYTE.into(),
-            format!("\"{}\"", params.tx_size_cost_per_byte.to_string()).into(),
+            format!("\"{}\"", params.tx_size_cost_per_byte).into(),
         );
 
         store.set(
             KEY_SIG_VERIFY_COST_ED25519.into(),
-            format!("\"{}\"", params.sig_verify_cost_ed25519.to_string()).into(),
+            format!("\"{}\"", params.sig_verify_cost_ed25519).into(),
         );
 
         store.set(
             KEY_SIG_VERIFY_COST_SECP256K1.into(),
-            format!("\"{}\"", params.sig_verify_cost_secp256k1.to_string()).into(),
+            format!("\"{}\"", params.sig_verify_cost_secp256k1).into(),
         );
-
-        return;
     }
 }

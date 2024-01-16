@@ -18,4 +18,10 @@ pub enum Error {
     DecodeAddress(String),
     #[error("decode error: `{0}`")]
     DecodeGeneral(String),
+    #[error("{0}")]
+    SerdeSerialize(#[from] serde_json::Error),
+    #[error("{0}")]
+    IoError(#[from] std::io::Error),
+    #[error("{0}")]
+    Custom(String),
 }

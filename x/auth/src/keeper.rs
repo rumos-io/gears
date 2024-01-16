@@ -34,7 +34,10 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
     for Keeper<SK, PSK>
 {
-    fn get_auth_params<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> gears::x::auth::Params {
+    fn get_auth_params<DB: Database>(
+        &self,
+        ctx: &Context<'_, '_, DB, SK>,
+    ) -> gears::x::auth::Params {
         self.auth_params_keeper.get(ctx)
     }
 
@@ -60,7 +63,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
             return Some(account);
         }
 
-        return None;
+        None
     }
 
     fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
@@ -87,7 +90,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         //TODO: sdk sanitizes accounts
         self.auth_params_keeper
             .set(&mut ctx.as_any(), genesis.params);
@@ -114,12 +121,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             let account = Account::decode::<Bytes>(buf.to_owned().into())
                 .expect("invalid data in database - possible database corruption");
 
-            return Ok(QueryAccountResponse {
-                account: account.into(),
-            });
+            return Ok(QueryAccountResponse { account });
         }
 
-        return Err(AppError::AccountNotFound);
+        Err(AppError::AccountNotFound)
     }
 
     fn get_next_account_number<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>) -> u64 {
@@ -136,11 +141,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let next_acct_num = acct_num + 1;
         auth_store.set(
-            GLOBAL_ACCOUNT_NUMBER_KEY.clone().into(),
+            GLOBAL_ACCOUNT_NUMBER_KEY.into(),
             next_acct_num.encode_to_vec(),
         );
 
-        return acct_num;
+        acct_num
     }
 
     pub fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
@@ -175,7 +180,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let addr = module.get_address();
 
         if self.has_account(ctx, &addr) {
-            return;
         } else {
             let account = ModuleAccount {
                 base_account: BaseAccount {
@@ -199,7 +203,7 @@ fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
     prefix.extend(ACCOUNT_STORE_PREFIX);
     prefix.append(&mut auth_store_key);
 
-    return prefix;
+    prefix
 }
 
 // TODO: so we really need a Module type?

@@ -8,7 +8,7 @@ use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
     base::v1beta1::SendCoins,
-    tx::v1beta1::{Fee, Message as SDKMessage, TxBody},
+    tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody},
 };
 use proto_types::AccAddress;
 use tendermint_informal::chain::Id;
@@ -38,10 +38,7 @@ pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name)
-                        .unwrap_or_default()
-                        .display()
-                        .to_string()
+                    get_default_home_dir(app_name).unwrap_or_default().display()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf))

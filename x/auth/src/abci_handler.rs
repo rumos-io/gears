@@ -29,7 +29,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                     .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
 
                 self.keeper
-                    .query_account(&ctx, req)
+                    .query_account(ctx, req)
                     .map(|res| res.encode_vec().into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
