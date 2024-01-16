@@ -1,5 +1,5 @@
 use gears::{config::Config, x::params::Keeper as ParamsKeeper};
-use tendermint_proto::abci::{RequestBeginBlock, RequestQuery};
+use tendermint_proto::abci::RequestQuery;
 
 use database::Database;
 use gears::error::AppError;
@@ -15,13 +15,13 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Handler {
-    bank_handler: bank::Handler<GaiaStoreKey, GaiaParamsStoreKey>,
-    auth_handler: auth::Handler<GaiaStoreKey, GaiaParamsStoreKey>,
+pub struct ABCIHandler {
+    bank_abci_handler: bank::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
+    auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
 }
 
-impl Handler {
-    pub fn new(_cfg: Config<AppConfig>) -> Handler {
+impl ABCIHandler {
+    pub fn new(_cfg: Config<AppConfig>) -> ABCIHandler {
         let params_keeper = ParamsKeeper::new(GaiaStoreKey::Params);
 
         let auth_keeper = auth::Keeper::new(
@@ -37,52 +37,44 @@ impl Handler {
             auth_keeper.clone(),
         );
 
-        Handler {
-            bank_handler: bank::Handler::new(bank_keeper),
-            auth_handler: auth::Handler::new(auth_keeper),
+        ABCIHandler {
+            bank_abci_handler: bank::ABCIHandler::new(bank_keeper),
+            auth_abci_handler: auth::ABCIHandler::new(auth_keeper),
         }
     }
 }
 
-impl gears::baseapp::Handler<Message, GaiaStoreKey, GenesisState> for Handler {
-    fn handle_tx<DB: Database>(
+impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHandler {
+    fn tx<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {
-            Message::Bank(msg) => self.bank_handler.handle(ctx, msg),
+            Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
         }
     }
 
-    fn handle_init_genesis<DB: Database>(
+    fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, GaiaStoreKey>,
         genesis: GenesisState,
     ) {
-        self.bank_handler.init_genesis(ctx, genesis.bank);
-        self.auth_handler.init_genesis(ctx, genesis.auth);
+        self.bank_abci_handler.genesis(ctx, genesis.bank);
+        self.auth_abci_handler.genesis(ctx, genesis.auth);
     }
 
-    fn handle_query<DB: Database>(
+    fn query<DB: Database>(
         &self,
         ctx: &QueryContext<'_, DB, GaiaStoreKey>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         if query.path.starts_with("/cosmos.auth") {
-            self.auth_handler.handle_query(ctx, query)
+            self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
-            self.bank_handler.handle_query(ctx, query)
+            self.bank_abci_handler.query(ctx, query)
         } else {
             Err(AppError::InvalidRequest("query path not found".into()))
         }
-    }
-
-    fn handle_begin_block<DB: Database>(
-        &self,
-        _ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
-        _request: RequestBeginBlock,
-    ) {
-        // do nothing
     }
 }

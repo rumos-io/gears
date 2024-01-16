@@ -29,7 +29,7 @@ pub async fn supply<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandlerTrait<SK>,
 >(
@@ -55,7 +55,7 @@ pub async fn get_balances<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandlerTrait<SK>,
 >(
@@ -95,7 +95,7 @@ pub async fn get_balances_by_denom<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandlerTrait<SK>,
 >(
@@ -131,7 +131,7 @@ pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     Ante: AnteHandlerTrait<SK>,
 >() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {

@@ -16,15 +16,15 @@ use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LIS
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
+use super::{ABCIHandler, Genesis};
 use super::ante::AnteHandlerTrait;
-use super::{Genesis, Handler};
 
 pub fn run_run_command<
     'a,
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AC: ApplicationConfig,
     Ante: AnteHandlerTrait<SK>,
@@ -34,7 +34,7 @@ pub fn run_run_command<
     app_version: &'static str,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
-    handler_builder: &'a dyn Fn(Config<AC>) -> H,
+    abci_handler_builder: &'a dyn Fn(Config<AC>) -> H,
     router: Router<RestState<SK, PSK, M, H, G, Ante>, Body>,
     ante_handler: Ante,
 ) {
@@ -85,7 +85,7 @@ pub fn run_run_command<
         std::process::exit(1)
     });
 
-    let handler = handler_builder(config.clone());
+    let abci_handler = abci_handler_builder(config.clone());
 
     let app: BaseApp<SK, PSK, M, H, G, Ante> = BaseApp::new(
         db,
@@ -93,7 +93,7 @@ pub fn run_run_command<
         app_version,
         params_keeper,
         params_subspace_key,
-        handler,
+        abci_handler,
         ante_handler,
     );
 

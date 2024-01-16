@@ -12,16 +12,16 @@ use store::StoreKey;
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
-pub struct Handler<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
     keeper: Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     pub fn new(keeper: Keeper<SK, PSK>) -> Self {
-        Handler { keeper }
+        ABCIHandler { keeper }
     }
 
-    pub fn handle<DB: Database>(
+    pub fn tx<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
@@ -33,7 +33,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    pub fn handle_query<DB: Database>(
+    pub fn query<DB: Database>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         query: tendermint_proto::abci::RequestQuery,
@@ -60,13 +60,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    /// NOTE: If the genesis_state already contains an entry for the given address then this method
-    /// will add another entry to the list i.e. it does not merge entries
-    pub fn init_genesis<DB: Database>(
-        &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
-    ) {
+    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
     }
 }

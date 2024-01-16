@@ -1,4 +1,4 @@
-Gaia-rs is a [Cosmos Hub](https://github.com/cosmos/gaia) (Gaia) node built on Gears, a Rust implementation of the Cosmos SDK.
+Gaia-rs is a [Cosmos Hub](https://github.com/cosmos/gaia) (Gaia) node built on Gears.
 
 NOTE: This is a WIP. Although it correctly replicates state for a subset of v0.7.1.0 of the Gaia state machine, the full state machine has not yet been implemented.
 
@@ -52,7 +52,6 @@ make tendermint-start
 Tendermint will connect to the application and bind it's RPC server to 127.0.0.1:26657.
 
 The chain (consisting of one node) is now up and running.
-
 
 ## Querying the chain
 

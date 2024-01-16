@@ -1,5 +1,4 @@
 use database::Database;
-use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
@@ -7,27 +6,19 @@ use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
 use store::StoreKey;
 
-use crate::{GenesisState, Keeper, Message};
+use crate::{GenesisState, Keeper};
 
 #[derive(Debug, Clone)]
-pub struct Handler<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
     keeper: Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     pub fn new(keeper: Keeper<SK, PSK>) -> Self {
-        Handler { keeper }
+        ABCIHandler { keeper }
     }
 
-    pub fn handle<DB: Database>(
-        &self,
-        _ctx: &mut Context<'_, '_, DB, SK>,
-        _msg: &Message,
-    ) -> Result<(), AppError> {
-        Ok(())
-    }
-
-    pub fn handle_query<DB: Database>(
+    pub fn query<DB: Database>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         query: tendermint_proto::abci::RequestQuery,
@@ -45,11 +36,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(
-        &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
-    ) {
+    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
     }
 }

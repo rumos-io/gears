@@ -1,0 +1,17 @@
+name: Feature request
+description: A request for a new feature, or to enhance existing functionality
+title: '[FEATURE]: '
+labels: ['enhancement']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your interest in Gears. We take all feature requests seriously and will endeavour to respond in a timely manner!
+  - type: textarea
+    id: feature
+    attributes:
+      label: Feature description
+      description: Please describe the feature in detail.
+      placeholder: Description here.
+    validations:
+      required: true
