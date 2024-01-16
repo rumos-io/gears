@@ -52,7 +52,6 @@ mod tests {
         screen::{Content, Indent, Screen},
         signer::SignerInfo,
     };
-    use proto_types::AccAddress;
 
     use crate::signing::renderer::{
         value_renderer::{DefaultValueRenderer, ValueRenderer},
@@ -81,9 +80,7 @@ mod tests {
             },
             Screen {
                 title: "Key".to_string(),
-                content: Content::new(AccAddress::from_bech32(
-                    "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-                )?)?,
+                content: Content::new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
                 indent: Some(Indent::new(1)?),
                 expert: true,
             },

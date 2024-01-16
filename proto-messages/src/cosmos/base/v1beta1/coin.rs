@@ -22,8 +22,9 @@ impl TryFrom<RawCoin> for Coin {
             .denom
             .try_into()
             .map_err(|_| Error::Coin(String::from("coin error")))?;
-        let amount =
-            BU256::from_str(&value.amount).map_err(|_| Error::Coin(String::from("coin error")))?.into();
+        let amount = BU256::from_str(&value.amount)
+            .map_err(|_| Error::Coin(String::from("coin error")))?
+            .into();
 
         Ok(Coin { denom, amount })
     }

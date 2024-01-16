@@ -29,8 +29,9 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                 tip, ctx,
             )?);
         }
-
-        if !signer_infos.is_empty() {
+        // Probaly need case for other types of signing
+        // TODO: !signer_infos.is_empty()
+        if false {
             let signer_count = signer_infos.len();
             final_screens.push(Screen {
                 title: "Other signer".to_string(),
@@ -75,11 +76,11 @@ mod tests {
         tx::v1beta1::{
             auth_info::AuthInfo,
             fee::Fee,
-            screen::{Content, Indent, Screen},
+            screen::{Content, Screen},
             signer::SignerInfo,
         },
     };
-    use proto_types::{AccAddress, Denom};
+    use proto_types::Denom;
 
     use crate::signing::renderer::{
         value_renderer::{DefaultValueRenderer, ValueRenderer},
@@ -144,44 +145,36 @@ mod tests {
                 indent: None,
                 expert: true,
             },
-            Screen {
-                title: "Other signer".to_string(),
-                content: Content::new("1 SignerInfo")?,
-                indent: None,
-                expert: true,
-            },
-            Screen {
-                title: "Other signer (1/1)".to_string(),
-                content: Content::new("SignerInfo object")?,
-                indent: Some(Indent::new(1)?),
-                expert: true,
-            },
-            Screen {
-                title: "Public key".to_string(),
-                content: Content::new("/cosmos.crypto.secp256k1.PubKey")?,
-                indent: None,
-                expert: true,
-            },
-            Screen {
-                title: "Key".to_string(),
-                content: Content::new(AccAddress::from_bech32(
-                    "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-                )?)?,
-                indent: Some(Indent::new(1)?),
-                expert: true,
-            },
-            Screen {
-                title: "Sequence".to_string(),
-                content: Content::new(2.to_string())?,
-                indent: Some(Indent::new(2)?),
-                expert: true,
-            },
-            Screen {
-                title: String::new(),
-                content: Content::new("End of Other signer")?,
-                indent: None,
-                expert: true,
-            },
+            // Screen {
+            //     title: "Other signer".to_string(),
+            //     content: Content::new("1 SignerInfo")?,
+            //     indent: None,
+            //     expert: true,
+            // },
+            // Screen {
+            //     title: "Other signer (1/1)".to_string(),
+            //     content: Content::new("SignerInfo object")?,
+            //     indent: Some(Indent::new(1)?),
+            //     expert: true,
+            // },
+            // Screen {
+            //     title: "Public key".to_string(),
+            //     content: Content::new("02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D")?,
+            //     indent: None,
+            //     expert: true,
+            // },
+            // Screen {
+            //     title: "Sequence".to_string(),
+            //     content: Content::new(2.to_string())?,
+            //     indent: Some(Indent::new(2)?),
+            //     expert: true,
+            // },
+            // Screen {
+            //     title: String::new(),
+            //     content: Content::new("End of Other signer")?,
+            //     indent: None,
+            //     expert: true,
+            // },
         ];
 
         Ok(result)

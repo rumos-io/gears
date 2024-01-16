@@ -100,7 +100,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
                 let zero = U256::ZERO;
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
-                total_supply.insert(coin.denom, coin.amount.0 + current_balance );
+                total_supply.insert(coin.denom, coin.amount.0 + current_balance);
             }
         }
 
@@ -178,7 +178,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .expect("invalid data in database - possible database corruption");
                 let amount = U256::from_str(&String::from_utf8_lossy(&raw_coin.1))
-                    .expect("invalid data in database - possible database corruption").into();
+                    .expect("invalid data in database - possible database corruption")
+                    .into();
                 Coin { denom, amount }
             })
             .collect()

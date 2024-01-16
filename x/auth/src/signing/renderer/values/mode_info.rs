@@ -11,6 +11,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
         &self,
         _ctx: &Context<'_, '_, RocksDB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
-        unimplemented!("TODO: Ask Kevin about it")
+        // I don't see that mode ino is used in screen formatin for now, but leave this as things may change
+        Ok(Vec::new())
     }
 }

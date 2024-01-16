@@ -81,7 +81,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
 
         screens.push(Screen {
             title: "Hash of raw bytes".to_string(),
-            content: Content::new(hash_get( &body_bytes, &auth_info_bytes) )?,
+            content: Content::new(hash_get(&body_bytes, &auth_info_bytes))?,
             indent: None,
             expert: true,
         });
@@ -94,11 +94,13 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
 mod tests {
     use bnum::types::U256;
     use gears::types::context::context::Context;
+    use ibc_proto::cosmos::tx::v1beta1::mode_info::{Single, Sum};
+    use ibc_proto::cosmos::tx::v1beta1::ModeInfo;
+    use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
     use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
-        crypto::secp256k1::v1beta1::PubKey,
         tx::v1beta1::{
             auth_info::AuthInfo,
             fee::Fee,
@@ -129,27 +131,32 @@ mod tests {
             ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&data, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
-        if expected_screens != actuals_screens
-        {
-            panic!( "Expected: {expected_screens:#?} \n !=\n Actual: {actuals_screens:#?}" )
+        if expected_screens != actuals_screens {
+            let expected = serde_json::to_string(&expected_screens)?;
+            let actual = serde_json::to_string(&actuals_screens)?;
+            panic!("Expected: {expected} \n !=\n Actual: {actual}")
         }
 
         Ok(())
     }
 
     fn textual_data_get() -> anyhow::Result<TextualData<MsgSend>> {
-        // SignerInfo {
-        //     public_key: Some(serde_json::from_str(
-        //         r#"{
-        //                 "@type": "/cosmos.crypto.secp256k1.PubKey",
-        //                 "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
-        //             }"#,
-        //     )?),
-        //     mode_info: None,
-        //     sequence: 2,
-        // }
+        let signer_info = SignerInfo {
+            public_key: Some(serde_json::from_str(
+                r#"{
+                        "@type": "/cosmos.crypto.secp256k1.PubKey",
+                        "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
+                    }"#,
+            )?),
+            // 2 represents SignMode_SIGN_MODE_TEXTUAL
+            mode_info: Some(ModeInfo {
+                sum: Some(Sum::Single(Single { mode: 2 })),
+            }),
+            sequence: 2,
+        };
+
         let auth_info = AuthInfo {
-            signer_infos: vec![],
+            signer_infos: vec![signer_info],
             fee: Fee {
                 amount: Some(
                     SendCoins::new(vec![Coin {
@@ -237,16 +244,14 @@ mod tests {
             },
             Screen {
                 title: "Public key".to_string(),
-                content: Content::new(
-                    serde_json::from_str::<PubKey>(
-                        r#"{
-                    "@type": "/cosmos.crypto.secp256k1.PubKey",
-                    "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
-                }"#,
-                    )?
-                    .formatted_address(),
-                )?,
+                content: Content::new("/cosmos.crypto.secp256k1.PubKey")?,
                 indent: None,
+                expert: true,
+            },
+            Screen {
+                title: "Key".to_string(),
+                content: Content::new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
+                indent: Some(Indent::new(1)?),
                 expert: true,
             },
             Screen {
@@ -258,8 +263,8 @@ mod tests {
             Screen {
                 title: "Message (1/1)".to_string(),
                 content: Content::new("/cosmos.bank.v1beta1.MsgSend")?,
-                indent: None,
-                expert: true,
+                indent: Some(Indent::new(1)?),
+                expert: false,
             },
             Screen {
                 title: "From address".to_string(),

@@ -52,7 +52,6 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 #[cfg(test)]
 mod tests {
     use gears::types::context::context::Context;
-    use ibc_proto::protobuf::Protobuf;
     use proto_messages::cosmos::tx::v1beta1::{
         screen::{Content, Indent, Screen},
         signer_data::{ChainId, SignerData},
@@ -111,7 +110,7 @@ mod tests {
             },
             Screen {
                 title: "Key".to_string(),
-                content: Content::new(signer_data.pub_key.encode_to_hex_string())?,
+                content: Content::new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
                 indent: Some(Indent::new(1)?),
                 expert: true,
             },

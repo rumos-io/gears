@@ -23,7 +23,7 @@ impl From<BU256> for U256 {
 }
 
 impl core::fmt::Display for U256 {
-    fn fmt(&self, f: &mut core::fmt::Formatter< '_ >) -> core::fmt::Result {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -57,7 +57,6 @@ impl TryFrom<&str> for U256 {
     }
 }
 
-
 impl Serialize for U256 {
     /// Serializes as an integer string using base 10
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -83,7 +82,7 @@ struct Uint256Visitor;
 impl<'de> serde::de::Visitor<'de> for Uint256Visitor {
     type Value = U256;
 
-    fn expecting(&self, formatter: &mut core::fmt::Formatter< '_ >) -> core::fmt::Result {
+    fn expecting(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         formatter.write_str("string-encoded integer")
     }
 

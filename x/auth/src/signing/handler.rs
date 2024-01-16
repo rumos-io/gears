@@ -50,6 +50,10 @@ mod tests {
     use bnum::types::U256;
     use gears::types::context::context::Context;
 
+    use ibc_proto::cosmos::tx::v1beta1::{
+        mode_info::{Single, Sum},
+        ModeInfo,
+    };
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
@@ -58,6 +62,7 @@ mod tests {
             cbor::Cbor,
             fee::Fee,
             screen::{Content, Indent, Screen},
+            signer::SignerInfo,
             signer_data::{ChainId, SignerData},
             tx_body::TxBody,
             tx_data::TxData,
@@ -72,8 +77,22 @@ mod tests {
 
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {
+        let signer_info = SignerInfo {
+            public_key: Some(serde_json::from_str(
+                r#"{
+                        "@type": "/cosmos.crypto.secp256k1.PubKey",
+                        "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
+                    }"#,
+            )?),
+            // 2 represents SignMode_SIGN_MODE_TEXTUAL
+            mode_info: Some(ModeInfo {
+                sum: Some(Sum::Single(Single { mode: 2 })),
+            }),
+            sequence: 2,
+        };
+
         let auth_inf = AuthInfo {
-            signer_infos: vec![],
+            signer_infos: vec![signer_info],
             fee: Fee {
                 amount: Some(
                     SendCoins::new(vec![Coin {

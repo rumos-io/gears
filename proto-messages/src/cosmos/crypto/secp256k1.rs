@@ -66,7 +66,7 @@ pub mod v1beta1 {
 
         pub fn formatted_address(&self) -> String {
             let pub_key = self.key.serialize().to_vec();
-            let hex = data_encoding::HEXUPPER.encode( &pub_key );
+            let hex = data_encoding::HEXUPPER.encode(&pub_key);
 
             let mut result = String::new();
             let mut counter = 0;

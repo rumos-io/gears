@@ -56,8 +56,8 @@ impl<M: Message> From<TextualData<M>> for TextualDataRaw {
         } = value;
 
         Self {
-            body_bytes: Bytes::from_iter( body.encode_vec() ),
-            auth_info_bytes: Bytes::from_iter( auth_info.encode_vec() ),
+            body_bytes: Bytes::from_iter(body.encode_vec()),
+            auth_info_bytes: Bytes::from_iter(auth_info.encode_vec()),
             signer_data: signer_data.into(),
         }
     }
