@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{ante::AnteHandlerTrait, BaseApp, Genesis, Handler},
+    baseapp::{ante::AnteHandlerTrait, BaseApp, Genesis, ABCIHandler},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
