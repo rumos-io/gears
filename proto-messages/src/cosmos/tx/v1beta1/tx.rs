@@ -65,6 +65,7 @@ pub struct Tx<M: Message> {
     /// public key and signing mode by position.
     #[serde(serialize_with = "crate::utils::serialize_vec_of_vec_to_vec_of_base64")]
     pub signatures: Vec<Vec<u8>>,
+    // TODO: get rid of this it's not part of the transaction
     #[serde(skip_serializing)]
     pub signatures_data: Vec<SignatureData>,
 }

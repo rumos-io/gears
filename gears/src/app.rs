@@ -1,4 +1,3 @@
-use crate::baseapp::ante::AnteHandler;
 use crate::baseapp::cli::get_run_command;
 use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::genesis_account::{
@@ -84,7 +83,7 @@ fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands:
 pub enum NilAuxCommand {}
 
 /// A Gears application.
-pub trait Application {
+pub trait ApplicationCore {
     const APP_NAME: &'static str;
     const APP_VERSION: &'static str;
 
@@ -97,11 +96,6 @@ pub trait Application {
     type TxSubcommand: Subcommand;
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
-    type AnteHandler: AnteHandler<Self::StoreKey>;
-
-    fn get_params_store_key(&self) -> Self::StoreKey;
-
-    fn get_params_subspace_key(&self) -> Self::ParamsSubspaceKey;
 
     fn handle_tx_command(
         &self,
@@ -122,101 +116,106 @@ pub trait Application {
     }
 }
 
-pub struct Node<'a, App: Application> {
-    app: App,
+pub struct ApplicationBuilder<'a, AppCore: ApplicationCore> {
+    app_core: AppCore,
     router: Router<
         RestState<
-            App::StoreKey,
-            App::ParamsSubspaceKey,
-            App::Message,
-            App::ABCIHandler,
-            App::Genesis,
-            App::AnteHandler,
+            AppCore::StoreKey,
+            AppCore::ParamsSubspaceKey,
+            AppCore::Message,
+            AppCore::ABCIHandler,
+            AppCore::Genesis,
         >,
         Body,
     >,
-    abci_handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::ABCIHandler,
-    ante_handler: App::AnteHandler,
+    abci_handler_builder: &'a dyn Fn(Config<AppCore::ApplicationConfig>) -> AppCore::ABCIHandler,
+
+    params_store_key: AppCore::StoreKey,
+    params_subspace_key: AppCore::ParamsSubspaceKey,
 }
 
-impl<'a, App: Application> Node<'a, App> {
+impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
     pub fn new(
-        app: App,
+        app_core: AppCore,
         router: Router<
             RestState<
-                App::StoreKey,
-                App::ParamsSubspaceKey,
-                App::Message,
-                App::ABCIHandler,
-                App::Genesis,
-                App::AnteHandler,
+                AppCore::StoreKey,
+                AppCore::ParamsSubspaceKey,
+                AppCore::Message,
+                AppCore::ABCIHandler,
+                AppCore::Genesis,
             >,
             Body,
         >,
-        abci_handler_builder: &'a dyn Fn(Config<App::ApplicationConfig>) -> App::ABCIHandler,
-        ante_handler: App::AnteHandler,
+        abci_handler_builder: &'a dyn Fn(
+            Config<AppCore::ApplicationConfig>,
+        ) -> AppCore::ABCIHandler,
+
+        params_store_key: AppCore::StoreKey,
+        params_subspace_key: AppCore::ParamsSubspaceKey,
     ) -> Self {
         Self {
-            app,
+            app_core,
             router,
             abci_handler_builder,
-            ante_handler,
+
+            params_store_key,
+            params_subspace_key,
         }
     }
 
     /// Runs the command passed on the command line.
-    pub fn run_command(self) -> Result<()> {
+    pub fn execute(self) -> Result<()> {
         setup_panic!();
 
-        let cli = build_cli::<App::TxSubcommand, App::QuerySubcommand, App::AuxCommands>(
-            App::APP_NAME,
-            App::APP_VERSION,
+        let cli = build_cli::<AppCore::TxSubcommand, AppCore::QuerySubcommand, AppCore::AuxCommands>(
+            AppCore::APP_NAME,
+            AppCore::APP_VERSION,
         );
 
         let matches = cli.get_matches();
 
         match matches.subcommand() {
-            Some(("init", sub_matches)) => run_init_command::<_, App::ApplicationConfig>(
+            Some(("init", sub_matches)) => run_init_command::<_, AppCore::ApplicationConfig>(
                 sub_matches,
-                App::APP_NAME,
-                &App::Genesis::default(),
+                AppCore::APP_NAME,
+                &AppCore::Genesis::default(),
             ),
             Some(("run", sub_matches)) => {
-                run_run_command::<_, _, _, _, _, App::ApplicationConfig, _>(
+                run_run_command::<_, _, _, _, _, AppCore::ApplicationConfig>(
                     sub_matches,
-                    App::APP_NAME,
-                    App::APP_VERSION,
-                    ParamsKeeper::new(self.app.get_params_store_key()),
-                    self.app.get_params_subspace_key(),
+                    AppCore::APP_NAME,
+                    AppCore::APP_VERSION,
+                    ParamsKeeper::new(self.params_store_key),
+                    self.params_subspace_key,
                     self.abci_handler_builder,
                     self.router,
-                    self.ante_handler,
                 )
             }
             Some(("query", sub_matches)) => {
                 run_query_command(sub_matches, |command, node, height| {
-                    self.app.handle_query_command(command, node, height)
+                    self.app_core.handle_query_command(command, node, height)
                 })?
             }
-            Some(("keys", sub_matches)) => run_keys_command(sub_matches, App::APP_NAME)?,
+            Some(("keys", sub_matches)) => run_keys_command(sub_matches, AppCore::APP_NAME)?,
             Some(("tx", sub_matches)) => {
-                run_tx_command(sub_matches, App::APP_NAME, |command, from_address| {
-                    self.app.handle_tx_command(command, from_address)
+                run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
+                    self.app_core.handle_tx_command(command, from_address)
                 })?
             }
             Some(("completions", sub_matches)) => {
-                run_completions_command::<App::TxSubcommand, App::QuerySubcommand, App::AuxCommands>(
-                    sub_matches,
-                    App::APP_NAME,
-                    App::APP_VERSION,
-                )
+                run_completions_command::<
+                    AppCore::TxSubcommand,
+                    AppCore::QuerySubcommand,
+                    AppCore::AuxCommands,
+                >(sub_matches, AppCore::APP_NAME, AppCore::APP_VERSION)
             }
             Some(("add-genesis-account", sub_matches)) => {
-                run_add_genesis_account_command::<App::Genesis>(sub_matches, App::APP_NAME)?
+                run_add_genesis_account_command::<AppCore::Genesis>(sub_matches, AppCore::APP_NAME)?
             }
             _ => {
-                self.app.handle_aux_commands(
-                    App::AuxCommands::from_arg_matches(&matches).expect(
+                self.app_core.handle_aux_commands(
+                    AppCore::AuxCommands::from_arg_matches(&matches).expect(
                         "exhausted list of subcommands and subcommand_required prevents `None`",
                     ),
                 )?;

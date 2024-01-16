@@ -9,7 +9,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{ante::AnteHandler, ABCIHandler, BaseApp, Genesis},
+    baseapp::{ABCIHandler, BaseApp, Genesis},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
@@ -31,9 +31,8 @@ pub async fn supply<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
 >(
-    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
     let request = RequestQuery {
         data: Default::default(),
@@ -57,11 +56,10 @@ pub async fn get_balances<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
-    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G>>,
 ) -> Result<Json<QueryAllBalancesResponse>, Error> {
     let req = QueryAllBalancesRequest {
         address,
@@ -97,11 +95,10 @@ pub async fn get_balances_by_denom<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
 >(
     Path(address): Path<AccAddress>,
     denom: Query<RawDenom>,
-    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G>>,
 ) -> Result<Json<QueryBalanceResponse>, Error> {
     let req = QueryBalanceRequest {
         address,
@@ -131,8 +128,7 @@ pub fn get_router<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante: AnteHandler<SK>,
->() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {
+>() -> Router<RestState<SK, PSK, M, H, G>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))
