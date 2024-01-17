@@ -4,20 +4,30 @@ name = "gaia-rs"
 version = "0.1.0"
 
 [dependencies]
+
+#local
 tendermint = {path = "../tendermint"}
-anyhow = "1.0.70"
 auth = {path = "../x/auth"}
 bank = {path = "../x/bank"}
-bytes = "1.2.1"
-clap = {version = "4.2.2", features = ["derive"]}
-cosmwasm-std = "1.1.5"
 database = {path = "../database"}
 gears = {path = "../gears"}
 proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
-serde = {version = "1.0", default-features = false}
 store = {path = "../store"}
+
+#newtypes
+bytes = { workspace = true }
+
+#utils 
+anyhow = { workspace = true }
+clap = {version = "4.2.2", features = ["derive"]}
 strum = { version = "0.25", features = ["derive"] }
+
+#serialization
+serde = {version = "1.0", default-features = false}
+
+#other
+cosmwasm-std = "1.1.5"
 axum = { workspace = true }
 
 [dev-dependencies]

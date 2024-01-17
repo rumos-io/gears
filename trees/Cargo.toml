@@ -4,10 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-thiserror = "1.0.13"
+#local
+database = { path = "../database" }
+
+#newtypes
+
+#utils
+thiserror = { workspace = true }
 sha2 = "0.10.6"
 integer-encoding = "3.0.4"
-database = { path = "../database" }
+
+#serialization
+
+#other
 caches = "0.2.4"
 
 [dev-dependencies]
