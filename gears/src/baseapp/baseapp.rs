@@ -2,7 +2,7 @@ use bytes::Bytes;
 use database::{Database, RocksDB};
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
-    tx::v1beta1::{Message, TxWithRaw},
+    tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
 };
 use proto_types::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
@@ -166,7 +166,7 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
                 info: "".to_string(),
                 index: 0,
                 key: request.data,
-                value: res.into(),
+                value: res,
                 proof_ops: None,
                 height: self
                     .get_block_height()
@@ -423,7 +423,7 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
     fn increment_block_height(&self) -> u64 {
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
-        return *height;
+        *height
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
@@ -500,7 +500,7 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
             self.abci_handler.tx(ctx, msg)?
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
@@ -515,6 +515,6 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
                 .map_err(|e| AppError::TxValidation(e.to_string()))?
         }
 
-        return Ok(());
+        Ok(())
     }
 }

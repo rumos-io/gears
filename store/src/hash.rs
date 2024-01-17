@@ -39,7 +39,7 @@ impl From<StoreInfo> for Pair {
 }
 
 pub fn hash_store_infos(store_infos: Vec<StoreInfo>) -> [u8; 32] {
-    if store_infos.len() == 0 {
+    if store_infos.is_empty() {
         panic!("must contain at least one store")
     };
 

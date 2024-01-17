@@ -16,6 +16,7 @@ serde = {version = "1.0.103", default-features = false, features = [
   "alloc",
 ]}
 thiserror = "1.0.13"
+data-encoding = "2.4.0"
 
 [dev-dependencies]
 serde_json = "1.0.93"

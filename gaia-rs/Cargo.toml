@@ -20,8 +20,7 @@ proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
 serde = {version = "1.0", default-features = false}
 store = {path = "../store"}
-strum = "0.24.1"
-strum_macros = "0.24"
+strum = { version = "0.25", features = ["derive"] }
 tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
 tendermint-proto = {git = "https://github.com/joneskm/tendermint-rs"}
 

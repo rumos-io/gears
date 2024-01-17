@@ -34,8 +34,8 @@ pub fn write_keys_and_genesis(
     chain_id: Id,
 ) -> Result<(), Error> {
     // write node key
-    let mut csprng = OsRng {};
-    let signing_key = SigningKey::new(&mut csprng);
+    let csprng = OsRng {};
+    let signing_key = SigningKey::new(csprng);
     let priv_key =
         tendermint_crates::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
     let node_key = NodeKey { priv_key };
@@ -46,7 +46,7 @@ pub fn write_keys_and_genesis(
     )?;
 
     // write node private validator key
-    let signing_key = SigningKey::new(&mut csprng);
+    let signing_key = SigningKey::new(csprng);
     let priv_key =
         tendermint_crates::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
     let public_key = priv_key.public_key();
@@ -54,7 +54,7 @@ pub fn write_keys_and_genesis(
     let priv_validator_key = PrivValidatorKey {
         address,
         pub_key: priv_key.public_key(),
-        priv_key: priv_key,
+        priv_key,
     };
     priv_validator_key_file.write_all(
         serde_json::to_string_pretty(&priv_validator_key)

@@ -2,7 +2,7 @@ use axum::body::Body;
 use axum::Router;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
-use proto_messages::cosmos::tx::v1beta1::Message;
+use proto_messages::cosmos::tx::v1beta1::message::Message;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use store_crate::StoreKey;
@@ -16,6 +16,7 @@ use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LIS
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
+use super::ante::AnteHandlerTrait;
 use super::{ABCIHandler, Genesis};
 
 pub fn run_run_command<
@@ -128,7 +129,6 @@ pub fn get_run_command(app_name: &str) -> Command {
                     get_default_home_dir(app_name)
                         .unwrap_or_default()
                         .display()
-                        .to_string()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),

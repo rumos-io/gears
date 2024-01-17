@@ -15,6 +15,10 @@ const ACCOUNT_ADDRESS_PREFIX: &str = env!("ACCOUNT_ADDRESS_PREFIX");
 const MAX_ADDR_LEN: u8 = 255;
 
 impl AccAddress {
+    pub fn into_inner(self) -> Vec<u8> {
+        self.0
+    }
+
     pub fn from_bech32(address: &str) -> Result<Self, AddressError> {
         let (hrp, data, variant) = bech32::decode(address)?;
 
@@ -43,7 +47,7 @@ impl AccAddress {
             });
         }
 
-        return Ok(Self(address));
+        Ok(Self(address))
     }
 
     pub fn len(&self) -> u8 {
@@ -55,6 +59,10 @@ impl AccAddress {
 
     pub fn as_hex(&self) -> String {
         hex::encode(&self.0)
+    }
+
+    pub fn as_upper_hex(&self) -> String {
+        data_encoding::HEXUPPER.encode(&self.0)
     }
 }
 

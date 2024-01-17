@@ -16,7 +16,7 @@ use clap::FromArgMatches;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
-use proto_messages::cosmos::tx::v1beta1::Message;
+use proto_messages::cosmos::tx::v1beta1::message::Message;
 use proto_types::AccAddress;
 use std::env;
 use store_crate::StoreKey;

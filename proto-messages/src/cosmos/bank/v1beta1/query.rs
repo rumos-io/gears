@@ -98,11 +98,8 @@ impl TryFrom<RawQueryAllBalancesResponse> for QueryAllBalancesResponse {
     type Error = Error;
 
     fn try_from(raw: RawQueryAllBalancesResponse) -> Result<Self, Self::Error> {
-        let balances: Result<Vec<Coin>, Error> = raw
-            .balances
-            .into_iter()
-            .map(|coin| Coin::try_from(coin))
-            .collect();
+        let balances: Result<Vec<Coin>, Error> =
+            raw.balances.into_iter().map(Coin::try_from).collect();
 
         Ok(QueryAllBalancesResponse {
             balances: balances?,
@@ -113,11 +110,8 @@ impl TryFrom<RawQueryAllBalancesResponse> for QueryAllBalancesResponse {
 
 impl From<QueryAllBalancesResponse> for RawQueryAllBalancesResponse {
     fn from(query: QueryAllBalancesResponse) -> RawQueryAllBalancesResponse {
-        let balances: Vec<Coin> = query.balances.into();
-        let balances = balances
-            .into_iter()
-            .map(|coin| RawCoin::from(coin))
-            .collect();
+        let balances: Vec<Coin> = query.balances;
+        let balances = balances.into_iter().map(RawCoin::from).collect();
 
         RawQueryAllBalancesResponse {
             balances,
@@ -169,11 +163,7 @@ impl TryFrom<RawQueryTotalSupplyResponse> for QueryTotalSupplyResponse {
     type Error = Error;
 
     fn try_from(raw: RawQueryTotalSupplyResponse) -> Result<Self, Self::Error> {
-        let supply: Result<Vec<Coin>, Error> = raw
-            .supply
-            .into_iter()
-            .map(|coin| Coin::try_from(coin))
-            .collect();
+        let supply: Result<Vec<Coin>, Error> = raw.supply.into_iter().map(Coin::try_from).collect();
 
         Ok(QueryTotalSupplyResponse {
             supply: supply?,
@@ -184,8 +174,8 @@ impl TryFrom<RawQueryTotalSupplyResponse> for QueryTotalSupplyResponse {
 
 impl From<QueryTotalSupplyResponse> for RawQueryTotalSupplyResponse {
     fn from(query: QueryTotalSupplyResponse) -> RawQueryTotalSupplyResponse {
-        let supply: Vec<Coin> = query.supply.into();
-        let supply = supply.into_iter().map(|coin| RawCoin::from(coin)).collect();
+        let supply: Vec<Coin> = query.supply;
+        let supply = supply.into_iter().map(RawCoin::from).collect();
 
         RawQueryTotalSupplyResponse {
             supply,

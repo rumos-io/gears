@@ -27,20 +27,16 @@ impl fmt::Display for Params {
 fn iavl_query_miss_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
     let mut group = c.benchmark_group("query-miss");
     for params in all_params {
-        let (tree, _) = prepare_tree(&params);
-        group.bench_with_input(
-            BenchmarkId::from_parameter(&params),
-            &params,
-            |b, params| {
-                b.iter(|| {
-                    let key: Vec<u8> = rand::thread_rng()
-                        .sample_iter(Standard)
-                        .take(params.key_length)
-                        .collect();
-                    tree.get(black_box(&key));
-                })
-            },
-        );
+        let (tree, _) = prepare_tree(params);
+        group.bench_with_input(BenchmarkId::from_parameter(params), &params, |b, params| {
+            b.iter(|| {
+                let key: Vec<u8> = rand::thread_rng()
+                    .sample_iter(Standard)
+                    .take(params.key_length)
+                    .collect();
+                tree.get(black_box(&key));
+            })
+        });
     }
     group.finish();
 }
@@ -49,19 +45,15 @@ fn iavl_query_miss_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
 fn iavl_query_hits_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
     let mut group = c.benchmark_group("query-hits");
     for params in all_params {
-        let (tree, keys) = prepare_tree(&params);
-        group.bench_with_input(
-            BenchmarkId::from_parameter(&params),
-            &params,
-            |b, params| {
-                b.iter(|| {
-                    let key: &Vec<u8> = keys
-                        .get(rand::thread_rng().gen_range(0..params.init_size))
-                        .unwrap();
-                    tree.get(black_box(&key));
-                })
-            },
-        );
+        let (tree, keys) = prepare_tree(params);
+        group.bench_with_input(BenchmarkId::from_parameter(params), &params, |b, params| {
+            b.iter(|| {
+                let key: &Vec<u8> = keys
+                    .get(rand::thread_rng().gen_range(0..params.init_size))
+                    .unwrap();
+                tree.get(black_box(key));
+            })
+        });
     }
     group.finish();
 }
@@ -69,33 +61,29 @@ fn iavl_query_hits_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
 fn iavl_update_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
     let mut group = c.benchmark_group("iavl-update");
     for params in all_params {
-        let (mut tree, keys) = prepare_tree(&params);
-        group.bench_with_input(
-            BenchmarkId::from_parameter(&params),
-            &params,
-            |b, params| {
-                b.iter_custom(|iters| {
-                    let start = Instant::now();
-                    for i in 0..iters {
-                        let key: &Vec<u8> = keys
-                            .get(rand::thread_rng().gen_range(0..params.init_size))
-                            .unwrap();
+        let (mut tree, keys) = prepare_tree(params);
+        group.bench_with_input(BenchmarkId::from_parameter(params), &params, |b, params| {
+            b.iter_custom(|iters| {
+                let start = Instant::now();
+                for i in 0..iters {
+                    let key: &Vec<u8> = keys
+                        .get(rand::thread_rng().gen_range(0..params.init_size))
+                        .unwrap();
 
-                        let data: Vec<u8> = rand::thread_rng()
-                            .sample_iter(Standard)
-                            .take(params.data_length)
-                            .collect();
+                    let data: Vec<u8> = rand::thread_rng()
+                        .sample_iter(Standard)
+                        .take(params.data_length)
+                        .collect();
 
-                        tree.set(black_box(key.clone()), black_box(data.to_vec()));
+                    tree.set(black_box(key.clone()), black_box(data.to_vec()));
 
-                        if i % params.block_size == 0 {
-                            commit_tree(&mut tree)
-                        }
+                    if i % params.block_size == 0 {
+                        commit_tree(&mut tree)
                     }
-                    start.elapsed()
-                })
-            },
-        );
+                }
+                start.elapsed()
+            })
+        });
     }
     group.finish();
 }
@@ -103,8 +91,8 @@ fn iavl_update_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
 fn iavl_range_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
     let mut group = c.benchmark_group("iavl-range");
     for params in all_params {
-        let (tree, _) = prepare_tree(&params);
-        group.bench_with_input(BenchmarkId::from_parameter(&params), &params, |b, _| {
+        let (tree, _) = prepare_tree(params);
+        group.bench_with_input(BenchmarkId::from_parameter(params), &params, |b, _| {
             b.iter(|| {
                 let _range: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
             })
@@ -116,42 +104,38 @@ fn iavl_range_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
 fn iavl_run_blocks_benchmark(c: &mut Criterion, all_params: &Vec<Params>) {
     let mut group = c.benchmark_group("iavl-run-blocks");
     for params in all_params {
-        let (mut tree, keys) = prepare_tree(&params);
-        group.bench_with_input(
-            BenchmarkId::from_parameter(&params),
-            &params,
-            |b, params| {
-                b.iter_custom(|iters| {
-                    let start = Instant::now();
-                    for i in 0..iters {
-                        for _ in 0..params.block_size {
-                            // 50% insert, 50% update
-                            let key = if i % 2 == 0 {
-                                keys.get(rand::thread_rng().gen_range(0..params.init_size))
-                                    .unwrap()
-                                    .clone()
-                            } else {
-                                rand::thread_rng()
-                                    .sample_iter(Standard)
-                                    .take(params.key_length)
-                                    .collect()
-                            };
-
-                            let data: Vec<u8> = rand::thread_rng()
+        let (mut tree, keys) = prepare_tree(params);
+        group.bench_with_input(BenchmarkId::from_parameter(params), &params, |b, params| {
+            b.iter_custom(|iters| {
+                let start = Instant::now();
+                for i in 0..iters {
+                    for _ in 0..params.block_size {
+                        // 50% insert, 50% update
+                        let key = if i % 2 == 0 {
+                            keys.get(rand::thread_rng().gen_range(0..params.init_size))
+                                .unwrap()
+                                .clone()
+                        } else {
+                            rand::thread_rng()
                                 .sample_iter(Standard)
-                                .take(params.data_length)
-                                .collect();
+                                .take(params.key_length)
+                                .collect()
+                        };
 
-                            tree.get(&key);
-                            tree.set(key, data)
-                        }
+                        let data: Vec<u8> = rand::thread_rng()
+                            .sample_iter(Standard)
+                            .take(params.data_length)
+                            .collect();
 
-                        commit_tree(&mut tree);
+                        tree.get(&key);
+                        tree.set(key, data)
                     }
-                    start.elapsed()
-                })
-            },
-        );
+
+                    commit_tree(&mut tree);
+                }
+                start.elapsed()
+            })
+        });
     }
     group.finish();
 }

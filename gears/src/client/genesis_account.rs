@@ -36,10 +36,7 @@ contain valid denominations.",
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name)
-                        .unwrap_or_default()
-                        .display()
-                        .to_string()
+                    get_default_home_dir(app_name).unwrap_or_default().display()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(clap::value_parser!(PathBuf)),
@@ -76,7 +73,6 @@ pub fn run_add_genesis_account_command<G: SDKGenesis>(
     let raw_genesis = fs::read_to_string(genesis_file_path.clone())?;
     let mut genesis: Genesis<G> = serde_json::from_str(&raw_genesis)?;
     genesis.app_state.add_genesis_account(address, coins)?;
-
     std::fs::write(genesis_file_path, &serde_json::to_string_pretty(&genesis)?)?;
     Ok(())
 }

@@ -18,7 +18,7 @@ use proto_messages::cosmos::{
         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
         QueryBalanceResponse, QueryTotalSupplyResponse,
     },
-    tx::v1beta1::Message,
+    tx::v1beta1::message::Message,
 };
 use serde::Deserialize;
 use store::StoreKey;
@@ -102,12 +102,14 @@ pub async fn get_balances_by_denom<
 ) -> Result<Json<QueryBalanceResponse>, Error> {
     let req = QueryBalanceRequest {
         address,
-        denom: String::from(denom.0.denom)
+        denom: denom
+            .0
+            .denom
             .try_into()
             .map_err(|e: proto_types::Error| Error::bad_request(e.to_string()))?,
     };
 
-    let request = RequestQuery {
+    let request: RequestQuery = RequestQuery {
         data: req.encode_vec().into(),
         path: "/cosmos.bank.v1beta1.Query/Balance".into(),
         height: 0,

@@ -8,7 +8,8 @@ use ibc_proto::{
 use keyring::key_pair::KeyPair;
 use prost::Message;
 use proto_messages::cosmos::tx::v1beta1::{
-    AuthInfo, Fee, Message as SDKMessage, SignerInfo, Tip, TxBody,
+    auth_info::AuthInfo, fee::Fee, message::Message as SDKMessage, signer::SignerInfo, tip::Tip,
+    tx_body::TxBody,
 };
 use tendermint_informal::chain::Id;
 

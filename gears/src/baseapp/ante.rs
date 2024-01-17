@@ -7,9 +7,7 @@ use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
-    tx::v1beta1::{
-        PublicKey, {Message, Tx, TxWithRaw},
-    },
+    tx::v1beta1::{message::Message, public_key::PublicKey, tx::tx::Tx, tx_raw::TxWithRaw},
 };
 use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
@@ -47,7 +45,7 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account);
 }
 
-pub trait AnteHandler<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn run<DB: Database, M: Message>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
@@ -62,7 +60,7 @@ pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey>
     sk: PhantomData<SK>,
 }
 
-impl<SK, BK, AK> AnteHandler<SK> for BaseAnteHandler<BK, AK, SK>
+impl<SK, BK, AK> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK>
 where
     SK: StoreKey,
     BK: BankKeeper<SK>,
@@ -133,7 +131,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             )));
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn tx_timeout_height_ante_handler<DB: Database, M: Message>(
@@ -261,7 +259,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             )));
         }
 
-        for (i, signature_data) in signature_data.into_iter().enumerate() {
+        for (i, signature_data) in signature_data.iter().enumerate() {
             let signer = signers[i];
 
             // check sequence number
@@ -303,14 +301,12 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
                     Secp256k1::verification_only()
                         .verify_ecdsa(&message, &signature, &public_key) //TODO: lib cannot be used for bitcoin sig verification
-                        .map_err(|_| {
-                            return AppError::TxValidation(format!("invalid signature"));
-                        })?;
+                        .map_err(|_| AppError::TxValidation("invalid signature".to_string()))?;
                 }
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn increment_sequence_ante_handler<DB: Database, M: Message>(

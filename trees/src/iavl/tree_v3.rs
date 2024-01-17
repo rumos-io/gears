@@ -7,7 +7,7 @@ enum BTreeMap<K: Clone, V: Clone> {
 
 impl<K: Clone, V: Clone> BTreeMap<K, V> {
     fn iter(&self) -> BTreeMapIterator<'_, K, V> {
-        BTreeMapIterator::new(&self)
+        BTreeMapIterator::new(self)
     }
 }
 
@@ -87,7 +87,7 @@ impl<'a, K: Clone, V: Clone> BTreeMapIterator<'a, K, V> {
                         match &inner.right_subtree {
                             Some(right_subtree) => {
                                 self.right_subtrees
-                                    .push(BorrowedOrCached::Borrowed(&right_subtree));
+                                    .push(BorrowedOrCached::Borrowed(right_subtree));
                             }
                             None => {
                                 let right_subtree = self

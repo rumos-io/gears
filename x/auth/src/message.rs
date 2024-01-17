@@ -6,13 +6,17 @@ use serde::Serialize;
 pub enum Message {}
 
 //TODO: the fact that this implements proto_messages::cosmos::tx::v1beta1::Message  is not used
-impl proto_messages::cosmos::tx::v1beta1::Message for Message {
+impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
         vec![]
     }
 
     fn validate_basic(&self) -> Result<(), String> {
         Ok(())
+    }
+
+    fn type_url(&self) -> &'static str {
+        "TODO"
     }
 }
 
