@@ -4,6 +4,7 @@ name = "gaia-rs"
 version = "0.1.0"
 
 [dependencies]
+tendermint = {path = "../tendermint"}
 anyhow = "1.0.70"
 auth = {path = "../x/auth"}
 axum = "0.6.18"
@@ -18,7 +19,6 @@ proto-types = {path = "../proto-types"}
 serde = {version = "1.0", default-features = false}
 store = {path = "../store"}
 strum = { version = "0.25", features = ["derive"] }
-tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-proto = {git = "https://github.com/joneskm/tendermint-rs"}
+
 
 [dev-dependencies]

@@ -34,11 +34,11 @@ pub(super) mod test_mocks {
             unimplemented!()
         }
 
-        fn push_event(&mut self, _: tendermint_informal::abci::Event) {
+        fn push_event(&mut self, _: tendermint::informal::abci::Event) {
             unimplemented!()
         }
 
-        fn append_events(&mut self, _: Vec<tendermint_informal::abci::Event>) {
+        fn append_events(&mut self, _: Vec<tendermint::informal::abci::Event>) {
             unimplemented!()
         }
 

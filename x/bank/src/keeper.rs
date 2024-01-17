@@ -22,7 +22,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::{AccAddress, Denom};
 use store::{KVStore, MutablePrefixStore, StoreKey};
-use tendermint_informal::abci::{Event, EventAttributeIndexExt};
+use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{BankParamsKeeper, GenesisState};
 

@@ -4,6 +4,9 @@ name = "gears"
 version = "0.1.0"
 
 [dependencies]
+#local
+tendermint = {path = "../tendermint", features = [ "rpc", "abci", "proto" ]}
+
 bip32 = "0.5.1"
 cosmwasm-std = "1.1.5"
 keyring = {path = "../keyring"}
@@ -27,20 +30,13 @@ handlebars = "4.3.6"
 hex = "0.4.3"
 human-panic = "1.1.4"
 integer-encoding = "3.0.4"
-lazy_static = "1.4.0"
+lazy_static = "1.4.0" # replace with once_cell from std or crate
 serde = {version = "1.0", default-features = false}
 serde-aux = "4.2.0"
 serde_json = "1.0.93"
 sha2 = "0.10.6"
 store_crate = {path = "../store", package = "store"}
 strum = { version = "0.25", features = [] } # "derive"
-tendermint = {path = "../tendermint"}
-tendermint-abci = {git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-proto = {git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-rpc = {git = "https://github.com/joneskm/tendermint-rs", features = [
-  "http-client",
-]}
 text_io = "0.1.12"
 tokio = "1.27.0"
 toml = "0.7.7"

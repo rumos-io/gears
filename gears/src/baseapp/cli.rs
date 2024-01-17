@@ -6,7 +6,7 @@ use proto_messages::cosmos::tx::v1beta1::message::Message;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use store_crate::StoreKey;
-use tendermint_abci::ServerBuilder;
+use tendermint::abci::ServerBuilder;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 

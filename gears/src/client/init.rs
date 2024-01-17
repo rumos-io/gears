@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
-use tendermint_informal::chain::Id;
+use tendermint::informal::chain::Id;
 
 use crate::{
     config::{ApplicationConfig, Config},

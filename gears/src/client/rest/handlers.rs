@@ -7,9 +7,9 @@ use proto_messages::cosmos::ibc_types::query::PageResponse;
 use proto_messages::cosmos::tx::v1beta1::response::tx_event::GetTxsEventResponse;
 use proto_messages::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message, tx::tx::Tx};
 use serde::{Deserialize, Serialize};
-use tendermint_informal::node::Info;
-use tendermint_rpc::{endpoint::tx_search::Response, query::Query, Order};
-use tendermint_rpc::{Client, HttpClient, Url};
+use tendermint::informal::node::Info;
+use tendermint::rpc::{endpoint::tx_search::Response, query::Query, Order};
+use tendermint::rpc::{Client, HttpClient, Url};
 
 use crate::client::rest::{error::Error, pagination::Pagination};
 
@@ -59,7 +59,7 @@ pub async fn txs<M: Message>(
         .0
         .events
         .parse()
-        .map_err(|e: tendermint_rpc::error::Error| Error::bad_request(e.detail().to_string()))?;
+        .map_err(|e: tendermint::rpc::error::Error| Error::bad_request(e.detail().to_string()))?;
     let (page, limit) = parse_pagination(pagination.0.clone());
 
     let res_tx = client

@@ -4,7 +4,7 @@ use proto_messages::cosmos::{tx::v1beta1::{
     auth_info::AuthInfo, fee::Fee, message::Message as SDKMessage, signer::SignerInfo, tip::Tip,
     tx_body::TxBody,
 }, ibc_types::{tx::{TxRaw, ModeInfo, Sum, Single, SignDoc}, protobuf::Protobuf}};
-use tendermint_informal::chain::Id;
+use tendermint::informal::chain::Id;
 
 /// Contains info required to sign a Tx
 pub struct SigningInfo {

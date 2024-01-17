@@ -202,9 +202,7 @@ dependencies = [
  "sha2 0.10.8",
  "store",
  "strum 0.25.0",
- "tendermint 0.29.1",
- "tendermint-proto",
- "tendermint-rpc",
+ "tendermint 0.1.0",
  "thiserror",
  "tokio",
 ]
@@ -300,10 +298,7 @@ dependencies = [
  "serde_json",
  "store",
  "strum 0.24.1",
- "tendermint 0.29.1",
- "tendermint-abci",
- "tendermint-proto",
- "tendermint-rpc",
+ "tendermint 0.1.0",
  "tokio",
 ]
 
@@ -1284,8 +1279,7 @@ dependencies = [
  "serde",
  "store",
  "strum 0.25.0",
- "tendermint 0.29.1",
- "tendermint-proto",
+ "tendermint 0.1.0",
 ]
 
 [[package]]
@@ -1319,10 +1313,6 @@ dependencies = [
  "store",
  "strum 0.25.0",
  "tendermint 0.1.0",
- "tendermint 0.29.1",
- "tendermint-abci",
- "tendermint-proto",
- "tendermint-rpc",
  "text_io",
  "tokio",
  "toml 0.7.8",
@@ -2516,7 +2506,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sha2 0.10.8",
- "tendermint 0.29.1",
+ "tendermint 0.1.0",
  "thiserror",
 ]
 
@@ -3386,7 +3376,10 @@ dependencies = [
  "serde",
  "serde_json",
  "tendermint 0.29.1",
+ "tendermint-abci",
  "tendermint-config",
+ "tendermint-proto",
+ "tendermint-rpc",
  "thiserror",
 ]
 

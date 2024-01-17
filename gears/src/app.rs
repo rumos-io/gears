@@ -21,7 +21,7 @@ use proto_messages::cosmos::tx::v1beta1::message::Message;
 use proto_types::AccAddress;
 use std::env;
 use store_crate::StoreKey;
-use tendermint_informal::block::Height;
+use tendermint::informal::block::Height;
 
 use crate::{
     baseapp::cli::run_run_command,

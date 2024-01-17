@@ -9,8 +9,8 @@ use proto_messages::cosmos::{
     tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody}, ibc_types::{tx::TxRaw, auth::RawQueryAccountResponse, protobuf::Protobuf},
 };
 use proto_types::AccAddress;
-use tendermint_informal::chain::Id;
-use tendermint_rpc::{Client, HttpClient};
+use tendermint::informal::chain::Id;
+use tendermint::rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
 use crate::client::keys::KeyringBackend;

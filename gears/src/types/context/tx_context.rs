@@ -2,7 +2,7 @@ use crate::types::context::context::Context;
 use database::{Database, PrefixDB};
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, MultiStore, StoreKey};
-use tendermint_informal::{abci::Event, block::Header};
+use tendermint::informal::{abci::Event, block::Header};
 
 pub struct TxContext<'a, DB, SK> {
     multi_store: &'a mut MultiStore<DB, SK>,

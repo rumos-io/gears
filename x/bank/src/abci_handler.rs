@@ -36,7 +36,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     pub fn query<DB: Database>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
-        query: tendermint_proto::abci::RequestQuery,
+        query: tendermint::proto::abci::RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
             "/cosmos.bank.v1beta1.Query/AllBalances" => {

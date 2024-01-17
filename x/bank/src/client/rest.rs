@@ -1,5 +1,5 @@
 use proto_types::AccAddress;
-use tendermint_abci::Application;
+use tendermint::abci::Application;
 
 use axum::{
     body::Body,
@@ -21,7 +21,7 @@ use proto_messages::cosmos::{
 };
 use serde::Deserialize;
 use store::StoreKey;
-use tendermint_proto::abci::RequestQuery;
+use tendermint::proto::abci::RequestQuery;
 
 /// Gets the total supply of every denom
 pub async fn supply<

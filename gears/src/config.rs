@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use tendermint_rpc::Url;
+use tendermint::rpc::Url;
 
 pub const DEFAULT_REST_LISTEN_ADDR: &str = "127.0.0.1:1317";
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:26658";
