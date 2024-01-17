@@ -1,9 +1,9 @@
 use axum::extract::{Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
-use ibc_proto::cosmos::base::query::v1beta1::PageResponse;
-use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::base::abci::v1beta1::TxResponse;
+use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::ibc_types::query::PageResponse;
 use proto_messages::cosmos::tx::v1beta1::response::tx_event::GetTxsEventResponse;
 use proto_messages::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message, tx::tx::Tx};
 use serde::{Deserialize, Serialize};

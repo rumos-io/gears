@@ -2,13 +2,11 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
-use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse as RawQueryAccountResponse;
-use ibc_proto::{cosmos::tx::v1beta1::TxRaw, protobuf::Protobuf};
 use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
     base::v1beta1::SendCoins,
-    tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody},
+    tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody}, ibc_types::{tx::TxRaw, auth::RawQueryAccountResponse, protobuf::Protobuf},
 };
 use proto_types::AccAddress;
 use tendermint_informal::chain::Id;

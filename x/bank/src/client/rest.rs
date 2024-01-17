@@ -1,4 +1,3 @@
-use ibc_proto::protobuf::Protobuf;
 use proto_types::AccAddress;
 use tendermint_abci::Application;
 
@@ -18,7 +17,7 @@ use proto_messages::cosmos::{
         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
         QueryBalanceResponse, QueryTotalSupplyResponse,
     },
-    tx::v1beta1::message::Message,
+    tx::v1beta1::message::Message, ibc_types::protobuf::Protobuf,
 };
 use serde::Deserialize;
 use store::StoreKey;

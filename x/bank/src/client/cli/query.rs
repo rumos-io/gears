@@ -2,9 +2,7 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 
 use gears::client::query::run_query;
-use ibc_proto::cosmos::bank::v1beta1::QueryAllBalancesResponse as RawQueryAllBalancesResponse;
-use ibc_proto::protobuf::Protobuf;
-use proto_messages::cosmos::bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse};
+use proto_messages::cosmos::{bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse}, ibc_types::{protobuf::Protobuf, bank::RawQueryAllBalancesResponse}};
 use proto_types::AccAddress;
 use tendermint_informal::block::Height;
 

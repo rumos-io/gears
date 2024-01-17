@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./proto-messages/Cargo.toml"
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false
+}

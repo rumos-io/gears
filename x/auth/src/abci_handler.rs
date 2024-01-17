@@ -2,8 +2,8 @@ use database::Database;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
-use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
+use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use store::StoreKey;
 
 use crate::{GenesisState, Keeper};

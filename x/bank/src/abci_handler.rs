@@ -3,10 +3,10 @@ use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
-use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::bank::v1beta1::{
     QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse,
 };
+use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use store::StoreKey;
 
 use crate::{GenesisState, Keeper, Message};

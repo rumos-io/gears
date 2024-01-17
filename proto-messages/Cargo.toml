@@ -7,7 +7,8 @@ version = "0.1.0"
 base64 = "0.21.0"
 base64-serde = "0.7.0"
 cosmwasm-std = "1.1.5"
-ibc-proto = {workspace = true}
+ibc-proto = {git = "https://github.com/joneskm/ibc-proto-rs"}
+secp256k1 = { version = "0.25.0", features = ["bitcoin-hashes"] }
 prost = "0.11.8"
 proto-types = {path = "../proto-types"}
 ripemd = "0.1.3"
@@ -18,7 +19,6 @@ serde_with = "3.0.0"
 sha2 = "0.10.6"
 tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
 thiserror = "1.0.13"
-secp256k1 = { version = "0.25.0", features = ["bitcoin-hashes"] }
 nutype = { version = "0.4.0" , features = [ "serde"]}
 byteorder = "1.5.0"
 micromarshal = "0.4.1"

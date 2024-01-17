@@ -6,7 +6,6 @@ version = "0.1.0"
 [dependencies]
 bip32 = "0.5.1"
 cosmwasm-std = "1.1.5"
-ibc-proto = {workspace = true}
 keyring = {path = "../keyring"}
 prost = {version = "0.11"}
 proto-messages = {path = "../proto-messages"}

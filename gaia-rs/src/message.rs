@@ -1,5 +1,4 @@
-use ibc_proto::google::protobuf::Any;
-use proto_messages::cosmos::tx::v1beta1::message::Message as SDKMessage;
+use proto_messages::cosmos::{tx::v1beta1::message::Message as SDKMessage, ibc_types::protobuf::Any};
 use proto_types::AccAddress;
 use serde::Serialize;
 

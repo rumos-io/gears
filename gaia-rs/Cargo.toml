@@ -14,7 +14,6 @@ color-eyre = "0.6.2"
 cosmwasm-std = "1.1.5"
 database = {path = "../database"}
 gears = {path = "../gears"}
-ibc-proto = {workspace = true}
 proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
 serde = {version = "1.0", default-features = false}
