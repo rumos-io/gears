@@ -33,8 +33,6 @@ num-format = { version = "0.4.4", features = ["with-num-bigint"]}
 num-bigint = { version = "0.4.4", features = [ ]}
 bnum = {version = "0.10.0", features = ["serde"]}
 num-traits = "0.2.17"
-rust_decimal = { version = "1.32", features = [ "maths"]}
-rust_decimal_macros = "1.32"
 
 [dev-dependencies]
 rand = "0.8.5"

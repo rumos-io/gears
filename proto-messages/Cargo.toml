@@ -21,7 +21,6 @@ tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm
 thiserror = "1.0.13"
 nutype = { version = "0.4.0" , features = [ "serde"]}
 byteorder = "1.5.0"
-micromarshal = "0.4.1"
 ciborium = "0.2.1"
 bnum = {version = "0.10.0", features = ["serde"]}
 num-traits = "0.2.17"

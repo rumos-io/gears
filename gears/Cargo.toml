@@ -24,10 +24,8 @@ clap_complete = "4.2.1"
 database = {path = "../database"}
 dirs = "4.0.0"
 handlebars = "4.3.6"
-hdpath = "0.6.2"
 hex = "0.4.3"
 human-panic = "1.1.4"
-ibc = "0.36.0"
 integer-encoding = "3.0.4"
 lazy_static = "1.4.0"
 serde = {version = "1.0", default-features = false}
@@ -44,7 +42,6 @@ tendermint-rpc = {git = "https://github.com/joneskm/tendermint-rs", features = [
   "http-client",
 ]}
 text_io = "0.1.12"
-tiny-bip39 = "1.0.0"
 tokio = "1.27.0"
 toml = "0.7.7"
 tower-http = {version = "0.4.1", features = ["cors"]}

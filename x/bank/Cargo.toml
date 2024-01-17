@@ -24,10 +24,8 @@ tendermint-rpc = { git = "https://github.com/joneskm/tendermint-rs", features = 
 ] }
 tokio = "1.27.0"
 serde_json = "1.0.93"
-ibc-relayer = "0.23.0"
 prost = { version = "0.11" }
 strum = "0.24.1"
-strum_macros = "0.24"
 axum = "0.6.18"
 tendermint-abci = { git = "https://github.com/joneskm/tendermint-rs" }
 bnum = {version = "0.10.0", features = ["serde"]}
