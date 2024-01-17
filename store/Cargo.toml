@@ -7,7 +7,7 @@ edition = "2021"
 thiserror = "1.0.13"
 trees = { path = "../trees" }
 database = { path = "../database" }
-integer-encoding = "3.0.4"
+integer-encoding = "4.0.0"
 sha2 = "0.10.6"
 strum = { version = "0.25", features = [] } #"derive"
 

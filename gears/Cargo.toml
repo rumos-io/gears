@@ -10,26 +10,26 @@ tendermint = {path = "../tendermint", features = [ "rpc", "abci", "proto" ]}
 bip32 = "0.5.1"
 cosmwasm-std = "1.1.5"
 keyring = {path = "../keyring"}
-prost = {version = "0.11"}
+prost = { workspace = true }
 proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
-secp256k1 = {version = "0.25.0", features = ["bitcoin-hashes"]}
+secp256k1 = {version = "0.28.1", features = ["hashes"]}
 tracing = {version = "0.1", default-features = false}
 # It's not clear what version of the Tendermint API each version of tendermint-abci implements
 # this line suggests that v0.28.0 implements Tendermint API v0.34.x 
 # https://github.com/informalsystems/tendermint-rs/blob/560c852840ac58cb03b55fc376ff0dc2ac089d94/abci/src/codec.rs#L5
 anyhow = "1.0.70"
-axum = "0.6.18"
+axum = { workspace = true }
 bech32 = "0.9.1"
 bytes = "1.2.1"
 clap = {version = "4.2.2", features = ["derive"]}
 clap_complete = "4.2.1"
 database = {path = "../database"}
-dirs = "4.0.0"
-handlebars = "4.3.6"
+dirs = "5.0.1"
+handlebars = "5.1.0"
 hex = "0.4.3"
 human-panic = "1.1.4"
-integer-encoding = "3.0.4"
+integer-encoding = "4.0.0"
 lazy_static = "1.4.0" # replace with once_cell from std or crate
 serde = {version = "1.0", default-features = false}
 serde-aux = "4.2.0"
@@ -39,9 +39,9 @@ store_crate = {path = "../store", package = "store"}
 strum = { version = "0.25", features = [] } # "derive"
 text_io = "0.1.12"
 tokio = "1.27.0"
-toml = "0.7.7"
+toml = "0.8.8"
 tower-http = {version = "0.4.1", features = ["cors"]}
-tracing-subscriber = {version = "0.2", optional = false, default-features = true}
+tracing-subscriber = {version = "0.3.18", optional = false, default-features = true}
 trees = {path = "../trees"}
 
 [dev-dependencies]
