@@ -6,7 +6,7 @@ use bank::cli::{
 };
 use clap::Subcommand;
 use proto_types::AccAddress;
-use tendermint_informal::block::Height;
+use tendermint::informal::block::Height;
 
 use crate::message::Message;
 

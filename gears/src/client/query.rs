@@ -1,10 +1,10 @@
 use anyhow::{anyhow, Result};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
-use ibc_proto::protobuf::Protobuf;
 use prost::Message;
+use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use serde::Serialize;
-use tendermint_informal::block::Height;
-use tendermint_rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};
+use tendermint::informal::block::Height;
+use tendermint::rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};
 use tokio::runtime::Runtime;
 
 pub fn get_query_command<QuerySubcommand: Subcommand>() -> Command {
@@ -60,7 +60,7 @@ pub fn run_query<
 ) -> Result<Response>
 where
     <Response as TryFrom<Raw>>::Error: std::fmt::Display,
-    <Response as ibc_proto::protobuf::erased::TryFrom<Raw>>::Error: std::fmt::Display,
+    <Response as proto_messages::cosmos::ibc_types::TryFrom<Raw>>::Error: std::fmt::Display,
 {
     let client = HttpClient::new(node)?;
 
@@ -80,7 +80,7 @@ async fn run_query_async(
     query_bytes: Vec<u8>,
     height: Option<Height>,
     path: String,
-) -> Result<AbciQuery, tendermint_rpc::Error> {
+) -> Result<AbciQuery, tendermint::rpc::Error> {
     client
         .abci_query(Some(path), query_bytes, height, false)
         .await

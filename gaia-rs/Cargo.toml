@@ -4,23 +4,30 @@ name = "gaia-rs"
 version = "0.1.0"
 
 [dependencies]
-anyhow = "1.0.70"
+
+#local
+tendermint = {path = "../tendermint"}
 auth = {path = "../x/auth"}
-axum = "0.6.18"
 bank = {path = "../x/bank"}
-bytes = "1.2.1"
-clap = {version = "4.2.2", features = ["derive"]}
-color-eyre = "0.6.2"
-cosmwasm-std = "1.1.5"
 database = {path = "../database"}
 gears = {path = "../gears"}
-ibc-proto = {workspace = true}
 proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
-serde = {version = "1.0", default-features = false}
 store = {path = "../store"}
+
+#newtypes
+bytes = { workspace = true }
+
+#utils 
+anyhow = { workspace = true }
+clap = {version = "4.2.2", features = ["derive"]}
 strum = { version = "0.25", features = ["derive"] }
-tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-proto = {git = "https://github.com/joneskm/tendermint-rs"}
+
+#serialization
+serde = {version = "1.0", default-features = false}
+
+#other
+cosmwasm-std = "1.1.5"
+axum = { workspace = true }
 
 [dev-dependencies]

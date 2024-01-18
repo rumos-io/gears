@@ -11,9 +11,9 @@ use std::{
     sync::{Arc, RwLock},
 };
 use store_crate::{MultiStore, StoreKey};
-use tendermint_abci::Application;
-use tendermint_informal::block::Header;
-use tendermint_proto::abci::{
+use tendermint::abci::Application;
+use tendermint::informal::block::Header;
+use tendermint::proto::abci::{
     RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
     RequestEndBlock, RequestInfo, RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot,
     RequestQuery, ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
@@ -450,7 +450,7 @@ impl<
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
+    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint::informal::abci::Event>, AppError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e| AppError::TxParseError(e.to_string()))?;
 

@@ -2,8 +2,8 @@ use database::Database;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
-use ibc_proto::protobuf::Protobuf;
 use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
+use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use store::StoreKey;
 
 use crate::{GenesisState, Keeper};
@@ -21,7 +21,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     pub fn query<DB: Database>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
-        query: tendermint_proto::abci::RequestQuery,
+        query: tendermint::proto::abci::RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
             "/cosmos.auth.v1beta1.Query/Account" => {

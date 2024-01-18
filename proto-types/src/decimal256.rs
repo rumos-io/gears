@@ -697,6 +697,7 @@ impl PartialEq<Decimal256> for &Decimal256 {
 }
 
 #[cfg(test)]
+#[allow( deprecated ) ] // TODO:
 mod tests {
     use super::*;
     use cosmwasm_std::StdError;

@@ -3,7 +3,7 @@ use crate::types::context::tx_context::TxContext;
 use database::{Database, PrefixDB};
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use store_crate::{KVStore, StoreKey};
-use tendermint_informal::abci::Event;
+use tendermint::informal::abci::Event;
 
 pub trait ContextTrait<T, SK> {
     fn height(&self) -> u64;

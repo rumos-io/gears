@@ -50,10 +50,6 @@ mod tests {
     use bnum::types::U256;
     use gears::types::context::context::Context;
 
-    use ibc_proto::cosmos::tx::v1beta1::{
-        mode_info::{Single, Sum},
-        ModeInfo,
-    };
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
@@ -66,7 +62,7 @@ mod tests {
             signer_data::{ChainId, SignerData},
             tx_body::TxBody,
             tx_data::TxData,
-        },
+        }, ibc_types::tx::{ModeInfo, Sum, Single},
     };
     use proto_types::{AccAddress, Denom};
 

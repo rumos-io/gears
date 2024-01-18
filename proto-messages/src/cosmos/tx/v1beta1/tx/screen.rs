@@ -2,8 +2,6 @@ use super::cbor::Cbor;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 
-const SCREENS_KEY: u64 = 1;
-
 const TITLE_KEY: u64 = 1;
 const CONTENT_KEY: u64 = 2;
 const INDENT_KEY: u64 = 3;

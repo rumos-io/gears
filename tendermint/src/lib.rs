@@ -11,7 +11,7 @@ use tendermint_config::{
     RpcConfig, StatesyncConfig, StorageConfig, TendermintConfig, TransferRate, TxIndexConfig,
     TxIndexer,
 };
-use tendermint_crates::{
+use tendermint_informal::{
     block::Size,
     chain::Id,
     consensus::{params::ValidatorParams, Params},
@@ -20,6 +20,17 @@ use tendermint_crates::{
     validator::Info,
     Genesis, Time,
 };
+
+#[cfg(feature ="informal")]
+pub use tendermint_informal as informal;
+#[cfg(feature ="abci")]
+pub use tendermint_abci as abci;
+#[cfg(feature ="config")]
+pub use tendermint_config as config;
+#[cfg(feature ="proto")]
+pub use tendermint_proto as proto;
+#[cfg(feature ="rpc")]
+pub use tendermint_rpc as rpc;
 
 mod error;
 
@@ -37,7 +48,7 @@ pub fn write_keys_and_genesis(
     let csprng = OsRng {};
     let signing_key = SigningKey::new(csprng);
     let priv_key =
-        tendermint_crates::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
+    tendermint_informal::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
     let node_key = NodeKey { priv_key };
     node_key_file.write_all(
         serde_json::to_string_pretty(&node_key)
@@ -48,9 +59,9 @@ pub fn write_keys_and_genesis(
     // write node private validator key
     let signing_key = SigningKey::new(csprng);
     let priv_key =
-        tendermint_crates::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
+    tendermint_informal::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
     let public_key = priv_key.public_key();
-    let address: tendermint_crates::account::Id = priv_key.public_key().into();
+    let address: tendermint_informal::account::Id = priv_key.public_key().into();
     let priv_validator_key = PrivValidatorKey {
         address,
         pub_key: priv_key.public_key(),
@@ -75,7 +86,7 @@ pub fn write_keys_and_genesis(
                 max_gas: -1,
                 time_iota_ms: 1000,
             },
-            evidence: tendermint_crates::evidence::Params {
+            evidence: tendermint_informal::evidence::Params {
                 max_age_num_blocks: 100000,
                 max_age_duration: TmDuration(Duration::new(172800, 0)),
                 max_bytes: 1048576,

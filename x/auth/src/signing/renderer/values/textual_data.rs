@@ -1,11 +1,10 @@
 use database::RocksDB;
 use gears::types::context::context::Context;
-use ibc_proto::protobuf::Protobuf;
-use proto_messages::cosmos::tx::v1beta1::{
+use proto_messages::cosmos::{tx::v1beta1::{
     message::Message,
     screen::{Content, Indent, Screen},
     textual_data::TextualData,
-};
+}, ibc_types::protobuf::Protobuf};
 use store::StoreKey;
 
 use crate::signing::{hasher::hash_get, renderer::value_renderer::ValueRenderer};
@@ -94,8 +93,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
 mod tests {
     use bnum::types::U256;
     use gears::types::context::context::Context;
-    use ibc_proto::cosmos::tx::v1beta1::mode_info::{Single, Sum};
-    use ibc_proto::cosmos::tx::v1beta1::ModeInfo;
+    use proto_messages::cosmos::ibc_types::tx::{ModeInfo, Sum, Single};
     use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
     use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
     use proto_messages::cosmos::{

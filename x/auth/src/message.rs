@@ -1,4 +1,4 @@
-use ibc_proto::google::protobuf::Any;
+use proto_messages::cosmos::ibc_types::protobuf::Any;
 use proto_types::AccAddress;
 use serde::Serialize;
 

@@ -72,13 +72,12 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 mod tests {
     use database::{Database, PrefixDB};
     use gears::types::context::context::{Context, ContextTrait};
-    use ibc_proto::cosmos::bank::v1beta1::MsgSend as MsgSendRaw;
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         tx::v1beta1::{
             screen::Screen,
             tx_metadata::{DenomUnit, Metadata},
-        },
+        }, ibc_types::bank::MsgSendRaw,
     };
     use store::StoreKey;
     use strum::EnumIter;
@@ -162,11 +161,11 @@ mod tests {
             unimplemented!()
         }
 
-        fn push_event(&mut self, _: tendermint_informal::abci::Event) {
+        fn push_event(&mut self, _: tendermint::informal::abci::Event) {
             unimplemented!()
         }
 
-        fn append_events(&mut self, _: Vec<tendermint_informal::abci::Event>) {
+        fn append_events(&mut self, _: Vec<tendermint::informal::abci::Event>) {
             unimplemented!()
         }
 

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use tendermint_informal::abci::Event;
+use tendermint::informal::abci::Event;
 
 use crate::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message};
 
