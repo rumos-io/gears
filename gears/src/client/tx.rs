@@ -6,7 +6,8 @@ use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
     base::v1beta1::SendCoins,
-    tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody}, ibc_types::{tx::TxRaw, auth::RawQueryAccountResponse, protobuf::Protobuf},
+    ibc_types::{auth::RawQueryAccountResponse, protobuf::Protobuf, tx::TxRaw},
+    tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody},
 };
 use proto_types::AccAddress;
 use tendermint::informal::chain::Id;

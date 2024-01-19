@@ -21,15 +21,15 @@ use tendermint_informal::{
     Genesis, Time,
 };
 
-#[cfg(feature ="informal")]
-pub use tendermint_informal as informal;
-#[cfg(feature ="abci")]
+#[cfg(feature = "abci")]
 pub use tendermint_abci as abci;
-#[cfg(feature ="config")]
+#[cfg(feature = "config")]
 pub use tendermint_config as config;
-#[cfg(feature ="proto")]
+#[cfg(feature = "informal")]
+pub use tendermint_informal as informal;
+#[cfg(feature = "proto")]
 pub use tendermint_proto as proto;
-#[cfg(feature ="rpc")]
+#[cfg(feature = "rpc")]
 pub use tendermint_rpc as rpc;
 
 mod error;

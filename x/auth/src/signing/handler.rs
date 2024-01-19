@@ -53,6 +53,7 @@ mod tests {
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
+        ibc_types::tx::{ModeInfo, Single, Sum},
         tx::v1beta1::{
             auth_info::AuthInfo,
             cbor::Cbor,
@@ -62,7 +63,7 @@ mod tests {
             signer_data::{ChainId, SignerData},
             tx_body::TxBody,
             tx_data::TxData,
-        }, ibc_types::tx::{ModeInfo, Sum, Single},
+        },
     };
     use proto_types::{AccAddress, Denom};
 

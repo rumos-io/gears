@@ -11,9 +11,12 @@ use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use prost::Message;
-use proto_messages::cosmos::{auth::v1beta1::{
-    Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
-}, ibc_types::protobuf::Protobuf};
+use proto_messages::cosmos::{
+    auth::v1beta1::{
+        Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
+    },
+    ibc_types::protobuf::Protobuf,
+};
 use proto_types::AccAddress;
 use store::StoreKey;
 

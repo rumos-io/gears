@@ -6,7 +6,8 @@ use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
-    tx::v1beta1::{message::Message, public_key::PublicKey, tx::tx::Tx, tx_raw::TxWithRaw}, ibc_types::tx::SignDoc,
+    ibc_types::tx::SignDoc,
+    tx::v1beta1::{message::Message, public_key::PublicKey, tx::tx::Tx, tx_raw::TxWithRaw},
 };
 use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};

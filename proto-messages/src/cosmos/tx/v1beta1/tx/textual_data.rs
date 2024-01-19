@@ -1,5 +1,6 @@
 use ibc_proto::{
-    cosmos::tx::v1beta1::AuthInfo as RawAuthInfo, cosmos::tx::v1beta1::TxBody as RawTxBody, protobuf::Protobuf,
+    cosmos::tx::v1beta1::AuthInfo as RawAuthInfo, cosmos::tx::v1beta1::TxBody as RawTxBody,
+    protobuf::Protobuf,
 };
 use prost::{bytes::Bytes, Message as ProstMessage};
 use serde::{Deserialize, Serialize};
