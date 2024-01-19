@@ -199,164 +199,6 @@ impl Node {
     }
 }
 
-// #[derive(Debug, Clone, PartialEq, Default)]
-// pub(crate) struct LeafNode {
-//     pub(crate) key: Vec<u8>,
-//     pub(crate) value: Vec<u8>,
-//     version: u32,
-// }
-
-// #[derive(Debug, Clone, PartialEq)]
-// pub(crate) enum Node {
-//     Leaf(LeafNode),
-//     Inner(InnerNode),
-// }
-
-// impl Default for Node {
-//     fn default() -> Self {
-//         Node::Leaf(Default::default())
-//     }
-// }
-
-// impl Node {
-//     pub(crate) fn shallow_clone(&self) -> Node {
-//         match self {
-//             Node::Leaf(n) => Node::Leaf(n.clone()),
-//             Node::Inner(n) => Node::Inner(n.shallow_clone()),
-//         }
-//     }
-//     pub fn get_key(&self) -> &Vec<u8> {
-//         match self {
-//             Node::Leaf(leaf) => &leaf.key,
-//             Node::Inner(inner) => &inner.key,
-//         }
-//     }
-
-//     pub fn get_height(&self) -> u8 {
-//         match self {
-//             Node::Leaf(_) => 0,
-//             Node::Inner(inner) => inner.height,
-//         }
-//     }
-
-//     pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
-//         Node::Leaf(LeafNode {
-//             key,
-//             value,
-//             version,
-//         })
-//     }
-
-//     pub fn hash(&self) -> [u8; 32] {
-//         let serialized = self.hash_serialize();
-//         Sha256::digest(serialized).into()
-//     }
-
-//     fn hash_serialize(&self) -> Vec<u8> {
-//         match &self {
-//             Node::Leaf(node) => {
-//                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
-//                 let height: i64 = 0;
-//                 let size: i64 = 1;
-//                 let version: i64 = node.version.into();
-//                 let hashed_value = Sha256::digest(&node.value);
-
-//                 let mut serialized = height.encode_var_vec();
-//                 serialized.extend(size.encode_var_vec());
-//                 serialized.extend(version.encode_var_vec());
-//                 serialized.extend(encode_bytes(&node.key));
-//                 serialized.extend(encode_bytes(&hashed_value));
-
-//                 serialized
-//             }
-//             Node::Inner(node) => {
-//                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
-//                 let height: i64 = node.height.into();
-//                 let size: i64 = node.size.into();
-//                 let version: i64 = node.version.into();
-
-//                 let mut serialized = height.encode_var_vec();
-//                 serialized.extend(size.encode_var_vec());
-//                 serialized.extend(version.encode_var_vec());
-//                 serialized.extend(encode_bytes(&node.left_hash));
-//                 serialized.extend(encode_bytes(&node.right_hash));
-
-//                 serialized
-//             }
-//         }
-//     }
-
-//     pub(crate) fn serialize(&self) -> Vec<u8> {
-//         match &self {
-//             Node::Leaf(node) => {
-//                 let height: u8 = 0;
-//                 let size: u32 = 1;
-
-//                 let mut serialized = height.encode_var_vec();
-//                 serialized.extend(size.encode_var_vec());
-//                 serialized.extend(node.version.encode_var_vec());
-//                 serialized.extend(encode_bytes(&node.key));
-//                 serialized.extend(encode_bytes(&node.value));
-
-//                 serialized
-//             }
-//             Node::Inner(node) => {
-//                 let mut serialized = node.height.encode_var_vec();
-//                 serialized.extend(node.size.encode_var_vec());
-//                 serialized.extend(node.version.encode_var_vec());
-//                 serialized.extend(encode_bytes(&node.key));
-//                 serialized.extend(encode_bytes(&node.left_hash));
-//                 serialized.extend(encode_bytes(&node.right_hash));
-
-//                 serialized
-//             }
-//         }
-//     }
-
-//     pub(crate) fn deserialize(bytes: Vec<u8>) -> Result<Self, Error> {
-//         let (height, mut n) = u8::decode_var(&bytes).ok_or(Error::NodeDeserialize)?;
-//         let (size, ns) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
-//         n += ns;
-//         let (version, nv) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
-//         n += nv;
-//         let (key, nk) = decode_bytes(&bytes[n..])?;
-//         n += nk;
-
-//         if height == 0 {
-//             // leaf node
-//             let (value, _) = decode_bytes(&bytes[n..])?;
-
-//             Ok(Node::Leaf(LeafNode {
-//                 key,
-//                 value,
-//                 version,
-//             }))
-//         } else {
-//             // inner node
-//             let (left_hash, nl) = decode_bytes(&bytes[n..])?;
-//             n += nl;
-//             let (right_hash, _) = decode_bytes(&bytes[n..])?;
-//             Ok(Node::Inner(InnerNode {
-//                 left_node: None,
-//                 right_node: None,
-//                 key,
-//                 height,
-//                 size,
-//                 left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-//                 right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-//                 version,
-//             }))
-//         }
-//     }
-
-//     fn get_size(&self) -> u32 {
-//         match &self {
-//             Node::Leaf(_) => 1,
-//             Node::Inner(n) => n.size,
-//         }
-//     }
-// }
-
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
@@ -464,47 +306,47 @@ where
         self.loaded_version
     }
 
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        match &self.root {
-            Some(root) => self.get_(key, root),
-            None => None,
-        }
-    }
+    // pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+    //     match &self.root {
+    //         Some(root) => self.get_(key, root),
+    //         None => None,
+    //     }
+    // }
 
-    fn get_(&self, key: &[u8], root: &Node) -> Option<Vec<u8>> {
-        let mut loop_node = root;
-        let mut cached_node;
+    // fn get_(&self, key: &[u8], root: &Node) -> Option<Vec<u8>> {
+    //     let mut loop_node = root;
+    //     let mut cached_node;
 
-        loop {
-            if key < &root.key {
-                match &root.left_node {
-                    Some(left_node) => loop_node = left_node,
-                    None => {
-                        let left_node = self
-                            .node_db
-                            .get_node(&root.left_hash)
-                            .expect("node db should contain all nodes");
+    //     loop {
+    //         if key < &root.key {
+    //             match &root.left_node {
+    //                 Some(left_node) => loop_node = left_node,
+    //                 None => {
+    //                     let left_node = self
+    //                         .node_db
+    //                         .get_node(&root.left_hash)
+    //                         .expect("node db should contain all nodes");
 
-                        cached_node = left_node;
-                        loop_node = &cached_node;
-                    }
-                }
-            } else {
-                match &root.right_node {
-                    Some(right_node) => loop_node = right_node,
-                    None => {
-                        let right_node = self
-                            .node_db
-                            .get_node(&root.right_hash)
-                            .expect("node db should contain all nodes");
+    //                     cached_node = left_node;
+    //                     loop_node = &cached_node;
+    //                 }
+    //             }
+    //         } else {
+    //             match &root.right_node {
+    //                 Some(right_node) => loop_node = right_node,
+    //                 None => {
+    //                     let right_node = self
+    //                         .node_db
+    //                         .get_node(&root.right_hash)
+    //                         .expect("node db should contain all nodes");
 
-                        cached_node = right_node;
-                        loop_node = &cached_node;
-                    }
-                }
-            }
-        }
-    }
+    //                     cached_node = right_node;
+    //                     loop_node = &cached_node;
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
 
     // pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
     //     match &mut self.root {
@@ -512,11 +354,17 @@ where
     //             Self::recursive_set(root, key, value, self.loaded_version + 1, &mut self.node_db)
     //         }
     //         None => {
-    //             self.root = Some(Node::Leaf(LeafNode {
-    //                 key,
-    //                 value,
-    //                 version: self.loaded_version + 1,
-    //             }));
+    //             self.root = Some(Node {
+    //                 left_node: todo!(),
+    //                 right_node: todo!(),
+    //                 value: todo!(),
+    //                 key: todo!(),
+    //                 height: todo!(),
+    //                 size: todo!(),
+    //                 left_hash: todo!(),
+    //                 right_hash: todo!(),
+    //                 version: todo!(),
+    //             });
     //         }
     //     };
     // }
@@ -528,103 +376,59 @@ where
     //     version: u32,
     //     node_db: &mut NodeDB<T>,
     // ) {
-    //     match &mut node {
-    //         Node::Leaf(leaf_node) => match key.cmp(&leaf_node.key) {
-    //             cmp::Ordering::Less => {
-    //                 let left_node = Node::new_leaf(key, value, version);
-    //                 let left_hash = left_node.hash();
-    //                 let right_node = Node::Leaf(leaf_node.clone());
-    //                 let right_hash = right_node.hash();
+    //     // Perform normal BST
+    //     if key < node.key {
+    //         Self::recursive_set(
+    //             node.get_mut_left_node(node_db),
+    //             key.clone(),
+    //             value,
+    //             version,
+    //             node_db,
+    //         );
+    //         node.update_left_hash();
+    //     } else {
+    //         Self::recursive_set(
+    //             node.get_mut_right_node(node_db),
+    //             key.clone(),
+    //             value,
+    //             version,
+    //             node_db,
+    //         );
+    //         node.update_right_hash();
+    //     }
 
-    //                 *node = Node::Inner(InnerNode {
-    //                     key: leaf_node.key.clone(),
-    //                     left_node: Some(Box::new(left_node)),
-    //                     right_node: Some(Box::new(right_node)),
-    //                     height: 1,
-    //                     size: 2,
-    //                     version,
-    //                     left_hash,
-    //                     right_hash,
-    //                 });
-    //             }
-    //             cmp::Ordering::Equal => {
-    //                 leaf_node.value = value;
-    //                 leaf_node.version = version;
-    //             }
-    //             cmp::Ordering::Greater => {
-    //                 let right_node = Node::new_leaf(key.clone(), value, version);
-    //                 let right_hash = right_node.hash();
-    //                 let left_subtree = node.clone();
-    //                 let left_hash = left_subtree.hash();
+    //     // Update height + size + version
+    //     let balance_factor = node.update_height_and_size_get_balance_factor(node_db);
+    //     node.version = version;
 
-    //                 *node = Node::Inner(InnerNode {
-    //                     key,
-    //                     left_node: Some(Box::new(left_subtree)),
-    //                     right_node: Some(Box::new(right_node)),
-    //                     height: 1,
-    //                     size: 2,
-    //                     left_hash,
-    //                     right_hash,
-    //                     version,
-    //                 });
-    //             }
-    //         },
-    //         Node::Inner(root_node) => {
-    //             // Perform normal BST
-    //             if key < root_node.key {
-    //                 Self::recursive_set(
-    //                     root_node.get_mut_left_node(node_db),
-    //                     key.clone(),
-    //                     value,
-    //                     version,
-    //                     node_db,
-    //                 );
-    //                 root_node.update_left_hash();
-    //             } else {
-    //                 Self::recursive_set(
-    //                     root_node.get_mut_right_node(node_db),
-    //                     key.clone(),
-    //                     value,
-    //                     version,
-    //                     node_db,
-    //                 );
-    //                 root_node.update_right_hash();
-    //             }
+    //     // If the tree is unbalanced then try out the usual four cases
+    //     if balance_factor > 1 {
+    //         let left_node = node.get_mut_left_node(node_db);
 
-    //             // Update height + size + version
-    //             let balance_factor = root_node.update_height_and_size_get_balance_factor(node_db);
-    //             root_node.version = version;
+    //         if key < left_node.key {
+    //             // Case 1 - Right
+    //             Self::right_rotate(node, version, node_db)
+    //                 .expect("Given the imbalance, expect rotation to always succeed");
+    //         } else {
+    //             // Case 2 - Left Right
+    //             Self::left_rotate(left_node, version, node_db)
+    //                 .expect("Given the imbalance, expect rotation to always succeed");
+    //             Self::right_rotate(node, version, node_db)
+    //                 .expect("Given the imbalance, expect rotation to always succeed");
+    //         }
+    //     } else if balance_factor < -1 {
+    //         let right_node = node.get_mut_right_node(node_db);
 
-    //             // If the tree is unbalanced then try out the usual four cases
-    //             if balance_factor > 1 {
-    //                 let left_node = root_node.get_mut_left_node(node_db);
-
-    //                 if &key < left_node.get_key() {
-    //                     // Case 1 - Right
-    //                     Self::right_rotate(node, version, node_db)
-    //                         .expect("Given the imbalance, expect rotation to always succeed");
-    //                 } else {
-    //                     // Case 2 - Left Right
-    //                     Self::left_rotate(left_node, version, node_db)
-    //                         .expect("Given the imbalance, expect rotation to always succeed");
-    //                     Self::right_rotate(node, version, node_db)
-    //                         .expect("Given the imbalance, expect rotation to always succeed");
-    //                 }
-    //             } else if balance_factor < -1 {
-    //                 let right_node = root_node.get_mut_right_node(node_db);
-
-    //                 if &key > right_node.get_key() {
-    //                     // Case 3 - Left
-    //                     Self::left_rotate(node, version, node_db)
-    //                         .expect("Given the imbalance, expect rotation to always succeed");
-    //                 } else {
-    //                     // Case 4 - Right Left
-    //                     Self::right_rotate(right_node, version, node_db)
-    //                         .expect("Given the imbalance, expect rotation to always succeed");
-    //                     Self::left_rotate(node, version, node_db)
-    //                         .expect("Given the imbalance, expect rotation to always succeed");
-    //                 }
-    //             }
+    //         if key > right_node.key {
+    //             // Case 3 - Left
+    //             Self::left_rotate(node, version, node_db)
+    //                 .expect("Given the imbalance, expect rotation to always succeed");
+    //         } else {
+    //             // Case 4 - Right Left
+    //             Self::right_rotate(right_node, version, node_db)
+    //                 .expect("Given the imbalance, expect rotation to always succeed");
+    //             Self::left_rotate(node, version, node_db)
+    //                 .expect("Given the imbalance, expect rotation to always succeed");
     //         }
     //     }
     // }
