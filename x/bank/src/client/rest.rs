@@ -8,7 +8,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{ante::AnteHandlerTrait, BaseApp, Genesis, ABCIHandler},
+    baseapp::{ante::AnteHandlerTrait, ABCIHandler, BaseApp, Genesis},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
@@ -17,7 +17,8 @@ use proto_messages::cosmos::{
         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
         QueryBalanceResponse, QueryTotalSupplyResponse,
     },
-    tx::v1beta1::message::Message, ibc_types::protobuf::Protobuf,
+    ibc_types::protobuf::Protobuf,
+    tx::v1beta1::message::Message,
 };
 use serde::Deserialize;
 use store::StoreKey;

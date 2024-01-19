@@ -16,8 +16,8 @@ use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LIS
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
-use super::{ABCIHandler, Genesis};
 use super::ante::AnteHandlerTrait;
+use super::{ABCIHandler, Genesis};
 
 pub fn run_run_command<
     'a,

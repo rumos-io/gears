@@ -5,7 +5,10 @@ use gears::client::query::run_query;
 
 use tendermint::informal::block::Height;
 
-use proto_messages::cosmos::{auth::v1beta1::{QueryAccountRequest, QueryAccountResponse}, ibc_types::{protobuf::Protobuf, auth::RawQueryAccountResponse}};
+use proto_messages::cosmos::{
+    auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
+    ibc_types::{auth::RawQueryAccountResponse, protobuf::Protobuf},
+};
 use proto_types::AccAddress;
 
 #[derive(Args, Debug)]

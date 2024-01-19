@@ -1,6 +1,6 @@
 use axum::{body::Body, Router};
 use gears::{
-    baseapp::{ante::AnteHandlerTrait, Genesis, ABCIHandler},
+    baseapp::{ante::AnteHandlerTrait, ABCIHandler, Genesis},
     client::rest::RestState,
     x::params::ParamsSubspaceKey,
 };
