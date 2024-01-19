@@ -101,13 +101,11 @@ where
     }
 
     fn recursive_tree_save(&mut self, node: &Node, hash: &[u8; 32]) {
-        if let Node::Inner(inner) = node {
-            if let Some(left_node) = &inner.left_node {
-                self.recursive_tree_save(left_node, &inner.left_hash);
-            }
-            if let Some(right_node) = &inner.right_node {
-                self.recursive_tree_save(right_node, &inner.right_hash);
-            }
+        if let Some(left_node) = &node.left_node {
+            self.recursive_tree_save(left_node, &node.left_hash);
+        }
+        if let Some(right_node) = &node.right_node {
+            self.recursive_tree_save(right_node, &node.right_hash);
         }
 
         self.save_node(node, hash)
@@ -119,10 +117,8 @@ where
         let root_hash = root.hash();
         self.recursive_tree_save(root, &root_hash);
 
-        if let Node::Inner(inner) = root {
-            inner.left_node = None;
-            inner.right_node = None;
-        }
+        root.left_node = None;
+        root.right_node = None;
 
         root_hash
     }
