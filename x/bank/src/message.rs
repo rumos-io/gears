@@ -1,6 +1,6 @@
 use bytes::Bytes;
-use ibc_proto::{google::protobuf::Any, protobuf::Protobuf};
 use proto_messages::cosmos::bank::v1beta1::MsgSend;
+use proto_messages::cosmos::ibc_types::protobuf::{Any, Protobuf};
 use proto_types::AccAddress;
 use serde::Serialize;
 

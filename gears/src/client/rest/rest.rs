@@ -1,6 +1,6 @@
 use axum::{body::Body, extract::FromRef, http::Method, routing::get, Router};
 use proto_messages::cosmos::tx::v1beta1::message::Message;
-use tendermint_rpc::Url;
+use tendermint::rpc::Url;
 
 use std::net::SocketAddr;
 use store_crate::StoreKey;

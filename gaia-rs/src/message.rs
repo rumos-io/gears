@@ -1,5 +1,4 @@
 use gears_derive::Message;
-use ibc_proto::google::protobuf::Any;
 use proto_types::AccAddress;
 use serde::Serialize;
 

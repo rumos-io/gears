@@ -47,7 +47,7 @@ impl ApplicationCore for GaiaCore {
         &self,
         command: Self::QuerySubcommand,
         node: &str,
-        height: Option<tendermint_informal::block::Height>,
+        height: Option<tendermint::informal::block::Height>,
     ) -> Result<()> {
         query_command_handler(command, node, height)
     }

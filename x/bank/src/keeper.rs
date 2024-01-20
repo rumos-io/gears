@@ -12,7 +12,7 @@ use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
-use ibc_proto::protobuf::Protobuf;
+use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -22,7 +22,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::{AccAddress, Denom};
 use store::{KVStore, MutablePrefixStore, StoreKey};
-use tendermint_informal::abci::{Event, EventAttributeIndexExt};
+use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{BankParamsKeeper, GenesisState};
 

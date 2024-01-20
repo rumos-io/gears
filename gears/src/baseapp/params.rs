@@ -1,11 +1,11 @@
 use database::Database;
 use serde::{Deserialize, Serialize};
 use store_crate::StoreKey;
-use tendermint_proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
+use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
 
 use crate::types::context::context::Context;
-use tendermint_proto::types::EvidenceParams as RawEvidenceParams;
-use tendermint_proto::types::ValidatorParams as RawValidatorParams;
+use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
+use tendermint::proto::types::ValidatorParams as RawValidatorParams;
 
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
@@ -122,8 +122,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
 #[cfg(test)]
 mod tests {
 
-    use tendermint_proto::google::protobuf::Duration;
-    use tendermint_proto::types::EvidenceParams as RawEvidenceParams;
+    use tendermint::proto::google::protobuf::Duration;
+    use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
 
     use super::*;
 

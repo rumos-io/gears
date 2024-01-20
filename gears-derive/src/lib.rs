@@ -58,7 +58,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
                 quote! {
                     if value.type_url.starts_with(#url) {
-                        Ok(Self::#ident(Any::try_into(value)?))
+                        Ok(Self::#ident(proto_messages::cosmos::ibc_types::protobuf::Any::try_into(value)?))
                     }
                 }
             });
@@ -89,7 +89,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
                 }
 
-                impl From<#name> for Any {
+                impl From<#name> for proto_messages::cosmos::ibc_types::protobuf::Any {
                     fn from(msg: #name) -> Self {
                         match msg {
                             #(#into_any),*
@@ -97,10 +97,10 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     }
                 }
 
-                impl TryFrom<Any> for #name {
+                impl TryFrom<proto_messages::cosmos::ibc_types::protobuf::Any> for #name {
                     type Error = proto_messages::Error;
 
-                    fn try_from(value: Any) -> Result<Self, Self::Error> {
+                    fn try_from(value: proto_messages::cosmos::ibc_types::protobuf::Any) -> Result<Self, Self::Error> {
 
                         #(#from_any) else*
 

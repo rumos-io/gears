@@ -8,7 +8,7 @@ use clap::{arg, Arg, ArgAction, ArgMatches, Command};
 
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
-use tendermint_informal::Genesis;
+use tendermint::informal::Genesis;
 
 use crate::{
     baseapp::Genesis as SDKGenesis,

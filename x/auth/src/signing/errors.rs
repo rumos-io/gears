@@ -1,7 +1,5 @@
 // use super::types::{screen::{ContentError, IndentError}, signer_data::ChainIdError};
 
-use ibc_proto::protobuf;
-
 #[derive(Debug, thiserror::Error)]
 pub enum SigningErrors {
     #[error("{0}")]
@@ -11,5 +9,5 @@ pub enum SigningErrors {
     #[error("{0}")]
     IoError(#[from] std::io::Error),
     #[error("{0}")]
-    ProtoError(#[from] protobuf::Error),
+    ProtoError(#[from] proto_messages::cosmos::ibc_types::protobuf::Error),
 }

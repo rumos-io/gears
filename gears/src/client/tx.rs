@@ -2,17 +2,16 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
-use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse as RawQueryAccountResponse;
-use ibc_proto::{cosmos::tx::v1beta1::TxRaw, protobuf::Protobuf};
 use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
     base::v1beta1::SendCoins,
+    ibc_types::{auth::RawQueryAccountResponse, protobuf::Protobuf, tx::TxRaw},
     tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody},
 };
 use proto_types::AccAddress;
-use tendermint_informal::chain::Id;
-use tendermint_rpc::{Client, HttpClient};
+use tendermint::informal::chain::Id;
+use tendermint::rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
 use crate::client::keys::KeyringBackend;
