@@ -9,7 +9,7 @@ struct Gears {
 }
 
 // TODO: rename to AppMessage or MessageRouter?
-#[proc_macro_derive(Message, attributes(gears))]
+#[proc_macro_derive(RoutingMessage, attributes(gears))]
 pub fn message_derive(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
 

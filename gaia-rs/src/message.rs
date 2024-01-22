@@ -1,8 +1,8 @@
-use gears_derive::Message;
+use gears_derive::RoutingMessage;
 use proto_types::AccAddress;
 use serde::Serialize;
 
-#[derive(Debug, Clone, Message, Serialize)]
+#[derive(Debug, Clone, RoutingMessage, Serialize)]
 #[serde(untagged)]
 pub enum Message {
     #[gears(url = "/cosmos.bank.v1beta1")]
