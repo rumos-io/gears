@@ -22,10 +22,6 @@ pub type ValAddress = BaseAddress<1>;
 pub struct BaseAddress<const PREFIX: u8>(Vec<u8>);
 
 impl<const PREFIX: u8> BaseAddress<PREFIX> {
-    pub fn into_inner(self) -> Vec<u8> {
-        self.0
-    }
-
     pub fn from_bech32(address: &str) -> Result<Self, AddressError> {
         let (hrp, data, variant) = bech32::decode(address)?;
 
