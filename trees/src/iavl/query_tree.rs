@@ -8,10 +8,7 @@ use super::{node_db::NodeDB, Node, Range, Tree};
 
 /// QueryTree is a "checked out" Tree at a given height which
 /// borrows a Tree's NodeDb
-pub struct QueryTree<'a, DB>
-where
-    DB: Database,
-{
+pub struct QueryTree<'a, DB> {
     pub(crate) root: Option<Node>,
     pub(crate) node_db: &'a NodeDB<DB>,
 }
@@ -98,12 +95,12 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
             Some(root) => Range {
                 range,
                 delayed_nodes: vec![root.clone()], //TODO: remove clone
-                node_db: &self.node_db,
+                node_db: self.node_db,
             },
             None => Range {
                 range,
                 delayed_nodes: vec![],
-                node_db: &&self.node_db,
+                node_db: self.node_db,
             },
         }
     }

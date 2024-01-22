@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use tendermint_rpc::Url;
+use tendermint::rpc::Url;
 
 pub const DEFAULT_REST_LISTEN_ADDR: &str = "127.0.0.1:1317";
 pub const DEFAULT_ADDRESS: &str = "127.0.0.1:26658";
@@ -46,7 +46,7 @@ impl<AC: ApplicationConfig> Config<AC> {
         let app_cfg = toml::to_string(&cfg.app_config).unwrap();
 
         file.write_all(config.as_bytes())?;
-        writeln!(file, "")?;
+        writeln!(file)?;
         writeln!(file, "[app_config]")?;
         file.write_all(app_cfg.as_bytes()).map_err(|e| e.into())
     }

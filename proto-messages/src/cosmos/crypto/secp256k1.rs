@@ -8,11 +8,12 @@ pub mod v1beta1 {
     use ibc_proto::protobuf::Protobuf;
     use proto_types::AccAddress;
     use ripemd::Ripemd160;
-    use secp256k1::PublicKey as Secp256k1PubKey;
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
     use sha2::{Digest, Sha256};
 
     use crate::Error;
+
+    pub use secp256k1::PublicKey as Secp256k1PubKey;
 
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct RawPubKey {
@@ -61,6 +62,24 @@ pub mod v1beta1 {
             );
 
             res
+        }
+
+        pub fn formatted_address(&self) -> String {
+            let pub_key = self.key.serialize().to_vec();
+            let hex = data_encoding::HEXUPPER.encode(&pub_key);
+
+            let mut result = String::new();
+            let mut counter = 0;
+            for ch in hex.chars() {
+                if counter == 4 {
+                    result.push(' ');
+                    counter = 0;
+                }
+                result.push(ch);
+                counter += 1;
+            }
+
+            result.to_ascii_uppercase()
         }
     }
 

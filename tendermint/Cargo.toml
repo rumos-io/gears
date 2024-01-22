@@ -3,14 +3,41 @@ name = "tendermint"
 version = "0.1.0"
 edition = "2021"
 
+# It's not clear what version of the Tendermint API each version of tendermint-abci implements
+# this line suggests that v0.28.0 implements Tendermint API v0.34.x 
+# https://github.com/informalsystems/tendermint-rs/blob/560c852840ac58cb03b55fc376ff0dc2ac089d94/abci/src/codec.rs#L5
 [dependencies]
-thiserror = "1.0.13"
-tendermint-config = { git = "https://github.com/joneskm/tendermint-rs" }
-serde_json = "1.0.93"
-handlebars = "4.3.6"
-tendermint_crates = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs" }
-rand = "0.8"
+#local
+
+#newtypes
 ed25519-consensus = { version = "2" }
+
+#utils
+thiserror = { workspace = true }
+rand = "0.8"
+
+#serialization
 serde = { version = "1.0", default-features = false }
+serde_json = "1.0.93"
+
+#other
+handlebars = "5.1.0"
+
+#tendermint git
+tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
+tendermint-proto = {git = "https://github.com/joneskm/tendermint-rs"}
+tendermint-abci = {git = "https://github.com/joneskm/tendermint-rs"}
+tendermint-rpc = {git = "https://github.com/joneskm/tendermint-rs", features = [
+  "http-client",
+]}
+tendermint-config = { git = "https://github.com/joneskm/tendermint-rs" }
+
 
 [dev-dependencies]
+
+[features]
+informal = []
+abci = []
+config = []
+proto = []
+rpc = []

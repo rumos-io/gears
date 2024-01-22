@@ -1,34 +1,25 @@
+use gears::error::AppError;
+use proto_messages::cosmos::base::v1beta1::SendCoins;
+use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(deny_unknown_fields)]
 pub struct GenesisState {
     pub bank: BankGenesis,
     pub auth: AuthGenesis,
 }
 
-impl Default for GenesisState {
-    fn default() -> Self {
-        Self {
-            bank: bank::GenesisState {
-                balances: vec![],
-                params: bank::Params {
-                    default_send_enabled: true,
-                },
-            },
-            auth: auth::GenesisState {
-                accounts: vec![],
-                params: gears::x::auth::Params {
-                    max_memo_characters: 256,
-                    tx_sig_limit: 7,
-                    tx_size_cost_per_byte: 10,
-                    sig_verify_cost_ed25519: 590,
-                    sig_verify_cost_secp256k1: 1000,
-                },
-            },
-        }
+impl gears::baseapp::Genesis for GenesisState {
+    fn add_genesis_account(
+        &mut self,
+        address: AccAddress,
+        coins: SendCoins,
+    ) -> Result<(), AppError> {
+        self.bank.add_genesis_account(address.clone(), coins);
+        self.auth.add_genesis_account(address)
     }
 }

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, str::FromStr};
 
+use bnum::types::U256;
 use bytes::Bytes;
-use cosmwasm_std::Uint256;
 use database::Database;
 
 use gears::types::context::context::Context;
@@ -12,7 +12,7 @@ use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
-use ibc_proto::protobuf::Protobuf;
+use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -22,7 +22,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::{AccAddress, Denom};
 use store::{KVStore, MutablePrefixStore, StoreKey};
-use tendermint_informal::abci::{Event, EventAttributeIndexExt};
+use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{BankParamsKeeper, GenesisState};
 
@@ -77,7 +77,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         // TODO:
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
@@ -87,16 +91,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
 
-        let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
+        let mut total_supply: HashMap<Denom, U256> = HashMap::new();
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
                 denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
-                let zero = Uint256::zero();
+                let zero = U256::ZERO;
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
-                total_supply.insert(coin.denom, coin.amount + current_balance);
+                total_supply.insert(coin.denom, coin.amount.0 + current_balance);
             }
         }
 
@@ -106,7 +110,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 &mut ctx.as_any(),
                 Coin {
                     denom: coin.0,
-                    amount: coin.1,
+                    amount: coin.1.into(),
                 },
             );
         }
@@ -173,8 +177,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .expect("invalid data in database - possible database corruption");
-                let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
-                    .expect("invalid data in database - possible database corruption");
+                let amount = U256::from_str(&String::from_utf8_lossy(&raw_coin.1))
+                    .expect("invalid data in database - possible database corruption")
+                    .into();
                 Coin { denom, amount }
             })
             .collect()
@@ -224,7 +229,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 return Err(AppError::Send("Insufficient funds".into()));
             }
 
-            from_balance.amount = from_balance.amount - send_coin.amount;
+            from_balance.amount.0 -= send_coin.amount.0;
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
@@ -241,11 +246,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     .expect("invalid data in database - possible database corruption"),
                 None => Coin {
                     denom: send_coin.denom.clone(),
-                    amount: Uint256::zero(),
+                    amount: U256::ZERO.into(),
                 },
             };
 
-            to_balance.amount = to_balance.amount + send_coin.amount;
+            to_balance.amount.0 += send_coin.amount.0;
 
             to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
 
@@ -254,14 +259,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 vec![
                     ("recipient", String::from(to_address.clone())).index(),
                     ("sender", String::from(from_address.clone())).index(),
-                    ("amount", send_coin.amount.into()).index(),
+                    ("amount", send_coin.amount.to_string()).index(),
                 ],
             ));
         }
 
         ctx.append_events(events);
 
-        return Ok(());
+        Ok(())
     }
 
     //#######
@@ -296,7 +301,7 @@ fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
     prefix.push(addr_len);
     prefix.append(&mut addr);
 
-    return prefix;
+    prefix
 }
 
 //TODO: copy tests across

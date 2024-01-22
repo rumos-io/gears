@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
-use tendermint_informal::abci::Event;
+use tendermint::informal::abci::Event;
 
-use crate::cosmos::tx::v1beta1::{AnyTx, Message};
+use crate::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message};
 
 /// TxResponse defines a structure containing relevant tx data and metadata. The
 /// tags are stringified and the log is JSON decoded.

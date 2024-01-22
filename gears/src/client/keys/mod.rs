@@ -31,7 +31,7 @@ impl KeyringBackend {
         }
     }
 
-    fn to_keyring_backend<'a>(&self, path: &'a PathBuf) -> keyring::Backend<'a> {
+    pub fn to_keyring_backend<'a>(&self, path: &'a PathBuf) -> keyring::Backend<'a> {
         match self {
             KeyringBackend::File => keyring::Backend::File(&path),
             KeyringBackend::Test => keyring::Backend::Test(&path),
@@ -54,10 +54,7 @@ pub fn get_keys_sub_commands(app_name: &str) -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name)
-                        .unwrap_or_default()
-                        .display()
-                        .to_string()
+                    get_default_home_dir(app_name).unwrap_or_default().display()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),

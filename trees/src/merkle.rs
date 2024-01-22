@@ -39,10 +39,10 @@ fn get_split_point(length: usize) -> usize {
     let bit_len = length.ilog2();
     let mut k = 1usize << bit_len;
     if k == length {
-        k = k >> 1;
+        k >>= 1;
     };
 
-    return k;
+    k
 }
 
 #[cfg(test)]

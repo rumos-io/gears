@@ -1,16 +1,16 @@
-use ibc_proto::{
-    cosmos::tx::v1beta1::{
-        mode_info::{Single, Sum},
-        ModeInfo, SignDoc, TxRaw,
-    },
-    protobuf::Protobuf,
-};
 use keyring::key_pair::KeyPair;
 use prost::Message;
-use proto_messages::cosmos::tx::v1beta1::{
-    AuthInfo, Fee, Message as SDKMessage, SignerInfo, Tip, TxBody,
+use proto_messages::cosmos::{
+    ibc_types::{
+        protobuf::Protobuf,
+        tx::{ModeInfo, SignDoc, Single, Sum, TxRaw},
+    },
+    tx::v1beta1::{
+        auth_info::AuthInfo, fee::Fee, message::Message as SDKMessage, signer::SignerInfo,
+        tip::Tip, tx_body::TxBody,
+    },
 };
-use tendermint_informal::chain::Id;
+use tendermint::informal::chain::Id;
 
 /// Contains info required to sign a Tx
 pub struct SigningInfo {

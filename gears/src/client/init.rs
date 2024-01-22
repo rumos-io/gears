@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
-use tendermint_informal::chain::Id;
+use tendermint::informal::chain::Id;
 
 use crate::{
     config::{ApplicationConfig, Config},
@@ -17,10 +17,7 @@ pub fn get_init_command(app_name: &str) -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name)
-                        .unwrap_or_default()
-                        .display()
-                        .to_string()
+                    get_default_home_dir(app_name).unwrap_or_default().display()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),
@@ -38,7 +35,7 @@ pub fn get_init_command(app_name: &str) -> Command {
 pub fn run_init_command<G: Serialize, AC: ApplicationConfig>(
     sub_matches: &ArgMatches,
     app_name: &str,
-    app_genesis_state: G,
+    app_genesis_state: &G,
 ) {
     let moniker = sub_matches
         .get_one::<String>("moniker")

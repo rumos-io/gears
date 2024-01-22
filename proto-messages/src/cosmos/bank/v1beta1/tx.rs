@@ -2,11 +2,15 @@ use ibc_proto::{
     cosmos::bank::v1beta1::MsgSend as RawMsgSend, cosmos::base::v1beta1::Coin as RawCoin,
     google::protobuf::Any, protobuf::Protobuf,
 };
+use prost::bytes::Bytes;
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cosmos::base::v1beta1::{Coin, SendCoins},
+    cosmos::{
+        base::v1beta1::{Coin, SendCoins},
+        tx::v1beta1::message::Message,
+    },
     error::Error,
 };
 
@@ -28,15 +32,11 @@ impl TryFrom<RawMsgSend> for MsgSend {
         let to_address = AccAddress::from_bech32(&raw.to_address)
             .map_err(|e| Error::DecodeAddress(e.to_string()))?;
 
-        let coins: Result<Vec<Coin>, Error> = raw
-            .amount
-            .into_iter()
-            .map(|coin| Coin::try_from(coin))
-            .collect();
+        let coins: Result<Vec<Coin>, Error> = raw.amount.into_iter().map(Coin::try_from).collect();
 
         Ok(MsgSend {
-            from_address: from_address,
-            to_address: to_address,
+            from_address,
+            to_address,
             amount: SendCoins::new(coins?)?,
         })
     }
@@ -45,7 +45,7 @@ impl TryFrom<RawMsgSend> for MsgSend {
 impl From<MsgSend> for RawMsgSend {
     fn from(msg: MsgSend) -> RawMsgSend {
         let coins: Vec<Coin> = msg.amount.into();
-        let coins = coins.into_iter().map(|coin| RawCoin::from(coin)).collect();
+        let coins = coins.into_iter().map(RawCoin::from).collect();
 
         RawMsgSend {
             from_address: msg.from_address.into(),
@@ -64,5 +64,28 @@ impl From<MsgSend> for Any {
             type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
             value: msg.encode_vec(),
         }
+    }
+}
+
+impl Message for MsgSend {
+    fn get_signers(&self) -> Vec<&AccAddress> {
+        todo!()
+    }
+
+    fn validate_basic(&self) -> Result<(), String> {
+        todo!()
+    }
+
+    fn type_url(&self) -> &'static str {
+        "/cosmos.bank.v1beta1.MsgSend"
+    }
+}
+
+impl TryFrom<Any> for MsgSend {
+    type Error = Error;
+
+    fn try_from(value: Any) -> Result<Self, Self::Error> {
+        MsgSend::decode::<Bytes>(value.value.clone().into())
+            .map_err(|e| Error::DecodeAny(e.to_string()))
     }
 }

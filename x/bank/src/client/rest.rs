@@ -1,6 +1,5 @@
-use ibc_proto::protobuf::Protobuf;
 use proto_types::AccAddress;
-use tendermint_abci::Application;
+use tendermint::abci::Application;
 
 use axum::{
     body::Body,
@@ -9,10 +8,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    baseapp::{
-        ante::{AuthKeeper, BankKeeper},
-        BaseApp, Genesis, Handler,
-    },
+    baseapp::{ante::AnteHandlerTrait, ABCIHandler, BaseApp, Genesis},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
 };
@@ -21,23 +17,23 @@ use proto_messages::cosmos::{
         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
         QueryBalanceResponse, QueryTotalSupplyResponse,
     },
-    tx::v1beta1::Message,
+    ibc_types::protobuf::Protobuf,
+    tx::v1beta1::message::Message,
 };
 use serde::Deserialize;
 use store::StoreKey;
-use tendermint_proto::abci::RequestQuery;
+use tendermint::proto::abci::RequestQuery;
 
 /// Gets the total supply of every denom
 pub async fn supply<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    Ante: AnteHandlerTrait<SK>,
 >(
-    State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
     let request = RequestQuery {
         data: Default::default(),
@@ -59,14 +55,13 @@ pub async fn get_balances<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    Ante: AnteHandlerTrait<SK>,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
-    State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
 ) -> Result<Json<QueryAllBalancesResponse>, Error> {
     let req = QueryAllBalancesRequest {
         address,
@@ -100,23 +95,24 @@ pub async fn get_balances_by_denom<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    Ante: AnteHandlerTrait<SK>,
 >(
     Path(address): Path<AccAddress>,
     denom: Query<RawDenom>,
-    State(app): State<BaseApp<SK, PSK, M, BK, AK, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, Ante>>,
 ) -> Result<Json<QueryBalanceResponse>, Error> {
     let req = QueryBalanceRequest {
         address,
-        denom: String::from(denom.0.denom)
+        denom: denom
+            .0
+            .denom
             .try_into()
             .map_err(|e: proto_types::Error| Error::bad_request(e.to_string()))?,
     };
 
-    let request = RequestQuery {
+    let request: RequestQuery = RequestQuery {
         data: req.encode_vec().into(),
         path: "/cosmos.bank.v1beta1.Query/Balance".into(),
         height: 0,
@@ -135,11 +131,10 @@ pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
->() -> Router<RestState<SK, PSK, M, BK, AK, H, G>, Body> {
+    Ante: AnteHandlerTrait<SK>,
+>() -> Router<RestState<SK, PSK, M, H, G, Ante>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))

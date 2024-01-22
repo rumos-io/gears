@@ -43,7 +43,7 @@ impl Display for AppError {
 
 impl AppError {
     pub fn code(&self) -> u32 {
-        return 1;
+        1
     }
 }
 
@@ -61,8 +61,8 @@ impl From<trees::Error> for AppError {
     }
 }
 
-impl From<ibc_proto::protobuf::Error> for AppError {
-    fn from(err: ibc_proto::protobuf::Error) -> AppError {
+impl From<proto_messages::cosmos::ibc_types::Error> for AppError {
+    fn from(err: proto_messages::cosmos::ibc_types::Error) -> AppError {
         AppError::InvalidRequest(err.to_string())
     }
 }

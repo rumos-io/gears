@@ -2,17 +2,16 @@ use std::path::PathBuf;
 
 use anyhow::{anyhow, Result};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
-use ibc_proto::cosmos::auth::v1beta1::QueryAccountResponse as RawQueryAccountResponse;
-use ibc_proto::{cosmos::tx::v1beta1::TxRaw, protobuf::Protobuf};
 use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
     base::v1beta1::SendCoins,
-    tx::v1beta1::{Fee, Message as SDKMessage, TxBody},
+    ibc_types::{auth::RawQueryAccountResponse, protobuf::Protobuf, tx::TxRaw},
+    tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody},
 };
 use proto_types::AccAddress;
-use tendermint_informal::chain::Id;
-use tendermint_rpc::{Client, HttpClient};
+use tendermint::informal::chain::Id;
+use tendermint::rpc::{Client, HttpClient};
 use tokio::runtime::Runtime;
 
 use crate::client::keys::KeyringBackend;
@@ -38,10 +37,7 @@ pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
             arg!(--home)
                 .help(format!(
                     "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name)
-                        .unwrap_or_default()
-                        .display()
-                        .to_string()
+                    get_default_home_dir(app_name).unwrap_or_default().display()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf))
@@ -71,9 +67,10 @@ pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
         .arg(
             Arg::new("keyring-backend")
                 .long("keyring-backend")
-                .help("Select keyring's backend (file|test) (default \"file\")")
+                .help("Select keyring's backend (default \"file\")")
                 .action(ArgAction::Set)
-                .value_parser(value_parser!(KeyringBackend)),
+                .value_parser(value_parser!(KeyringBackend))
+                .global(true),
         );
     TxSubcommand::augment_subcommands(cli)
 }
@@ -120,7 +117,7 @@ where
 
     let fee_amount = matches.get_one::<SendCoins>("fee").cloned();
 
-    let key = keyring::get_key_by_name(&from, keyring::Backend::File(&keyring_home))?;
+    let key = keyring::get_key_by_name(&from, backend.to_keyring_backend(&keyring_home))?;
     let address = key.get_address();
 
     let args = TxSubcommand::from_arg_matches(matches).unwrap(); // TODO: remove unwrap

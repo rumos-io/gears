@@ -1,15 +1,13 @@
 use std::marker::PhantomData;
 
 use database::Database;
-use ibc_proto::cosmos::tx::v1beta1::SignDoc;
 
 use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
-    tx::v1beta1::{
-        PublicKey, {Message, Tx, TxWithRaw},
-    },
+    ibc_types::tx::SignDoc,
+    tx::v1beta1::{message::Message, public_key::PublicKey, tx::tx::Tx, tx_raw::TxWithRaw},
 };
 use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
@@ -47,16 +45,39 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account);
 }
 
+pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
+    fn run<DB: Database, M: Message>(
+        &self,
+        ctx: &mut Context<'_, '_, DB, SK>,
+        tx: &TxWithRaw<M>,
+    ) -> Result<(), AppError>;
+}
+
 #[derive(Debug, Clone)]
-pub struct AnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> {
+pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> {
     bank_keeper: BK,
     auth_keeper: AK,
     sk: PhantomData<SK>,
 }
 
-impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, SK> {
-    pub fn new(bank_keeper: BK, auth_keeper: AK) -> AnteHandler<BK, AK, SK> {
-        AnteHandler {
+impl<SK, BK, AK> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK>
+where
+    SK: StoreKey,
+    BK: BankKeeper<SK>,
+    AK: AuthKeeper<SK>,
+{
+    fn run<DB: Database, M: Message>(
+        &self,
+        ctx: &mut Context<'_, '_, DB, SK>,
+        tx: &TxWithRaw<M>,
+    ) -> Result<(), AppError> {
+        BaseAnteHandler::run(self, ctx, tx)
+    }
+}
+
+impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, AK, SK> {
+    pub fn new(bank_keeper: BK, auth_keeper: AK) -> BaseAnteHandler<BK, AK, SK> {
+        BaseAnteHandler {
             bank_keeper,
             auth_keeper,
             sk: PhantomData,
@@ -110,7 +131,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
             )));
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn tx_timeout_height_ante_handler<DB: Database, M: Message>(
@@ -238,7 +259,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
             )));
         }
 
-        for (i, signature_data) in signature_data.into_iter().enumerate() {
+        for (i, signature_data) in signature_data.iter().enumerate() {
             let signer = signers[i];
 
             // check sequence number
@@ -280,14 +301,12 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> AnteHandler<BK, AK, S
 
                     Secp256k1::verification_only()
                         .verify_ecdsa(&message, &signature, &public_key) //TODO: lib cannot be used for bitcoin sig verification
-                        .map_err(|_| {
-                            return AppError::TxValidation(format!("invalid signature"));
-                        })?;
+                        .map_err(|_| AppError::TxValidation("invalid signature".to_string()))?;
                 }
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn increment_sequence_ante_handler<DB: Database, M: Message>(

@@ -2,7 +2,7 @@ use bytes::Bytes;
 use database::{Database, RocksDB};
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
-    tx::v1beta1::{Message, TxWithRaw},
+    tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
 };
 use proto_types::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
@@ -11,15 +11,15 @@ use std::{
     sync::{Arc, RwLock},
 };
 use store_crate::{MultiStore, StoreKey};
-use tendermint_abci::Application;
-use tendermint_informal::block::Header;
-use tendermint_proto::abci::{
+use tendermint::abci::Application;
+use tendermint::informal::block::Header;
+use tendermint::proto::abci::{
     RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
     RequestEndBlock, RequestInfo, RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot,
     RequestQuery, ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
     ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
     ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
-    ResponseQuery,
+    ResponseQuery, ValidatorUpdate,
 };
 use tracing::{error, info};
 
@@ -31,56 +31,60 @@ use crate::{
     x::params::{Keeper, ParamsSubspaceKey},
 };
 
-use super::{
-    ante::{AnteHandler, AuthKeeper, BankKeeper},
-    params::BaseAppParamsKeeper,
-};
+use super::{ante::AnteHandlerTrait, params::BaseAppParamsKeeper};
 
-pub trait Handler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
+pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn handle_tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M)
-        -> Result<(), AppError>;
+    fn tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M) -> Result<(), AppError>;
 
-    fn handle_begin_block<DB: Database>(
+    #[allow(unused_variables)]
+    fn begin_block<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         request: RequestBeginBlock,
-    );
+    ) {
+    }
 
-    fn handle_init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
+    #[allow(unused_variables)]
+    fn end_block<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        request: RequestEndBlock,
+    ) -> Vec<ValidatorUpdate> {
+        vec![]
+    }
 
-    fn handle_query<DB: Database>(
+    fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
+
+    fn query<DB: Database>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         query: RequestQuery,
     ) -> Result<Bytes, AppError>;
+}
 
-    fn handle_add_genesis_account(
-        &self,
-        genesis_state: &mut G,
+pub trait Genesis: Default + DeserializeOwned + Serialize + Clone + Send + Sync + 'static {
+    fn add_genesis_account(
+        &mut self,
         address: AccAddress,
         coins: SendCoins,
     ) -> Result<(), AppError>;
 }
-
-pub trait Genesis: DeserializeOwned + Serialize + Clone + Send + Sync + 'static {}
-impl<T: DeserializeOwned + Serialize + Clone + Send + Sync + 'static> Genesis for T {}
 
 #[derive(Debug, Clone)]
 pub struct BaseApp<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    Ante,
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
-    base_ante_handler: AnteHandler<BK, AK, SK>,
-    handler: H,
+    ante_handler: Ante,
+    abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
     app_name: &'static str,
@@ -93,11 +97,10 @@ impl<
         M: Message,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        BK: BankKeeper<SK>,
-        AK: AuthKeeper<SK>,
-        H: Handler<M, SK, G>,
+        H: ABCIHandler<M, SK, G>,
         G: Genesis,
-    > Application for BaseApp<SK, PSK, M, BK, AK, H, G>
+        Ante: AnteHandlerTrait<SK>,
+    > Application for BaseApp<SK, PSK, M, H, G, Ante>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
@@ -126,14 +129,14 @@ impl<
                 std::process::exit(1)
             });
 
-        self.handler.handle_init_genesis(&mut ctx, genesis);
+        self.abci_handler.init_genesis(&mut ctx, genesis);
 
         multi_store.write_then_clear_tx_caches();
 
         ResponseInitChain {
             consensus_params: request.consensus_params,
             validators: request.validators,
-            app_hash: "hash_goes_here".into(),
+            app_hash: "hash_goes_here".into(), //TODO: set app hash
         }
     }
 
@@ -165,7 +168,7 @@ impl<
                 info: "".to_string(),
                 index: 0,
                 key: request.data,
-                value: res.into(),
+                value: res,
                 proof_ops: None,
                 height: self
                     .get_block_height()
@@ -288,7 +291,7 @@ impl<
             vec![],
         );
 
-        self.handler.handle_begin_block(&mut ctx, request);
+        self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
         multi_store.write_then_clear_tx_caches();
@@ -298,9 +301,35 @@ impl<
         }
     }
 
-    fn end_block(&self, _request: RequestEndBlock) -> ResponseEndBlock {
+    fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         info!("Got end block request");
-        Default::default()
+
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block"),
+            vec![],
+        );
+
+        let validator_updates = self.abci_handler.end_block(&mut ctx, request);
+
+        let events = ctx.events;
+        multi_store.write_then_clear_tx_caches();
+
+        ResponseEndBlock {
+            events: events.into_iter().map(|e| e.into()).collect(),
+            validator_updates,
+            consensus_param_updates: None,
+            // TODO: there is only one call to BaseAppParamsKeeper::set_consensus_params,
+            // which is made during init. This means that these params cannot change.
+            // However a get method should be implemented in future.
+        }
     }
 
     /// Signals that messages queued on the client should be flushed to the server.
@@ -341,21 +370,19 @@ impl<
         M: Message,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        BK: BankKeeper<SK>,
-        AK: AuthKeeper<SK>,
-        H: Handler<M, SK, G>,
+        H: ABCIHandler<M, SK, G>,
         G: Genesis,
-    > BaseApp<SK, PSK, M, BK, AK, H, G>
+        Ante: AnteHandlerTrait<SK>,
+    > BaseApp<SK, PSK, M, H, G, Ante>
 {
     pub fn new(
         db: RocksDB,
         app_name: &'static str,
         version: &'static str,
-        bank_keeper: BK,
-        auth_keeper: AK,
         params_keeper: Keeper<SK, PSK>,
         params_subspace_key: PSK,
-        handler: H,
+        abci_handler: H,
+        ante_handler: Ante,
     ) -> Self {
         let multi_store = MultiStore::new(db);
         let baseapp_params_keeper = BaseAppParamsKeeper {
@@ -365,8 +392,8 @@ impl<
         let height = multi_store.get_head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
-            base_ante_handler: AnteHandler::new(bank_keeper, auth_keeper),
-            handler,
+            ante_handler,
+            abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
             height: Arc::new(RwLock::new(height)),
@@ -406,7 +433,7 @@ impl<
     fn increment_block_height(&self) -> u64 {
         let mut height = self.height.write().expect("RwLock will not be poisoned");
         *height += 1;
-        return *height;
+        *height
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
@@ -420,10 +447,10 @@ impl<
             .expect("RwLock will not be poisoned");
         let ctx = QueryContext::new(&multi_store, version)?;
 
-        self.handler.handle_query(&ctx, request.clone())
+        self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint_informal::abci::Event>, AppError> {
+    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint::informal::abci::Event>, AppError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e| AppError::TxParseError(e.to_string()))?;
 
@@ -442,7 +469,7 @@ impl<
             raw.clone().into(),
         );
 
-        match self.base_ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
+        match self.ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
             Ok(_) => multi_store.write_then_clear_tx_caches(),
             Err(e) => {
                 multi_store.clear_tx_caches();
@@ -477,10 +504,10 @@ impl<
         msgs: &Vec<M>,
     ) -> Result<(), AppError> {
         for msg in msgs {
-            self.handler.handle_tx(ctx, msg)?
+            self.abci_handler.tx(ctx, msg)?
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
@@ -495,6 +522,6 @@ impl<
                 .map_err(|e| AppError::TxValidation(e.to_string()))?
         }
 
-        return Ok(());
+        Ok(())
     }
 }

@@ -1,17 +1,17 @@
 use std::str::FromStr;
 
-use cosmwasm_std::Uint256;
+use bnum::types::U256 as BU256;
 use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, protobuf::Protobuf};
 use proto_types::Denom;
 use serde::{Deserialize, Serialize};
 
-use crate::error::Error;
+use crate::{error::Error, u256::U256};
 
 /// Coin defines a token with a denomination and an amount.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Coin {
     pub denom: proto_types::Denom,
-    pub amount: ::cosmwasm_std::Uint256,
+    pub amount: U256,
 }
 
 impl TryFrom<RawCoin> for Coin {
@@ -22,8 +22,9 @@ impl TryFrom<RawCoin> for Coin {
             .denom
             .try_into()
             .map_err(|_| Error::Coin(String::from("coin error")))?;
-        let amount = Uint256::from_str(&value.amount)
-            .map_err(|_| Error::Coin(String::from("coin error")))?;
+        let amount = BU256::from_str(&value.amount)
+            .map_err(|_| Error::Coin(String::from("coin error")))?
+            .into();
 
         Ok(Coin { denom, amount })
     }
@@ -33,7 +34,7 @@ impl From<Coin> for RawCoin {
     fn from(value: Coin) -> RawCoin {
         RawCoin {
             denom: value.denom.to_string(),
-            amount: value.amount.to_string(),
+            amount: value.amount.0.to_string(),
         }
     }
 }
@@ -45,17 +46,15 @@ impl FromStr for Coin {
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         // get the index at which amount ends and denom starts
-        let i = input
-            .find(|c: char| !c.is_numeric())
-            .unwrap_or_else(|| input.len());
+        let i = input.find(|c: char| !c.is_numeric()).unwrap_or(input.len());
 
         let amount = input[..i]
-            .parse::<Uint256>()
-            .map_err(|e| Error::Coin(String::from(format!("coin error: {}", e))))?;
+            .parse::<U256>()
+            .map_err(|e| Error::Coin(format!("coin error: {}", e)))?;
 
         let denom = input[i..]
             .parse::<Denom>()
-            .map_err(|e| Error::Coin(String::from(format!("coin error: {}", e))))?;
+            .map_err(|e| Error::Coin(format!("coin error: {}", e)))?;
 
         Ok(Coin { denom, amount })
     }
@@ -66,7 +65,7 @@ impl FromStr for Coin {
 // - All coin amounts are positive
 // - No duplicate denominations
 // - Sorted lexicographically
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Default)]
 pub struct SendCoins(Vec<Coin>);
 
 impl SendCoins {
@@ -89,14 +88,14 @@ impl SendCoins {
             return Err(Error::Coins(String::from("list of coins is empty")));
         }
 
-        if coins[0].amount.is_zero() {
+        if coins[0].amount.0.is_zero() {
             return Err(Error::Coins(String::from("coin amount must be positive")));
         };
 
         let mut previous_denom = coins[0].denom.to_string();
 
         for coin in &coins[1..] {
-            if coin.amount.is_zero() {
+            if coin.amount.0.is_zero() {
                 return Err(Error::Coins(String::from("coin amount must be positive")));
             };
 
@@ -111,7 +110,11 @@ impl SendCoins {
             previous_denom = coin.denom.to_string();
         }
 
-        return Ok(());
+        Ok(())
+    }
+
+    pub fn into_inner(self) -> Vec<Coin> {
+        self.0
     }
 }
 
@@ -134,7 +137,7 @@ impl FromStr for SendCoins {
     type Err = Error;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let coin_strings = input.split(",");
+        let coin_strings = input.split(',');
         let mut coins = vec![];
 
         for coin in coin_strings {
@@ -148,8 +151,6 @@ impl FromStr for SendCoins {
 
 #[cfg(test)]
 mod tests {
-
-    use cosmwasm_std::Uint256;
     use std::str::FromStr;
 
     use super::*;
@@ -161,7 +162,7 @@ mod tests {
         assert_eq!(
             Coin {
                 denom: String::from("uatom").try_into().unwrap(),
-                amount: "32454".try_into().unwrap()
+                amount: "32454".parse().unwrap()
             },
             coin
         );
@@ -171,7 +172,7 @@ mod tests {
         assert_eq!(
             Coin {
                 denom: String::from("uatom").try_into().unwrap(),
-                amount: "0".try_into().unwrap()
+                amount: "0".parse().unwrap()
             },
             coin
         );
@@ -181,7 +182,7 @@ mod tests {
         assert_eq!(
             Coin {
                 denom: String::from("uatom").try_into().unwrap(),
-                amount: "1".try_into().unwrap()
+                amount: "1".parse().unwrap()
             },
             coin
         );
@@ -191,7 +192,7 @@ mod tests {
         assert_eq!(
             Coin {
                 denom: String::from("uatom56").try_into().unwrap(),
-                amount: "12".try_into().unwrap()
+                amount: "12".parse().unwrap()
             },
             coin
         );
@@ -220,11 +221,11 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("atom").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
             Coin {
                 denom: String::from("atom1").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
         ];
         SendCoins::new(coins).unwrap();
@@ -237,7 +238,7 @@ mod tests {
                 )
                 .try_into()
                 .unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
             Coin {
                 denom: String::from(
@@ -245,7 +246,7 @@ mod tests {
                 )
                 .try_into()
                 .unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
         ];
         SendCoins::new(coins).unwrap();
@@ -254,11 +255,11 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("big").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
             Coin {
                 denom: String::from("bigger").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
         ];
         SendCoins::new(coins).unwrap();
@@ -269,101 +270,104 @@ mod tests {
         // empty
         let coins = vec![];
         let err = SendCoins::new(coins).unwrap_err();
-        assert_eq!(err.to_string(), String::from("list of coins is empty"));
+        assert_eq!(
+            err.to_string(),
+            String::from("invalid coins: `list of coins is empty`")
+        );
 
         // not sorted
         let coins = vec![
             Coin {
                 denom: String::from("tree").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
             Coin {
                 denom: String::from("mineral").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
         ];
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coins are not sorted and/or contain duplicates")
+            String::from("invalid coins: `coins are not sorted and/or contain duplicates`")
         );
 
         // not sorted 2
         let coins = vec![
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
             Coin {
                 denom: String::from("true").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
             Coin {
                 denom: String::from("mineral").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
         ];
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coins are not sorted and/or contain duplicates")
+            String::from("invalid coins: `coins are not sorted and/or contain duplicates`")
         );
 
         // not positive
         let coins = vec![Coin {
             denom: String::from("truer").try_into().unwrap(),
-            amount: Uint256::zero(),
+            amount: BU256::ZERO.into(),
         }];
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coin amount must be positive")
+            String::from("invalid coins: `coin amount must be positive`")
         );
 
         // not all positive
         let coins = vec![
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
             Coin {
                 denom: String::from("true").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
             Coin {
                 denom: String::from("truer").try_into().unwrap(),
-                amount: Uint256::zero(),
+                amount: BU256::ZERO.into(),
             },
         ];
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coin amount must be positive")
+            String::from("invalid coins: `coin amount must be positive`")
         );
 
         // duplicate denomination
         let coins = vec![
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
             Coin {
                 denom: String::from("truer").try_into().unwrap(),
-                amount: Uint256::from_str("3").unwrap(),
+                amount: U256::from_str("3").unwrap(),
             },
             Coin {
                 denom: String::from("truer").try_into().unwrap(),
-                amount: Uint256::one(),
+                amount: BU256::ONE.into(),
             },
         ];
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
             err.to_string(),
-            String::from("coins are not sorted and/or contain duplicates")
+            String::from("invalid coins: `coins are not sorted and/or contain duplicates`")
         );
     }
 

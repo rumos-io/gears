@@ -2,11 +2,11 @@ use axum::body::Body;
 use axum::Router;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command};
 use database::RocksDB;
-use proto_messages::cosmos::tx::v1beta1::Message;
+use proto_messages::cosmos::tx::v1beta1::message::Message;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use store_crate::StoreKey;
-use tendermint_abci::ServerBuilder;
+use tendermint::abci::ServerBuilder;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
@@ -16,32 +16,28 @@ use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LIS
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
-use super::ante::{AuthKeeper, BankKeeper};
-use super::{Genesis, Handler};
+use super::ante::AnteHandlerTrait;
+use super::{ABCIHandler, Genesis};
 
 pub fn run_run_command<
+    'a,
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
-    H: Handler<M, SK, G>,
-    HandlerBuilder,
+    H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AC: ApplicationConfig,
+    Ante: AnteHandlerTrait<SK>,
 >(
     matches: &ArgMatches,
     app_name: &'static str,
     app_version: &'static str,
-    bank_keeper: BK,
-    auth_keeper: AK,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
-    handler_builder: HandlerBuilder,
-    router: Router<RestState<SK, PSK, M, BK, AK, H, G>, Body>,
-) where
-    HandlerBuilder: FnOnce(Config<AC>) -> H,
-{
+    abci_handler_builder: &'a dyn Fn(Config<AC>) -> H,
+    router: Router<RestState<SK, PSK, M, H, G, Ante>, Body>,
+    ante_handler: Ante,
+) {
     let address = matches.get_one::<SocketAddr>("address").cloned();
 
     let read_buf_size = matches
@@ -89,17 +85,16 @@ pub fn run_run_command<
         std::process::exit(1)
     });
 
-    let handler = handler_builder(config.clone());
+    let abci_handler = abci_handler_builder(config.clone());
 
-    let app: BaseApp<SK, PSK, M, BK, AK, H, G> = BaseApp::new(
+    let app: BaseApp<SK, PSK, M, H, G, Ante> = BaseApp::new(
         db,
         app_name,
         app_version,
-        bank_keeper,
-        auth_keeper,
         params_keeper,
         params_subspace_key,
-        handler,
+        abci_handler,
+        ante_handler,
     );
 
     let rest_listen_addr = rest_listen_addr.unwrap_or(config.rest_listen_addr);
@@ -137,7 +132,6 @@ pub fn get_run_command(app_name: &str) -> Command {
                     get_default_home_dir(app_name)
                         .unwrap_or_default()
                         .display()
-                        .to_string()
                 ))
                 .action(ArgAction::Set)
                 .value_parser(value_parser!(PathBuf)),

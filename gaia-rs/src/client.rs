@@ -6,7 +6,7 @@ use bank::cli::{
 };
 use clap::Subcommand;
 use proto_types::AccAddress;
-use tendermint_informal::block::Height;
+use tendermint::informal::block::Height;
 
 use crate::message::Message;
 
@@ -18,9 +18,7 @@ pub enum Commands {
 
 pub fn tx_command_handler(command: Commands, from_address: AccAddress) -> Result<Message> {
     match command {
-        Commands::Bank(args) => {
-            run_bank_tx_command(args, from_address).map(|msg| Message::Bank(msg))
-        }
+        Commands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
     }
 }
 
