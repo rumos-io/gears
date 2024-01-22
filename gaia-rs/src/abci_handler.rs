@@ -86,7 +86,7 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
         }
     }
 
-    fn run_ante_handler<DB: Database>(
+    fn run_ante_checks<DB: Database>(
         &self,
         ctx: &mut gears::types::context::context::Context<'_, '_, DB, GaiaStoreKey>,
         tx: &proto_messages::cosmos::tx::v1beta1::tx_raw::TxWithRaw<Message>,

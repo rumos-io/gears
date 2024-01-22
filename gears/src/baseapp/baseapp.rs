@@ -36,7 +36,7 @@ use super::params::BaseAppParamsKeeper;
 pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn run_ante_handler<DB: Database>(
+    fn run_ante_checks<DB: Database>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -461,7 +461,7 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
 
         match self
             .abci_handler
-            .run_ante_handler(&mut ctx.as_any(), &tx_with_raw)
+            .run_ante_checks(&mut ctx.as_any(), &tx_with_raw)
         {
             Ok(_) => multi_store.write_then_clear_tx_caches(),
             Err(e) => {
