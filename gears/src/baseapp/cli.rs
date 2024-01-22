@@ -16,7 +16,6 @@ use crate::config::{ApplicationConfig, Config, DEFAULT_ADDRESS, DEFAULT_REST_LIS
 use crate::utils::{get_config_file_from_home_dir, get_default_home_dir};
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
-use super::ante::AnteHandlerTrait;
 use super::{ABCIHandler, Genesis};
 
 pub fn run_run_command<
@@ -27,7 +26,6 @@ pub fn run_run_command<
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AC: ApplicationConfig,
-    Ante: AnteHandlerTrait<SK>,
 >(
     matches: &ArgMatches,
     app_name: &'static str,
@@ -35,8 +33,7 @@ pub fn run_run_command<
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     abci_handler_builder: &'a dyn Fn(Config<AC>) -> H,
-    router: Router<RestState<SK, PSK, M, H, G, Ante>, Body>,
-    ante_handler: Ante,
+    router: Router<RestState<SK, PSK, M, H, G>, Body>,
 ) {
     let address = matches.get_one::<SocketAddr>("address").cloned();
 
@@ -87,14 +84,13 @@ pub fn run_run_command<
 
     let abci_handler = abci_handler_builder(config.clone());
 
-    let app: BaseApp<SK, PSK, M, H, G, Ante> = BaseApp::new(
+    let app: BaseApp<SK, PSK, M, H, G> = BaseApp::new(
         db,
         app_name,
         app_version,
         params_keeper,
         params_subspace_key,
         abci_handler,
-        ante_handler,
     );
 
     let rest_listen_addr = rest_listen_addr.unwrap_or(config.rest_listen_addr);

@@ -3,6 +3,7 @@ members = [
   "proto-types",
   "proto-messages",
   "gears",
+  "gears-derive",
   "trees",
   "database",
   "tendermint",
@@ -12,7 +13,7 @@ members = [
   "x/auth",
   "keyring",
 ]
-resolver="2"
+resolver = "2"
 
 [workspace.dependencies]
 thiserror = "1.0.13"

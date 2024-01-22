@@ -1,4 +1,6 @@
-use gears::{config::Config, x::params::Keeper as ParamsKeeper};
+use auth::Keeper as AuthKeeper;
+use bank::Keeper as BankKeeper;
+use gears::{baseapp::ante::BaseAnteHandler, config::Config, x::params::Keeper as ParamsKeeper};
 use tendermint::proto::abci::RequestQuery;
 
 use database::Database;
@@ -18,6 +20,11 @@ use crate::{
 pub struct ABCIHandler {
     bank_abci_handler: bank::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
+    ante_handler: BaseAnteHandler<
+        BankKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
+        AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
+        GaiaStoreKey,
+    >,
 }
 
 impl ABCIHandler {
@@ -38,8 +45,9 @@ impl ABCIHandler {
         );
 
         ABCIHandler {
-            bank_abci_handler: bank::ABCIHandler::new(bank_keeper),
-            auth_abci_handler: auth::ABCIHandler::new(auth_keeper),
+            bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
+            auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
+            ante_handler: BaseAnteHandler::new(bank_keeper, auth_keeper),
         }
     }
 }
@@ -76,5 +84,13 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
         } else {
             Err(AppError::InvalidRequest("query path not found".into()))
         }
+    }
+
+    fn run_ante_checks<DB: Database>(
+        &self,
+        ctx: &mut gears::types::context::context::Context<'_, '_, DB, GaiaStoreKey>,
+        tx: &proto_messages::cosmos::tx::v1beta1::tx_raw::TxWithRaw<Message>,
+    ) -> Result<(), AppError> {
+        self.ante_handler.run(ctx, tx)
     }
 }

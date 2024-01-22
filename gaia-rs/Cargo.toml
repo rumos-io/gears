@@ -6,28 +6,29 @@ version = "0.1.0"
 [dependencies]
 
 #local
-tendermint = {path = "../tendermint"}
 auth = {path = "../x/auth"}
 bank = {path = "../x/bank"}
 database = {path = "../database"}
 gears = {path = "../gears"}
+gears-derive = {path = "../gears-derive"}
 proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
 store = {path = "../store"}
+tendermint = {path = "../tendermint"}
 
 #newtypes
-bytes = { workspace = true }
+bytes = {workspace = true}
 
 #utils 
-anyhow = { workspace = true }
+anyhow = {workspace = true}
 clap = {version = "4.2.2", features = ["derive"]}
-strum = { version = "0.25", features = ["derive"] }
+strum = {version = "0.25", features = ["derive"]}
 
 #serialization
 serde = {version = "1.0", default-features = false}
 
 #other
+axum = {workspace = true}
 cosmwasm-std = "1.1.5"
-axum = { workspace = true }
 
 [dev-dependencies]

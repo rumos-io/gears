@@ -23,19 +23,25 @@ use tendermint::proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::types::context::init_context::InitContext;
 use crate::types::context::query_context::QueryContext;
 use crate::types::context::tx_context::TxContext;
+use crate::types::context::{context::Context, init_context::InitContext};
 use crate::{
     error::AppError,
     x::params::{Keeper, ParamsSubspaceKey},
 };
 
-use super::{ante::AnteHandlerTrait, params::BaseAppParamsKeeper};
+use super::params::BaseAppParamsKeeper;
 
 pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
+    fn run_ante_checks<DB: Database>(
+        &self,
+        ctx: &mut Context<'_, '_, DB, SK>,
+        tx: &TxWithRaw<M>,
+    ) -> Result<(), AppError>;
+
     fn tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M) -> Result<(), AppError>;
 
     #[allow(unused_variables)]
@@ -79,11 +85,9 @@ pub struct BaseApp<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    Ante,
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
-    ante_handler: Ante,
     abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -93,14 +97,8 @@ pub struct BaseApp<
     pub g: PhantomData<G>,
 }
 
-impl<
-        M: Message,
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G>,
-        G: Genesis,
-        Ante: AnteHandlerTrait<SK>,
-    > Application for BaseApp<SK, PSK, M, H, G, Ante>
+impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>, G: Genesis>
+    Application for BaseApp<SK, PSK, M, H, G>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
@@ -366,14 +364,8 @@ impl<
     }
 }
 
-impl<
-        M: Message,
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G>,
-        G: Genesis,
-        Ante: AnteHandlerTrait<SK>,
-    > BaseApp<SK, PSK, M, H, G, Ante>
+impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>, G: Genesis>
+    BaseApp<SK, PSK, M, H, G>
 {
     pub fn new(
         db: RocksDB,
@@ -382,7 +374,6 @@ impl<
         params_keeper: Keeper<SK, PSK>,
         params_subspace_key: PSK,
         abci_handler: H,
-        ante_handler: Ante,
     ) -> Self {
         let multi_store = MultiStore::new(db);
         let baseapp_params_keeper = BaseAppParamsKeeper {
@@ -392,7 +383,6 @@ impl<
         let height = multi_store.get_head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
-            ante_handler,
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
@@ -469,7 +459,10 @@ impl<
             raw.clone().into(),
         );
 
-        match self.ante_handler.run(&mut ctx.as_any(), &tx_with_raw) {
+        match self
+            .abci_handler
+            .run_ante_checks(&mut ctx.as_any(), &tx_with_raw)
+        {
             Ok(_) => multi_store.write_then_clear_tx_caches(),
             Err(e) => {
                 multi_store.clear_tx_caches();

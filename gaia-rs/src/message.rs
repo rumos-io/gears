@@ -1,53 +1,10 @@
-use proto_messages::cosmos::{
-    ibc_types::protobuf::Any, tx::v1beta1::message::Message as SDKMessage,
-};
+use gears_derive::RoutingMessage;
 use proto_types::AccAddress;
 use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, RoutingMessage, Serialize)]
 #[serde(untagged)]
 pub enum Message {
+    #[gears(url = "/cosmos.bank.v1beta1")]
     Bank(bank::Message),
-}
-
-impl From<Message> for Any {
-    fn from(msg: Message) -> Self {
-        match msg {
-            Message::Bank(msg) => msg.into(),
-        }
-    }
-}
-
-impl TryFrom<Any> for Message {
-    type Error = proto_messages::Error;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        if value.type_url.starts_with("/cosmos.bank") {
-            Ok(Message::Bank(Any::try_into(value)?))
-        } else {
-            Err(proto_messages::Error::DecodeGeneral(
-                "message type not recognized".into(),
-            ))
-        }
-    }
-}
-
-impl SDKMessage for Message {
-    fn get_signers(&self) -> Vec<&AccAddress> {
-        match self {
-            Message::Bank(msg) => msg.get_signers(),
-        }
-    }
-
-    fn validate_basic(&self) -> std::result::Result<(), String> {
-        match self {
-            Message::Bank(msg) => msg.validate_basic(),
-        }
-    }
-
-    fn type_url(&self) -> &'static str {
-        match self {
-            Message::Bank(bank) => bank.type_url(),
-        }
-    }
 }
