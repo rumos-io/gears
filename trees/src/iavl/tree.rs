@@ -1,6 +1,7 @@
 use std::{
-    cmp,
+    cmp::{self, Ordering},
     collections::BTreeSet,
+    marker::PhantomData,
     mem,
     ops::{Bound, RangeBounds},
 };
@@ -8,11 +9,11 @@ use std::{
 use database::Database;
 use enum_dispatch::enum_dispatch;
 use integer_encoding::VarInt;
-use sha2::{Digest, Sha256};
+// use sha2::{Digest, Sha256};
 
 use crate::{error::Error, merkle::EMPTY_HASH};
 
-use super::node_db::NodeDB;
+// use super::node_db::NodeDB;
 
 #[enum_dispatch(NodeValue)]
 pub trait NodeValueTrait {
@@ -43,12 +44,6 @@ impl Default for NodeValue {
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct DbValue;
 
-impl Drop for DbValue {
-    fn drop(&mut self) {
-        // Probably this where we should delete value from db
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Default)]
 pub(crate) struct Node {
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
@@ -63,147 +58,260 @@ pub(crate) struct Node {
 }
 
 impl Node {
-    pub fn hash(&self) -> [u8; 32] {
-        let serialized = self.hash_serialize();
-        Sha256::digest(serialized).into()
+    /// Compute height of left node
+    pub fn left_height(&self) -> u8 {
+        self.left_node.as_ref().map_or(0, |left| left.height)
     }
 
-    fn hash_serialize(&self) -> Vec<u8> {
-        // NOTE: i64 is used here for parameters for compatibility wih cosmos
-        let height: i64 = self.height.into();
-        let size: i64 = self.size.into();
-        let version: i64 = self.version.into();
-
-        let mut serialized = height.encode_var_vec();
-        serialized.extend(size.encode_var_vec());
-        serialized.extend(version.encode_var_vec());
-        serialized.extend(encode_bytes(&self.left_hash));
-        serialized.extend(encode_bytes(&self.right_hash));
-
-        serialized
+    /// Compute height of right node
+    pub fn right_height(&self) -> u8 {
+        self.right_node.as_ref().map_or(0, |right| right.height)
     }
 
-    pub(crate) fn serialize(&self) -> Vec<u8> {
-        let mut serialized = self.height.encode_var_vec();
-        serialized.extend(self.size.encode_var_vec());
-        serialized.extend(self.version.encode_var_vec());
-        serialized.extend(encode_bytes(&self.key));
-        serialized.extend(encode_bytes(&self.left_hash));
-        serialized.extend(encode_bytes(&self.right_hash));
-
-        serialized
+    /// Update height of node taking max value from left or right
+    pub fn update_height(&mut self) {
+        self.height = 1 + cmp::max(self.left_height(), self.right_height());
     }
 
-    pub(crate) fn deserialize(bytes: Vec<u8>) -> Result<Self, Error> {
-        let (height, mut n) = u8::decode_var(&bytes).ok_or(Error::NodeDeserialize)?;
-        let (size, ns) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
-        n += ns;
-        let (version, nv) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
-        n += nv;
-        let (key, nk) = decode_bytes(&bytes[n..])?;
-        n += nk;
+    pub fn balance_factor(&self) -> i8 {
+        let left_height = self.left_height();
+        let right_height = self.right_height();
 
-        let (left_hash, nl) = decode_bytes(&bytes[n..])?;
-        n += nl;
-        let (right_hash, _) = decode_bytes(&bytes[n..])?;
-        Ok(Node {
-            left_node: None,
-            right_node: None,
-            key,
-            height,
-            size,
-            left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-            right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-            version,
-            value: Default::default(), // TODO: Probably what earlier was right_hash now should be this
-        })
-    }
-
-    fn get_mut_left_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
-        self.left_node.get_or_insert_with(|| {
-            let node = node_db
-                .get_node(&self.left_hash)
-                .expect("node should be in db");
-            Box::new(node)
-        })
-    }
-
-    fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
-        self.right_node.get_or_insert_with(|| {
-            let node = node_db
-                .get_node(&self.right_hash)
-                .expect("node should be in db");
-
-            Box::new(node)
-        })
-    }
-
-    fn update_left_hash(&mut self) {
-        if let Some(left_node) = &self.left_node {
-            self.left_hash = left_node.hash();
+        if left_height >= right_height {
+            (left_height - right_height) as i8
+        } else {
+            -((right_height - left_height) as i8)
         }
     }
 
-    fn update_right_hash(&mut self) {
-        if let Some(node) = &self.right_node {
-            self.right_hash = node.hash();
-        }
-    }
+    pub fn rotate_left(&mut self) -> bool {
+        if let Some(right_node) = &mut self.right_node {
+            let right_left_tree = right_node.left_node.take();
+            let right_right_tree = right_node.right_node.take();
 
-    /// This does three things at once to prevent repeating the same process for getting the left and right nodes
-    fn update_height_and_size_get_balance_factor<T: Database>(
-        &mut self,
-        node_db: &NodeDB<T>,
-    ) -> i16 {
-        let (left_height, left_size) = match &self.left_node {
-            Some(left_node) => (left_node.height, left_node.size),
-            None => {
-                let left_node = node_db
-                    .get_node(&self.left_hash)
-                    .expect("node db should contain all nodes");
+            let mut new_left_tree = mem::replace(&mut self.right_node, right_right_tree);
+            mem::swap(&mut self.value, &mut new_left_tree.as_mut().unwrap().value);
+            let left_tree = self.left_node.take();
 
-                (left_node.height, left_node.size)
+            let new_left_node = new_left_tree.as_mut().unwrap();
+            new_left_node.right_node = right_left_tree;
+            new_left_node.left_node = left_tree;
+            self.left_node = new_left_tree;
+
+            if let Some(node) = self.left_node.as_mut() {
+                node.update_height();
             }
-        };
 
-        let (right_height, right_size) = match &self.right_node {
-            Some(right_node) => (right_node.height, right_node.size),
-            None => {
-                let right_node = node_db
-                    .get_node(&self.right_hash)
-                    .expect("node db should contain all nodes");
+            self.update_height();
 
-                (right_node.height, right_node.size)
-            }
-        };
-
-        self.height = 1 + cmp::max(left_height, right_height);
-        self.size = left_size + right_size;
-
-        left_height as i16 - right_height as i16
-    }
-
-    // TODO: What is 'shallow' here?
-    pub(crate) fn shallow_clone(&self) -> Self {
-        Self {
-            left_node: None,
-            right_node: None,
-            key: self.key.clone(),
-            height: self.height,
-            size: self.size,
-            left_hash: self.left_hash,
-            right_hash: self.right_hash,
-            version: self.version,
-            value: self.value.clone(),
+            true
+        } else {
+            false
         }
     }
+
+    pub fn rotate_right(&mut self) -> bool {
+        if let Some(left_node) = &mut self.left_node {
+            let left_right_tree = left_node.right_node.take();
+            let left_left_tree = left_node.left_node.take();
+
+            let mut new_right_tree = mem::replace(&mut self.left_node, left_left_tree);
+            mem::swap(&mut self.value, &mut new_right_tree.as_mut().unwrap().value);
+            let right_tree = self.right_node.take();
+
+            let new_right_node = new_right_tree.as_mut().unwrap();
+            new_right_node.left_node = left_right_tree;
+            new_right_node.right_node = right_tree;
+            self.right_node = new_right_tree;
+
+            if let Some(node) = self.right_node.as_mut() {
+                node.update_height();
+            }
+
+            self.update_height();
+
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn rebalance(&mut self) -> bool {
+        match self.balance_factor() {
+            -2 => {
+                if let Some(right_node) = &mut self.right_node {
+                    if right_node.balance_factor() == 1 {
+                        right_node.rotate_right();
+                    }
+
+                    self.rotate_left();
+
+                    true
+                } else {
+                    unreachable!("Right node should exist if height == -2")
+                }
+            }
+
+            2 => {
+                if let Some(left_node) = &mut self.left_node {
+                    if left_node.balance_factor() == -1 {
+                        left_node.rotate_left();
+                    }
+
+                    self.rotate_right();
+
+                    true
+                } else {
+                    unreachable!("Left node should exist if height == 2")
+                }
+            }
+            _ => false,
+        }
+    }
+
+    // TODO: Should be moved to NodeValueDb
+    // pub fn hash(&self) -> [u8; 32] {
+    //     let serialized = self.hash_serialize();
+    //     Sha256::digest(serialized).into()
+    // }
+
+    // fn hash_serialize(&self) -> Vec<u8> {
+    //     // NOTE: i64 is used here for parameters for compatibility wih cosmos
+    //     let height: i64 = self.height.into();
+    //     let size: i64 = self.size.into();
+    //     let version: i64 = self.version.into();
+
+    //     let mut serialized = height.encode_var_vec();
+    //     serialized.extend(size.encode_var_vec());
+    //     serialized.extend(version.encode_var_vec());
+    //     serialized.extend(encode_bytes(&self.left_hash));
+    //     serialized.extend(encode_bytes(&self.right_hash));
+
+    //     serialized
+    // }
+
+    // pub(crate) fn serialize(&self) -> Vec<u8> {
+    //     let mut serialized = self.height.encode_var_vec();
+    //     serialized.extend(self.size.encode_var_vec());
+    //     serialized.extend(self.version.encode_var_vec());
+    //     serialized.extend(encode_bytes(&self.key));
+    //     serialized.extend(encode_bytes(&self.left_hash));
+    //     serialized.extend(encode_bytes(&self.right_hash));
+
+    //     serialized
+    // }
+
+    // pub(crate) fn deserialize(bytes: Vec<u8>) -> Result<Self, Error> {
+    //     let (height, mut n) = u8::decode_var(&bytes).ok_or(Error::NodeDeserialize)?;
+    //     let (size, ns) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
+    //     n += ns;
+    //     let (version, nv) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
+    //     n += nv;
+    //     let (key, nk) = decode_bytes(&bytes[n..])?;
+    //     n += nk;
+
+    //     let (left_hash, nl) = decode_bytes(&bytes[n..])?;
+    //     n += nl;
+    //     let (right_hash, _) = decode_bytes(&bytes[n..])?;
+    //     Ok(Node {
+    //         left_node: None,
+    //         right_node: None,
+    //         key,
+    //         height,
+    //         size,
+    //         left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
+    //         right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
+    //         version,
+    //         value: Default::default(), // TODO: Probably what earlier was right_hash now should be this
+    //     })
+    // }
+
+    // fn get_mut_left_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
+    //     self.left_node.get_or_insert_with(|| {
+    //         let node = node_db
+    //             .get_node(&self.left_hash)
+    //             .expect("node should be in db");
+    //         Box::new(node)
+    //     })
+    // }
+
+    // fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
+    //     self.right_node.get_or_insert_with(|| {
+    //         let node = node_db
+    //             .get_node(&self.right_hash)
+    //             .expect("node should be in db");
+
+    //         Box::new(node)
+    //     })
+    // }
+
+    // fn update_left_hash(&mut self) {
+    //     if let Some(left_node) = &self.left_node {
+    //         self.left_hash = left_node.hash();
+    //     }
+    // }
+
+    // fn update_right_hash(&mut self) {
+    //     if let Some(node) = &self.right_node {
+    //         self.right_hash = node.hash();
+    //     }
+    // }
+
+    // /// This does three things at once to prevent repeating the same process for getting the left and right nodes
+    // fn update_height_and_size_get_balance_factor<T: Database>(
+    //     &mut self,
+    //     node_db: &NodeDB<T>,
+    // ) -> i16 {
+    //     let (left_height, left_size) = match &self.left_node {
+    //         Some(left_node) => (left_node.height, left_node.size),
+    //         None => {
+    //             let left_node = node_db
+    //                 .get_node(&self.left_hash)
+    //                 .expect("node db should contain all nodes");
+
+    //             (left_node.height, left_node.size)
+    //         }
+    //     };
+
+    //     let (right_height, right_size) = match &self.right_node {
+    //         Some(right_node) => (right_node.height, right_node.size),
+    //         None => {
+    //             let right_node = node_db
+    //                 .get_node(&self.right_hash)
+    //                 .expect("node db should contain all nodes");
+
+    //             (right_node.height, right_node.size)
+    //         }
+    //     };
+
+    //     self.height = 1 + cmp::max(left_height, right_height);
+    //     self.size = left_size + right_size;
+
+    //     left_height as i16 - right_height as i16
+    // }
+
+    // // TODO: What is 'shallow' here?
+    // pub(crate) fn shallow_clone(&self) -> Self {
+    //     Self {
+    //         left_node: None,
+    //         right_node: None,
+    //         key: self.key.clone(),
+    //         height: self.height,
+    //         size: self.size,
+    //         left_hash: self.left_hash,
+    //         right_hash: self.right_hash,
+    //         version: self.version,
+    //         value: self.value.clone(),
+    //     }
+    // }
 }
 
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
-    root: Option<Node>,
-    pub(crate) node_db: NodeDB<T>,
+    root: Option<Box<Node>>,
+    // pub(crate) node_db: NodeDB<T>,
+    node_db: PhantomData<T>,
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
 }
@@ -212,98 +320,126 @@ impl<T> Tree<T>
 where
     T: Database,
 {
-    /// Panics if cache_size=0
-    pub fn new(db: T, target_version: Option<u32>, cache_size: usize) -> Result<Tree<T>, Error> {
-        assert!(cache_size > 0);
-        let node_db = NodeDB::new(db, cache_size);
-        let versions = node_db.get_versions();
+    // /// Return new `Self`
+    // ///
+    // /// # Panics
+    // ///
+    // /// Panics if `cache_size=0`.
+    // ///
+    // /// # Errors
+    // ///
+    // /// This function will return an error if TODO.
+    // pub fn new(db: T, target_version: Option<u32>, cache_size: usize) -> Result<Tree<T>, Error> {
+    //     assert!(cache_size > 0);
+    //     let node_db = NodeDB::new(db, cache_size);
+    //     let versions = node_db.get_versions();
 
-        if let Some(target_version) = target_version {
-            let root = node_db.get_root_node(target_version)?;
+    //     if let Some(target_version) = target_version {
+    //         let root = node_db.get_root_node(target_version)?;
 
-            Ok(Tree {
-                root,
-                loaded_version: target_version,
-                node_db,
-                versions,
-            })
-        } else {
-            // use the latest version available
-            if let Some(latest_version) = versions.last() {
-                Ok(Tree {
-                    root: node_db
-                        .get_root_node(*latest_version)
-                        .expect("invalid data in database - possible database corruption"),
-                    loaded_version: *latest_version,
-                    node_db,
-                    versions,
-                })
-            } else {
-                Ok(Tree {
-                    root: None,
-                    loaded_version: 0,
-                    node_db,
-                    versions,
-                })
-            }
-        }
-    }
+    //         Ok(Tree {
+    //             root,
+    //             loaded_version: target_version,
+    //             node_db,
+    //             versions,
+    //         })
+    //     } else {
+    //         // use the latest version available
+    //         if let Some(latest_version) = versions.last() {
+    //             Ok(Tree {
+    //                 root: node_db
+    //                     .get_root_node(*latest_version)
+    //                     .expect("invalid data in database - possible database corruption"),
+    //                 loaded_version: *latest_version,
+    //                 node_db,
+    //                 versions,
+    //             })
+    //         } else {
+    //             Ok(Tree {
+    //                 root: None,
+    //                 loaded_version: 0,
+    //                 node_db,
+    //                 versions,
+    //             })
+    //         }
+    //     }
+    // }
 
-    /// Save the current tree to disk.
-    /// Returns an error if saving would overwrite an existing version
-    pub fn save_version(&mut self) -> Result<([u8; 32], u32), Error> {
-        let version = self.loaded_version + 1;
+    // /// Save the current tree to disk.
+    // /// Returns an error if saving would overwrite an existing version
+    // pub fn save_version(&mut self) -> Result<([u8; 32], u32), Error> {
+    //     let version = self.loaded_version + 1;
 
-        if self.versions.contains(&version) {
-            // If the version already exists, return an error as we're attempting to overwrite.
-            // However, the same hash means idempotent (i.e. no-op).
-            // TODO: do we really need to be doing this?
-            let saved_hash = self
-                .node_db
-                .get_root_hash(version)
-                .expect("invalid data in database - possible database corruption");
-            let working_hash = self.root_hash();
+    //     if self.versions.contains(&version) {
+    //         // If the version already exists, return an error as we're attempting to overwrite.
+    //         // However, the same hash means idempotent (i.e. no-op).
+    //         // TODO: do we really need to be doing this?
+    //         let saved_hash = self
+    //             .node_db
+    //             .get_root_hash(version)
+    //             .expect("invalid data in database - possible database corruption");
+    //         let working_hash = self.root_hash();
 
-            if saved_hash == working_hash {
-                self.loaded_version = version;
+    //         if saved_hash == working_hash {
+    //             self.loaded_version = version;
 
-                // clear the root node's left and right nodes if they exist
-                if let Some(node) = &mut self.root {
-                    {
-                        node.left_node = None;
-                        node.right_node = None;
-                    }
-                }
-                return Ok((saved_hash, self.loaded_version));
-            }
-            return Err(Error::Overwrite);
-        }
+    //             // clear the root node's left and right nodes if they exist
+    //             if let Some(node) = &mut self.root {
+    //                 {
+    //                     node.left_node = None;
+    //                     node.right_node = None;
+    //                 }
+    //             }
+    //             return Ok((saved_hash, self.loaded_version));
+    //         }
+    //         return Err(Error::Overwrite);
+    //     }
 
-        let root = self.root.as_mut();
-        let root_hash = if let Some(root) = root {
-            let root_hash = self.node_db.save_tree(root);
-            self.node_db.save_version(version, &root_hash);
-            root_hash
-        } else {
-            self.node_db.save_version(version, &EMPTY_HASH);
-            EMPTY_HASH
-        };
+    //     let root = self.root.as_mut();
+    //     let root_hash = if let Some(root) = root {
+    //         let root_hash = self.node_db.save_tree(root);
+    //         self.node_db.save_version(version, &root_hash);
+    //         root_hash
+    //     } else {
+    //         self.node_db.save_version(version, &EMPTY_HASH);
+    //         EMPTY_HASH
+    //     };
 
-        self.versions.insert(version);
+    //     self.versions.insert(version);
 
-        self.loaded_version = version;
-        Ok((root_hash, self.loaded_version))
-    }
+    //     self.loaded_version = version;
+    //     Ok((root_hash, self.loaded_version))
+    // }
 
-    pub fn root_hash(&self) -> [u8; 32] {
-        match &self.root {
-            Some(root) => root.hash(),
-            None => EMPTY_HASH,
-        }
-    }
+    // pub fn root_hash(&self) -> [u8; 32] {
+    //     match &self.root {
+    //         Some(root) => root.hash(),
+    //         None => EMPTY_HASH,
+    //     }
+    // }
 
     pub fn loaded_version(&self) -> u32 {
         self.loaded_version
+    }
+
+    pub fn get(&self, key: impl AsRef<[u8]>) -> Option<&NodeValue> {
+        let mut current_tree = &self.root;
+
+        while let Some(current_node) = current_tree {
+            match current_node.key[..].cmp(key.as_ref()) {
+                Ordering::Less => {
+                    current_tree = &current_node.right_node;
+                }
+                Ordering::Equal => {
+                    return Some(&current_node.value);
+                }
+                Ordering::Greater => {
+                    current_tree = &current_node.left_node;
+                }
+            };
+        }
+
+        None
     }
 
     // pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
@@ -433,137 +569,137 @@ where
     //     }
     // }
 
-    fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
-        let mut z = mem::take(node);
-        let mut y = mem::take(node.get_mut_left_node(node_db));
+    // fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
+    //     let mut z = mem::take(node);
+    //     let mut y = mem::take(node.get_mut_left_node(node_db));
 
-        let t3 = y.right_node;
+    //     let t3 = y.right_node;
 
-        // Perform rotation on z and update height and hash
-        z.left_node = t3;
-        z.left_hash = y.right_hash;
-        z.update_height_and_size_get_balance_factor(node_db);
-        z.version = version;
+    //     // Perform rotation on z and update height and hash
+    //     z.left_node = t3;
+    //     z.left_hash = y.right_hash;
+    //     z.update_height_and_size_get_balance_factor(node_db);
+    //     z.version = version;
 
-        // Perform rotation on y, update hash and update height
-        y.right_hash = z.hash();
-        y.right_node = Some(Box::new(z));
-        y.update_height_and_size_get_balance_factor(node_db);
-        y.version = version;
+    //     // Perform rotation on y, update hash and update height
+    //     y.right_hash = z.hash();
+    //     y.right_node = Some(Box::new(z));
+    //     y.update_height_and_size_get_balance_factor(node_db);
+    //     y.version = version;
 
-        *node = y;
+    //     *node = y;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    fn left_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
-        let mut z = mem::take(node);
-        let mut y = mem::take(z.get_mut_right_node(node_db));
+    // fn left_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
+    //     let mut z = mem::take(node);
+    //     let mut y = mem::take(z.get_mut_right_node(node_db));
 
-        let t2 = y.left_node;
+    //     let t2 = y.left_node;
 
-        // Perform rotation on z and update height and hash
-        z.right_node = t2;
-        z.right_hash = y.left_hash;
-        z.update_height_and_size_get_balance_factor(node_db);
-        z.version = version;
+    //     // Perform rotation on z and update height and hash
+    //     z.right_node = t2;
+    //     z.right_hash = y.left_hash;
+    //     z.update_height_and_size_get_balance_factor(node_db);
+    //     z.version = version;
 
-        // Perform rotation on y, update hash and update height
-        y.left_hash = z.hash();
-        y.left_node = Some(Box::new(z));
-        y.update_height_and_size_get_balance_factor(node_db);
-        y.version = version;
+    //     // Perform rotation on y, update hash and update height
+    //     y.left_hash = z.hash();
+    //     y.left_node = Some(Box::new(z));
+    //     y.update_height_and_size_get_balance_factor(node_db);
+    //     y.version = version;
 
-        *node = y;
+    //     *node = y;
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, T>
-    where
-        R: RangeBounds<Vec<u8>>,
-    {
-        match &self.root {
-            Some(root) => Range {
-                range,
-                delayed_nodes: vec![root.clone()], //TODO: remove clone
-                node_db: &self.node_db,
-            },
-            None => Range {
-                range,
-                delayed_nodes: vec![],
-                node_db: &self.node_db,
-            },
-        }
-    }
+    // pub fn range<R>(&self, range: R) -> Range<'_, R, T>
+    // where
+    //     R: RangeBounds<Vec<u8>>,
+    // {
+    //     match &self.root {
+    //         Some(root) => Range {
+    //             range,
+    //             delayed_nodes: vec![root.clone()], //TODO: remove clone
+    //             node_db: &self.node_db,
+    //         },
+    //         None => Range {
+    //             range,
+    //             delayed_nodes: vec![],
+    //             node_db: &self.node_db,
+    //         },
+    //     }
+    // }
 }
 
-pub struct Range<'a, R: RangeBounds<Vec<u8>>, T>
-where
-    T: Database,
-{
-    pub(crate) range: R,
-    pub(crate) delayed_nodes: Vec<Node>,
-    pub(crate) node_db: &'a NodeDB<T>,
-}
+// pub struct Range<'a, R: RangeBounds<Vec<u8>>, T>
+// where
+//     T: Database,
+// {
+//     pub(crate) range: R,
+//     pub(crate) delayed_nodes: Vec<Node>,
+//     pub(crate) node_db: &'a NodeDB<T>,
+// }
 
-impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
-    fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
-        let node = self.delayed_nodes.pop()?;
+// impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
+//     fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
+//         let node = self.delayed_nodes.pop()?;
 
-        let after_start = match self.range.start_bound() {
-            Bound::Included(l) => node.key > *l,
-            Bound::Excluded(l) => node.key > *l,
-            Bound::Unbounded => true,
-        };
+//         let after_start = match self.range.start_bound() {
+//             Bound::Included(l) => node.key > *l,
+//             Bound::Excluded(l) => node.key > *l,
+//             Bound::Unbounded => true,
+//         };
 
-        let before_end = match self.range.end_bound() {
-            Bound::Included(u) => node.key <= *u,
-            Bound::Excluded(u) => node.key < *u,
-            Bound::Unbounded => true,
-        };
+//         let before_end = match self.range.end_bound() {
+//             Bound::Included(u) => node.key <= *u,
+//             Bound::Excluded(u) => node.key < *u,
+//             Bound::Unbounded => true,
+//         };
 
-        // Traverse through the left subtree, then the right subtree.
-        if before_end {
-            match node.right_node {
-                Some(right_node) => self.delayed_nodes.push(*right_node), //TODO: deref will cause a clone, remove
-                None => {
-                    let right_node = self
-                        .node_db
-                        .get_node(&node.right_hash)
-                        .expect("node db should contain all nodes");
+//         // Traverse through the left subtree, then the right subtree.
+//         if before_end {
+//             match node.right_node {
+//                 Some(right_node) => self.delayed_nodes.push(*right_node), //TODO: deref will cause a clone, remove
+//                 None => {
+//                     let right_node = self
+//                         .node_db
+//                         .get_node(&node.right_hash)
+//                         .expect("node db should contain all nodes");
 
-                    self.delayed_nodes.push(right_node);
-                }
-            }
-        }
+//                     self.delayed_nodes.push(right_node);
+//                 }
+//             }
+//         }
 
-        if after_start {
-            match node.left_node {
-                Some(left_node) => self.delayed_nodes.push(*left_node), //TODO: deref will cause a clone, remove
-                None => {
-                    let left_node = self
-                        .node_db
-                        .get_node(&node.left_hash)
-                        .expect("node db should contain all nodes");
+//         if after_start {
+//             match node.left_node {
+//                 Some(left_node) => self.delayed_nodes.push(*left_node), //TODO: deref will cause a clone, remove
+//                 None => {
+//                     let left_node = self
+//                         .node_db
+//                         .get_node(&node.left_hash)
+//                         .expect("node db should contain all nodes");
 
-                    //self.cached_nodes.push(left_node);
-                    self.delayed_nodes.push(left_node);
-                }
-            }
-        }
+//                     //self.cached_nodes.push(left_node);
+//                     self.delayed_nodes.push(left_node);
+//                 }
+//             }
+//         }
 
-        self.traverse()
-    }
-}
+//         self.traverse()
+//     }
+// }
 
-impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Iterator for Range<'a, T, R> {
-    type Item = (Vec<u8>, Vec<u8>);
+// impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Iterator for Range<'a, T, R> {
+//     type Item = (Vec<u8>, Vec<u8>);
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.traverse()
-    }
-}
+//     fn next(&mut self) -> Option<Self::Item> {
+//         self.traverse()
+//     }
+// }
 
 fn encode_bytes(bz: &[u8]) -> Vec<u8> {
     let mut enc_bytes = bz.len().encode_var_vec();
