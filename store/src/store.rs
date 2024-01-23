@@ -7,7 +7,7 @@ use std::{
 use database::{Database, PrefixDB};
 use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
-use trees::iavl::{Range, Tree};
+use trees::iavl::{AvlTree, Range};
 
 use crate::{error::Error, QueryKVStore};
 
@@ -115,7 +115,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
 
 #[derive(Debug)]
 pub struct KVStore<DB> {
-    pub(crate) persistent_store: Tree<DB>,
+    pub(crate) persistent_store: AvlTree<DB>,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
@@ -123,7 +123,7 @@ pub struct KVStore<DB> {
 impl<DB: Database> KVStore<DB> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
         Ok(KVStore {
-            persistent_store: Tree::new(db, target_version, TREE_CACHE_SIZE)?,
+            persistent_store: AvlTree::new(db, target_version, TREE_CACHE_SIZE)?,
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         })

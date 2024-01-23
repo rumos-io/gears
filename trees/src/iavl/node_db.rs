@@ -1,21 +1,40 @@
-// use std::{collections::BTreeSet, sync::Mutex};
+use std::{collections::BTreeSet, sync::Mutex};
 
-// use caches::{Cache, DefaultHashBuilder, LRUCache};
-// use database::Database;
-// use integer_encoding::VarInt;
+use caches::{Cache, DefaultHashBuilder, LRUCache};
+use database::Database;
+use integer_encoding::VarInt;
 
-// use crate::{merkle::EMPTY_HASH, Error};
+use crate::{merkle::EMPTY_HASH, Error};
+
+use super::{NodeTrait, HASH_LENGHT};
 
 // use super::Node;
 
-// #[derive(Debug)]
-// pub struct NodeDB<T> {
-//     db: T,
-//     cache: Mutex<LRUCache<[u8; 32], Node, DefaultHashBuilder>>,
-// }
+#[derive(Debug)]
+pub struct NodeDB<T, U> {
+    db: T,
+    cache: Mutex<LRUCache<[u8; HASH_LENGHT], U, DefaultHashBuilder>>,
+}
 
-// const ROOTS_PREFIX: [u8; 1] = [1];
-// const NODES_PREFIX: [u8; 1] = [2];
+impl<T, U: NodeTrait> NodeDB<T, U>
+where
+    T: Database,
+{
+    fn save_node(&mut self, node: &U, hash: &[u8; 32]) {
+        self.db.put(Self::get_node_key(hash), node.bytes());
+        self.cache
+            .lock()
+            .expect("Lock will not be poisoned")
+            .put(*hash, node.shallow_clone());
+    }
+
+    fn get_node_key(hash: &[u8; 32]) -> Vec<u8> {
+        [NODES_PREFIX.to_vec(), hash.to_vec()].concat()
+    }
+}
+
+const ROOTS_PREFIX: [u8; 1] = [1];
+const NODES_PREFIX: [u8; 1] = [2];
 
 // // TODO: batch writes
 // // TODO: fast nodes
