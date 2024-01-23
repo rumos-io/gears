@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::RangeBounds};
 
 use database::{Database, PrefixDB};
-use trees::iavl::{QueryTree, Range};
+use trees::iavl::{query::QueryTree, range::Range};
 
 use crate::{error::Error, ImmutablePrefixStore, KVStore, MultiStore, StoreKey};
 
@@ -47,7 +47,7 @@ impl<'a, DB: Database> QueryKVStore<'a, DB> {
         })
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<R>(&self, range: R) -> Range<R>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {

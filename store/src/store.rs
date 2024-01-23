@@ -7,7 +7,7 @@ use std::{
 use database::{Database, PrefixDB};
 use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
-use trees::iavl::{AvlTree, Range};
+use trees::iavl::{persistent::Tree, range::Range};
 
 use crate::{error::Error, QueryKVStore};
 
@@ -115,7 +115,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
 
 #[derive(Debug)]
 pub struct KVStore<DB> {
-    pub(crate) persistent_store: AvlTree<DB>,
+    pub(crate) persistent_store: Tree<DB>,
     block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
@@ -123,7 +123,7 @@ pub struct KVStore<DB> {
 impl<DB: Database> KVStore<DB> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
         Ok(KVStore {
-            persistent_store: AvlTree::new(db, target_version, TREE_CACHE_SIZE)?,
+            persistent_store: Tree::new(db, target_version, TREE_CACHE_SIZE)?,
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         })
@@ -136,7 +136,7 @@ impl<DB: Database> KVStore<DB> {
             let block_cache_val = self.block_cache.get(key);
 
             if block_cache_val.is_none() {
-                return self.persistent_store.get(key);
+                return self.persistent_store.get(key).cloned();
             };
 
             return block_cache_val.cloned();
@@ -168,7 +168,7 @@ impl<DB: Database> KVStore<DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<R>(&self, range: R) -> Range<R>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {
@@ -182,7 +182,7 @@ impl<DB: Database> KVStore<DB> {
         //     MergedRange::merge(block_cached_values, persisted_values),
         // );
 
-        self.persistent_store.range(range)
+        self.persistent_store.inner_tree.range(range)
     }
 
     /// Writes tx cache into block cache then clears the tx cache
@@ -215,7 +215,7 @@ impl<DB: Database> KVStore<DB> {
                 .block_cache
                 .get(key)
                 .expect("key is definitely in the HashMap");
-            self.persistent_store.set(key.to_owned(), value.to_owned())
+            self.persistent_store.set(key, value.to_owned());
         }
         self.block_cache.clear();
     }
@@ -228,7 +228,7 @@ impl<DB: Database> KVStore<DB> {
     }
 
     pub fn head_commit_hash(&self) -> [u8; 32] {
-        self.persistent_store.root_hash()
+        self.persistent_store.inner_tree.root_hash()
     }
 
     pub fn last_committed_version(&self) -> u32 {
@@ -261,7 +261,7 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<R>(&self, range: R) -> Range<R>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {
@@ -284,7 +284,7 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
         self.store.get(&full_key)
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange<'a, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
@@ -304,12 +304,12 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
     }
 }
 
-pub struct PrefixRange<'a, DB: Database> {
-    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
+pub struct PrefixRange {
+    parent_range: Range<(Bound<Vec<u8>>, Bound<Vec<u8>>)>,
     prefix_length: usize,
 }
 
-impl<'a, DB: Database> Iterator for PrefixRange<'a, DB> {
+impl Iterator for PrefixRange {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
