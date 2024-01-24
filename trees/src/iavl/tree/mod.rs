@@ -5,7 +5,7 @@ pub mod query;
 use crate::merkle::EMPTY_HASH;
 use std::{
     cmp::Ordering,
-    mem::{self, replace},
+    mem::{self},
 };
 
 use self::{node::Node, range::Range};
@@ -106,121 +106,74 @@ impl AvlTree {
         }
     }
 
-    pub fn take(&mut self, hash: &[u8; HASH_LENGHT]) -> Option<Vec<u8>> {
-        let mut prev_ptrs = Vec::<*mut Node>::new();
-        let mut current_tree = &mut self.root;
-        let mut target_value = None;
+    pub fn take(&mut self, value: &impl AsRef<[u8]>) -> Option<Node> {
+        // Deref value and get copy on stack 
+        return tree_take(&mut self.root, value).map( | this | *this );
 
-        while let Some(current_node) = current_tree {
-            match current_node.hash.cmp(hash) {
-                Ordering::Less => {
-                    prev_ptrs.push(&mut **current_node);
-                    current_tree = &mut current_node.right_node;
-                }
-                Ordering::Equal => {
-                    target_value = Some(&mut **current_node);
-                    break;
-                }
-                Ordering::Greater => {
-                    prev_ptrs.push(&mut **current_node);
-                    current_tree = &mut current_node.left_node;
-                }
-            };
-        }
-
-        if target_value.is_none() {
-            return None;
-        }
-
-        let target_node = target_value.unwrap();
-
-        let taken_value = if target_node.left_node.is_none() || target_node.right_node.is_none() {
-            if let Some(left_node) = target_node.left_node.take() {
-                mem::replace(target_node, *left_node).value
-            } else if let Some(right_node) = target_node.right_node.take() {
-                mem::replace(target_node, *right_node).value
-            } else if let Some(prev_ptr) = prev_ptrs.pop() {
-                let prev_node = unsafe { &mut *prev_ptr };
-
-                let inner_value = if let Some(left_node) = prev_node.left_node.as_ref() {
-                    if left_node.value == target_node.value {
-                        prev_node.left_node.take().unwrap().value
-                    } else {
-                        prev_node.right_node.take().unwrap().value
+        fn tree_take(tree: &mut Option<Box<Node>>, value: &impl AsRef<[u8]>) -> Option<Box<Node>> {
+            match tree {
+                None => return None,
+                Some(node) => {
+                    if let Some(result) =
+                        match node.value.as_slice().cmp(value.as_ref()) {
+                            Ordering::Less => Some(tree_take(&mut node.right_node, value)),
+                            Ordering::Equal => None,
+                            Ordering::Greater => Some(tree_take(&mut node.left_node, value)),
+                        }
+                    {
+                        node.update_height();
+                        node.rebalance();
+                        return result
                     }
-                } else {
-                    prev_node.right_node.take().unwrap().value
-                };
-
-                prev_node.update_height();
-                prev_node.update_size();
-                prev_node.rebalance();
-
-                inner_value
-            } else {
-                self.root.take().unwrap().value
+                },
             }
-        } else {
-            let right_tree = &mut target_node.right_node;
+            // If control flow fell through to here, it's because we hit the Equal case above. The
+            // borrow of `tree` is now out of scope, but we know it's Some node whose value is
+            // equal to `value`. We can `take()` it out of the tree to get ownership of it, and
+            // then we can manipulate the node and insert parts of it back into the tree as needed.
 
-            if right_tree.as_ref().unwrap().left_node.is_none() {
-                let mut right_node = right_tree.take().unwrap();
-
-                let inner_value = mem::replace(&mut target_node.value, right_node.value);
-                let _ = mem::replace(&mut target_node.right_node, right_node.right_node.take());
-
-                target_node.update_height();
-                target_node.update_size();
-                target_node.rebalance();
-
-                inner_value
-            } else {
-                let mut next_tree = right_tree;
-                let mut inner_ptrs = Vec::<*mut Node>::new();
-
-                while let Some(next_left_node) = next_tree {
-                    if next_left_node.left_node.is_some() {
-                        inner_ptrs.push(&mut **next_left_node);
+            let mut node = tree.take().expect( "We know that is some");
+            match node.left_node.take() {
+                None => {
+                    *tree = node.right_node.take();
+                },
+                Some(left) => {
+                    match node.right_node.take() {
+                        None => {
+                            *tree = Some(left);
+                        },
+                        Some(right) => {
+                            // This is the general case: the node to be removed has both a left and
+                            // a right child.
+                            let mut replacement = leftmost_to_top(right);
+                            replacement.left_node = Some(left);
+                            replacement.update_height();
+                            replacement.update_size();
+                            replacement.rebalance();
+                            *tree = Some(replacement);
+                        }
                     }
-                    next_tree = &mut next_left_node.left_node;
                 }
+            }
+            Some(node)
+        }
 
-                let parent_left_node = unsafe { &mut *inner_ptrs.pop().unwrap() };
-                let mut leftmost_node = parent_left_node.left_node.take().unwrap();
-
-                let inner_value = mem::replace(&mut target_node.value, leftmost_node.value);
-                let _ = replace(
-                    &mut parent_left_node.left_node,
-                    leftmost_node.right_node.take(),
-                );
-
-                parent_left_node.update_height();
-                parent_left_node.update_size();
-                parent_left_node.rebalance();
-
-                for node_ptr in inner_ptrs.into_iter().rev() {
-                    let node = unsafe { &mut *node_ptr };
+        /// Returns a rotated version of `node` whose top has no left child and whose top has a
+        /// balanced right subtree.
+        fn leftmost_to_top(mut node: Box<Node>) -> Box<Node> {
+            match node.left_node {
+                None => node,
+                Some(node_l) => {
+                    let mut next_top = leftmost_to_top(node_l);
+                    // By induction, next_top has no left child
+                    node.left_node = next_top.right_node;
                     node.update_height();
-                    node.update_size();
                     node.rebalance();
+                    next_top.right_node = Some(node);
+                    next_top
                 }
-
-                target_node.update_height();
-                target_node.update_size();
-                target_node.rebalance();
-
-                inner_value
             }
-        };
-
-        for node_ptr in prev_ptrs.into_iter().rev() {
-            let node = unsafe { &mut *node_ptr };
-            node.update_height();
-            node.update_size();
-            node.rebalance();
         }
-
-        Some(taken_value)
     }
 
     pub fn range<R>(&self, range: R) -> Range<R>
