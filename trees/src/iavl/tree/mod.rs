@@ -79,31 +79,31 @@ impl AvlTree {
     }
 
     pub fn insert(&mut self, node: Node) -> bool {
-        let mut prev_ptrs = Vec::<*mut Node>::new();
-        let mut current_tree = &mut self.root;
+        let node = Box::new(node);
+        return tree_insert(&mut self.root, node);
 
-        while let Some(current_node) = current_tree {
-            prev_ptrs.push(&mut **current_node);
-
-            match current_node.hash.cmp(&node.hash) {
-                Ordering::Less => current_tree = &mut current_node.right_node,
-                Ordering::Equal => {
-                    return false;
-                }
-                Ordering::Greater => current_tree = &mut current_node.left_node,
+        fn tree_insert(tree: &mut Option<Box< Node >>, node: Box<Node>) -> bool {
+            match tree {
+                None => {
+                    *tree = Some(node);
+                    true
+                },
+                Some(tree_node) => {
+                    let inserted =
+                        match node.value.cmp(&node.value) {
+                            Ordering::Equal => false,
+                            Ordering::Less => tree_insert(&mut tree_node.right_node, node),
+                            Ordering::Greater => tree_insert(&mut tree_node.left_node, node),
+                        };
+                    if inserted {
+                        tree_node.update_height();
+                        tree_node.update_size();
+                        tree_node.rebalance();
+                    }
+                    inserted
+                },
             }
         }
-
-        *current_tree = Some(Box::new(node));
-
-        for node_ptr in prev_ptrs.into_iter().rev() {
-            let node = unsafe { &mut *node_ptr };
-            node.update_height();
-            node.update_size();
-            node.rebalance();
-        }
-
-        true
     }
 
     pub fn take(&mut self, hash: &[u8; HASH_LENGHT]) -> Option<Vec<u8>> {
