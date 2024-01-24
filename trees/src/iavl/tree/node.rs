@@ -28,6 +28,10 @@ impl Node {
         self.left_node.as_ref().map_or(0, |left| left.height)
     }
 
+    pub fn left_size(&self) -> u32{
+        self.left_node.as_ref().map_or(0, |left| left.size)
+    }
+
     /// Return hash of right node
     pub fn right_hash(&self) -> [u8; HASH_LENGHT] //TODO: Is it better Option or empty?
     {
@@ -41,9 +45,18 @@ impl Node {
         self.right_node.as_ref().map_or(0, |right| right.height)
     }
 
+    pub fn right_size(&self) -> u32{
+        self.right_node.as_ref().map_or(0, |right| right.size)
+    }
+
     /// Update height of node taking max value from left or right
     pub fn update_height(&mut self) {
         self.height = 1 + cmp::max(self.left_height(), self.right_height());
+    }
+
+    pub fn update_size(&mut self)
+    {
+        self.size = self.left_size() + self.right_size()
     }
 
     pub fn balance_factor(&self) -> i8 {

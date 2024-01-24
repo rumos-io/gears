@@ -99,6 +99,7 @@ impl AvlTree {
         for node_ptr in prev_ptrs.into_iter().rev() {
             let node = unsafe { &mut *node_ptr };
             node.update_height();
+            node.update_size();
             node.rebalance();
         }
 
@@ -152,6 +153,7 @@ impl AvlTree {
                 };
 
                 prev_node.update_height();
+                prev_node.update_size();
                 prev_node.rebalance();
 
                 inner_value
@@ -168,6 +170,7 @@ impl AvlTree {
                 let _ = mem::replace(&mut target_node.right_node, right_node.right_node.take());
 
                 target_node.update_height();
+                target_node.update_size();
                 target_node.rebalance();
 
                 inner_value
@@ -192,15 +195,18 @@ impl AvlTree {
                 );
 
                 parent_left_node.update_height();
+                parent_left_node.update_size();
                 parent_left_node.rebalance();
 
                 for node_ptr in inner_ptrs.into_iter().rev() {
                     let node = unsafe { &mut *node_ptr };
                     node.update_height();
+                    node.update_size();
                     node.rebalance();
                 }
 
                 target_node.update_height();
+                target_node.update_size();
                 target_node.rebalance();
 
                 inner_value
@@ -210,6 +216,7 @@ impl AvlTree {
         for node_ptr in prev_ptrs.into_iter().rev() {
             let node = unsafe { &mut *node_ptr };
             node.update_height();
+            node.update_size();
             node.rebalance();
         }
 
