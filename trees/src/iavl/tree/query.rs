@@ -2,7 +2,10 @@ use std::ops::RangeBounds;
 
 use database::Database;
 
-use crate::{iavl::{accessor::Accessor, persistent::Tree}, Error};
+use crate::{
+    iavl::{accessor::Accessor, persistent::Tree},
+    Error,
+};
 
 use super::{node::Node, range::Range};
 

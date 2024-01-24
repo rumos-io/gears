@@ -6,6 +6,8 @@ use crate::{merkle::EMPTY_HASH, Error};
 
 use super::{accessor::Accessor, node::Node, range::Range, AvlTree};
 
+// TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?).
+// this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
     pub inner_tree: AvlTree,
@@ -135,9 +137,8 @@ impl<T: Database> Tree<T> {
         }
     }
 
-    pub fn set(&mut self, key: &impl AsRef<[u8]>, value: Vec<u8>) -> Option<Vec<u8>>
-    {
-        self.inner_tree.set( key, value)
+    pub fn set(&mut self, key: &impl AsRef<[u8]>, value: Vec<u8>) -> Option<Vec<u8>> {
+        self.inner_tree.set(key, value)
     }
 
     pub fn range<R>(&self, range: R) -> Range<R>

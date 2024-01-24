@@ -1,6 +1,6 @@
 pub mod node;
-pub mod range;
 pub mod query;
+pub mod range;
 
 use crate::merkle::EMPTY_HASH;
 use std::{
@@ -12,7 +12,6 @@ use self::{node::Node, range::Range};
 
 use super::HASH_LENGHT;
 
-// TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug, Default)]
 pub struct AvlTree {
     pub(crate) root: Option<Box<Node>>,
@@ -82,67 +81,64 @@ impl AvlTree {
         let node = Box::new(node);
         return tree_insert(&mut self.root, node);
 
-        fn tree_insert(tree: &mut Option<Box< Node >>, node: Box<Node>) -> bool {
+        fn tree_insert(tree: &mut Option<Box<Node>>, node: Box<Node>) -> bool {
             match tree {
                 None => {
                     *tree = Some(node);
                     true
-                },
+                }
                 Some(tree_node) => {
-                    let inserted =
-                        match node.value.cmp(&node.value) {
-                            Ordering::Equal => false,
-                            Ordering::Less => tree_insert(&mut tree_node.right_node, node),
-                            Ordering::Greater => tree_insert(&mut tree_node.left_node, node),
-                        };
+                    let inserted = match node.key[..].cmp(&node.key) {
+                        Ordering::Equal => false,
+                        Ordering::Less => tree_insert(&mut tree_node.right_node, node),
+                        Ordering::Greater => tree_insert(&mut tree_node.left_node, node),
+                    };
                     if inserted {
                         tree_node.update_height();
                         tree_node.update_size();
                         tree_node.rebalance();
                     }
                     inserted
-                },
+                }
             }
         }
     }
 
-    pub fn take(&mut self, value: &impl AsRef<[u8]>) -> Option<Node> {
-        // Deref value and get copy on stack 
-        return tree_take(&mut self.root, value).map( | this | *this );
+    pub fn take(&mut self, key: &impl AsRef<[u8]>) -> Option<Node> {
+        // Deref value and get copy on stack
+        return tree_take(&mut self.root, key).map(|this| *this);
 
-        fn tree_take(tree: &mut Option<Box<Node>>, value: &impl AsRef<[u8]>) -> Option<Box<Node>> {
+        fn tree_take(tree: &mut Option<Box<Node>>, key: &impl AsRef<[u8]>) -> Option<Box<Node>> {
             match tree {
                 None => return None,
                 Some(node) => {
-                    if let Some(result) =
-                        match node.value.as_slice().cmp(value.as_ref()) {
-                            Ordering::Less => Some(tree_take(&mut node.right_node, value)),
-                            Ordering::Equal => None,
-                            Ordering::Greater => Some(tree_take(&mut node.left_node, value)),
-                        }
-                    {
+                    if let Some(result) = match node.key[..].cmp(key.as_ref()) {
+                        Ordering::Less => Some(tree_take(&mut node.right_node, key)),
+                        Ordering::Equal => None,
+                        Ordering::Greater => Some(tree_take(&mut node.left_node, key)),
+                    } {
                         node.update_height();
                         node.update_size();
                         node.rebalance();
-                        return result
+                        return result;
                     }
-                },
+                }
             }
             // If control flow fell through to here, it's because we hit the Equal case above. The
             // borrow of `tree` is now out of scope, but we know it's Some node whose value is
             // equal to `value`. We can `take()` it out of the tree to get ownership of it, and
             // then we can manipulate the node and insert parts of it back into the tree as needed.
 
-            let mut node = tree.take().expect( "We know that is some");
+            let mut node = tree.take().expect("We know that is some");
             match node.left_node.take() {
                 None => {
                     *tree = node.right_node.take();
-                },
+                }
                 Some(left) => {
                     match node.right_node.take() {
                         None => {
                             *tree = Some(left);
-                        },
+                        }
                         Some(right) => {
                             // This is the general case: the node to be removed has both a left and
                             // a right child.
@@ -194,7 +190,27 @@ impl AvlTree {
         }
     }
 
-    pub fn contains(&self, hash: &[u8; HASH_LENGHT]) -> bool {
+    pub fn contains(&self, key: &impl AsRef<[u8]>) -> bool {
+        let mut current_tree = &self.root;
+
+        while let Some(current_node) = current_tree {
+            match current_node.key[..].cmp(key.as_ref()) {
+                Ordering::Less => {
+                    current_tree = &current_node.right_node;
+                }
+                Ordering::Equal => {
+                    return true;
+                }
+                Ordering::Greater => {
+                    current_tree = &current_node.left_node;
+                }
+            };
+        }
+
+        false
+    }
+
+    pub fn contains_hash(&self, hash: &[u8; HASH_LENGHT]) -> bool {
         let mut current_tree = &self.root;
 
         while let Some(current_node) = current_tree {
