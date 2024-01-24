@@ -122,6 +122,7 @@ impl AvlTree {
                         }
                     {
                         node.update_height();
+                        node.update_size();
                         node.rebalance();
                         return result
                     }
@@ -168,6 +169,7 @@ impl AvlTree {
                     // By induction, next_top has no left child
                     node.left_node = next_top.right_node;
                     node.update_height();
+                    node.update_size();
                     node.rebalance();
                     next_top.right_node = Some(node);
                     next_top
