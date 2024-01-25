@@ -9,8 +9,15 @@ pub struct Node {
     height: u8,
     size: u32, // number of nodes in this subtree. If it exceeds 2 than tree should be rotated
     version: u32,
+    leaf: u32, // 0 - means there is no other nodes
     pub(crate) key: Vec<u8>,
-    pub(crate) value: Vec<u8>, //TODO: It needs to be made Option to say that value located in DB. Or I will get better idea
+    /*
+        TODO:
+        It needs to be made Option to say that value located in DB. Or I will get better idea
+        Main issue is that `value` should be loaded on requirement( for example hash or serialization into bytes)
+        and proper error handling
+    */
+    pub(crate) value: Vec<u8>,
     pub(crate) hash: [u8; HASH_LENGHT],
     pub(crate) left_node: Option<Box<Node>>,
     pub(crate) right_node: Option<Box<Node>>,
@@ -162,7 +169,7 @@ pub(crate) trait NodeTrait {
     /// Clone `Self` without reference to other nodes
     fn shallow_clone(&self) -> Self;
 
-    /// TODO
+    /// Return hash of node
     fn hash(&self) -> &[u8; HASH_LENGHT];
 
     type Output;
@@ -196,6 +203,7 @@ impl NodeTrait for Node {
             hash: self.hash,
             version: self.version,
             value: self.value.clone(),
+            leaf: self.leaf,
         }
     }
 
@@ -211,7 +219,9 @@ impl NodeTrait for Node {
         n += nk;
         let (value, nl) = decode_bytes(&bytes[n..])?;
         n += nl;
-        let (ser_hash, _) = decode_bytes(&bytes[n..])?;
+        let (ser_hash, len) = decode_bytes(&bytes[n..])?;
+        n += len;
+        let (leaf, _len) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
 
         let mut hash: [u8; HASH_LENGHT] = Default::default();
         if hash.len() != ser_hash.len() {
@@ -228,16 +238,30 @@ impl NodeTrait for Node {
             version,
             value,
             hash,
+            leaf,
         })
     }
 
     fn serialize(&self) -> Vec<u8> {
-        let mut serialized = self.height.encode_var_vec();
-        serialized.extend(self.size.encode_var_vec());
-        serialized.extend(self.version.encode_var_vec());
-        serialized.extend(encode_bytes(&self.key));
-        serialized.extend(encode_bytes(&self.value));
-        serialized.extend(encode_bytes(&self.hash));
+        let Self {
+            height,
+            size,
+            version,
+            key,
+            value,
+            hash,
+            left_node: _,
+            right_node: _,
+            leaf,
+        } = self;
+
+        let mut serialized = height.encode_var_vec();
+        serialized.extend(size.encode_var_vec());
+        serialized.extend(version.encode_var_vec());
+        serialized.extend(encode_bytes(key));
+        serialized.extend(encode_bytes(value));
+        serialized.extend(encode_bytes(hash));
+        serialized.extend(leaf.encode_var_vec());
 
         serialized
     }
