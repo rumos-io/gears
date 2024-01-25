@@ -1,6 +1,6 @@
 use database::RocksDB;
 use gears::types::context::context::Context;
-use proto_messages::cosmos::{ibc_types::tx::ModeInfo, tx::v1beta1::screen::Screen};
+use proto_messages::cosmos::tx::v1beta1::{mode_info::ModeInfo, screen::Screen};
 use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;

@@ -97,7 +97,7 @@ mod tests {
                             "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                         }"#,
                 )?),
-                mode_info: None,
+                mode_info: Default::default(),
                 sequence: 2,
             }],
             fee: Fee {

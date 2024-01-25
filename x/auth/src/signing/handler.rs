@@ -53,11 +53,12 @@ mod tests {
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
-        ibc_types::tx::{ModeInfo, Single, Sum},
+        ibc_types::tx::{Single, Sum},
         tx::v1beta1::{
             auth_info::AuthInfo,
             cbor::Cbor,
             fee::Fee,
+            mode_info::ModeInfo,
             screen::{Content, Indent, Screen},
             signer::SignerInfo,
             signer_data::{ChainId, SignerData},
@@ -82,9 +83,9 @@ mod tests {
                     }"#,
             )?),
             // 2 represents SignMode_SIGN_MODE_TEXTUAL
-            mode_info: Some(ModeInfo {
-                sum: Some(Sum::Single(Single { mode: 2 })),
-            }),
+            mode_info: ModeInfo {
+                sum: Sum::Single(Single { mode: 2 }),
+            },
             sequence: 2,
         };
 

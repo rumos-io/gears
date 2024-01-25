@@ -2,6 +2,7 @@ pub mod any_tx;
 pub mod auth_info;
 pub mod cbor;
 pub mod fee;
+pub mod mode_info;
 pub mod public_key;
 pub mod screen;
 pub mod signature_data;

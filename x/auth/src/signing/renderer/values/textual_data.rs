@@ -96,7 +96,8 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
 mod tests {
     use bnum::types::U256;
     use gears::types::context::context::Context;
-    use proto_messages::cosmos::ibc_types::tx::{ModeInfo, Single, Sum};
+    use proto_messages::cosmos::ibc_types::tx::{Single, Sum};
+    use proto_messages::cosmos::tx::v1beta1::mode_info::ModeInfo;
     use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
     use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
     use proto_messages::cosmos::{
@@ -150,9 +151,9 @@ mod tests {
                     }"#,
             )?),
             // 2 represents SignMode_SIGN_MODE_TEXTUAL
-            mode_info: Some(ModeInfo {
-                sum: Some(Sum::Single(Single { mode: 2 })),
-            }),
+            mode_info: ModeInfo {
+                sum: Sum::Single(Single { mode: 2 }),
+            },
             sequence: 2,
         };
 

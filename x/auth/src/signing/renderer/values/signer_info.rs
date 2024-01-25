@@ -28,11 +28,9 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
             )?)
         }
 
-        if let Some(mode_info) = mode_info {
-            final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-                mode_info, ctx,
-            )?)
-        }
+        final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+            mode_info, ctx,
+        )?);
 
         final_screens.push(Screen {
             title: "Sequence".to_string(),
@@ -67,7 +65,7 @@ mod tests {
                         "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                     }"#,
             )?),
-            mode_info: None,
+            mode_info: Default::default(),
             sequence: 2,
         };
 
