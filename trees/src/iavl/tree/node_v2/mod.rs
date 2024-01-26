@@ -51,6 +51,13 @@ impl NodeEnum {
         }
     }
 
+    pub fn make_inner(&mut self) {
+        match self {
+            NodeEnum::Inner(_) => (),
+            NodeEnum::Leaf(var) => *self = var.clone().into(), // TODO: Is there better way?
+        }
+    }
+
     pub fn into_inner(self) -> InnerNode {
         match self {
             NodeEnum::Inner(var) => var,

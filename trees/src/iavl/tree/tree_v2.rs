@@ -106,6 +106,53 @@ impl AvlTree {
 
         Ok(None)
     }
+
+    pub fn insert(&mut self, node: NodeEnum) -> bool {
+        // TODO: I assume that we could make leaf node into inner for this
+
+        let node = Box::new(node);
+        return tree_insert(&mut self.root, node);
+
+        fn tree_insert(tree: &mut Option<Box<NodeEnum>>, node: Box<NodeEnum>) -> bool {
+            match tree {
+                None => {
+                    *tree = Some(node);
+                    true
+                }
+                Some(tree_node) => {
+                    let inserted = match tree_node.key().cmp(&node.key()) {
+                        Ordering::Equal => false,
+                        Ordering::Less => match tree_node.as_mut() {
+                            NodeEnum::Inner(inner) => tree_insert(&mut inner.right_node, node),
+                            NodeEnum::Leaf(_leaf) => {
+                                tree_node.make_inner();
+                                let inner = tree_node
+                                    .inner_mut()
+                                    .expect("Leaf node already parsed into inner");
+                                tree_insert(&mut inner.right_node, node) //TODO: Is I should set it manually or call method?
+                            }
+                        },
+                        Ordering::Greater => match tree_node.as_mut() {
+                            NodeEnum::Inner(inner) => tree_insert(&mut inner.left_node, node),
+                            NodeEnum::Leaf(_leaf) => {
+                                tree_node.make_inner();
+                                let inner = tree_node
+                                    .inner_mut()
+                                    .expect("Leaf node already parsed into inner");
+                                tree_insert(&mut inner.left_node, node)
+                            }
+                        },
+                    };
+                    if inserted {
+                        tree_node.update_height();
+                        tree_node.update_size();
+                        // tree_node.rebalance();
+                    }
+                    inserted
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
