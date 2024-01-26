@@ -51,14 +51,14 @@ impl NodeEnum {
         }
     }
 
-    pub fn as_inner(self) -> InnerNode {
+    pub fn into_inner(self) -> InnerNode {
         match self {
             NodeEnum::Inner(var) => var,
             NodeEnum::Leaf(var) => var.into(),
         }
     }
 
-    pub fn as_leaf(self) -> LeafNode {
+    pub fn into_leaf(self) -> LeafNode {
         match self {
             NodeEnum::Inner(var) => var.into(),
             NodeEnum::Leaf(var) => var,

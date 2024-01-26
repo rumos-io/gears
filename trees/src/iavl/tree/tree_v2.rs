@@ -91,12 +91,14 @@ impl AvlTree {
                     };
                 }
                 NodeEnum::Leaf(leaf) => {
-                    let mut err_key = Vec::new();
-                    err_key.extend_from_slice(key.as_ref());
-
                     return match leaf.key() == key.as_ref() {
                         true => Ok(Some(mem::replace(&mut leaf.value, value))),
-                        false => Err(NodeError::SearchAfter(format!("Error key: {:?}", err_key))),
+                        false => {
+                            let mut err_key = Vec::new();
+                            err_key.extend_from_slice(key.as_ref());
+
+                            Err(NodeError::SearchAfter(format!("Error key: {:?}", err_key)))
+                        }
                     };
                 }
             }
