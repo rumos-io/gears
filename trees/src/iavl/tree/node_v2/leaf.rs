@@ -62,11 +62,11 @@ impl NodeTrait for LeafNode {
 
     fn update_height(&mut self) {}
 
-    fn right_node_mut(&mut self) -> Option< &mut NodeEnum> {
+    fn right_node_mut(&mut self) -> Option<&mut NodeEnum> {
         None
     }
 
-    fn left_node_mut(&mut self) -> Option< &mut NodeEnum> {
+    fn left_node_mut(&mut self) -> Option<&mut NodeEnum> {
         None
     }
 
@@ -78,15 +78,15 @@ impl NodeTrait for LeafNode {
         None
     }
 
-    fn key(&self) ->  &[u8] {
+    fn key(&self) -> &[u8] {
         &self.node.key
     }
 
-    fn right_node(&self) -> Option< &NodeEnum> {
+    fn right_node(&self) -> Option<&NodeEnum> {
         None
     }
 
-    fn left_node(&self) -> Option< &NodeEnum> {
+    fn left_node(&self) -> Option<&NodeEnum> {
         None
     }
 }

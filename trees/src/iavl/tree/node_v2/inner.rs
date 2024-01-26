@@ -84,41 +84,35 @@ impl NodeTrait for InnerNode {
         self.left_node.take()
     }
 
-    fn right_node_mut(&mut self) -> Option< &mut NodeEnum> {
-        match &mut self.right_node 
-        {
-            Some( var ) => Some( var ),
+    fn right_node_mut(&mut self) -> Option<&mut NodeEnum> {
+        match &mut self.right_node {
+            Some(var) => Some(var),
             None => None,
         }
     }
 
-    fn left_node_mut(&mut self) -> Option< &mut NodeEnum> {
-        match &mut self.left_node 
-        {
-            Some( var ) => Some( var ),
+    fn left_node_mut(&mut self) -> Option<&mut NodeEnum> {
+        match &mut self.left_node {
+            Some(var) => Some(var),
             None => None,
         }
     }
 
-    fn key(&self) ->  &[u8] {
+    fn key(&self) -> &[u8] {
         &self.node.key
     }
 
-    fn right_node(&self) -> Option< &NodeEnum> {
-        match &self.right_node 
-        {
-            Some( var ) => Some( var ),
+    fn right_node(&self) -> Option<&NodeEnum> {
+        match &self.right_node {
+            Some(var) => Some(var),
             None => None,
         }
     }
 
-    fn left_node(&self) -> Option< &NodeEnum> {
-        match &self.left_node 
-        {
-            Some( var ) => Some( var ),
+    fn left_node(&self) -> Option<&NodeEnum> {
+        match &self.left_node {
+            Some(var) => Some(var),
             None => None,
         }
     }
-
-
 }

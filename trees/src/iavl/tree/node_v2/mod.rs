@@ -44,10 +44,9 @@ pub enum NodeEnum {
 }
 
 impl NodeEnum {
-    pub fn inner_mut(&mut self) -> Option< &mut InnerNode >
-    {
+    pub fn inner_mut(&mut self) -> Option<&mut InnerNode> {
         match self {
-            NodeEnum::Inner( var ) => Some( var ),
+            NodeEnum::Inner(var) => Some(var),
             NodeEnum::Leaf(_) => None,
         }
     }
@@ -72,12 +71,19 @@ impl NodeEnum {
                 if let Some(right_node) = &mut inner.right_node {
                     let right_left_tree = right_node.left_node_take();
                     let right_right_tree = right_node.right_node_take();
- 
-                    let mut new_left_tree = mem::replace( &mut self.inner_mut().expect( "Node shoud be inner").right_node, right_right_tree);
+
+                    let mut new_left_tree = mem::replace(
+                        &mut self.inner_mut().expect("Node shoud be inner").right_node,
+                        right_right_tree,
+                    );
                     // mem::swap(&mut self.value, &mut new_left_tree.as_mut().unwrap().value);
                     let left_tree = self.left_node_take();
 
-                    let new_left_node = new_left_tree.as_mut().expect( "Node is Some").inner_mut().expect( "Node shoud be inner");
+                    let new_left_node = new_left_tree
+                        .as_mut()
+                        .expect("Node is Some")
+                        .inner_mut()
+                        .expect("Node shoud be inner");
                     new_left_node.right_node = right_left_tree;
                     new_left_node.left_node = left_tree;
 
@@ -89,10 +95,9 @@ impl NodeEnum {
                     false
                 }
             }
-            NodeEnum::Leaf(_leaf) => 
-            { 
+            NodeEnum::Leaf(_leaf) => {
                 // TODO: What should I do if node is leaf. Is this even possible?
-                unreachable!( "Leaf node can't be rotated. Investigate state")
+                unreachable!("Leaf node can't be rotated. Investigate state")
             }
         }
     }
@@ -103,12 +108,19 @@ impl NodeEnum {
                 if let Some(left_node) = &mut inner.left_node {
                     let left_left_tree = left_node.left_node_take();
                     let left_right_tree = left_node.right_node_take();
- 
-                    let mut new_right_tree = mem::replace( &mut self.inner_mut().expect( "Node shoud be inner").right_node, left_right_tree);
+
+                    let mut new_right_tree = mem::replace(
+                        &mut self.inner_mut().expect("Node shoud be inner").right_node,
+                        left_right_tree,
+                    );
                     // mem::swap(&mut self.value, &mut new_left_tree.as_mut().unwrap().value);
                     let left_tree = self.right_node_take();
 
-                    let new_right_node = new_right_tree.as_mut().expect( "Node is Some").inner_mut().expect( "Node shoud be inner");
+                    let new_right_node = new_right_tree
+                        .as_mut()
+                        .expect("Node is Some")
+                        .inner_mut()
+                        .expect("Node shoud be inner");
                     new_right_node.right_node = left_left_tree;
                     new_right_node.left_node = left_tree;
 
@@ -120,10 +132,9 @@ impl NodeEnum {
                     false
                 }
             }
-            NodeEnum::Leaf(_leaf) => 
-            { 
+            NodeEnum::Leaf(_leaf) => {
                 // TODO: What should I do if node is leaf. Is this even possible?
-                unreachable!( "Leaf node can't be rotated. Investigate state")
+                unreachable!("Leaf node can't be rotated. Investigate state")
             }
         }
     }
@@ -172,14 +183,14 @@ pub trait NodeTrait {
         }
     }
 
-    fn right_node_take( &mut self ) -> Option< Box<NodeEnum>>;
-    fn left_node_take( &mut self ) -> Option< Box< NodeEnum >>;
+    fn right_node_take(&mut self) -> Option<Box<NodeEnum>>;
+    fn left_node_take(&mut self) -> Option<Box<NodeEnum>>;
 
-    fn right_node_mut( &mut self ) -> Option< &mut NodeEnum>;
-    fn left_node_mut( &mut self ) -> Option< &mut NodeEnum>;
+    fn right_node_mut(&mut self) -> Option<&mut NodeEnum>;
+    fn left_node_mut(&mut self) -> Option<&mut NodeEnum>;
 
-    fn right_node( &self ) -> Option< &NodeEnum>;
-    fn left_node( &self ) -> Option< &NodeEnum>;
+    fn right_node(&self) -> Option<&NodeEnum>;
+    fn left_node(&self) -> Option<&NodeEnum>;
 
     fn key(&self) -> &[u8];
 }
