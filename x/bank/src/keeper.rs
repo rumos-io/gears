@@ -13,6 +13,7 @@ use gears::{
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
@@ -28,6 +29,7 @@ use crate::{BankParamsKeeper, GenesisState};
 
 const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
+const DENOM_METADATA_PREFIX: [u8; 1] = [1];
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -113,6 +115,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     amount: coin.1.into(),
                 },
             );
+        }
+
+        for denom_metadata in genesis.denom_metadata {
+            self.set_denom_metadata(&mut ctx.as_any(), denom_metadata);
         }
     }
 
@@ -269,8 +275,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    //#######
-
     pub fn set_supply<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
@@ -290,6 +294,29 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let prefix = create_denom_balance_prefix(address.to_owned());
         bank_store.get_mutable_prefix_store(prefix)
     }
+
+    /// Sets the denominations metadata
+    pub fn set_denom_metadata<DB: Database>(
+        &self,
+        ctx: &mut Context<'_, '_, DB, SK>,
+        denom_metadata: Metadata,
+    ) {
+        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        let mut denom_metadata_store =
+            bank_store.get_mutable_prefix_store(denom_metadata_key(denom_metadata.base.clone()));
+
+        denom_metadata_store.set(
+            denom_metadata.base.clone().into_bytes(),
+            denom_metadata.encode_vec(),
+        );
+    }
+}
+
+fn denom_metadata_key(denom: String) -> Vec<u8> {
+    let mut key = Vec::new();
+    key.extend(DENOM_METADATA_PREFIX);
+    key.extend(denom.into_bytes());
+    key
 }
 
 fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {

@@ -77,8 +77,6 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
             display: "ATOM".into(),
             name: String::new(),
             symbol: String::new(),
-            uri: String::new(),
-            uri_hash: None,
         }
     }
 }
