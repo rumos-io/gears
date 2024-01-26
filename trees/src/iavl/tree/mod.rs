@@ -1,3 +1,4 @@
+pub mod tree_v2;
 pub mod node;
 #[allow(dead_code)]
 pub mod node_v2;

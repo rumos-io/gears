@@ -77,4 +77,16 @@ impl NodeTrait for LeafNode {
     fn left_node_take(&mut self) -> Option<Box<NodeEnum>> {
         None
     }
+
+    fn key(&self) ->  &[u8] {
+        &self.node.key
+    }
+
+    fn right_node(&self) -> Option< &NodeEnum> {
+        None
+    }
+
+    fn left_node(&self) -> Option< &NodeEnum> {
+        None
+    }
 }

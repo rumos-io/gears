@@ -177,6 +177,11 @@ pub trait NodeTrait {
 
     fn right_node_mut( &mut self ) -> Option< &mut NodeEnum>;
     fn left_node_mut( &mut self ) -> Option< &mut NodeEnum>;
+
+    fn right_node( &self ) -> Option< &NodeEnum>;
+    fn left_node( &self ) -> Option< &NodeEnum>;
+
+    fn key(&self) -> &[u8];
 }
 
 #[derive(Debug, Clone, thiserror::Error)]

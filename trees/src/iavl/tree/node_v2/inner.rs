@@ -100,5 +100,25 @@ impl NodeTrait for InnerNode {
         }
     }
 
+    fn key(&self) ->  &[u8] {
+        &self.node.key
+    }
+
+    fn right_node(&self) -> Option< &NodeEnum> {
+        match &self.right_node 
+        {
+            Some( var ) => Some( var ),
+            None => None,
+        }
+    }
+
+    fn left_node(&self) -> Option< &NodeEnum> {
+        match &self.left_node 
+        {
+            Some( var ) => Some( var ),
+            None => None,
+        }
+    }
+
 
 }
