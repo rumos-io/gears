@@ -12,6 +12,7 @@ use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
+use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
 use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::{
@@ -309,6 +310,28 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             denom_metadata.base.clone().into_bytes(),
             denom_metadata.encode_vec(),
         );
+    }
+
+    pub fn query_denoms_metadata<DB: Database>(
+        &self,
+        ctx: &QueryContext<'_, DB, SK>,
+    ) -> QueryDenomsMetadataResponse {
+        let bank_store = ctx.get_kv_store(&self.store_key);
+        let mut denoms_metadata = vec![];
+
+        for (_, metadata) in bank_store
+            .get_immutable_prefix_store(DENOM_METADATA_PREFIX.into())
+            .range(..)
+        {
+            let metadata: Metadata = Metadata::decode::<Bytes>(metadata.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
+            denoms_metadata.push(metadata);
+        }
+
+        QueryDenomsMetadataResponse {
+            metadatas: denoms_metadata,
+            pagination: None,
+        }
     }
 }
 

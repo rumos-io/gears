@@ -2,8 +2,12 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 
 use gears::client::query::run_query;
+use prost::Message;
 use proto_messages::cosmos::{
-    bank::v1beta1::{QueryAllBalancesRequest, QueryAllBalancesResponse},
+    bank::v1beta1::{
+        QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
+        QueryDenomsMetadataResponse, RawQueryDenomsMetadataResponse,
+    },
     ibc_types::{bank::RawQueryAllBalancesResponse, protobuf::Protobuf},
 };
 use proto_types::AccAddress;
@@ -22,6 +26,7 @@ pub enum BankCommands {
         /// address
         address: AccAddress,
     },
+    DenomMetadata,
 }
 
 pub fn run_bank_query_command(
@@ -39,6 +44,18 @@ pub fn run_bank_query_command(
             let res = run_query::<QueryAllBalancesResponse, RawQueryAllBalancesResponse>(
                 query.encode_vec(),
                 "/cosmos.bank.v1beta1.Query/AllBalances".into(),
+                node,
+                height,
+            )?;
+
+            Ok(serde_json::to_string_pretty(&res)?)
+        }
+        BankCommands::DenomMetadata => {
+            let query = QueryDenomsMetadataRequest { pagination: None };
+
+            let res = run_query::<QueryDenomsMetadataResponse, RawQueryDenomsMetadataResponse>(
+                query.encode_to_vec(),
+                "/cosmos.bank.v1beta1.Query/DenomsMetadata".into(),
                 node,
                 height,
             )?;
