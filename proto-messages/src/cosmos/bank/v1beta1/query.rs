@@ -4,6 +4,7 @@ use ibc_proto::{
         QueryAllBalancesResponse as RawQueryAllBalancesResponse,
         QueryBalanceRequest as RawQueryBalanceRequest,
         QueryBalanceResponse as RawQueryBalanceResponse,
+        QueryDenomMetadataRequest as RawQueryDenomMetadataRequest,
         QueryTotalSupplyResponse as RawQueryTotalSupplyResponse,
     },
     cosmos::base::{query::v1beta1::PageResponse, v1beta1::Coin as RawCoin},
@@ -240,3 +241,72 @@ impl From<QueryDenomsMetadataResponse> for RawQueryDenomsMetadataResponse {
 }
 
 impl Protobuf<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse {}
+
+#[derive(Clone, PartialEq)]
+pub struct QueryDenomMetadataRequest {
+    /// denom is the coin denom to query balances for.
+    pub denom: proto_types::Denom,
+}
+
+impl TryFrom<RawQueryDenomMetadataRequest> for QueryDenomMetadataRequest {
+    type Error = Error;
+
+    fn try_from(raw: RawQueryDenomMetadataRequest) -> Result<Self, Self::Error> {
+        let denom = raw
+            .denom
+            .try_into()
+            .map_err(|_| Error::Coin(String::from("invalid denom")))?;
+
+        Ok(QueryDenomMetadataRequest { denom })
+    }
+}
+
+impl From<QueryDenomMetadataRequest> for RawQueryDenomMetadataRequest {
+    fn from(query: QueryDenomMetadataRequest) -> RawQueryDenomMetadataRequest {
+        RawQueryDenomMetadataRequest {
+            denom: query.denom.to_string(),
+        }
+    }
+}
+
+impl Protobuf<RawQueryDenomMetadataRequest> for QueryDenomMetadataRequest {}
+
+/// We use our own version of the QueryDenomMetadataResponse struct because the
+/// Metadata struct in ibc_proto has additional fields that were added in SDK
+/// v46 (uri and uri_hash).
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct RawQueryDenomMetadataResponse {
+    /// metadata describes and provides all the client information for the requested token.
+    #[prost(message, optional, tag = "1")]
+    pub metadata: Option<RawMetadata>,
+}
+
+#[derive(Clone)]
+pub struct QueryDenomMetadataResponse {
+    /// metadata describes and provides all the client information for the requested token.
+    pub metadata: Option<Metadata>,
+}
+
+impl TryFrom<RawQueryDenomMetadataResponse> for QueryDenomMetadataResponse {
+    type Error = Error;
+
+    fn try_from(raw: RawQueryDenomMetadataResponse) -> Result<Self, Self::Error> {
+        let metadata = raw
+            .metadata
+            .map(Metadata::try_from)
+            .transpose()
+            .map_err(|_| Error::Coin(String::from("invalid metadata")))?;
+
+        Ok(QueryDenomMetadataResponse { metadata })
+    }
+}
+
+impl From<QueryDenomMetadataResponse> for RawQueryDenomMetadataResponse {
+    fn from(query: QueryDenomMetadataResponse) -> RawQueryDenomMetadataResponse {
+        RawQueryDenomMetadataResponse {
+            metadata: query.metadata.map(RawMetadata::from),
+        }
+    }
+}
+
+impl Protobuf<RawQueryDenomMetadataResponse> for QueryDenomMetadataResponse {}
