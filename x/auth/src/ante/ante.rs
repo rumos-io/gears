@@ -2,6 +2,11 @@ use std::marker::PhantomData;
 
 use database::Database;
 
+use gears::{
+    error::AppError,
+    types::context::context::Context,
+    x::auth::{Module, Params},
+};
 use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     auth::v1beta1::Account,
@@ -17,13 +22,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
-use store_crate::StoreKey;
-
-use crate::types::context::context::Context;
-use crate::{
-    error::AppError,
-    x::auth::{Module, Params},
-};
+use store::StoreKey;
 
 // TODO: this doesn't belong here
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {

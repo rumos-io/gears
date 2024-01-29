@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
+use auth::ante::{AuthKeeper, BankKeeper};
 use bnum::types::U256;
 use bytes::Bytes;
 use database::Database;
@@ -8,7 +9,6 @@ use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::{
-    baseapp::ante::AuthKeeper,
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
@@ -41,9 +41,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     auth_keeper: auth::Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::BankKeeper<SK>
-    for Keeper<SK, PSK>
-{
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
