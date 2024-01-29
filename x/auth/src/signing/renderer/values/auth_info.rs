@@ -76,6 +76,7 @@ mod tests {
         tx::v1beta1::{
             auth_info::AuthInfo,
             fee::Fee,
+            mode_info::{ModeInfo, SignMode},
             screen::{Content, Screen},
             signer::SignerInfo,
         },
@@ -97,7 +98,7 @@ mod tests {
                             "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                         }"#,
                 )?),
-                mode_info: Default::default(),
+                mode_info: ModeInfo::Single(SignMode::Direct),
                 sequence: 2,
             }],
             fee: Fee {

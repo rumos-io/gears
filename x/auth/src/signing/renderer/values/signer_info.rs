@@ -47,6 +47,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 mod tests {
     use gears::types::context::context::Context;
     use proto_messages::cosmos::tx::v1beta1::{
+        mode_info::{ModeInfo, SignMode},
         screen::{Content, Indent, Screen},
         signer::SignerInfo,
     };
@@ -65,7 +66,7 @@ mod tests {
                         "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                     }"#,
             )?),
-            mode_info: Default::default(),
+            mode_info: ModeInfo::Single(SignMode::Direct),
             sequence: 2,
         };
 

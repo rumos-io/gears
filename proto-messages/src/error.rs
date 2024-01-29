@@ -24,4 +24,6 @@ pub enum Error {
     IoError(#[from] std::io::Error),
     #[error("{0}")]
     Custom(String),
+    #[error("invalid sign mode: `{0}`")]
+    InvalidSignMode(i32),
 }
