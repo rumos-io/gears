@@ -7,7 +7,13 @@ use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
     ibc_types::tx::SignDoc,
-    tx::v1beta1::{message::Message, public_key::PublicKey, tx::tx::Tx, tx_raw::TxWithRaw},
+    tx::v1beta1::{
+        message::Message,
+        mode_info::{ModeInfo, SignMode},
+        public_key::PublicKey,
+        tx::tx::Tx,
+        tx_raw::TxWithRaw,
+    },
 };
 use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
@@ -275,14 +281,38 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                 )));
             }
 
-            // check signature
-            let sign_bytes = SignDoc {
-                body_bytes: tx.raw.body_bytes.clone(),
-                auth_info_bytes: tx.raw.auth_info_bytes.clone(),
-                chain_id: ctx.get_chain_id().to_owned(),
-                account_number: acct.get_account_number(),
-            }
-            .encode_to_vec();
+            let sign_bytes = match &signature_data.mode_info {
+                ModeInfo::Single(mode) => match mode {
+                    SignMode::Unspecified => {
+                        return Err(AppError::TxValidation(
+                            "unspecified sign mode not supported".to_string(),
+                        ));
+                    }
+                    SignMode::Direct => SignDoc {
+                        body_bytes: tx.raw.body_bytes.clone(),
+                        auth_info_bytes: tx.raw.auth_info_bytes.clone(),
+                        chain_id: ctx.get_chain_id().to_owned(),
+                        account_number: acct.get_account_number(),
+                    }
+                    .encode_to_vec(),
+                    SignMode::Textual => {
+                        return Err(AppError::TxValidation(
+                            "textual mode not supported".to_string(),
+                        ));
+                    }
+                    _ => {
+                        return Err(AppError::TxValidation(
+                            "sign mode not supported".to_string(),
+                        ))
+                    }
+                },
+                ModeInfo::Multi(_) => {
+                    return Err(AppError::TxValidation(
+                        "multi sig not supported".to_string(),
+                    ));
+                }
+            };
+
             let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
 
             let public_key = acct
