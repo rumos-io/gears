@@ -124,19 +124,124 @@ impl Default for Node {
 }
 
 impl Node {
-    // pub fn right_node_take(&mut self) -> Option<Box<Node>> {
-    //     match self {
-    //         Node::Leaf(_) => None,
-    //         Node::Inner(inner) => inner.right_node.take(),
-    //     }
-    // }
+    /// This does three things at once to prevent repeating the same process for getting the left and right nodes
+    fn update_height_and_size_get_balance_factor<T: Database>(
+        &mut self,
+        node_db: &NodeDB<T>,
+    ) -> i16 {
+        match self {
+            Node::Leaf(_) => 0,
+            Node::Inner(inner) => inner.update_height_and_size_get_balance_factor(node_db),
+        }
+    }
 
-    // pub fn left_node_take(&mut self) -> Option<Box<Node>> {
-    //     match self {
-    //         Node::Leaf(_) => None,
-    //         Node::Inner(inner) => inner.left_node.take(),
-    //     }
-    // }
+    fn right_rotate<T: Database>(
+        &mut self,
+        version: u32,
+        node_db: &NodeDB<T>,
+    ) -> Result<(), Error> {
+        if let Node::Inner(z) = self {
+            let mut z = mem::take(z);
+            let y = mem::take(z.get_mut_left_node(node_db));
+
+            let mut y = match y {
+                Node::Inner(y) => y,
+                Node::Leaf(_) => return Err(Error::RotateError),
+            };
+
+            let t3 = y.right_node;
+
+            // Perform rotation on z and update height and hash
+            z.left_node = t3;
+            z.left_hash = y.right_hash;
+            z.update_height_and_size_get_balance_factor(node_db);
+            z.version = version;
+            let z = Node::Inner(z);
+
+            // Perform rotation on y, update hash and update height
+            y.right_hash = z.hash();
+            y.right_node = Some(Box::new(z));
+            y.update_height_and_size_get_balance_factor(node_db);
+            y.version = version;
+
+            *self = Node::Inner(y);
+
+            Ok(())
+        } else {
+            // Can't rotate a leaf node
+            Err(Error::RotateError)
+        }
+    }
+
+    fn left_rotate<T: Database>(&mut self, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
+        if let Node::Inner(z) = self {
+            let mut z = mem::take(z);
+            let y = mem::take(z.get_mut_right_node(node_db));
+
+            let mut y = match y {
+                Node::Inner(y) => y,
+                Node::Leaf(_) => return Err(Error::RotateError),
+            };
+
+            let t2 = y.left_node;
+
+            // Perform rotation on z and update height and hash
+            z.right_node = t2;
+            z.right_hash = y.left_hash;
+            z.update_height_and_size_get_balance_factor(node_db);
+            z.version = version;
+            let z = Node::Inner(z);
+
+            // Perform rotation on y, update hash and update height
+            y.left_hash = z.hash();
+            y.left_node = Some(Box::new(z));
+            y.update_height_and_size_get_balance_factor(node_db);
+            y.version = version;
+
+            *self = Node::Inner(y);
+
+            Ok(())
+        } else {
+            // Can't rotate a leaf node
+            Err(Error::RotateError)
+        }
+    }
+
+    pub fn rebalance<T: Database>(
+        &mut self,
+        version: u32,
+        node_db: &NodeDB<T>,
+    ) -> Result<bool, Error> {
+        match self {
+            Node::Leaf(_) => Ok(false),
+            Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
+                -2 => {
+                    let right_node = inner.right_node.as_mut().unwrap();
+
+                    if right_node.update_height_and_size_get_balance_factor(node_db) == 1 {
+                        Self::right_rotate(right_node, version, node_db)?;
+                    }
+
+                    Self::left_rotate(self, version, node_db)?;
+
+                    Ok(true)
+                }
+
+                2 => {
+                    let left_node = inner.left_node.as_mut().unwrap();
+
+                    if left_node.update_height_and_size_get_balance_factor(node_db) == -1 {
+                        Self::left_rotate(left_node, version, node_db)?;
+                    }
+
+                    Self::left_rotate(self, version, node_db)?;
+
+                    Ok(true)
+                }
+                _ => Ok(false),
+            },
+        }
+    }
 
     pub(crate) fn shallow_clone(&self) -> Node {
         match self {
@@ -436,12 +541,21 @@ where
         }
     }
 
-    pub(crate) fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Box<Node>> {
-        return tree_remove(&mut self.root, key);
+    pub(crate) fn remove(
+        &mut self,
+        key: &impl AsRef<[u8]>,
+        version: u32,
+    ) -> Result<Option<Box<Node>>, Error> {
+        return tree_remove(&mut self.root, key, version, &self.node_db);
 
-        fn tree_remove(tree: &mut Option<Box<Node>>, key: &impl AsRef<[u8]>) -> Option<Box<Node>> {
+        fn tree_remove<T: Database>(
+            tree: &mut Option<Box<Node>>,
+            key: &impl AsRef<[u8]>,
+            version: u32,
+            node_db: &NodeDB<T>,
+        ) -> Result<Option<Box<Node>>, Error> {
             match tree {
-                None => return None,
+                None => return Ok(None),
                 Some(node) => match node.as_mut() {
                     // auto deref make pain so we need to explicit call `as_mut`
                     Node::Leaf(leaf) => {
@@ -451,12 +565,15 @@ where
                     }
                     Node::Inner(inner) => {
                         if let Some(result) = match inner.key[..].cmp(key.as_ref()) {
-                            Ordering::Less => Some(tree_remove(&mut inner.right_node, key)),
+                            Ordering::Less => {
+                                Some(tree_remove(&mut inner.right_node, key, version, node_db))
+                            }
                             Ordering::Equal => None,
-                            Ordering::Greater => Some(tree_remove(&mut inner.left_node, key)),
+                            Ordering::Greater => {
+                                Some(tree_remove(&mut inner.left_node, key, version, node_db))
+                            }
                         } {
-                            // node.update_height();
-                            // node.rebalance();
+                            node.rebalance(version, node_db)?;
                             return result;
                         }
                     }
@@ -490,8 +607,7 @@ where
                                         Node::Leaf(_) => panic!("Leaf node cannot replace inner"),
                                         Node::Inner(inner_replacement) => {
                                             inner_replacement.left_node = Some(left_inner);
-                                            // replacement.update_height();
-                                            // replacement.rebalance();
+                                            replacement.rebalance(version, node_db)?;
                                             *tree = Some(replacement);
                                         }
                                     }
@@ -502,7 +618,7 @@ where
                 }
             }
 
-            Some(node)
+            Ok(Some(node))
         }
 
         /// Returns a rotated version of `node` whose top has no left child and whose top has a
@@ -628,13 +744,14 @@ where
 
                     if key[..] < *left_node.get_key() {
                         // Case 1 - Right
-                        Self::right_rotate(node, version, node_db)
+                        node.right_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     } else {
                         // Case 2 - Left Right
-                        Self::left_rotate(left_node, version, node_db)
+                        left_node
+                            .left_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
-                        Self::right_rotate(node, version, node_db)
+                        node.right_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     }
                 } else if balance_factor < -1 {
@@ -642,85 +759,18 @@ where
 
                     if key[..] > *right_node.get_key() {
                         // Case 3 - Left
-                        Self::left_rotate(node, version, node_db)
+                        node.left_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     } else {
                         // Case 4 - Right Left
-                        Self::right_rotate(right_node, version, node_db)
+                        right_node
+                            .right_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
-                        Self::left_rotate(node, version, node_db)
+                        node.left_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     }
                 }
             }
-        }
-    }
-
-    fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
-        if let Node::Inner(z) = node {
-            let mut z = mem::take(z);
-            let y = mem::take(z.get_mut_left_node(node_db));
-
-            let mut y = match y {
-                Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError),
-            };
-
-            let t3 = y.right_node;
-
-            // Perform rotation on z and update height and hash
-            z.left_node = t3;
-            z.left_hash = y.right_hash;
-            z.update_height_and_size_get_balance_factor(node_db);
-            z.version = version;
-            let z = Node::Inner(z);
-
-            // Perform rotation on y, update hash and update height
-            y.right_hash = z.hash();
-            y.right_node = Some(Box::new(z));
-            y.update_height_and_size_get_balance_factor(node_db);
-            y.version = version;
-
-            *node = Node::Inner(y);
-
-            Ok(())
-        } else {
-            // Can't rotate a leaf node
-            Err(Error::RotateError)
-        }
-    }
-
-    fn left_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
-        if let Node::Inner(z) = node {
-            let mut z = mem::take(z);
-            let y = mem::take(z.get_mut_right_node(node_db));
-
-            let mut y = match y {
-                Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError),
-            };
-
-            let t2 = y.left_node;
-
-            // Perform rotation on z and update height and hash
-            z.right_node = t2;
-            z.right_hash = y.left_hash;
-            z.update_height_and_size_get_balance_factor(node_db);
-            z.version = version;
-            let z = Node::Inner(z);
-
-            // Perform rotation on y, update hash and update height
-            y.left_hash = z.hash();
-            y.left_node = Some(Box::new(z));
-            y.update_height_and_size_get_balance_factor(node_db);
-            y.version = version;
-
-            *node = Node::Inner(y);
-
-            Ok(())
-        } else {
-            // Can't rotate a leaf node
-            Err(Error::RotateError)
         }
     }
 
@@ -913,7 +963,7 @@ mod tests {
         let mut z = Node::Inner(z);
 
         let db = MemDB::new();
-        Tree::right_rotate(&mut z, 0, &NodeDB::new(db, 100)).unwrap();
+        z.right_rotate(0, &NodeDB::new(db, 100)).unwrap();
 
         let hash = z.hash();
         let expected = [
@@ -995,7 +1045,7 @@ mod tests {
         let mut z = Node::Inner(z);
 
         let db = MemDB::new();
-        Tree::left_rotate(&mut z, 0, &NodeDB::new(db, 100)).unwrap();
+        z.left_rotate(0, &NodeDB::new(db, 100)).unwrap();
 
         let hash = z.hash();
         let expected = [
