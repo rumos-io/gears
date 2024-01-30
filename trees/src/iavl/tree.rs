@@ -1,5 +1,5 @@
 use std::{
-    cmp,
+    cmp::{self, Ordering},
     collections::BTreeSet,
     mem,
     ops::{Bound, RangeBounds},
@@ -124,13 +124,27 @@ impl Default for Node {
 }
 
 impl Node {
+    pub fn right_node_take(&mut self) -> Option<Box<Node>> {
+        match self {
+            Node::Leaf(_) => None,
+            Node::Inner(inner) => inner.right_node.take(),
+        }
+    }
+
+    pub fn left_node_take(&mut self) -> Option<Box<Node>> {
+        match self {
+            Node::Leaf(_) => None,
+            Node::Inner(inner) => inner.left_node.take(),
+        }
+    }
+
     pub(crate) fn shallow_clone(&self) -> Node {
         match self {
             Node::Leaf(n) => Node::Leaf(n.clone()),
             Node::Inner(n) => Node::Inner(n.shallow_clone()),
         }
     }
-    pub fn get_key(&self) -> &Vec<u8> {
+    pub fn get_key(&self) -> &[u8] {
         match self {
             Node::Leaf(leaf) => &leaf.key,
             Node::Inner(inner) => &inner.key,
@@ -422,6 +436,104 @@ where
         }
     }
 
+    pub fn remove(&mut self, key: &impl AsRef<[u8]>) /*-> Result< Option< Node >, () > */
+    {
+        // return tree_remove( &mut self.root, key);
+
+        fn tree_remove(tree: &mut Option<Box<Node>>, key: &impl AsRef<[u8]>) -> Option<Box<Node>> {
+            match tree {
+                None => return None,
+                Some(node) => match node.as_mut() {
+                    // auto deref make pain so we need to explicit call `as_mut`
+                    Node::Leaf(leaf) => {
+                        if leaf.key[..] != *key.as_ref() {
+                            panic!("Tried to delete key that don't exists")
+                        }
+                    }
+                    Node::Inner(inner) => {
+                        if let Some(result) = match inner.key[..].cmp(key.as_ref()) {
+                            Ordering::Less => Some(tree_remove(&mut inner.right_node, key)),
+                            Ordering::Equal => None,
+                            Ordering::Greater => Some(tree_remove(&mut inner.left_node, key)),
+                        } {
+                            // node.update_height();
+                            // node.rebalance();
+                            return result;
+                        }
+                    }
+                },
+            }
+
+            // If control flow fell through to here, it's because we hit the Equal case above. The
+            // borrow of `tree` is now out of scope, but we know it's Some node whose key is
+            // equal to `key`. We can `take()` it out of the tree to get ownership of it, and
+            // then we can manipulate the node and insert parts of it back into the tree as needed.
+
+            let mut node = tree.take().unwrap();
+            match node.as_mut() {
+                Node::Leaf(_) => todo!(),
+                Node::Inner(inner_node) => {
+                    match inner_node.left_node.take() {
+                        None => {
+                            *tree = inner_node.right_node.take();
+                        }
+                        Some(left_inner) => {
+                            match inner_node.right_node.take() {
+                                None => {
+                                    *tree = Some(left_inner);
+                                }
+                                Some(right_inner) => {
+                                    // This is the general case: the node to be removed has both a left and
+                                    // a right child.
+                                    let mut replacement = leftmost_to_top(right_inner);
+                                    match replacement.as_mut() {
+                                        // TODO: Probably instead of panic need to create inner and attach leaf
+                                        Node::Leaf(_) => panic!("Leaf node cannot replace inner"),
+                                        Node::Inner(inner_replacement) => {
+                                            inner_replacement.left_node = Some(left_inner);
+                                            // replacement.update_height();
+                                            // replacement.rebalance();
+                                            *tree = Some(replacement);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Some(node)
+        }
+
+        /// Returns a rotated version of `node` whose top has no left child and whose top has a
+        /// balanced right subtree.
+        fn leftmost_to_top(mut node: Box<Node>) -> Box<Node> {
+            match node.as_mut() {
+                Node::Leaf(_) => node,
+                Node::Inner(inner) => {
+                    match inner.left_node.take() {
+                        None => node,
+                        Some(node_l) => {
+                            let mut next_top = leftmost_to_top(node_l);
+                            match next_top.as_mut() {
+                                Node::Leaf(_) => next_top,
+                                Node::Inner(inner_new) => {
+                                    // By induction, next_top has no left child
+                                    inner.left_node = inner_new.right_node.take();
+                                    // node.update_height();
+                                    // node.rebalance();
+                                    inner_new.right_node = Some(node);
+                                    next_top
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         match &mut self.root {
             Some(root) => {
@@ -515,7 +627,7 @@ where
                 if balance_factor > 1 {
                     let left_node = root_node.get_mut_left_node(node_db);
 
-                    if &key < left_node.get_key() {
+                    if key[..] < *left_node.get_key() {
                         // Case 1 - Right
                         Self::right_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
@@ -529,7 +641,7 @@ where
                 } else if balance_factor < -1 {
                     let right_node = root_node.get_mut_right_node(node_db);
 
-                    if &key > right_node.get_key() {
+                    if key[..] > *right_node.get_key() {
                         // Case 3 - Left
                         Self::left_rotate(node, version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
