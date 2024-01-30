@@ -1,4 +1,4 @@
-use std::ops::RangeBounds;
+use std::ops::{Deref, RangeBounds};
 
 use database::Database;
 
@@ -9,7 +9,7 @@ use super::{node_db::NodeDB, Node, Range, Tree};
 /// QueryTree is a "checked out" Tree at a given height which
 /// borrows a Tree's NodeDb
 pub struct QueryTree<'a, DB> {
-    pub(crate) root: Option<Node>,
+    pub(crate) root: Option<Box<Node>>,
     pub(crate) node_db: &'a NodeDB<DB>,
 }
 
@@ -94,7 +94,7 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
         match &self.root {
             Some(root) => Range {
                 range,
-                delayed_nodes: vec![root.clone()], //TODO: remove clone
+                delayed_nodes: vec![root.deref().clone()], //TODO: remove clone
                 node_db: self.node_db,
             },
             None => Range {

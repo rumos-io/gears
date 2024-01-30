@@ -2,7 +2,7 @@ use std::{
     cmp::{self, Ordering},
     collections::BTreeSet,
     mem,
-    ops::{Bound, RangeBounds},
+    ops::{Bound, Deref, RangeBounds},
 };
 
 use database::Database;
@@ -31,7 +31,7 @@ impl InnerNode {
             let node = node_db
                 .get_node(&self.left_hash)
                 .expect("node should be in db");
-            Box::new(node)
+            node
         })
     }
 
@@ -41,7 +41,7 @@ impl InnerNode {
                 .get_node(&self.right_hash)
                 .expect("node should be in db");
 
-            Box::new(node)
+            node
         })
     }
 
@@ -124,19 +124,19 @@ impl Default for Node {
 }
 
 impl Node {
-    pub fn right_node_take(&mut self) -> Option<Box<Node>> {
-        match self {
-            Node::Leaf(_) => None,
-            Node::Inner(inner) => inner.right_node.take(),
-        }
-    }
+    // pub fn right_node_take(&mut self) -> Option<Box<Node>> {
+    //     match self {
+    //         Node::Leaf(_) => None,
+    //         Node::Inner(inner) => inner.right_node.take(),
+    //     }
+    // }
 
-    pub fn left_node_take(&mut self) -> Option<Box<Node>> {
-        match self {
-            Node::Leaf(_) => None,
-            Node::Inner(inner) => inner.left_node.take(),
-        }
-    }
+    // pub fn left_node_take(&mut self) -> Option<Box<Node>> {
+    //     match self {
+    //         Node::Leaf(_) => None,
+    //         Node::Inner(inner) => inner.left_node.take(),
+    //     }
+    // }
 
     pub(crate) fn shallow_clone(&self) -> Node {
         match self {
@@ -279,7 +279,7 @@ impl Node {
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
-    root: Option<Node>,
+    root: Option<Box<Node>>,
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
@@ -346,7 +346,7 @@ where
 
                 // clear the root node's left and right nodes if they exist
                 if let Some(node) = &mut self.root {
-                    if let Node::Inner(inner) = node {
+                    if let Node::Inner(inner) = node.as_mut() {
                         inner.left_node = None;
                         inner.right_node = None;
                     }
@@ -436,9 +436,8 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &impl AsRef<[u8]>) /*-> Result< Option< Node >, () > */
-    {
-        // return tree_remove( &mut self.root, key);
+    pub(crate) fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Box<Node>> {
+        return tree_remove(&mut self.root, key);
 
         fn tree_remove(tree: &mut Option<Box<Node>>, key: &impl AsRef<[u8]>) -> Option<Box<Node>> {
             match tree {
@@ -540,11 +539,11 @@ where
                 Self::recursive_set(root, key, value, self.loaded_version + 1, &mut self.node_db)
             }
             None => {
-                self.root = Some(Node::Leaf(LeafNode {
+                self.root = Some(Box::new(Node::Leaf(LeafNode {
                     key,
                     value,
                     version: self.loaded_version + 1,
-                }));
+                })));
             }
         };
     }
@@ -732,7 +731,7 @@ where
         match &self.root {
             Some(root) => Range {
                 range,
-                delayed_nodes: vec![root.clone()], //TODO: remove clone
+                delayed_nodes: vec![root.deref().clone()], //TODO: remove clone
                 node_db: &self.node_db,
             },
             None => Range {
@@ -781,7 +780,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
                                 .get_node(&inner.right_hash)
                                 .expect("node db should contain all nodes");
 
-                            self.delayed_nodes.push(right_node);
+                            self.delayed_nodes.push(*right_node);
                         }
                     }
                 }
@@ -796,7 +795,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
                                 .expect("node db should contain all nodes");
 
                             //self.cached_nodes.push(left_node);
-                            self.delayed_nodes.push(left_node);
+                            self.delayed_nodes.push(*left_node);
                         }
                     }
 
@@ -839,8 +838,6 @@ fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Borrow;
-
     use super::*;
     use database::MemDB;
 
@@ -1480,19 +1477,19 @@ mod tests {
     /// Checks if left/right hash matches the left/right node hash for every inner node in a tree
     fn is_consistent<T: Database, N>(root: N, node_db: &NodeDB<T>) -> bool
     where
-        N: Borrow<Node>,
+        N: AsRef<Node>,
     {
-        match root.borrow() {
+        match root.as_ref() {
             Node::Inner(node) => {
                 let left_node = match &node.left_node {
-                    Some(left_node) => *left_node.clone(),
+                    Some(left_node) => left_node.clone(),
                     None => node_db
                         .get_node(&node.left_hash)
                         .expect("node db should contain all nodes"),
                 };
 
                 let right_node = match &node.right_node {
-                    Some(right_node) => *right_node.clone(),
+                    Some(right_node) => right_node.clone(),
                     None => node_db
                         .get_node(&node.right_hash)
                         .expect("node db should contain all nodes"),
