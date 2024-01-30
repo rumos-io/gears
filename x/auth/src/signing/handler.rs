@@ -103,13 +103,13 @@ mod tests {
         };
 
         let signer_data = SignerData {
-            address: "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs".to_string(),
+            address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
             chain_id: ChainId::new("my-chain".to_string())?,
             account_number: 1,
             sequence: 2,
             pub_key: serde_json::from_str(
                 r#"{
-				"@type": "/cosmos.crypto.secp256k1.PubKey",
+                    "@type": "/cosmos.crypto.secp256k1.PubKey",
 				"key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
 			}"#,
             )?,
@@ -138,7 +138,6 @@ mod tests {
         let tx_data = TxData::<MsgSend> {
             body: tx_body,
             auth_info: auth_inf,
-            body_has_unknown_non_criticals: false,
         };
 
         let handler = SignModeHandler;

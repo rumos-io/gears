@@ -176,7 +176,7 @@ mod tests {
         };
 
         let signer_data = SignerData {
-            address: "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs".to_string(),
+            address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
             chain_id: ChainId::new("my-chain".to_string())?,
             account_number: 1,
             sequence: 2,
@@ -211,7 +211,6 @@ mod tests {
         let tx_data = TxData::<MsgSend> {
             body: tx_body,
             auth_info: auth_info,
-            body_has_unknown_non_criticals: false,
         };
 
         let data = TextualData::new(signer_data, tx_data)?;

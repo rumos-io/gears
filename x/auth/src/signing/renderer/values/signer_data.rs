@@ -58,6 +58,7 @@ mod tests {
         screen::{Content, Indent, Screen},
         signer_data::{ChainId, SignerData},
     };
+    use proto_types::AccAddress;
 
     use crate::signing::renderer::{
         value_renderer::{DefaultValueRenderer, ValueRenderer},
@@ -67,7 +68,7 @@ mod tests {
     #[test]
     fn signer_data_formating() -> anyhow::Result<()> {
         let signer_data = SignerData {
-            address: "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs".to_string(),
+            address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
             chain_id: ChainId::new("my-chain".to_string())?,
             account_number: 1,
             sequence: 2,

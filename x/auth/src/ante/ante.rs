@@ -24,6 +24,8 @@ use proto_types::AccAddress;
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 use store::StoreKey;
 
+use crate::signing::handler::SignModeHandler;
+
 // TODO: this doesn't belong here
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
@@ -295,9 +297,11 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                     }
                     .encode_to_vec(),
                     SignMode::Textual => {
-                        return Err(AppError::TxValidation(
-                            "textual mode not supported".to_string(),
-                        ));
+                        todo!()
+                        // let handler = SignModeHandler;
+
+                        // handler.sign_bytes_get(ctx, signer_data, tx_data).unwrap()
+                        //TODO: remove unwrap
                     }
                     _ => {
                         return Err(AppError::TxValidation(
