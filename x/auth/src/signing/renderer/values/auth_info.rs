@@ -1,4 +1,4 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     auth_info::AuthInfo,
@@ -8,10 +8,12 @@ use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for AuthInfo {
+impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
+    for AuthInfo
+{
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let AuthInfo {
             signer_infos,
@@ -20,12 +22,12 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
         } = &self;
         let mut final_screens = Vec::<Screen>::new();
 
-        final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+        final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
             fee, ctx,
         )?);
 
         if let Some(tip) = tip {
-            final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+            final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
                 tip, ctx,
             )?);
         }
@@ -50,7 +52,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
                     indent: Some(Indent::new(1)?),
                     expert: true,
                 });
-                final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+                final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
                     info, ctx,
                 )?);
             }
@@ -124,7 +126,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&auth_info, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&auth_info, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);

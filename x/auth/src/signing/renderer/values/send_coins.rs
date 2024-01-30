@@ -1,5 +1,5 @@
 use bnum::types::U256 as BU256;
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
@@ -13,10 +13,12 @@ use store::StoreKey;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for SendCoins {
+impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
+    for SendCoins
+{
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let inner_coins = self.clone().into_inner();
 
@@ -125,7 +127,7 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screen = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(
+        let actual_screen = ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(
             &SendCoins::new(vec![coin])?,
             &context,
         )

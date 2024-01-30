@@ -1,4 +1,4 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     ibc_types::protobuf::Protobuf,
@@ -12,12 +12,16 @@ use store::StoreKey;
 
 use crate::signing::{hasher::hash_get, renderer::value_renderer::ValueRenderer};
 
-impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValueRenderer, SK>>
-    ValueRenderer<DefaultValueRenderer, SK> for TextualData<M>
+impl<
+        DefaultValueRenderer,
+        SK: StoreKey,
+        DB: Database,
+        M: Message + ValueRenderer<DefaultValueRenderer, SK, DB>,
+    > ValueRenderer<DefaultValueRenderer, SK, DB> for TextualData<M>
 {
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let TextualData {
             body,
@@ -30,7 +34,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
         let mut screens = Vec::<Screen>::new();
 
         // =========================
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
             signer_data,
             ctx,
         )?);
@@ -53,7 +57,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
                 indent: Some(Indent::new(1)?),
                 expert: false,
             });
-            screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+            screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
                 ms, ctx,
             )?);
         }
@@ -73,7 +77,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
         }
 
         // =========================
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
             auth_info, ctx,
         )?);
 
@@ -129,7 +133,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&data, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&data, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         if expected_screens != actuals_screens {

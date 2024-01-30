@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     cbor::Cbor, message::Message, screen::Screen, signer_data::SignerData,
@@ -17,11 +17,11 @@ use super::{
 pub struct SignModeHandler;
 
 impl SignModeHandler {
-    pub fn sign_bytes_get<SK: StoreKey>(
+    pub fn sign_bytes_get<SK: StoreKey, DB: Database>(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
         signer_data: SignerData,
-        tx_data: TxData<impl Message + ValueRenderer<DefaultValueRenderer, SK>>,
+        tx_data: TxData<impl Message + ValueRenderer<DefaultValueRenderer, SK, DB>>,
     ) -> Result<Vec<u8>, SigningErrors> {
         let data = TextualData::new(signer_data, tx_data)
             .map_err(|e| SigningErrors::CustomError(e.to_string()))?;

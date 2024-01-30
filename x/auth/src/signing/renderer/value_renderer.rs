@@ -2,7 +2,7 @@
 
 use std::error::Error;
 
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     message::Message, screen::Screen, textual_data::TextualData,
@@ -20,13 +20,20 @@ pub trait PrimitiveValueRenderer<V> {
 }
 
 /// The notion of "value renderer" is defined in ADR-050.
-pub trait ValueRenderer<VR, SK: StoreKey> {
+pub trait ValueRenderer<VR, SK: StoreKey, DB: Database> {
     /// Format renders the Protobuf value to a list of Screens.
-    fn format(&self, ctx: &Context<'_, '_, RocksDB, SK>) -> Result<Vec<Screen>, Box<dyn Error>>;
+    fn format(&self, ctx: &Context<'_, '_, DB, SK>) -> Result<Vec<Screen>, Box<dyn Error>>;
 }
 
 /// Context is "renderable" into `Screen`.
-pub trait ContextRenderer<CR, VR, SK: StoreKey, M: Message + ValueRenderer<VR, SK>> {
+pub trait ContextRenderer<
+    CR,
+    VR,
+    SK: StoreKey,
+    DB: Database,
+    M: Message + ValueRenderer<VR, SK, DB>,
+>
+{
     fn format(&self, value: TextualData<M>) -> Result<Vec<Screen>, Box<dyn Error>>;
 }
 

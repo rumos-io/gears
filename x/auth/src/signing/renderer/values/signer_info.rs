@@ -1,4 +1,4 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     screen::{Content, Indent, Screen},
@@ -10,10 +10,12 @@ use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
 
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for SignerInfo {
+impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
+    for SignerInfo
+{
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let SignerInfo {
             public_key,
@@ -23,12 +25,12 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 
         let mut final_screens = Vec::<Screen>::new();
         if let Some(public_key) = public_key {
-            final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+            final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
                 public_key, ctx,
             )?)
         }
 
-        final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+        final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
             mode_info, ctx,
         )?);
 
@@ -97,7 +99,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&info, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&info, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);

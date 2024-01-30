@@ -1,4 +1,4 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     fee::Fee,
@@ -10,10 +10,12 @@ use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
 
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for Fee {
+impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
+    for Fee
+{
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let Fee {
             amount,
@@ -24,7 +26,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 
         let mut screens = Vec::<Screen>::new();
         if let Some(amount) = amount {
-            screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
+            screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
                 amount, ctx,
             )?);
         }
@@ -96,7 +98,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&fee, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&fee, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
@@ -137,7 +139,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&fee, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&fee, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
@@ -186,7 +188,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&fee, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&fee, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
@@ -241,7 +243,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&fee, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&fee, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);

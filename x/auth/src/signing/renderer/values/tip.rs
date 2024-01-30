@@ -1,4 +1,4 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     screen::{Content, Screen},
@@ -8,15 +8,17 @@ use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for Tip {
+impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
+    for Tip
+{
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let Tip { amount, tipper } = &self;
 
         if let Some(amount) = amount {
-            let mut screens = ValueRenderer::<DefaultValueRenderer, SK>::format(amount, ctx)?;
+            let mut screens = ValueRenderer::<DefaultValueRenderer, SK, DB>::format(amount, ctx)?;
 
             screens.push(Screen {
                 title: "Tipper".to_string(),
@@ -64,7 +66,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&tip, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&tip, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
@@ -103,7 +105,7 @@ mod tests {
             Context::DynamicContext(&mut ctx);
 
         let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&tip, &context)
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&tip, &context)
                 .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);

@@ -2,7 +2,7 @@ use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
 use bnum::types::U256;
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     base::v1beta1::Coin,
@@ -13,11 +13,13 @@ use proto_messages::cosmos::{
 };
 use store::StoreKey;
 
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for Coin {
+impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
+    for Coin
+{
     /// Format `Coin` into `Screen`.
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let Metadata {
             display,
@@ -95,7 +97,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screen = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&coin, &context);
+        let actual_screen =
+            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&coin, &context);
 
         assert!(actual_screen.is_ok(), "Failed to retrieve screens");
         assert_eq!(vec![expected_screens], actual_screen.unwrap());
