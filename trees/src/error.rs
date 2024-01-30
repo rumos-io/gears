@@ -10,4 +10,6 @@ pub enum Error {
     NodeDeserialize,
     #[error("cannot overwrite existing version")]
     Overwrite,
+    #[error("requested node is not exists")]
+    NodeNotExists,
 }

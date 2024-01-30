@@ -14,7 +14,7 @@ use crate::{error::Error, merkle::EMPTY_HASH};
 use super::node_db::NodeDB;
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub(crate) struct InnerNode {
+pub struct InnerNode {
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     pub(crate) right_node: Option<Box<Node>>,
     pub(crate) key: Vec<u8>,
@@ -23,6 +23,23 @@ pub(crate) struct InnerNode {
     pub(crate) left_hash: [u8; 32],
     pub(crate) right_hash: [u8; 32],
     version: u32,
+}
+
+impl From<LeafNode> for InnerNode {
+    fn from(value: LeafNode) -> Self {
+        let right_hash = value.hash();
+
+        Self {
+            left_node: None,
+            right_node: None,
+            key: value.key,
+            height: 1,
+            size: 0,
+            left_hash: EMPTY_HASH,
+            right_hash,
+            version: value.version,
+        }
+    }
 }
 
 impl InnerNode {
@@ -105,14 +122,37 @@ impl InnerNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub(crate) struct LeafNode {
+pub struct LeafNode {
     pub(crate) key: Vec<u8>,
     pub(crate) value: Vec<u8>,
     version: u32,
 }
 
+impl LeafNode {
+    pub fn hash(&self) -> [u8; 32] {
+        let serialized = self.hash_serialize();
+        Sha256::digest(serialized).into()
+    }
+
+    fn hash_serialize(&self) -> Vec<u8> {
+        // NOTE: i64 is used here for parameters for compatibility wih cosmos
+        let height: i64 = 0;
+        let size: i64 = 1;
+        let version: i64 = self.version.into();
+        let hashed_value = Sha256::digest(&self.value);
+
+        let mut serialized = height.encode_var_vec();
+        serialized.extend(size.encode_var_vec());
+        serialized.extend(version.encode_var_vec());
+        serialized.extend(encode_bytes(&self.key));
+        serialized.extend(encode_bytes(&hashed_value));
+
+        serialized
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum Node {
+pub enum Node {
     Leaf(LeafNode),
     Inner(InnerNode),
 }
@@ -278,21 +318,7 @@ impl Node {
 
     fn hash_serialize(&self) -> Vec<u8> {
         match &self {
-            Node::Leaf(node) => {
-                // NOTE: i64 is used here for parameters for compatibility wih cosmos
-                let height: i64 = 0;
-                let size: i64 = 1;
-                let version: i64 = node.version.into();
-                let hashed_value = Sha256::digest(&node.value);
-
-                let mut serialized = height.encode_var_vec();
-                serialized.extend(size.encode_var_vec());
-                serialized.extend(version.encode_var_vec());
-                serialized.extend(encode_bytes(&node.key));
-                serialized.extend(encode_bytes(&hashed_value));
-
-                serialized
-            }
+            Node::Leaf(node) => node.hash_serialize(),
             Node::Inner(node) => {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
                 let height: i64 = node.height.into();
@@ -541,7 +567,7 @@ where
         }
     }
 
-    pub(crate) fn remove(
+    pub fn remove(
         &mut self,
         key: &impl AsRef<[u8]>,
         version: u32,
@@ -560,7 +586,7 @@ where
                     // auto deref make pain so we need to explicit call `as_mut`
                     Node::Leaf(leaf) => {
                         if leaf.key[..] != *key.as_ref() {
-                            panic!("Tried to delete key that don't exists")
+                            return Err(Error::NodeNotExists);
                         }
                     }
                     Node::Inner(inner) => {
@@ -587,7 +613,7 @@ where
 
             let mut node = tree.take().unwrap();
             match node.as_mut() {
-                Node::Leaf(_) => todo!(),
+                Node::Leaf(_) => (),
                 Node::Inner(inner_node) => {
                     match inner_node.left_node.take() {
                         None => {
@@ -603,8 +629,24 @@ where
                                     // a right child.
                                     let mut replacement = leftmost_to_top(right_inner);
                                     match replacement.as_mut() {
-                                        // TODO: Probably instead of panic need to create inner and attach leaf
-                                        Node::Leaf(_) => panic!("Leaf node cannot replace inner"),
+                                        Node::Leaf(leaf_replacement) => {
+                                            /*
+                                               ! If we need to replace node with inner we create new inner
+                                               ! from a leaf and add leaf to right node of new inner
+                                               ! at end we replace leaf node with inner
+                                            */
+                                            let mut inner_replacement =
+                                                InnerNode::from(leaf_replacement.clone());
+                                            inner_replacement.right_node = Some(Box::new(
+                                                Node::Leaf(leaf_replacement.clone()),
+                                            ));
+                                            inner_replacement.left_node = Some(left_inner);
+
+                                            replacement = Box::new(Node::Inner(inner_replacement));
+
+                                            replacement.rebalance(version, node_db)?;
+                                            *tree = Some(replacement);
+                                        }
                                         Node::Inner(inner_replacement) => {
                                             inner_replacement.left_node = Some(left_inner);
                                             replacement.rebalance(version, node_db)?;
@@ -890,6 +932,69 @@ fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), Error> {
 mod tests {
     use super::*;
     use database::MemDB;
+
+    #[test]
+    fn remove_root_leaf() -> anyhow::Result<()> {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100).unwrap();
+
+        let leaf = Some(Box::new(Node::Leaf(LeafNode {
+            key: vec![1],
+            value: vec![3, 2, 1],
+            version: 0,
+        })));
+
+        tree.root = leaf.clone();
+
+        let node = tree.remove(&[1], 0)?;
+
+        assert_eq!(node, leaf);
+        assert!(tree.root.is_none());
+
+        Ok(())
+    }
+
+    #[test]
+    fn remove_leaf_from_tree() -> anyhow::Result<()> {
+        let expected_leaf = Some(Box::new(Node::Leaf(LeafNode {
+            key: vec![19],
+            value: vec![3, 2, 1],
+            version: 0,
+        })));
+
+        let root = InnerNode {
+            left_node: expected_leaf.clone(),
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
+                key: vec![20],
+                value: vec![1, 6, 9],
+                version: 0,
+            }))),
+            key: vec![20],
+            height: 1,
+            size: 2,
+            left_hash: [
+                56, 18, 97, 18, 6, 216, 38, 113, 24, 103, 129, 119, 92, 30, 188, 114, 183, 100,
+                110, 73, 39, 131, 243, 199, 251, 72, 125, 220, 56, 132, 125, 106,
+            ],
+            right_hash: [
+                150, 105, 234, 135, 99, 29, 12, 162, 67, 236, 81, 117, 3, 18, 217, 76, 202, 161,
+                168, 94, 102, 108, 58, 135, 122, 167, 228, 134, 150, 121, 201, 234,
+            ],
+            version: 0,
+        };
+
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100).unwrap();
+
+        tree.root = Some(Box::new(Node::Inner(root)));
+
+        let node = tree.remove(&[19], 0)?;
+
+        assert_eq!(node, expected_leaf);
+        assert!(tree.root.is_some());
+
+        Ok(())
+    }
 
     #[test]
     fn right_rotate_works() {
