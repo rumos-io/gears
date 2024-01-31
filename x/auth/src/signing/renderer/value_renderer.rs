@@ -4,9 +4,7 @@ use std::error::Error;
 
 use database::Database;
 use gears::types::context::context::Context;
-use proto_messages::cosmos::tx::v1beta1::{
-    message::Message, screen::Screen, textual_data::TextualData,
-};
+use proto_messages::cosmos::tx::v1beta1::screen::Screen;
 use store::StoreKey;
 
 /// Render primitive type into content for `Screen`.
@@ -25,18 +23,6 @@ pub trait ValueRenderer<VR, SK: StoreKey, DB: Database> {
     fn format(&self, ctx: &Context<'_, '_, DB, SK>) -> Result<Vec<Screen>, Box<dyn Error>>;
 }
 
-/// Context is "renderable" into `Screen`.
-pub trait ContextRenderer<
-    CR,
-    VR,
-    SK: StoreKey,
-    DB: Database,
-    M: Message + ValueRenderer<VR, SK, DB>,
->
-{
-    fn format(&self, value: TextualData<M>) -> Result<Vec<Screen>, Box<dyn Error>>;
-}
-
 /// Static structure which implement trait for formatting primitive types
 /// like `i64` or `bool` and made for using in `gears`
 pub struct DefaultPrimitiveRenderer;
@@ -44,6 +30,3 @@ pub struct DefaultPrimitiveRenderer;
 /// Static structure which implement trait for formatting messages
 /// like `Coin` or `Tx<M : Message>`
 pub struct DefaultValueRenderer;
-
-/// Static structure which implement trait for formatting context
-pub struct DefaultContextRenderer;
