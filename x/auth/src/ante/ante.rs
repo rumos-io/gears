@@ -16,7 +16,9 @@ use proto_messages::cosmos::{
         message::Message,
         mode_info::{ModeInfo, SignMode},
         public_key::PublicKey,
+        signer_data::{ChainId, SignerData},
         tx::tx::Tx,
+        tx_data::TxData,
         tx_raw::TxWithRaw,
     },
 };
@@ -282,6 +284,11 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                 )));
             }
 
+            let public_key = acct
+                .get_public_key()
+                .as_ref()
+                .expect("account pub keys are set in set_pub_key_ante_handler"); //TODO: but can't they be set to None?
+
             let sign_bytes = match &signature_data.mode_info {
                 ModeInfo::Single(mode) => match mode {
                     SignMode::Unspecified => {
@@ -297,11 +304,24 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                     }
                     .encode_to_vec(),
                     SignMode::Textual => {
-                        todo!()
-                        // let handler = SignModeHandler;
+                        let handler = SignModeHandler;
 
-                        // handler.sign_bytes_get(ctx, signer_data, tx_data).unwrap()
+                        let signer_data = SignerData {
+                            address: signer.to_owned(),
+                            chain_id: ChainId::new(ctx.get_chain_id().to_owned()).unwrap(), //TODO: remove unwrap
+                            account_number: acct.get_account_number(),
+                            sequence: account_seq,
+                            pub_key: public_key.to_owned(),
+                        };
+
+                        let tx_data = TxData {
+                            body: tx.tx.body.clone(),
+                            auth_info: tx.tx.auth_info.clone(),
+                        };
+
+                        //handler.sign_bytes_get(ctx, signer_data, tx_data).unwrap()
                         //TODO: remove unwrap
+                        todo!()
                     }
                     _ => {
                         return Err(AppError::TxValidation(
@@ -317,11 +337,6 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             };
 
             let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
-
-            let public_key = acct
-                .get_public_key()
-                .as_ref()
-                .expect("account pub keys are set in set_pub_key_ante_handler"); //TODO: but can't they be set to None?
 
             //TODO: move sig verification into PublicKey
             match public_key {
