@@ -5,9 +5,7 @@ use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for ModeInfo
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for ModeInfo {
     fn format(
         &self,
         _ctx: &Context<'_, '_, DB, SK>,

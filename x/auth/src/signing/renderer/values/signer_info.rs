@@ -10,9 +10,7 @@ use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
 
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for SignerInfo
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerInfo {
     fn format(
         &self,
         ctx: &Context<'_, '_, DB, SK>,
@@ -25,14 +23,10 @@ impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValu
 
         let mut final_screens = Vec::<Screen>::new();
         if let Some(public_key) = public_key {
-            final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
-                public_key, ctx,
-            )?)
+            final_screens.append(&mut ValueRenderer::<SK, DB>::format(public_key, ctx)?)
         }
 
-        final_screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
-            mode_info, ctx,
-        )?);
+        final_screens.append(&mut ValueRenderer::<SK, DB>::format(mode_info, ctx)?);
 
         final_screens.push(Screen {
             title: "Sequence".to_string(),
@@ -54,10 +48,7 @@ mod tests {
         signer::SignerInfo,
     };
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn signer_info_formatting() -> anyhow::Result<()> {
@@ -98,9 +89,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&info, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&info, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
 

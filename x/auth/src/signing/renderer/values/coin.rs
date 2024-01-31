@@ -13,9 +13,7 @@ use proto_messages::cosmos::{
 };
 use store::StoreKey;
 
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for Coin
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Coin {
     /// Format `Coin` into `Screen`.
     fn format(
         &self,
@@ -68,7 +66,7 @@ impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValu
 #[cfg(test)]
 mod tests {
     use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
+        value_renderer::ValueRenderer,
         values::test_mocks::{KeyMock, MockContext},
     };
     use anyhow::Ok;
@@ -97,8 +95,7 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screen =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&coin, &context);
+        let actual_screen = ValueRenderer::<KeyMock, _>::format(&coin, &context);
 
         assert!(actual_screen.is_ok(), "Failed to retrieve screens");
         assert_eq!(vec![expected_screens], actual_screen.unwrap());

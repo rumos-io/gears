@@ -11,9 +11,7 @@ use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for MsgSend
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for MsgSend {
     /// Format `MsgSend` with `MessageDefaultRenderer`
     ///
     /// ## Example
@@ -59,9 +57,7 @@ impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValu
         for coin_raw in self.amount.clone() {
             let coin: Coin = coin_raw.try_into()?;
 
-            screens_vec.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
-                &coin, ctx,
-            )?)
+            screens_vec.append(&mut ValueRenderer::<SK, DB>::format(&coin, ctx)?)
         }
 
         Ok(screens_vec)
@@ -83,7 +79,7 @@ mod tests {
     use store::StoreKey;
     use strum::EnumIter;
 
-    use crate::signing::renderer::value_renderer::{DefaultValueRenderer, ValueRenderer};
+    use crate::signing::renderer::value_renderer::ValueRenderer;
 
     // TODO: fix this test
     // #[test]
@@ -142,8 +138,7 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&msg, &context);
+        let actual_screens = ValueRenderer::<KeyMock, _>::format(&msg, &context);
 
         assert!(actual_screens.is_ok(), "Failed to retrieve screens");
         assert_eq!(expected_screens, actual_screens.expect("Unreachable"));

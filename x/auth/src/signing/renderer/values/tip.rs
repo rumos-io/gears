@@ -8,9 +8,7 @@ use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for Tip
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Tip {
     fn format(
         &self,
         ctx: &Context<'_, '_, DB, SK>,
@@ -18,7 +16,7 @@ impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValu
         let Tip { amount, tipper } = &self;
 
         if let Some(amount) = amount {
-            let mut screens = ValueRenderer::<DefaultValueRenderer, SK, DB>::format(amount, ctx)?;
+            let mut screens = ValueRenderer::<SK, DB>::format(amount, ctx)?;
 
             screens.push(Screen {
                 title: "Tipper".to_string(),
@@ -47,10 +45,7 @@ mod tests {
     };
     use proto_types::{AccAddress, Denom};
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn tip_formating_no_amount() -> anyhow::Result<()> {
@@ -65,9 +60,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&tip, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&tip, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
 
@@ -104,9 +98,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&tip, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&tip, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
 

@@ -13,9 +13,7 @@ use store::StoreKey;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for SendCoins
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SendCoins {
     fn format(
         &self,
         ctx: &Context<'_, '_, DB, SK>,
@@ -105,7 +103,7 @@ mod tests {
     };
 
     use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
+        value_renderer::ValueRenderer,
         values::test_mocks::{KeyMock, MockContext},
     };
 
@@ -127,11 +125,9 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screen = ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(
-            &SendCoins::new(vec![coin])?,
-            &context,
-        )
-        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actual_screen =
+            ValueRenderer::<KeyMock, _>::format(&SendCoins::new(vec![coin])?, &context)
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(vec![expected_screens], actual_screen);
 

@@ -18,7 +18,7 @@ pub trait PrimitiveValueRenderer<V> {
 }
 
 /// The notion of "value renderer" is defined in ADR-050.
-pub trait ValueRenderer<VR, SK: StoreKey, DB: Database> {
+pub trait ValueRenderer<SK: StoreKey, DB: Database> {
     /// Format renders the Protobuf value to a list of Screens.
     fn format(&self, ctx: &Context<'_, '_, DB, SK>) -> Result<Vec<Screen>, Box<dyn Error>>;
 }

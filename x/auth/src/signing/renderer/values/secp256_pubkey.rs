@@ -10,9 +10,7 @@ use crate::signing::renderer::value_renderer::ValueRenderer;
 
 const TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for PubKey
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for PubKey {
     fn format(
         &self,
         _ctx: &Context<'_, '_, DB, SK>,
@@ -42,10 +40,7 @@ mod tests {
         tx::v1beta1::screen::{Content, Indent, Screen},
     };
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {
@@ -76,9 +71,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&key, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actual_screens = ValueRenderer::<KeyMock, _>::format(&key, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actual_screens);
 

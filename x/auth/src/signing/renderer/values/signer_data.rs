@@ -8,9 +8,7 @@ use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValueRenderer, SK, DB>
-    for SignerData
-{
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerData {
     fn format(
         &self,
         ctx: &Context<'_, '_, DB, SK>,
@@ -42,10 +40,7 @@ impl<DefaultValueRenderer, SK: StoreKey, DB: Database> ValueRenderer<DefaultValu
             },
         ];
 
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
-            &self.pub_key,
-            ctx,
-        )?);
+        screens.append(&mut ValueRenderer::<SK, DB>::format(&self.pub_key, ctx)?);
 
         Ok(screens)
     }
@@ -60,10 +55,7 @@ mod tests {
     };
     use proto_types::AccAddress;
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn signer_data_formating() -> anyhow::Result<()> {
@@ -124,9 +116,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&signer_data, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&signer_data, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
 

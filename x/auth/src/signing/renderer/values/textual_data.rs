@@ -12,12 +12,8 @@ use store::StoreKey;
 
 use crate::signing::{hasher::hash_get, renderer::value_renderer::ValueRenderer};
 
-impl<
-        DefaultValueRenderer,
-        SK: StoreKey,
-        DB: Database,
-        M: Message + ValueRenderer<DefaultValueRenderer, SK, DB>,
-    > ValueRenderer<DefaultValueRenderer, SK, DB> for TextualData<M>
+impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRenderer<SK, DB>
+    for TextualData<M>
 {
     fn format(
         &self,
@@ -34,10 +30,7 @@ impl<
         let mut screens = Vec::<Screen>::new();
 
         // =========================
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
-            signer_data,
-            ctx,
-        )?);
+        screens.append(&mut ValueRenderer::<SK, DB>::format(signer_data, ctx)?);
 
         // Transaction message section
         screens.push(Screen {
@@ -57,9 +50,7 @@ impl<
                 indent: Some(Indent::new(1)?),
                 expert: false,
             });
-            screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
-                ms, ctx,
-            )?);
+            screens.append(&mut ValueRenderer::<SK, DB>::format(ms, ctx)?);
         }
         screens.push(Screen {
             title: String::new(),
@@ -77,9 +68,7 @@ impl<
         }
 
         // =========================
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK, DB>::format(
-            auth_info, ctx,
-        )?);
+        screens.append(&mut ValueRenderer::<SK, DB>::format(auth_info, ctx)?);
 
         // =========================
         let body_bytes = body.encode_vec();
@@ -117,10 +106,7 @@ mod tests {
     };
     use proto_types::{AccAddress, Denom};
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn textual_data_formatting() -> anyhow::Result<()> {
@@ -132,9 +118,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&data, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&data, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         if expected_screens != actuals_screens {
             let expected = serde_json::to_string(&expected_screens)?;

@@ -8,10 +8,7 @@ use proto_messages::cosmos::tx::v1beta1::{
 };
 use store::StoreKey;
 
-use super::{
-    errors::SigningErrors,
-    renderer::value_renderer::{DefaultValueRenderer, ValueRenderer},
-};
+use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 
 #[derive(Debug)]
 pub struct SignModeHandler;
@@ -21,7 +18,7 @@ impl SignModeHandler {
         &self,
         ctx: &Context<'_, '_, DB, SK>,
         signer_data: SignerData,
-        tx_data: TxData<impl Message + ValueRenderer<DefaultValueRenderer, SK, DB>>,
+        tx_data: TxData<impl Message + ValueRenderer<SK, DB>>,
     ) -> Result<Vec<u8>, SigningErrors> {
         let data = TextualData::new(signer_data, tx_data)
             .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
