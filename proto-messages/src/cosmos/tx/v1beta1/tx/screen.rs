@@ -23,12 +23,6 @@ pub struct Content(String);
 )]
 pub struct Indent(u8);
 
-// impl Default for Indent {
-//     fn default() -> Self {
-//         Self::new(0).expect("Default should be valid")
-//     }
-// }
-
 /// Screen is the abstract unit of Textual rendering.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Screen {
@@ -86,21 +80,6 @@ impl Screen {
         map
     }
 }
-
-// impl Cbor for &[Screen] {
-//     fn encode(&self, writter: &mut impl std::io::Write) -> Result<(), std::io::Error> {
-//         let map = self.iter().map( Screen::cbor_map ).collect::<Vec<_>>();
-
-//         let mut final_map = HashMap::new();
-
-//         final_map.insert( 1, map);
-//         let mut bytes = Vec::new();
-
-//         final_map.encode(&mut bytes)?;
-
-//         Ok( bytes )
-//     }
-// }
 
 impl Cbor for Vec<Screen> {
     fn encode(&self, writter: &mut impl std::io::Write) -> Result<(), std::io::Error> {
