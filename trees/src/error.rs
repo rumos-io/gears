@@ -11,5 +11,5 @@ pub enum Error {
     #[error("cannot overwrite existing version")]
     Overwrite,
     #[error("requested node is not exists")]
-    NodeNotExists,
+    NodeNotExists, // TODO: More specific and special errors for removing node
 }

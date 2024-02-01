@@ -52,6 +52,38 @@ impl InnerNode {
         })
     }
 
+    /// Return left node of node. \
+    /// This method will not panic if node is not found in db.
+    fn left_node_mut<T: Database>(&mut self, node_db: &NodeDB<T>) -> Option<&mut Node> {
+        match self.left_node {
+            Some(ref mut node) => Some(node),
+            None => {
+                self.left_node = node_db.get_node(&self.left_hash);
+
+                match self.left_node {
+                    Some(ref mut node) => Some(node),
+                    None => None,
+                }
+            }
+        }
+    }
+
+    /// Return right node of node. \
+    /// This method will not panic if node is not found in db.
+    fn right_node_mut<T: Database>(&mut self, node_db: &NodeDB<T>) -> Option<&mut Node> {
+        match self.left_node {
+            Some(ref mut node) => Some(node),
+            None => {
+                self.left_node = node_db.get_node(&self.left_hash);
+
+                match self.left_node {
+                    Some(ref mut node) => Some(node),
+                    None => None,
+                }
+            }
+        }
+    }
+
     fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         self.right_node.get_or_insert_with(|| {
             let node = node_db
@@ -256,7 +288,7 @@ impl Node {
             Node::Leaf(_) => Ok(false),
             Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
                 -2 => {
-                    let right_node = inner.right_node.as_mut().unwrap();
+                    let right_node = inner.right_node_mut(node_db).ok_or(Error::NodeNotExists)?;
 
                     if right_node.update_height_and_size_get_balance_factor(node_db) == 1 {
                         Self::right_rotate(right_node, version, node_db)?;
@@ -268,7 +300,7 @@ impl Node {
                 }
 
                 2 => {
-                    let left_node = inner.left_node.as_mut().unwrap();
+                    let left_node = inner.left_node_mut(node_db).ok_or(Error::NodeNotExists)?;
 
                     if left_node.update_height_and_size_get_balance_factor(node_db) == -1 {
                         Self::left_rotate(left_node, version, node_db)?;
@@ -567,6 +599,61 @@ where
         }
     }
 
+    pub fn remove_v2(
+        &mut self,
+        key: &impl AsRef<[u8]>,
+    ) -> Result<Option<(Vec<u8>, Vec<Node>)>, Error> {
+        return match self.root {
+            Some(ref mut tree) => {
+                let mut orphants = Vec::<Node>::with_capacity(3 + tree.get_height() as usize);
+
+                let result = recursive_remove(
+                    tree,
+                    &self.node_db,
+                    key,
+                    &mut orphants,
+                    self.loaded_version + 1,
+                )?;
+
+                Ok(Some((result, orphants)))
+            }
+            None => Ok(None),
+        };
+
+        fn recursive_remove<T: Database>(
+            node: &mut Node,
+            node_db: &NodeDB<T>,
+            key: &impl AsRef<[u8]>,
+            orphaned: &mut Vec<Node>,
+            version: u32,
+        ) -> Result<Vec<u8>, Error> {
+            let result = match node {
+                Node::Leaf(leaf) => {
+                    if leaf.key[..] != *key.as_ref() {
+                        Err(Error::NodeNotExists)
+                    } else {
+                        orphaned.push(Node::Leaf(leaf.clone()));
+                        Ok(leaf.value.drain(..).collect::<Vec<_>>()) // TODO: Unsure if I should drain value
+                    }
+                }
+                Node::Inner(inner) => {
+                    let next_node = match inner.key[..].cmp(key.as_ref()) {
+                        Ordering::Less => inner.left_node_mut(node_db).ok_or(Error::NodeNotExists),
+                        Ordering::Greater | Ordering::Equal => {
+                            inner.right_node_mut(node_db).ok_or(Error::NodeNotExists)
+                        }
+                    }?;
+
+                    recursive_remove(next_node, node_db, key, orphaned, version)
+                }
+            }?;
+
+            node.rebalance(version, node_db)?;
+
+            Ok(result)
+        }
+    }
+
     pub fn remove(
         &mut self,
         key: &impl AsRef<[u8]>,
@@ -594,8 +681,7 @@ where
                             Ordering::Less => {
                                 Some(tree_remove(&mut inner.right_node, key, version, node_db))
                             }
-                            Ordering::Equal => None,
-                            Ordering::Greater => {
+                            Ordering::Greater | Ordering::Equal => {
                                 Some(tree_remove(&mut inner.left_node, key, version, node_db))
                             }
                         } {
