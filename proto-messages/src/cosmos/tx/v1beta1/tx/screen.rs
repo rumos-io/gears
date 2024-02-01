@@ -193,19 +193,6 @@ mod tests {
         validate_result([(bytes, CBOR)])
     }
 
-    // fn validate_result(value: impl IntoIterator<Item = Screen>, expected: &'static str) {
-    //     let vec = value.into_iter().collect::<Vec<_>>();
-
-    //     let mut buf = Vec::new();
-
-    //     vec.encode(&mut buf).expect("Failed to encode");
-
-    //     let expected = data_encoding::HEXLOWER
-    //         .decode(expected.as_bytes())
-    //         .expect("Failed to decode");
-    //     assert_eq!(buf, expected, "{buf:02x?} != {expected:02x?}");
-    // }
-
     fn validate_result<'a>(value: impl IntoIterator<Item = (Vec<u8>, &'a str)>) {
         for (i, expected) in value {
             let actual = data_encoding::HEXLOWER.encode(&i);
