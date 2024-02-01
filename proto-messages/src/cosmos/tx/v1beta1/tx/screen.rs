@@ -1,4 +1,3 @@
-use super::cbor::Cbor;
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 
@@ -78,12 +77,6 @@ impl Screen {
         }
 
         map
-    }
-}
-
-impl Cbor for Vec<Screen> {
-    fn encode(&self, writter: &mut impl std::io::Write) -> Result<(), std::io::Error> {
-        AsRef::<[Screen]>::as_ref(self).encode(writter)
     }
 }
 
