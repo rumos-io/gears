@@ -1,6 +1,6 @@
 use std::{
     cmp::{self, Ordering},
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeSet, HashMap, HashSet},
     mem,
     ops::{Bound, Deref, RangeBounds},
 };
@@ -497,6 +497,7 @@ pub struct Tree<T> {
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
     pub(crate) orphans: HashMap<Sha256Hash, u32>,
+    pub(crate) unsaved_removal : HashSet<Vec<u8>>
 }
 
 #[derive(Debug, Clone)]
@@ -538,6 +539,7 @@ where
                 node_db,
                 versions,
                 orphans: Default::default(),
+                unsaved_removal : Default::default(),
             })
         } else {
             // use the latest version available
@@ -550,6 +552,7 @@ where
                     node_db,
                     versions,
                     orphans: Default::default(),
+                    unsaved_removal : Default::default(),
                 })
             } else {
                 Ok(Tree {
@@ -558,6 +561,7 @@ where
                     node_db,
                     versions,
                     orphans: Default::default(),
+                    unsaved_removal : Default::default(),
                 })
             }
         }
@@ -570,6 +574,12 @@ where
                 .into_iter()
                 .map(|this| (this.hash(), this.version())),
         )
+    }
+
+    fn unsaved_removal_add( &mut self, key: &impl AsRef<[u8]> ) -> bool
+    {
+        // TODO: delete from fast_additions when implements
+        self.unsaved_removal.insert( key.as_ref().into_iter().cloned().collect() )
     }
 
     /// Save the current tree to disk.
@@ -719,7 +729,7 @@ where
                         return Ok(None);
                     }
 
-                    // tree.addUnsavedRemoval(key) // TODO
+                    tree.unsaved_removal_add( key );
 
                     if new_root.is_none() {
                         let new_root_hash = new_root_hash.ok_or(Error::CustomError(
