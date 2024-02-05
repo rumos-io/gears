@@ -697,7 +697,7 @@ where
             // equal to `key`. We can `take()` it out of the tree to get ownership of it, and
             // then we can manipulate the node and insert parts of it back into the tree as needed.
 
-            let mut node = tree.take().unwrap();
+            let mut node = tree.take().expect( "Unreachable: We hit Equal above. We know that tree is Some." );
             match node.as_mut() {
                 Node::Leaf(_) => (),
                 Node::Inner(inner_node) => {
@@ -713,7 +713,8 @@ where
                                 Some(right_inner) => {
                                     // This is the general case: the node to be removed has both a left and
                                     // a right child.
-                                    let mut replacement = leftmost_to_top(right_inner);
+                                    let mut replacement =
+                                        leftmost_to_top(right_inner, version, node_db)?;
                                     match replacement.as_mut() {
                                         Node::Leaf(leaf_replacement) => {
                                             /*
@@ -751,23 +752,26 @@ where
 
         /// Returns a rotated version of `node` whose top has no left child and whose top has a
         /// balanced right subtree.
-        fn leftmost_to_top(mut node: Box<Node>) -> Box<Node> {
+        fn leftmost_to_top<T: Database>(
+            mut node: Box<Node>,
+            version: u32,
+            node_db: &NodeDB<T>,
+        ) -> Result<Box<Node>, Error> {
             match node.as_mut() {
-                Node::Leaf(_) => node,
+                Node::Leaf(_) => Ok(node),
                 Node::Inner(inner) => {
                     match inner.left_node.take() {
-                        None => node,
+                        None => Ok(node),
                         Some(node_l) => {
-                            let mut next_top = leftmost_to_top(node_l);
+                            let mut next_top = leftmost_to_top(node_l, version, node_db)?;
                             match next_top.as_mut() {
-                                Node::Leaf(_) => next_top,
+                                Node::Leaf(_) => Ok(next_top),
                                 Node::Inner(inner_new) => {
                                     // By induction, next_top has no left child
                                     inner.left_node = inner_new.right_node.take();
-                                    // node.update_height();
-                                    // node.rebalance();
+                                    node.rebalance(version, node_db)?;
                                     inner_new.right_node = Some(node);
-                                    next_top
+                                    Ok(next_top)
                                 }
                             }
                         }
