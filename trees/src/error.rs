@@ -12,4 +12,6 @@ pub enum Error {
     Overwrite,
     #[error("requested node is not exists")]
     NodeNotExists, // TODO: More specific and special errors for removing node
+    #[error("custom error: {0}")]
+    CustomError(String),
 }

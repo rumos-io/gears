@@ -1,6 +1,6 @@
 use std::{
     cmp::{self, Ordering},
-    collections::BTreeSet,
+    collections::{BTreeSet, HashMap},
     mem,
     ops::{Bound, Deref, RangeBounds},
 };
@@ -9,25 +9,28 @@ use database::Database;
 use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
-use crate::{error::Error, merkle::EMPTY_HASH};
+use crate::{
+    error::Error,
+    merkle::{Sha256Hash, EMPTY_HASH},
+};
 
 use super::node_db::NodeDB;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub struct NodeDetails {
     pub(crate) key: Vec<u8>,
     pub(crate) is_persisted: bool,
     version: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub struct InnerNode {
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     pub(crate) right_node: Option<Box<Node>>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
-    pub(crate) left_hash: [u8; 32],
-    pub(crate) right_hash: [u8; 32],
+    pub(crate) left_hash: Sha256Hash,
+    pub(crate) right_hash: Sha256Hash,
     pub(crate) details: NodeDetails,
 }
 
@@ -157,14 +160,14 @@ impl InnerNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub struct LeafNode {
     pub(crate) value: Vec<u8>,
     pub(crate) details: NodeDetails,
 }
 
 impl LeafNode {
-    pub fn hash(&self) -> [u8; 32] {
+    pub fn hash(&self) -> Sha256Hash {
         let serialized = self.hash_serialize();
         Sha256::digest(serialized).into()
     }
@@ -186,7 +189,7 @@ impl LeafNode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub enum Node {
     Leaf(LeafNode),
     Inner(InnerNode),
@@ -338,6 +341,20 @@ impl Node {
         }
     }
 
+    pub fn is_persisted(&self) -> bool {
+        match self {
+            Node::Leaf(var) => var.details.is_persisted,
+            Node::Inner(var) => var.details.is_persisted,
+        }
+    }
+
+    pub fn version(&self) -> u32 {
+        match self {
+            Node::Leaf(var) => var.details.version,
+            Node::Inner(var) => var.details.version,
+        }
+    }
+
     pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
         Node::Leaf(LeafNode {
             value,
@@ -458,6 +475,27 @@ pub struct Tree<T> {
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
+    pub(crate) orphans: HashMap<Sha256Hash, u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct OrphantList(Vec<Node>);
+
+impl OrphantList {
+    pub fn new(nodes: impl IntoIterator<Item = Node>) -> Option<Self> {
+        let mut nodes = nodes.into_iter();
+
+        if nodes.any(|this| this.hash() == EMPTY_HASH) {
+            None
+        } else {
+            // We don't need to orphan nodes that were never persisted.
+            Some(Self(nodes.filter(|this| this.is_persisted()).collect()))
+        }
+    }
+
+    pub fn into_inner(self) -> Vec<Node> {
+        self.0
+    }
 }
 
 impl<T> Tree<T>
@@ -478,6 +516,7 @@ where
                 loaded_version: target_version,
                 node_db,
                 versions,
+                orphans: Default::default(),
             })
         } else {
             // use the latest version available
@@ -489,6 +528,7 @@ where
                     loaded_version: *latest_version,
                     node_db,
                     versions,
+                    orphans: Default::default(),
                 })
             } else {
                 Ok(Tree {
@@ -496,9 +536,19 @@ where
                     loaded_version: 0,
                     node_db,
                     versions,
+                    orphans: Default::default(),
                 })
             }
         }
+    }
+
+    fn orphans_add(&mut self, orphants: OrphantList) {
+        self.orphans.extend(
+            orphants
+                .0
+                .into_iter()
+                .map(|this| (this.hash(), this.version())),
+        )
     }
 
     /// Save the current tree to disk.
@@ -611,11 +661,8 @@ where
         }
     }
 
-    pub fn remove_v2(
-        &mut self,
-        key: &impl AsRef<[u8]>,
-    ) -> Result<Option<(Vec<u8>, Vec<Node>)>, Error> {
-        return match self.root {
+    pub fn remove_v2(&mut self, key: &impl AsRef<[u8]>) -> Result<Option<Vec<u8>>, Error> {
+        let result = match self.root {
             Some(ref mut tree) => {
                 let mut orphants = Vec::<Node>::with_capacity(3 + tree.get_height() as usize);
 
@@ -630,6 +677,16 @@ where
                 Ok(Some((result, orphants)))
             }
             None => Ok(None),
+        }?;
+
+        return if let Some((value, orphants)) = result {
+            self.orphans_add(OrphantList::new(orphants).ok_or(Error::CustomError(
+                "expected to find node hash, but was empty".to_owned(),
+            ))?);
+
+            return Ok(Some(value));
+        } else {
+            Ok(None)
         };
 
         fn recursive_remove<T: Database>(
