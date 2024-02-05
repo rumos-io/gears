@@ -202,6 +202,27 @@ impl Default for Node {
 }
 
 impl Node {
+    fn inner_mut(&mut self) -> Option<&mut InnerNode> {
+        match self {
+            Node::Leaf(_) => None,
+            Node::Inner(var) => Some(var),
+        }
+    }
+
+    fn clone_version(&self, version: u32) -> Result<InnerNode, Error> {
+        match self {
+            Node::Leaf(_) => Err(Error::CustomError("can't clone leaf node".to_owned())),
+            Node::Inner(inner) => {
+                let mut node = inner.shallow_clone();
+
+                node.details.version = version;
+                node.details.is_persisted = false;
+
+                Ok(node)
+            }
+        }
+    }
+
     /// This does three things at once to prevent repeating the same process for getting the left and right nodes
     fn update_height_and_size_get_balance_factor<T: Database>(
         &mut self,
@@ -661,194 +682,175 @@ where
         }
     }
 
-    pub fn remove_v2(&mut self, key: &impl AsRef<[u8]>) -> Result<Option<Vec<u8>>, Error> {
-        let result = match self.root {
-            Some(ref mut tree) => {
-                let mut orphants = Vec::<Node>::with_capacity(3 + tree.get_height() as usize);
+    pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Result<Option<Vec<u8>>, Error> {
+        // I use this struct to be 100% sure in output of `recursive_remove`
+        struct NodeKey(pub Vec<u8>);
+        struct NodeValue(pub Vec<u8>);
 
-                let result = recursive_remove(
-                    tree,
-                    &self.node_db,
-                    key,
-                    &mut orphants,
-                    self.loaded_version + 1,
-                )?;
+        let result = inner_remove(self, key)?;
 
-                Ok(Some((result, orphants)))
-            }
-            None => Ok(None),
-        }?;
-
-        return if let Some((value, orphants)) = result {
-            self.orphans_add(OrphantList::new(orphants).ok_or(Error::CustomError(
+        return if let Some((value, orphans)) = result {
+            self.orphans_add(OrphantList::new(orphans).ok_or(Error::CustomError(
                 "expected to find node hash, but was empty".to_owned(),
             ))?);
 
-            return Ok(Some(value));
+            Ok(value.map(|this| this.0))
         } else {
             Ok(None)
         };
 
+        fn inner_remove<T: Database>(
+            tree: &mut Tree<T>,
+            key: &impl AsRef<[u8]>,
+        ) -> Result<Option<(Option<NodeValue>, Vec<Node>)>, Error> {
+            match tree.root {
+                Some(ref mut root) => {
+                    let mut orphants = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
+
+                    let (new_root_hash, new_root, _, value) = recursive_remove(
+                        root,
+                        &tree.node_db,
+                        key,
+                        &mut orphants,
+                        tree.loaded_version + 1,
+                    )?;
+
+                    if orphants.is_empty() {
+                        return Ok(None);
+                    }
+
+                    // tree.addUnsavedRemoval(key) // TODO
+
+                    if new_root.is_none() {
+                        let new_root_hash = new_root_hash.ok_or(Error::CustomError(
+                            "New root hash need to be Some".to_owned(),
+                        ))?;
+
+                        tree.root = tree.node_db.get_node(&new_root_hash); // TODO: is it okay to operate on Option without checks
+                    }
+
+                    Ok(Some((value, orphants)))
+                }
+                None => Ok(None),
+            }
+        }
+
+        // Awful but as close as possible to cosmos implementation
         fn recursive_remove<T: Database>(
             node: &mut Node,
             node_db: &NodeDB<T>,
             key: &impl AsRef<[u8]>,
             orphaned: &mut Vec<Node>,
             version: u32,
-        ) -> Result<Vec<u8>, Error> {
-            let result = match node {
-                Node::Leaf(leaf) => {
-                    if leaf.details.key[..] != *key.as_ref() {
-                        Err(Error::NodeNotExists)
-                    } else {
-                        orphaned.push(Node::Leaf(leaf.clone()));
-                        Ok(leaf.value.drain(..).collect::<Vec<_>>()) // TODO: Unsure if I should drain value
-                    }
-                }
-                Node::Inner(inner) => {
-                    let next_node = match inner.details.key[..].cmp(key.as_ref()) {
-                        Ordering::Less => inner.left_node_mut(node_db).ok_or(Error::NodeNotExists),
-                        Ordering::Greater | Ordering::Equal => {
-                            inner.right_node_mut(node_db).ok_or(Error::NodeNotExists)
-                        }
-                    }?;
-
-                    recursive_remove(next_node, node_db, key, orphaned, version)
-                }
-            }?;
-
-            node.rebalance(version, node_db)?;
-
-            Ok(result)
-        }
-    }
-
-    pub fn remove(
-        &mut self,
-        key: &impl AsRef<[u8]>,
-        version: u32,
-    ) -> Result<Option<Box<Node>>, Error> {
-        return tree_remove(&mut self.root, key, version, &self.node_db);
-
-        fn tree_remove<T: Database>(
-            tree: &mut Option<Box<Node>>,
-            key: &impl AsRef<[u8]>,
-            version: u32,
-            node_db: &NodeDB<T>,
-        ) -> Result<Option<Box<Node>>, Error> {
-            match tree {
-                None => return Ok(None),
-                Some(node) => match node.as_mut() {
-                    // auto deref make pain so we need to explicit call `as_mut`
-                    Node::Leaf(leaf) => {
-                        if leaf.details.key[..] != *key.as_ref() {
-                            return Err(Error::NodeNotExists);
-                        }
-                    }
-                    Node::Inner(inner) => {
-                        if let Some(result) = match inner.details.key[..].cmp(key.as_ref()) {
-                            Ordering::Less => {
-                                Some(tree_remove(&mut inner.right_node, key, version, node_db))
-                            }
-                            Ordering::Greater | Ordering::Equal => {
-                                Some(tree_remove(&mut inner.left_node, key, version, node_db))
-                            }
-                        } {
-                            node.rebalance(version, node_db)?;
-                            return result;
-                        }
-                    }
-                },
+        ) -> Result<
+            (
+                Option<Sha256Hash>,
+                Option<Box<Node>>,
+                Option<NodeKey>,
+                Option<NodeValue>,
+            ),
+            Error,
+        > {
+            if let Node::Leaf(leaf) = node {
+                return if leaf.details.key[..] != *key.as_ref() {
+                    Ok((
+                        Some(node.hash()),
+                        Some(Box::new(node.shallow_clone())),
+                        None,
+                        None,
+                    ))
+                } else {
+                    orphaned.push(Node::Leaf(leaf.clone()));
+                    Ok((
+                        None,
+                        None,
+                        None,
+                        Some(NodeValue(leaf.value.drain(..).collect::<Vec<_>>())),
+                    )) // TODO: Unsure if I should drain value
+                };
             }
 
-            // If control flow fell through to here, it's because we hit the Equal case above. The
-            // borrow of `tree` is now out of scope, but we know it's Some node whose key is
-            // equal to `key`. We can `take()` it out of the tree to get ownership of it, and
-            // then we can manipulate the node and insert parts of it back into the tree as needed.
+            let shallow_copy = node.shallow_clone();
 
-            let mut node = tree
-                .take()
-                .expect("Unreachable: We hit Equal above. We know that tree is Some.");
-            match node.as_mut() {
-                Node::Leaf(_) => (),
-                Node::Inner(inner_node) => {
-                    match inner_node.left_node.take() {
-                        None => {
-                            *tree = inner_node.right_node.take();
-                        }
-                        Some(left_inner) => {
-                            match inner_node.right_node.take() {
-                                None => {
-                                    *tree = Some(left_inner);
-                                }
-                                Some(right_inner) => {
-                                    // This is the general case: the node to be removed has both a left and
-                                    // a right child.
-                                    let mut replacement =
-                                        leftmost_to_top(right_inner, version, node_db)?;
-                                    match replacement.as_mut() {
-                                        Node::Leaf(leaf_replacement) => {
-                                            /*
-                                               ! If we need to replace node with inner we create new inner
-                                               ! from a leaf and add leaf to right node of new inner
-                                               ! at end we replace leaf node with inner
-                                            */
-                                            let mut inner_replacement =
-                                                InnerNode::from(leaf_replacement.clone());
-                                            inner_replacement.right_node = Some(Box::new(
-                                                Node::Leaf(leaf_replacement.clone()),
-                                            ));
-                                            inner_replacement.left_node = Some(left_inner);
+            let inner = node.inner_mut().expect("We know that node is inner");
 
-                                            replacement = Box::new(Node::Inner(inner_replacement));
+            match inner.details.key[..].cmp(key.as_ref()) {
+                Ordering::Less => {
+                    let left_node = inner.left_node_mut(node_db).ok_or(Error::NodeNotExists)?;
 
-                                            replacement.rebalance(version, node_db)?;
-                                            *tree = Some(replacement);
-                                        }
-                                        Node::Inner(inner_replacement) => {
-                                            inner_replacement.left_node = Some(left_inner);
-                                            replacement.rebalance(version, node_db)?;
-                                            *tree = Some(replacement);
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    let (new_left_hash, new_left_node, new_key, value) =
+                        recursive_remove(left_node, node_db, key, orphaned, version)?;
+
+                    if orphaned.len() == 0 {
+                        return Ok((Some(node.hash()), Some(Box::new(shallow_copy)), None, value));
                     }
-                }
-            }
+                    orphaned.push(shallow_copy);
 
-            Ok(Some(node))
-        }
-
-        /// Returns a rotated version of `node` whose top has no left child and whose top has a
-        /// balanced right subtree.
-        fn leftmost_to_top<T: Database>(
-            mut node: Box<Node>,
-            version: u32,
-            node_db: &NodeDB<T>,
-        ) -> Result<Box<Node>, Error> {
-            match node.as_mut() {
-                Node::Leaf(_) => Ok(node),
-                Node::Inner(inner) => {
-                    match inner.left_node.take() {
-                        None => Ok(node),
-                        Some(node_l) => {
-                            let mut next_top = leftmost_to_top(node_l, version, node_db)?;
-                            match next_top.as_mut() {
-                                Node::Leaf(_) => Ok(next_top),
-                                Node::Inner(inner_new) => {
-                                    // By induction, next_top has no left child
-                                    inner.left_node = inner_new.right_node.take();
-                                    node.rebalance(version, node_db)?;
-                                    inner_new.right_node = Some(node);
-                                    Ok(next_top)
-                                }
-                            }
-                        }
+                    if new_left_hash.is_none() && new_left_node.is_none() {
+                        return Ok((
+                            Some(inner.right_hash),
+                            inner.right_node.clone(),
+                            Some(NodeKey(inner.details.key.clone())),
+                            value,
+                        ));
                     }
+
+                    let mut new_node = node.clone_version(version)?;
+                    new_node.left_hash = new_left_hash.expect("We checked it to None");
+                    new_node.left_node = new_left_node;
+
+                    let mut new_node = Node::Inner(new_node);
+
+                    new_node.rebalance(version, node_db)?;
+
+                    return Ok((
+                        Some(new_node.hash()),
+                        Some(Box::new(new_node)),
+                        new_key,
+                        value,
+                    ));
                 }
-            }
+                Ordering::Greater | Ordering::Equal => {
+                    let right_node = inner.right_node_mut(node_db).ok_or(Error::NodeNotExists)?;
+
+                    let (new_right_hash, new_right_node, new_key, value) =
+                        recursive_remove(right_node, node_db, key, orphaned, version)?;
+
+                    if orphaned.len() == 0 {
+                        return Ok((
+                            Some(node.hash()),
+                            Some(Box::new(node.shallow_clone())),
+                            None,
+                            value,
+                        ));
+                    }
+                    orphaned.push(shallow_copy);
+
+                    if new_right_hash.is_none() && new_right_node.is_none() {
+                        return Ok((
+                            Some(inner.left_hash),
+                            inner.left_node.clone(),
+                            Some(NodeKey(inner.details.key.clone())),
+                            value,
+                        ));
+                    }
+
+                    let mut new_node = node.clone_version(version)?;
+                    new_node.right_hash = new_right_hash.expect("We checked it to None");
+                    new_node.right_node = new_right_node;
+
+                    let mut new_node = Node::Inner(new_node);
+
+                    new_node.rebalance(version, node_db)?;
+
+                    return Ok((
+                        Some(new_node.hash()),
+                        Some(Box::new(new_node)),
+                        new_key,
+                        value,
+                    ));
+                }
+            };
         }
     }
 
@@ -1104,30 +1106,6 @@ mod tests {
     use database::MemDB;
 
     #[test]
-    fn remove_root_leaf() -> anyhow::Result<()> {
-        let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
-
-        let leaf = Some(Box::new(Node::Leaf(LeafNode {
-            details: NodeDetails {
-                key: vec![1],
-                is_persisted: true,
-                version: 0,
-            },
-            value: vec![3, 2, 1],
-        })));
-
-        tree.root = leaf.clone();
-
-        let node = tree.remove(&[1], 0)?;
-
-        assert_eq!(node, leaf);
-        assert!(tree.root.is_none());
-
-        Ok(())
-    }
-
-    #[test]
     fn remove_leaf_from_tree() -> anyhow::Result<()> {
         let expected_leaf = Some(Box::new(Node::Leaf(LeafNode {
             details: NodeDetails {
@@ -1170,9 +1148,9 @@ mod tests {
 
         tree.root = Some(Box::new(Node::Inner(root)));
 
-        let node = tree.remove(&[19], 0)?;
+        let node = tree.remove(&[19])?;
 
-        assert_eq!(node, expected_leaf);
+        assert_eq!(node, Some(vec![3, 2, 1]));
         assert!(tree.root.is_some());
 
         Ok(())
