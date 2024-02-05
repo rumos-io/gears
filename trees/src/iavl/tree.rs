@@ -14,15 +14,22 @@ use crate::{error::Error, merkle::EMPTY_HASH};
 use super::node_db::NodeDB;
 
 #[derive(Debug, Clone, PartialEq, Default)]
+pub struct NodeDetails
+{
+    pub(crate) key: Vec<u8>,
+    pub(crate) is_persisted : bool,
+    version: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct InnerNode {
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     pub(crate) right_node: Option<Box<Node>>,
-    pub(crate) key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
     pub(crate) left_hash: [u8; 32],
     pub(crate) right_hash: [u8; 32],
-    version: u32,
+    pub(crate) details : NodeDetails
 }
 
 impl From<LeafNode> for InnerNode {
@@ -32,12 +39,11 @@ impl From<LeafNode> for InnerNode {
         Self {
             left_node: None,
             right_node: None,
-            key: value.key,
             height: 1,
             size: 0,
             left_hash: EMPTY_HASH,
             right_hash,
-            version: value.version,
+            details: value.details,
         }
     }
 }
@@ -143,21 +149,19 @@ impl InnerNode {
         Self {
             left_node: None,
             right_node: None,
-            key: self.key.clone(),
             height: self.height,
             size: self.size,
             left_hash: self.left_hash,
             right_hash: self.right_hash,
-            version: self.version,
+            details: self.details.clone(),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct LeafNode {
-    pub(crate) key: Vec<u8>,
     pub(crate) value: Vec<u8>,
-    version: u32,
+    pub(crate) details : NodeDetails
 }
 
 impl LeafNode {
@@ -170,13 +174,13 @@ impl LeafNode {
         // NOTE: i64 is used here for parameters for compatibility wih cosmos
         let height: i64 = 0;
         let size: i64 = 1;
-        let version: i64 = self.version.into();
+        let version: i64 = self.details.version.into();
         let hashed_value = Sha256::digest(&self.value);
 
         let mut serialized = height.encode_var_vec();
         serialized.extend(size.encode_var_vec());
         serialized.extend(version.encode_var_vec());
-        serialized.extend(encode_bytes(&self.key));
+        serialized.extend(encode_bytes(&self.details.key));
         serialized.extend(encode_bytes(&hashed_value));
 
         serialized
@@ -227,14 +231,14 @@ impl Node {
             z.left_node = t3;
             z.left_hash = y.right_hash;
             z.update_height_and_size_get_balance_factor(node_db);
-            z.version = version;
+            z.details.version = version;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.right_hash = z.hash();
             y.right_node = Some(Box::new(z));
             y.update_height_and_size_get_balance_factor(node_db);
-            y.version = version;
+            y.details.version = version;
 
             *self = Node::Inner(y);
 
@@ -261,14 +265,14 @@ impl Node {
             z.right_node = t2;
             z.right_hash = y.left_hash;
             z.update_height_and_size_get_balance_factor(node_db);
-            z.version = version;
+            z.details.version = version;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.left_hash = z.hash();
             y.left_node = Some(Box::new(z));
             y.update_height_and_size_get_balance_factor(node_db);
-            y.version = version;
+            y.details.version = version;
 
             *self = Node::Inner(y);
 
@@ -323,8 +327,8 @@ impl Node {
     }
     pub fn get_key(&self) -> &[u8] {
         match self {
-            Node::Leaf(leaf) => &leaf.key,
-            Node::Inner(inner) => &inner.key,
+            Node::Leaf(leaf) => &leaf.details.key,
+            Node::Inner(inner) => &inner.details.key,
         }
     }
 
@@ -337,9 +341,9 @@ impl Node {
 
     pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
         Node::Leaf(LeafNode {
-            key,
+        
             value,
-            version,
+            details: NodeDetails { key, is_persisted: false, version },
         })
     }
 
@@ -355,7 +359,7 @@ impl Node {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
                 let height: i64 = node.height.into();
                 let size: i64 = node.size.into();
-                let version: i64 = node.version.into();
+                let version: i64 = node.details.version.into();
 
                 let mut serialized = height.encode_var_vec();
                 serialized.extend(size.encode_var_vec());
@@ -376,8 +380,8 @@ impl Node {
 
                 let mut serialized = height.encode_var_vec();
                 serialized.extend(size.encode_var_vec());
-                serialized.extend(node.version.encode_var_vec());
-                serialized.extend(encode_bytes(&node.key));
+                serialized.extend(node.details.version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.details.key));
                 serialized.extend(encode_bytes(&node.value));
 
                 serialized
@@ -385,8 +389,8 @@ impl Node {
             Node::Inner(node) => {
                 let mut serialized = node.height.encode_var_vec();
                 serialized.extend(node.size.encode_var_vec());
-                serialized.extend(node.version.encode_var_vec());
-                serialized.extend(encode_bytes(&node.key));
+                serialized.extend(node.details.version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.details.key));
                 serialized.extend(encode_bytes(&node.left_hash));
                 serialized.extend(encode_bytes(&node.right_hash));
 
@@ -409,9 +413,9 @@ impl Node {
             let (value, _) = decode_bytes(&bytes[n..])?;
 
             Ok(Node::Leaf(LeafNode {
-                key,
+        
                 value,
-                version,
+                details: NodeDetails { key, is_persisted: true, version },
             }))
         } else {
             // inner node
@@ -421,12 +425,11 @@ impl Node {
             Ok(Node::Inner(InnerNode {
                 left_node: None,
                 right_node: None,
-                key,
                 height,
                 size,
                 left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
                 right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-                version,
+                details: NodeDetails { key, is_persisted: true, version },
             }))
         }
     }
@@ -560,14 +563,14 @@ where
         loop {
             match loop_node {
                 Node::Leaf(leaf) => {
-                    if leaf.key == key {
+                    if leaf.details.key == key {
                         return Some(leaf.value.clone());
                     } else {
                         return None;
                     }
                 }
                 Node::Inner(node) => {
-                    if key < &node.key {
+                    if key < &node.details.key {
                         match &node.left_node {
                             Some(left_node) => loop_node = left_node,
                             None => {
@@ -629,7 +632,7 @@ where
         ) -> Result<Vec<u8>, Error> {
             let result = match node {
                 Node::Leaf(leaf) => {
-                    if leaf.key[..] != *key.as_ref() {
+                    if leaf.details.key[..] != *key.as_ref() {
                         Err(Error::NodeNotExists)
                     } else {
                         orphaned.push(Node::Leaf(leaf.clone()));
@@ -637,7 +640,7 @@ where
                     }
                 }
                 Node::Inner(inner) => {
-                    let next_node = match inner.key[..].cmp(key.as_ref()) {
+                    let next_node = match inner.details.key[..].cmp(key.as_ref()) {
                         Ordering::Less => inner.left_node_mut(node_db).ok_or(Error::NodeNotExists),
                         Ordering::Greater | Ordering::Equal => {
                             inner.right_node_mut(node_db).ok_or(Error::NodeNotExists)
@@ -672,12 +675,12 @@ where
                 Some(node) => match node.as_mut() {
                     // auto deref make pain so we need to explicit call `as_mut`
                     Node::Leaf(leaf) => {
-                        if leaf.key[..] != *key.as_ref() {
+                        if leaf.details.key[..] != *key.as_ref() {
                             return Err(Error::NodeNotExists);
                         }
                     }
                     Node::Inner(inner) => {
-                        if let Some(result) = match inner.key[..].cmp(key.as_ref()) {
+                        if let Some(result) = match inner.details.key[..].cmp(key.as_ref()) {
                             Ordering::Less => {
                                 Some(tree_remove(&mut inner.right_node, key, version, node_db))
                             }
@@ -788,9 +791,8 @@ where
             }
             None => {
                 self.root = Some(Box::new(Node::Leaf(LeafNode {
-                    key,
+                    details: NodeDetails { key, is_persisted: false, version : self.loaded_version + 1 }, // TODO: CHeck if edited node is persisted
                     value,
-                    version: self.loaded_version + 1,
                 })));
             }
         };
@@ -804,7 +806,7 @@ where
         node_db: &mut NodeDB<T>,
     ) {
         match &mut node {
-            Node::Leaf(leaf_node) => match key.cmp(&leaf_node.key) {
+            Node::Leaf(leaf_node) => match key.cmp(&leaf_node.details.key) {
                 cmp::Ordering::Less => {
                     let left_node = Node::new_leaf(key, value, version);
                     let left_hash = left_node.hash();
@@ -812,19 +814,18 @@ where
                     let right_hash = right_node.hash();
 
                     *node = Node::Inner(InnerNode {
-                        key: leaf_node.key.clone(),
+                        details: NodeDetails { key : leaf_node.details.key.clone(), is_persisted: false, version },
                         left_node: Some(Box::new(left_node)),
                         right_node: Some(Box::new(right_node)),
                         height: 1,
                         size: 2,
-                        version,
                         left_hash,
                         right_hash,
                     });
                 }
                 cmp::Ordering::Equal => {
                     leaf_node.value = value;
-                    leaf_node.version = version;
+                    leaf_node.details.version = version;
                 }
                 cmp::Ordering::Greater => {
                     let right_node = Node::new_leaf(key.clone(), value, version);
@@ -833,20 +834,19 @@ where
                     let left_hash = left_subtree.hash();
 
                     *node = Node::Inner(InnerNode {
-                        key,
+                        details: NodeDetails { key, is_persisted: false, version },
                         left_node: Some(Box::new(left_subtree)),
                         right_node: Some(Box::new(right_node)),
                         height: 1,
                         size: 2,
                         left_hash,
                         right_hash,
-                        version,
                     });
                 }
             },
             Node::Inner(root_node) => {
                 // Perform normal BST
-                if key < root_node.key {
+                if key < root_node.details.key {
                     Self::recursive_set(
                         root_node.get_mut_left_node(node_db),
                         key.clone(),
@@ -868,7 +868,7 @@ where
 
                 // Update height + size + version
                 let balance_factor = root_node.update_height_and_size_get_balance_factor(node_db);
-                root_node.version = version;
+                root_node.details.version = version;
 
                 // If the tree is unbalanced then try out the usual four cases
                 if balance_factor > 1 {
@@ -985,9 +985,9 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
                 }
             }
             Node::Leaf(leaf) => {
-                if self.range.contains(&leaf.key) {
+                if self.range.contains(&leaf.details.key) {
                     // we have a leaf node within the range
-                    return Some((leaf.key.clone(), leaf.value.clone()));
+                    return Some((leaf.details.key.clone(), leaf.value.clone()));
                 }
             }
         }
@@ -1029,9 +1029,8 @@ mod tests {
         let mut tree = Tree::new(db, None, 100).unwrap();
 
         let leaf = Some(Box::new(Node::Leaf(LeafNode {
-            key: vec![1],
+            details: NodeDetails { key : vec![1], is_persisted: true, version : 0 },
             value: vec![3, 2, 1],
-            version: 0,
         })));
 
         tree.root = leaf.clone();
@@ -1047,19 +1046,17 @@ mod tests {
     #[test]
     fn remove_leaf_from_tree() -> anyhow::Result<()> {
         let expected_leaf = Some(Box::new(Node::Leaf(LeafNode {
-            key: vec![19],
+            details: NodeDetails { key : vec![19], is_persisted: true, version : 0 },
             value: vec![3, 2, 1],
-            version: 0,
         })));
 
         let root = InnerNode {
             left_node: expected_leaf.clone(),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![20],
+                details: NodeDetails { key : vec![20], is_persisted: true, version : 0 },
                 value: vec![1, 6, 9],
-                version: 0,
             }))),
-            key: vec![20],
+            details: NodeDetails { key : vec![20], is_persisted: true, version : 0 },
             height: 1,
             size: 2,
             left_hash: [
@@ -1070,7 +1067,6 @@ mod tests {
                 150, 105, 234, 135, 99, 29, 12, 162, 67, 236, 81, 117, 3, 18, 217, 76, 202, 161,
                 168, 94, 102, 108, 58, 135, 122, 167, 228, 134, 150, 121, 201, 234,
             ],
-            version: 0,
         };
 
         let db = MemDB::new();
@@ -1090,16 +1086,14 @@ mod tests {
     fn right_rotate_works() {
         let t3 = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![19],
+                details: NodeDetails { key : vec![19], is_persisted: true, version : 0 },
                 value: vec![3, 2, 1],
-                version: 0,
             }))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![20],
+                details: NodeDetails { key : vec![20], is_persisted: true, version : 0 },
                 value: vec![1, 6, 9],
-                version: 0,
             }))),
-            key: vec![20],
+            details: NodeDetails { key : vec![20], is_persisted: true, version : 0 },
             height: 1,
             size: 2,
             left_hash: [
@@ -1110,17 +1104,15 @@ mod tests {
                 150, 105, 234, 135, 99, 29, 12, 162, 67, 236, 81, 117, 3, 18, 217, 76, 202, 161,
                 168, 94, 102, 108, 58, 135, 122, 167, 228, 134, 150, 121, 201, 234,
             ],
-            version: 0,
         };
 
         let y = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![18],
+                details: NodeDetails { key : vec![18], is_persisted: true, version : 0 },
                 value: vec![3, 2, 1],
-                version: 0,
             }))),
             right_node: Some(Box::new(Node::Inner(t3))),
-            key: vec![19],
+            details: NodeDetails { key : vec![19], is_persisted: true, version : 0 },
             height: 2,
             size: 3,
             left_hash: [
@@ -1131,17 +1123,15 @@ mod tests {
                 192, 103, 168, 209, 21, 23, 137, 121, 173, 138, 179, 199, 124, 163, 200, 22, 101,
                 85, 103, 102, 253, 118, 15, 195, 248, 223, 181, 228, 63, 234, 156, 135,
             ],
-            version: 0,
         };
 
         let z = InnerNode {
             left_node: Some(Box::new(Node::Inner(y))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![21],
+                details: NodeDetails { key : vec![21], is_persisted: true, version : 0 },
                 value: vec![3, 2, 1],
-                version: 0,
             }))),
-            key: vec![21],
+            details: NodeDetails { key : vec![21], is_persisted: true, version : 0 },
             height: 3,
             size: 4,
             left_hash: [
@@ -1152,7 +1142,6 @@ mod tests {
                 0, 85, 79, 1, 62, 128, 35, 121, 122, 250, 9, 14, 106, 197, 49, 81, 58, 121, 9, 157,
                 156, 44, 10, 204, 48, 235, 172, 20, 43, 158, 240, 254,
             ],
-            version: 0,
         };
 
         let mut z = Node::Inner(z);
@@ -1172,16 +1161,14 @@ mod tests {
     fn left_rotate_works() {
         let t2 = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![19],
+                details: NodeDetails { key : vec![19], is_persisted: true, version : 0 },
                 value: vec![3, 2, 1],
-                version: 0,
             }))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![20],
+                details: NodeDetails { key : vec![20], is_persisted: true, version : 0 },
                 value: vec![1, 6, 9],
-                version: 0,
             }))),
-            key: vec![20],
+            details: NodeDetails { key : vec![20], is_persisted: true, version : 0 },
             height: 1,
             size: 2,
             left_hash: [
@@ -1192,17 +1179,15 @@ mod tests {
                 150, 105, 234, 135, 99, 29, 12, 162, 67, 236, 81, 117, 3, 18, 217, 76, 202, 161,
                 168, 94, 102, 108, 58, 135, 122, 167, 228, 134, 150, 121, 201, 234,
             ],
-            version: 0,
         };
 
         let y = InnerNode {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![21],
+                details: NodeDetails { key : vec![21], is_persisted: true, version : 0 },
                 value: vec![3, 2, 1, 1],
-                version: 0,
             }))),
             left_node: Some(Box::new(Node::Inner(t2))),
-            key: vec![21],
+            details: NodeDetails { key : vec![21], is_persisted: true, version : 0 },
             height: 2,
             size: 3,
             right_hash: [
@@ -1213,17 +1198,15 @@ mod tests {
                 192, 103, 168, 209, 21, 23, 137, 121, 173, 138, 179, 199, 124, 163, 200, 22, 101,
                 85, 103, 102, 253, 118, 15, 195, 248, 223, 181, 228, 63, 234, 156, 135,
             ],
-            version: 0,
         };
 
         let z = InnerNode {
             right_node: Some(Box::new(Node::Inner(y))),
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![18],
+                details: NodeDetails { key : vec![18], is_persisted: true, version : 0 },
                 value: vec![3, 2, 2],
-                version: 0,
             }))),
-            key: vec![19],
+            details: NodeDetails { key : vec![19], is_persisted: true, version : 0 },
             height: 3,
             size: 4,
             left_hash: [
@@ -1234,7 +1217,6 @@ mod tests {
                 13, 181, 53, 227, 140, 38, 242, 22, 94, 152, 94, 71, 0, 89, 35, 122, 129, 85, 55,
                 190, 253, 226, 35, 230, 65, 214, 244, 35, 69, 39, 223, 90,
             ],
-            version: 0,
         };
 
         let mut z = Node::Inner(z);
@@ -1531,7 +1513,7 @@ mod tests {
         let orig_node = Node::Inner(InnerNode {
             left_node: None,
             right_node: None,
-            key: vec![19],
+            details: NodeDetails { key : vec![19], is_persisted: true, version : 0 },
             height: 3,
             size: 4,
             left_hash: [
@@ -1542,7 +1524,6 @@ mod tests {
                 13, 181, 53, 227, 140, 38, 242, 22, 94, 152, 94, 71, 0, 89, 35, 122, 129, 85, 55,
                 190, 253, 226, 35, 230, 65, 214, 244, 35, 69, 39, 223, 90,
             ],
-            version: 0,
         });
 
         let node_bytes = orig_node.serialize();
@@ -1562,9 +1543,8 @@ mod tests {
     #[test]
     fn serialize_deserialize_leaf_works() {
         let orig_node = Node::Leaf(LeafNode {
-            key: vec![19],
+            details: NodeDetails { key : vec![19], is_persisted: true, version : 0 },
             value: vec![1, 2, 3],
-            version: 0,
         });
 
         let node_bytes = orig_node.serialize();

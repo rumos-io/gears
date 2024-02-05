@@ -48,14 +48,14 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
         loop {
             match loop_node {
                 Node::Leaf(leaf) => {
-                    if leaf.key == key {
+                    if leaf.details.key == key {
                         return Some(leaf.value.clone());
                     } else {
                         return None;
                     }
                 }
                 Node::Inner(node) => {
-                    if key < &node.key {
+                    if key < &node.details.key {
                         match &node.left_node {
                             Some(left_node) => loop_node = left_node,
                             None => {
