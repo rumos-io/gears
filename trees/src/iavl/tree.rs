@@ -17,14 +17,14 @@ use crate::{
 use super::node_db::NodeDB;
 
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
-pub struct NodeDetails {
+pub(crate) struct NodeDetails {
     pub(crate) key: Vec<u8>,
     pub(crate) is_persisted: bool,
     version: u32,
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
-pub struct InnerNode {
+pub(crate) struct InnerNode {
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     pub(crate) right_node: Option<Box<Node>>,
     height: u8,
@@ -161,7 +161,7 @@ impl InnerNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
-pub struct LeafNode {
+pub(crate) struct LeafNode {
     pub(crate) value: Vec<u8>,
     pub(crate) details: NodeDetails,
 }
@@ -190,7 +190,7 @@ impl LeafNode {
 }
 
 #[derive(Debug, Clone, PartialEq, Hash)]
-pub enum Node {
+pub(crate) enum Node {
     Leaf(LeafNode),
     Inner(InnerNode),
 }
@@ -497,11 +497,11 @@ pub struct Tree<T> {
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
     pub(crate) orphans: HashMap<Sha256Hash, u32>,
-    pub(crate) unsaved_removal : HashSet<Vec<u8>>
+    pub(crate) unsaved_removal: HashSet<Vec<u8>>,
 }
 
 #[derive(Debug, Clone)]
-pub struct OrphantList(Vec<Node>);
+pub(crate) struct OrphantList(Vec<Node>);
 
 impl OrphantList {
     pub fn new(nodes: impl IntoIterator<Item = Node>) -> Option<Self> {
@@ -513,10 +513,6 @@ impl OrphantList {
             // We don't need to orphan nodes that were never persisted.
             Some(Self(nodes.filter(|this| this.is_persisted()).collect()))
         }
-    }
-
-    pub fn into_inner(self) -> Vec<Node> {
-        self.0
     }
 }
 
@@ -539,7 +535,7 @@ where
                 node_db,
                 versions,
                 orphans: Default::default(),
-                unsaved_removal : Default::default(),
+                unsaved_removal: Default::default(),
             })
         } else {
             // use the latest version available
@@ -552,7 +548,7 @@ where
                     node_db,
                     versions,
                     orphans: Default::default(),
-                    unsaved_removal : Default::default(),
+                    unsaved_removal: Default::default(),
                 })
             } else {
                 Ok(Tree {
@@ -561,7 +557,7 @@ where
                     node_db,
                     versions,
                     orphans: Default::default(),
-                    unsaved_removal : Default::default(),
+                    unsaved_removal: Default::default(),
                 })
             }
         }
@@ -576,10 +572,10 @@ where
         )
     }
 
-    fn unsaved_removal_add( &mut self, key: &impl AsRef<[u8]> ) -> bool
-    {
+    fn unsaved_removal_add(&mut self, key: &impl AsRef<[u8]>) -> bool {
         // TODO: delete from fast_additions when implements
-        self.unsaved_removal.insert( key.as_ref().into_iter().cloned().collect() )
+        self.unsaved_removal
+            .insert(key.as_ref().into_iter().cloned().collect())
     }
 
     /// Save the current tree to disk.
@@ -729,7 +725,7 @@ where
                         return Ok(None);
                     }
 
-                    tree.unsaved_removal_add( key );
+                    tree.unsaved_removal_add(key);
 
                     if new_root.is_none() {
                         let new_root_hash = new_root_hash.ok_or(Error::CustomError(
