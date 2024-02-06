@@ -17,6 +17,9 @@ pub enum AddressError {
 
     #[error("invalid length, max length is: {max:?}, found {found:?})")]
     InvalidLength { max: u8, found: usize },
+
+    #[error("bech32 decode error: address is empty")]
+    EmptyAddress,
 }
 
 #[derive(Error, Debug, PartialEq, Eq)]
