@@ -2,7 +2,7 @@ use std::{
     cmp::{self, Ordering},
     collections::{BTreeSet, HashMap, HashSet},
     mem,
-    ops::{Bound, Deref, RangeBounds},
+    ops::{Bound, RangeBounds},
 };
 
 use database::Database;
@@ -1001,7 +1001,7 @@ where
         match &self.root {
             Some(root) => Range {
                 range,
-                delayed_nodes: vec![root.deref().clone()], //TODO: remove clone
+                delayed_nodes: vec![root.clone()], //TODO: remove clone
                 node_db: &self.node_db,
             },
             None => Range {
@@ -1018,7 +1018,7 @@ where
     T: Database,
 {
     pub(crate) range: R,
-    pub(crate) delayed_nodes: Vec<Node>,
+    pub(crate) delayed_nodes: Vec<Box<Node>>,
     pub(crate) node_db: &'a NodeDB<T>,
 }
 
@@ -1038,26 +1038,26 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
             Bound::Unbounded => true,
         };
 
-        match node {
+        match *node {
             Node::Inner(inner) => {
                 // Traverse through the left subtree, then the right subtree.
                 if before_end {
                     match inner.right_node {
-                        Some(right_node) => self.delayed_nodes.push(*right_node), //TODO: deref will cause a clone, remove
+                        Some(right_node) => self.delayed_nodes.push(right_node), //TODO: deref will cause a clone, remove
                         None => {
                             let right_node = self
                                 .node_db
                                 .get_node(&inner.right_hash)
                                 .expect("node db should contain all nodes");
 
-                            self.delayed_nodes.push(*right_node);
+                            self.delayed_nodes.push(right_node);
                         }
                     }
                 }
 
                 if after_start {
                     match inner.left_node {
-                        Some(left_node) => self.delayed_nodes.push(*left_node), //TODO: deref will cause a clone, remove
+                        Some(left_node) => self.delayed_nodes.push(left_node), //TODO: deref will cause a clone, remove
                         None => {
                             let left_node = self
                                 .node_db
@@ -1065,7 +1065,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
                                 .expect("node db should contain all nodes");
 
                             //self.cached_nodes.push(left_node);
-                            self.delayed_nodes.push(*left_node);
+                            self.delayed_nodes.push(left_node);
                         }
                     }
 

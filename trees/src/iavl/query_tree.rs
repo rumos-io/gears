@@ -1,4 +1,4 @@
-use std::ops::{Deref, RangeBounds};
+use std::ops::RangeBounds;
 
 use database::Database;
 
@@ -94,7 +94,7 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
         match &self.root {
             Some(root) => Range {
                 range,
-                delayed_nodes: vec![root.deref().clone()], //TODO: remove clone
+                delayed_nodes: vec![root.clone()], //TODO: remove clone
                 node_db: self.node_db,
             },
             None => Range {
