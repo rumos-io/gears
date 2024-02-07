@@ -492,7 +492,7 @@ impl Node {
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
-    skip_upgrade : bool,
+    skip_upgrade: bool,
     root: Option<Box<Node>>,
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
@@ -522,7 +522,12 @@ where
     T: Database,
 {
     /// Panics if cache_size=0
-    pub fn new(db: T, target_version: Option<u32>, cache_size: usize, skip_upgrade : bool) -> Result<Tree<T>, Error> {
+    pub fn new(
+        db: T,
+        target_version: Option<u32>,
+        cache_size: usize,
+        skip_upgrade: bool,
+    ) -> Result<Tree<T>, Error> {
         assert!(cache_size > 0);
         let node_db = NodeDB::new(db, cache_size);
         let versions = node_db.get_versions();
@@ -641,19 +646,16 @@ where
 
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         match &self.root {
-            Some(root) => 
-            {
-                if !self.skip_upgrade
-                {
+            Some(root) => {
+                if !self.skip_upgrade {
                     // TODO: Try to get from fast additions
-                    if let Some( _ ) = self.unsaved_removal.get( key )
-                    {
-                       return None
+                    if let Some(_) = self.unsaved_removal.get(key) {
+                        return None;
                     }
                 }
 
-                self.get_(key, root)   
-            },
+                self.get_(key, root)
+            }
             None => None,
         }
     }
@@ -704,56 +706,54 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Result<Option<Vec<u8>>, Error> {
+    pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
         // I use this struct to be 100% sure in output of `recursive_remove`
         struct NodeKey(pub Vec<u8>);
         struct NodeValue(pub Vec<u8>);
 
-        let result = inner_remove(self, key)?;
+        let result = inner_remove(self, key);
 
         return if let Some((value, orphans)) = result {
-            self.orphans_add(OrphanList::new(orphans).ok_or(Error::CustomError(
-                "expected to find node hash, but was empty".to_owned(),
-            ))?);
+            self.orphans_add(
+                OrphanList::new(orphans).expect("expected to find node hash, but was empty"),
+            );
 
-            Ok(value.map(|this| this.0))
+            value.map(|this| this.0)
         } else {
-            Ok(None)
+            None
         };
 
         fn inner_remove<T: Database>(
             tree: &mut Tree<T>,
             key: &impl AsRef<[u8]>,
-        ) -> Result<Option<(Option<NodeValue>, Vec<Node>)>, Error> {
+        ) -> Option<(Option<NodeValue>, Vec<Node>)> {
             match tree.root {
                 Some(ref mut root) => {
-                    let mut orphants = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
+                    let mut orphans = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
 
                     let (new_root_hash, new_root, _, value) = recursive_remove(
                         root,
                         &tree.node_db,
                         key,
-                        &mut orphants,
+                        &mut orphans,
                         tree.loaded_version + 1,
-                    )?;
+                    );
 
-                    if orphants.is_empty() {
-                        return Ok(None);
+                    if orphans.is_empty() {
+                        return None;
                     }
 
                     tree.unsaved_removal_add(key);
 
                     if new_root.is_none() {
-                        let new_root_hash = new_root_hash.ok_or(Error::CustomError(
-                            "New root hash need to be Some".to_owned(),
-                        ))?;
+                        let new_root_hash = new_root_hash.expect("New root hash need to be Some");
 
                         tree.root = tree.node_db.get_node(&new_root_hash); // TODO: is it okay to operate on Option without checks
                     }
 
-                    Ok(Some((value, orphants)))
+                    Some((value, orphans))
                 }
-                None => Ok(None),
+                None => None,
             }
         }
 
@@ -764,31 +764,28 @@ where
             key: &impl AsRef<[u8]>,
             orphaned: &mut Vec<Node>,
             version: u32,
-        ) -> Result<
-            (
-                Option<Sha256Hash>,
-                Option<Box<Node>>,
-                Option<NodeKey>,
-                Option<NodeValue>,
-            ),
-            Error,
-        > {
+        ) -> (
+            Option<Sha256Hash>,
+            Option<Box<Node>>,
+            Option<NodeKey>,
+            Option<NodeValue>,
+        ) {
             if let Node::Leaf(leaf) = node {
                 return if leaf.details.key[..] != *key.as_ref() {
-                    Ok((
+                    (
                         Some(node.hash()),
                         Some(Box::new(node.shallow_clone())),
                         None,
                         None,
-                    ))
+                    )
                 } else {
                     orphaned.push(Node::Leaf(leaf.clone()));
-                    Ok((
+                    (
                         None,
                         None,
                         None,
                         Some(NodeValue(leaf.value.drain(..).collect::<Vec<_>>())),
-                    )) // TODO: Unsure if I should drain value
+                    ) // TODO: Unsure if I should drain value
                 };
             }
 
@@ -798,79 +795,91 @@ where
 
             match inner.details.key[..].cmp(key.as_ref()) {
                 Ordering::Less => {
-                    let left_node = inner.left_node_mut(node_db).ok_or(Error::NodeNotExists)?;
+                    let left_node = inner
+                        .left_node_mut(node_db)
+                        .expect("node not exists in db. Possible database corruption");
 
                     let (new_left_hash, new_left_node, new_key, value) =
-                        recursive_remove(left_node, node_db, key, orphaned, version)?;
+                        recursive_remove(left_node, node_db, key, orphaned, version);
 
                     if orphaned.len() == 0 {
-                        return Ok((Some(node.hash()), Some(Box::new(shallow_copy)), None, value));
+                        return (Some(node.hash()), Some(Box::new(shallow_copy)), None, value);
                     }
                     orphaned.push(shallow_copy);
 
                     if new_left_hash.is_none() && new_left_node.is_none() {
-                        return Ok((
+                        return (
                             Some(inner.right_hash),
                             inner.right_node.clone(),
                             Some(NodeKey(inner.details.key.clone())),
                             value,
-                        ));
+                        );
                     }
 
-                    let mut new_node = node.clone_version(version)?;
+                    let mut new_node = node
+                        .clone_version(version)
+                        .expect("coudn't clone leaf node");
                     new_node.left_hash = new_left_hash.expect("We checked it to None");
                     new_node.left_node = new_left_node;
 
                     let mut new_node = Node::Inner(new_node);
 
-                    new_node.balance(version, node_db)?;
+                    new_node
+                        .balance(version, node_db)
+                        .expect("error rotating tree");
 
-                    return Ok((
+                    return (
                         Some(new_node.hash()),
                         Some(Box::new(new_node)),
                         new_key,
                         value,
-                    ));
+                    );
                 }
                 Ordering::Greater | Ordering::Equal => {
-                    let right_node = inner.right_node_mut(node_db).ok_or(Error::NodeNotExists)?;
+                    let right_node = inner
+                        .right_node_mut(node_db)
+                        .expect("node not exists in db. Possible database corruption");
 
                     let (new_right_hash, new_right_node, new_key, value) =
-                        recursive_remove(right_node, node_db, key, orphaned, version)?;
+                        recursive_remove(right_node, node_db, key, orphaned, version);
 
                     if orphaned.len() == 0 {
-                        return Ok((
+                        return (
                             Some(node.hash()),
                             Some(Box::new(node.shallow_clone())),
                             None,
                             value,
-                        ));
+                        );
                     }
                     orphaned.push(shallow_copy);
 
                     if new_right_hash.is_none() && new_right_node.is_none() {
-                        return Ok((
+                        return (
                             Some(inner.left_hash),
                             inner.left_node.clone(),
                             Some(NodeKey(inner.details.key.clone())),
                             value,
-                        ));
+                        );
                     }
 
-                    let mut new_node = node.clone_version(version)?;
+                    let mut new_node = node
+                        .clone_version(version)
+                        .expect("coudn't clone leaf node");
                     new_node.right_hash = new_right_hash.expect("We checked it to None");
                     new_node.right_node = new_right_node;
 
                     let mut new_node = Node::Inner(new_node);
 
-                    new_node.balance(version, node_db)?;
+                    new_node
+                        .balance(version, node_db)
+                        .expect("error rotating tree");
 
-                    return Ok((
+                    return (
                         Some(new_node.hash()),
                         Some(Box::new(new_node)),
                         new_key,
                         value,
-                    ));
+                    );
                 }
             };
         }
@@ -1170,7 +1179,7 @@ mod tests {
 
         tree.root = Some(Box::new(Node::Inner(root)));
 
-        let node = tree.remove(&[19])?;
+        let node = tree.remove(&[19]);
 
         assert_eq!(node, Some(vec![3, 2, 1]));
         assert!(tree.root.is_some());
