@@ -306,7 +306,7 @@ impl Node {
         }
     }
 
-    pub fn rebalance<T: Database>(
+    pub fn balance<T: Database>(
         &mut self,
         version: u32,
         node_db: &NodeDB<T>,
@@ -823,7 +823,7 @@ where
 
                     let mut new_node = Node::Inner(new_node);
 
-                    new_node.rebalance(version, node_db)?;
+                    new_node.balance(version, node_db)?;
 
                     return Ok((
                         Some(new_node.hash()),
@@ -863,7 +863,7 @@ where
 
                     let mut new_node = Node::Inner(new_node);
 
-                    new_node.rebalance(version, node_db)?;
+                    new_node.balance(version, node_db)?;
 
                     return Ok((
                         Some(new_node.hash()),
