@@ -7,7 +7,7 @@ use std::{
 use database::{Database, PrefixDB};
 use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
-use trees::iavl::{Range, Tree};
+use trees::iavl::Tree;
 
 use crate::{error::Error, QueryKVStore};
 
@@ -168,21 +168,29 @@ impl<DB: Database> KVStore<DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<'a, R>(&'a self, range: R) -> impl Iterator<Item = (Vec<u8>, Vec<u8>)> + 'a
     where
-        R: RangeBounds<Vec<u8>> + Clone,
+        R: RangeBounds<Vec<u8>> + Clone + 'a,
     {
-        //TODO: this doesn't iterate over cached values
-        // let tx_cached_values = self.tx_cache.range(range.clone());
-        // let block_cached_values = self.block_cache.range(range.clone());
-        // let persisted_values = self.persistent_store.range(range.clone());
+        let tx_cached_values = self.tx_cache.range(range.clone());
+        let block_cached_values = self.block_cache.range(range.clone());
+        let mut persisted_values = self
+            .persistent_store
+            .range(range.clone())
+            .collect::<BTreeMap<_, _>>();
 
-        // MergedRange::merge(
-        //     tx_cached_values,
-        //     MergedRange::merge(block_cached_values, persisted_values),
-        // );
+        persisted_values.extend(
+            block_cached_values
+                .into_iter()
+                .map(|(first, second)| (first.clone(), second.clone())),
+        );
+        persisted_values.extend(
+            tx_cached_values
+                .into_iter()
+                .map(|(first, second)| (first.clone(), second.clone())),
+        );
 
-        self.persistent_store.range(range)
+        persisted_values.into_iter()
     }
 
     /// Writes tx cache into block cache then clears the tx cache
@@ -261,14 +269,33 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<R>(&self, range: R) -> StoreRange
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {
         match self {
-            AnyKVStore::KVStore(store) => store.range(range),
-            AnyKVStore::QueryKVStore(store) => store.range(range),
+            AnyKVStore::KVStore(store) => StoreRange(store.range(range).collect()),
+            AnyKVStore::QueryKVStore(store) => StoreRange(store.range(range).collect()),
         }
+    }
+}
+
+pub struct StoreRange(BTreeMap<Vec<u8>, Vec<u8>>);
+
+impl StoreRange {
+    pub fn range<R>(&self, range: R) -> std::collections::btree_map::Range<'_, Vec<u8>, Vec<u8>>
+    where
+        R: RangeBounds<Vec<u8>>,
+    {
+        self.0.range(range)
+    }
+}
+
+impl Iterator for StoreRange {
+    type Item = (Vec<u8>, Vec<u8>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.pop_first()
     }
 }
 
@@ -284,7 +311,7 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
         self.store.get(&full_key)
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange<'a, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
@@ -304,12 +331,12 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
     }
 }
 
-pub struct PrefixRange<'a, DB: Database> {
-    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
+pub struct PrefixRange {
+    parent_range: StoreRange,
     prefix_length: usize,
 }
 
-impl<'a, DB: Database> Iterator for PrefixRange<'a, DB> {
+impl Iterator for PrefixRange {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -468,50 +495,49 @@ mod tests {
         assert!(matches!(prefix_end_bound(prefix), Bound::Unbounded));
     }
 
-    // TODO: uncomment this test once merged range works
-    // /// Tests whether kv range works with cached and persisted values
-    // #[test]
-    // fn kv_store_merged_range_works() {
-    //     let db = MemDB::new();
-    //     let mut store = KVStore::new(db, None).unwrap();
+    /// Tests whether kv range works with cached and persisted values
+    #[test]
+    fn kv_store_merged_range_works() {
+        let db = MemDB::new();
+        let mut store = KVStore::new(db, None).unwrap();
 
-    //     // values in this group will be in the persistent store
-    //     store.set(vec![1], vec![1]);
-    //     store.set(vec![7], vec![13]); // shadowed by value in tx cache
-    //     store.set(vec![10], vec![2]); // shadowed by value in block cache
-    //     store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
-    //     store.commit();
+        // values in this group will be in the persistent store
+        store.set(vec![1], vec![1]);
+        store.set(vec![7], vec![13]); // shadowed by value in tx cache
+        store.set(vec![10], vec![2]); // shadowed by value in block cache
+        store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
+        store.commit();
 
-    //     // values in this group will be in the block cache
-    //     store.set(vec![2], vec![3]);
-    //     store.set(vec![9], vec![4]); // shadowed by value in tx cache
-    //     store.set(vec![10], vec![7]); // shadows a persisted value
-    //     store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
-    //     store.write_then_clear_tx_cache();
+        // values in this group will be in the block cache
+        store.set(vec![2], vec![3]);
+        store.set(vec![9], vec![4]); // shadowed by value in tx cache
+        store.set(vec![10], vec![7]); // shadows a persisted value
+        store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
+        store.write_then_clear_tx_cache();
 
-    //     // values in this group will be in the tx cache
-    //     store.set(vec![3], vec![5]);
-    //     store.set(vec![8], vec![6]);
-    //     store.set(vec![7], vec![5]); // shadows a persisted value
-    //     store.set(vec![9], vec![6]); // shadows a block cache value
-    //     store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
+        // values in this group will be in the tx cache
+        store.set(vec![3], vec![5]);
+        store.set(vec![8], vec![6]);
+        store.set(vec![7], vec![5]); // shadows a persisted value
+        store.set(vec![9], vec![6]); // shadows a block cache value
+        store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
 
-    //     let start = vec![0];
-    //     let stop = vec![20];
-    //     let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
-    //         .range((Bound::Excluded(start), Bound::Excluded(stop)))
-    //         .collect();
-    //     let expected_pairs = vec![
-    //         (vec![1], vec![1]),
-    //         (vec![2], vec![3]),
-    //         (vec![3], vec![5]),
-    //         (vec![7], vec![5]),
-    //         (vec![8], vec![6]),
-    //         (vec![9], vec![6]),
-    //         (vec![10], vec![7]),
-    //         (vec![14], vec![212]),
-    //     ];
+        let start = vec![0];
+        let stop = vec![20];
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
+            .range((Bound::Excluded(start), Bound::Excluded(stop)))
+            .collect();
+        let expected_pairs = vec![
+            (vec![1], vec![1]),
+            (vec![2], vec![3]),
+            (vec![3], vec![5]),
+            (vec![7], vec![5]),
+            (vec![8], vec![6]),
+            (vec![9], vec![6]),
+            (vec![10], vec![7]),
+            (vec![14], vec![212]),
+        ];
 
-    //     assert_eq!(expected_pairs, got_pairs);
-    // }
+        assert_eq!(expected_pairs, got_pairs);
+    }
 }
