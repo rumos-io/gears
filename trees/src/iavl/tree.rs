@@ -502,9 +502,9 @@ pub struct Tree<T> {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct OrphantList(Vec<Node>);
+pub(crate) struct OrphanList(Vec<Node>);
 
-impl OrphantList {
+impl OrphanList {
     pub fn new(nodes: impl IntoIterator<Item = Node>) -> Option<Self> {
         let mut nodes = nodes.into_iter();
 
@@ -567,7 +567,7 @@ where
         }
     }
 
-    fn orphans_add(&mut self, orphants: OrphantList) {
+    fn orphans_add(&mut self, orphants: OrphanList) {
         self.orphans.extend(
             orphants
                 .0
@@ -712,7 +712,7 @@ where
         let result = inner_remove(self, key)?;
 
         return if let Some((value, orphans)) = result {
-            self.orphans_add(OrphantList::new(orphans).ok_or(Error::CustomError(
+            self.orphans_add(OrphanList::new(orphans).ok_or(Error::CustomError(
                 "expected to find node hash, but was empty".to_owned(),
             ))?);
 
