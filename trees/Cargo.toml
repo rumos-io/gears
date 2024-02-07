@@ -10,6 +10,7 @@ database = { path = "../database" }
 #newtypes
 
 #utils
+anyhow = { workspace = true }
 thiserror = { workspace = true }
 sha2 = "0.10.6"
 integer-encoding = "3.0.4"

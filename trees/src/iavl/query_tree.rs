@@ -9,7 +9,7 @@ use super::{node_db::NodeDB, Node, Range, Tree};
 /// QueryTree is a "checked out" Tree at a given height which
 /// borrows a Tree's NodeDb
 pub struct QueryTree<'a, DB> {
-    pub(crate) root: Option<Node>,
+    pub(crate) root: Option<Box<Node>>,
     pub(crate) node_db: &'a NodeDB<DB>,
 }
 
@@ -48,14 +48,14 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
         loop {
             match loop_node {
                 Node::Leaf(leaf) => {
-                    if leaf.key == key {
+                    if leaf.details.key == key {
                         return Some(leaf.value.clone());
                     } else {
                         return None;
                     }
                 }
                 Node::Inner(node) => {
-                    if key < &node.key {
+                    if key < &node.details.key {
                         match &node.left_node {
                             Some(left_node) => loop_node = left_node,
                             None => {
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn new_query_tree_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100, false).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.save_version().unwrap();
         tree.set(b"alice".to_vec(), b"123".to_vec());
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn new_query_tree_works_empty_tree() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100, false).unwrap();
         tree.save_version().unwrap();
 
         let query_tree = QueryTree::new(&tree, 1).unwrap();
