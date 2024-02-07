@@ -79,12 +79,12 @@ impl InnerNode {
     /// Return right node of node. \
     /// This method will not panic if node is not found in db.
     fn right_node_mut<T: Database>(&mut self, node_db: &NodeDB<T>) -> Option<&mut Node> {
-        match self.left_node {
+        match self.right_node {
             Some(ref mut node) => Some(node),
             None => {
-                self.left_node = node_db.get_node(&self.left_hash);
+                self.right_node = node_db.get_node(&self.right_hash);
 
-                match self.left_node {
+                match self.right_node {
                     Some(ref mut node) => Some(node),
                     None => None,
                 }
@@ -793,7 +793,7 @@ where
 
             let inner = node.inner_mut().expect("We know that node is inner");
 
-            match inner.details.key[..].cmp(key.as_ref()) {
+            match key.as_ref().cmp(&inner.details.key) {
                 Ordering::Less => {
                     let left_node = inner
                         .left_node_mut(node_db)
