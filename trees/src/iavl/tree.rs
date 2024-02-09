@@ -820,7 +820,9 @@ where
                         .clone_version(version)
                         .expect("coudn't clone leaf node");
                     new_node.left_hash = new_left_hash.expect("We checked it to None");
-                    new_node.left_node = new_left_node;
+                    new_node.left_node = new_left_node.clone();
+                    new_node.right_node = new_left_node;
+                    new_node.right_hash = EMPTY_HASH;
 
                     let mut new_node = Node::Inner(new_node);
 
@@ -866,7 +868,9 @@ where
                         .clone_version(version)
                         .expect("coudn't clone leaf node");
                     new_node.right_hash = new_right_hash.expect("We checked it to None");
-                    new_node.right_node = new_right_node;
+                    new_node.right_node = new_right_node.clone();
+                    new_node.left_node = new_right_node;
+                    new_node.left_hash = EMPTY_HASH;
 
                     let mut new_node = Node::Inner(new_node);
 
@@ -1187,6 +1191,17 @@ mod tests {
         Ok(())
     }
 
+
+    /*
+    
+     ┌──k2 inner───────┐
+     │                │
+     ▼                ▼
+     k1 v4      ┌───k3 inner──┐
+                │             │
+                ▼             ▼
+              k2 v5         k3 v6
+     */
     #[test]
     fn remove_leaf_works() {
         let db = MemDB::new();
@@ -1194,6 +1209,7 @@ mod tests {
         tree.set(vec![1], vec![4]);
         tree.set(vec![2], vec![5]);
         tree.set(vec![3], vec![6]);
+
         let val = tree.remove(&[2]);
 
         assert_eq!(val, Some(vec![5]));
