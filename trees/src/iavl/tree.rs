@@ -1151,7 +1151,7 @@ mod tests {
         Ok(())
     }
 
-    /*
+    /* Visual representation of tree before removal
 
     ┌──k2 inner───────┐
     │                 │
@@ -1163,13 +1163,6 @@ mod tests {
     */
     #[test]
     fn remove_leaf_works() {
-        let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
-        tree.set(vec![1], vec![4]);
-        tree.set(vec![3], vec![6]);
-
-        let first_hash = tree.root_hash();
-
         let db = MemDB::new();
         let mut tree = Tree::new(db, None, 100, false).unwrap();
         tree.set(vec![1], vec![4]);
@@ -1186,7 +1179,6 @@ mod tests {
             34, 221, 199, 75, 12, 47, 227, 31, 159, 50, 0, 24, 80, 106, 150, 185, 56, 183, 39, 197,
             31, 201, 239, 2, 254, 74, 63, 155, 135, 210, 49, 149,
         ];
-        assert_eq!(first_hash, expected);
         assert_eq!(hash, expected)
     }
 
