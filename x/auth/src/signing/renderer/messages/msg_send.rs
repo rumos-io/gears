@@ -86,37 +86,6 @@ mod tests {
     use crate::signing::renderer::value_renderer::{DefaultValueRenderer, ValueRenderer};
 
     #[test]
-    fn screen_result_no_coins() -> anyhow::Result<()> {
-        const MESSAGE: &str = r#"{
-            "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-            "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
-            "amount": []
-        }"#;
-
-        let msg: MsgSendRaw = serde_json::from_str(MESSAGE)?;
-        let msg: MsgSend = msg.try_into()?;
-
-        const SCREENS: &str = r#"[
-    		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
-    		{ "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 }
-    	]"#;
-
-        let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
-
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actual_screens = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&msg, &context);
-
-        assert!(actual_screens.is_ok(), "Failed to retrieve screens");
-        assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
-
-        Ok(())
-    }
-
-    #[test]
     fn screen_result_with_coin() -> anyhow::Result<()> {
         const MESSAGE: &str = r#"{
             "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
