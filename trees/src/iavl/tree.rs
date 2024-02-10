@@ -209,20 +209,6 @@ impl Node {
         }
     }
 
-    fn clone_version(&self, version: u32) -> Result<InnerNode, Error> {
-        match self {
-            Node::Leaf(_) => Err(Error::CustomError("can't clone leaf node".to_owned())),
-            Node::Inner(inner) => {
-                let mut node = inner.shallow_clone();
-
-                node.details.version = version;
-                node.details.is_persisted = false;
-
-                Ok(node)
-            }
-        }
-    }
-
     /// This does three things at once to prevent repeating the same process for getting the left and right nodes
     fn update_height_and_size_get_balance_factor<T: Database>(
         &mut self,
@@ -339,6 +325,26 @@ impl Node {
                 }
                 _ => Ok(false),
             },
+        }
+    }
+
+    pub(crate) fn right_hash_set(&mut self, hash: Sha256Hash) -> Option<Sha256Hash> {
+        match self {
+            Node::Leaf(_) => Some(hash),
+            Node::Inner(node) => {
+                node.right_hash = hash;
+                None
+            }
+        }
+    }
+
+    pub(crate) fn left_hash_set(&mut self, hash: Sha256Hash) -> Option<Sha256Hash> {
+        match self {
+            Node::Leaf(_) => Some(hash),
+            Node::Inner(node) => {
+                node.left_hash = hash;
+                None
+            }
         }
     }
 
@@ -708,7 +714,7 @@ where
 
     pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
         // I use this struct to be 100% sure in output of `recursive_remove`
-        struct NodeKey(pub Vec<u8>);
+        // struct NodeKey(pub Vec<u8>);
         struct NodeValue(pub Vec<u8>);
 
         let result = inner_remove(self, key);
@@ -731,7 +737,7 @@ where
                 Some(ref mut root) => {
                     let mut orphans = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
 
-                    let (new_root_hash, new_root, _, value) = recursive_remove(
+                    let (value, _, _) = recursive_remove(
                         root,
                         &tree.node_db,
                         key,
@@ -744,12 +750,6 @@ where
                     }
 
                     tree.unsaved_removal_add(key);
-
-                    if new_root.is_none() {
-                        let new_root_hash = new_root_hash.expect("New root hash need to be Some");
-
-                        tree.root = tree.node_db.get_node(&new_root_hash); // TODO: is it okay to operate on Option without checks
-                    }
 
                     Some((value, orphans))
                 }
@@ -764,28 +764,17 @@ where
             key: &impl AsRef<[u8]>,
             orphaned: &mut Vec<Node>,
             version: u32,
-        ) -> (
-            Option<Sha256Hash>,
-            Option<Box<Node>>,
-            Option<NodeKey>,
-            Option<NodeValue>,
-        ) {
+        ) -> (Option<NodeValue>, Option<Sha256Hash>, bool) {
             if let Node::Leaf(leaf) = node {
                 return if leaf.details.key[..] != *key.as_ref() {
-                    (
-                        Some(node.hash()),
-                        Some(Box::new(node.shallow_clone())),
-                        None,
-                        None,
-                    )
+                    (None, None, false)
                 } else {
                     orphaned.push(Node::Leaf(leaf.clone()));
                     (
-                        None,
-                        None,
-                        None,
                         Some(NodeValue(leaf.value.drain(..).collect::<Vec<_>>())),
-                    ) // TODO: Unsure if I should drain value
+                        None,
+                        true,
+                    )
                 };
             }
 
@@ -799,91 +788,62 @@ where
                         .left_node_mut(node_db)
                         .expect("node not exists in db. Possible database corruption");
 
-                    let (new_left_hash, new_left_node, new_key, value) =
+                    let (value, new_hash, is_update) =
                         recursive_remove(left_node, node_db, key, orphaned, version);
 
-                    if orphaned.len() == 0 {
-                        return (Some(node.hash()), Some(Box::new(shallow_copy)), None, value);
+                    if value.is_none() {
+                        return (None, None, false);
                     }
                     orphaned.push(shallow_copy);
 
-                    if new_left_hash.is_none() && new_left_node.is_none() {
-                        return (
-                            Some(inner.right_hash),
-                            inner.right_node.clone(),
-                            Some(NodeKey(inner.details.key.clone())),
-                            value,
-                        );
+                    if is_update {
+                        let right_side = inner.right_node.take();
+                        *node = match right_side {
+                            Some(var) => *var,
+                            None => *node_db
+                                .get_node(&inner.right_hash)
+                                .expect("node not exists in db. Possible database corruption"),
+                        };
                     }
 
-                    let mut new_node = node
-                        .clone_version(version)
-                        .expect("coudn't clone leaf node");
-                    new_node.left_hash = new_left_hash.expect("We checked it to None");
-                    new_node.left_node = new_left_node.clone();
-                    new_node.right_node = new_left_node;
-                    new_node.right_hash = EMPTY_HASH;
+                    if let Some(new_hash) = new_hash {
+                        node.left_hash_set(new_hash);
+                    }
 
-                    let mut new_node = Node::Inner(new_node);
+                    node.balance(version, node_db).expect("error rotating tree");
 
-                    new_node
-                        .balance(version, node_db)
-                        .expect("error rotating tree");
-
-                    return (
-                        Some(new_node.hash()),
-                        Some(Box::new(new_node)),
-                        new_key,
-                        value,
-                    );
+                    return (value, Some(node.hash()), false);
                 }
                 Ordering::Greater | Ordering::Equal => {
                     let right_node = inner
                         .right_node_mut(node_db)
                         .expect("node not exists in db. Possible database corruption");
 
-                    let (new_right_hash, new_right_node, new_key, value) =
+                    let (value, new_hash, is_update) =
                         recursive_remove(right_node, node_db, key, orphaned, version);
 
-                    if orphaned.len() == 0 {
-                        return (
-                            Some(node.hash()),
-                            Some(Box::new(node.shallow_clone())),
-                            None,
-                            value,
-                        );
+                    if value.is_none() {
+                        return (None, None, false);
                     }
                     orphaned.push(shallow_copy);
 
-                    if new_right_hash.is_none() && new_right_node.is_none() {
-                        return (
-                            Some(inner.left_hash),
-                            inner.left_node.clone(),
-                            Some(NodeKey(inner.details.key.clone())),
-                            value,
-                        );
+                    if is_update {
+                        let left_side = inner.left_node.take();
+                        *node = match left_side {
+                            Some(var) => *var,
+                            None => *node_db
+                                .get_node(&inner.left_hash)
+                                .expect("node not exists in db. Possible database corruption"),
+                        };
                     }
 
-                    let mut new_node = node
-                        .clone_version(version)
-                        .expect("coudn't clone leaf node");
-                    new_node.right_hash = new_right_hash.expect("We checked it to None");
-                    new_node.right_node = new_right_node.clone();
-                    new_node.left_node = new_right_node;
-                    new_node.left_hash = EMPTY_HASH;
+                    if let Some(new_hash) = new_hash {
+                        node.right_hash_set(new_hash);
+                    }
 
-                    let mut new_node = Node::Inner(new_node);
+                    node.balance(version, node_db).expect("error rotating tree");
 
-                    new_node
-                        .balance(version, node_db)
-                        .expect("error rotating tree");
-
-                    return (
-                        Some(new_node.hash()),
-                        Some(Box::new(new_node)),
-                        new_key,
-                        value,
-                    );
+                    return (value, Some(node.hash()), false);
                 }
             };
         }
@@ -1191,19 +1151,25 @@ mod tests {
         Ok(())
     }
 
-
     /*
-    
-     ┌──k2 inner───────┐
-     │                │
-     ▼                ▼
-     k1 v4      ┌───k3 inner──┐
-                │             │
-                ▼             ▼
-              k2 v5         k3 v6
-     */
+
+    ┌──k2 inner───────┐
+    │                 │
+    ▼                 ▼
+    k1 v4      ┌───k3 inner──┐
+               │             │
+               ▼             ▼
+             k2 v5         k3 v6
+    */
     #[test]
     fn remove_leaf_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        tree.set(vec![1], vec![4]);
+        tree.set(vec![3], vec![6]);
+
+        let first_hash = tree.root_hash();
+
         let db = MemDB::new();
         let mut tree = Tree::new(db, None, 100, false).unwrap();
         tree.set(vec![1], vec![4]);
@@ -1220,6 +1186,7 @@ mod tests {
             34, 221, 199, 75, 12, 47, 227, 31, 159, 50, 0, 24, 80, 106, 150, 185, 56, 183, 39, 197,
             31, 201, 239, 2, 254, 74, 63, 155, 135, 210, 49, 149,
         ];
+        assert_eq!(first_hash, expected);
         assert_eq!(hash, expected)
     }
 
