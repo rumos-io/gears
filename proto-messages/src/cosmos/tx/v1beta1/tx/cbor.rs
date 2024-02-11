@@ -1,5 +1,6 @@
-use std::{collections::HashMap, hash::Hash, io::Write};
+use std::{collections::BTreeMap, io::Write};
 
+use ciborium::value::CanonicalValue;
 use serde::Serialize;
 
 // Cbor is a CBOR (RFC8949) data item that can be encoded to a stream.
@@ -8,7 +9,7 @@ pub trait Cbor {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error>;
 }
 
-impl<T: Serialize + Eq + PartialEq + Hash + Ord, V: Serialize> Cbor for HashMap<T, V> {
+impl<V: Serialize> Cbor for BTreeMap<CanonicalValue, V> {
     fn encode(&self, writter: &mut impl Write) -> Result<(), std::io::Error> {
         ciborium::into_writer(self, writter)
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
@@ -17,25 +18,53 @@ impl<T: Serialize + Eq + PartialEq + Hash + Ord, V: Serialize> Cbor for HashMap<
 
 #[cfg(test)]
 mod tests {
-    //use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
-    //use super::Cbor;
+    use ciborium::{
+        value::{CanonicalValue, Integer},
+        Value,
+    };
 
-    // TODO: Fix this test
-    // #[test]
-    // fn check_hashmap() {
-    //     // Examples come from RFC8949, Appendix A
-    //     let mut var = HashMap::new();
+    use super::Cbor;
 
-    //     var.insert(1_u64, 2_u64);
-    //     var.insert(3, 4);
+    #[test]
+    fn check_hashmap() {
+        // Examples come from RFC8949, Appendix A
+        let mut var = BTreeMap::new();
 
-    //     let mut buf = Vec::new();
+        var.insert(Value::Integer(1.into()).into(), 2_u64);
+        var.insert(Value::Integer(3.into()).into(), 4);
 
-    //     var.encode(&mut buf).expect("Failed to write buffer");
+        let mut buf = Vec::new();
 
-    //     let hex = data_encoding::HEXLOWER.encode(&buf);
+        var.encode(&mut buf).expect("Failed to write buffer");
 
-    //     assert_eq!(&hex, "a201020304")
-    // }
+        let hex = data_encoding::HEXLOWER.encode(&buf);
+
+        assert_eq!(&hex, "a201020304")
+    }
+
+    // Ensures that the serialized values are in the correct order. A naive
+    // implementation would serialize the values in the order of the integer
+    // values, which would result in the order -1,10. This is incorrect, as
+    // the canonical order is 10,-1. This is because the CBOR serialization of
+    // 10 is 0x0a,the serialization of -1 is 0x20 and 0x0a < 0x20.
+    #[test]
+    fn check_hashmap_serialized_values() {
+        let mut final_map = BTreeMap::new();
+
+        let key = Value::Integer(10.into());
+        let canonical_key: CanonicalValue = key.into();
+        final_map.insert(canonical_key, 2);
+
+        let key = Value::Integer(Integer::from(-1));
+        let canonical_key: CanonicalValue = key.into();
+        final_map.insert(canonical_key, 3);
+
+        let mut bytes = Vec::new();
+        ciborium::into_writer(&final_map, &mut bytes).unwrap();
+        let hex_bytes = hex::encode(bytes);
+
+        assert_eq!(hex_bytes, "a20a022003")
+    }
 }

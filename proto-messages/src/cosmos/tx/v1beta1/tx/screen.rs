@@ -1,3 +1,6 @@
+use std::collections::BTreeMap;
+
+use ciborium::{value::CanonicalValue, Value};
 use nutype::nutype;
 use serde::{Deserialize, Serialize};
 
@@ -52,28 +55,34 @@ fn bool_skip(var: &bool) -> bool {
 }
 
 impl Screen {
-    pub fn cbor_map(&self) -> ordered_hash_map::OrderedHashMap<u64, ciborium::Value> {
-        let mut map = ordered_hash_map::OrderedHashMap::new();
+    pub fn cbor_map(&self) -> BTreeMap<CanonicalValue, ciborium::Value> {
+        let mut map: BTreeMap<CanonicalValue, ciborium::Value> = BTreeMap::new();
         if !self.title.is_empty() {
-            let _ = map.insert(TITLE_KEY, ciborium::Value::Text(self.title.clone()));
+            let _ = map.insert(
+                Value::Integer(TITLE_KEY.into()).into(),
+                Value::Text(self.title.clone()),
+            );
             // ignore returned
         }
 
         let _ = map.insert(
-            CONTENT_KEY,
+            Value::Integer(CONTENT_KEY.into()).into(),
             ciborium::Value::Text(self.content.clone().into_inner()),
         ); // nutype made validation that content is not empty
 
         if let Some(indent) = self.indent {
             if indent.into_inner() > 0 {
                 let _ = map.insert(
-                    INDENT_KEY,
-                    ciborium::Value::Integer(indent.into_inner().into()),
+                    Value::Integer(INDENT_KEY.into()).into(),
+                    Value::Integer(indent.into_inner().into()),
                 );
             }
         }
         if self.expert {
-            let _ = map.insert(EXPERT_KEY, ciborium::Value::Bool(self.expert));
+            let _ = map.insert(
+                Value::Integer(EXPERT_KEY.into()).into(),
+                Value::Bool(self.expert),
+            );
         }
 
         map
@@ -82,8 +91,9 @@ impl Screen {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
+    use ciborium::Value;
     use serde_json::json;
 
     use crate::cosmos::tx::v1beta1::cbor::Cbor;
@@ -116,9 +126,9 @@ mod tests {
 
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut final_map = HashMap::new();
+        let mut final_map = BTreeMap::new();
 
-        final_map.insert(1, map);
+        final_map.insert(Value::Integer(1.into()).into(), map);
         let mut bytes = Vec::new();
 
         final_map.encode(&mut bytes).expect("Failed to encode");
@@ -149,9 +159,9 @@ mod tests {
         const CBOR : &str = "a1018da20168436861696e20696402686d792d636861696ea2016e4163636f756e74206e756d626572026131a2016853657175656e6365026132a301674164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e767161386579687304f5a3016a5075626c6963206b657902781f2f636f736d6f732e63727970746f2e736563703235366b312e5075624b657904f5a401634b657902785230324542204444374620453446442045423736204443384120323035452046363544203739304320443330452038413337203541354320323532382045423341203932334120463146422034443739203444030104f5a102781e54686973207472616e73616374696f6e206861732031204d657373616765a3016d4d6573736167652028312f312902622f410301a3016542595445530278575348412d3235363d333242412035343543204430373020334530392030464643204438304620323045372031373239203944313220354434362033373238203838373120324232442042324437204346443220414138300302a1026e456e64206f66204d657373616765a2016446656573026a302e3030322041544f4da30169476173206c696d697402673130302730303004f5a3017148617368206f66207261772062797465730278403034323431666266613333366238326237666139643361643564383730363839313739386161396134393738646139653064393934353130643236363463643404f5";
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut final_map = HashMap::new();
+        let mut final_map = BTreeMap::new();
 
-        final_map.insert(1, map);
+        final_map.insert(Value::Integer(1.into()).into(), map);
         let mut bytes = Vec::new();
 
         final_map.encode(&mut bytes).expect("Failed to encode");
@@ -183,9 +193,9 @@ mod tests {
 
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut final_map = HashMap::new();
+        let mut final_map = BTreeMap::new();
 
-        final_map.insert(1, map);
+        final_map.insert(Value::Integer(1.into()).into(), map);
         let mut bytes = Vec::new();
 
         final_map.encode(&mut bytes).expect("Failed to encode");

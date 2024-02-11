@@ -1,10 +1,11 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
+use ciborium::{value::CanonicalValue, Value};
 use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
-    cbor::Cbor, message::Message, screen::Screen, signer_data::SignerData,
-    textual_data::TextualData, tx_data::TxData,
+    message::Message, screen::Screen, signer_data::SignerData, textual_data::TextualData,
+    tx_data::TxData,
 };
 use store::StoreKey;
 
@@ -29,12 +30,14 @@ impl SignModeHandler {
 
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut final_map = HashMap::new();
+        let canonical_key: CanonicalValue = Value::Integer(1.into()).into();
+        let mut final_map = BTreeMap::new();
+        final_map.insert(canonical_key, map);
 
-        final_map.insert(1, map);
         let mut bytes = Vec::new();
 
-        final_map.encode(&mut bytes)?;
+        ciborium::into_writer(&final_map, &mut bytes)
+            .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
 
         Ok(bytes)
     }
@@ -42,9 +45,10 @@ impl SignModeHandler {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use bnum::types::U256;
+    use ciborium::Value;
     use gears::types::context::context::Context;
 
     use proto_messages::cosmos::{
@@ -254,9 +258,9 @@ mod tests {
 
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut final_map = HashMap::new();
+        let mut final_map = BTreeMap::new();
 
-        final_map.insert(1, map);
+        final_map.insert(Value::Integer(1.into()).into(), map);
         let mut bytes = Vec::new();
 
         final_map.encode(&mut bytes)?;
