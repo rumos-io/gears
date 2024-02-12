@@ -260,13 +260,9 @@ impl Node {
         }
     }
 
-    pub fn balance<T: Database>(
-        &mut self,
-        version: u32,
-        node_db: &NodeDB<T>,
-    ) -> Result<bool, Error> {
+    pub fn balance<T: Database>(&mut self, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
         match self {
-            Node::Leaf(_) => Ok(false),
+            Node::Leaf(_) => Ok(()),
             Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
                 -2 => {
                     let right_node = inner.get_mut_right_node(node_db);
@@ -277,7 +273,7 @@ impl Node {
 
                     Self::left_rotate(self, version, node_db)?;
 
-                    Ok(true)
+                    Ok(())
                 }
 
                 2 => {
@@ -289,9 +285,9 @@ impl Node {
 
                     Self::left_rotate(self, version, node_db)?;
 
-                    Ok(true)
+                    Ok(())
                 }
-                _ => Ok(false),
+                _ => Ok(()),
             },
         }
     }
