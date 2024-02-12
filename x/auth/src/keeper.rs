@@ -4,7 +4,7 @@ use database::Database;
 use gears::{
     baseapp::ante::AuthKeeper,
     error::AppError,
-    types::context::context::{KVStoreReadTrait, KVStoreWriteTrait},
+    types::context::context::KVStoreRead,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 //use params_module::ParamsSubspaceKey;

@@ -16,7 +16,7 @@ pub(super) mod test_mocks {
     //!
     use database::{Database, PrefixDB};
     use gears::types::context::context::{
-        ContextTrait, DynamicContext, KVStoreReadTrait, KVStoreWriteTrait,
+        ContextTrait, DynamicContext, KVStoreRead,
     };
     use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
     use store::StoreKey;
@@ -69,13 +69,11 @@ pub(super) mod test_mocks {
         }
     }
 
-    impl<T: Database, SK: StoreKey> KVStoreReadTrait<T, SK> for MockContext {
+    impl<T: Database, SK: StoreKey> KVStoreRead<T, SK> for MockContext {
         fn get_kv_store(&self, _store_key: &SK) -> &store::KVStore<PrefixDB<T>> {
             unimplemented!()
         }
-    }
 
-    impl<T: Database, SK: StoreKey> KVStoreWriteTrait<T, SK> for MockContext {
         fn get_mutable_kv_store(&mut self, _store_key: &SK) -> &mut store::KVStore<PrefixDB<T>> {
             unimplemented!()
         }

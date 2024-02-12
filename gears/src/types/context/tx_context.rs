@@ -4,7 +4,7 @@ use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint::informal::{abci::Event, block::Header};
 
-use super::context::{KVStoreReadTrait, KVStoreWriteTrait};
+use super::context::KVStoreRead;
 
 pub struct TxContext<'a, DB, SK> {
     multi_store: &'a mut MultiStore<DB, SK>,
@@ -14,18 +14,16 @@ pub struct TxContext<'a, DB, SK> {
     _tx_bytes: Vec<u8>,
 }
 
-impl<DB: Database, SK: StoreKey> KVStoreReadTrait<DB, SK> for TxContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> KVStoreRead<DB, SK> for TxContext<'_, DB, SK> {
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
     fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
         self.multi_store.get_kv_store(store_key)
     }
-}
 
-impl<DB: Database, SK: StoreKey> KVStoreWriteTrait<DB, SK> for TxContext<'_, DB, SK> {
-    /// Fetches a mutable ref to a KVStore from the MultiStore.
-    fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
-        self.multi_store.get_mutable_kv_store(store_key)
-    }
+        /// Fetches a mutable ref to a KVStore from the MultiStore.
+        fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
+            self.multi_store.get_mutable_kv_store(store_key)
+        }
 }
 
 impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {

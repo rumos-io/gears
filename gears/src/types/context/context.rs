@@ -13,16 +13,13 @@ pub trait ContextTrait<T, SK> {
     fn metadata_get(&self) -> Metadata;
 }
 
-pub trait KVStoreReadTrait<T, SK> {
+pub trait KVStoreRead<T, SK> {
     fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>>;
-}
-
-pub trait KVStoreWriteTrait<T, SK>: KVStoreReadTrait<T, SK> {
     fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>>;
 }
 
 pub trait DynamicContext<DB, SK>:
-    ContextTrait<DB, SK> + KVStoreWriteTrait<DB, SK> + KVStoreReadTrait<DB, SK>
+    ContextTrait<DB, SK> + KVStoreRead<DB, SK>
 {
 }
 
@@ -33,7 +30,7 @@ pub enum Context<'a, 'b, T: Database, SK: StoreKey> {
     DynamicContext(&'a mut dyn DynamicContext<T, SK>),
 }
 
-impl<DB: Database, SK: StoreKey> KVStoreReadTrait<DB, SK> for Context<'_, '_, DB, SK> {
+impl<DB: Database, SK: StoreKey> KVStoreRead<DB, SK> for Context<'_, '_, DB, SK> {
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
     fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
         match self {
@@ -42,9 +39,7 @@ impl<DB: Database, SK: StoreKey> KVStoreReadTrait<DB, SK> for Context<'_, '_, DB
             Context::DynamicContext(ctx) => ctx.get_kv_store(store_key),
         }
     }
-}
 
-impl<DB: Database, SK: StoreKey> KVStoreWriteTrait<DB, SK> for Context<'_, '_, DB, SK> {
     /// Fetches a mutable ref to a KVStore from the MultiStore.
     fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
         match self {
