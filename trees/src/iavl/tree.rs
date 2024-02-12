@@ -60,38 +60,6 @@ impl InnerNode {
         })
     }
 
-    /// Return left node of node. \
-    /// This method will not panic if node is not found in db.
-    fn left_node_mut<T: Database>(&mut self, node_db: &NodeDB<T>) -> Option<&mut Node> {
-        match self.left_node {
-            Some(ref mut node) => Some(node),
-            None => {
-                self.left_node = node_db.get_node(&self.left_hash);
-
-                match self.left_node {
-                    Some(ref mut node) => Some(node),
-                    None => None,
-                }
-            }
-        }
-    }
-
-    /// Return right node of node. \
-    /// This method will not panic if node is not found in db.
-    fn right_node_mut<T: Database>(&mut self, node_db: &NodeDB<T>) -> Option<&mut Node> {
-        match self.right_node {
-            Some(ref mut node) => Some(node),
-            None => {
-                self.right_node = node_db.get_node(&self.right_hash);
-
-                match self.right_node {
-                    Some(ref mut node) => Some(node),
-                    None => None,
-                }
-            }
-        }
-    }
-
     fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         self.right_node.get_or_insert_with(|| {
             let node = node_db
@@ -301,7 +269,7 @@ impl Node {
             Node::Leaf(_) => Ok(false),
             Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
                 -2 => {
-                    let right_node = inner.right_node_mut(node_db).ok_or(Error::NodeNotExists)?;
+                    let right_node = inner.get_mut_right_node(node_db);
 
                     if right_node.update_height_and_size_get_balance_factor(node_db) == 1 {
                         Self::right_rotate(right_node, version, node_db)?;
@@ -313,7 +281,7 @@ impl Node {
                 }
 
                 2 => {
-                    let left_node = inner.left_node_mut(node_db).ok_or(Error::NodeNotExists)?;
+                    let left_node = inner.get_mut_left_node(node_db);
 
                     if left_node.update_height_and_size_get_balance_factor(node_db) == -1 {
                         Self::left_rotate(left_node, version, node_db)?;
@@ -784,9 +752,7 @@ where
 
             match key.as_ref().cmp(&inner.details.key) {
                 Ordering::Less => {
-                    let left_node = inner
-                        .left_node_mut(node_db)
-                        .expect("node not exists in db. Possible database corruption");
+                    let left_node = inner.get_mut_left_node(node_db);
 
                     let (value, new_hash, is_update) =
                         recursive_remove(left_node, node_db, key, orphaned, version);
@@ -815,9 +781,7 @@ where
                     return (value, Some(node.hash()), false);
                 }
                 Ordering::Greater | Ordering::Equal => {
-                    let right_node = inner
-                        .right_node_mut(node_db)
-                        .expect("node not exists in db. Possible database corruption");
+                    let right_node = inner.get_mut_right_node(node_db);
 
                     let (value, new_hash, is_update) =
                         recursive_remove(right_node, node_db, key, orphaned, version);
