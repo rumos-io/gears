@@ -248,7 +248,7 @@ pub trait KVStoreTrait {
     // fn delete( &mut self, k : &impl AsRef<[u8]> );
 }
 
-pub enum AnyKVStore<'a, DB: Database> {
+pub(crate) enum AnyKVStore<'a, DB: Database> {
     KVStore(&'a KVStore<DB>),
     QueryKVStore(&'a QueryKVStore<'a, DB>),
 }
