@@ -4,7 +4,7 @@ use bnum::types::U256;
 use bytes::Bytes;
 use database::Database;
 
-use gears::types::context::context::{Context, KVStoreRead};
+use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::{

@@ -15,9 +15,7 @@ pub(super) mod test_mocks {
     //! This module shares test implementation of context and `StoreKey`
     //!
     use database::{Database, PrefixDB};
-    use gears::types::context::context::{
-        ContextTrait, DynamicContext, KVStoreRead,
-    };
+    use gears::types::context::context::ContextTrait;
     use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
     use store::StoreKey;
     use strum::EnumIter;
@@ -67,9 +65,6 @@ pub(super) mod test_mocks {
                 uri_hash: None,
             }
         }
-    }
-
-    impl<T: Database, SK: StoreKey> KVStoreRead<T, SK> for MockContext {
         fn get_kv_store(&self, _store_key: &SK) -> &store::KVStore<PrefixDB<T>> {
             unimplemented!()
         }
@@ -78,8 +73,6 @@ pub(super) mod test_mocks {
             unimplemented!()
         }
     }
-
-    impl<T: Database, SK: StoreKey> DynamicContext<T, SK> for MockContext {}
 
     #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
     pub enum KeyMock {
