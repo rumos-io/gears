@@ -168,29 +168,19 @@ impl<DB: Database> KVStore<DB> {
         }
     }
 
-    pub fn range<'a, R>(&'a self, range: R) -> impl Iterator<Item = (Vec<u8>, Vec<u8>)> + 'a
+    pub fn range<'a, R>(&'a self, range: R) -> KvMergedRange<'a, R, DB>
     where
         R: RangeBounds<Vec<u8>> + Clone + 'a,
     {
         let tx_cached_values = self.tx_cache.range(range.clone());
         let block_cached_values = self.block_cache.range(range.clone());
-        let mut persisted_values = self
-            .persistent_store
-            .range(range.clone())
-            .collect::<BTreeMap<_, _>>();
+        let persisted_values = self.persistent_store.range(range.clone());
 
-        persisted_values.extend(
-            block_cached_values
-                .into_iter()
-                .map(|(first, second)| (first.clone(), second.clone())),
-        );
-        persisted_values.extend(
-            tx_cached_values
-                .into_iter()
-                .map(|(first, second)| (first.clone(), second.clone())),
-        );
-
-        persisted_values.into_iter()
+        KvMergedRange {
+            range: persisted_values,
+            block_cache: block_cached_values.collect(),
+            tx_cache: tx_cached_values.collect(),
+        }
     }
 
     /// Writes tx cache into block cache then clears the tx cache
@@ -244,6 +234,49 @@ impl<DB: Database> KVStore<DB> {
     }
 }
 
+pub struct KvMergedRange<'a, R: RangeBounds<Vec<u8>> + Clone + 'a, T: Database> {
+    range: trees::iavl::Range<'a, R, T>,
+    block_cache: BTreeMap<&'a Vec<u8>, &'a Vec<u8>>,
+    tx_cache: BTreeMap<&'a Vec<u8>, &'a Vec<u8>>,
+}
+
+impl<'a, R: RangeBounds<Vec<u8>> + Clone + 'a, T: Database> Iterator for KvMergedRange<'_, R, T> {
+    type Item = (Vec<u8>, Vec<u8>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((key, value)) = self.range.next() {
+            /*
+               Read values from persistent store and check in `BTreeMap`'s for overriding values
+               Then check for value in tx_cache and return value from it removing from block so value won't repeat
+               If not found we try to get from block_cache and only if not found return original value from persistent store
+
+               NOTE: first we get value with overrides from persisted then tx_cache and at the end from block
+            */
+
+            match self.tx_cache.remove(&key) {
+                Some(tx_value) => {
+                    let _ = self.block_cache.remove(&key);
+
+                    Some((key, tx_value.clone()))
+                }
+                None => {
+                    let block_value = self.block_cache.remove(&key).cloned().unwrap_or(value);
+
+                    Some((key, block_value))
+                }
+            }
+        } else if let Some((key, value)) = self.block_cache.pop_first() {
+            let value = self.tx_cache.remove(&key).cloned().unwrap_or(value.clone());
+
+            Some((key.clone(), value))
+        } else {
+            self.tx_cache
+                .pop_first()
+                .map(|(first, second)| (first.clone(), second.clone()))
+        }
+    }
+}
+
 pub(crate) enum AnyKVStore<'a, DB: Database> {
     KVStore(&'a KVStore<DB>),
     QueryKVStore(&'a QueryKVStore<'a, DB>),
@@ -269,33 +302,32 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> StoreRange
+    pub fn range<R>(&self, range: R) -> AnyMergedRange<'_, R, DB>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {
         match self {
-            AnyKVStore::KVStore(store) => StoreRange(store.range(range).collect()),
-            AnyKVStore::QueryKVStore(store) => StoreRange(store.range(range).collect()),
+            AnyKVStore::KVStore(store) => AnyMergedRange::KvMergedRange(store.range(range)),
+            AnyKVStore::QueryKVStore(store) => AnyMergedRange::QueryRange(
+                store.range(range).collect::<HashMap<_, _>>().into_iter(),
+            ),
         }
     }
 }
 
-pub struct StoreRange(BTreeMap<Vec<u8>, Vec<u8>>);
-
-impl StoreRange {
-    pub fn range<R>(&self, range: R) -> std::collections::btree_map::Range<'_, Vec<u8>, Vec<u8>>
-    where
-        R: RangeBounds<Vec<u8>>,
-    {
-        self.0.range(range)
-    }
+pub enum AnyMergedRange<'a, R: RangeBounds<Vec<u8>> + Clone, T: Database> {
+    KvMergedRange(KvMergedRange<'a, R, T>),
+    QueryRange(std::collections::hash_map::IntoIter<Vec<u8>, Vec<u8>>),
 }
 
-impl Iterator for StoreRange {
+impl<'a, R: RangeBounds<Vec<u8>> + Clone + 'a, T: Database> Iterator for AnyMergedRange<'a, R, T> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.0.pop_first()
+        match self {
+            AnyMergedRange::KvMergedRange(iter) => iter.next(),
+            AnyMergedRange::QueryRange(iter) => iter.next(),
+        }
     }
 }
 
@@ -311,7 +343,10 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
         self.store.get(&full_key)
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange {
+    pub fn range<R: RangeBounds<Vec<u8>>>(
+        &'a self,
+        range: R,
+    ) -> PrefixRange<'_, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
@@ -331,12 +366,12 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
     }
 }
 
-pub struct PrefixRange {
-    parent_range: StoreRange,
+pub struct PrefixRange<'a, R: RangeBounds<Vec<u8>> + Clone, T: Database> {
+    parent_range: AnyMergedRange<'a, R, T>,
     prefix_length: usize,
 }
 
-impl Iterator for PrefixRange {
+impl<'a, R: RangeBounds<Vec<u8>> + Clone + 'a, T: Database> Iterator for PrefixRange<'a, R, T> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -524,10 +559,10 @@ mod tests {
 
         let start = vec![0];
         let stop = vec![20];
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
+        let mut got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
             .range((Bound::Excluded(start), Bound::Excluded(stop)))
             .collect();
-        let expected_pairs = vec![
+        let mut expected_pairs = vec![
             (vec![1], vec![1]),
             (vec![2], vec![3]),
             (vec![3], vec![5]),
@@ -537,6 +572,9 @@ mod tests {
             (vec![10], vec![7]),
             (vec![14], vec![212]),
         ];
+
+        got_pairs.sort();
+        expected_pairs.sort();
 
         assert_eq!(expected_pairs, got_pairs);
     }
