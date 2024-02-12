@@ -1,7 +1,7 @@
 use database::{Database, PrefixDB};
 use store_crate::StoreKey;
 
-use crate::types::context::context::Context;
+use crate::types::context::context::{Context, KVStoreReadTrait, KVStoreWriteTrait};
 use std::{hash::Hash, marker::PhantomData};
 use strum::IntoEnumIterator;
 

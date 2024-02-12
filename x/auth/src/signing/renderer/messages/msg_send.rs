@@ -70,20 +70,15 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
 
 #[cfg(test)]
 mod tests {
-    use database::{Database, PrefixDB};
-    use gears::types::context::context::{Context, ContextTrait};
+    use gears::types::context::context::Context;
     use proto_messages::cosmos::{
-        bank::v1beta1::MsgSend,
-        ibc_types::bank::MsgSendRaw,
-        tx::v1beta1::{
-            screen::Screen,
-            tx_metadata::{DenomUnit, Metadata},
-        },
+        bank::v1beta1::MsgSend, ibc_types::bank::MsgSendRaw, tx::v1beta1::screen::Screen,
     };
-    use store::StoreKey;
-    use strum::EnumIter;
 
-    use crate::signing::renderer::value_renderer::{DefaultValueRenderer, ValueRenderer};
+    use crate::signing::renderer::{
+        value_renderer::{DefaultValueRenderer, ValueRenderer},
+        KeyMock, MockContext,
+    };
 
     #[test]
     fn screen_result_no_coins() -> anyhow::Result<()> {
@@ -146,77 +141,5 @@ mod tests {
         assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
 
         Ok(())
-    }
-
-    // We use custom implementation instead of mock
-    // 1. Mockall requires generic parameters to be 'static
-    // 2. Diffuclties exporting mock on other crates
-    pub struct MockContext;
-
-    impl<T: Database, SK: StoreKey> ContextTrait<T, SK> for MockContext {
-        fn height(&self) -> u64 {
-            unimplemented!()
-        }
-
-        fn chain_id(&self) -> &str {
-            unimplemented!()
-        }
-
-        fn push_event(&mut self, _: tendermint::informal::abci::Event) {
-            unimplemented!()
-        }
-
-        fn append_events(&mut self, _: Vec<tendermint::informal::abci::Event>) {
-            unimplemented!()
-        }
-
-        fn metadata_get(&self) -> Metadata {
-            Metadata {
-                description: String::new(),
-                denom_units: vec![
-                    DenomUnit {
-                        denom: "ATOM".parse().expect("Test data should be valid"),
-                        exponent: 6,
-                        aliases: Vec::new(),
-                    },
-                    DenomUnit {
-                        denom: "uatom".parse().expect("Test data should be valid"),
-                        exponent: 0,
-                        aliases: Vec::new(),
-                    },
-                ],
-                base: "uatom".into(),
-                display: "ATOM".into(),
-                name: String::new(),
-                symbol: String::new(),
-                uri: String::new(),
-                uri_hash: None,
-            }
-        }
-
-        fn get_kv_store(&self, _: &SK) -> &store::KVStore<PrefixDB<T>> {
-            unimplemented!()
-        }
-
-        fn get_mutable_kv_store(&mut self, _: &SK) -> &mut store::KVStore<PrefixDB<T>> {
-            unimplemented!()
-        }
-    }
-
-    #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
-    pub enum KeyMock {
-        Bank,
-        Auth,
-        Params,
-    }
-
-    impl StoreKey for KeyMock {
-        fn name(&self) -> &'static str {
-            match self {
-                KeyMock::Bank => "bank",
-                KeyMock::Auth => "acc",
-                KeyMock::Params => "params",
-            }
-        }
     }
 }

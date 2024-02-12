@@ -4,11 +4,27 @@ use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint::informal::abci::Event;
 
+use super::context::{KVStoreReadTrait, KVStoreWriteTrait};
+
 pub struct InitContext<'a, DB, SK> {
     pub multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
     pub events: Vec<Event>,
     pub chain_id: String,
+}
+
+impl<DB: Database, SK: StoreKey> KVStoreReadTrait<DB, SK> for InitContext<'_, DB, SK> {
+    ///  Fetches an immutable ref to a KVStore from the MultiStore.
+    fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
+        self.multi_store.get_kv_store(store_key)
+    }
+}
+
+impl<DB: Database, SK: StoreKey> KVStoreWriteTrait<DB, SK> for InitContext<'_, DB, SK> {
+    /// Fetches a mutable ref to a KVStore from the MultiStore.
+    fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
+        self.multi_store.get_mutable_kv_store(store_key)
+    }
 }
 
 impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
