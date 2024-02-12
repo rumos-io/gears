@@ -26,6 +26,16 @@ pub struct MultiStore<DB, SK> {
     pub(crate) stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
 }
 
+impl<DB: Database, SK: StoreKey> AnyStoreReadTrait<DB, SK> for MultiStore<DB, SK> {
+    fn get_any_store(&self, store_key: &SK) -> crate::AnyKVStore<'_, PrefixDB<DB>> {
+        AnyKVStore::KVStore(
+            self.stores
+                .get(store_key)
+                .expect("a store for every key is guaranteed to exist"),
+        )
+    }
+}
+
 pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
 }
@@ -248,7 +258,11 @@ pub trait KVStoreTrait {
     // fn delete( &mut self, k : &impl AsRef<[u8]> );
 }
 
-pub(crate) enum AnyKVStore<'a, DB: Database> {
+pub trait AnyStoreReadTrait<DB: Database, SK> {
+    fn get_any_store(&self, store_key: &SK) -> AnyKVStore<'_, PrefixDB<DB>>;
+}
+
+pub enum AnyKVStore<'a, DB: Database> {
     KVStore(&'a KVStore<DB>),
     QueryKVStore(&'a QueryKVStore<'a, DB>),
 }
