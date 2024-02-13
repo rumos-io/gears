@@ -170,13 +170,6 @@ impl Default for Node {
 }
 
 impl Node {
-    fn inner_mut(&mut self) -> Option<&mut InnerNode> {
-        match self {
-            Node::Leaf(_) => None,
-            Node::Inner(var) => Some(var),
-        }
-    }
-
     /// This does three things at once to prevent repeating the same process for getting the left and right nodes
     fn update_height_and_size_get_balance_factor<T: Database>(
         &mut self,
@@ -723,7 +716,7 @@ where
             }
         }
 
-        // Awful but as close as possible to cosmos implementation
+        // As close as possible to cosmos implementation
         fn recursive_remove<T: Database>(
             node: &mut Node,
             node_db: &NodeDB<T>,
@@ -731,83 +724,84 @@ where
             orphaned: &mut Vec<Node>,
             version: u32,
         ) -> (Option<NodeValue>, Option<Sha256Hash>, bool) {
-            if let Node::Leaf(leaf) = node {
-                return if leaf.details.key[..] != *key.as_ref() {
-                    (None, None, false)
-                } else {
-                    orphaned.push(Node::Leaf(leaf.clone()));
-                    (
-                        Some(NodeValue(leaf.value.drain(..).collect::<Vec<_>>())),
-                        None,
-                        true,
-                    )
-                };
+            match node {
+                Node::Leaf(leaf) => {
+                    return if leaf.details.key[..] != *key.as_ref() {
+                        (None, None, false)
+                    } else {
+                        orphaned.push(Node::Leaf(leaf.clone()));
+                        (
+                            Some(NodeValue(leaf.value.drain(..).collect::<Vec<_>>())),
+                            None,
+                            true,
+                        )
+                    };
+                }
+                Node::Inner(inner) => {
+                    let shallow_copy = Node::Inner(inner.shallow_clone());
+
+                    match key.as_ref().cmp(&inner.details.key) {
+                        Ordering::Less => {
+                            let left_node = inner.get_mut_left_node(node_db);
+
+                            let (value, new_hash, is_update) =
+                                recursive_remove(left_node, node_db, key, orphaned, version);
+
+                            if value.is_none() {
+                                return (None, None, false);
+                            }
+                            orphaned.push(shallow_copy);
+
+                            if is_update {
+                                let right_side = inner.right_node.take();
+                                *node = match right_side {
+                                    Some(var) => *var,
+                                    None => *node_db.get_node(&inner.right_hash).expect(
+                                        "node not exists in db. Possible database corruption",
+                                    ),
+                                };
+                            }
+
+                            if let Some(new_hash) = new_hash {
+                                node.left_hash_set(new_hash);
+                            }
+
+                            node.balance(version, node_db).expect("error rotating tree");
+
+                            return (value, Some(node.hash()), false);
+                        }
+                        Ordering::Greater | Ordering::Equal => {
+                            let right_node = inner.get_mut_right_node(node_db);
+
+                            let (value, new_hash, is_update) =
+                                recursive_remove(right_node, node_db, key, orphaned, version);
+
+                            if value.is_none() {
+                                return (None, None, false);
+                            }
+                            orphaned.push(shallow_copy);
+
+                            if is_update {
+                                let left_side = inner.left_node.take();
+                                *node = match left_side {
+                                    Some(var) => *var,
+                                    None => *node_db.get_node(&inner.left_hash).expect(
+                                        "node not exists in db. Possible database corruption",
+                                    ),
+                                };
+                            }
+
+                            if let Some(new_hash) = new_hash {
+                                node.right_hash_set(new_hash);
+                            }
+
+                            node.balance(version, node_db).expect("error rotating tree");
+
+                            return (value, Some(node.hash()), false);
+                        }
+                    };
+                }
             }
-
-            let shallow_copy = node.shallow_clone();
-
-            let inner = node.inner_mut().expect("We know that node is inner");
-
-            match key.as_ref().cmp(&inner.details.key) {
-                Ordering::Less => {
-                    let left_node = inner.get_mut_left_node(node_db);
-
-                    let (value, new_hash, is_update) =
-                        recursive_remove(left_node, node_db, key, orphaned, version);
-
-                    if value.is_none() {
-                        return (None, None, false);
-                    }
-                    orphaned.push(shallow_copy);
-
-                    if is_update {
-                        let right_side = inner.right_node.take();
-                        *node = match right_side {
-                            Some(var) => *var,
-                            None => *node_db
-                                .get_node(&inner.right_hash)
-                                .expect("node not exists in db. Possible database corruption"),
-                        };
-                    }
-
-                    if let Some(new_hash) = new_hash {
-                        node.left_hash_set(new_hash);
-                    }
-
-                    node.balance(version, node_db).expect("error rotating tree");
-
-                    return (value, Some(node.hash()), false);
-                }
-                Ordering::Greater | Ordering::Equal => {
-                    let right_node = inner.get_mut_right_node(node_db);
-
-                    let (value, new_hash, is_update) =
-                        recursive_remove(right_node, node_db, key, orphaned, version);
-
-                    if value.is_none() {
-                        return (None, None, false);
-                    }
-                    orphaned.push(shallow_copy);
-
-                    if is_update {
-                        let left_side = inner.left_node.take();
-                        *node = match left_side {
-                            Some(var) => *var,
-                            None => *node_db
-                                .get_node(&inner.left_hash)
-                                .expect("node not exists in db. Possible database corruption"),
-                        };
-                    }
-
-                    if let Some(new_hash) = new_hash {
-                        node.right_hash_set(new_hash);
-                    }
-
-                    node.balance(version, node_db).expect("error rotating tree");
-
-                    return (value, Some(node.hash()), false);
-                }
-            };
         }
     }
 
