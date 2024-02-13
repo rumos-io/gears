@@ -10,7 +10,7 @@ use integer_encoding::VarInt;
 use sha2::{Digest, Sha256};
 
 use crate::{
-    error::Error,
+    error::{constants::LEAF_ROTATE_ERROR, Error},
     merkle::{Sha256Hash, EMPTY_HASH},
 };
 
@@ -199,7 +199,7 @@ impl Node {
 
             let mut y = match y {
                 Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError),
+                Node::Leaf(_) => return Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned())),
             };
 
             let t3 = y.right_node;
@@ -222,7 +222,7 @@ impl Node {
             Ok(())
         } else {
             // Can't rotate a leaf node
-            Err(Error::RotateError)
+            Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned()))
         }
     }
 
@@ -233,7 +233,7 @@ impl Node {
 
             let mut y = match y {
                 Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError),
+                Node::Leaf(_) => return Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned())),
             };
 
             let t2 = y.left_node;
@@ -256,36 +256,38 @@ impl Node {
             Ok(())
         } else {
             // Can't rotate a leaf node
-            Err(Error::RotateError)
+            Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned()))
         }
     }
 
     pub fn balance<T: Database>(&mut self, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
+        if self.is_persisted() {
+            return Err(Error::RotateError("call on persisted node".to_owned()));
+        }
+
         match self {
             Node::Leaf(_) => Ok(()),
             Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
-                -2 => {
+                ..=-2 => {
                     let right_node = inner.get_mut_right_node(node_db);
 
-                    if right_node.update_height_and_size_get_balance_factor(node_db) == 1 {
-                        Self::right_rotate(right_node, version, node_db)?;
+                    if right_node.update_height_and_size_get_balance_factor(node_db) <= 0 {
+                        return Self::left_rotate(right_node, version, node_db);
                     }
 
-                    Self::left_rotate(self, version, node_db)?;
-
-                    Ok(())
+                    Self::right_rotate(right_node, version, node_db)?;
+                    Self::left_rotate(self, version, node_db)
                 }
 
-                2 => {
+                2.. => {
                     let left_node = inner.get_mut_left_node(node_db);
 
-                    if left_node.update_height_and_size_get_balance_factor(node_db) == -1 {
-                        Self::left_rotate(left_node, version, node_db)?;
+                    if left_node.update_height_and_size_get_balance_factor(node_db) >= 0 {
+                        return Self::right_rotate(left_node, version, node_db);
                     }
 
-                    Self::left_rotate(self, version, node_db)?;
-
-                    Ok(())
+                    Self::left_rotate(left_node, version, node_db)?;
+                    Self::right_rotate(self, version, node_db)
                 }
                 _ => Ok(()),
             },
