@@ -672,8 +672,7 @@ where
     }
 
     pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
-        // I use this struct to be 100% sure in output of `recursive_remove`
-        // struct NodeKey(pub Vec<u8>);
+        // We use this struct to be 100% sure in output of `recursive_remove`
         struct NodeValue(pub Vec<u8>);
 
         let result = inner_remove(self, key);
@@ -716,7 +715,9 @@ where
             }
         }
 
-        // As close as possible to cosmos implementation
+        /// Returns the value corresponding to the key if it was found
+        /// The new root hash if the root hash changed
+        /// Whether the node passed in was a leaf node and was removed
         fn recursive_remove<T: Database>(
             node: &mut Node,
             node_db: &NodeDB<T>,
@@ -726,78 +727,90 @@ where
         ) -> (Option<NodeValue>, Option<Sha256Hash>, bool) {
             match node {
                 Node::Leaf(leaf) => {
-                    return if leaf.details.key[..] != *key.as_ref() {
+                    return if leaf.details.key != key.as_ref() {
                         (None, None, false)
                     } else {
                         orphaned.push(Node::Leaf(leaf.clone()));
-                        (
-                            Some(NodeValue(leaf.value.drain(..).collect::<Vec<_>>())),
-                            None,
-                            true,
-                        )
+                        (Some(NodeValue(leaf.value.clone())), None, true)
                     };
                 }
                 Node::Inner(inner) => {
-                    let shallow_copy = Node::Inner(inner.shallow_clone());
-
                     match key.as_ref().cmp(&inner.details.key) {
                         Ordering::Less => {
                             let left_node = inner.get_mut_left_node(node_db);
 
-                            let (value, new_hash, is_update) =
+                            let (value, new_hash, leaf_cut) =
                                 recursive_remove(left_node, node_db, key, orphaned, version);
 
                             if value.is_none() {
+                                // The key was not found in the left subtree, so nothing changed
                                 return (None, None, false);
+                            } else {
+                                // The key was found in the left subtree, either we just removed a leaf node
+                                // or we updated the left subtree's root hash. Either way, we need to orphan
+                                // the current node
+
+                                let shallow_copy = Node::Inner(inner.shallow_clone());
+                                orphaned.push(shallow_copy);
+
+                                if leaf_cut {
+                                    // The left node was a leaf node and was removed.
+                                    // We promote the right node to the root of the subtree
+                                    let right_node = inner.get_mut_right_node(node_db);
+                                    *node = right_node.shallow_clone();
+
+                                    // The right node was already balanced, so we don't need to call balance
+                                    // on node.
+                                    // Also, the right node's height and size were correct so don't need re-calculating
+                                    // on the new root node.
+                                    return (value, Some(node.hash()), false);
+                                } else if let Some(new_hash) = new_hash {
+                                    // The left subtree's root hash has changed, let's update the node's hash
+                                    node.left_hash_set(new_hash);
+                                    node.balance(version, node_db).expect("error rotating tree");
+                                    return (value, Some(node.hash()), false);
+                                } else {
+                                    unreachable!("either a leaf was removed or the left subtree's root hash changed")
+                                }
                             }
-                            orphaned.push(shallow_copy);
-
-                            if is_update {
-                                let right_side = inner.right_node.take();
-                                *node = match right_side {
-                                    Some(var) => *var,
-                                    None => *node_db.get_node(&inner.right_hash).expect(
-                                        "node not exists in db. Possible database corruption",
-                                    ),
-                                };
-                            }
-
-                            if let Some(new_hash) = new_hash {
-                                node.left_hash_set(new_hash);
-                            }
-
-                            node.balance(version, node_db).expect("error rotating tree");
-
-                            return (value, Some(node.hash()), false);
                         }
                         Ordering::Greater | Ordering::Equal => {
                             let right_node = inner.get_mut_right_node(node_db);
 
-                            let (value, new_hash, is_update) =
+                            let (value, new_hash, leaf_cut) =
                                 recursive_remove(right_node, node_db, key, orphaned, version);
 
                             if value.is_none() {
+                                // The key was not found in the right subtree, so nothing changed
                                 return (None, None, false);
+                            } else {
+                                // The key was found in the right subtree, either we just removed a leaf node
+                                // or we updated the right subtree's root hash. Either way, we need to orphan
+                                // the current node
+
+                                let shallow_copy = Node::Inner(inner.shallow_clone());
+                                orphaned.push(shallow_copy);
+
+                                if leaf_cut {
+                                    // The right node was a leaf node and was removed.
+                                    // We promote the left node to the root of the subtree
+                                    let left_node = inner.get_mut_left_node(node_db);
+                                    *node = left_node.shallow_clone();
+
+                                    // The left node was balanced, so we don't need to call balance
+                                    // on node.
+                                    // Also, the left node's height and size were correct so don't need re-calculating
+                                    // on the new root node.
+                                    return (value, Some(node.hash()), false);
+                                } else if let Some(new_hash) = new_hash {
+                                    // The right subtree's root hash has changed, let's update the node's hash
+                                    node.right_hash_set(new_hash);
+                                    node.balance(version, node_db).expect("error rotating tree");
+                                    return (value, Some(node.hash()), false);
+                                } else {
+                                    unreachable!("either a leaf was removed or the right subtree's root hash changed")
+                                }
                             }
-                            orphaned.push(shallow_copy);
-
-                            if is_update {
-                                let left_side = inner.left_node.take();
-                                *node = match left_side {
-                                    Some(var) => *var,
-                                    None => *node_db.get_node(&inner.left_hash).expect(
-                                        "node not exists in db. Possible database corruption",
-                                    ),
-                                };
-                            }
-
-                            if let Some(new_hash) = new_hash {
-                                node.right_hash_set(new_hash);
-                            }
-
-                            node.balance(version, node_db).expect("error rotating tree");
-
-                            return (value, Some(node.hash()), false);
                         }
                     };
                 }
@@ -1135,7 +1148,17 @@ mod tests {
             34, 221, 199, 75, 12, 47, 227, 31, 159, 50, 0, 24, 80, 106, 150, 185, 56, 183, 39, 197,
             31, 201, 239, 2, 254, 74, 63, 155, 135, 210, 49, 149,
         ];
-        assert_eq!(hash, expected)
+        assert_eq!(hash, expected);
+
+        // // re-insert the removed key
+        // tree.set(vec![2], vec![5]);
+
+        // let hash = tree.root_hash();
+        // let expected = [
+        //     152, 235, 239, 45, 253, 157, 226, 68, 31, 70, 159, 245, 108, 36, 34, 155, 91, 73, 117,
+        //     9, 188, 255, 19, 21, 191, 133, 108, 5, 23, 199, 164, 205,
+        // ];
+        // assert_eq!(hash, expected);
     }
 
     #[test]
