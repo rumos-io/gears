@@ -1067,7 +1067,7 @@ mod tests {
         let expected_leaf = Some(Box::new(Node::Leaf(LeafNode {
             details: NodeDetails {
                 key: vec![19],
-                is_persisted: true,
+                is_persisted: false,
                 version: 0,
             },
             value: vec![3, 2, 1],
@@ -1078,14 +1078,14 @@ mod tests {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![20],
-                    is_persisted: true,
+                    is_persisted: false,
                     version: 0,
                 },
                 value: vec![1, 6, 9],
             }))),
             details: NodeDetails {
                 key: vec![20],
-                is_persisted: true,
+                is_persisted: false,
                 version: 0,
             },
             height: 1,
