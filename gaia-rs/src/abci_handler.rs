@@ -60,6 +60,7 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
     ) -> Result<(), AppError> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
+            Message::Ibc(_msg) => unimplemented!( "TODO: Ask Kevin about this"), // TODO
         }
     }
 

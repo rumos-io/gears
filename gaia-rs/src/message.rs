@@ -7,4 +7,6 @@ use serde::Serialize;
 pub enum Message {
     #[gears(url = "/cosmos.bank.v1beta1")]
     Bank(bank::Message),
+    #[gears(url = "/cosmos.bank.v1beta1")]
+    Ibc( ibc::message::Message),
 }

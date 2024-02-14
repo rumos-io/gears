@@ -1432,7 +1432,7 @@ dependencies = [
  "database",
  "gears",
  "gears-derive",
- "ibc",
+ "ibc 0.1.0",
  "proto-messages",
  "proto-types",
  "serde",
@@ -1818,6 +1818,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "ibc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "ibc 0.50.0",
+ "prost 0.11.9",
+ "proto-messages",
+ "proto-types",
+ "schemars",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
