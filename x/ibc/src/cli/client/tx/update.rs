@@ -10,6 +10,6 @@ pub struct MsgUpdateClient {
     pub signer: Signer,
 }
 
-pub(super) fn tx_command_handler(_msg: MsgUpdateClient) {
+pub(super) fn tx_command_handler(_msg: MsgUpdateClient) -> anyhow::Result<crate::message::Message> {
     unimplemented!()
 }

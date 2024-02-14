@@ -11,6 +11,8 @@ pub struct MsgSubmitMisbehaviour {
     pub signer: Signer,
 }
 
-pub(super) fn tx_command_handler(_msg: MsgSubmitMisbehaviour) {
+pub(super) fn tx_command_handler(
+    _msg: MsgSubmitMisbehaviour,
+) -> anyhow::Result<crate::message::Message> {
     unimplemented!()
 }

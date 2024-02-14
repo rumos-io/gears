@@ -39,7 +39,5 @@ pub fn run_ibc_tx_command(args: IbcCli, _from_address: AccAddress) -> Result<Ibc
         IbcCommands::Misbehavior(msg) => misbehavior::tx_command_handler(msg),
         IbcCommands::RecoverClientProposal(msg) => recover_client::tx_command_handler(msg),
         // IbcCommands::IBCUpgradeProposal => todo!(),
-    };
-
-    unimplemented!()
+    }
 }

@@ -8,6 +8,8 @@ pub struct MsgRecoverClient {
     pub signer: String,
 }
 
-pub(super) fn tx_command_handler(_msg: MsgRecoverClient) {
+pub(super) fn tx_command_handler(
+    _msg: MsgRecoverClient,
+) -> anyhow::Result<crate::message::Message> {
     unimplemented!()
 }

@@ -13,6 +13,8 @@ pub struct MsgUpgradeClient {
     pub signer: Signer,
 }
 
-pub(super) fn tx_command_handler(_msg: MsgUpgradeClient) {
+pub(super) fn tx_command_handler(
+    _msg: MsgUpgradeClient,
+) -> anyhow::Result<crate::message::Message> {
     unimplemented!()
 }

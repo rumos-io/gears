@@ -2,7 +2,9 @@ use proto_messages::cosmos::ibc_types::protobuf::Any;
 use proto_types::AccAddress;
 
 #[derive(Debug, Clone, serde::Serialize)]
-pub enum Message {}
+pub enum Message {
+    ClientCreate(ibc::core::client::types::proto::v1::MsgCreateClient),
+}
 
 impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
