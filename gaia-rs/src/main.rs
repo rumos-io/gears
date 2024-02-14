@@ -19,6 +19,7 @@ mod genesis;
 mod message;
 mod rest;
 mod store_keys;
+mod ibc;
 
 struct GaiaCore;
 

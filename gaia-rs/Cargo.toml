@@ -30,5 +30,6 @@ serde = {version = "1.0", default-features = false}
 #other
 axum = {workspace = true}
 cosmwasm-std = "1.1.5"
+ibc = "0.50.0"
 
 [dev-dependencies]
