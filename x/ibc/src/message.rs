@@ -6,6 +6,7 @@ pub enum Message {
     // TODO: More strict struct which serializes in proto-types crate
     ClientCreate(ibc::core::client::types::proto::v1::MsgCreateClient),
     ClientUpdate(ibc::core::client::types::proto::v1::MsgUpdateClient),
+    ClientUpgrade(ibc::core::client::types::proto::v1::MsgUpgradeClient),
     SubmitMisbehaviour(ibc::core::client::types::proto::v1::MsgSubmitMisbehaviour),
     RecoverClient(ibc::core::client::types::proto::v1::MsgRecoverClient),
 }
