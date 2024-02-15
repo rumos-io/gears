@@ -1186,6 +1186,29 @@ mod tests {
     }
 
     #[test]
+    fn remove_leaf_after_save_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        tree.set(vec![1], vec![4]);
+        tree.set(vec![2], vec![5]);
+        tree.set(vec![3], vec![6]);
+
+        tree.save_version().unwrap();
+
+        let val = tree.remove(&[2]);
+
+        assert_eq!(val, Some(vec![5]));
+        assert!(tree.root.is_some());
+
+        let hash = tree.root_hash();
+        let expected = [
+            157, 211, 3, 179, 46, 81, 187, 161, 109, 233, 192, 198, 57, 27, 36, 234, 79, 230, 161,
+            49, 123, 3, 121, 162, 182, 58, 126, 93, 17, 215, 95, 248,
+        ];
+        assert_eq!(hash, expected);
+    }
+
+    #[test]
     fn right_rotate_works() {
         let t3 = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
