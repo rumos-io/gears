@@ -7,6 +7,7 @@ pub enum Message {
     ClientCreate(ibc::core::client::types::proto::v1::MsgCreateClient),
     ClientUpdate(ibc::core::client::types::proto::v1::MsgUpdateClient),
     SubmitMisbehaviour(ibc::core::client::types::proto::v1::MsgSubmitMisbehaviour),
+    RecoverClient(ibc::core::client::types::proto::v1::MsgRecoverClient),
 }
 
 impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {
