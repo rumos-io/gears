@@ -14,8 +14,8 @@ use crate::types::Signer;
 
 #[derive(Args, Debug)]
 pub struct MsgCreateClient {
-    pub client_state: PathBuf,
-    pub consensus_state: PathBuf,
+    pub client_state: PathBuf,    //  TODO: User could pass not only file
+    pub consensus_state: PathBuf, //  TODO: User could pass not only file
     pub signer: Signer,
 }
 

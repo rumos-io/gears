@@ -3,7 +3,9 @@ use proto_types::AccAddress;
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub enum Message {
+    // TODO: More strict struct which serializes in proto-types crate
     ClientCreate(ibc::core::client::types::proto::v1::MsgCreateClient),
+    ClientUpdate(ibc::core::client::types::proto::v1::MsgUpdateClient),
 }
 
 impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {
