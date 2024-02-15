@@ -320,6 +320,13 @@ impl Node {
         }
     }
 
+    pub fn set_key(&mut self, key: Vec<u8>) {
+        match self {
+            Node::Leaf(leaf) => leaf.details.key = key,
+            Node::Inner(inner) => inner.details.key = key,
+        }
+    }
+
     pub fn get_height(&self) -> u8 {
         match self {
             Node::Leaf(_) => 0,
@@ -673,6 +680,7 @@ where
 
     pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
         // We use this struct to be 100% sure in output of `recursive_remove`
+        struct NodeKey(pub Vec<u8>);
         struct NodeValue(pub Vec<u8>);
 
         let result = inner_remove(self, key);
@@ -695,7 +703,7 @@ where
                 Some(ref mut root) => {
                     let mut orphans = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
 
-                    let (value, _, _) = recursive_remove(
+                    let (value, _, _, _) = recursive_remove(
                         root,
                         &tree.node_db,
                         key,
@@ -718,20 +726,21 @@ where
         /// Returns the value corresponding to the key if it was found
         /// The new root hash if the root hash changed
         /// Whether the node passed in was a leaf node and was removed
+        /// The new leftmost leaf key for the subtree (if it has changed) after successfully removing 'key'
         fn recursive_remove<T: Database>(
             node: &mut Node,
             node_db: &NodeDB<T>,
             key: &impl AsRef<[u8]>,
             orphaned: &mut Vec<Node>,
             version: u32,
-        ) -> (Option<NodeValue>, Option<Sha256Hash>, bool) {
+        ) -> (Option<NodeValue>, Option<Sha256Hash>, bool, Option<NodeKey>) {
             match node {
                 Node::Leaf(leaf) => {
                     return if leaf.details.key != key.as_ref() {
-                        (None, None, false)
+                        (None, None, false, None)
                     } else {
                         orphaned.push(Node::Leaf(leaf.clone()));
-                        (Some(NodeValue(leaf.value.clone())), None, true)
+                        (Some(NodeValue(leaf.value.clone())), None, true, None)
                     };
                 }
                 Node::Inner(inner) => {
@@ -739,12 +748,12 @@ where
                         Ordering::Less => {
                             let left_node = inner.get_mut_left_node(node_db);
 
-                            let (value, new_hash, leaf_cut) =
+                            let (value, new_hash, leaf_cut, new_key) =
                                 recursive_remove(left_node, node_db, key, orphaned, version);
 
                             if value.is_none() {
                                 // The key was not found in the left subtree, so nothing changed
-                                return (None, None, false);
+                                return (None, None, false, None);
                             } else {
                                 // The key was found in the left subtree, either we just removed a leaf node
                                 // or we updated the left subtree's root hash. Either way, we need to orphan
@@ -763,13 +772,20 @@ where
                                     // on node.
                                     // Also, the right node's height and size were correct so don't need re-calculating
                                     // on the new root node.
-                                    return (value, Some(node.hash()), false);
+                                    // The new leftmost leaf key for the subtree has changed so we return it
+                                    return (
+                                        value,
+                                        Some(node.hash()),
+                                        false,
+                                        Some(NodeKey(node.get_key().to_vec())),
+                                    );
                                 } else if let Some(new_hash) = new_hash {
-                                    // The left subtree's root hash has changed, let's update the node's hash
+                                    // The left subtree's root hash has changed, so update the node's hash
+                                    // Bubble up the new leftmost leaf key for the subtree
                                     // TODO: we should update the version of the node as is done in the SDK (this is a new node)
                                     node.left_hash_set(new_hash);
                                     node.balance(version, node_db).expect("error rotating tree");
-                                    return (value, Some(node.hash()), false);
+                                    return (value, Some(node.hash()), false, new_key);
                                 } else {
                                     unreachable!("either a leaf was removed or the left subtree's root hash changed")
                                 }
@@ -778,12 +794,12 @@ where
                         Ordering::Greater | Ordering::Equal => {
                             let right_node = inner.get_mut_right_node(node_db);
 
-                            let (value, new_hash, leaf_cut) =
+                            let (value, new_hash, leaf_cut, new_key) =
                                 recursive_remove(right_node, node_db, key, orphaned, version);
 
                             if value.is_none() {
                                 // The key was not found in the right subtree, so nothing changed
-                                return (None, None, false);
+                                return (None, None, false, None);
                             } else {
                                 // The key was found in the right subtree, either we just removed a leaf node
                                 // or we updated the right subtree's root hash. Either way, we need to orphan
@@ -800,15 +816,21 @@ where
 
                                     // The left node was balanced, so we don't need to call balance
                                     // on node.
+                                    // Since we promoted the left node to the root of the subtree, the leftmost leaf key remains the same
                                     // Also, the left node's height and size were correct so don't need re-calculating
                                     // on the new root node.
-                                    return (value, Some(node.hash()), false);
+                                    return (value, Some(node.hash()), false, None);
                                 } else if let Some(new_hash) = new_hash {
-                                    // The right subtree's root hash has changed, let's update the node's hash
+                                    // The right subtree's root hash has changed, so update the node's hash
                                     // TODO: we should update the version of the node as is done in the SDK (this is a new node)
                                     node.right_hash_set(new_hash);
+
+                                    // If the right subtree's leftmost key has changed, set this node's key to the new key
+                                    if let Some(new_key) = new_key {
+                                        node.set_key(new_key.0);
+                                    }
                                     node.balance(version, node_db).expect("error rotating tree");
-                                    return (value, Some(node.hash()), false);
+                                    return (value, Some(node.hash()), false, None);
                                 } else {
                                     unreachable!("either a leaf was removed or the right subtree's root hash changed")
                                 }
@@ -1152,15 +1174,15 @@ mod tests {
         ];
         assert_eq!(hash, expected);
 
-        // // re-insert the removed key
-        // tree.set(vec![2], vec![5]);
+        // re-insert the removed key
+        tree.set(vec![2], vec![5]);
 
-        // let hash = tree.root_hash();
-        // let expected = [
-        //     152, 235, 239, 45, 253, 157, 226, 68, 31, 70, 159, 245, 108, 36, 34, 155, 91, 73, 117,
-        //     9, 188, 255, 19, 21, 191, 133, 108, 5, 23, 199, 164, 205,
-        // ];
-        // assert_eq!(hash, expected);
+        let hash = tree.root_hash();
+        let expected = [
+            152, 235, 239, 45, 253, 157, 226, 68, 31, 70, 159, 245, 108, 36, 34, 155, 91, 73, 117,
+            9, 188, 255, 19, 21, 191, 133, 108, 5, 23, 199, 164, 205,
+        ];
+        assert_eq!(hash, expected);
     }
 
     #[test]
