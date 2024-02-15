@@ -265,7 +265,7 @@ impl Node {
                     let right_node = inner.get_mut_right_node(node_db);
 
                     if right_node.update_height_and_size_get_balance_factor(node_db) <= 0 {
-                        return Self::left_rotate(right_node, version, node_db);
+                        return Self::left_rotate(self, version, node_db);
                     }
 
                     Self::right_rotate(right_node, version, node_db)?;
@@ -276,7 +276,7 @@ impl Node {
                     let left_node = inner.get_mut_left_node(node_db);
 
                     if left_node.update_height_and_size_get_balance_factor(node_db) >= 0 {
-                        return Self::right_rotate(left_node, version, node_db);
+                        return Self::right_rotate(self, version, node_db);
                     }
 
                     Self::left_rotate(left_node, version, node_db)?;
@@ -766,6 +766,7 @@ where
                                     return (value, Some(node.hash()), false);
                                 } else if let Some(new_hash) = new_hash {
                                     // The left subtree's root hash has changed, let's update the node's hash
+                                    // TODO: we should update the version of the node as is done in the SDK (this is a new node)
                                     node.left_hash_set(new_hash);
                                     node.balance(version, node_db).expect("error rotating tree");
                                     return (value, Some(node.hash()), false);
@@ -804,6 +805,7 @@ where
                                     return (value, Some(node.hash()), false);
                                 } else if let Some(new_hash) = new_hash {
                                     // The right subtree's root hash has changed, let's update the node's hash
+                                    // TODO: we should update the version of the node as is done in the SDK (this is a new node)
                                     node.right_hash_set(new_hash);
                                     node.balance(version, node_db).expect("error rotating tree");
                                     return (value, Some(node.hash()), false);
@@ -1862,6 +1864,9 @@ mod tests {
                         .get_node(&node.right_hash)
                         .expect("node db should contain all nodes"),
                 };
+
+                println!("left_node: {:?}", left_node);
+                println!("right_node: {:?}", right_node);
 
                 if left_node.hash() != node.left_hash {
                     return false;
