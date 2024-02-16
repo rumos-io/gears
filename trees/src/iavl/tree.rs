@@ -17,12 +17,6 @@ use crate::{
 use super::node_db::NodeDB;
 
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
-pub(crate) struct NodeDetails {
-    pub(crate) key: Vec<u8>,
-    version: u32,
-}
-
-#[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub(crate) struct InnerNode {
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     pub(crate) right_node: Option<Box<Node>>,
@@ -30,7 +24,8 @@ pub(crate) struct InnerNode {
     size: u32, // number of leaf nodes in this node's subtrees
     pub(crate) left_hash: Sha256Hash,
     pub(crate) right_hash: Sha256Hash,
-    pub(crate) details: NodeDetails,
+    pub(crate) key: Vec<u8>,
+    version: u32,
 }
 
 impl From<LeafNode> for InnerNode {
@@ -44,7 +39,8 @@ impl From<LeafNode> for InnerNode {
             size: 0,
             left_hash: EMPTY_HASH,
             right_hash,
-            details: value.details,
+            key: value.key,
+            version: value.version,
         }
     }
 }
@@ -122,7 +118,8 @@ impl InnerNode {
             size: self.size,
             left_hash: self.left_hash,
             right_hash: self.right_hash,
-            details: self.details.clone(),
+            key: self.key.clone(),
+            version: self.version,
         }
     }
 }
@@ -130,7 +127,8 @@ impl InnerNode {
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub(crate) struct LeafNode {
     pub(crate) value: Vec<u8>,
-    pub(crate) details: NodeDetails,
+    pub(crate) key: Vec<u8>,
+    version: u32,
 }
 
 impl LeafNode {
@@ -143,13 +141,13 @@ impl LeafNode {
         // NOTE: i64 is used here for parameters for compatibility wih cosmos
         let height: i64 = 0;
         let size: i64 = 1;
-        let version: i64 = self.details.version.into();
+        let version: i64 = self.version.into();
         let hashed_value = Sha256::digest(&self.value);
 
         let mut serialized = height.encode_var_vec();
         serialized.extend(size.encode_var_vec());
         serialized.extend(version.encode_var_vec());
-        serialized.extend(encode_bytes(&self.details.key));
+        serialized.extend(encode_bytes(&self.key));
         serialized.extend(encode_bytes(&hashed_value));
 
         serialized
@@ -200,14 +198,14 @@ impl Node {
             z.left_node = t3;
             z.left_hash = y.right_hash;
             z.update_height_and_size_get_balance_factor(node_db);
-            z.details.version = version;
+            z.version = version;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.right_hash = z.hash();
             y.right_node = Some(Box::new(z));
             y.update_height_and_size_get_balance_factor(node_db);
-            y.details.version = version;
+            y.version = version;
 
             *self = Node::Inner(y);
 
@@ -234,14 +232,14 @@ impl Node {
             z.right_node = t2;
             z.right_hash = y.left_hash;
             z.update_height_and_size_get_balance_factor(node_db);
-            z.details.version = version;
+            z.version = version;
             let z = Node::Inner(z);
 
             // Perform rotation on y, update hash and update height
             y.left_hash = z.hash();
             y.left_node = Some(Box::new(z));
             y.update_height_and_size_get_balance_factor(node_db);
-            y.details.version = version;
+            y.version = version;
 
             *self = Node::Inner(y);
 
@@ -310,15 +308,15 @@ impl Node {
     }
     pub fn get_key(&self) -> &[u8] {
         match self {
-            Node::Leaf(leaf) => &leaf.details.key,
-            Node::Inner(inner) => &inner.details.key,
+            Node::Leaf(leaf) => &leaf.key,
+            Node::Inner(inner) => &inner.key,
         }
     }
 
     pub fn set_key(&mut self, key: Vec<u8>) {
         match self {
-            Node::Leaf(leaf) => leaf.details.key = key,
-            Node::Inner(inner) => inner.details.key = key,
+            Node::Leaf(leaf) => leaf.key = key,
+            Node::Inner(inner) => inner.key = key,
         }
     }
 
@@ -332,7 +330,8 @@ impl Node {
     pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
         Node::Leaf(LeafNode {
             value,
-            details: NodeDetails { key, version },
+            key,
+            version,
         })
     }
 
@@ -348,7 +347,7 @@ impl Node {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
                 let height: i64 = node.height.into();
                 let size: i64 = node.size.into();
-                let version: i64 = node.details.version.into();
+                let version: i64 = node.version.into();
 
                 let mut serialized = height.encode_var_vec();
                 serialized.extend(size.encode_var_vec());
@@ -369,8 +368,8 @@ impl Node {
 
                 let mut serialized = height.encode_var_vec();
                 serialized.extend(size.encode_var_vec());
-                serialized.extend(node.details.version.encode_var_vec());
-                serialized.extend(encode_bytes(&node.details.key));
+                serialized.extend(node.version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.key));
                 serialized.extend(encode_bytes(&node.value));
 
                 serialized
@@ -378,8 +377,8 @@ impl Node {
             Node::Inner(node) => {
                 let mut serialized = node.height.encode_var_vec();
                 serialized.extend(node.size.encode_var_vec());
-                serialized.extend(node.details.version.encode_var_vec());
-                serialized.extend(encode_bytes(&node.details.key));
+                serialized.extend(node.version.encode_var_vec());
+                serialized.extend(encode_bytes(&node.key));
                 serialized.extend(encode_bytes(&node.left_hash));
                 serialized.extend(encode_bytes(&node.right_hash));
 
@@ -403,7 +402,8 @@ impl Node {
 
             Ok(Node::Leaf(LeafNode {
                 value,
-                details: NodeDetails { key, version },
+                key,
+                version,
             }))
         } else {
             // inner node
@@ -417,7 +417,8 @@ impl Node {
                 size,
                 left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
                 right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-                details: NodeDetails { key, version },
+                key,
+                version,
             }))
         }
     }
@@ -551,14 +552,14 @@ where
         loop {
             match loop_node {
                 Node::Leaf(leaf) => {
-                    if leaf.details.key == key {
+                    if leaf.key == key {
                         return Some(leaf.value.clone());
                     } else {
                         return None;
                     }
                 }
                 Node::Inner(node) => {
-                    if key < &node.details.key {
+                    if key < &node.key {
                         match &node.left_node {
                             Some(left_node) => loop_node = left_node,
                             None => {
@@ -626,7 +627,7 @@ where
         ) -> (Option<NodeValue>, Option<Sha256Hash>, bool, Option<NodeKey>) {
             match node {
                 Node::Leaf(leaf) => {
-                    return if leaf.details.key != key.as_ref() {
+                    return if leaf.key != key.as_ref() {
                         (None, None, false, None)
                     } else {
                         orphaned.push(Node::Leaf(leaf.clone()));
@@ -634,7 +635,7 @@ where
                     };
                 }
                 Node::Inner(inner) => {
-                    match key.as_ref().cmp(&inner.details.key) {
+                    match key.as_ref().cmp(&inner.key) {
                         Ordering::Less => {
                             let left_node = inner.get_mut_left_node(node_db);
 
@@ -674,7 +675,7 @@ where
                                     // By updating the node's hash we're essentially creating a new node, so we need to
                                     // update the version
                                     // Bubble up the new leftmost leaf key for the subtree
-                                    inner.details.version = version;
+                                    inner.version = version;
                                     node.left_hash_set(new_hash);
                                     node.balance(version, node_db).expect("error rotating tree");
                                     return (value, Some(node.hash()), false, new_key);
@@ -716,7 +717,7 @@ where
                                     // The right subtree's root hash has changed, so update the node's hash
                                     // By updating the node's hash we're essentially creating a new node, so we need to
                                     // update the version
-                                    inner.details.version = version;
+                                    inner.version = version;
                                     node.right_hash_set(new_hash);
 
                                     // If the right subtree's leftmost key has changed, set this node's key to the new key
@@ -743,11 +744,8 @@ where
             }
             None => {
                 self.root = Some(Box::new(Node::Leaf(LeafNode {
-                    details: NodeDetails {
-                        key,
-
-                        version: self.loaded_version + 1,
-                    }, // TODO: CHeck if edited node is persisted
+                    key,
+                    version: self.loaded_version + 1,
                     value,
                 })));
             }
@@ -762,7 +760,7 @@ where
         node_db: &mut NodeDB<T>,
     ) {
         match &mut node {
-            Node::Leaf(leaf_node) => match key.cmp(&leaf_node.details.key) {
+            Node::Leaf(leaf_node) => match key.cmp(&leaf_node.key) {
                 cmp::Ordering::Less => {
                     let left_node = Node::new_leaf(key, value, version);
                     let left_hash = left_node.hash();
@@ -770,10 +768,8 @@ where
                     let right_hash = right_node.hash();
 
                     *node = Node::Inner(InnerNode {
-                        details: NodeDetails {
-                            key: leaf_node.details.key.clone(),
-                            version,
-                        },
+                        key: leaf_node.key.clone(),
+                        version,
                         left_node: Some(Box::new(left_node)),
                         right_node: Some(Box::new(right_node)),
                         height: 1,
@@ -784,7 +780,7 @@ where
                 }
                 cmp::Ordering::Equal => {
                     leaf_node.value = value;
-                    leaf_node.details.version = version;
+                    leaf_node.version = version;
                 }
                 cmp::Ordering::Greater => {
                     let right_node = Node::new_leaf(key.clone(), value, version);
@@ -793,7 +789,8 @@ where
                     let left_hash = left_subtree.hash();
 
                     *node = Node::Inner(InnerNode {
-                        details: NodeDetails { key, version },
+                        key,
+                        version,
                         left_node: Some(Box::new(left_subtree)),
                         right_node: Some(Box::new(right_node)),
                         height: 1,
@@ -805,7 +802,7 @@ where
             },
             Node::Inner(root_node) => {
                 // Perform normal BST
-                if key < root_node.details.key {
+                if key < root_node.key {
                     Self::recursive_set(
                         root_node.get_mut_left_node(node_db),
                         key.clone(),
@@ -827,7 +824,7 @@ where
 
                 // Update height + size + version
                 let balance_factor = root_node.update_height_and_size_get_balance_factor(node_db);
-                root_node.details.version = version;
+                root_node.version = version;
 
                 // If the tree is unbalanced then try out the usual four cases
                 if balance_factor > 1 {
@@ -944,9 +941,9 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
                 }
             }
             Node::Leaf(leaf) => {
-                if self.range.contains(&leaf.details.key) {
+                if self.range.contains(&leaf.key) {
                     // we have a leaf node within the range
-                    return Some((leaf.details.key.clone(), leaf.value.clone()));
+                    return Some((leaf.key.clone(), leaf.value.clone()));
                 }
             }
         }
@@ -985,26 +982,20 @@ mod tests {
     #[test]
     fn remove_leaf_from_tree() -> anyhow::Result<()> {
         let expected_leaf = Some(Box::new(Node::Leaf(LeafNode {
-            details: NodeDetails {
-                key: vec![19],
-                version: 0,
-            },
+            key: vec![19],
+            version: 0,
             value: vec![3, 2, 1],
         })));
 
         let root = InnerNode {
             left_node: expected_leaf.clone(),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![20],
-                    version: 0,
-                },
-                value: vec![1, 6, 9],
-            }))),
-            details: NodeDetails {
                 key: vec![20],
                 version: 0,
-            },
+                value: vec![1, 6, 9],
+            }))),
+            key: vec![20],
+            version: 0,
             height: 1,
             size: 2,
             left_hash: [
@@ -1098,23 +1089,17 @@ mod tests {
     fn right_rotate_works() {
         let t3 = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![19],
-                    version: 0,
-                },
+                key: vec![19],
+                version: 0,
                 value: vec![3, 2, 1],
             }))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![20],
-                    version: 0,
-                },
-                value: vec![1, 6, 9],
-            }))),
-            details: NodeDetails {
                 key: vec![20],
                 version: 0,
-            },
+                value: vec![1, 6, 9],
+            }))),
+            key: vec![20],
+            version: 0,
             height: 1,
             size: 2,
             left_hash: [
@@ -1129,17 +1114,13 @@ mod tests {
 
         let y = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![18],
-                    version: 0,
-                },
+                key: vec![18],
+                version: 0,
                 value: vec![3, 2, 1],
             }))),
             right_node: Some(Box::new(Node::Inner(t3))),
-            details: NodeDetails {
-                key: vec![19],
-                version: 0,
-            },
+            key: vec![19],
+            version: 0,
             height: 2,
             size: 3,
             left_hash: [
@@ -1155,16 +1136,12 @@ mod tests {
         let z = InnerNode {
             left_node: Some(Box::new(Node::Inner(y))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![21],
-                    version: 0,
-                },
-                value: vec![3, 2, 1],
-            }))),
-            details: NodeDetails {
                 key: vec![21],
                 version: 0,
-            },
+                value: vec![3, 2, 1],
+            }))),
+            key: vec![21],
+            version: 0,
             height: 3,
             size: 4,
             left_hash: [
@@ -1194,23 +1171,17 @@ mod tests {
     fn left_rotate_works() {
         let t2 = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![19],
-                    version: 0,
-                },
+                key: vec![19],
+                version: 0,
                 value: vec![3, 2, 1],
             }))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![20],
-                    version: 0,
-                },
-                value: vec![1, 6, 9],
-            }))),
-            details: NodeDetails {
                 key: vec![20],
                 version: 0,
-            },
+                value: vec![1, 6, 9],
+            }))),
+            key: vec![20],
+            version: 0,
             height: 1,
             size: 2,
             left_hash: [
@@ -1225,17 +1196,13 @@ mod tests {
 
         let y = InnerNode {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![21],
-                    version: 0,
-                },
+                key: vec![21],
+                version: 0,
                 value: vec![3, 2, 1, 1],
             }))),
             left_node: Some(Box::new(Node::Inner(t2))),
-            details: NodeDetails {
-                key: vec![21],
-                version: 0,
-            },
+            key: vec![21],
+            version: 0,
             height: 2,
             size: 3,
             right_hash: [
@@ -1251,16 +1218,12 @@ mod tests {
         let z = InnerNode {
             right_node: Some(Box::new(Node::Inner(y))),
             left_node: Some(Box::new(Node::Leaf(LeafNode {
-                details: NodeDetails {
-                    key: vec![18],
-                    version: 0,
-                },
+                key: vec![18],
+                version: 0,
                 value: vec![3, 2, 2],
             }))),
-            details: NodeDetails {
-                key: vec![19],
-                version: 0,
-            },
+            key: vec![19],
+            version: 0,
             height: 3,
             size: 4,
             left_hash: [
@@ -1567,10 +1530,8 @@ mod tests {
         let orig_node = Node::Inner(InnerNode {
             left_node: None,
             right_node: None,
-            details: NodeDetails {
-                key: vec![19],
-                version: 0,
-            },
+            key: vec![19],
+            version: 0,
             height: 3,
             size: 4,
             left_hash: [
@@ -1600,10 +1561,8 @@ mod tests {
     #[test]
     fn serialize_deserialize_leaf_works() {
         let orig_node = Node::Leaf(LeafNode {
-            details: NodeDetails {
-                key: vec![19],
-                version: 0,
-            },
+            key: vec![19],
+            version: 0,
             value: vec![1, 2, 3],
         });
 
