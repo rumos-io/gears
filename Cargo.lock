@@ -1826,12 +1826,16 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "database",
+ "gears",
  "prost 0.11.9",
  "proto-messages",
  "proto-types",
  "schemars",
  "serde",
  "serde_json",
+ "store",
+ "thiserror",
 ]
 
 [[package]]
