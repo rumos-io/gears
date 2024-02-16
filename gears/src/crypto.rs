@@ -1,7 +1,7 @@
 use keyring::key_pair::KeyPair;
 use prost::Message;
 use proto_messages::cosmos::{
-    ibc_types::{
+    ibc::{
         protobuf::Protobuf,
         tx::{ModeInfo, SignDoc, Single, Sum, TxRaw},
     },

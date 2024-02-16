@@ -9,5 +9,5 @@ pub enum SigningErrors {
     #[error("{0}")]
     IoError(#[from] std::io::Error),
     #[error("{0}")]
-    ProtoError(#[from] proto_messages::cosmos::ibc_types::protobuf::Error),
+    ProtoError(#[from] proto_messages::cosmos::ibc::protobuf::Error),
 }

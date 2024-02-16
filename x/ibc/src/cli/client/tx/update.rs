@@ -27,7 +27,7 @@ pub(super) fn tx_command_handler(msg: MsgUpdateClient) -> anyhow::Result<crate::
     let mut buffer = Vec::<u8>::new();
     File::open(client_message)?.read_to_end(&mut buffer)?;
 
-    let cl_msg = proto_messages::cosmos::ibc_types::protobuf::Any::decode(buffer.as_slice())?;
+    let cl_msg = proto_messages::cosmos::ibc::protobuf::Any::decode(buffer.as_slice())?;
 
     let raw_msg = RawMsgUpdateClient {
         client_id: RawClientId::from_str(&client_id.0)?,

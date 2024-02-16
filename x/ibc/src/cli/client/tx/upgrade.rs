@@ -10,7 +10,7 @@ use ibc::{
     primitives::Signer as RawSigner,
 };
 use prost::Message;
-use proto_messages::cosmos::ibc_types::protobuf::Any;
+use proto_messages::cosmos::ibc::protobuf::Any;
 
 use crate::types::{ClientId, Signer};
 

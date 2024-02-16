@@ -74,7 +74,7 @@ mod tests {
     use gears::types::context::context::{Context, ContextTrait};
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
-        ibc_types::bank::MsgSendRaw,
+        ibc::bank::MsgSendRaw,
         tx::v1beta1::{
             screen::Screen,
             tx_metadata::{DenomUnit, Metadata},

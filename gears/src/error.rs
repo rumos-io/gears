@@ -61,8 +61,8 @@ impl From<trees::Error> for AppError {
     }
 }
 
-impl From<proto_messages::cosmos::ibc_types::Error> for AppError {
-    fn from(err: proto_messages::cosmos::ibc_types::Error) -> AppError {
+impl From<proto_messages::cosmos::ibc::Error> for AppError {
+    fn from(err: proto_messages::cosmos::ibc::Error) -> AppError {
         AppError::InvalidRequest(err.to_string())
     }
 }

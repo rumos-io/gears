@@ -17,7 +17,7 @@ use proto_messages::cosmos::{
         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
         QueryBalanceResponse, QueryTotalSupplyResponse,
     },
-    ibc_types::protobuf::Protobuf,
+    ibc::protobuf::Protobuf,
     tx::v1beta1::message::Message,
 };
 use serde::Deserialize;

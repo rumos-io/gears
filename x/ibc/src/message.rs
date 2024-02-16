@@ -1,4 +1,4 @@
-use proto_messages::cosmos::ibc_types::protobuf::Any;
+use proto_messages::cosmos::ibc::protobuf::Any;
 use proto_types::AccAddress;
 
 #[derive(Debug, Clone, serde::Serialize)]

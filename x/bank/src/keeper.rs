@@ -12,7 +12,7 @@ use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
-use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,

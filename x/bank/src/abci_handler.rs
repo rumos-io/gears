@@ -6,7 +6,7 @@ use gears::{error::AppError, x::params::ParamsSubspaceKey};
 use proto_messages::cosmos::bank::v1beta1::{
     QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse,
 };
-use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use store::StoreKey;
 
 use crate::{GenesisState, Keeper, Message};

@@ -53,7 +53,7 @@ mod tests {
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
-        ibc_types::tx::{ModeInfo, Single, Sum},
+        ibc::tx::{ModeInfo, Single, Sum},
         tx::v1beta1::{
             auth_info::AuthInfo,
             cbor::Cbor,
