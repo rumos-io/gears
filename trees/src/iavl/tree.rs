@@ -28,23 +28,6 @@ pub(crate) struct InnerNode {
     version: u32,
 }
 
-impl From<LeafNode> for InnerNode {
-    fn from(value: LeafNode) -> Self {
-        let right_hash = value.hash();
-
-        Self {
-            left_node: None,
-            right_node: None,
-            height: 1,
-            size: 0,
-            left_hash: EMPTY_HASH,
-            right_hash,
-            key: value.key,
-            version: value.version,
-        }
-    }
-}
-
 impl InnerNode {
     fn get_mut_left_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         self.left_node.get_or_insert_with(|| {
@@ -132,11 +115,6 @@ pub(crate) struct LeafNode {
 }
 
 impl LeafNode {
-    pub fn hash(&self) -> Sha256Hash {
-        let serialized = self.hash_serialize();
-        Sha256::digest(serialized).into()
-    }
-
     fn hash_serialize(&self) -> Vec<u8> {
         // NOTE: i64 is used here for parameters for compatibility wih cosmos
         let height: i64 = 0;
@@ -1739,8 +1717,8 @@ mod tests {
                         .expect("node db should contain all nodes"),
                 };
 
-                println!("left_node: {:?}", left_node);
-                println!("right_node: {:?}", right_node);
+                dbg!("left_node: {:?}", &left_node);
+                dbg!("right_node: {:?}", &right_node);
 
                 if left_node.hash() != node.left_hash {
                     return false;
