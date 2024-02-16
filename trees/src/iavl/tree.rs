@@ -781,8 +781,10 @@ where
                                     );
                                 } else if let Some(new_hash) = new_hash {
                                     // The left subtree's root hash has changed, so update the node's hash
+                                    // By updating the node's hash we're essentially creating a new node, so we need to
+                                    // update the version
                                     // Bubble up the new leftmost leaf key for the subtree
-                                    // TODO: we should update the version of the node as is done in the SDK (this is a new node)
+                                    inner.details.version = version;
                                     node.left_hash_set(new_hash);
                                     node.balance(version, node_db).expect("error rotating tree");
                                     return (value, Some(node.hash()), false, new_key);
@@ -822,7 +824,9 @@ where
                                     return (value, Some(node.hash()), false, None);
                                 } else if let Some(new_hash) = new_hash {
                                     // The right subtree's root hash has changed, so update the node's hash
-                                    // TODO: we should update the version of the node as is done in the SDK (this is a new node)
+                                    // By updating the node's hash we're essentially creating a new node, so we need to
+                                    // update the version
+                                    inner.details.version = version;
                                     node.right_hash_set(new_hash);
 
                                     // If the right subtree's leftmost key has changed, set this node's key to the new key
