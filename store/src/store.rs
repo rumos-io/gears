@@ -123,7 +123,7 @@ pub struct KVStore<DB> {
 impl<DB: Database> KVStore<DB> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
         Ok(KVStore {
-            persistent_store: Tree::new(db, target_version, TREE_CACHE_SIZE, false)?, //TODO: Allow to set mode
+            persistent_store: Tree::new(db, target_version, TREE_CACHE_SIZE)?,
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         })

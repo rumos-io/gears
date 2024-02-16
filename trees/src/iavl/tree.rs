@@ -433,7 +433,6 @@ impl Node {
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
-    _skip_upgrade: bool,
     root: Option<Box<Node>>,
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
@@ -445,12 +444,7 @@ where
     T: Database,
 {
     /// Panics if cache_size=0
-    pub fn new(
-        db: T,
-        target_version: Option<u32>,
-        cache_size: usize,
-        skip_upgrade: bool,
-    ) -> Result<Tree<T>, Error> {
+    pub fn new(db: T, target_version: Option<u32>, cache_size: usize) -> Result<Tree<T>, Error> {
         assert!(cache_size > 0);
         let node_db = NodeDB::new(db, cache_size);
         let versions = node_db.get_versions();
@@ -463,7 +457,6 @@ where
                 loaded_version: target_version,
                 node_db,
                 versions,
-                _skip_upgrade: skip_upgrade,
             })
         } else {
             // use the latest version available
@@ -475,7 +468,6 @@ where
                     loaded_version: *latest_version,
                     node_db,
                     versions,
-                    _skip_upgrade: skip_upgrade,
                 })
             } else {
                 Ok(Tree {
@@ -483,7 +475,6 @@ where
                     loaded_version: 0,
                     node_db,
                     versions,
-                    _skip_upgrade: skip_upgrade,
                 })
             }
         }
@@ -1027,7 +1018,7 @@ mod tests {
         };
 
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
 
         tree.root = Some(Box::new(Node::Inner(root)));
 
@@ -1052,7 +1043,7 @@ mod tests {
     #[test]
     fn remove_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(vec![1], vec![4]);
         tree.set(vec![2], vec![5]);
         tree.set(vec![3], vec![6]);
@@ -1083,7 +1074,7 @@ mod tests {
     #[test]
     fn remove_leaf_after_save_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(vec![1], vec![4]);
         tree.set(vec![2], vec![5]);
         tree.set(vec![3], vec![6]);
@@ -1298,7 +1289,7 @@ mod tests {
     #[test]
     fn set_equal_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(vec![1], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -1313,7 +1304,7 @@ mod tests {
     #[test]
     fn set_less_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(vec![3], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -1328,7 +1319,7 @@ mod tests {
     #[test]
     fn set_greater_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(vec![1], vec![2]);
         tree.set(vec![3], vec![3]);
 
@@ -1343,7 +1334,7 @@ mod tests {
     #[test]
     fn repeated_set_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1360,7 +1351,7 @@ mod tests {
     #[test]
     fn save_version_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1385,7 +1376,7 @@ mod tests {
     #[test]
     fn get_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1401,7 +1392,7 @@ mod tests {
     #[test]
     fn scenario_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
         tree.set(
             vec![
@@ -1454,7 +1445,7 @@ mod tests {
     #[test]
     fn bounded_range_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(b"1".to_vec(), b"abc1".to_vec());
 
         tree.set(b"2".to_vec(), b"abc2".to_vec());
@@ -1518,7 +1509,7 @@ mod tests {
     #[test]
     fn full_range_unique_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1542,7 +1533,7 @@ mod tests {
     #[test]
     fn full_range_duplicate_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
@@ -1559,7 +1550,7 @@ mod tests {
     #[test]
     fn empty_tree_range_works() {
         let db = MemDB::new();
-        let tree = Tree::new(db, None, 100, false).unwrap();
+        let tree = Tree::new(db, None, 100).unwrap();
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
@@ -1626,7 +1617,7 @@ mod tests {
     #[test]
     fn bug_scenario_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(vec![0], vec![8, 244, 162, 237, 1]);
         tree.save_version().unwrap();
         tree.set(vec![0], vec![8, 133, 164, 237, 1]);
@@ -1719,7 +1710,7 @@ mod tests {
     #[test]
     fn bug_scenario_2_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100, false).unwrap();
+        let mut tree = Tree::new(db, None, 100).unwrap();
         tree.set(
             vec![
                 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58,
