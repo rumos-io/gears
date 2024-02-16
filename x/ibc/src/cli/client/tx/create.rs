@@ -1,26 +1,23 @@
 use std::{fs::File, io::Read, path::PathBuf};
 
 use clap::Args;
-pub use ibc::core::client::types::msgs::MsgCreateClient as RawMsgCreateClient;
-use ibc::{
-    clients::tendermint::consensus_state::ConsensusState,
-    primitives::{
-        proto::{Any, Protobuf},
-        Signer as RawSigner,
-    },
+use proto_messages::cosmos::ibc::{
+    protobuf::{PrimitiveAny, PrimitiveProtobuf},
+    tx::MsgCreateClient,
+    types::{RawConsensusState, RawSigner},
 };
 
 use crate::types::Signer;
 
 #[derive(Args, Debug)]
-pub struct MsgCreateClient {
+pub struct CliCreateClient {
     pub client_state: PathBuf,    //  TODO: User could pass not only file
     pub consensus_state: PathBuf, //  TODO: User could pass not only file
     pub signer: Signer,
 }
 
-pub(super) fn tx_command_handler(msg: MsgCreateClient) -> anyhow::Result<crate::message::Message> {
-    let MsgCreateClient {
+pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::message::Message> {
+    let CliCreateClient {
         client_state,
         consensus_state,
         signer,
@@ -28,15 +25,16 @@ pub(super) fn tx_command_handler(msg: MsgCreateClient) -> anyhow::Result<crate::
     let mut buffer = Vec::<u8>::new();
 
     File::open(client_state)?.read_to_end(&mut buffer)?;
-    let client_state = <ConsensusState as Protobuf<Any>>::decode_vec(&buffer)?;
+    let client_state = <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?;
     File::open(consensus_state)?.read_to_end(&mut buffer)?;
-    let consensus_state = <ConsensusState as Protobuf<Any>>::decode_vec(&buffer)?;
+    let consensus_state =
+        <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?;
 
-    let raw_msg = RawMsgCreateClient::new(
-        client_state.into(),
-        consensus_state.into(),
-        RawSigner::from(signer.0),
-    );
+    let raw_msg = MsgCreateClient {
+        client_state,
+        consensus_state,
+        signer: RawSigner::from(signer.0),
+    };
 
-    Ok(crate::message::Message::ClientCreate(raw_msg.into()))
+    Ok(crate::message::Message::ClientCreate(raw_msg))
 }

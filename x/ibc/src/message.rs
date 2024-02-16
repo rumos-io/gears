@@ -1,14 +1,18 @@
-use proto_messages::cosmos::ibc::protobuf::Any;
+use proto_messages::cosmos::ibc::{
+    protobuf::Any,
+    tx::{
+        MsgCreateClient, MsgRecoverClient, MsgSubmitMisbehaviour, MsgUpdateClient, MsgUpgradeClient,
+    },
+};
 use proto_types::AccAddress;
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub enum Message {
-    // TODO: More strict struct which serializes in proto-types crate
-    ClientCreate(ibc::core::client::types::proto::v1::MsgCreateClient),
-    ClientUpdate(ibc::core::client::types::proto::v1::MsgUpdateClient),
-    ClientUpgrade(ibc::core::client::types::proto::v1::MsgUpgradeClient),
-    SubmitMisbehaviour(ibc::core::client::types::proto::v1::MsgSubmitMisbehaviour),
-    RecoverClient(ibc::core::client::types::proto::v1::MsgRecoverClient),
+    ClientCreate(MsgCreateClient),
+    ClientUpdate(MsgUpdateClient),
+    ClientUpgrade(MsgUpgradeClient),
+    SubmitMisbehaviour(MsgSubmitMisbehaviour),
+    RecoverClient(MsgRecoverClient),
 }
 
 impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {

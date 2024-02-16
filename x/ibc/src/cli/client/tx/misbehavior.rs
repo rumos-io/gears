@@ -1,39 +1,39 @@
 use std::{fs::File, io::Read, str::FromStr};
 
 use clap::Args;
-pub use ibc::core::client::types::msgs::MsgSubmitMisbehaviour as RawMsgSubmitMisbehaviour;
-use ibc::{
-    core::host::types::identifiers::ClientId as RawClientId, primitives::Signer as RawSigner,
-};
 use prost::Message;
-use proto_messages::cosmos::ibc::protobuf::Any;
+use proto_messages::cosmos::ibc::{
+    protobuf::Any,
+    tx::MsgSubmitMisbehaviour,
+    types::{RawClientId, RawSigner},
+};
 
 use crate::types::{ClientId, Signer};
 
 #[derive(Args, Debug)]
-pub struct MsgSubmitMisbehaviour {
+pub struct CliSubmitMisbehaviour {
     pub client_id: ClientId,
     pub misbehaviour: String,
     pub signer: Signer,
 }
 
 pub(super) fn tx_command_handler(
-    msg: MsgSubmitMisbehaviour,
+    msg: CliSubmitMisbehaviour,
 ) -> anyhow::Result<crate::message::Message> {
-    let MsgSubmitMisbehaviour {
+    let CliSubmitMisbehaviour {
         client_id,
         misbehaviour,
         signer,
     } = msg;
 
     let mut buffer = Vec::<u8>::new();
+
     File::open(misbehaviour)?.read_to_end(&mut buffer)?;
+    let misbehaviour = Any::decode(buffer.as_slice())?;
 
-    let Any { type_url, value } = Any::decode(buffer.as_slice())?;
-
-    let raw_msg = RawMsgSubmitMisbehaviour {
+    let raw_msg = MsgSubmitMisbehaviour {
         client_id: RawClientId::from_str(&client_id.0)?,
-        misbehaviour: ibc::primitives::proto::Any { type_url, value },
+        misbehaviour,
         signer: RawSigner::from(signer.0),
     };
 

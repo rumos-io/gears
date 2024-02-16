@@ -9,7 +9,8 @@ tendermint = { path = "../tendermint", features = [ "informal" ] }
 proto-types = {path = "../proto-types"}
 
 #newtypes
-ibc-proto = {git = "https://github.com/joneskm/ibc-proto-rs"}
+ibc-proto = {git = "https://github.com/joneskm/ibc-proto-rs"} # TODO: Should ibc-proto be replaced with ibc
+ibc = "0.50.0"
 secp256k1 = { version = "0.28.1", features = ["hashes"] }
 bnum = {version = "0.10.0", features = ["serde"]}
 ordered_hash_map = { version = "0.4.0", features = ["serde"]}

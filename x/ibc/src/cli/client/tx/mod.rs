@@ -9,8 +9,8 @@ use proto_types::AccAddress;
 use crate::message::Message as IbcMessage;
 
 use self::{
-    create::MsgCreateClient, misbehavior::MsgSubmitMisbehaviour, recover_client::MsgRecoverClient,
-    update::MsgUpdateClient, upgrade::MsgUpgradeClient,
+    create::CliCreateClient, misbehavior::CliSubmitMisbehaviour, recover_client::CliRecoverClient,
+    update::CliUpdateClient, upgrade::CliUpgradeClient,
 };
 
 pub mod create;
@@ -23,11 +23,11 @@ pub struct IbcCli {
 
 #[derive(Subcommand, Debug)]
 pub enum IbcCommands {
-    ClientCreate(MsgCreateClient),
-    ClientUpdate(MsgUpdateClient),
-    ClientUpgrade(MsgUpgradeClient),
-    Misbehavior(MsgSubmitMisbehaviour),
-    RecoverClientProposal(MsgRecoverClient),
+    ClientCreate(CliCreateClient),
+    ClientUpdate(CliUpdateClient),
+    ClientUpgrade(CliUpgradeClient),
+    Misbehavior(CliSubmitMisbehaviour),
+    RecoverClientProposal(CliRecoverClient),
     // IBCUpgradeProposal,
 }
 

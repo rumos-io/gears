@@ -1826,7 +1826,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
- "ibc 0.50.0",
  "prost 0.11.9",
  "proto-messages",
  "proto-types",
@@ -3375,6 +3374,7 @@ dependencies = [
  "cosmwasm-std",
  "data-encoding",
  "hex",
+ "ibc 0.50.0",
  "ibc-proto 0.31.0-alpha.2",
  "num-traits",
  "nutype",
