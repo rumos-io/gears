@@ -1,6 +1,6 @@
 use std::{
     cmp::{self, Ordering},
-    collections::{BTreeSet, HashMap, HashSet},
+    collections::BTreeSet,
     mem,
     ops::{Bound, RangeBounds},
 };
@@ -19,7 +19,6 @@ use super::node_db::NodeDB;
 #[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub(crate) struct NodeDetails {
     pub(crate) key: Vec<u8>,
-    pub(crate) is_persisted: bool,
     version: u32,
 }
 
@@ -254,10 +253,6 @@ impl Node {
     }
 
     pub fn balance<T: Database>(&mut self, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
-        if self.is_persisted() {
-            return Err(Error::RotateError("call on persisted node".to_owned()));
-        }
-
         match self {
             Node::Leaf(_) => Ok(()),
             Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
@@ -334,28 +329,10 @@ impl Node {
         }
     }
 
-    pub fn is_persisted(&self) -> bool {
-        match self {
-            Node::Leaf(var) => var.details.is_persisted,
-            Node::Inner(var) => var.details.is_persisted,
-        }
-    }
-
-    pub fn version(&self) -> u32 {
-        match self {
-            Node::Leaf(var) => var.details.version,
-            Node::Inner(var) => var.details.version,
-        }
-    }
-
     pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
         Node::Leaf(LeafNode {
             value,
-            details: NodeDetails {
-                key,
-                is_persisted: false,
-                version,
-            },
+            details: NodeDetails { key, version },
         })
     }
 
@@ -426,11 +403,7 @@ impl Node {
 
             Ok(Node::Leaf(LeafNode {
                 value,
-                details: NodeDetails {
-                    key,
-                    is_persisted: true,
-                    version,
-                },
+                details: NodeDetails { key, version },
             }))
         } else {
             // inner node
@@ -444,11 +417,7 @@ impl Node {
                 size,
                 left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
                 right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-                details: NodeDetails {
-                    key,
-                    is_persisted: true,
-                    version,
-                },
+                details: NodeDetails { key, version },
             }))
         }
     }
@@ -464,29 +433,11 @@ impl Node {
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
-    skip_upgrade: bool,
+    _skip_upgrade: bool,
     root: Option<Box<Node>>,
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
-    pub(crate) orphans: HashMap<Sha256Hash, u32>,
-    pub(crate) unsaved_removal: HashSet<Vec<u8>>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct OrphanList(Vec<Node>);
-
-impl OrphanList {
-    pub fn new(nodes: impl IntoIterator<Item = Node>) -> Option<Self> {
-        let mut nodes = nodes.into_iter();
-
-        if nodes.any(|this| this.hash() == EMPTY_HASH) {
-            None
-        } else {
-            // We don't need to orphan nodes that were never persisted.
-            Some(Self(nodes.filter(|this| this.is_persisted()).collect()))
-        }
-    }
 }
 
 impl<T> Tree<T>
@@ -512,9 +463,7 @@ where
                 loaded_version: target_version,
                 node_db,
                 versions,
-                orphans: Default::default(),
-                unsaved_removal: Default::default(),
-                skip_upgrade,
+                _skip_upgrade: skip_upgrade,
             })
         } else {
             // use the latest version available
@@ -526,9 +475,7 @@ where
                     loaded_version: *latest_version,
                     node_db,
                     versions,
-                    orphans: Default::default(),
-                    unsaved_removal: Default::default(),
-                    skip_upgrade,
+                    _skip_upgrade: skip_upgrade,
                 })
             } else {
                 Ok(Tree {
@@ -536,27 +483,10 @@ where
                     loaded_version: 0,
                     node_db,
                     versions,
-                    orphans: Default::default(),
-                    unsaved_removal: Default::default(),
-                    skip_upgrade,
+                    _skip_upgrade: skip_upgrade,
                 })
             }
         }
-    }
-
-    fn orphans_add(&mut self, orphants: OrphanList) {
-        self.orphans.extend(
-            orphants
-                .0
-                .into_iter()
-                .map(|this| (this.hash(), this.version())),
-        )
-    }
-
-    fn unsaved_removal_add(&mut self, key: &impl AsRef<[u8]>) -> bool {
-        // TODO: delete from fast_additions when implements
-        self.unsaved_removal
-            .insert(key.as_ref().into_iter().cloned().collect())
     }
 
     /// Save the current tree to disk.
@@ -618,16 +548,7 @@ where
 
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         match &self.root {
-            Some(root) => {
-                if !self.skip_upgrade {
-                    // TODO: Try to get from fast additions
-                    if let Some(_) = self.unsaved_removal.get(key) {
-                        return None;
-                    }
-                }
-
-                self.get_(key, root)
-            }
+            Some(root) => self.get_(key, root),
             None => None,
         }
     }
@@ -683,45 +604,23 @@ where
         struct NodeKey(pub Vec<u8>);
         struct NodeValue(pub Vec<u8>);
 
-        let result = inner_remove(self, key);
+        return match self.root {
+            Some(ref mut root) => {
+                // NOTE: recursive_remove returns a list of orphaned nodes, but we don't use them
+                let mut orphans = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
 
-        return if let Some((value, orphans)) = result {
-            self.orphans_add(
-                OrphanList::new(orphans).expect("expected to find node hash, but was empty"),
-            );
+                let (value, _, _, _) = recursive_remove(
+                    root,
+                    &self.node_db,
+                    key,
+                    &mut orphans,
+                    self.loaded_version + 1,
+                );
 
-            value.map(|this| this.0)
-        } else {
-            None
-        };
-
-        fn inner_remove<T: Database>(
-            tree: &mut Tree<T>,
-            key: &impl AsRef<[u8]>,
-        ) -> Option<(Option<NodeValue>, Vec<Node>)> {
-            match tree.root {
-                Some(ref mut root) => {
-                    let mut orphans = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
-
-                    let (value, _, _, _) = recursive_remove(
-                        root,
-                        &tree.node_db,
-                        key,
-                        &mut orphans,
-                        tree.loaded_version + 1,
-                    );
-
-                    if orphans.is_empty() {
-                        return None;
-                    }
-
-                    tree.unsaved_removal_add(key);
-
-                    Some((value, orphans))
-                }
-                None => None,
+                value.map(|val| val.0)
             }
-        }
+            None => None,
+        };
 
         /// Returns the value corresponding to the key if it was found
         /// The new root hash if the root hash changed
@@ -855,7 +754,7 @@ where
                 self.root = Some(Box::new(Node::Leaf(LeafNode {
                     details: NodeDetails {
                         key,
-                        is_persisted: false,
+
                         version: self.loaded_version + 1,
                     }, // TODO: CHeck if edited node is persisted
                     value,
@@ -882,7 +781,6 @@ where
                     *node = Node::Inner(InnerNode {
                         details: NodeDetails {
                             key: leaf_node.details.key.clone(),
-                            is_persisted: false,
                             version,
                         },
                         left_node: Some(Box::new(left_node)),
@@ -904,11 +802,7 @@ where
                     let left_hash = left_subtree.hash();
 
                     *node = Node::Inner(InnerNode {
-                        details: NodeDetails {
-                            key,
-                            is_persisted: false,
-                            version,
-                        },
+                        details: NodeDetails { key, version },
                         left_node: Some(Box::new(left_subtree)),
                         right_node: Some(Box::new(right_node)),
                         height: 1,
@@ -1102,7 +996,6 @@ mod tests {
         let expected_leaf = Some(Box::new(Node::Leaf(LeafNode {
             details: NodeDetails {
                 key: vec![19],
-                is_persisted: false,
                 version: 0,
             },
             value: vec![3, 2, 1],
@@ -1113,14 +1006,12 @@ mod tests {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![20],
-                    is_persisted: false,
                     version: 0,
                 },
                 value: vec![1, 6, 9],
             }))),
             details: NodeDetails {
                 key: vec![20],
-                is_persisted: false,
                 version: 0,
             },
             height: 1,
@@ -1218,7 +1109,6 @@ mod tests {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![19],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![3, 2, 1],
@@ -1226,14 +1116,12 @@ mod tests {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![20],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![1, 6, 9],
             }))),
             details: NodeDetails {
                 key: vec![20],
-                is_persisted: true,
                 version: 0,
             },
             height: 1,
@@ -1252,7 +1140,6 @@ mod tests {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![18],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![3, 2, 1],
@@ -1260,7 +1147,6 @@ mod tests {
             right_node: Some(Box::new(Node::Inner(t3))),
             details: NodeDetails {
                 key: vec![19],
-                is_persisted: true,
                 version: 0,
             },
             height: 2,
@@ -1280,14 +1166,12 @@ mod tests {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![21],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![3, 2, 1],
             }))),
             details: NodeDetails {
                 key: vec![21],
-                is_persisted: true,
                 version: 0,
             },
             height: 3,
@@ -1321,7 +1205,6 @@ mod tests {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![19],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![3, 2, 1],
@@ -1329,14 +1212,12 @@ mod tests {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![20],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![1, 6, 9],
             }))),
             details: NodeDetails {
                 key: vec![20],
-                is_persisted: true,
                 version: 0,
             },
             height: 1,
@@ -1355,7 +1236,6 @@ mod tests {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![21],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![3, 2, 1, 1],
@@ -1363,7 +1243,6 @@ mod tests {
             left_node: Some(Box::new(Node::Inner(t2))),
             details: NodeDetails {
                 key: vec![21],
-                is_persisted: true,
                 version: 0,
             },
             height: 2,
@@ -1383,14 +1262,12 @@ mod tests {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
                 details: NodeDetails {
                     key: vec![18],
-                    is_persisted: true,
                     version: 0,
                 },
                 value: vec![3, 2, 2],
             }))),
             details: NodeDetails {
                 key: vec![19],
-                is_persisted: true,
                 version: 0,
             },
             height: 3,
@@ -1701,7 +1578,6 @@ mod tests {
             right_node: None,
             details: NodeDetails {
                 key: vec![19],
-                is_persisted: true,
                 version: 0,
             },
             height: 3,
@@ -1735,7 +1611,6 @@ mod tests {
         let orig_node = Node::Leaf(LeafNode {
             details: NodeDetails {
                 key: vec![19],
-                is_persisted: true,
                 version: 0,
             },
             value: vec![1, 2, 3],
