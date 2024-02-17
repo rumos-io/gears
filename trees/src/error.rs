@@ -14,6 +14,8 @@ pub enum Error {
     NodeNotExists, // TODO: More specific and special errors for removing node
     #[error("custom error: {0}")]
     CustomError(String),
+    #[error("cannot balance a node with balance factor >2 or <-2")]
+    Balancing,
 }
 
 pub mod constants {

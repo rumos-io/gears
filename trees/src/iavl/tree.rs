@@ -60,6 +60,32 @@ impl InnerNode {
         }
     }
 
+    fn get_balance_factor<T: Database>(&self, node_db: &NodeDB<T>) -> i16 {
+        let left_height = match &self.left_node {
+            Some(left_node) => left_node.get_height(),
+            None => {
+                let left_node = node_db
+                    .get_node(&self.left_hash)
+                    .expect("node db should contain all nodes");
+
+                left_node.get_height()
+            }
+        };
+
+        let right_height = match &self.right_node {
+            Some(right_node) => right_node.get_height(),
+            None => {
+                let right_node = node_db
+                    .get_node(&self.right_hash)
+                    .expect("node db should contain all nodes");
+
+                right_node.get_height()
+            }
+        };
+
+        left_height as i16 - right_height as i16
+    }
+
     /// This does three things at once to prevent repeating the same process for getting the left and right nodes
     fn update_height_and_size_get_balance_factor<T: Database>(
         &mut self,
@@ -145,14 +171,10 @@ impl Default for Node {
 }
 
 impl Node {
-    /// This does three things at once to prevent repeating the same process for getting the left and right nodes
-    fn update_height_and_size_get_balance_factor<T: Database>(
-        &mut self,
-        node_db: &NodeDB<T>,
-    ) -> i16 {
+    fn get_balance_factor<T: Database>(&self, node_db: &NodeDB<T>) -> i16 {
         match self {
             Node::Leaf(_) => 0,
-            Node::Inner(inner) => inner.update_height_and_size_get_balance_factor(node_db),
+            Node::Inner(inner) => inner.get_balance_factor(node_db),
         }
     }
 
@@ -228,32 +250,51 @@ impl Node {
         }
     }
 
-    pub fn balance<T: Database>(&mut self, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
+    /// Updates the node's height and size and balance factor
+    /// Balances a node if it's balance factor is between -2 and 2 (inclusive)
+    fn update_height_and_size_and_balance<T: Database>(
+        &mut self,
+        version: u32,
+        node_db: &NodeDB<T>,
+    ) -> Result<(), Error> {
         match self {
-            Node::Leaf(_) => Ok(()),
+            Node::Leaf(_) => {
+                // A leaf node is always balanced
+                Ok(())
+            }
             Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
-                ..=-2 => {
+                -2 => {
                     let right_node = inner.get_mut_right_node(node_db);
 
-                    if right_node.update_height_and_size_get_balance_factor(node_db) <= 0 {
-                        return Self::left_rotate(self, version, node_db);
+                    if right_node.get_balance_factor(node_db) <= 0 {
+                        return Ok(Self::left_rotate(self, version, node_db)
+                            .expect("given the imbalance, expect rotation to always succeed"));
                     }
 
-                    Self::right_rotate(right_node, version, node_db)?;
-                    Self::left_rotate(self, version, node_db)
+                    Self::right_rotate(right_node, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed");
+                    Ok(Self::left_rotate(self, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed"))
                 }
 
-                2.. => {
+                2 => {
                     let left_node = inner.get_mut_left_node(node_db);
 
-                    if left_node.update_height_and_size_get_balance_factor(node_db) >= 0 {
-                        return Self::right_rotate(self, version, node_db);
+                    if left_node.get_balance_factor(node_db) >= 0 {
+                        return Ok(Self::right_rotate(self, version, node_db)
+                            .expect("given the imbalance, expect rotation to always succeed"));
                     }
 
-                    Self::left_rotate(left_node, version, node_db)?;
-                    Self::right_rotate(self, version, node_db)
+                    Self::left_rotate(left_node, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed");
+                    Ok(Self::right_rotate(self, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed"))
                 }
-                _ => Ok(()),
+                -1..=1 => {
+                    // The node is balanced
+                    Ok(())
+                }
+                _ => Err(Error::Balancing),
             },
         }
     }
@@ -655,7 +696,8 @@ where
                                     // Bubble up the new leftmost leaf key for the subtree
                                     inner.version = version;
                                     node.left_hash_set(new_hash);
-                                    node.balance(version, node_db).expect("error rotating tree");
+                                    node.update_height_and_size_and_balance(version, node_db)
+                                        .expect("balance factor is between -2 and 2 inclusive, so this should never fail");
                                     return (value, Some(node.hash()), false, new_key);
                                 } else {
                                     unreachable!("either a leaf was removed or the left subtree's root hash changed")
@@ -702,7 +744,8 @@ where
                                     if let Some(new_key) = new_key {
                                         node.set_key(new_key.0);
                                     }
-                                    node.balance(version, node_db).expect("error rotating tree");
+                                    node.update_height_and_size_and_balance(version, node_db)
+                                    .expect("balance factor is between -2 and 2 inclusive, so this should never fail");
                                     return (value, Some(node.hash()), false, None);
                                 } else {
                                     unreachable!("either a leaf was removed or the right subtree's root hash changed")
@@ -889,7 +932,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
                 // Traverse through the left subtree, then the right subtree.
                 if before_end {
                     match inner.right_node {
-                        Some(right_node) => self.delayed_nodes.push(right_node), //TODO: deref will cause a clone, remove
+                        Some(right_node) => self.delayed_nodes.push(right_node),
                         None => {
                             let right_node = self
                                 .node_db
@@ -903,7 +946,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
 
                 if after_start {
                     match inner.left_node {
-                        Some(left_node) => self.delayed_nodes.push(left_node), //TODO: deref will cause a clone, remove
+                        Some(left_node) => self.delayed_nodes.push(left_node),
                         None => {
                             let left_node = self
                                 .node_db
