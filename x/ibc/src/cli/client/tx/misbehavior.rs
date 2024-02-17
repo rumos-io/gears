@@ -28,8 +28,13 @@ pub(super) fn tx_command_handler(
 
     let mut buffer = Vec::<u8>::new();
 
-    File::open(misbehaviour)?.read_to_end(&mut buffer)?;
-    let misbehaviour = Any::decode(buffer.as_slice())?;
+    let misbehaviour_result = serde_json::from_str::<Any>(&misbehaviour);
+    let misbehaviour = if let Ok(misbehaviour) = misbehaviour_result {
+        misbehaviour
+    } else {
+        File::open(misbehaviour)?.read_to_end(&mut buffer)?;
+        Any::decode(buffer.as_slice())? // TODO: Should decode as protobuf or with serde?
+    };
 
     let raw_msg = MsgSubmitMisbehaviour {
         client_id: RawClientId::from_str(&client_id.0)?,

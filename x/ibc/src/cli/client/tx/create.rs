@@ -1,4 +1,4 @@
-use std::{fs::File, io::Read, path::PathBuf};
+use std::{fs::File, io::Read};
 
 use clap::Args;
 use proto_messages::cosmos::ibc::{
@@ -11,8 +11,8 @@ use crate::types::Signer;
 
 #[derive(Args, Debug)]
 pub struct CliCreateClient {
-    pub client_state: PathBuf,    //  TODO: User could pass not only file
-    pub consensus_state: PathBuf, //  TODO: User could pass not only file
+    pub client_state: String,
+    pub consensus_state: String,
     pub signer: Signer,
 }
 
@@ -22,13 +22,26 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
         consensus_state,
         signer,
     } = msg;
+
     let mut buffer = Vec::<u8>::new();
 
-    File::open(client_state)?.read_to_end(&mut buffer)?;
-    let client_state = <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?;
-    File::open(consensus_state)?.read_to_end(&mut buffer)?;
-    let consensus_state =
-        <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?;
+    let client_state_result = serde_json::from_str::<RawConsensusState>(&client_state);
+    let client_state = if let Ok(client_state) = client_state_result {
+        client_state
+    } else {
+        File::open(client_state)?.read_to_end(&mut buffer)?;
+        <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?
+        // TODO: Should decode as protobuf or with serde?
+    };
+
+    let consensus_state_result = serde_json::from_str::<RawConsensusState>(&consensus_state);
+    let consensus_state = if let Ok(consensus_state) = consensus_state_result {
+        consensus_state
+    } else {
+        File::open(consensus_state)?.read_to_end(&mut buffer)?;
+        <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?
+        // TODO: Should decode as protobuf or with serde?
+    };
 
     let raw_msg = MsgCreateClient {
         client_state,
