@@ -1,19 +1,20 @@
 [package]
+edition = "2021"
 name = "trees"
 version = "0.1.0"
-edition = "2021"
 
 [dependencies]
 #local
-database = { path = "../database" }
+database = {path = "../database"}
 
 #newtypes
 
 #utils
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-sha2 = "0.10.6"
+anyhow = {workspace = true}
 integer-encoding = "3.0.4"
+nutype = {version = "0.4.0"}
+sha2 = "0.10.6"
+thiserror = {workspace = true}
 
 #serialization
 
@@ -21,17 +22,17 @@ integer-encoding = "3.0.4"
 caches = "0.2.4"
 
 [dev-dependencies]
-hex = "0.4.3"
 criterion = "0.5.1"
-rand = "0.8.5"
-pprof = { version = "0.13.0", features = ["flamegraph", "criterion"] }
 handlebars = "5.1.0"
+hex = "0.4.3"
+pprof = {version = "0.13.0", features = ["flamegraph", "criterion"]}
+rand = "0.8.5"
 serde = "1.0.176"
 serde_json = "1.0.104"
 
 [[bench]]
-name = "iavl_benchmark"
 harness = false
+name = "iavl_benchmark"
 
 [[example]]
 name = "benchtable"

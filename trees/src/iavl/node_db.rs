@@ -6,7 +6,7 @@ use integer_encoding::VarInt;
 
 use crate::{merkle::EMPTY_HASH, Error};
 
-use super::Node;
+use super::{CacheSize, Node};
 
 #[derive(Debug)]
 pub struct NodeDB<T> {
@@ -23,13 +23,11 @@ impl<T> NodeDB<T>
 where
     T: Database,
 {
-    /// Panics if cache_size=0
-    pub fn new(db: T, cache_size: usize) -> NodeDB<T> {
-        assert!(cache_size > 0);
+    pub fn new(db: T, cache_size: CacheSize) -> NodeDB<T> {
         NodeDB {
             db,
             cache: Mutex::new(
-                LRUCache::new(cache_size).expect("won't panic since cache_size > zero"),
+                LRUCache::new(cache_size.into()).expect("won't panic since cache_size > zero"),
             ),
         }
     }

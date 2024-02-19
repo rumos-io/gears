@@ -3923,6 +3923,7 @@ dependencies = [
  "handlebars",
  "hex",
  "integer-encoding 3.0.4",
+ "nutype",
  "pprof",
  "rand",
  "serde",
