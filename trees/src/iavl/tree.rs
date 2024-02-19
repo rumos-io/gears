@@ -1,5 +1,5 @@
 use std::{
-    cmp,
+    cmp::{self, Ordering},
     collections::BTreeSet,
     mem,
     ops::{Bound, RangeBounds},
@@ -7,21 +7,27 @@ use std::{
 
 use database::Database;
 use integer_encoding::VarInt;
+use nutype::nutype;
 use sha2::{Digest, Sha256};
 
-use crate::{error::Error, merkle::EMPTY_HASH};
+use crate::{
+    error::{constants::LEAF_ROTATE_ERROR, Error},
+    merkle::{Sha256Hash, EMPTY_HASH},
+};
 
 use super::node_db::NodeDB;
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub(crate) struct InnerNode {
+    // TODO: consider removing left/right_hash and making left/right_node an enum of Box<Node> and
+    // Sha256Hash to avoid needing to calculate hashes until save_version is called
     pub(crate) left_node: Option<Box<Node>>, // None means value is the same as what's in the DB
     pub(crate) right_node: Option<Box<Node>>,
-    pub(crate) key: Vec<u8>,
     height: u8,
     size: u32, // number of leaf nodes in this node's subtrees
-    pub(crate) left_hash: [u8; 32],
-    pub(crate) right_hash: [u8; 32],
+    pub(crate) left_hash: Sha256Hash,
+    pub(crate) right_hash: Sha256Hash,
+    pub(crate) key: Vec<u8>,
     version: u32,
 }
 
@@ -31,7 +37,7 @@ impl InnerNode {
             let node = node_db
                 .get_node(&self.left_hash)
                 .expect("node should be in db");
-            Box::new(node)
+            node
         })
     }
 
@@ -41,7 +47,7 @@ impl InnerNode {
                 .get_node(&self.right_hash)
                 .expect("node should be in db");
 
-            Box::new(node)
+            node
         })
     }
 
@@ -55,6 +61,32 @@ impl InnerNode {
         if let Some(node) = &self.right_node {
             self.right_hash = node.hash();
         }
+    }
+
+    fn get_balance_factor<T: Database>(&self, node_db: &NodeDB<T>) -> i16 {
+        let left_height = match &self.left_node {
+            Some(left_node) => left_node.get_height(),
+            None => {
+                let left_node = node_db
+                    .get_node(&self.left_hash)
+                    .expect("node db should contain all nodes");
+
+                left_node.get_height()
+            }
+        };
+
+        let right_height = match &self.right_node {
+            Some(right_node) => right_node.get_height(),
+            None => {
+                let right_node = node_db
+                    .get_node(&self.right_hash)
+                    .expect("node db should contain all nodes");
+
+                right_node.get_height()
+            }
+        };
+
+        left_height as i16 - right_height as i16
     }
 
     /// This does three things at once to prevent repeating the same process for getting the left and right nodes
@@ -94,24 +126,42 @@ impl InnerNode {
         Self {
             left_node: None,
             right_node: None,
-            key: self.key.clone(),
             height: self.height,
             size: self.size,
             left_hash: self.left_hash,
             right_hash: self.right_hash,
+            key: self.key.clone(),
             version: self.version,
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Hash, Default)]
 pub(crate) struct LeafNode {
-    pub(crate) key: Vec<u8>,
     pub(crate) value: Vec<u8>,
+    pub(crate) key: Vec<u8>,
     version: u32,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl LeafNode {
+    fn hash_serialize(&self) -> Vec<u8> {
+        // NOTE: i64 is used here for parameters for compatibility wih cosmos
+        let height: i64 = 0;
+        let size: i64 = 1;
+        let version: i64 = self.version.into();
+        let hashed_value = Sha256::digest(&self.value);
+
+        let mut serialized = height.encode_var_vec();
+        serialized.extend(size.encode_var_vec());
+        serialized.extend(version.encode_var_vec());
+        serialized.extend(encode_bytes(&self.key));
+        serialized.extend(encode_bytes(&hashed_value));
+
+        serialized
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub(crate) enum Node {
     Leaf(LeafNode),
     Inner(InnerNode),
@@ -124,16 +174,171 @@ impl Default for Node {
 }
 
 impl Node {
+    fn get_balance_factor<T: Database>(&self, node_db: &NodeDB<T>) -> i16 {
+        match self {
+            Node::Leaf(_) => 0,
+            Node::Inner(inner) => inner.get_balance_factor(node_db),
+        }
+    }
+
+    fn right_rotate<T: Database>(
+        &mut self,
+        version: u32,
+        node_db: &NodeDB<T>,
+    ) -> Result<(), Error> {
+        if let Node::Inner(z) = self {
+            let mut z = mem::take(z);
+            let y = mem::take(z.get_mut_left_node(node_db));
+
+            let mut y = match y {
+                Node::Inner(y) => y,
+                Node::Leaf(_) => return Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned())),
+            };
+
+            let t3 = y.right_node;
+
+            // Perform rotation on z and update height and hash
+            z.left_node = t3;
+            z.left_hash = y.right_hash;
+            z.update_height_and_size_get_balance_factor(node_db);
+            z.version = version;
+            let z = Node::Inner(z);
+
+            // Perform rotation on y, update hash and update height
+            y.right_hash = z.hash();
+            y.right_node = Some(Box::new(z));
+            y.update_height_and_size_get_balance_factor(node_db);
+            y.version = version;
+
+            *self = Node::Inner(y);
+
+            Ok(())
+        } else {
+            // Can't rotate a leaf node
+            Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned()))
+        }
+    }
+
+    fn left_rotate<T: Database>(&mut self, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
+        if let Node::Inner(z) = self {
+            let mut z = mem::take(z);
+            let y = mem::take(z.get_mut_right_node(node_db));
+
+            let mut y = match y {
+                Node::Inner(y) => y,
+                Node::Leaf(_) => return Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned())),
+            };
+
+            let t2 = y.left_node;
+
+            // Perform rotation on z and update height and hash
+            z.right_node = t2;
+            z.right_hash = y.left_hash;
+            z.update_height_and_size_get_balance_factor(node_db);
+            z.version = version;
+            let z = Node::Inner(z);
+
+            // Perform rotation on y, update hash and update height
+            y.left_hash = z.hash();
+            y.left_node = Some(Box::new(z));
+            y.update_height_and_size_get_balance_factor(node_db);
+            y.version = version;
+
+            *self = Node::Inner(y);
+
+            Ok(())
+        } else {
+            // Can't rotate a leaf node
+            Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned()))
+        }
+    }
+
+    /// Updates the node's height and size and balance factor
+    /// Balances a node if it's balance factor is between -2 and 2 (inclusive)
+    fn update_height_and_size_and_balance<T: Database>(
+        &mut self,
+        version: u32,
+        node_db: &NodeDB<T>,
+    ) -> Result<(), Error> {
+        match self {
+            Node::Leaf(_) => {
+                // A leaf node is always balanced
+                Ok(())
+            }
+            Node::Inner(inner) => match inner.update_height_and_size_get_balance_factor(node_db) {
+                -2 => {
+                    let right_node = inner.get_mut_right_node(node_db);
+
+                    if right_node.get_balance_factor(node_db) <= 0 {
+                        return Ok(Self::left_rotate(self, version, node_db)
+                            .expect("given the imbalance, expect rotation to always succeed"));
+                    }
+
+                    Self::right_rotate(right_node, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed");
+                    Ok(Self::left_rotate(self, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed"))
+                }
+
+                2 => {
+                    let left_node = inner.get_mut_left_node(node_db);
+
+                    if left_node.get_balance_factor(node_db) >= 0 {
+                        return Ok(Self::right_rotate(self, version, node_db)
+                            .expect("given the imbalance, expect rotation to always succeed"));
+                    }
+
+                    Self::left_rotate(left_node, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed");
+                    Ok(Self::right_rotate(self, version, node_db)
+                        .expect("given the imbalance, expect rotation to always succeed"))
+                }
+                -1..=1 => {
+                    // The node is balanced
+                    Ok(())
+                }
+                _ => Err(Error::Balancing),
+            },
+        }
+    }
+
+    pub(crate) fn right_hash_set(&mut self, hash: Sha256Hash) -> Option<Sha256Hash> {
+        match self {
+            Node::Leaf(_) => Some(hash),
+            Node::Inner(node) => {
+                node.right_hash = hash;
+                None
+            }
+        }
+    }
+
+    pub(crate) fn left_hash_set(&mut self, hash: Sha256Hash) -> Option<Sha256Hash> {
+        match self {
+            Node::Leaf(_) => Some(hash),
+            Node::Inner(node) => {
+                node.left_hash = hash;
+                None
+            }
+        }
+    }
+
     pub(crate) fn shallow_clone(&self) -> Node {
         match self {
             Node::Leaf(n) => Node::Leaf(n.clone()),
             Node::Inner(n) => Node::Inner(n.shallow_clone()),
         }
     }
-    pub fn get_key(&self) -> &Vec<u8> {
+    pub fn get_key(&self) -> &[u8] {
         match self {
             Node::Leaf(leaf) => &leaf.key,
             Node::Inner(inner) => &inner.key,
+        }
+    }
+
+    pub fn set_key(&mut self, key: Vec<u8>) {
+        match self {
+            Node::Leaf(leaf) => leaf.key = key,
+            Node::Inner(inner) => inner.key = key,
         }
     }
 
@@ -146,8 +351,8 @@ impl Node {
 
     pub fn new_leaf(key: Vec<u8>, value: Vec<u8>, version: u32) -> Node {
         Node::Leaf(LeafNode {
-            key,
             value,
+            key,
             version,
         })
     }
@@ -159,21 +364,7 @@ impl Node {
 
     fn hash_serialize(&self) -> Vec<u8> {
         match &self {
-            Node::Leaf(node) => {
-                // NOTE: i64 is used here for parameters for compatibility wih cosmos
-                let height: i64 = 0;
-                let size: i64 = 1;
-                let version: i64 = node.version.into();
-                let hashed_value = Sha256::digest(&node.value);
-
-                let mut serialized = height.encode_var_vec();
-                serialized.extend(size.encode_var_vec());
-                serialized.extend(version.encode_var_vec());
-                serialized.extend(encode_bytes(&node.key));
-                serialized.extend(encode_bytes(&hashed_value));
-
-                serialized
-            }
+            Node::Leaf(node) => node.hash_serialize(),
             Node::Inner(node) => {
                 // NOTE: i64 is used here for parameters for compatibility wih cosmos
                 let height: i64 = node.height.into();
@@ -232,8 +423,8 @@ impl Node {
             let (value, _) = decode_bytes(&bytes[n..])?;
 
             Ok(Node::Leaf(LeafNode {
-                key,
                 value,
+                key,
                 version,
             }))
         } else {
@@ -244,11 +435,11 @@ impl Node {
             Ok(Node::Inner(InnerNode {
                 left_node: None,
                 right_node: None,
-                key,
                 height,
                 size,
                 left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
                 right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
+                key,
                 version,
             }))
         }
@@ -265,19 +456,24 @@ impl Node {
 // TODO: rename loaded_version to head_version introduce a working_version (+ remove redundant loaded_version?). this will allow the first committed version to be version 0 rather than 1 (there is no version 0 currently!)
 #[derive(Debug)]
 pub struct Tree<T> {
-    root: Option<Node>,
+    root: Option<Box<Node>>,
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
 }
 
+#[nutype(validate(greater = 0), derive(TryFrom, Into))]
+pub struct CacheSize(usize);
+
 impl<T> Tree<T>
 where
     T: Database,
 {
-    /// Panics if cache_size=0
-    pub fn new(db: T, target_version: Option<u32>, cache_size: usize) -> Result<Tree<T>, Error> {
-        assert!(cache_size > 0);
+    pub fn new(
+        db: T,
+        target_version: Option<u32>,
+        cache_size: CacheSize,
+    ) -> Result<Tree<T>, Error> {
         let node_db = NodeDB::new(db, cache_size);
         let versions = node_db.get_versions();
 
@@ -332,7 +528,7 @@ where
 
                 // clear the root node's left and right nodes if they exist
                 if let Some(node) = &mut self.root {
-                    if let Node::Inner(inner) = node {
+                    if let Node::Inner(inner) = node.as_mut() {
                         inner.left_node = None;
                         inner.right_node = None;
                     }
@@ -422,17 +618,165 @@ where
         }
     }
 
+    pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+        // We use this struct to be 100% sure in output of `recursive_remove`
+        struct NodeKey(pub Vec<u8>);
+        struct NodeValue(pub Vec<u8>);
+
+        return match self.root {
+            Some(ref mut root) => {
+                // NOTE: recursive_remove returns a list of orphaned nodes, but we don't use them
+                let mut orphans = Vec::<Node>::with_capacity(3 + root.get_height() as usize);
+
+                let (value, _, _, _) = recursive_remove(
+                    root,
+                    &self.node_db,
+                    key,
+                    &mut orphans,
+                    self.loaded_version + 1,
+                );
+
+                value.map(|val| val.0)
+            }
+            None => None,
+        };
+
+        /// Returns the value corresponding to the key if it was found
+        /// The new root hash if the root hash changed
+        /// Whether the node passed in was a leaf node and was removed
+        /// The new leftmost leaf key for the subtree (if it has changed) after successfully removing 'key'
+        fn recursive_remove<T: Database>(
+            node: &mut Node,
+            node_db: &NodeDB<T>,
+            key: &impl AsRef<[u8]>,
+            orphaned: &mut Vec<Node>,
+            version: u32,
+        ) -> (Option<NodeValue>, Option<Sha256Hash>, bool, Option<NodeKey>) {
+            match node {
+                Node::Leaf(leaf) => {
+                    return if leaf.key != key.as_ref() {
+                        (None, None, false, None)
+                    } else {
+                        orphaned.push(Node::Leaf(leaf.clone()));
+                        (Some(NodeValue(leaf.value.clone())), None, true, None)
+                    };
+                }
+                Node::Inner(inner) => {
+                    match key.as_ref().cmp(&inner.key) {
+                        Ordering::Less => {
+                            let left_node = inner.get_mut_left_node(node_db);
+
+                            let (value, new_hash, leaf_cut, new_key) =
+                                recursive_remove(left_node, node_db, key, orphaned, version);
+
+                            if value.is_none() {
+                                // The key was not found in the left subtree, so nothing changed
+                                return (None, None, false, None);
+                            } else {
+                                // The key was found in the left subtree, either we just removed a leaf node
+                                // or we updated the left subtree's root hash. Either way, we need to orphan
+                                // the current node
+
+                                let shallow_copy = Node::Inner(inner.shallow_clone());
+                                orphaned.push(shallow_copy);
+
+                                if leaf_cut {
+                                    // The left node was a leaf node and was removed.
+                                    // We promote the right node to the root of the subtree
+                                    let right_node = inner.get_mut_right_node(node_db);
+                                    *node = right_node.shallow_clone();
+
+                                    // The right node was already balanced, so we don't need to call balance
+                                    // on node.
+                                    // Also, the right node's height and size were correct so don't need re-calculating
+                                    // on the new root node.
+                                    // The new leftmost leaf key for the subtree has changed so we return it
+                                    return (
+                                        value,
+                                        Some(node.hash()),
+                                        false,
+                                        Some(NodeKey(node.get_key().to_vec())),
+                                    );
+                                } else if let Some(new_hash) = new_hash {
+                                    // The left subtree's root hash has changed, so update the node's hash
+                                    // By updating the node's hash we're essentially creating a new node, so we need to
+                                    // update the version
+                                    // Bubble up the new leftmost leaf key for the subtree
+                                    inner.version = version;
+                                    node.left_hash_set(new_hash);
+                                    node.update_height_and_size_and_balance(version, node_db)
+                                        .expect("balance factor is between -2 and 2 inclusive, so this should never fail");
+                                    return (value, Some(node.hash()), false, new_key);
+                                } else {
+                                    unreachable!("either a leaf was removed or the left subtree's root hash changed")
+                                }
+                            }
+                        }
+                        Ordering::Greater | Ordering::Equal => {
+                            let right_node = inner.get_mut_right_node(node_db);
+
+                            let (value, new_hash, leaf_cut, new_key) =
+                                recursive_remove(right_node, node_db, key, orphaned, version);
+
+                            if value.is_none() {
+                                // The key was not found in the right subtree, so nothing changed
+                                return (None, None, false, None);
+                            } else {
+                                // The key was found in the right subtree, either we just removed a leaf node
+                                // or we updated the right subtree's root hash. Either way, we need to orphan
+                                // the current node
+
+                                let shallow_copy = Node::Inner(inner.shallow_clone());
+                                orphaned.push(shallow_copy);
+
+                                if leaf_cut {
+                                    // The right node was a leaf node and was removed.
+                                    // We promote the left node to the root of the subtree
+                                    let left_node = inner.get_mut_left_node(node_db);
+                                    *node = left_node.shallow_clone();
+
+                                    // The left node was balanced, so we don't need to call balance
+                                    // on node.
+                                    // Since we promoted the left node to the root of the subtree, the leftmost leaf key remains the same
+                                    // Also, the left node's height and size were correct so don't need re-calculating
+                                    // on the new root node.
+                                    return (value, Some(node.hash()), false, None);
+                                } else if let Some(new_hash) = new_hash {
+                                    // The right subtree's root hash has changed, so update the node's hash
+                                    // By updating the node's hash we're essentially creating a new node, so we need to
+                                    // update the version
+                                    inner.version = version;
+                                    node.right_hash_set(new_hash);
+
+                                    // If the right subtree's leftmost key has changed, set this node's key to the new key
+                                    if let Some(new_key) = new_key {
+                                        node.set_key(new_key.0);
+                                    }
+                                    node.update_height_and_size_and_balance(version, node_db)
+                                    .expect("balance factor is between -2 and 2 inclusive, so this should never fail");
+                                    return (value, Some(node.hash()), false, None);
+                                } else {
+                                    unreachable!("either a leaf was removed or the right subtree's root hash changed")
+                                }
+                            }
+                        }
+                    };
+                }
+            }
+        }
+    }
+
     pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
         match &mut self.root {
             Some(root) => {
                 Self::recursive_set(root, key, value, self.loaded_version + 1, &mut self.node_db)
             }
             None => {
-                self.root = Some(Node::Leaf(LeafNode {
+                self.root = Some(Box::new(Node::Leaf(LeafNode {
                     key,
-                    value,
                     version: self.loaded_version + 1,
-                }));
+                    value,
+                })));
             }
         };
     }
@@ -454,11 +798,11 @@ where
 
                     *node = Node::Inner(InnerNode {
                         key: leaf_node.key.clone(),
+                        version,
                         left_node: Some(Box::new(left_node)),
                         right_node: Some(Box::new(right_node)),
                         height: 1,
                         size: 2,
-                        version,
                         left_hash,
                         right_hash,
                     });
@@ -475,13 +819,13 @@ where
 
                     *node = Node::Inner(InnerNode {
                         key,
+                        version,
                         left_node: Some(Box::new(left_subtree)),
                         right_node: Some(Box::new(right_node)),
                         height: 1,
                         size: 2,
                         left_hash,
                         right_hash,
-                        version,
                     });
                 }
             },
@@ -515,101 +859,35 @@ where
                 if balance_factor > 1 {
                     let left_node = root_node.get_mut_left_node(node_db);
 
-                    if &key < left_node.get_key() {
+                    if key[..] < *left_node.get_key() {
                         // Case 1 - Right
-                        Self::right_rotate(node, version, node_db)
+                        node.right_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     } else {
                         // Case 2 - Left Right
-                        Self::left_rotate(left_node, version, node_db)
+                        left_node
+                            .left_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
-                        Self::right_rotate(node, version, node_db)
+                        node.right_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     }
                 } else if balance_factor < -1 {
                     let right_node = root_node.get_mut_right_node(node_db);
 
-                    if &key > right_node.get_key() {
+                    if key[..] > *right_node.get_key() {
                         // Case 3 - Left
-                        Self::left_rotate(node, version, node_db)
+                        node.left_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     } else {
                         // Case 4 - Right Left
-                        Self::right_rotate(right_node, version, node_db)
+                        right_node
+                            .right_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
-                        Self::left_rotate(node, version, node_db)
+                        node.left_rotate(version, node_db)
                             .expect("Given the imbalance, expect rotation to always succeed");
                     }
                 }
             }
-        }
-    }
-
-    fn right_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
-        if let Node::Inner(z) = node {
-            let mut z = mem::take(z);
-            let y = mem::take(z.get_mut_left_node(node_db));
-
-            let mut y = match y {
-                Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError),
-            };
-
-            let t3 = y.right_node;
-
-            // Perform rotation on z and update height and hash
-            z.left_node = t3;
-            z.left_hash = y.right_hash;
-            z.update_height_and_size_get_balance_factor(node_db);
-            z.version = version;
-            let z = Node::Inner(z);
-
-            // Perform rotation on y, update hash and update height
-            y.right_hash = z.hash();
-            y.right_node = Some(Box::new(z));
-            y.update_height_and_size_get_balance_factor(node_db);
-            y.version = version;
-
-            *node = Node::Inner(y);
-
-            Ok(())
-        } else {
-            // Can't rotate a leaf node
-            Err(Error::RotateError)
-        }
-    }
-
-    fn left_rotate(node: &mut Node, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
-        if let Node::Inner(z) = node {
-            let mut z = mem::take(z);
-            let y = mem::take(z.get_mut_right_node(node_db));
-
-            let mut y = match y {
-                Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError),
-            };
-
-            let t2 = y.left_node;
-
-            // Perform rotation on z and update height and hash
-            z.right_node = t2;
-            z.right_hash = y.left_hash;
-            z.update_height_and_size_get_balance_factor(node_db);
-            z.version = version;
-            let z = Node::Inner(z);
-
-            // Perform rotation on y, update hash and update height
-            y.left_hash = z.hash();
-            y.left_node = Some(Box::new(z));
-            y.update_height_and_size_get_balance_factor(node_db);
-            y.version = version;
-
-            *node = Node::Inner(y);
-
-            Ok(())
-        } else {
-            // Can't rotate a leaf node
-            Err(Error::RotateError)
         }
     }
 
@@ -637,7 +915,7 @@ where
     T: Database,
 {
     pub(crate) range: R,
-    pub(crate) delayed_nodes: Vec<Node>,
+    pub(crate) delayed_nodes: Vec<Box<Node>>,
     pub(crate) node_db: &'a NodeDB<T>,
 }
 
@@ -657,12 +935,12 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
             Bound::Unbounded => true,
         };
 
-        match node {
+        match *node {
             Node::Inner(inner) => {
                 // Traverse through the left subtree, then the right subtree.
                 if before_end {
                     match inner.right_node {
-                        Some(right_node) => self.delayed_nodes.push(*right_node), //TODO: deref will cause a clone, remove
+                        Some(right_node) => self.delayed_nodes.push(right_node),
                         None => {
                             let right_node = self
                                 .node_db
@@ -676,7 +954,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
 
                 if after_start {
                     match inner.left_node {
-                        Some(left_node) => self.delayed_nodes.push(*left_node), //TODO: deref will cause a clone, remove
+                        Some(left_node) => self.delayed_nodes.push(left_node),
                         None => {
                             let left_node = self
                                 .node_db
@@ -727,25 +1005,26 @@ fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), Error> {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Borrow;
-
     use super::*;
     use database::MemDB;
 
     #[test]
-    fn right_rotate_works() {
-        let t3 = InnerNode {
-            left_node: Some(Box::new(Node::Leaf(LeafNode {
-                key: vec![19],
-                value: vec![3, 2, 1],
-                version: 0,
-            }))),
+    fn remove_leaf_from_tree() -> anyhow::Result<()> {
+        let expected_leaf = Some(Box::new(Node::Leaf(LeafNode {
+            key: vec![19],
+            version: 0,
+            value: vec![3, 2, 1],
+        })));
+
+        let root = InnerNode {
+            left_node: expected_leaf.clone(),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![20],
-                value: vec![1, 6, 9],
                 version: 0,
+                value: vec![1, 6, 9],
             }))),
             key: vec![20],
+            version: 0,
             height: 1,
             size: 2,
             left_hash: [
@@ -756,17 +1035,121 @@ mod tests {
                 150, 105, 234, 135, 99, 29, 12, 162, 67, 236, 81, 117, 3, 18, 217, 76, 202, 161,
                 168, 94, 102, 108, 58, 135, 122, 167, 228, 134, 150, 121, 201, 234,
             ],
+        };
+
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
+
+        tree.root = Some(Box::new(Node::Inner(root)));
+
+        let node = tree.remove(&[19]);
+
+        assert_eq!(node, Some(vec![3, 2, 1]));
+        assert!(tree.root.is_some());
+
+        Ok(())
+    }
+
+    /* Visual representation of tree before removal
+
+    ┌──k2 inner───────┐
+    │                 │
+    ▼                 ▼
+    k1 v4      ┌───k3 inner──┐
+               │             │
+               ▼             ▼
+             k2 v5         k3 v6
+    */
+    #[test]
+    fn remove_leaf_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
+        tree.set(vec![1], vec![4]);
+        tree.set(vec![2], vec![5]);
+        tree.set(vec![3], vec![6]);
+
+        let val = tree.remove(&[2]);
+
+        assert_eq!(val, Some(vec![5]));
+        assert!(tree.root.is_some());
+
+        let hash = tree.root_hash();
+        let expected = [
+            34, 221, 199, 75, 12, 47, 227, 31, 159, 50, 0, 24, 80, 106, 150, 185, 56, 183, 39, 197,
+            31, 201, 239, 2, 254, 74, 63, 155, 135, 210, 49, 149,
+        ];
+        assert_eq!(hash, expected);
+
+        // re-insert the removed key
+        tree.set(vec![2], vec![5]);
+
+        let hash = tree.root_hash();
+        let expected = [
+            152, 235, 239, 45, 253, 157, 226, 68, 31, 70, 159, 245, 108, 36, 34, 155, 91, 73, 117,
+            9, 188, 255, 19, 21, 191, 133, 108, 5, 23, 199, 164, 205,
+        ];
+        assert_eq!(hash, expected);
+    }
+
+    #[test]
+    fn remove_leaf_after_save_works() {
+        let db = MemDB::new();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
+        tree.set(vec![1], vec![4]);
+        tree.set(vec![2], vec![5]);
+        tree.set(vec![3], vec![6]);
+
+        tree.save_version().unwrap();
+
+        let val = tree.remove(&[2]);
+
+        assert_eq!(val, Some(vec![5]));
+        assert!(tree.root.is_some());
+
+        let hash = tree.root_hash();
+        let expected = [
+            157, 211, 3, 179, 46, 81, 187, 161, 109, 233, 192, 198, 57, 27, 36, 234, 79, 230, 161,
+            49, 123, 3, 121, 162, 182, 58, 126, 93, 17, 215, 95, 248,
+        ];
+        assert_eq!(hash, expected);
+    }
+
+    #[test]
+    fn right_rotate_works() {
+        let t3 = InnerNode {
+            left_node: Some(Box::new(Node::Leaf(LeafNode {
+                key: vec![19],
+                version: 0,
+                value: vec![3, 2, 1],
+            }))),
+            right_node: Some(Box::new(Node::Leaf(LeafNode {
+                key: vec![20],
+                version: 0,
+                value: vec![1, 6, 9],
+            }))),
+            key: vec![20],
             version: 0,
+            height: 1,
+            size: 2,
+            left_hash: [
+                56, 18, 97, 18, 6, 216, 38, 113, 24, 103, 129, 119, 92, 30, 188, 114, 183, 100,
+                110, 73, 39, 131, 243, 199, 251, 72, 125, 220, 56, 132, 125, 106,
+            ],
+            right_hash: [
+                150, 105, 234, 135, 99, 29, 12, 162, 67, 236, 81, 117, 3, 18, 217, 76, 202, 161,
+                168, 94, 102, 108, 58, 135, 122, 167, 228, 134, 150, 121, 201, 234,
+            ],
         };
 
         let y = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![18],
-                value: vec![3, 2, 1],
                 version: 0,
+                value: vec![3, 2, 1],
             }))),
             right_node: Some(Box::new(Node::Inner(t3))),
             key: vec![19],
+            version: 0,
             height: 2,
             size: 3,
             left_hash: [
@@ -777,17 +1160,17 @@ mod tests {
                 192, 103, 168, 209, 21, 23, 137, 121, 173, 138, 179, 199, 124, 163, 200, 22, 101,
                 85, 103, 102, 253, 118, 15, 195, 248, 223, 181, 228, 63, 234, 156, 135,
             ],
-            version: 0,
         };
 
         let z = InnerNode {
             left_node: Some(Box::new(Node::Inner(y))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![21],
-                value: vec![3, 2, 1],
                 version: 0,
+                value: vec![3, 2, 1],
             }))),
             key: vec![21],
+            version: 0,
             height: 3,
             size: 4,
             left_hash: [
@@ -798,13 +1181,13 @@ mod tests {
                 0, 85, 79, 1, 62, 128, 35, 121, 122, 250, 9, 14, 106, 197, 49, 81, 58, 121, 9, 157,
                 156, 44, 10, 204, 48, 235, 172, 20, 43, 158, 240, 254,
             ],
-            version: 0,
         };
 
         let mut z = Node::Inner(z);
 
         let db = MemDB::new();
-        Tree::right_rotate(&mut z, 0, &NodeDB::new(db, 100)).unwrap();
+        z.right_rotate(0, &NodeDB::new(db, 100.try_into().unwrap()))
+            .unwrap();
 
         let hash = z.hash();
         let expected = [
@@ -819,15 +1202,16 @@ mod tests {
         let t2 = InnerNode {
             left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![19],
-                value: vec![3, 2, 1],
                 version: 0,
+                value: vec![3, 2, 1],
             }))),
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![20],
-                value: vec![1, 6, 9],
                 version: 0,
+                value: vec![1, 6, 9],
             }))),
             key: vec![20],
+            version: 0,
             height: 1,
             size: 2,
             left_hash: [
@@ -838,17 +1222,17 @@ mod tests {
                 150, 105, 234, 135, 99, 29, 12, 162, 67, 236, 81, 117, 3, 18, 217, 76, 202, 161,
                 168, 94, 102, 108, 58, 135, 122, 167, 228, 134, 150, 121, 201, 234,
             ],
-            version: 0,
         };
 
         let y = InnerNode {
             right_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![21],
-                value: vec![3, 2, 1, 1],
                 version: 0,
+                value: vec![3, 2, 1, 1],
             }))),
             left_node: Some(Box::new(Node::Inner(t2))),
             key: vec![21],
+            version: 0,
             height: 2,
             size: 3,
             right_hash: [
@@ -859,17 +1243,17 @@ mod tests {
                 192, 103, 168, 209, 21, 23, 137, 121, 173, 138, 179, 199, 124, 163, 200, 22, 101,
                 85, 103, 102, 253, 118, 15, 195, 248, 223, 181, 228, 63, 234, 156, 135,
             ],
-            version: 0,
         };
 
         let z = InnerNode {
             right_node: Some(Box::new(Node::Inner(y))),
             left_node: Some(Box::new(Node::Leaf(LeafNode {
                 key: vec![18],
-                value: vec![3, 2, 2],
                 version: 0,
+                value: vec![3, 2, 2],
             }))),
             key: vec![19],
+            version: 0,
             height: 3,
             size: 4,
             left_hash: [
@@ -880,13 +1264,13 @@ mod tests {
                 13, 181, 53, 227, 140, 38, 242, 22, 94, 152, 94, 71, 0, 89, 35, 122, 129, 85, 55,
                 190, 253, 226, 35, 230, 65, 214, 244, 35, 69, 39, 223, 90,
             ],
-            version: 0,
         };
 
         let mut z = Node::Inner(z);
 
         let db = MemDB::new();
-        Tree::left_rotate(&mut z, 0, &NodeDB::new(db, 100)).unwrap();
+        z.left_rotate(0, &NodeDB::new(db, 100.try_into().unwrap()))
+            .unwrap();
 
         let hash = z.hash();
         let expected = [
@@ -899,7 +1283,7 @@ mod tests {
     #[test]
     fn set_equal_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(vec![1], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -914,7 +1298,7 @@ mod tests {
     #[test]
     fn set_less_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(vec![3], vec![2]);
         tree.set(vec![1], vec![3]);
 
@@ -929,7 +1313,7 @@ mod tests {
     #[test]
     fn set_greater_than_leaf_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(vec![1], vec![2]);
         tree.set(vec![3], vec![3]);
 
@@ -944,7 +1328,7 @@ mod tests {
     #[test]
     fn repeated_set_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -961,7 +1345,7 @@ mod tests {
     #[test]
     fn save_version_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -986,7 +1370,7 @@ mod tests {
     #[test]
     fn get_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1002,7 +1386,7 @@ mod tests {
     #[test]
     fn scenario_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(vec![0, 117, 97, 116, 111, 109], vec![51, 52]);
         tree.set(
             vec![
@@ -1055,7 +1439,7 @@ mod tests {
     #[test]
     fn bounded_range_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(b"1".to_vec(), b"abc1".to_vec());
 
         tree.set(b"2".to_vec(), b"abc2".to_vec());
@@ -1119,7 +1503,7 @@ mod tests {
     #[test]
     fn full_range_unique_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"bob".to_vec(), b"123".to_vec());
         tree.set(b"c".to_vec(), b"1".to_vec());
@@ -1143,7 +1527,7 @@ mod tests {
     #[test]
     fn full_range_duplicate_keys_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
@@ -1160,7 +1544,7 @@ mod tests {
     #[test]
     fn empty_tree_range_works() {
         let db = MemDB::new();
-        let tree = Tree::new(db, None, 100).unwrap();
+        let tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = tree.range(..).collect();
 
         let expected_pairs: Vec<(Vec<u8>, Vec<u8>)> = vec![];
@@ -1178,6 +1562,7 @@ mod tests {
             left_node: None,
             right_node: None,
             key: vec![19],
+            version: 0,
             height: 3,
             size: 4,
             left_hash: [
@@ -1188,7 +1573,6 @@ mod tests {
                 13, 181, 53, 227, 140, 38, 242, 22, 94, 152, 94, 71, 0, 89, 35, 122, 129, 85, 55,
                 190, 253, 226, 35, 230, 65, 214, 244, 35, 69, 39, 223, 90,
             ],
-            version: 0,
         });
 
         let node_bytes = orig_node.serialize();
@@ -1209,8 +1593,8 @@ mod tests {
     fn serialize_deserialize_leaf_works() {
         let orig_node = Node::Leaf(LeafNode {
             key: vec![19],
-            value: vec![1, 2, 3],
             version: 0,
+            value: vec![1, 2, 3],
         });
 
         let node_bytes = orig_node.serialize();
@@ -1223,7 +1607,7 @@ mod tests {
     #[test]
     fn bug_scenario_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(vec![0], vec![8, 244, 162, 237, 1]);
         tree.save_version().unwrap();
         tree.set(vec![0], vec![8, 133, 164, 237, 1]);
@@ -1316,7 +1700,7 @@ mod tests {
     #[test]
     fn bug_scenario_2_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
         tree.set(
             vec![
                 0, 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58,
@@ -1368,23 +1752,26 @@ mod tests {
     /// Checks if left/right hash matches the left/right node hash for every inner node in a tree
     fn is_consistent<T: Database, N>(root: N, node_db: &NodeDB<T>) -> bool
     where
-        N: Borrow<Node>,
+        N: AsRef<Node>,
     {
-        match root.borrow() {
+        match root.as_ref() {
             Node::Inner(node) => {
                 let left_node = match &node.left_node {
-                    Some(left_node) => *left_node.clone(),
+                    Some(left_node) => left_node.clone(),
                     None => node_db
                         .get_node(&node.left_hash)
                         .expect("node db should contain all nodes"),
                 };
 
                 let right_node = match &node.right_node {
-                    Some(right_node) => *right_node.clone(),
+                    Some(right_node) => right_node.clone(),
                     None => node_db
                         .get_node(&node.right_hash)
                         .expect("node db should contain all nodes"),
                 };
+
+                dbg!("left_node: {:?}", &left_node);
+                dbg!("right_node: {:?}", &right_node);
 
                 if left_node.hash() != node.left_hash {
                     return false;

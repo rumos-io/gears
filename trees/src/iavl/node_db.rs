@@ -6,7 +6,7 @@ use integer_encoding::VarInt;
 
 use crate::{merkle::EMPTY_HASH, Error};
 
-use super::Node;
+use super::{CacheSize, Node};
 
 #[derive(Debug)]
 pub struct NodeDB<T> {
@@ -23,13 +23,11 @@ impl<T> NodeDB<T>
 where
     T: Database,
 {
-    /// Panics if cache_size=0
-    pub fn new(db: T, cache_size: usize) -> NodeDB<T> {
-        assert!(cache_size > 0);
+    pub fn new(db: T, cache_size: CacheSize) -> NodeDB<T> {
         NodeDB {
             db,
             cache: Mutex::new(
-                LRUCache::new(cache_size).expect("won't panic since cache_size > zero"),
+                LRUCache::new(cache_size.into()).expect("won't panic since cache_size > zero"),
             ),
         }
     }
@@ -55,7 +53,7 @@ where
             .ok_or(Error::VersionNotFound)
     }
 
-    pub(crate) fn get_root_node(&self, version: u32) -> Result<Option<Node>, Error> {
+    pub(crate) fn get_root_node(&self, version: u32) -> Result<Option<Box<Node>>, Error> {
         let root_hash = self.get_root_hash(version)?;
 
         if root_hash == EMPTY_HASH {
@@ -76,12 +74,12 @@ where
         [NODES_PREFIX.to_vec(), hash.to_vec()].concat()
     }
 
-    pub(crate) fn get_node(&self, hash: &[u8; 32]) -> Option<Node> {
+    pub(crate) fn get_node(&self, hash: &[u8; 32]) -> Option<Box<Node>> {
         let cache = &mut self.cache.lock().expect("Lock will not be poisoned");
         let cache_node = cache.get(hash);
 
         if cache_node.is_some() {
-            return cache_node.map(|v| v.to_owned());
+            return cache_node.map(|v| Box::new(v.to_owned()));
         };
 
         let node_bytes = self.db.get(&Self::get_node_key(hash))?;
@@ -89,7 +87,7 @@ where
             .expect("invalid data in database - possible database corruption");
 
         cache.put(*hash, node.clone());
-        Some(node)
+        Some(Box::new(node))
     }
 
     fn save_node(&mut self, node: &Node, hash: &[u8; 32]) {
