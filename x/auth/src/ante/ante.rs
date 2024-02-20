@@ -304,9 +304,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                     }
                     .encode_to_vec(),
                     SignMode::Textual => {
-                        let handler = SignModeHandler;
+                        let _handler = SignModeHandler;
 
-                        let signer_data = SignerData {
+                        let _signer_data = SignerData {
                             address: signer.to_owned(),
                             chain_id: ChainId::new(ctx.get_chain_id().to_owned()).unwrap(), //TODO: remove unwrap
                             account_number: acct.get_account_number(),
@@ -314,7 +314,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                             pub_key: public_key.to_owned(),
                         };
 
-                        let tx_data = TxData {
+                        let _tx_data = TxData {
                             body: tx.tx.body.clone(),
                             auth_info: tx.tx.auth_info.clone(),
                         };
