@@ -44,8 +44,8 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
     };
 
     let raw_msg = MsgCreateClient {
-        client_state,
-        consensus_state,
+        client_state: client_state.into(),
+        consensus_state: consensus_state.into(),
         signer: RawSigner::from(signer.0),
     };
 

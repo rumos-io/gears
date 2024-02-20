@@ -3,11 +3,22 @@ use gears::{types::context::init_context::InitContext, x::params::ParamsSubspace
 use prost::Message;
 use proto_messages::cosmos::ibc::{
     tx::MsgCreateClient,
-    types::{ClientStateCommon, ClientType, IdentifierError, RawClientId},
+    types::{
+        client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
+        types::events::{
+            CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
+            CREATE_CLIENT_EVENT,
+        },
+        ClientError, ClientExecutionContext, ClientType, Event, EventAttribute, IdentifierError,
+        RawClientId,
+    },
 };
 use store::StoreKey;
 
-use crate::params::{self, AbciParamsKeeper, Params, ParamsError, RawParams};
+use crate::{
+    params::{self, AbciParamsKeeper, Params, ParamsError, RawParams},
+    types::{ClientStore, InitContextShim},
+};
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -28,6 +39,8 @@ pub enum ClientCreateError {
     DecodeError(#[from] prost::DecodeError),
     #[error("{0}")]
     IdentifierError(#[from] IdentifierError),
+    #[error("{0}")]
+    ClientError(#[from] ClientError),
     #[error("Unexpected error: {0}")]
     CustomError(String),
 }
@@ -48,18 +61,25 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn client_create<DB: Database>(
+    pub fn client_create<DB: Database + Send + Sync, E: ClientExecutionContext>(
         &mut self,
         ctx: &mut InitContext<'_, DB, SK>,
         msg: MsgCreateClient,
-        state: impl ClientStateCommon,
-    ) -> Result<(), ClientCreateError> {
-        let client_type = state.client_type();
+        // client_state: impl ClientStateCommon + ClientStateExecution<E>,
+        // consensus_state: RawConsensusState,
+    ) -> Result<RawClientId, ClientCreateError> {
+        let MsgCreateClient {
+            client_state,
+            consensus_state,
+            signer: _signer, // TODO: is it okay to ignore this field?
+        } = msg;
+
+        let client_type = client_state.client_type();
         if client_type
             == ClientType::new("09-localhost")
                 .expect("Unreachable: localhost should be valid client type")
         {
-            return Err(ClientCreateError::InvalidType(state.client_type()));
+            return Err(ClientCreateError::InvalidType(client_state.client_type()));
         }
 
         let params = self.params_get(ctx)?;
@@ -70,7 +90,35 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let client_id = self.client_indentifier_generate(ctx, &client_type)?;
 
-        Ok(())
+        // let client_store = ClientStore(ctx.get_mutable_kv_store(&self.store_key));
+        // {
+        //     let mut ctx = InitContextShim(ctx);
+
+        //     client_store.initialise(&mut ctx, &client_id, consensus_state.into())?;
+        //     client_store.status(&mut ctx, &client_id);
+        // }
+
+        ctx.append_events(vec![
+            Event::new(
+                CREATE_CLIENT_EVENT,
+                [
+                    (CLIENT_ID_ATTRIBUTE_KEY, client_id.as_str().to_owned()),
+                    (CLIENT_TYPE_ATTRIBUTE_KEY, client_type.as_str().to_owned()),
+                    (
+                        CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
+                        client_state.latest_height().to_string(),
+                    ),
+                ],
+            ),
+            Event::new(
+                "message",
+                [
+                    (crate::types::ATTRIBUTE_KEY_MODULE, "ibc_client"), // TODO
+                ],
+            ),
+        ]);
+
+        Ok(client_id)
     }
 
     fn client_indentifier_generate<DB: Database>(

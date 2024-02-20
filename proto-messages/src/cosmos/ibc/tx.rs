@@ -8,7 +8,7 @@ pub use ibc_proto::cosmos::tx::v1beta1::{
 };
 
 use crate::cosmos::ibc::protobuf::Any;
-use crate::cosmos::ibc::types::{RawClientId, RawSigner, RawConsensusState};
+use crate::cosmos::ibc::types::{RawClientId, RawSigner};
 
 pub use ibc::core::client::types::msgs::MsgUpgradeClient as RawMsgUpgradeClient;
 pub use ibc_proto::ibc::core::client::v1::MsgUpgradeClient as RawProtoMsgUpgradeClient;
@@ -21,6 +21,8 @@ pub use ibc::core::client::types::msgs::MsgCreateClient as RawMsgCreateClient;
 pub use ibc::core::client::types::proto::v1::MsgCreateClient as RawProtoMsgCreateClient;
 
 pub use ibc::core::client::types::msgs::{ UPGRADE_CLIENT_TYPE_URL, UPDATE_CLIENT_TYPE_URL, CREATE_CLIENT_TYPE_URL, SUBMIT_MISBEHAVIOUR_TYPE_URL};
+
+use super::types::ConsensusState;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MsgUpgradeClient {
@@ -94,8 +96,8 @@ impl From<RawMsgSubmitMisbehaviour> for MsgSubmitMisbehaviour
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MsgCreateClient {
-    pub client_state: RawConsensusState, // TODO: Concrete validated type?
-    pub consensus_state: RawConsensusState, // TODO: Concrete validated type?
+    pub client_state: ConsensusState, 
+    pub consensus_state: ConsensusState,
     pub signer: RawSigner, // TODO: Is validation required?
 }
 

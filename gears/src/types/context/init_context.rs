@@ -4,6 +4,7 @@ use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint::informal::abci::Event;
 
+#[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
     pub multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
