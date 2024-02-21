@@ -104,7 +104,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             ),
         ]);
 
-        {
+        { // FIXME: fix lifetimes so borrow checker would be happy with this code before events
             let mut ctx = InitContextShim(ctx);
 
             client_state.initialise(&mut ctx, &client_id, consensus_state.into())?;

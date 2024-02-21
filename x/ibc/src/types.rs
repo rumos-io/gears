@@ -53,7 +53,7 @@ impl From<&str> for Signer {
     }
 }
 
-pub struct InitContextShim<'a, 'b, DB: Send + Sync, SK: Sync + Send>(
+pub struct InitContextShim<'a, 'b, DB, SK>(
     pub &'a mut InitContext<'b, DB, SK>,
 ); // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
 
@@ -87,7 +87,7 @@ impl TryFrom<ConsensusState> for RawConsensusState {
     }
 }
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> CommonContext
+impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext
     for InitContextShim<'a, 'b, DB, SK>
 {
     type ConversionError = InfallibleError;
@@ -117,7 +117,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> CommonConte
     }
 }
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
+impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     ibc::core::host::ValidationContext for InitContextShim<'a, 'b, DB, SK>
 {
     type V = Self;
@@ -147,7 +147,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
         &self,
         _client_cons_state_path: &ClientConsensusStatePath,
     ) -> Result<Self::AnyConsensusState, ContextError> {
-        todo!()
+       unimplemented!() // TODO: Implement
     }
 
     fn host_height(&self) -> Result<Height, ContextError> {
@@ -257,7 +257,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
     }
 }
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
+impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     ibc::core::host::ExecutionContext for InitContextShim<'a, 'b, DB, SK>
 {
     fn get_client_execution_context(&mut self) -> &mut Self::E {
@@ -374,7 +374,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
     }
 }
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientExecutionContext
+impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
     for InitContextShim<'a, 'b, DB, SK>
 {
     type V = Self;
@@ -388,7 +388,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientExecu
         _client_state_path: ClientStatePath,
         _client_state: Self::AnyClientState,
     ) -> Result<(), ContextError> {
-        todo!()
+        unimplemented!() // TODO: Implement
     }
 
     fn store_consensus_state(
@@ -396,7 +396,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientExecu
         _consensus_state_path: ClientConsensusStatePath,
         _consensus_state: Self::AnyConsensusState,
     ) -> Result<(), ContextError> {
-        todo!()
+        unimplemented!() // TODO: Implement
     }
 
     fn delete_consensus_state(
@@ -412,7 +412,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientExecu
         _height: Height,
         _host_timestamp: Timestamp,
     ) -> Result<(), ContextError> {
-        todo!()
+        unimplemented!() // TODO: Implement
     }
 
     fn store_update_height(
@@ -421,7 +421,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientExecu
         _height: Height,
         _host_height: Height,
     ) -> Result<(), ContextError> {
-        todo!()
+        unimplemented!() // TODO: Implement
     }
 
     fn delete_update_time(
@@ -441,7 +441,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientExecu
     }
 }
 
-impl<DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientValidationContext
+impl<DB: Database, SK: StoreKey> ClientValidationContext
     for InitContextShim<'_, '_, DB, SK>
 {
     fn client_update_time(
@@ -461,7 +461,7 @@ impl<DB: Database + Send + Sync, SK: StoreKey + Send + Sync> ClientValidationCon
     }
 }
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
+impl<'a, 'b, DB: Database, SK: StoreKey>
     ibc::clients::tendermint::context::ValidationContext for InitContextShim<'a, 'b, DB, SK>
 {
     fn next_consensus_state(
