@@ -3,7 +3,8 @@ use std::{fs::File, io::Read};
 use clap::Args;
 use proto_messages::cosmos::ibc::{
     protobuf::{PrimitiveAny, PrimitiveProtobuf},
-    tx::MsgCreateClient, types::tendermint::consensus_state::RawConsensusState,
+    tx::MsgCreateClient,
+    types::tendermint::consensus_state::RawConsensusState,
 };
 
 use crate::types::Signer;

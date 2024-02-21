@@ -1,7 +1,25 @@
 use database::Database;
 use gears::{types::context::init_context::InitContext, x::params::ParamsSubspaceKey};
 use prost::Message;
-use proto_messages::cosmos::ibc::types::{core::{client::{context::{client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation}, types::events::{CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT}}, error::ClientError}, host::{error::IdentifierError, identifiers::{ClientId, ClientType}}}, tendermint::{consensus_state::WrappedConsensusState, informal::Event}};
+use proto_messages::cosmos::ibc::types::{
+    core::{
+        client::{
+            context::{
+                client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
+                types::events::{
+                    CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY,
+                    CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT,
+                },
+            },
+            error::ClientError,
+        },
+        host::{
+            error::IdentifierError,
+            identifiers::{ClientId, ClientType},
+        },
+    },
+    tendermint::{consensus_state::WrappedConsensusState, informal::Event},
+};
 use store::StoreKey;
 
 use crate::{
@@ -45,7 +63,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             params_subspace_key,
         };
         Keeper {
-            _store_key : store_key,
+            _store_key: store_key,
             params_keeper: abci_params_keeper,
         }
     }
@@ -95,7 +113,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             ),
         ]);
 
-        { // FIXME: fix lifetimes so borrow checker would be happy with this code before events
+        {
+            // FIXME: fix lifetimes so borrow checker would be happy with this code before events
             let mut ctx = InitContextShim(ctx);
 
             client_state.initialise(&mut ctx, &client_id, consensus_state.into())?;

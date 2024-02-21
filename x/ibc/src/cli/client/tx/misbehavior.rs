@@ -2,10 +2,7 @@ use std::{fs::File, io::Read, str::FromStr};
 
 use clap::Args;
 use prost::Message;
-use proto_messages::cosmos::ibc::{
-    protobuf::Any,
-    tx::MsgSubmitMisbehaviour,
-};
+use proto_messages::cosmos::ibc::{protobuf::Any, tx::MsgSubmitMisbehaviour};
 
 use crate::types::{ClientId, Signer};
 
@@ -36,7 +33,9 @@ pub(super) fn tx_command_handler(
     };
 
     let raw_msg = MsgSubmitMisbehaviour {
-        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(&client_id.0)?,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(
+            &client_id.0,
+        )?,
         misbehaviour,
         signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };

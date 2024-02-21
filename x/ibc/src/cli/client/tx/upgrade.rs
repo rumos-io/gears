@@ -3,8 +3,7 @@ use std::{fs::File, io::Read, str::FromStr};
 use clap::Args;
 use prost::Message;
 use proto_messages::cosmos::ibc::{
-    protobuf::Any,
-    tx::MsgUpgradeClient, types::core::commitment::CommitmentProofBytes,
+    protobuf::Any, tx::MsgUpgradeClient, types::core::commitment::CommitmentProofBytes,
 };
 
 use crate::types::{ClientId, Signer};
@@ -49,7 +48,9 @@ pub(super) fn tx_command_handler(msg: CliUpgradeClient) -> anyhow::Result<crate:
         };
 
     let raw_msg = MsgUpgradeClient {
-        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(&client_id.0)?,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(
+            &client_id.0,
+        )?,
         upgraded_client_state,
         upgraded_consensus_state,
         proof_upgrade_client: CommitmentProofBytes::try_from(proof_upgrade_client.into_bytes())?,
