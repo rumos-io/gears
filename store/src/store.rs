@@ -120,6 +120,24 @@ pub struct KVStore<DB> {
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
+impl<DB: Database> KVStoreTrait for KVStore<DB> {
+    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+        let tx_cache_val = self.tx_cache.get(k.as_ref());
+
+        if tx_cache_val.is_none() {
+            let block_cache_val = self.block_cache.get(k.as_ref());
+
+            if block_cache_val.is_none() {
+                return self.persistent_store.get(k.as_ref());
+            };
+
+            return block_cache_val.cloned();
+        }
+
+        tx_cache_val.cloned()
+    }
+}
+
 impl<DB: Database> KVStore<DB> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
         Ok(KVStore {
@@ -131,31 +149,6 @@ impl<DB: Database> KVStore<DB> {
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         })
-    }
-
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        let tx_cache_val = self.tx_cache.get(key);
-
-        if tx_cache_val.is_none() {
-            let block_cache_val = self.block_cache.get(key);
-
-            if block_cache_val.is_none() {
-                return self.persistent_store.get(key);
-            };
-
-            return block_cache_val.cloned();
-        }
-
-        tx_cache_val.cloned()
-    }
-
-    pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
-        if key.is_empty() {
-            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
-            panic!("key is empty")
-        }
-
-        self.tx_cache.insert(key, value);
     }
 
     pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
@@ -187,6 +180,17 @@ impl<DB: Database> KVStore<DB> {
         // );
 
         self.persistent_store.range(range)
+    }
+
+    pub fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>) {
+        let key: Vec<u8> = key.into_iter().collect();
+
+        if key.is_empty() {
+            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
+            panic!("key is empty")
+        }
+
+        self.tx_cache.insert(key, value.into_iter().collect());
     }
 
     /// Writes tx cache into block cache then clears the tx cache
@@ -240,7 +244,13 @@ impl<DB: Database> KVStore<DB> {
     }
 }
 
-pub(crate) enum AnyKVStore<'a, DB: Database> {
+/// Equivalent to [`BasicKVStore`](https://docs.cosmos.network/v0.46/core/store.html#base-layer-kvstores) from cosmos
+pub trait KVStoreTrait {
+    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>>;
+    // TODO: range after PR merge
+}
+
+pub enum AnyKVStore<'a, DB: Database> {
     KVStore(&'a KVStore<DB>),
     QueryKVStore(&'a QueryKVStore<'a, DB>),
 }
@@ -258,7 +268,7 @@ impl<'a, DB: Database> From<&'a QueryKVStore<'a, DB>> for AnyKVStore<'a, DB> {
 }
 
 impl<'a, DB: Database> AnyKVStore<'a, DB> {
-    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
+    pub fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
         match self {
             AnyKVStore::KVStore(store) => store.get(k),
             AnyKVStore::QueryKVStore(store) => store.get(k),

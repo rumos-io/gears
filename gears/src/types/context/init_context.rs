@@ -25,16 +25,6 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
         Context::InitContext(self)
     }
 
-    ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
-        return self.multi_store.get_kv_store(store_key);
-    }
-
-    /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
-        return self.multi_store.get_mutable_kv_store(store_key);
-    }
-
     pub fn get_height(&self) -> u64 {
         self.height
     }
@@ -67,5 +57,15 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
             name: String::new(),
             symbol: String::new(),
         }
+    }
+
+    ///  Fetches an immutable ref to a KVStore from the MultiStore.
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
+        self.multi_store.get_kv_store(store_key)
+    }
+
+    /// Fetches a mutable ref to a KVStore from the MultiStore.
+    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
+        self.multi_store.get_mutable_kv_store(store_key)
     }
 }

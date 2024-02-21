@@ -17,7 +17,7 @@ use proto_messages::cosmos::{
     ibc_types::protobuf::Protobuf,
 };
 use proto_types::AccAddress;
-use store::StoreKey;
+use store::{KVStoreTrait, StoreKey};
 
 use crate::{ante::AuthKeeper, AuthParamsKeeper, GenesisState};
 
@@ -139,10 +139,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         };
 
         let next_acct_num = acct_num + 1;
-        auth_store.set(
-            GLOBAL_ACCOUNT_NUMBER_KEY.into(),
-            next_acct_num.encode_to_vec(),
-        );
+        auth_store.set(GLOBAL_ACCOUNT_NUMBER_KEY, next_acct_num.encode_to_vec());
 
         acct_num
     }
