@@ -4,8 +4,7 @@ use clap::Args;
 use prost::Message;
 use proto_messages::cosmos::ibc::{
     protobuf::Any,
-    tx::MsgUpgradeClient,
-    types::{tendermint::RawCommitmentProofBytes, RawClientId, RawSigner},
+    tx::MsgUpgradeClient, types::core::commitment::CommitmentProofBytes,
 };
 
 use crate::types::{ClientId, Signer};
@@ -50,14 +49,14 @@ pub(super) fn tx_command_handler(msg: CliUpgradeClient) -> anyhow::Result<crate:
         };
 
     let raw_msg = MsgUpgradeClient {
-        client_id: RawClientId::from_str(&client_id.0)?,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(&client_id.0)?,
         upgraded_client_state,
         upgraded_consensus_state,
-        proof_upgrade_client: RawCommitmentProofBytes::try_from(proof_upgrade_client.into_bytes())?,
-        proof_upgrade_consensus_state: RawCommitmentProofBytes::try_from(
+        proof_upgrade_client: CommitmentProofBytes::try_from(proof_upgrade_client.into_bytes())?,
+        proof_upgrade_consensus_state: CommitmentProofBytes::try_from(
             proof_upgrade_consensus_state.into_bytes(),
         )?,
-        signer: RawSigner::from(signer.0),
+        signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 
     Ok(crate::message::Message::ClientUpgrade(raw_msg.into()))

@@ -5,7 +5,7 @@ use gears::{
     types::context::context::Context,
     x::params::{Keeper, ParamsSubspaceKey},
 };
-use proto_messages::cosmos::ibc::types::ClientType;
+use proto_messages::cosmos::ibc::types::core::host::identifiers::ClientType;
 use serde::{Deserialize, Serialize};
 use store::StoreKey;
 

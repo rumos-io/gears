@@ -3,8 +3,7 @@ use std::{fs::File, io::Read};
 use clap::Args;
 use proto_messages::cosmos::ibc::{
     protobuf::{PrimitiveAny, PrimitiveProtobuf},
-    tx::MsgCreateClient,
-    types::{tendermint::RawConsensusState, RawSigner},
+    tx::MsgCreateClient, types::tendermint::consensus_state::RawConsensusState,
 };
 
 use crate::types::Signer;
@@ -46,7 +45,7 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
     let raw_msg = MsgCreateClient {
         client_state: client_state.into(),
         consensus_state: consensus_state.into(),
-        signer: RawSigner::from(signer.0),
+        signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 
     Ok(crate::message::Message::ClientCreate(raw_msg))

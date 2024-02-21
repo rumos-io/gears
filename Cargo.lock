@@ -1828,7 +1828,6 @@ dependencies = [
  "clap",
  "database",
  "gears",
- "ibc 0.50.0",
  "prost 0.11.9",
  "proto-messages",
  "proto-types",
@@ -1836,7 +1835,6 @@ dependencies = [
  "serde",
  "serde_json",
  "store",
- "strum",
  "thiserror",
 ]
 

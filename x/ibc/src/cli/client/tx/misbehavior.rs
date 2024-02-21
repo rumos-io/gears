@@ -5,7 +5,6 @@ use prost::Message;
 use proto_messages::cosmos::ibc::{
     protobuf::Any,
     tx::MsgSubmitMisbehaviour,
-    types::{RawClientId, RawSigner},
 };
 
 use crate::types::{ClientId, Signer};
@@ -37,9 +36,9 @@ pub(super) fn tx_command_handler(
     };
 
     let raw_msg = MsgSubmitMisbehaviour {
-        client_id: RawClientId::from_str(&client_id.0)?,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(&client_id.0)?,
         misbehaviour,
-        signer: RawSigner::from(signer.0),
+        signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 
     Ok(crate::message::Message::SubmitMisbehaviour(raw_msg.into()))

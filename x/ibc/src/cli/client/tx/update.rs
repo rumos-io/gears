@@ -5,7 +5,6 @@ use prost::Message;
 use proto_messages::cosmos::ibc::{
     protobuf::Any,
     tx::MsgUpdateClient,
-    types::{RawClientId, RawSigner},
 };
 
 use crate::types::{ClientId, Signer};
@@ -35,9 +34,9 @@ pub(super) fn tx_command_handler(msg: CliUpdateClient) -> anyhow::Result<crate::
     };
 
     let raw_msg = MsgUpdateClient {
-        client_id: RawClientId::from_str(&client_id.0)?,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(&client_id.0)?,
         client_message: cl_msg,
-        signer: RawSigner::from(signer.0),
+        signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 
     Ok(crate::message::Message::ClientUpdate(raw_msg.into()))

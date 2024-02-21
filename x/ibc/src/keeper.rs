@@ -1,16 +1,7 @@
 use database::Database;
 use gears::{types::context::init_context::InitContext, x::params::ParamsSubspaceKey};
-use ibc::core::client::context::client_state::ClientStateValidation;
 use prost::Message;
-use proto_messages::cosmos::ibc::types::{
-    client_state::{ClientStateCommon, ClientStateExecution},
-    tendermint::{informal::Event, RawConsensusState},
-    types::events::{
-        CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
-        CREATE_CLIENT_EVENT,
-    },
-    ClientError, ClientType, IdentifierError, RawClientId,
-};
+use proto_messages::cosmos::ibc::types::{core::{client::{context::{client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation}, types::events::{CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT}}, error::ClientError}, host::{error::IdentifierError, identifiers::{ClientId, ClientType}}}, tendermint::{consensus_state::WrappedConsensusState, informal::Event}};
 use store::StoreKey;
 
 use crate::{
@@ -65,8 +56,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         client_state: impl ClientStateCommon
             + ClientStateExecution<InitContextShim<'a, 'b, DB, SK>>
             + ClientStateValidation<InitContextShim<'a, 'b, DB, SK>>,
-        consensus_state: RawConsensusState,
-    ) -> Result<RawClientId, ClientCreateError> {
+        consensus_state: WrappedConsensusState,
+    ) -> Result<ClientId, ClientCreateError> {
         let client_type = client_state.client_type();
         if client_type
             == ClientType::new("09-localhost")
@@ -118,12 +109,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &mut self,
         ctx: &mut InitContext<'_, DB, SK>,
         client_type: &ClientType,
-    ) -> Result<RawClientId, ClientCreateError> {
+    ) -> Result<ClientId, ClientCreateError> {
         let next_client_seq = self.next_client_sequence_get(ctx)?;
 
         self.next_client_sequence_set(ctx, next_client_seq + 1);
 
-        RawClientId::new(client_type.as_str(), next_client_seq)
+        ClientId::new(client_type.as_str(), next_client_seq)
             .map_err(ClientCreateError::IdentifierError)
     }
 

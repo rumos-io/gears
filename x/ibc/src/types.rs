@@ -1,13 +1,6 @@
 use database::Database;
 use gears::types::context::init_context::InitContext;
-use ibc::clients::tendermint::client_state::ClientState as WrappedTendermintClientState;
-use ibc::clients::tendermint::context::CommonContext;
-use ibc::core::client::context::{ClientExecutionContext, ClientValidationContext};
-use ibc::core::client::types::Height;
-use ibc::core::host::types::path::{ClientConsensusStatePath, ClientStatePath};
-use ibc::primitives::Timestamp;
-use proto_messages::cosmos::ibc::types::tendermint::RawConsensusState;
-use proto_messages::cosmos::ibc::types::{ClientError, ContextError, RawClientId};
+use proto_messages::cosmos::ibc::{protobuf::PrimitiveAny, types::{core::{channel::{channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment, PacketCommitment}, client::{context::{types::Height, ClientExecutionContext, ClientValidationContext}, error::ClientError}, commitment::CommitmentPrefix, connection::ConnectionEnd, handler::{error::ContextError, events::IbcEvent}, host::{identifiers::{ConnectionId, Sequence}, path::{AckPath, ChannelEndPath, ClientConnectionPath, ClientConsensusStatePath, ClientStatePath, CommitmentPath, ConnectionPath, ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath}}}, primitives::Timestamp, tendermint::{ consensus_state::WrappedConsensusState, context::CommonContext, WrappedTendermintClientState}}};
 use store::StoreKey;
 
 // TODO: try to find this const in external crates
@@ -77,9 +70,9 @@ impl From<InfallibleError> for ClientError {
     }
 }
 
-pub struct ConsensusState(pub RawConsensusState);
+pub struct ConsensusState(pub WrappedConsensusState);
 
-impl TryFrom<ConsensusState> for RawConsensusState {
+impl TryFrom<ConsensusState> for WrappedConsensusState {
     type Error = InfallibleError;
 
     fn try_from(value: ConsensusState) -> Result<Self, Self::Error> {
@@ -111,20 +104,20 @@ impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext
 
     fn consensus_state_heights(
         &self,
-        _client_id: &RawClientId,
+        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
     ) -> Result<Vec<Height>, ContextError> {
         todo!()
     }
 }
 
 impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
-    ibc::core::host::ValidationContext for InitContextShim<'a, 'b, DB, SK>
+proto_messages::cosmos::ibc::types::core::host::ValidationContext for InitContextShim<'a, 'b, DB, SK>
 {
     type V = Self;
 
     type E = Self;
 
-    type AnyConsensusState = RawConsensusState;
+    type AnyConsensusState = proto_messages::cosmos::ibc::types::tendermint::consensus_state::WrappedConsensusState;
 
     type AnyClientState = WrappedTendermintClientState;
 
@@ -132,13 +125,13 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
         todo!()
     }
 
-    fn client_state(&self, _client_id: &RawClientId) -> Result<Self::AnyClientState, ContextError> {
+    fn client_state(&self, _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId) -> Result<Self::AnyClientState, ContextError> {
         todo!()
     }
 
     fn decode_client_state(
         &self,
-        _client_state: ibc::primitives::proto::Any,
+        _client_state: PrimitiveAny,
     ) -> Result<Self::AnyClientState, ContextError> {
         todo!()
     }
@@ -171,19 +164,19 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn connection_end(
         &self,
-        _conn_id: &ibc::core::host::types::identifiers::ConnectionId,
-    ) -> Result<ibc::core::connection::types::ConnectionEnd, ContextError> {
+        _conn_id: &ConnectionId,
+    ) -> Result<ConnectionEnd, ContextError> {
         todo!()
     }
 
     fn validate_self_client(
         &self,
-        _client_state_of_host_on_counterparty: ibc::primitives::proto::Any,
+        _client_state_of_host_on_counterparty: PrimitiveAny,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
-    fn commitment_prefix(&self) -> proto_messages::cosmos::ibc::types::CommitmentPrefix {
+    fn commitment_prefix(&self) -> CommitmentPrefix {
         todo!()
     }
 
@@ -193,50 +186,50 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn channel_end(
         &self,
-        _channel_end_path: &ibc::core::host::types::path::ChannelEndPath,
-    ) -> Result<ibc::core::channel::types::channel::ChannelEnd, ContextError> {
+        _channel_end_path: &ChannelEndPath,
+    ) -> Result<ChannelEnd, ContextError> {
         todo!()
     }
 
     fn get_next_sequence_send(
         &self,
-        _seq_send_path: &ibc::core::host::types::path::SeqSendPath,
-    ) -> Result<ibc::core::host::types::identifiers::Sequence, ContextError> {
+        _seq_send_path: &SeqSendPath,
+    ) -> Result<Sequence, ContextError> {
         todo!()
     }
 
     fn get_next_sequence_recv(
         &self,
-        _seq_recv_path: &ibc::core::host::types::path::SeqRecvPath,
-    ) -> Result<ibc::core::host::types::identifiers::Sequence, ContextError> {
+        _seq_recv_path: &SeqRecvPath,
+    ) -> Result<Sequence, ContextError> {
         todo!()
     }
 
     fn get_next_sequence_ack(
         &self,
-        _seq_ack_path: &ibc::core::host::types::path::SeqAckPath,
-    ) -> Result<ibc::core::host::types::identifiers::Sequence, ContextError> {
+        _seq_ack_path: &SeqAckPath,
+    ) -> Result<Sequence, ContextError> {
         todo!()
     }
 
     fn get_packet_commitment(
         &self,
-        _commitment_path: &ibc::core::host::types::path::CommitmentPath,
-    ) -> Result<ibc::core::channel::types::commitment::PacketCommitment, ContextError> {
+        _commitment_path: &CommitmentPath,
+    ) -> Result<PacketCommitment, ContextError> {
         todo!()
     }
 
     fn get_packet_receipt(
         &self,
-        _receipt_path: &ibc::core::host::types::path::ReceiptPath,
-    ) -> Result<ibc::core::channel::types::packet::Receipt, ContextError> {
+        _receipt_path: &ReceiptPath,
+    ) -> Result<Receipt, ContextError> {
         todo!()
     }
 
     fn get_packet_acknowledgement(
         &self,
-        _ack_path: &ibc::core::host::types::path::AckPath,
-    ) -> Result<ibc::core::channel::types::commitment::AcknowledgementCommitment, ContextError>
+        _ack_path: &AckPath,
+    ) -> Result<AcknowledgementCommitment, ContextError>
     {
         todo!()
     }
@@ -251,14 +244,14 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn validate_message_signer(
         &self,
-        _signer: &ibc::primitives::Signer,
+        _signer: &proto_messages::cosmos::ibc::types::primitives::Signer,
     ) -> Result<(), ContextError> {
         todo!()
     }
 }
 
 impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
-    ibc::core::host::ExecutionContext for InitContextShim<'a, 'b, DB, SK>
+proto_messages::cosmos::ibc::types::core::host::ExecutionContext for InitContextShim<'a, 'b, DB, SK>
 {
     fn get_client_execution_context(&mut self) -> &mut Self::E {
         todo!()
@@ -270,16 +263,16 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn store_connection(
         &mut self,
-        _connection_path: &ibc::core::host::types::path::ConnectionPath,
-        _connection_end: ibc::core::connection::types::ConnectionEnd,
+        _connection_path: &ConnectionPath,
+        _connection_end: ConnectionEnd,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn store_connection_to_client(
         &mut self,
-        _client_connection_path: &ibc::core::host::types::path::ClientConnectionPath,
-        _conn_id: ibc::core::host::types::identifiers::ConnectionId,
+        _client_connection_path: &ClientConnectionPath,
+        _conn_id: ConnectionId,
     ) -> Result<(), ContextError> {
         todo!()
     }
@@ -290,70 +283,70 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn store_packet_commitment(
         &mut self,
-        _commitment_path: &ibc::core::host::types::path::CommitmentPath,
-        _commitment: ibc::core::channel::types::commitment::PacketCommitment,
+        _commitment_path: &CommitmentPath,
+        _commitment: PacketCommitment,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn delete_packet_commitment(
         &mut self,
-        _commitment_path: &ibc::core::host::types::path::CommitmentPath,
+        _commitment_path: &CommitmentPath,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn store_packet_receipt(
         &mut self,
-        _receipt_path: &ibc::core::host::types::path::ReceiptPath,
-        _receipt: ibc::core::channel::types::packet::Receipt,
+        _receipt_path: &ReceiptPath,
+        _receipt: Receipt,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn store_packet_acknowledgement(
         &mut self,
-        _ack_path: &ibc::core::host::types::path::AckPath,
-        _ack_commitment: ibc::core::channel::types::commitment::AcknowledgementCommitment,
+        _ack_path: &AckPath,
+        _ack_commitment: AcknowledgementCommitment,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn delete_packet_acknowledgement(
         &mut self,
-        _ack_path: &ibc::core::host::types::path::AckPath,
+        _ack_path: &AckPath,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn store_channel(
         &mut self,
-        _channel_end_path: &ibc::core::host::types::path::ChannelEndPath,
-        _channel_end: ibc::core::channel::types::channel::ChannelEnd,
+        _channel_end_path: &ChannelEndPath,
+        _channel_end: ChannelEnd,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn store_next_sequence_send(
         &mut self,
-        _seq_send_path: &ibc::core::host::types::path::SeqSendPath,
-        _seq: ibc::core::host::types::identifiers::Sequence,
+        _seq_send_path: &SeqSendPath,
+        _seq: Sequence,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn store_next_sequence_recv(
         &mut self,
-        _seq_recv_path: &ibc::core::host::types::path::SeqRecvPath,
-        _seq: ibc::core::host::types::identifiers::Sequence,
+        _seq_recv_path: &SeqRecvPath,
+        _seq: Sequence,
     ) -> Result<(), ContextError> {
         todo!()
     }
 
     fn store_next_sequence_ack(
         &mut self,
-        _seq_ack_path: &ibc::core::host::types::path::SeqAckPath,
-        _seq: ibc::core::host::types::identifiers::Sequence,
+        _seq_ack_path: &SeqAckPath,
+        _seq: Sequence,
     ) -> Result<(), ContextError> {
         todo!()
     }
@@ -364,7 +357,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn emit_ibc_event(
         &mut self,
-        _event: proto_messages::cosmos::ibc::types::IbcEvent,
+        _event: IbcEvent,
     ) -> Result<(), ContextError> {
         todo!()
     }
@@ -381,7 +374,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     type AnyClientState = WrappedTendermintClientState;
 
-    type AnyConsensusState = RawConsensusState;
+    type AnyConsensusState = WrappedConsensusState;
 
     fn store_client_state(
         &mut self,
@@ -408,7 +401,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn store_update_time(
         &mut self,
-        _client_id: RawClientId,
+        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: Height,
         _host_timestamp: Timestamp,
     ) -> Result<(), ContextError> {
@@ -417,7 +410,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn store_update_height(
         &mut self,
-        _client_id: RawClientId,
+        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: Height,
         _host_height: Height,
     ) -> Result<(), ContextError> {
@@ -426,7 +419,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn delete_update_time(
         &mut self,
-        _client_id: RawClientId,
+        _client_id:proto_messages::cosmos::ibc::types::core::host::identifiers:: ClientId,
         _height: Height,
     ) -> Result<(), ContextError> {
         todo!()
@@ -434,7 +427,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn delete_update_height(
         &mut self,
-        _client_id: RawClientId,
+        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: Height,
     ) -> Result<(), ContextError> {
         todo!()
@@ -446,7 +439,7 @@ impl<DB: Database, SK: StoreKey> ClientValidationContext
 {
     fn client_update_time(
         &self,
-        _client_id: &RawClientId,
+        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Timestamp, ContextError> {
         todo!()
@@ -454,7 +447,7 @@ impl<DB: Database, SK: StoreKey> ClientValidationContext
 
     fn client_update_height(
         &self,
-        _client_id: &RawClientId,
+        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Height, ContextError> {
         todo!()
@@ -462,11 +455,11 @@ impl<DB: Database, SK: StoreKey> ClientValidationContext
 }
 
 impl<'a, 'b, DB: Database, SK: StoreKey>
-    ibc::clients::tendermint::context::ValidationContext for InitContextShim<'a, 'b, DB, SK>
+proto_messages::cosmos::ibc::types::tendermint::context::ValidationContext for InitContextShim<'a, 'b, DB, SK>
 {
     fn next_consensus_state(
         &self,
-        _client_id: &RawClientId,
+        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Option<Self::AnyConsensusState>, ContextError> {
         todo!()
@@ -474,7 +467,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey>
 
     fn prev_consensus_state(
         &self,
-        _client_id: &RawClientId,
+        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Option<Self::AnyConsensusState>, ContextError> {
         todo!()

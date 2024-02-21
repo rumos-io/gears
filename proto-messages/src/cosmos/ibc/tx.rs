@@ -8,7 +8,10 @@ pub use ibc_proto::cosmos::tx::v1beta1::{
 };
 
 use crate::cosmos::ibc::protobuf::Any;
-use crate::cosmos::ibc::types::{tendermint::RawConsensusState, RawClientId, RawSigner};
+use crate::cosmos::ibc::types::tendermint::consensus_state::RawConsensusState;
+
+use ibc::core::host::types::identifiers::ClientId as RawClientId;
+use ibc::primitives::Signer as RawSigner;
 
 pub use ibc::core::client::types::msgs::MsgCreateClient as RawMsgCreateClient;
 pub use ibc::core::client::types::msgs::MsgSubmitMisbehaviour as RawMsgSubmitMisbehaviour;
