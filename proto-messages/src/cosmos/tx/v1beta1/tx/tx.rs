@@ -131,6 +131,7 @@ impl<M: Message> TryFrom<RawTx> for Tx<M> {
                 signature: signature.clone(),
                 // the check above, tx.signatures.len() != tx.auth_info.signer_infos.len(), ensures that this indexing is safe
                 sequence: auth_info.signer_infos[i].sequence,
+                mode_info: auth_info.signer_infos[i].mode_info.clone(),
             })
         }
 

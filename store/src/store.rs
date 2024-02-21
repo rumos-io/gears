@@ -141,7 +141,11 @@ impl<DB: Database> KVStoreTrait for KVStore<DB> {
 impl<DB: Database> KVStore<DB> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
         Ok(KVStore {
-            persistent_store: Tree::new(db, target_version, TREE_CACHE_SIZE)?,
+            persistent_store: Tree::new(
+                db,
+                target_version,
+                TREE_CACHE_SIZE.try_into().expect("tree cache size is > 0"),
+            )?,
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         })

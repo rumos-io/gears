@@ -1,4 +1,4 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     screen::{Content, Screen},
@@ -8,10 +8,10 @@ use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for SignerData {
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerData {
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let mut screens = vec![
             Screen {
@@ -40,10 +40,7 @@ impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK>
             },
         ];
 
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-            &self.pub_key,
-            ctx,
-        )?);
+        screens.append(&mut ValueRenderer::<SK, DB>::format(&self.pub_key, ctx)?);
 
         Ok(screens)
     }
@@ -56,16 +53,14 @@ mod tests {
         screen::{Content, Indent, Screen},
         signer_data::{ChainId, SignerData},
     };
+    use proto_types::AccAddress;
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn signer_data_formating() -> anyhow::Result<()> {
         let signer_data = SignerData {
-            address: "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs".to_string(),
+            address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
             chain_id: ChainId::new("my-chain".to_string())?,
             account_number: 1,
             sequence: 2,
@@ -121,9 +116,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&signer_data, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&signer_data, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
 

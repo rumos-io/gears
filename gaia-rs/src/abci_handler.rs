@@ -1,6 +1,6 @@
-use auth::Keeper as AuthKeeper;
+use auth::{ante::BaseAnteHandler, Keeper as AuthKeeper};
 use bank::Keeper as BankKeeper;
-use gears::{baseapp::ante::BaseAnteHandler, config::Config, x::params::Keeper as ParamsKeeper};
+use gears::{config::Config, x::params::Keeper as ParamsKeeper};
 use tendermint::proto::abci::RequestQuery;
 
 use database::Database;

@@ -56,8 +56,6 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
             display: "ATOM".into(),
             name: String::new(),
             symbol: String::new(),
-            uri: String::new(),
-            uri_hash: None,
         }
     }
 

@@ -61,8 +61,6 @@ pub(super) mod test_mocks {
                 display: "ATOM".into(),
                 name: String::new(),
                 symbol: String::new(),
-                uri: String::new(),
-                uri_hash: None,
             }
         }
         fn get_kv_store(&self, _store_key: &SK) -> &store::KVStore<PrefixDB<T>> {

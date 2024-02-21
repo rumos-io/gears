@@ -156,4 +156,14 @@ mod tests {
             "7c2bb42a8be69791ec763e51f5a49bcd41e82237"
         )
     }
+
+    #[test]
+    fn deserialize_works() {
+        let _: PubKey = serde_json::from_str(
+            r#"{
+            "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
+        }"#,
+        )
+        .unwrap();
+    }
 }

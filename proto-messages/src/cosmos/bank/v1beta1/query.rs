@@ -4,15 +4,24 @@ use ibc_proto::{
         QueryAllBalancesResponse as RawQueryAllBalancesResponse,
         QueryBalanceRequest as RawQueryBalanceRequest,
         QueryBalanceResponse as RawQueryBalanceResponse,
+        QueryDenomMetadataRequest as RawQueryDenomMetadataRequest,
         QueryTotalSupplyResponse as RawQueryTotalSupplyResponse,
     },
-    cosmos::base::v1beta1::Coin as RawCoin,
+    cosmos::base::{query::v1beta1::PageResponse, v1beta1::Coin as RawCoin},
     protobuf::Protobuf,
 };
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
-use crate::{cosmos::base::v1beta1::Coin, Error};
+use crate::{
+    cosmos::{
+        base::v1beta1::Coin,
+        tx::v1beta1::tx_metadata::{Metadata, RawMetadata},
+    },
+    Error,
+};
+
+pub use ibc_proto::cosmos::bank::v1beta1::QueryDenomsMetadataRequest;
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
 #[derive(Clone, PartialEq)]
@@ -185,3 +194,119 @@ impl From<QueryTotalSupplyResponse> for RawQueryTotalSupplyResponse {
 }
 
 impl Protobuf<RawQueryTotalSupplyResponse> for QueryTotalSupplyResponse {}
+
+/// We use our own version of the DenomsMetadataResponse struct because the
+/// Metadata struct in ibc_proto has additional fields that were added in SDK
+/// v46 (uri and uri_hash).
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct RawQueryDenomsMetadataResponse {
+    /// metadata provides the client information for all the registered tokens.
+    #[prost(message, repeated, tag = "1")]
+    pub metadatas: ::prost::alloc::vec::Vec<RawMetadata>,
+    /// pagination defines the pagination in the response.
+    #[prost(message, optional, tag = "2")]
+    pub pagination: ::core::option::Option<PageResponse>,
+}
+
+/// QueryDenomsMetadataResponse is the response type for the
+/// Query/DenomsMetadata RPC method.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct QueryDenomsMetadataResponse {
+    // metadata provides the client information for all the registered tokens.
+    pub metadatas: Vec<Metadata>,
+    // pagination defines the pagination in the response.
+    pub pagination: ::core::option::Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
+}
+
+impl TryFrom<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse {
+    type Error = Error;
+
+    fn try_from(raw: RawQueryDenomsMetadataResponse) -> Result<Self, Self::Error> {
+        let metadatas: Result<Vec<Metadata>, Error> =
+            raw.metadatas.into_iter().map(Metadata::try_from).collect();
+        Ok(QueryDenomsMetadataResponse {
+            metadatas: metadatas?,
+            pagination: raw.pagination,
+        })
+    }
+}
+
+impl From<QueryDenomsMetadataResponse> for RawQueryDenomsMetadataResponse {
+    fn from(query: QueryDenomsMetadataResponse) -> RawQueryDenomsMetadataResponse {
+        RawQueryDenomsMetadataResponse {
+            metadatas: query.metadatas.into_iter().map(RawMetadata::from).collect(),
+            pagination: query.pagination,
+        }
+    }
+}
+
+impl Protobuf<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse {}
+
+#[derive(Clone, PartialEq)]
+pub struct QueryDenomMetadataRequest {
+    /// denom is the coin denom to query balances for.
+    pub denom: proto_types::Denom,
+}
+
+impl TryFrom<RawQueryDenomMetadataRequest> for QueryDenomMetadataRequest {
+    type Error = Error;
+
+    fn try_from(raw: RawQueryDenomMetadataRequest) -> Result<Self, Self::Error> {
+        let denom = raw
+            .denom
+            .try_into()
+            .map_err(|_| Error::Coin(String::from("invalid denom")))?;
+
+        Ok(QueryDenomMetadataRequest { denom })
+    }
+}
+
+impl From<QueryDenomMetadataRequest> for RawQueryDenomMetadataRequest {
+    fn from(query: QueryDenomMetadataRequest) -> RawQueryDenomMetadataRequest {
+        RawQueryDenomMetadataRequest {
+            denom: query.denom.to_string(),
+        }
+    }
+}
+
+impl Protobuf<RawQueryDenomMetadataRequest> for QueryDenomMetadataRequest {}
+
+/// We use our own version of the QueryDenomMetadataResponse struct because the
+/// Metadata struct in ibc_proto has additional fields that were added in SDK
+/// v46 (uri and uri_hash).
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct RawQueryDenomMetadataResponse {
+    /// metadata describes and provides all the client information for the requested token.
+    #[prost(message, optional, tag = "1")]
+    pub metadata: Option<RawMetadata>,
+}
+
+#[derive(Clone)]
+pub struct QueryDenomMetadataResponse {
+    /// metadata describes and provides all the client information for the requested token.
+    pub metadata: Option<Metadata>,
+}
+
+impl TryFrom<RawQueryDenomMetadataResponse> for QueryDenomMetadataResponse {
+    type Error = Error;
+
+    fn try_from(raw: RawQueryDenomMetadataResponse) -> Result<Self, Self::Error> {
+        let metadata = raw
+            .metadata
+            .map(Metadata::try_from)
+            .transpose()
+            .map_err(|_| Error::Coin(String::from("invalid metadata")))?;
+
+        Ok(QueryDenomMetadataResponse { metadata })
+    }
+}
+
+impl From<QueryDenomMetadataResponse> for RawQueryDenomMetadataResponse {
+    fn from(query: QueryDenomMetadataResponse) -> RawQueryDenomMetadataResponse {
+        RawQueryDenomMetadataResponse {
+            metadata: query.metadata.map(RawMetadata::from),
+        }
+    }
+}
+
+impl Protobuf<RawQueryDenomMetadataResponse> for QueryDenomMetadataResponse {}
