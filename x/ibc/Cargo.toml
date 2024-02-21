@@ -13,6 +13,9 @@ store = { path = "../../store" }
 gears = { path = "../../gears" }
 database = { path = "../../database" }
 
+#newtypes
+ibc = "0.50.0"
+
 #serialization
 serde = { version = "1.0", default-features = false }
 serde_json = "1.0.93"
@@ -23,3 +26,7 @@ schemars = "0.8.16"
 clap = { version = "4.2.2", features = ["derive"] }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+
+
+#to remove
+strum = {version = "0.25", features = ["derive"]}

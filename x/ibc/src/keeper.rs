@@ -1,28 +1,26 @@
 use database::Database;
 use gears::{types::context::init_context::InitContext, x::params::ParamsSubspaceKey};
+use ibc::core::client::context::client_state::ClientStateValidation;
 use prost::Message;
-use proto_messages::cosmos::ibc::{
-    tx::MsgCreateClient,
-    types::{
-        client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
-        types::events::{
-            CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
-            CREATE_CLIENT_EVENT,
-        },
-        ClientError, ClientExecutionContext, ClientType, Event, EventAttribute, IdentifierError,
-        RawClientId,
+use proto_messages::cosmos::ibc::types::{
+    client_state::{ClientStateCommon, ClientStateExecution},
+    tendermint::{informal::Event, RawConsensusState},
+    types::events::{
+        CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
+        CREATE_CLIENT_EVENT,
     },
+    ClientError, ClientType, IdentifierError, RawClientId,
 };
 use store::StoreKey;
 
 use crate::{
     params::{self, AbciParamsKeeper, Params, ParamsError, RawParams},
-    types::{ClientStore, InitContextShim},
+    types::InitContextShim,
 };
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    store_key: SK,
+    _store_key: SK,
     params_keeper: AbciParamsKeeper<SK, PSK>,
     // auth_keeper: auth::Keeper<SK, PSK>,
 }
@@ -56,24 +54,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             params_subspace_key,
         };
         Keeper {
-            store_key,
+            _store_key : store_key,
             params_keeper: abci_params_keeper,
         }
     }
 
-    pub fn client_create<DB: Database + Send + Sync, E: ClientExecutionContext>(
+    pub fn client_create<'a, 'b, DB: Database + Send + Sync>(
         &mut self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        msg: MsgCreateClient,
-        // client_state: impl ClientStateCommon + ClientStateExecution<E>,
-        // consensus_state: RawConsensusState,
+        ctx: &'a mut InitContext<'b, DB, SK>,
+        client_state: impl ClientStateCommon
+            + ClientStateExecution<InitContextShim<'a, 'b, DB, SK>>
+            + ClientStateValidation<InitContextShim<'a, 'b, DB, SK>>,
+        consensus_state: RawConsensusState,
     ) -> Result<RawClientId, ClientCreateError> {
-        let MsgCreateClient {
-            client_state,
-            consensus_state,
-            signer: _signer, // TODO: is it okay to ignore this field?
-        } = msg;
-
         let client_type = client_state.client_type();
         if client_type
             == ClientType::new("09-localhost")
@@ -90,14 +83,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let client_id = self.client_indentifier_generate(ctx, &client_type)?;
 
-        // let client_store = ClientStore(ctx.get_mutable_kv_store(&self.store_key));
-        // {
-        //     let mut ctx = InitContextShim(ctx);
-
-        //     client_store.initialise(&mut ctx, &client_id, consensus_state.into())?;
-        //     client_store.status(&mut ctx, &client_id);
-        // }
-
+        // TODO: Is this okay to create events before rest of code?
         ctx.append_events(vec![
             Event::new(
                 CREATE_CLIENT_EVENT,
@@ -113,10 +99,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             Event::new(
                 "message",
                 [
-                    (crate::types::ATTRIBUTE_KEY_MODULE, "ibc_client"), // TODO
+                    (crate::types::ATTRIBUTE_KEY_MODULE, "ibc_client"), // TODO: const
                 ],
             ),
         ]);
+
+        {
+            let mut ctx = InitContextShim(ctx);
+
+            client_state.initialise(&mut ctx, &client_id, consensus_state.into())?;
+            client_state.status(&mut ctx, &client_id)?;
+        }
 
         Ok(client_id)
     }

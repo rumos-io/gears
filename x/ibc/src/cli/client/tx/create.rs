@@ -4,7 +4,7 @@ use clap::Args;
 use proto_messages::cosmos::ibc::{
     protobuf::{PrimitiveAny, PrimitiveProtobuf},
     tx::MsgCreateClient,
-    types::{RawConsensusState, RawSigner},
+    types::{tendermint::RawConsensusState, RawSigner},
 };
 
 use crate::types::Signer;

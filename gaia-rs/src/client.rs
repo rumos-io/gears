@@ -16,13 +16,13 @@ pub enum Commands {
     /// Bank transaction subcommands
     Bank(Cli),
     /// IBC transaction subcommands
-    IBC( IbcCli ),
+    IBC(IbcCli),
 }
 
 pub fn tx_command_handler(command: Commands, from_address: AccAddress) -> Result<Message> {
     match command {
         Commands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
-        Commands::IBC( args ) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
+        Commands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
     }
 }
 

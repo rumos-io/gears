@@ -5,7 +5,7 @@ use prost::Message;
 use proto_messages::cosmos::ibc::{
     protobuf::Any,
     tx::MsgUpgradeClient,
-    types::{RawClientId, RawCommitmentProofBytes, RawSigner},
+    types::{tendermint::RawCommitmentProofBytes, RawClientId, RawSigner},
 };
 
 use crate::types::{ClientId, Signer};
