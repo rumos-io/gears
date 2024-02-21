@@ -26,16 +26,6 @@ pub struct MultiStore<DB, SK> {
     pub(crate) stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
 }
 
-impl<DB: Database, SK: StoreKey> AnyStoreReadTrait<DB, SK> for MultiStore<DB, SK> {
-    fn get_any_store(&self, store_key: &SK) -> crate::AnyKVStore<'_, PrefixDB<DB>> {
-        AnyKVStore::KVStore(
-            self.stores
-                .get(store_key)
-                .expect("a store for every key is guaranteed to exist"),
-        )
-    }
-}
-
 pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
 }
@@ -146,17 +136,6 @@ impl<DB: Database> KVStoreTrait for KVStore<DB> {
 
         tx_cache_val.cloned()
     }
-
-    fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>) {
-        let key: Vec<u8> = key.into_iter().collect();
-
-        if key.is_empty() {
-            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
-            panic!("key is empty")
-        }
-
-        self.tx_cache.insert(key, value.into_iter().collect());
-    }
 }
 
 impl<DB: Database> KVStore<DB> {
@@ -197,6 +176,17 @@ impl<DB: Database> KVStore<DB> {
         // );
 
         self.persistent_store.range(range)
+    }
+
+    pub fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>) {
+        let key: Vec<u8> = key.into_iter().collect();
+
+        if key.is_empty() {
+            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
+            panic!("key is empty")
+        }
+
+        self.tx_cache.insert(key, value.into_iter().collect());
     }
 
     /// Writes tx cache into block cache then clears the tx cache
@@ -253,13 +243,7 @@ impl<DB: Database> KVStore<DB> {
 /// Equivalent to [`BasicKVStore`](https://docs.cosmos.network/v0.46/core/store.html#base-layer-kvstores) from cosmos
 pub trait KVStoreTrait {
     fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>>;
-    // fn contains( &self, k : &impl AsRef<[u8]>) -> bool;
-    fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>);
-    // fn delete( &mut self, k : &impl AsRef<[u8]> );
-}
-
-pub trait AnyStoreReadTrait<DB: Database, SK> {
-    fn get_any_store(&self, store_key: &SK) -> AnyKVStore<'_, PrefixDB<DB>>;
+    // TODO: range after PR merge
 }
 
 pub enum AnyKVStore<'a, DB: Database> {
