@@ -4,7 +4,8 @@ use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
 use proto_messages::cosmos::bank::v1beta1::{
-    QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse,
+    QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,
+    QueryTotalSupplyResponse,
 };
 use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use store::StoreKey;
@@ -55,7 +56,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
                 Ok(self.keeper.query_balance(ctx, req).encode_vec().into())
             }
-
+            "/cosmos.bank.v1beta1.Query/DenomsMetadata" => {
+                Ok(self.keeper.query_denoms_metadata(ctx).encode_vec().into())
+            }
+            "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
+                let req = QueryDenomMetadataRequest::decode(query.data)?;
+                Ok(self
+                    .keeper
+                    .query_denom_metadata(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
     }

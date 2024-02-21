@@ -1,4 +1,4 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     ibc_types::protobuf::Protobuf,
@@ -12,12 +12,12 @@ use store::StoreKey;
 
 use crate::signing::{hasher::hash_get, renderer::value_renderer::ValueRenderer};
 
-impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValueRenderer, SK>>
-    ValueRenderer<DefaultValueRenderer, SK> for TextualData<M>
+impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRenderer<SK, DB>
+    for TextualData<M>
 {
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let TextualData {
             body,
@@ -30,10 +30,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
         let mut screens = Vec::<Screen>::new();
 
         // =========================
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-            signer_data,
-            ctx,
-        )?);
+        screens.append(&mut ValueRenderer::<SK, DB>::format(signer_data, ctx)?);
 
         // Transaction message section
         screens.push(Screen {
@@ -53,9 +50,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
                 indent: Some(Indent::new(1)?),
                 expert: false,
             });
-            screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-                ms, ctx,
-            )?);
+            screens.append(&mut ValueRenderer::<SK, DB>::format(ms, ctx)?);
         }
         screens.push(Screen {
             title: String::new(),
@@ -73,9 +68,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
         }
 
         // =========================
-        screens.append(&mut ValueRenderer::<DefaultValueRenderer, SK>::format(
-            auth_info, ctx,
-        )?);
+        screens.append(&mut ValueRenderer::<SK, DB>::format(auth_info, ctx)?);
 
         // =========================
         let body_bytes = body.encode_vec();
@@ -96,7 +89,7 @@ impl<DefaultValueRenderer, SK: StoreKey, M: Message + ValueRenderer<DefaultValue
 mod tests {
     use bnum::types::U256;
     use gears::types::context::context::Context;
-    use proto_messages::cosmos::ibc_types::tx::{ModeInfo, Single, Sum};
+    use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
     use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
     use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
     use proto_messages::cosmos::{
@@ -113,10 +106,7 @@ mod tests {
     };
     use proto_types::{AccAddress, Denom};
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn textual_data_formatting() -> anyhow::Result<()> {
@@ -128,9 +118,8 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actuals_screens =
-            ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&data, &context)
-                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&data, &context)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         if expected_screens != actuals_screens {
             let expected = serde_json::to_string(&expected_screens)?;
@@ -149,10 +138,8 @@ mod tests {
                         "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                     }"#,
             )?),
-            // 2 represents SignMode_SIGN_MODE_TEXTUAL
-            mode_info: Some(ModeInfo {
-                sum: Some(Sum::Single(Single { mode: 2 })),
-            }),
+
+            mode_info: ModeInfo::Single(SignMode::Textual),
             sequence: 2,
         };
 
@@ -174,7 +161,7 @@ mod tests {
         };
 
         let signer_data = SignerData {
-            address: "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs".to_string(),
+            address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
             chain_id: ChainId::new("my-chain".to_string())?,
             account_number: 1,
             sequence: 2,
@@ -209,7 +196,6 @@ mod tests {
         let tx_data = TxData::<MsgSend> {
             body: tx_body,
             auth_info: auth_info,
-            body_has_unknown_non_criticals: false,
         };
 
         let data = TextualData::new(signer_data, tx_data)?;

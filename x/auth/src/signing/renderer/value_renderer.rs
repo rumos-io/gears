@@ -2,11 +2,9 @@
 
 use std::error::Error;
 
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
-use proto_messages::cosmos::tx::v1beta1::{
-    message::Message, screen::Screen, textual_data::TextualData,
-};
+use proto_messages::cosmos::tx::v1beta1::screen::Screen;
 use store::StoreKey;
 
 /// Render primitive type into content for `Screen`.
@@ -20,14 +18,9 @@ pub trait PrimitiveValueRenderer<V> {
 }
 
 /// The notion of "value renderer" is defined in ADR-050.
-pub trait ValueRenderer<VR, SK: StoreKey> {
+pub trait ValueRenderer<SK: StoreKey, DB: Database> {
     /// Format renders the Protobuf value to a list of Screens.
-    fn format(&self, ctx: &Context<'_, '_, RocksDB, SK>) -> Result<Vec<Screen>, Box<dyn Error>>;
-}
-
-/// Context is "renderable" into `Screen`.
-pub trait ContextRenderer<CR, VR, SK: StoreKey, M: Message + ValueRenderer<VR, SK>> {
-    fn format(&self, value: TextualData<M>) -> Result<Vec<Screen>, Box<dyn Error>>;
+    fn format(&self, ctx: &Context<'_, '_, DB, SK>) -> Result<Vec<Screen>, Box<dyn Error>>;
 }
 
 /// Static structure which implement trait for formatting primitive types
@@ -37,6 +30,3 @@ pub struct DefaultPrimitiveRenderer;
 /// Static structure which implement trait for formatting messages
 /// like `Coin` or `Tx<M : Message>`
 pub struct DefaultValueRenderer;
-
-/// Static structure which implement trait for formatting context
-pub struct DefaultContextRenderer;

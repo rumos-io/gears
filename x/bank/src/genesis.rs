@@ -1,4 +1,4 @@
-use proto_messages::cosmos::base::v1beta1::SendCoins;
+use proto_messages::cosmos::{base::v1beta1::SendCoins, tx::v1beta1::tx_metadata::Metadata};
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +9,7 @@ use crate::Params;
 pub struct GenesisState {
     pub balances: Vec<Balance>,
     pub params: Params,
+    pub denom_metadata: Vec<Metadata>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
@@ -24,6 +25,7 @@ impl Default for GenesisState {
             params: Params {
                 default_send_enabled: true,
             },
+            denom_metadata: vec![],
         }
     }
 }
