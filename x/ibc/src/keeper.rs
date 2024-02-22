@@ -1,29 +1,24 @@
 use database::Database;
-use gears::{types::context::init_context::InitContext, x::params::ParamsSubspaceKey};
+use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
 use prost::Message;
 use proto_messages::cosmos::ibc::types::{
     core::{
-        client::{
-            context::{
-                client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
-                types::events::{
-                    CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY,
-                    CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT,
-                },
+        client::context::{
+            client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
+            types::events::{
+                CLIENT_ID_ATTRIBUTE_KEY, CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
+                CREATE_CLIENT_EVENT,
             },
-            error::ClientError,
         },
-        host::{
-            error::IdentifierError,
-            identifiers::{ClientId, ClientType},
-        },
+        host::identifiers::{ClientId, ClientType},
     },
     tendermint::{consensus_state::WrappedConsensusState, informal::Event},
 };
 use store::StoreKey;
 
 use crate::{
-    params::{self, AbciParamsKeeper, Params, ParamsError, RawParams},
+    errors::ClientCreateError,
+    params::{self, AbciParamsKeeper, Params, RawParams},
     types::InitContextShim,
 };
 
@@ -32,24 +27,6 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     _store_key: SK,
     params_keeper: AbciParamsKeeper<SK, PSK>,
     // auth_keeper: auth::Keeper<SK, PSK>,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ClientCreateError {
-    #[error("cannot create client of type: {0}")]
-    InvalidType(ClientType),
-    #[error("client state type {0} is not registered in the allowlist")]
-    NotAllowed(ClientType),
-    #[error("{0}")]
-    ParamsError(#[from] ParamsError),
-    #[error("Decode error: {0}")]
-    DecodeError(#[from] prost::DecodeError),
-    #[error("{0}")]
-    IdentifierError(#[from] IdentifierError),
-    #[error("{0}")]
-    ClientError(#[from] ClientError),
-    #[error("Unexpected error: {0}")]
-    CustomError(String),
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
@@ -70,10 +47,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn client_create<'a, 'b, DB: Database + Send + Sync>(
         &mut self,
-        ctx: &'a mut InitContext<'b, DB, SK>,
-        client_state: impl ClientStateCommon
-            + ClientStateExecution<InitContextShim<'a, 'b, DB, SK>>
-            + ClientStateValidation<InitContextShim<'a, 'b, DB, SK>>,
+        ctx: &'a mut TxContext<'b, DB, SK>,
+        client_state: &(impl ClientStateCommon
+              + ClientStateExecution<InitContextShim<'a, 'b, DB, SK>>
+              + ClientStateValidation<InitContextShim<'a, 'b, DB, SK>>),
         consensus_state: WrappedConsensusState,
     ) -> Result<ClientId, ClientCreateError> {
         let client_type = client_state.client_type();
@@ -126,7 +103,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     fn client_indentifier_generate<DB: Database>(
         &mut self,
-        ctx: &mut InitContext<'_, DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
         client_type: &ClientType,
     ) -> Result<ClientId, ClientCreateError> {
         let next_client_seq = self.next_client_sequence_get(ctx)?;
@@ -139,10 +116,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     fn next_client_sequence_set<DB: Database>(
         &mut self,
-        ctx: &mut InitContext<'_, DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
         sequence: u64,
     ) {
-        let mut ctx = gears::types::context::context::Context::InitContext(ctx);
+        let mut ctx = gears::types::context::context::Context::TxContext(ctx);
         self.params_keeper.set(
             &mut ctx,
             params::NEXT_CLIENT_SEQUENCE.as_bytes().into_iter().cloned(),
@@ -152,9 +129,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     fn next_client_sequence_get<DB: Database>(
         &self,
-        ctx: &mut InitContext<'_, DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
     ) -> Result<u64, ClientCreateError> {
-        let ctx = gears::types::context::context::Context::InitContext(ctx);
+        let ctx = gears::types::context::context::Context::TxContext(ctx);
         let bytes = self
             .params_keeper
             .get(&ctx, &params::NEXT_CLIENT_SEQUENCE)?;
@@ -175,9 +152,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     fn params_get<DB: Database>(
         &self,
-        ctx: &mut InitContext<'_, DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
     ) -> Result<Params, ClientCreateError> {
-        let ctx = gears::types::context::context::Context::InitContext(ctx);
+        let ctx = gears::types::context::context::Context::TxContext(ctx);
         let bytes = self.params_keeper.get(&ctx, &params::CLIENT_PARAMS_KEY)?;
 
         Ok(RawParams::decode(bytes.as_slice())?.into())

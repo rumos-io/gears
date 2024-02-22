@@ -145,7 +145,7 @@ impl From<RawMsgSubmitMisbehaviour> for MsgSubmitMisbehaviour {
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MsgCreateClient {
-    pub client_state: RawConsensusState,
+    pub client_state: ibc::clients::tendermint::client_state::ClientState,
     pub consensus_state: RawConsensusState,
     pub signer: RawSigner, // TODO: Is validation required?
 }

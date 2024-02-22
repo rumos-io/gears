@@ -4,7 +4,7 @@ use clap::Args;
 use proto_messages::cosmos::ibc::{
     protobuf::{PrimitiveAny, PrimitiveProtobuf},
     tx::MsgCreateClient,
-    types::tendermint::consensus_state::RawConsensusState,
+    types::tendermint::{consensus_state::RawConsensusState, WrappedTendermintClientState},
 };
 
 use crate::types::Signer;
@@ -25,12 +25,12 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
 
     let mut buffer = Vec::<u8>::new();
 
-    let client_state_result = serde_json::from_str::<RawConsensusState>(&client_state);
+    let client_state_result = serde_json::from_str::<WrappedTendermintClientState>(&client_state);
     let client_state = if let Ok(client_state) = client_state_result {
         client_state
     } else {
         File::open(client_state)?.read_to_end(&mut buffer)?;
-        <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?
+        <WrappedTendermintClientState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?
         // TODO: Should decode as protobuf or with serde?
     };
 

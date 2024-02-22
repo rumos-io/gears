@@ -1,5 +1,5 @@
 use database::Database;
-use gears::types::context::init_context::InitContext;
+use gears::types::context::tx_context::TxContext;
 use proto_messages::cosmos::ibc::{
     protobuf::PrimitiveAny,
     types::{
@@ -75,12 +75,12 @@ impl From<&str> for Signer {
     }
 }
 
-pub struct InitContextShim<'a, 'b, DB, SK>(pub &'a mut InitContext<'b, DB, SK>); // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
+pub struct InitContextShim<'a, 'b, DB, SK>(pub &'a mut TxContext<'b, DB, SK>); // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
 
 impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
-    From<&'a mut InitContext<'b, DB, SK>> for InitContextShim<'a, 'b, DB, SK>
+    From<&'a mut TxContext<'b, DB, SK>> for InitContextShim<'a, 'b, DB, SK>
 {
-    fn from(value: &'a mut InitContext<'b, DB, SK>) -> Self {
+    fn from(value: &'a mut TxContext<'b, DB, SK>) -> Self {
         Self(value)
     }
 }
@@ -178,7 +178,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     }
 
     fn host_timestamp(&self) -> Result<Timestamp, ContextError> {
-        todo!()
+        unimplemented!() // TODO: Implement
     }
 
     fn host_consensus_state(
