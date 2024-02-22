@@ -8,13 +8,12 @@ use database::Database;
 use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
+use gears::types::context::read_context::ReadContext;
 use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
-use proto_messages::cosmos::bank::v1beta1::{
-    QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataResponse,
-};
+use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
 use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::{
@@ -59,6 +58,23 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
         };
 
         self.send_coins(ctx, msg)
+    }
+
+    fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
+        &self,
+        ctx: &CTX,
+        base: Denom,
+    ) -> Option<Metadata> {
+        let bank_store = ctx.get_kv_store(&self.store_key);
+        let denom_metadata_store =
+            bank_store.get_immutable_prefix_store(denom_metadata_key(base.to_string()));
+
+        denom_metadata_store
+            .get(&base.to_string().into_bytes())
+            .map(|metadata| {
+                Metadata::decode::<&[u8]>(&metadata)
+                    .expect("invalid data in database - possible database corruption")
+            })
     }
 }
 
@@ -334,25 +350,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             metadatas: denoms_metadata,
             pagination: None,
         }
-    }
-
-    pub fn query_denom_metadata<DB: Database>(
-        &self,
-        ctx: &QueryContext<'_, DB, SK>,
-        req: QueryDenomMetadataRequest,
-    ) -> QueryDenomMetadataResponse {
-        let bank_store = ctx.get_kv_store(&self.store_key);
-        let denom_metadata_store =
-            bank_store.get_immutable_prefix_store(denom_metadata_key(req.denom.to_string()));
-
-        let metadata = denom_metadata_store
-            .get(&req.denom.to_string().into_bytes())
-            .map(|metadata| {
-                Metadata::decode::<&[u8]>(&metadata)
-                    .expect("invalid data in database - possible database corruption")
-            });
-
-        QueryDenomMetadataResponse { metadata }
     }
 }
 

@@ -3,10 +3,7 @@ use std::{collections::HashMap, ops::RangeBounds};
 use database::{Database, PrefixDB};
 use trees::iavl::{QueryTree, Range};
 
-use crate::{
-    error::Error, ImmutablePrefixStore, KVStore, KVStoreTrait,
-    MultiStore, StoreKey,
-};
+use crate::{error::Error, ImmutablePrefixStore, KVStore, KVStoreTrait, MultiStore, StoreKey};
 
 pub struct QueryMultiStore<'a, DB, SK> {
     //head_version: u32,
@@ -28,7 +25,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
         })
     }
 
-    pub fn get_kv_store(&self, store_key: &SK) -> &QueryKVStore<'_, PrefixDB<DB>> {
+    pub fn get_kv_store(&self, store_key: &SK) -> &QueryKVStore<'a, PrefixDB<DB>> {
         self.stores
             .get(store_key)
             .expect("a store for every key is guaranteed to exist")

@@ -1,3 +1,4 @@
+use auth::ante::BankKeeper;
 use database::Database;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
@@ -5,7 +6,7 @@ use gears::types::context::tx_context::TxContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
 use proto_messages::cosmos::bank::v1beta1::{
     QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,
-    QueryTotalSupplyResponse,
+    QueryDenomMetadataResponse, QueryTotalSupplyResponse,
 };
 use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
 use store::StoreKey;
@@ -17,7 +18,7 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
     keeper: Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
+impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     pub fn new(keeper: Keeper<SK, PSK>) -> Self {
         ABCIHandler { keeper }
     }
@@ -36,7 +37,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
     pub fn query<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<'a, DB, SK>,
         query: tendermint::proto::abci::RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
@@ -61,11 +62,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)?;
-                Ok(self
-                    .keeper
-                    .query_denom_metadata(ctx, req)
-                    .encode_vec()
-                    .into())
+                let metadata = self.keeper.get_denom_metadata(ctx, req.denom);
+                Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
