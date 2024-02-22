@@ -4,7 +4,7 @@ use database::Database;
 
 use gears::{
     error::AppError,
-    types::context::{context::Context, query_context::ReadContext},
+    types::context::{context::Context, read_context::ReadContext},
     x::auth::{Module, Params},
 };
 use prost::Message as ProstMessage;
