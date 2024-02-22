@@ -1,6 +1,8 @@
 use crate::error::AppError;
 use database::{Database, PrefixDB};
-use store_crate::{MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
+use store_crate::{AnyKVStore, MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
+
+use super::context::Context;
 
 pub struct QueryContext<'a, DB, SK> {
     pub multi_store: QueryMultiStore<'a, DB, SK>,
@@ -25,4 +27,34 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
     // pub fn _get_height(&self) -> u64 {
     //     self._height
     // }
+}
+
+pub enum ReadContext<'a, 'b, SK: StoreKey, DB: Database> {
+    QueryContext(&'a QueryContext<'a, DB, SK>),
+    Context(&'a Context<'a, 'b, DB, SK>),
+}
+
+impl<'a, SK: StoreKey, DB: Database> From<&'a QueryContext<'a, DB, SK>>
+    for ReadContext<'a, '_, SK, DB>
+{
+    fn from(ctx: &'a QueryContext<'a, DB, SK>) -> Self {
+        ReadContext::QueryContext(ctx)
+    }
+}
+
+impl<'a, 'b, SK: StoreKey, DB: Database> From<&'a Context<'a, 'b, DB, SK>>
+    for ReadContext<'a, 'b, SK, DB>
+{
+    fn from(ctx: &'a Context<'a, 'b, DB, SK>) -> Self {
+        ReadContext::Context(ctx)
+    }
+}
+
+impl<SK: StoreKey, DB: Database> ReadContext<'_, '_, SK, DB> {
+    pub fn get_kv_store(&self, store_key: &SK) -> AnyKVStore<'_, PrefixDB<impl Database>> {
+        match self {
+            ReadContext::QueryContext(ctx) => AnyKVStore::QueryKVStore(ctx.get_kv_store(store_key)),
+            ReadContext::Context(ctx) => AnyKVStore::KVStore(ctx.get_kv_store(store_key)),
+        }
+    }
 }

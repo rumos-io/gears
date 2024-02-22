@@ -4,7 +4,7 @@ use database::Database;
 
 use gears::{
     error::AppError,
-    types::context::context::Context,
+    types::context::{context::Context, query_context::ReadContext},
     x::auth::{Module, Params},
 };
 use prost::Message as ProstMessage;
@@ -19,16 +19,16 @@ use proto_messages::cosmos::{
         signer_data::{ChainId, SignerData},
         tx::tx::Tx,
         tx_data::TxData,
+        tx_metadata::Metadata,
         tx_raw::TxWithRaw,
     },
 };
-use proto_types::AccAddress;
+use proto_types::{AccAddress, Denom};
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 use store::StoreKey;
 
 use crate::signing::handler::SignModeHandler;
 
-// TODO: this doesn't belong here
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
@@ -37,9 +37,14 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         to_module: Module,
         amount: SendCoins,
     ) -> Result<(), AppError>;
+
+    fn get_denom_metadata<DB: Database>(
+        &self,
+        ctx: ReadContext<'_, '_, SK, DB>,
+        base: Denom,
+    ) -> Option<Metadata>;
 }
 
-// TODO: this doesn't belong here
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_auth_params<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> Params;
 

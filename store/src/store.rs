@@ -284,6 +284,13 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
             AnyKVStore::QueryKVStore(store) => store.range(range),
         }
     }
+
+    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
+        match self {
+            AnyKVStore::KVStore(store) => store.get_immutable_prefix_store(prefix),
+            AnyKVStore::QueryKVStore(store) => store.get_immutable_prefix_store(prefix),
+        }
+    }
 }
 
 /// Wraps an immutable reference to a KVStore with a prefix
