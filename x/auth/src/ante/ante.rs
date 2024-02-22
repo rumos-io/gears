@@ -38,9 +38,9 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn get_denom_metadata<DB: Database>(
+    fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
         &self,
-        ctx: ReadContext<'_, '_, SK, DB>,
+        ctx: &CTX,
         base: Denom,
     ) -> Option<Metadata>;
 }

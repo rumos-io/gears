@@ -59,9 +59,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
         self.send_coins(ctx, msg)
     }
 
-    fn get_denom_metadata<DB: Database>(
+    fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
         &self,
-        ctx: ReadContext<'_, '_, SK, DB>,
+        ctx: &CTX,
         base: Denom,
     ) -> Option<Metadata> {
         let bank_store = ctx.get_kv_store(&self.store_key);

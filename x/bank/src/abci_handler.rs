@@ -62,7 +62,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)?;
-                let metadata = self.keeper.get_denom_metadata(ctx.into(), req.denom);
+                let metadata = self.keeper.get_denom_metadata(ctx, req.denom);
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
