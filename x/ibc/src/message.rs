@@ -1,7 +1,7 @@
 use proto_messages::cosmos::ibc::{
     protobuf::Any,
     tx::{
-        MsgCreateClient, MsgRecoverClient, MsgSubmitMisbehaviour, MsgUpdateClient, MsgUpgradeClient,
+        MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient,
     },
 };
 use proto_types::AccAddress;
@@ -11,7 +11,6 @@ pub enum Message {
     ClientCreate(MsgCreateClient),
     ClientUpdate(MsgUpdateClient),
     ClientUpgrade(MsgUpgradeClient),
-    SubmitMisbehaviour(MsgSubmitMisbehaviour),
     RecoverClient(MsgRecoverClient),
 }
 

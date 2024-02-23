@@ -76,7 +76,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
                 Ok(())
             }
-            Message::SubmitMisbehaviour(_) => todo!(),
             Message::RecoverClient(_) => todo!(),
         }
     }
