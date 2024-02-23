@@ -1,31 +1,32 @@
-use database::Database;
-use gears::types::context::context::Context;
-use proto_messages::cosmos::tx::v1beta1::{public_key::PublicKey, screen::Screen};
-use store::StoreKey;
+use proto_messages::cosmos::tx::v1beta1::{
+    public_key::PublicKey, screen::Screen, tx_metadata::Metadata,
+};
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for PublicKey {
-    fn format(
+impl ValueRenderer for PublicKey {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
-        // I prefer to implement formating for each key in own module to keep things as small as possible
+        // I prefer to implement formatting for each key in own module to keep things as small as possible
         match self {
-            PublicKey::Secp256k1(key) => ValueRenderer::<SK, DB>::format(key, ctx),
+            PublicKey::Secp256k1(key) => ValueRenderer::format(key, get_metadata),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         crypto::secp256k1::v1beta1::PubKey,
         tx::v1beta1::screen::{Content, Indent, Screen},
     };
 
-    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
+    use crate::signing::renderer::{
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
+    };
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {
@@ -51,12 +52,7 @@ mod tests {
             },
         ];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actual_screens = ValueRenderer::<KeyMock, _>::format(&key, &context)
+        let actual_screens = ValueRenderer::format(&key, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actual_screens);

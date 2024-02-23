@@ -27,7 +27,7 @@ use proto_types::{AccAddress, Denom};
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 use store::StoreKey;
 
-use crate::signing::handler::SignModeHandler;
+use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
@@ -41,7 +41,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
         &self,
         ctx: &CTX,
-        base: Denom,
+        base: &Denom,
     ) -> Option<Metadata>;
 }
 
@@ -60,7 +60,7 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 }
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: Message>(
+    fn run<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -80,7 +80,7 @@ where
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
 {
-    fn run<DB: Database, M: Message>(
+    fn run<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -97,7 +97,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, M: Message>(
+    pub fn run<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -256,7 +256,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn sig_verification_handler<DB: Database, M: Message>(
+    fn sig_verification_handler<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -309,9 +309,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                     }
                     .encode_to_vec(),
                     SignMode::Textual => {
-                        let _handler = SignModeHandler;
+                        let handler = SignModeHandler;
 
-                        let _signer_data = SignerData {
+                        let signer_data = SignerData {
                             address: signer.to_owned(),
                             chain_id: ChainId::new(ctx.get_chain_id().to_owned()).unwrap(), //TODO: remove unwrap
                             account_number: acct.get_account_number(),
@@ -319,14 +319,17 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                             pub_key: public_key.to_owned(),
                         };
 
-                        let _tx_data = TxData {
+                        let tx_data = TxData {
                             body: tx.tx.body.clone(),
                             auth_info: tx.tx.auth_info.clone(),
                         };
 
-                        //handler.sign_bytes_get(ctx, signer_data, tx_data).unwrap()
+                        let f = |denom: &Denom| -> Option<Metadata> {
+                            self.bank_keeper.get_denom_metadata(ctx, denom)
+                        };
+
+                        handler.sign_bytes_get(&f, signer_data, tx_data).unwrap()
                         //TODO: remove unwrap
-                        todo!()
                     }
                     _ => {
                         return Err(AppError::TxValidation(

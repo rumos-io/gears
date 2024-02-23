@@ -1,16 +1,16 @@
-use database::Database;
-use gears::types::context::context::Context;
-use proto_messages::cosmos::tx::v1beta1::{mode_info::ModeInfo, screen::Screen};
-use store::StoreKey;
+use proto_messages::cosmos::tx::v1beta1::{
+    mode_info::ModeInfo, screen::Screen, tx_metadata::Metadata,
+};
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for ModeInfo {
-    fn format(
+impl ValueRenderer for ModeInfo {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        _ctx: &Context<'_, '_, DB, SK>,
+        _get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
-        // I don't see that mode ino is used in screen formatin for now, but leave this as things may change
+        // I don't see that mode ino is used in screen formatting for now, but leave this as things may change
         Ok(Vec::new())
     }
 }

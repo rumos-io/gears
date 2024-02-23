@@ -1,7 +1,10 @@
+use auth::signing::renderer::value_renderer::ValueRenderer;
 use bytes::Bytes;
 use proto_messages::cosmos::bank::v1beta1::MsgSend;
 use proto_messages::cosmos::ibc_types::protobuf::{Any, Protobuf};
-use proto_types::AccAddress;
+use proto_messages::cosmos::tx::v1beta1::screen::Screen;
+use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
+use proto_types::{AccAddress, Denom};
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
@@ -9,6 +12,17 @@ use serde::Serialize;
 pub enum Message {
     #[serde(rename = "/cosmos.bank.v1beta1.MsgSend")]
     Send(MsgSend),
+}
+
+impl ValueRenderer for Message {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
+        &self,
+        get_metadata: &F,
+    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+        match self {
+            Message::Send(msg) => msg.format(get_metadata),
+        }
+    }
 }
 
 impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {

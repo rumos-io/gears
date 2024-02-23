@@ -1,5 +1,7 @@
+use auth::signing::renderer::value_renderer::ValueRenderer;
 use gears_derive::RoutingMessage;
-use proto_types::AccAddress;
+use proto_messages::cosmos::tx::v1beta1::{screen::Screen, tx_metadata::Metadata};
+use proto_types::{AccAddress, Denom};
 use serde::Serialize;
 
 #[derive(Debug, Clone, RoutingMessage, Serialize)]
@@ -7,4 +9,15 @@ use serde::Serialize;
 pub enum Message {
     #[gears(url = "/cosmos.bank.v1beta1")]
     Bank(bank::Message),
+}
+
+impl ValueRenderer for Message {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
+        &self,
+        get_metadata: &F,
+    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+        match self {
+            Message::Bank(msg) => msg.format(get_metadata),
+        }
+    }
 }

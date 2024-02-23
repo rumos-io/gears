@@ -1,23 +1,20 @@
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     ibc_types::protobuf::Protobuf,
     tx::v1beta1::{
         message::Message,
         screen::{Content, Indent, Screen},
         textual_data::TextualData,
+        tx_metadata::Metadata,
     },
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use crate::signing::{hasher::hash_get, renderer::value_renderer::ValueRenderer};
 
-impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRenderer<SK, DB>
-    for TextualData<M>
-{
-    fn format(
+impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let TextualData {
             body,
@@ -30,7 +27,7 @@ impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRender
         let mut screens = Vec::<Screen>::new();
 
         // =========================
-        screens.append(&mut ValueRenderer::<SK, DB>::format(signer_data, ctx)?);
+        screens.append(&mut ValueRenderer::format(signer_data, get_metadata)?);
 
         // Transaction message section
         screens.push(Screen {
@@ -50,7 +47,7 @@ impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRender
                 indent: Some(Indent::new(1)?),
                 expert: false,
             });
-            screens.append(&mut ValueRenderer::<SK, DB>::format(ms, ctx)?);
+            screens.append(&mut ValueRenderer::format(ms, get_metadata)?);
         }
         screens.push(Screen {
             title: String::new(),
@@ -68,7 +65,7 @@ impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRender
         }
 
         // =========================
-        screens.append(&mut ValueRenderer::<SK, DB>::format(auth_info, ctx)?);
+        screens.append(&mut ValueRenderer::format(auth_info, get_metadata)?);
 
         // =========================
         let body_bytes = body.encode_vec();
@@ -88,7 +85,6 @@ impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRender
 #[cfg(test)]
 mod tests {
     use bnum::types::U256;
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
     use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
     use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
@@ -106,19 +102,15 @@ mod tests {
     };
     use proto_types::{AccAddress, Denom};
 
-    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
+    use crate::signing::renderer::value_renderer::ValueRenderer;
+    use crate::signing::renderer::values::test_functions::get_metadata;
 
     #[test]
     fn textual_data_formatting() -> anyhow::Result<()> {
         let data = textual_data_get()?;
         let expected_screens = expected_screens_get()?;
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&data, &context)
+        let actuals_screens = ValueRenderer::format(&data, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         if expected_screens != actuals_screens {

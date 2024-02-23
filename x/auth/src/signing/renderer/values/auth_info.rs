@@ -1,17 +1,16 @@
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     auth_info::AuthInfo,
     screen::{Content, Indent, Screen},
+    tx_metadata::Metadata,
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for AuthInfo {
-    fn format(
+impl ValueRenderer for AuthInfo {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let AuthInfo {
             signer_infos,
@@ -20,12 +19,12 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for AuthInfo {
         } = &self;
         let mut final_screens = Vec::<Screen>::new();
 
-        final_screens.append(&mut ValueRenderer::<SK, DB>::format(fee, ctx)?);
+        final_screens.append(&mut ValueRenderer::format(fee, get_metadata)?);
 
         if let Some(tip) = tip {
-            final_screens.append(&mut ValueRenderer::<SK, DB>::format(tip, ctx)?);
+            final_screens.append(&mut ValueRenderer::format(tip, get_metadata)?);
         }
-        // Probaly need case for other types of signing
+        // Probably need case for other types of signing
         // TODO: !signer_infos.is_empty()
         if false {
             let signer_count = signer_infos.len();
@@ -46,7 +45,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for AuthInfo {
                     indent: Some(Indent::new(1)?),
                     expert: true,
                 });
-                final_screens.append(&mut ValueRenderer::<SK, DB>::format(info, ctx)?);
+                final_screens.append(&mut ValueRenderer::format(info, get_metadata)?);
             }
 
             final_screens.push(Screen {
@@ -64,7 +63,6 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for AuthInfo {
 #[cfg(test)]
 mod tests {
     use bnum::types::U256;
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::{
@@ -77,7 +75,9 @@ mod tests {
     };
     use proto_types::Denom;
 
-    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
+    use crate::signing::renderer::{
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
+    };
 
     #[test]
     fn auth_info_formatting() -> anyhow::Result<()> {
@@ -109,12 +109,7 @@ mod tests {
 
         let expected_screens = expected_screens_get()?;
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&auth_info, &context)
+        let actuals_screens = ValueRenderer::format(&auth_info, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);

@@ -1,19 +1,20 @@
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     crypto::secp256k1::v1beta1::PubKey,
-    tx::v1beta1::screen::{Content, Indent, Screen},
+    tx::v1beta1::{
+        screen::{Content, Indent, Screen},
+        tx_metadata::Metadata,
+    },
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
 const TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for PubKey {
-    fn format(
+impl ValueRenderer for PubKey {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        _ctx: &Context<'_, '_, DB, SK>,
+        _get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         Ok(vec![
             Screen {
@@ -34,13 +35,14 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for PubKey {
 
 #[cfg(test)]
 mod tests {
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         crypto::secp256k1::v1beta1::PubKey,
         tx::v1beta1::screen::{Content, Indent, Screen},
     };
 
-    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
+    use crate::signing::renderer::{
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
+    };
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {
@@ -66,12 +68,7 @@ mod tests {
             },
         ];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actual_screens = ValueRenderer::<KeyMock, _>::format(&key, &context)
+        let actual_screens = ValueRenderer::format(&key, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actual_screens);

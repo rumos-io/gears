@@ -1,17 +1,18 @@
 use std::error::Error;
 
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     bank::v1beta1::MsgSend,
     base::v1beta1::Coin,
-    tx::v1beta1::screen::{Content, Indent, Screen},
+    tx::v1beta1::{
+        screen::{Content, Indent, Screen},
+        tx_metadata::Metadata,
+    },
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for MsgSend {
+impl ValueRenderer for MsgSend {
     /// Format `MsgSend` with `MessageDefaultRenderer`
     ///
     /// ## Example
@@ -37,7 +38,10 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for MsgSend {
     ///
     /// ## Note
     /// This implementation doesn't include `Screen` with information about beginning of message and name
-    fn format(&self, ctx: &Context<'_, '_, DB, SK>) -> Result<Vec<Screen>, Box<dyn Error>> {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
+        &self,
+        get_metadata: &F,
+    ) -> Result<Vec<Screen>, Box<dyn Error>> {
         let mut screens_vec = Vec::new();
 
         screens_vec.push(Screen {
@@ -57,7 +61,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for MsgSend {
         for coin_raw in self.amount.clone() {
             let coin: Coin = coin_raw.try_into()?;
 
-            screens_vec.append(&mut ValueRenderer::<SK, DB>::format(&coin, ctx)?)
+            screens_vec.append(&mut ValueRenderer::format(&coin, get_metadata)?)
         }
 
         Ok(screens_vec)
@@ -66,20 +70,13 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for MsgSend {
 
 #[cfg(test)]
 mod tests {
-    use database::{Database, PrefixDB};
-    use gears::types::context::context::{Context, ContextTrait};
     use proto_messages::cosmos::{
-        bank::v1beta1::MsgSend,
-        ibc_types::bank::MsgSendRaw,
-        tx::v1beta1::{
-            screen::Screen,
-            tx_metadata::{DenomUnit, Metadata},
-        },
+        bank::v1beta1::MsgSend, ibc_types::bank::MsgSendRaw, tx::v1beta1::screen::Screen,
     };
-    use store::StoreKey;
-    use strum::EnumIter;
 
-    use crate::signing::renderer::value_renderer::ValueRenderer;
+    use crate::signing::renderer::{
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
+    };
 
     // TODO: fix this test
     // #[test]
@@ -100,13 +97,7 @@ mod tests {
 
     //     let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
 
-    //     let mut ctx = MockContext;
-
-    //     let context: Context<'_, '_, database::RocksDB, KeyMock> =
-    //         Context::DynamicContext(&mut ctx);
-
-    //     let actual_screens =
-    //         ValueRenderer::<DefaultValueRenderer, KeyMock, _>::format(&msg, &context);
+    //     let actual_screens = ValueRenderer::format(&msg, &get_metadata);
 
     //     assert!(actual_screens.is_ok(), "Failed to retrieve screens");
     //     assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
@@ -133,86 +124,11 @@ mod tests {
 
         let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actual_screens = ValueRenderer::<KeyMock, _>::format(&msg, &context);
+        let actual_screens = ValueRenderer::format(&msg, &get_metadata);
 
         assert!(actual_screens.is_ok(), "Failed to retrieve screens");
         assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
 
         Ok(())
-    }
-
-    // We use custom implementation instead of mock
-    // 1. Mockall requires generic parameters to be 'static
-    // 2. Diffuclties exporting mock on other crates
-    pub struct MockContext;
-
-    impl<T: Database, SK: StoreKey> ContextTrait<T, SK> for MockContext {
-        fn height(&self) -> u64 {
-            unimplemented!()
-        }
-
-        fn chain_id(&self) -> &str {
-            unimplemented!()
-        }
-
-        fn push_event(&mut self, _: tendermint::informal::abci::Event) {
-            unimplemented!()
-        }
-
-        fn append_events(&mut self, _: Vec<tendermint::informal::abci::Event>) {
-            unimplemented!()
-        }
-
-        fn metadata_get(&self) -> Metadata {
-            Metadata {
-                description: String::new(),
-                denom_units: vec![
-                    DenomUnit {
-                        denom: "ATOM".parse().expect("Test data should be valid"),
-                        exponent: 6,
-                        aliases: Vec::new(),
-                    },
-                    DenomUnit {
-                        denom: "uatom".parse().expect("Test data should be valid"),
-                        exponent: 0,
-                        aliases: Vec::new(),
-                    },
-                ],
-                base: "uatom".into(),
-                display: "ATOM".into(),
-                name: String::new(),
-                symbol: String::new(),
-            }
-        }
-
-        fn get_kv_store(&self, _: &SK) -> &store::KVStore<PrefixDB<T>> {
-            unimplemented!()
-        }
-
-        fn get_mutable_kv_store(&mut self, _: &SK) -> &mut store::KVStore<PrefixDB<T>> {
-            unimplemented!()
-        }
-    }
-
-    #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
-    pub enum KeyMock {
-        Bank,
-        Auth,
-        Params,
-    }
-
-    impl StoreKey for KeyMock {
-        fn name(&self) -> &'static str {
-            match self {
-                KeyMock::Bank => "bank",
-                KeyMock::Auth => "acc",
-                KeyMock::Params => "params",
-            }
-        }
     }
 }

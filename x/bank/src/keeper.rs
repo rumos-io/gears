@@ -63,7 +63,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
     fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
         &self,
         ctx: &CTX,
-        base: Denom,
+        base: &Denom,
     ) -> Option<Metadata> {
         let bank_store = ctx.get_kv_store(&self.store_key);
         let denom_metadata_store =

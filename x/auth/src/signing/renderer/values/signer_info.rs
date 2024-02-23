@@ -1,19 +1,18 @@
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     screen::{Content, Indent, Screen},
     signer::SignerInfo,
+    tx_metadata::Metadata,
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerInfo {
-    fn format(
+impl ValueRenderer for SignerInfo {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let SignerInfo {
             public_key,
@@ -23,10 +22,10 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerInfo {
 
         let mut final_screens = Vec::<Screen>::new();
         if let Some(public_key) = public_key {
-            final_screens.append(&mut ValueRenderer::<SK, DB>::format(public_key, ctx)?)
+            final_screens.append(&mut ValueRenderer::format(public_key, get_metadata)?)
         }
 
-        final_screens.append(&mut ValueRenderer::<SK, DB>::format(mode_info, ctx)?);
+        final_screens.append(&mut ValueRenderer::format(mode_info, get_metadata)?);
 
         final_screens.push(Screen {
             title: "Sequence".to_string(),
@@ -41,14 +40,15 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerInfo {
 
 #[cfg(test)]
 mod tests {
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::tx::v1beta1::{
         mode_info::{ModeInfo, SignMode},
         screen::{Content, Indent, Screen},
         signer::SignerInfo,
     };
 
-    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
+    use crate::signing::renderer::{
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
+    };
 
     #[test]
     fn signer_info_formatting() -> anyhow::Result<()> {
@@ -84,12 +84,7 @@ mod tests {
             },
         ];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&info, &context)
+        let actuals_screens = ValueRenderer::format(&info, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);

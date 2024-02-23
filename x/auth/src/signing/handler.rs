@@ -1,13 +1,11 @@
 use std::collections::BTreeMap;
 
 use ciborium::{value::CanonicalValue, Value};
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     message::Message, screen::Screen, signer_data::SignerData, textual_data::TextualData,
-    tx_data::TxData,
+    tx_data::TxData, tx_metadata::Metadata,
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 
@@ -15,17 +13,17 @@ use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 pub struct SignModeHandler;
 
 impl SignModeHandler {
-    pub fn sign_bytes_get<SK: StoreKey, DB: Database>(
+    pub fn sign_bytes_get<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
         signer_data: SignerData,
-        tx_data: TxData<impl Message + ValueRenderer<SK, DB>>,
+        tx_data: TxData<impl Message + ValueRenderer>,
     ) -> Result<Vec<u8>, SigningErrors> {
         let data = TextualData::new(signer_data, tx_data)
             .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
 
         let screens = data
-            .format(ctx)
+            .format(get_metadata)
             .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
 
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
@@ -49,7 +47,6 @@ mod tests {
 
     use bnum::types::U256;
     use ciborium::Value;
-    use gears::types::context::context::Context;
 
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
@@ -68,10 +65,7 @@ mod tests {
     };
     use proto_types::{AccAddress, Denom};
 
-    use crate::signing::{
-        handler::SignModeHandler,
-        renderer::{KeyMock, MockContext},
-    };
+    use crate::signing::{handler::SignModeHandler, renderer::get_metadata};
 
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {
@@ -143,12 +137,7 @@ mod tests {
 
         let handler = SignModeHandler;
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let cbor = handler.sign_bytes_get(&context, signer_data, tx_data)?;
+        let cbor = handler.sign_bytes_get(&get_metadata, signer_data, tx_data)?;
 
         const EXPECTED_CBOR : &str = "a1018fa20168436861696e20696402686d792d636861696ea2016e4163636f756e74206e756d626572026131a2016853657175656e6365026132a301674164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e767161386579687304f5a3016a5075626c6963206b657902781f2f636f736d6f732e63727970746f2e736563703235366b312e5075624b657904f5a401634b657902785230324542204444374620453446442045423736204443384120323035452046363544203739304320443330452038413337203541354320323532382045423341203932334120463146422034443739203444030104f5a102781e54686973207472616e73616374696f6e206861732031204d657373616765a3016d4d6573736167652028312f312902781c2f636f736d6f732e62616e6b2e763162657461312e4d736753656e640301a3016c46726f6d206164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e76716138657968730302a3016a546f206164647265737302782d636f736d6f7331656a726634637572327779366b667572673966326a707070326833616665356836706b6835740302a30166416d6f756e74026731302041544f4d0302a1026e456e64206f66204d657373616765a2016446656573026a302e3030322041544f4da30169476173206c696d697402673130302730303004f5a3017148617368206f66207261772062797465730278403738356264333036656138393632636462393630303038396264643635663364633032396531616561313132646565363965313935343663396164616438366504f5";
 

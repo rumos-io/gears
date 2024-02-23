@@ -1,19 +1,18 @@
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     fee::Fee,
     screen::{Content, Screen},
+    tx_metadata::Metadata,
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Fee {
-    fn format(
+impl ValueRenderer for Fee {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let Fee {
             amount,
@@ -24,7 +23,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Fee {
 
         let mut screens = Vec::<Screen>::new();
         if let Some(amount) = amount {
-            screens.append(&mut ValueRenderer::<SK, DB>::format(amount, ctx)?);
+            screens.append(&mut ValueRenderer::format(amount, get_metadata)?);
         }
         if let Some(payer) = payer {
             screens.push(Screen {
@@ -57,7 +56,6 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Fee {
 #[cfg(test)]
 mod tests {
     use bnum::types::U256;
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::{
@@ -67,7 +65,9 @@ mod tests {
     };
     use proto_types::{AccAddress, Denom};
 
-    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
+    use crate::signing::renderer::{
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
+    };
 
     #[test]
     fn fee_almost_empty() -> anyhow::Result<()> {
@@ -85,12 +85,7 @@ mod tests {
             expert: true,
         }];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&fee, &context)
+        let actuals_screens = ValueRenderer::format(&fee, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
@@ -125,12 +120,7 @@ mod tests {
             },
         ];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&fee, &context)
+        let actuals_screens = ValueRenderer::format(&fee, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
@@ -173,12 +163,7 @@ mod tests {
             },
         ];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&fee, &context)
+        let actuals_screens = ValueRenderer::format(&fee, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
@@ -227,12 +212,7 @@ mod tests {
             },
         ];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&fee, &context)
+        let actuals_screens = ValueRenderer::format(&fee, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);

@@ -2,8 +2,6 @@ use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
 use bnum::types::U256;
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::{
     base::v1beta1::Coin,
     tx::v1beta1::{
@@ -11,19 +9,19 @@ use proto_messages::cosmos::{
         tx_metadata::Metadata,
     },
 };
-use store::StoreKey;
+use proto_types::Denom;
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Coin {
+impl ValueRenderer for Coin {
     /// Format `Coin` into `Screen`.
-    fn format(
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let Metadata {
             display,
             denom_units,
             ..
-        } = ctx.metadata_get();
+        } = get_metadata(&self.denom).ok_or("Metadata not found")?;
 
         let coin_exp = denom_units.iter().find(|this| this.denom == self.denom);
         let denom_exp = denom_units
@@ -66,12 +64,10 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Coin {
 #[cfg(test)]
 mod tests {
     use crate::signing::renderer::{
-        value_renderer::ValueRenderer,
-        values::test_mocks::{KeyMock, MockContext},
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
     };
     use anyhow::Ok;
     use bnum::types::U256;
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         base::v1beta1::Coin,
         tx::v1beta1::screen::{Content, Indent, Screen},
@@ -90,12 +86,8 @@ mod tests {
             indent: Some(Indent::new(2)?),
             expert: false,
         };
-        let mut ctx = MockContext;
 
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actual_screen = ValueRenderer::<KeyMock, _>::format(&coin, &context);
+        let actual_screen = ValueRenderer::format(&coin, &get_metadata);
 
         assert!(actual_screen.is_ok(), "Failed to retrieve screens");
         assert_eq!(vec![expected_screens], actual_screen.unwrap());

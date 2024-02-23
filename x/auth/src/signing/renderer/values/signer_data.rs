@@ -1,17 +1,16 @@
-use database::Database;
-use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
     screen::{Content, Screen},
     signer_data::SignerData,
+    tx_metadata::Metadata,
 };
-use store::StoreKey;
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerData {
-    fn format(
+impl ValueRenderer for SignerData {
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        get_metadata: &F,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let mut screens = vec![
             Screen {
@@ -40,7 +39,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerData {
             },
         ];
 
-        screens.append(&mut ValueRenderer::<SK, DB>::format(&self.pub_key, ctx)?);
+        screens.append(&mut ValueRenderer::format(&self.pub_key, get_metadata)?);
 
         Ok(screens)
     }
@@ -48,14 +47,15 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SignerData {
 
 #[cfg(test)]
 mod tests {
-    use gears::types::context::context::Context;
     use proto_messages::cosmos::tx::v1beta1::{
         screen::{Content, Indent, Screen},
         signer_data::{ChainId, SignerData},
     };
     use proto_types::AccAddress;
 
-    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
+    use crate::signing::renderer::{
+        value_renderer::ValueRenderer, values::test_functions::get_metadata,
+    };
 
     #[test]
     fn signer_data_formating() -> anyhow::Result<()> {
@@ -111,12 +111,7 @@ mod tests {
             },
         ];
 
-        let mut ctx = MockContext;
-
-        let context: Context<'_, '_, database::RocksDB, KeyMock> =
-            Context::DynamicContext(&mut ctx);
-
-        let actuals_screens = ValueRenderer::<KeyMock, _>::format(&signer_data, &context)
+        let actuals_screens = ValueRenderer::format(&signer_data, &get_metadata)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actuals_screens);
