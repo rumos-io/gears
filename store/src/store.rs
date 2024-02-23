@@ -129,14 +129,14 @@ impl<DB: Database> KVStore<DB> {
         })
     }
 
-    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        let tx_cache_val = self.tx_cache.get(key);
+    pub fn get(&self, key: impl AsRef<[u8]>) -> Option<Vec<u8>> {
+        let tx_cache_val = self.tx_cache.get(key.as_ref());
 
         if tx_cache_val.is_none() {
-            let block_cache_val = self.block_cache.get(key);
+            let block_cache_val = self.block_cache.get(key.as_ref());
 
             if block_cache_val.is_none() {
-                return self.persistent_store.get(key);
+                return self.persistent_store.get(key.as_ref());
             };
 
             return block_cache_val.cloned();
