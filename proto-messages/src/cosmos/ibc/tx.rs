@@ -83,10 +83,7 @@ impl From<RawMsgUpdateClient> for MsgUpdateClient {
 
         Self {
             client_id,
-            client_message: Any {
-                type_url: client_message.type_url,
-                value: client_message.value,
-            },
+            client_message,
             signer,
         }
     }

@@ -12,6 +12,8 @@ use crate::params::ParamsError;
 pub enum ModuleErrors {
     #[error("Error while creating client: {0}")]
     ClientCreateError(#[from] ClientCreateError),
+    #[error("Error while updating client: {0}")]
+    ClientUpdateError(#[from] ClientUpdateError),
 }
 
 #[derive(Debug, thiserror::Error)]

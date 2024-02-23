@@ -44,7 +44,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
                 let MsgUpdateClient {
                     client_id,
                     client_message,
-                    signer,
+                    signer: _signer,
                 } = msg;
 
                 self.keeper.write().expect("poisoned lock").client_update(
