@@ -154,17 +154,23 @@ impl<DB: Database> KVStore<DB> {
         self.tx_cache.insert(key, value);
     }
 
-    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
+    pub fn get_immutable_prefix_store(
+        &self,
+        prefix: impl IntoIterator<Item = u8>,
+    ) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
-            prefix,
+            prefix: prefix.into_iter().collect(),
         }
     }
 
-    pub fn get_mutable_prefix_store(&mut self, prefix: Vec<u8>) -> MutablePrefixStore<'_, DB> {
+    pub fn get_mutable_prefix_store(
+        &mut self,
+        prefix: impl IntoIterator<Item = u8>,
+    ) -> MutablePrefixStore<'_, DB> {
         MutablePrefixStore {
             store: self,
-            prefix,
+            prefix: prefix.into_iter().collect(),
         }
     }
 

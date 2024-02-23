@@ -275,7 +275,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
-        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
+        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY);
 
         supply_store.set(
             coin.denom.to_string().into(),
