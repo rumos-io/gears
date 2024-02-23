@@ -2,7 +2,6 @@ use std::{fs::File, io::Read};
 
 use clap::Args;
 use proto_messages::cosmos::ibc::{
-    protobuf::{PrimitiveAny, PrimitiveProtobuf},
     tx::MsgCreateClient,
     types::tendermint::{consensus_state::RawConsensusState, WrappedTendermintClientState},
 };
@@ -30,8 +29,7 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
         client_state
     } else {
         File::open(client_state)?.read_to_end(&mut buffer)?;
-        <WrappedTendermintClientState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?
-        // TODO: Should decode as protobuf or with serde?
+        serde_json::from_slice(&buffer)?
     };
 
     let consensus_state_result = serde_json::from_str::<RawConsensusState>(&consensus_state);
@@ -39,8 +37,7 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
         consensus_state
     } else {
         File::open(consensus_state)?.read_to_end(&mut buffer)?;
-        <RawConsensusState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&buffer)?
-        // TODO: Should decode as protobuf or with serde?
+        serde_json::from_slice(&buffer)?
     };
 
     let raw_msg = MsgCreateClient {
