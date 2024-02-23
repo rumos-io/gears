@@ -33,8 +33,6 @@ pub enum ClientUpgradeError {
     ClientError(#[from] ClientError),
     #[error("SearchError: {0}")]
     SearchError(#[from] SearchError),
-    #[error("Unexpected error: {0}")]
-    CustomError(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -45,8 +43,6 @@ pub enum ClientUpdateError {
     NotActive { client_id: ClientId, status: Status },
     #[error("SearchError: {0}")]
     SearchError(#[from] SearchError),
-    #[error("Unexpected error: {0}")]
-    CustomError(String),
 }
 
 #[derive(Debug, thiserror::Error)]
