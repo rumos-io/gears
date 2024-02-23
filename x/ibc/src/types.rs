@@ -75,10 +75,10 @@ impl From<&str> for Signer {
     }
 }
 
-pub struct InitContextShim<'a, 'b, DB, SK>(pub &'a mut TxContext<'b, DB, SK>); // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
+pub struct ContextShim<'a, 'b, DB, SK>(pub &'a mut TxContext<'b, DB, SK>); // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
 
 impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
-    From<&'a mut TxContext<'b, DB, SK>> for InitContextShim<'a, 'b, DB, SK>
+    From<&'a mut TxContext<'b, DB, SK>> for ContextShim<'a, 'b, DB, SK>
 {
     fn from(value: &'a mut TxContext<'b, DB, SK>) -> Self {
         Self(value)
@@ -107,7 +107,7 @@ impl TryFrom<ConsensusState> for WrappedConsensusState {
     }
 }
 
-impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext for InitContextShim<'a, 'b, DB, SK> {
+impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext for ContextShim<'a, 'b, DB, SK> {
     type ConversionError = InfallibleError;
 
     type AnyConsensusState = ConsensusState;
@@ -137,7 +137,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext for InitContextShim<'a, '
 
 impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     proto_messages::cosmos::ibc::types::core::host::ValidationContext
-    for InitContextShim<'a, 'b, DB, SK>
+    for ContextShim<'a, 'b, DB, SK>
 {
     type V = Self;
 
@@ -269,7 +269,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
 impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     proto_messages::cosmos::ibc::types::core::host::ExecutionContext
-    for InitContextShim<'a, 'b, DB, SK>
+    for ContextShim<'a, 'b, DB, SK>
 {
     fn get_client_execution_context(&mut self) -> &mut Self::E {
         todo!()
@@ -380,7 +380,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 }
 
 impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
-    for InitContextShim<'a, 'b, DB, SK>
+    for ContextShim<'a, 'b, DB, SK>
 {
     type V = Self;
 
@@ -446,7 +446,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
     }
 }
 
-impl<DB: Database, SK: StoreKey> ClientValidationContext for InitContextShim<'_, '_, DB, SK> {
+impl<DB: Database, SK: StoreKey> ClientValidationContext for ContextShim<'_, '_, DB, SK> {
     fn client_update_time(
         &self,
         _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
@@ -466,7 +466,7 @@ impl<DB: Database, SK: StoreKey> ClientValidationContext for InitContextShim<'_,
 
 impl<'a, 'b, DB: Database, SK: StoreKey>
     proto_messages::cosmos::ibc::types::tendermint::context::ValidationContext
-    for InitContextShim<'a, 'b, DB, SK>
+    for ContextShim<'a, 'b, DB, SK>
 {
     fn next_consensus_state(
         &self,

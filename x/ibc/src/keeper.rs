@@ -32,7 +32,7 @@ use crate::{
         ClientCreateError, ClientRecoverError, ClientUpdateError, ClientUpgradeError, SearchError,
     },
     params::{self, AbciParamsKeeper, Params, RawParams, CLIENT_STATE_KEY},
-    types::InitContextShim,
+    types::ContextShim,
 };
 
 #[derive(Debug, Clone)]
@@ -60,11 +60,64 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn recover_client<DB: Database + Send + Sync>(
         &mut self,
-        _ctx: &mut TxContext<'_, DB, SK>,
-        _subject_client_id: &ClientId,
-        _substitute_client_id: &ClientId,
+        ctx: &mut TxContext<'_, DB, SK>,
+        subject_client_id: &ClientId,
+        substitute_client_id: &ClientId,
     ) -> Result<(), ClientRecoverError> {
-        // https://github.com/cosmos/ibc-go/blob/41e7bf14f717d5cc2815688c8c590769ed164389/modules/core/02-client/keeper/client.go#L169
+        let subj_client_state = self.client_state_get(ctx, subject_client_id)?;
+        {
+            let mut shim_ctx = ContextShim(ctx);
+            let subj_client_status = subj_client_state.status(&mut shim_ctx, subject_client_id)?;
+            if subj_client_status == Status::Active {
+                return Err(ClientRecoverError::SubjectStatus {
+                    client_id: subject_client_id.clone(),
+                    status: subj_client_status,
+                });
+            }
+        }
+
+        let subs_client_state = self.client_state_get(ctx, substitute_client_id)?;
+        if subj_client_state.latest_height() >= subs_client_state.latest_height() {
+            return Err(ClientRecoverError::InvalidHeight {
+                subject: subj_client_state.latest_height(),
+                substitute: subs_client_state.latest_height(),
+            });
+        }
+
+        {
+            let mut shim_ctx = ContextShim(ctx);
+            let subs_client_status =
+                subj_client_state.status(&mut shim_ctx, substitute_client_id)?;
+            if subs_client_status != Status::Active {
+                return Err(ClientRecoverError::SubstituteStatus {
+                    client_id: substitute_client_id.clone(),
+                    status: subs_client_status,
+                });
+            }
+        }
+
+        // if err := subjectClientState.CheckSubstituteAndUpdateState(ctx, k.cdc, subjectClientStore, substituteClientStore, substituteClientState); err != nil {
+        //     return errorsmod.Wrap(err, "failed to validate substitute client")
+        // }
+
+        ctx.append_events(vec![
+            Event::new(
+                UPGRADE_CLIENT_EVENT,
+                [
+                    ("subject_client_id", subject_client_id.as_str().to_owned()),
+                    (
+                        CLIENT_TYPE_ATTRIBUTE_KEY,
+                        subs_client_state.client_type().as_str().to_owned(),
+                    ),
+                ],
+            ),
+            Event::new(
+                "message",
+                [
+                    (crate::types::ATTRIBUTE_KEY_MODULE, "ibc_client"), // TODO: const
+                ],
+            ),
+        ]);
 
         Ok(())
     }
@@ -78,9 +131,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         proof_upgrade_client: CommitmentProofBytes,
         proof_upgrade_consensus_state: CommitmentProofBytes,
     ) -> Result<(), ClientUpgradeError> {
-        let client_state = self.client_state_get(ctx)?;
+        let client_state = self.client_state_get(ctx, client_id)?;
 
-        let mut shim_ctx = InitContextShim(ctx);
+        let mut shim_ctx = ContextShim(ctx);
         let client_status = client_state.status(&mut shim_ctx, client_id)?;
 
         if client_status != Status::Active {
@@ -144,11 +197,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         client_id: &ClientId,
         client_message: PrimitiveAny,
     ) -> Result<(), ClientUpdateError> {
-        let client_state = self.client_state_get(ctx)?;
+        let client_state = self.client_state_get(ctx, client_id)?;
         let client_type = client_state.client_type();
         let params = self.params_get(ctx)?;
 
-        let mut shim_ctx = InitContextShim(ctx);
+        let mut shim_ctx = ContextShim(ctx);
 
         let client_status = if params.is_client_allowed(&client_type) {
             Status::Unauthorized
@@ -238,8 +291,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &mut self,
         ctx: &'a mut TxContext<'b, DB, SK>,
         client_state: &(impl ClientStateCommon
-              + ClientStateExecution<InitContextShim<'a, 'b, DB, SK>>
-              + ClientStateValidation<InitContextShim<'a, 'b, DB, SK>>),
+              + ClientStateExecution<ContextShim<'a, 'b, DB, SK>>
+              + ClientStateValidation<ContextShim<'a, 'b, DB, SK>>),
         consensus_state: WrappedConsensusState,
     ) -> Result<ClientId, ClientCreateError> {
         let client_type = client_state.client_type();
@@ -281,7 +334,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         {
             // FIXME: fix lifetimes so borrow checker would be happy with this code before events
-            let mut ctx = InitContextShim(ctx);
+            let mut ctx = ContextShim(ctx);
 
             client_state.initialise(&mut ctx, &client_id, consensus_state.into())?;
             client_state.status(&mut ctx, &client_id)?;
@@ -357,9 +410,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     fn client_state_get<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
+        client_id: &ClientId,
     ) -> Result<WrappedTendermintClientState, SearchError> {
         // TODO: Unsure in this code https://github.com/cosmos/ibc-go/blob/41e7bf14f717d5cc2815688c8c590769ed164389/modules/core/02-client/keeper/keeper.go#L78
-        let store = ctx.get_kv_store(&self.store_key); 
+        let store = ctx
+            .get_kv_store(&self.store_key)
+            .get_immutable_prefix_store(client_id.as_bytes().iter().cloned());
         let bytes = store
             .get(CLIENT_STATE_KEY.as_bytes())
             .ok_or(SearchError::NotFound)?;

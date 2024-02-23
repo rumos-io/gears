@@ -27,6 +27,14 @@ pub enum ModuleErrors {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClientRecoverError {
+    #[error(
+        "subject client state latest height is greater or equal to substitute client state latest height ({subject} >= {substitute})"
+    )]
+    InvalidHeight { subject: Height, substitute: Height },
+    #[error("cannot recover client {client_id} with status {status}")]
+    SubjectStatus { client_id: ClientId, status: Status },
+    #[error("cannot recover client {client_id} with status {status}")]
+    SubstituteStatus { client_id: ClientId, status: Status },
     #[error("{0}")]
     ClientError(#[from] ClientError),
     #[error("SearchError: {0}")]
