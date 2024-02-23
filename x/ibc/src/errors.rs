@@ -1,5 +1,8 @@
 use proto_messages::cosmos::ibc::types::core::{
-    client::{context::types::Status, error::ClientError},
+    client::{
+        context::types::{Height, Status},
+        error::ClientError,
+    },
     host::{
         error::IdentifierError,
         identifiers::{ClientId, ClientType},
@@ -14,6 +17,24 @@ pub enum ModuleErrors {
     ClientCreateError(#[from] ClientCreateError),
     #[error("Error while updating client: {0}")]
     ClientUpdateError(#[from] ClientUpdateError),
+    #[error("Error while upgrading client: {0}")]
+    ClientUpgradeError(#[from] ClientUpgradeError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ClientUpgradeError {
+    #[error(
+        "upgraded client height {upgraded} must be at greater than current client height {current}"
+    )]
+    HeightError { upgraded: Height, current: Height },
+    #[error("cannot upgrade client {client_id} with status {status}")]
+    NotActive { client_id: ClientId, status: Status },
+    #[error("{0}")]
+    ClientError(#[from] ClientError),
+    #[error("SearchError: {0}")]
+    SearchError(#[from] SearchError),
+    #[error("Unexpected error: {0}")]
+    CustomError(String),
 }
 
 #[derive(Debug, thiserror::Error)]

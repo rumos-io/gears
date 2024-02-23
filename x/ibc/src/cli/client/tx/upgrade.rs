@@ -1,9 +1,12 @@
 use std::{fs::File, io::Read, str::FromStr};
 
 use clap::Args;
-use prost::Message;
 use proto_messages::cosmos::ibc::{
-    protobuf::Any, tx::MsgUpgradeClient, types::core::commitment::CommitmentProofBytes,
+    tx::MsgUpgradeClient,
+    types::{
+        core::commitment::CommitmentProofBytes,
+        tendermint::{consensus_state::WrappedConsensusState, WrappedTendermintClientState},
+    },
 };
 
 use crate::types::{ClientId, Signer};
@@ -30,21 +33,23 @@ pub(super) fn tx_command_handler(msg: CliUpgradeClient) -> anyhow::Result<crate:
 
     let mut buffer = Vec::<u8>::new();
 
-    let upgraded_client_state_res = serde_json::from_str::<Any>(&upgraded_client_state);
+    let upgraded_client_state_res =
+        serde_json::from_str::<WrappedTendermintClientState>(&upgraded_client_state);
     let upgraded_client_state = if let Ok(upgraded_client_state) = upgraded_client_state_res {
         upgraded_client_state
     } else {
         File::open(upgraded_client_state)?.read_to_end(&mut buffer)?;
-        Any::decode(buffer.as_slice())? // TODO: Should decode as protobuf or with serde?
+        serde_json::from_slice(&buffer)?
     };
 
-    let upgraded_consensus_state_res = serde_json::from_str::<Any>(&upgraded_consensus_state);
+    let upgraded_consensus_state_res =
+        serde_json::from_str::<WrappedConsensusState>(&upgraded_consensus_state);
     let upgraded_consensus_state =
         if let Ok(upgraded_consensus_state) = upgraded_consensus_state_res {
             upgraded_consensus_state
         } else {
             File::open(upgraded_consensus_state)?.read_to_end(&mut buffer)?;
-            Any::decode(buffer.as_slice())? // TODO: Should decode as protobuf or with serde?
+            serde_json::from_slice(&buffer)?
         };
 
     let raw_msg = MsgUpgradeClient {

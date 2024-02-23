@@ -2,7 +2,7 @@ use std::sync::{Arc, RwLock};
 
 use database::Database;
 use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
-use proto_messages::cosmos::ibc::tx::{MsgCreateClient, MsgUpdateClient};
+use proto_messages::cosmos::ibc::tx::{MsgCreateClient, MsgUpdateClient, MsgUpgradeClient};
 use store::StoreKey;
 
 use crate::{errors::ModuleErrors, keeper::Keeper, message::Message};
@@ -55,7 +55,27 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
 
                 Ok(())
             }
-            Message::ClientUpgrade(_) => todo!(),
+            Message::ClientUpgrade(msg) => {
+                let MsgUpgradeClient {
+                    client_id,
+                    upgraded_client_state,
+                    upgraded_consensus_state,
+                    proof_upgrade_client,
+                    proof_upgrade_consensus_state,
+                    signer: _signer,
+                } = msg;
+
+                self.keeper.write().expect("poisoned lock").client_upgrade(
+                    ctx,
+                    &client_id,
+                    upgraded_client_state,
+                    upgraded_consensus_state,
+                    proof_upgrade_client,
+                    proof_upgrade_consensus_state,
+                )?;
+
+                Ok(())
+            }
             Message::SubmitMisbehaviour(_) => todo!(),
             Message::RecoverClient(_) => todo!(),
         }

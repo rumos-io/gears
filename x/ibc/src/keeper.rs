@@ -12,10 +12,12 @@ use proto_messages::cosmos::ibc::{
                         CLIENT_ID_ATTRIBUTE_KEY, CLIENT_MISBEHAVIOUR_EVENT,
                         CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHTS_ATTRIBUTE_KEY,
                         CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT, UPDATE_CLIENT_EVENT,
+                        UPGRADE_CLIENT_EVENT,
                     },
                     Status, UpdateKind,
                 },
             },
+            commitment::{CommitmentProofBytes, CommitmentRoot},
             host::identifiers::{ClientId, ClientType},
         },
         tendermint::{
@@ -26,7 +28,7 @@ use proto_messages::cosmos::ibc::{
 use store::StoreKey;
 
 use crate::{
-    errors::{ClientCreateError, ClientUpdateError, SearchError},
+    errors::{ClientCreateError, ClientUpdateError, ClientUpgradeError, SearchError},
     params::{self, AbciParamsKeeper, Params, RawParams, CLIENT_STATE_KEY},
     types::InitContextShim,
 };
@@ -52,6 +54,75 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             store_key,
             params_keeper: abci_params_keeper,
         }
+    }
+
+    pub fn client_upgrade<DB: Database + Send + Sync>(
+        &mut self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        client_id: &ClientId,
+        upgraded_client_state: WrappedTendermintClientState,
+        upgraded_consensus_state: WrappedConsensusState,
+        proof_upgrade_client: CommitmentProofBytes,
+        proof_upgrade_consensus_state: CommitmentProofBytes,
+    ) -> Result<(), ClientUpgradeError> {
+        let client_state = self.client_state_get(ctx)?;
+
+        let mut shim_ctx = InitContextShim(ctx);
+        let client_status = client_state.status(&mut shim_ctx, client_id)?;
+
+        if client_status != Status::Active {
+            return Err(ClientUpgradeError::NotActive {
+                client_id: client_id.clone(),
+                status: client_status,
+            });
+        }
+
+        let last_height = client_state.latest_height();
+
+        {
+            let upgraded_height = upgraded_client_state.latest_height();
+
+            if !(upgraded_height > last_height) {
+                return Err(ClientUpgradeError::HeightError {
+                    upgraded: upgraded_height,
+                    current: last_height,
+                });
+            }
+        }
+
+        let root_hash = CommitmentRoot::from_bytes(&self.root_hash(ctx));
+        client_state.verify_upgrade_client(
+            upgraded_client_state.into(),
+            upgraded_consensus_state.into(),
+            proof_upgrade_client,
+            proof_upgrade_consensus_state,
+            &root_hash,
+        )?;
+
+        ctx.append_events(vec![
+            Event::new(
+                UPGRADE_CLIENT_EVENT,
+                [
+                    (CLIENT_ID_ATTRIBUTE_KEY, client_id.as_str().to_owned()),
+                    (
+                        CLIENT_TYPE_ATTRIBUTE_KEY,
+                        client_state.client_type().as_str().to_owned(),
+                    ),
+                    (
+                        CONSENSUS_HEIGHT_ATTRIBUTE_KEY,
+                        client_state.latest_height().to_string(),
+                    ),
+                ],
+            ),
+            Event::new(
+                "message",
+                [
+                    (crate::types::ATTRIBUTE_KEY_MODULE, "ibc_client"), // TODO: const
+                ],
+            ),
+        ]);
+
+        Ok(())
     }
 
     pub fn client_update<DB: Database + Send + Sync>(
@@ -284,5 +355,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 .map_err(|e| SearchError::DecodeError(e.to_string()))?;
 
         Ok(state)
+    }
+
+    fn root_hash<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>) -> [u8; 32] {
+        ctx.get_kv_store(&self.store_key).head_commit_hash()
     }
 }

@@ -1,3 +1,4 @@
+use ibc::core::client::types::error::ClientError;
 use ibc::core::commitment_types::commitment::CommitmentProofBytes;
 pub use ibc_proto::cosmos::tx::v1beta1::SignDoc;
 pub use ibc_proto::cosmos::tx::v1beta1::TxRaw;
@@ -8,7 +9,10 @@ pub use ibc_proto::cosmos::tx::v1beta1::{
 };
 
 use crate::cosmos::ibc::protobuf::{Any, PrimitiveAny};
-use crate::cosmos::ibc::types::tendermint::consensus_state::RawConsensusState;
+use crate::cosmos::ibc::types::tendermint::{
+    consensus_state::{RawConsensusState, WrappedConsensusState},
+    WrappedTendermintClientState,
+};
 
 use ibc::core::host::types::identifiers::ClientId as RawClientId;
 use ibc::primitives::Signer as RawSigner;
@@ -28,18 +32,20 @@ pub use ibc::core::client::types::msgs::{
     UPGRADE_CLIENT_TYPE_URL,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct MsgUpgradeClient {
     pub client_id: RawClientId,
-    pub upgraded_client_state: Any, // TODO: Concrete validated type?
-    pub upgraded_consensus_state: Any, // TODO: Concrete validated type?
+    pub upgraded_client_state: WrappedTendermintClientState,
+    pub upgraded_consensus_state: WrappedConsensusState,
     pub proof_upgrade_client: CommitmentProofBytes,
     pub proof_upgrade_consensus_state: CommitmentProofBytes,
     pub signer: RawSigner, // TODO: Is validation required?
 }
 
-impl From<RawMsgUpgradeClient> for MsgUpgradeClient {
-    fn from(value: RawMsgUpgradeClient) -> Self {
+impl TryFrom<RawMsgUpgradeClient> for MsgUpgradeClient {
+    type Error = ClientError;
+
+    fn try_from(value: RawMsgUpgradeClient) -> Result<Self, Self::Error> {
         let RawMsgUpgradeClient {
             client_id,
             upgraded_client_state,
@@ -49,20 +55,14 @@ impl From<RawMsgUpgradeClient> for MsgUpgradeClient {
             signer,
         } = value;
 
-        Self {
+        Ok(Self {
             client_id,
-            upgraded_client_state: Any {
-                type_url: upgraded_client_state.type_url,
-                value: upgraded_client_state.value,
-            },
-            upgraded_consensus_state: Any {
-                type_url: upgraded_consensus_state.type_url,
-                value: upgraded_consensus_state.value,
-            },
+            upgraded_client_state: upgraded_client_state.try_into()?,
+            upgraded_consensus_state: upgraded_consensus_state.try_into()?,
             proof_upgrade_client,
             proof_upgrade_consensus_state,
             signer,
-        }
+        })
     }
 }
 
