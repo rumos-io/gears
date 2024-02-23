@@ -7,7 +7,7 @@ pub use ibc_proto::cosmos::tx::v1beta1::{
     ModeInfo,
 };
 
-use crate::cosmos::ibc::protobuf::Any;
+use crate::cosmos::ibc::protobuf::{Any, PrimitiveAny};
 use crate::cosmos::ibc::types::tendermint::consensus_state::RawConsensusState;
 
 use ibc::core::host::types::identifiers::ClientId as RawClientId;
@@ -69,8 +69,8 @@ impl From<RawMsgUpgradeClient> for MsgUpgradeClient {
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MsgUpdateClient {
     pub client_id: RawClientId,
-    pub client_message: Any, // TODO: Concrete validated type?
-    pub signer: RawSigner,   // TODO: Is validation required?
+    pub client_message: PrimitiveAny, // TODO: Concrete validated type?
+    pub signer: RawSigner,            // TODO: Is validation required?
 }
 
 impl From<RawMsgUpdateClient> for MsgUpdateClient {
