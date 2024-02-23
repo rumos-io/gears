@@ -9,6 +9,7 @@ use proto_messages::cosmos::ibc::types::core::host::identifiers::ClientType;
 use serde::{Deserialize, Serialize};
 use store::StoreKey;
 
+pub const CLIENT_STATE_KEY: &str = "clientState";
 pub const CLIENT_PARAMS_KEY: &str = "clientParams";
 pub const NEXT_CLIENT_SEQUENCE: &str = "nextClientSequence";
 const ALLOW_ALL_CLIENTS: &str = "*";

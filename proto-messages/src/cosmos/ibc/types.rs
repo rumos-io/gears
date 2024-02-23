@@ -83,4 +83,8 @@ pub mod tendermint {
 
     pub use ibc::clients::tendermint::client_state::ClientState as WrappedTendermintClientState;
     pub use ibc::clients::tendermint::types::ClientState as RawTendermintClientState;
+
+    pub mod error {
+        pub use ::tendermint::proto::Error;
+    }
 }

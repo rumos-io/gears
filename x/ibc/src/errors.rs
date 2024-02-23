@@ -1,6 +1,9 @@
 use proto_messages::cosmos::ibc::types::core::{
-    client::error::ClientError,
-    host::{error::IdentifierError, identifiers::ClientType},
+    client::{context::types::Status, error::ClientError},
+    host::{
+        error::IdentifierError,
+        identifiers::{ClientId, ClientType},
+    },
 };
 
 use crate::params::ParamsError;
@@ -9,6 +12,18 @@ use crate::params::ParamsError;
 pub enum ModuleErrors {
     #[error("Error while creating client: {0}")]
     ClientCreateError(#[from] ClientCreateError),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ClientUpdateError {
+    #[error("{0}")]
+    ClientError(#[from] ClientError),
+    #[error("cannot update client {client_id} with status {status}")]
+    NotActive { client_id: ClientId, status: Status },
+    #[error("SearchError: {0}")]
+    SearchError(#[from] SearchError),
+    #[error("Unexpected error: {0}")]
+    CustomError(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -25,6 +40,16 @@ pub enum ClientCreateError {
     IdentifierError(#[from] IdentifierError),
     #[error("{0}")]
     ClientError(#[from] ClientError),
+    #[error("SearchError: {0}")]
+    SearchError(#[from] SearchError),
     #[error("Unexpected error: {0}")]
     CustomError(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SearchError {
+    #[error("not found")]
+    NotFound,
+    #[error("Decode error: {0}")]
+    DecodeError(String),
 }
