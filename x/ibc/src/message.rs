@@ -1,8 +1,6 @@
 use proto_messages::cosmos::ibc::{
     protobuf::Any,
-    tx::{
-        MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient,
-    },
+    tx::{MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient},
 };
 use proto_types::AccAddress;
 

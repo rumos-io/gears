@@ -19,6 +19,18 @@ pub enum ModuleErrors {
     ClientUpdateError(#[from] ClientUpdateError),
     #[error("Error while upgrading client: {0}")]
     ClientUpgradeError(#[from] ClientUpgradeError),
+    #[error("Error while recovering client: {0}")]
+    ClientRecoverError(#[from] ClientRecoverError),
+    #[error("Unexpected error: {0}")]
+    CustomError(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ClientRecoverError {
+    #[error("{0}")]
+    ClientError(#[from] ClientError),
+    #[error("SearchError: {0}")]
+    SearchError(#[from] SearchError),
 }
 
 #[derive(Debug, thiserror::Error)]

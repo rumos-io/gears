@@ -8,8 +8,8 @@ use proto_types::AccAddress;
 use crate::message::Message as IbcMessage;
 
 use self::{
-    create::CliCreateClient, recover_client::CliRecoverClient,
-    update::CliUpdateClient, upgrade::CliUpgradeClient,
+    create::CliCreateClient, recover_client::CliRecoverClient, update::CliUpdateClient,
+    upgrade::CliUpgradeClient,
 };
 
 pub mod create;

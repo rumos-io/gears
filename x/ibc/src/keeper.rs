@@ -28,7 +28,9 @@ use proto_messages::cosmos::ibc::{
 use store::StoreKey;
 
 use crate::{
-    errors::{ClientCreateError, ClientUpdateError, ClientUpgradeError, SearchError},
+    errors::{
+        ClientCreateError, ClientRecoverError, ClientUpdateError, ClientUpgradeError, SearchError,
+    },
     params::{self, AbciParamsKeeper, Params, RawParams, CLIENT_STATE_KEY},
     types::InitContextShim,
 };
@@ -56,6 +58,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
+    pub fn recover_client<DB: Database + Send + Sync>(
+        &mut self,
+        _ctx: &mut TxContext<'_, DB, SK>,
+        _subject_client_id: &ClientId,
+        _substitute_client_id: &ClientId,
+    ) -> Result<(), ClientRecoverError> {
+        // https://github.com/cosmos/ibc-go/blob/41e7bf14f717d5cc2815688c8c590769ed164389/modules/core/02-client/keeper/client.go#L169
+
+        Ok(())
+    }
+
     pub fn client_upgrade<DB: Database + Send + Sync>(
         &mut self,
         ctx: &mut TxContext<'_, DB, SK>,
@@ -65,7 +78,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         proof_upgrade_client: CommitmentProofBytes,
         proof_upgrade_consensus_state: CommitmentProofBytes,
     ) -> Result<(), ClientUpgradeError> {
-        let client_state = self.client_state_get(ctx)?;
+        let client_state = self.client_state_get(ctx, &self.store_key)?;
 
         let mut shim_ctx = InitContextShim(ctx);
         let client_status = client_state.status(&mut shim_ctx, client_id)?;
@@ -131,7 +144,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         client_id: &ClientId,
         client_message: PrimitiveAny,
     ) -> Result<(), ClientUpdateError> {
-        let client_state = self.client_state_get(ctx)?;
+        let client_state = self.client_state_get(ctx, &self.store_key)?;
         let client_type = client_state.client_type();
         let params = self.params_get(ctx)?;
 
@@ -344,9 +357,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     fn client_state_get<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
+        key: &SK,
     ) -> Result<WrappedTendermintClientState, SearchError> {
         // TODO: Unsure in this code https://github.com/cosmos/ibc-go/blob/41e7bf14f717d5cc2815688c8c590769ed164389/modules/core/02-client/keeper/keeper.go#L78
-        let store = ctx.get_kv_store(&self.store_key);
+        let store = ctx.get_kv_store(key);
         let bytes = store
             .get(CLIENT_STATE_KEY.as_bytes())
             .ok_or(SearchError::NotFound)?;

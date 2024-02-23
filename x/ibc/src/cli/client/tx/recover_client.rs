@@ -1,5 +1,7 @@
+use std::str::FromStr;
+
 use clap::Args;
-use proto_messages::cosmos::ibc::tx::MsgRecoverClient;
+use proto_messages::cosmos::ibc::{tx::MsgRecoverClient, types::core::host::identifiers::ClientId};
 
 use crate::types::Signer;
 
@@ -18,8 +20,8 @@ pub(super) fn tx_command_handler(msg: CliRecoverClient) -> anyhow::Result<crate:
     } = msg;
 
     let raw_msg = MsgRecoverClient {
-        subject_client_id,
-        substitute_client_id,
+        subject_client_id: ClientId::from_str(&subject_client_id)?,
+        substitute_client_id: ClientId::from_str(&substitute_client_id)?,
         signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 

@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use ibc::core::client::types::error::ClientError;
 use ibc::core::commitment_types::commitment::CommitmentProofBytes;
 pub use ibc_proto::cosmos::tx::v1beta1::SignDoc;
@@ -93,24 +95,26 @@ pub const RECOVER_CLIENT_TYPE_URL: &str = "ibc.core.client.v1.MsgRecoverClient";
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct MsgRecoverClient {
-    pub subject_client_id: String,    // TODO: Is validation required?
-    pub substitute_client_id: String, // TODO: Is validation required?
-    pub signer: RawSigner,            // TODO: Is validation required?
+    pub subject_client_id: RawClientId,
+    pub substitute_client_id: RawClientId,
+    pub signer: RawSigner, // TODO: Is validation required?
 }
 
-impl From<RawProtoMsgRecoverClient> for MsgRecoverClient {
-    fn from(value: RawProtoMsgRecoverClient) -> Self {
+impl TryFrom<RawProtoMsgRecoverClient> for MsgRecoverClient {
+    type Error = ibc::core::host::types::error::IdentifierError;
+
+    fn try_from(value: RawProtoMsgRecoverClient) -> Result<Self, Self::Error> {
         let RawProtoMsgRecoverClient {
             subject_client_id,
             substitute_client_id,
             signer,
         } = value;
 
-        Self {
-            subject_client_id,
-            substitute_client_id,
+        Ok(Self {
+            subject_client_id: RawClientId::from_str(&subject_client_id)?,
+            substitute_client_id: RawClientId::from_str(&substitute_client_id)?,
             signer: RawSigner::from(signer),
-        }
+        })
     }
 }
 
