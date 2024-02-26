@@ -1,5 +1,5 @@
 use database::Database;
-use gears::types::context::tx_context::TxContext;
+use gears::types::context::{query_context::QueryContext, tx_context::TxContext};
 use proto_messages::cosmos::ibc::{
     protobuf::PrimitiveAny,
     types::{
@@ -484,3 +484,22 @@ impl<'a, 'b, DB: Database, SK: StoreKey>
         todo!()
     }
 }
+
+pub struct QueryShim<'a, 'b, DB, SK>(pub &'a mut QueryContext<'b, DB, SK>);
+
+// impl<DB : Database, SK : StoreKey> tonic::client::GrpcService<tonic::body::BoxBody> for QueryShim<'_, '_, DB, SK>
+// {
+//     type ResponseBody = Body<Data = Bytes> + Send + 'static;
+
+//     type Error = StdError;
+
+//     type Future;
+
+//     fn poll_ready(&mut self, cx: &mut std::task::Context<'_>) -> std::task::Poll<Result<(), Self::Error>> {
+//         todo!()
+//     }
+
+//     fn call(&mut self, request: http::Request<tonic::body::BoxBody>) -> Self::Future {
+//         todo!()
+//     }
+// }

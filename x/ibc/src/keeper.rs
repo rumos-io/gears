@@ -1,21 +1,26 @@
 use database::Database;
 use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
-use prost::Message;
 use proto_messages::cosmos::ibc::{
     protobuf::{PrimitiveAny, PrimitiveProtobuf},
     types::{
         core::{
-            client::context::{
-                client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
-                types::{
-                    events::{
-                        CLIENT_ID_ATTRIBUTE_KEY, CLIENT_MISBEHAVIOUR_EVENT,
-                        CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHTS_ATTRIBUTE_KEY,
-                        CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT, UPDATE_CLIENT_EVENT,
-                        UPGRADE_CLIENT_EVENT,
+            client::{
+                context::{
+                    client_state::{
+                        ClientStateCommon, ClientStateExecution, ClientStateValidation,
                     },
-                    Status, UpdateKind,
+                    types::{
+                        events::{
+                            CLIENT_ID_ATTRIBUTE_KEY, CLIENT_MISBEHAVIOUR_EVENT,
+                            CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHTS_ATTRIBUTE_KEY,
+                            CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT,
+                            UPDATE_CLIENT_EVENT, UPGRADE_CLIENT_EVENT,
+                        },
+                        Status, UpdateKind,
+                    },
                 },
+                proto::RawParams,
+                types::Params,
             },
             commitment::{CommitmentProofBytes, CommitmentRoot},
             host::identifiers::{ClientId, ClientType},
@@ -31,7 +36,7 @@ use crate::{
     errors::{
         ClientCreateError, ClientRecoverError, ClientUpdateError, ClientUpgradeError, SearchError,
     },
-    params::{self, AbciParamsKeeper, Params, RawParams, CLIENT_STATE_KEY},
+    params::{self, AbciParamsKeeper, CLIENT_STATE_KEY},
     types::ContextShim,
 };
 
@@ -402,7 +407,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .get(&ctx, &params::CLIENT_PARAMS_KEY)
             .map_err(|_| SearchError::NotFound)?;
 
-        Ok(RawParams::decode(bytes.as_slice())
+        Ok(serde_json::from_slice::<RawParams>(&bytes)
             .map_err(|e| SearchError::DecodeError(e.to_string()))?
             .into())
     }
