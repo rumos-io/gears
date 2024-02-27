@@ -106,21 +106,31 @@ pub struct CompactBitArray {
     pub elems: Vec<u8>,
 }
 
-impl From<RawCompactBitArray> for CompactBitArray
-{
+impl From<RawCompactBitArray> for CompactBitArray {
     fn from(value: RawCompactBitArray) -> Self {
-        let RawCompactBitArray { extra_bits_stored, elems } = value;
+        let RawCompactBitArray {
+            extra_bits_stored,
+            elems,
+        } = value;
 
-        Self { extra_bits_stored, elems }
+        Self {
+            extra_bits_stored,
+            elems,
+        }
     }
 }
 
-impl From<CompactBitArray> for RawCompactBitArray
-{
+impl From<CompactBitArray> for RawCompactBitArray {
     fn from(value: CompactBitArray) -> Self {
-        let CompactBitArray { extra_bits_stored, elems } = value;
+        let CompactBitArray {
+            extra_bits_stored,
+            elems,
+        } = value;
 
-        Self { extra_bits_stored, elems }
+        Self {
+            extra_bits_stored,
+            elems,
+        }
     }
 }
 
@@ -139,7 +149,7 @@ impl TryFrom<RawMulti> for Multi {
 
     fn try_from(raw: RawMulti) -> Result<Self, Self::Error> {
         Ok(Multi {
-            bitarray: raw.bitarray.map( | this | this.into()),
+            bitarray: raw.bitarray.map(CompactBitArray::from),
             mode_infos: raw
                 .mode_infos
                 .into_iter()
@@ -152,7 +162,7 @@ impl TryFrom<RawMulti> for Multi {
 impl From<Multi> for RawMulti {
     fn from(multi: Multi) -> RawMulti {
         RawMulti {
-            bitarray: multi.bitarray.map( | this | this.into()),
+            bitarray: multi.bitarray.map(CompactBitArray::into),
             mode_infos: multi
                 .mode_infos
                 .into_iter()

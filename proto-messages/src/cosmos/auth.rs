@@ -6,7 +6,8 @@ pub mod v1beta1 {
             QueryAccountRequest as RawQueryAccountRequest,
             QueryAccountResponse as RawQueryAccountResponse,
         },
-        google::protobuf::Any, Protobuf,
+        google::protobuf::Any,
+        Protobuf,
     };
     use prost::bytes::Bytes;
     use proto_types::AccAddress;

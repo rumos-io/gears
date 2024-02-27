@@ -67,8 +67,7 @@ impl From<proto_messages::Error> for AppError {
     }
 }
 
-impl From<tendermint::proto::Error> for AppError
-{
+impl From<tendermint::proto::Error> for AppError {
     fn from(value: tendermint::proto::Error) -> Self {
         AppError::InvalidRequest(value.to_string())
     }

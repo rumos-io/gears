@@ -89,7 +89,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
                 }
 
-                impl From<#name> for proto_messages::any::Any {
+                impl From<#name> for ::proto_messages::any::Any {
                     fn from(msg: #name) -> Self {
                         match msg {
                             #(#into_any),*
@@ -97,10 +97,10 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     }
                 }
 
-                impl TryFrom<proto_messages::any::Any> for #name {
+                impl TryFrom<::proto_messages::any::Any> for #name {
                     type Error = proto_messages::Error;
 
-                    fn try_from(value: proto_messages::any::Any) -> Result<Self, Self::Error> {
+                    fn try_from(value: ::proto_messages::any::Any) -> Result<Self, Self::Error> {
 
                         #(#from_any) else*
 

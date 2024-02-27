@@ -7,7 +7,7 @@ pub enum Error {
     #[error(transparent)]
     Decode(#[from] prost::DecodeError),
     #[error("{0}")]
-    DecodeProtobuf( String),
+    DecodeProtobuf(String),
     #[error("decode error: `{0}`")]
     DecodeAny(String),
     #[error("missing field: `{0}`")]

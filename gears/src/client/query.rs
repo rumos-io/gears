@@ -60,7 +60,6 @@ pub fn run_query<
 ) -> Result<Response>
 where
     <Response as TryFrom<Raw>>::Error: std::fmt::Display,
-    <Response as TryFrom<Raw>>::Error: std::fmt::Display,
 {
     let client = HttpClient::new(node)?;
 

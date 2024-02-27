@@ -1,3 +1,5 @@
+use ibc_proto::cosmos::base::query::v1beta1::PageRequest as RawPageRequest;
+use ibc_proto::cosmos::base::query::v1beta1::PageResponse as RawPageResponse;
 use ibc_proto::{
     cosmos::bank::v1beta1::{
         QueryAllBalancesRequest as RawQueryAllBalancesRequest,
@@ -12,8 +14,6 @@ use ibc_proto::{
 };
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
-use ibc_proto::cosmos::base::query::v1beta1::PageResponse as RawPageResponse; 
-use ibc_proto::cosmos::base::query::v1beta1::PageRequest as RawPageRequest;
 
 use crate::{
     cosmos::{
@@ -70,21 +70,43 @@ pub struct PageRequest {
     pub reverse: bool,
 }
 
-impl From<RawPageRequest> for PageRequest
-{
+impl From<RawPageRequest> for PageRequest {
     fn from(value: RawPageRequest) -> Self {
-        let RawPageRequest { key, offset, limit, count_total, reverse } = value;
-    
-        Self { key, offset, limit, count_total, reverse }
+        let RawPageRequest {
+            key,
+            offset,
+            limit,
+            count_total,
+            reverse,
+        } = value;
+
+        Self {
+            key,
+            offset,
+            limit,
+            count_total,
+            reverse,
+        }
     }
 }
 
-impl From<PageRequest> for RawPageRequest
-{
+impl From<PageRequest> for RawPageRequest {
     fn from(value: PageRequest) -> Self {
-        let PageRequest { key, offset, limit, count_total, reverse } = value;
+        let PageRequest {
+            key,
+            offset,
+            limit,
+            count_total,
+            reverse,
+        } = value;
 
-        Self { key, offset, limit, count_total, reverse }
+        Self {
+            key,
+            offset,
+            limit,
+            count_total,
+            reverse,
+        }
     }
 }
 
@@ -106,7 +128,7 @@ impl TryFrom<RawQueryAllBalancesRequest> for QueryAllBalancesRequest {
 
         Ok(QueryAllBalancesRequest {
             address,
-            pagination: raw.pagination.map( | this | this.into()),
+            pagination: raw.pagination.map(|this| this.into()),
         })
     }
 }
@@ -115,7 +137,7 @@ impl From<QueryAllBalancesRequest> for RawQueryAllBalancesRequest {
     fn from(query: QueryAllBalancesRequest) -> RawQueryAllBalancesRequest {
         RawQueryAllBalancesRequest {
             address: query.address.to_string(),
-            pagination: query.pagination.map( | this | this.into()),
+            pagination: query.pagination.map(|this| this.into()),
         }
     }
 }
@@ -128,8 +150,7 @@ pub struct PageResponse {
     pub total: u64,
 }
 
-impl From<RawPageResponse> for PageResponse
-{
+impl From<RawPageResponse> for PageResponse {
     fn from(value: RawPageResponse) -> Self {
         let RawPageResponse { next_key, total } = value;
 
@@ -137,8 +158,7 @@ impl From<RawPageResponse> for PageResponse
     }
 }
 
-impl From<PageResponse> for RawPageResponse
-{
+impl From<PageResponse> for RawPageResponse {
     fn from(value: PageResponse) -> Self {
         let PageResponse { next_key, total } = value;
 
@@ -165,7 +185,7 @@ impl TryFrom<RawQueryAllBalancesResponse> for QueryAllBalancesResponse {
 
         Ok(QueryAllBalancesResponse {
             balances: balances?,
-            pagination: raw.pagination.map( | this | this.into()),
+            pagination: raw.pagination.map(|this| this.into()),
         })
     }
 }
@@ -177,7 +197,7 @@ impl From<QueryAllBalancesResponse> for RawQueryAllBalancesResponse {
 
         RawQueryAllBalancesResponse {
             balances,
-            pagination: query.pagination.map( | this | this.into()),
+            pagination: query.pagination.map(|this| this.into()),
         }
     }
 }
@@ -229,7 +249,7 @@ impl TryFrom<RawQueryTotalSupplyResponse> for QueryTotalSupplyResponse {
 
         Ok(QueryTotalSupplyResponse {
             supply: supply?,
-            pagination: raw.pagination.map( | this | this.into()),
+            pagination: raw.pagination.map(|this| this.into()),
         })
     }
 }
@@ -241,7 +261,7 @@ impl From<QueryTotalSupplyResponse> for RawQueryTotalSupplyResponse {
 
         RawQueryTotalSupplyResponse {
             supply,
-            pagination: query.pagination.map( | this | this.into()),
+            pagination: query.pagination.map(|this| this.into()),
         }
     }
 }
@@ -279,7 +299,7 @@ impl TryFrom<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse {
             raw.metadatas.into_iter().map(Metadata::try_from).collect();
         Ok(QueryDenomsMetadataResponse {
             metadatas: metadatas?,
-            pagination: raw.pagination.map( | this | this.into()),
+            pagination: raw.pagination.map(|this| this.into()),
         })
     }
 }
@@ -288,7 +308,7 @@ impl From<QueryDenomsMetadataResponse> for RawQueryDenomsMetadataResponse {
     fn from(query: QueryDenomsMetadataResponse) -> RawQueryDenomsMetadataResponse {
         RawQueryDenomsMetadataResponse {
             metadatas: query.metadatas.into_iter().map(RawMetadata::from).collect(),
-            pagination: query.pagination.map( | this | this.into()),
+            pagination: query.pagination.map(|this| this.into()),
         }
     }
 }

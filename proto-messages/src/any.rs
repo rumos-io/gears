@@ -1,7 +1,6 @@
-use serde::{Deserialize, Serialize};
-use ibc_proto::google::protobuf::Any as GoogleAny;
 use ibc::primitives::proto::Any as PrimitiveAny;
-
+use ibc_proto::google::protobuf::Any as GoogleAny;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq, ::prost::Message, Serialize, Deserialize)]
 pub struct Any {
@@ -41,26 +40,23 @@ pub struct Any {
     pub value: ::prost::alloc::vec::Vec<u8>,
 }
 
-impl From<GoogleAny> for Any
-{
+impl From<GoogleAny> for Any {
     fn from(value: GoogleAny) -> Self {
-        let GoogleAny { type_url, value }   = value;
+        let GoogleAny { type_url, value } = value;
 
         Self { type_url, value }
     }
 }
 
-impl From<PrimitiveAny> for Any
-{
+impl From<PrimitiveAny> for Any {
     fn from(value: PrimitiveAny) -> Self {
-        let PrimitiveAny { type_url, value }   = value;
+        let PrimitiveAny { type_url, value } = value;
 
         Self { type_url, value }
     }
 }
 
-impl From<Any> for GoogleAny
-{
+impl From<Any> for GoogleAny {
     fn from(value: Any) -> Self {
         let Any { type_url, value } = value;
 
@@ -68,8 +64,7 @@ impl From<Any> for GoogleAny
     }
 }
 
-impl From<Any> for PrimitiveAny
-{
+impl From<Any> for PrimitiveAny {
     fn from(value: Any) -> Self {
         let Any { type_url, value } = value;
 

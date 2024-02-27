@@ -1,7 +1,10 @@
 use keyring::key_pair::KeyPair;
 use prost::Message;
 use proto_messages::cosmos::{
-    ibc_types::{protobuf::Protobuf, tx::{SignDoc, TxRaw}},
+    ibc_types::{
+        protobuf::Protobuf,
+        tx::{SignDoc, TxRaw},
+    },
     tx::v1beta1::{
         auth_info::AuthInfo,
         fee::Fee,

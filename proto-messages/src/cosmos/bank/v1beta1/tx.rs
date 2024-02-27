@@ -6,10 +6,12 @@ use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    any::Any, cosmos::{
+    any::Any,
+    cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::message::Message,
-    }, error::Error
+    },
+    error::Error,
 };
 
 /// MsgSend represents a message to send coins from one account to another.

@@ -7,7 +7,7 @@ use crate::{cosmos::tx::v1beta1::message::Message, error::Error};
 
 use super::tx::Tx;
 
-#[derive(Debug, Clone, PartialEq,Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TxRaw {
     pub body_bytes: Vec<u8>,
     pub auth_info_bytes: Vec<u8>,
@@ -16,18 +16,33 @@ pub struct TxRaw {
 
 impl From<RawTxRaw> for TxRaw {
     fn from(value: RawTxRaw) -> Self {
-        let RawTxRaw { body_bytes, auth_info_bytes, signatures } = value;
+        let RawTxRaw {
+            body_bytes,
+            auth_info_bytes,
+            signatures,
+        } = value;
 
-        Self { body_bytes, auth_info_bytes, signatures }
+        Self {
+            body_bytes,
+            auth_info_bytes,
+            signatures,
+        }
     }
 }
 
-impl From<TxRaw> for RawTxRaw
-{
+impl From<TxRaw> for RawTxRaw {
     fn from(value: TxRaw) -> Self {
-        let TxRaw { body_bytes, auth_info_bytes, signatures } = value;
+        let TxRaw {
+            body_bytes,
+            auth_info_bytes,
+            signatures,
+        } = value;
 
-        Self { body_bytes, auth_info_bytes, signatures }
+        Self {
+            body_bytes,
+            auth_info_bytes,
+            signatures,
+        }
     }
 }
 
@@ -43,6 +58,9 @@ impl<M: Message> TxWithRaw<M> {
         let tx = Tx::decode(raw.clone()).map_err(|e| Error::DecodeGeneral(format!("{}", e)))?;
 
         let raw = RawTxRaw::decode(raw).map_err(|e| Error::DecodeGeneral(format!("{}", e)))?;
-        Ok(TxWithRaw { tx, raw : raw.into() })
+        Ok(TxWithRaw {
+            tx,
+            raw: raw.into(),
+        })
     }
 }

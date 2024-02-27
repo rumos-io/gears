@@ -70,7 +70,6 @@ mod tests {
     use gears::types::context::context::{Context, ContextTrait};
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
-        // ibc_types::bank::MsgSendRaw,
         tx::v1beta1::{
             screen::Screen,
             tx_metadata::{DenomUnit, Metadata},
@@ -123,7 +122,6 @@ mod tests {
         }"#;
 
         let msg: MsgSend = serde_json::from_str(MESSAGE)?;
-        // let msg: MsgSend = msg.try_into()?;
 
         const SCREENS: &str = r#"[
     		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
