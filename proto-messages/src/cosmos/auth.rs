@@ -6,8 +6,7 @@ pub mod v1beta1 {
             QueryAccountRequest as RawQueryAccountRequest,
             QueryAccountResponse as RawQueryAccountResponse,
         },
-        google::protobuf::Any,
-        protobuf::Protobuf,
+        google::protobuf::Any, Protobuf,
     };
     use prost::bytes::Bytes;
     use proto_types::AccAddress;
@@ -260,7 +259,7 @@ pub mod v1beta1 {
 #[cfg(test)]
 mod tests {
 
-    use ibc_proto::protobuf::Protobuf;
+    use ibc_proto::Protobuf;
     use proto_types::AccAddress;
 
     use super::v1beta1::*;

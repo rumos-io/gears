@@ -1,17 +1,15 @@
 use ibc_proto::{
-    cosmos::bank::v1beta1::MsgSend as RawMsgSend, cosmos::base::v1beta1::Coin as RawCoin,
-    google::protobuf::Any, protobuf::Protobuf,
+    cosmos::bank::v1beta1::MsgSend as RawMsgSend, cosmos::base::v1beta1::Coin as RawCoin, Protobuf,
 };
 use prost::bytes::Bytes;
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    cosmos::{
+    any::Any, cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::message::Message,
-    },
-    error::Error,
+    }, error::Error
 };
 
 /// MsgSend represents a message to send coins from one account to another.

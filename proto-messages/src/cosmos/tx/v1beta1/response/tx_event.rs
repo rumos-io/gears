@@ -1,8 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::cosmos::{
-    base::abci::v1beta1::TxResponse,
-    tx::v1beta1::{message::Message, tx::tx::Tx},
+    bank::v1beta1::PageResponse, base::abci::v1beta1::TxResponse, tx::v1beta1::{message::Message, tx::tx::Tx}
 };
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
@@ -19,7 +18,7 @@ pub struct GetTxsEventResponse<M: Message> {
     /// pagination defines a pagination for the response.
     /// Deprecated post v0.46.x: use total instead.
     // TODO: doesn't serialize correctly - has been deprecated
-    pub pagination: Option<ibc_proto::cosmos::base::query::v1beta1::PageResponse>,
+    pub pagination: Option<PageResponse>,
     /// total is total number of results available
     #[serde_as(as = "DisplayFromStr")]
     pub total: u64,

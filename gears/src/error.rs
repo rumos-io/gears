@@ -61,8 +61,15 @@ impl From<trees::Error> for AppError {
     }
 }
 
-impl From<proto_messages::cosmos::ibc_types::Error> for AppError {
-    fn from(err: proto_messages::cosmos::ibc_types::Error) -> AppError {
+impl From<proto_messages::Error> for AppError {
+    fn from(err: proto_messages::Error) -> AppError {
         AppError::InvalidRequest(err.to_string())
+    }
+}
+
+impl From<tendermint::proto::Error> for AppError
+{
+    fn from(value: tendermint::proto::Error) -> Self {
+        AppError::InvalidRequest(value.to_string())
     }
 }

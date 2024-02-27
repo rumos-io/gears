@@ -116,7 +116,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
+                denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.clone().encode_vec());
                 let zero = U256::ZERO;
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount.0 + current_balance);

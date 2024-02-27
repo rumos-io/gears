@@ -1,4 +1,4 @@
-use ibc_proto::{google::protobuf::Any, protobuf::Protobuf};
+use ibc_proto::{google::protobuf::Any, Protobuf};
 use prost::bytes::Bytes;
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};

@@ -18,6 +18,6 @@ resolver = "2"
 [workspace.dependencies]
 thiserror = "1.0.13"
 bytes = "1.2.1"
-prost = { version = "0.11" }
+prost = { version = "0.12.3" }
 axum = "0.6.18"
 anyhow = "1.0.70"

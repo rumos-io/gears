@@ -42,7 +42,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
             "/cosmos.bank.v1beta1.Query/AllBalances" => {
-                let req = QueryAllBalancesRequest::decode(query.data)?;
+                let req = QueryAllBalancesRequest::decode(query.data).map_err(| e | proto_messages::Error::DecodeProtobuf(e.to_string()))?;
 
                 Ok(self.keeper.query_all_balances(ctx, req).encode_vec().into())
             }
@@ -53,7 +53,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
             .encode_vec()
             .into()),
             "/cosmos.bank.v1beta1.Query/Balance" => {
-                let req = QueryBalanceRequest::decode(query.data)?;
+                let req = QueryBalanceRequest::decode(query.data).map_err(| e | proto_messages::Error::DecodeProtobuf(e.to_string()))?;
 
                 Ok(self.keeper.query_balance(ctx, req).encode_vec().into())
             }
@@ -61,7 +61,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                 Ok(self.keeper.query_denoms_metadata(ctx).encode_vec().into())
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
-                let req = QueryDenomMetadataRequest::decode(query.data)?;
+                let req = QueryDenomMetadataRequest::decode(query.data).map_err(| e | proto_messages::Error::DecodeProtobuf(e.to_string()))?;
                 let metadata = self.keeper.get_denom_metadata(ctx, req.denom);
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
             }

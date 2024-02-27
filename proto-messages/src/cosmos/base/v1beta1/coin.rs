@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bnum::types::U256 as BU256;
-use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, protobuf::Protobuf};
+use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, Protobuf};
 use proto_types::Denom;
 use serde::{Deserialize, Serialize};
 

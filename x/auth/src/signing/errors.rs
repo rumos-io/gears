@@ -8,6 +8,6 @@ pub enum SigningErrors {
     EncodeError,
     #[error("{0}")]
     IoError(#[from] std::io::Error),
-    #[error("{0}")]
-    ProtoError(#[from] proto_messages::cosmos::ibc_types::protobuf::Error),
+    // #[error("{0}")]
+    // ProtoError(#[from] proto_messages::cosmos::ibc_types::protobuf::Error),
 }
