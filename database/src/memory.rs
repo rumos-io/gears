@@ -2,6 +2,7 @@ use std::{cell::RefCell, collections::BTreeMap, ops::Bound};
 
 use crate::Database;
 
+#[derive(Debug)]
 pub struct MemDB {
     store: RefCell<BTreeMap<Vec<u8>, Vec<u8>>>, // we use a refcell because the set method on the DB trait doesn't take a mutable ref
 }

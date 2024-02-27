@@ -61,16 +61,13 @@ pub(super) mod test_mocks {
                 display: "ATOM".into(),
                 name: String::new(),
                 symbol: String::new(),
-                uri: String::new(),
-                uri_hash: None,
             }
         }
-
-        fn get_kv_store(&self, _: &SK) -> &store::KVStore<PrefixDB<T>> {
+        fn get_kv_store(&self, _store_key: &SK) -> &store::KVStore<PrefixDB<T>> {
             unimplemented!()
         }
 
-        fn get_mutable_kv_store(&mut self, _: &SK) -> &mut store::KVStore<PrefixDB<T>> {
+        fn get_mutable_kv_store(&mut self, _store_key: &SK) -> &mut store::KVStore<PrefixDB<T>> {
             unimplemented!()
         }
     }

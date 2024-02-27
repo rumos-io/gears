@@ -5,7 +5,7 @@ pub mod v1beta1 {
         engine::general_purpose::{self},
         Engine,
     };
-    use ibc_proto::protobuf::Protobuf;
+    use ibc_proto::Protobuf;
     use proto_types::AccAddress;
     use ripemd::Ripemd160;
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -155,5 +155,15 @@ mod tests {
             hex::encode(address),
             "7c2bb42a8be69791ec763e51f5a49bcd41e82237"
         )
+    }
+
+    #[test]
+    fn deserialize_works() {
+        let _: PubKey = serde_json::from_str(
+            r#"{
+            "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
+        }"#,
+        )
+        .unwrap();
     }
 }

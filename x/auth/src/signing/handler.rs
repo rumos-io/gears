@@ -1,27 +1,25 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
-use database::RocksDB;
+use ciborium::{value::CanonicalValue, Value};
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{
-    cbor::Cbor, message::Message, screen::Screen, signer_data::SignerData,
-    textual_data::TextualData, tx_data::TxData,
+    message::Message, screen::Screen, signer_data::SignerData, textual_data::TextualData,
+    tx_data::TxData,
 };
 use store::StoreKey;
 
-use super::{
-    errors::SigningErrors,
-    renderer::value_renderer::{DefaultValueRenderer, ValueRenderer},
-};
+use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 
 #[derive(Debug)]
 pub struct SignModeHandler;
 
 impl SignModeHandler {
-    pub fn sign_bytes_get<SK: StoreKey>(
+    pub fn sign_bytes_get<SK: StoreKey, DB: Database>(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
         signer_data: SignerData,
-        tx_data: TxData<impl Message + ValueRenderer<DefaultValueRenderer, SK>>,
+        tx_data: TxData<impl Message + ValueRenderer<SK, DB>>,
     ) -> Result<Vec<u8>, SigningErrors> {
         let data = TextualData::new(signer_data, tx_data)
             .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
@@ -32,12 +30,14 @@ impl SignModeHandler {
 
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut final_map = HashMap::new();
+        let canonical_key: CanonicalValue = Value::Integer(1.into()).into();
+        let mut final_map = BTreeMap::new();
+        final_map.insert(canonical_key, map);
 
-        final_map.insert(1, map);
         let mut bytes = Vec::new();
 
-        final_map.encode(&mut bytes)?;
+        ciborium::into_writer(&final_map, &mut bytes)
+            .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
 
         Ok(bytes)
     }
@@ -45,19 +45,20 @@ impl SignModeHandler {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::collections::BTreeMap;
 
     use bnum::types::U256;
+    use ciborium::Value;
     use gears::types::context::context::Context;
 
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
-        ibc::tx::{ModeInfo, Single, Sum},
         tx::v1beta1::{
             auth_info::AuthInfo,
             cbor::Cbor,
             fee::Fee,
+            mode_info::{ModeInfo, SignMode},
             screen::{Content, Indent, Screen},
             signer::SignerInfo,
             signer_data::{ChainId, SignerData},
@@ -81,10 +82,7 @@ mod tests {
                         "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
                     }"#,
             )?),
-            // 2 represents SignMode_SIGN_MODE_TEXTUAL
-            mode_info: Some(ModeInfo {
-                sum: Some(Sum::Single(Single { mode: 2 })),
-            }),
+            mode_info: ModeInfo::Single(SignMode::Textual),
             sequence: 2,
         };
 
@@ -106,13 +104,13 @@ mod tests {
         };
 
         let signer_data = SignerData {
-            address: "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs".to_string(),
+            address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
             chain_id: ChainId::new("my-chain".to_string())?,
             account_number: 1,
             sequence: 2,
             pub_key: serde_json::from_str(
                 r#"{
-				"@type": "/cosmos.crypto.secp256k1.PubKey",
+                    "@type": "/cosmos.crypto.secp256k1.PubKey",
 				"key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"
 			}"#,
             )?,
@@ -141,7 +139,6 @@ mod tests {
         let tx_data = TxData::<MsgSend> {
             body: tx_body,
             auth_info: auth_inf,
-            body_has_unknown_non_criticals: false,
         };
 
         let handler = SignModeHandler;
@@ -261,9 +258,9 @@ mod tests {
 
         let map = screens.iter().map(Screen::cbor_map).collect::<Vec<_>>();
 
-        let mut final_map = HashMap::new();
+        let mut final_map = BTreeMap::new();
 
-        final_map.insert(1, map);
+        final_map.insert(Value::Integer(1.into()).into(), map);
         let mut bytes = Vec::new();
 
         final_map.encode(&mut bytes)?;

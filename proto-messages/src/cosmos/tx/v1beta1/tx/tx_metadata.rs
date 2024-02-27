@@ -1,12 +1,35 @@
 use ibc_proto::cosmos::bank::v1beta1::DenomUnit as RawDenomUnit;
-use ibc_proto::cosmos::bank::v1beta1::Metadata as RawMetadata;
+use ibc_proto::Protobuf;
 use nutype::nutype;
 use prost::bytes::Bytes;
 use prost::Message;
 use proto_types::Denom;
+use serde::Deserialize;
+use serde::Serialize;
 
 use crate::Error;
 
+/// We use our own version of the Metadata struct because the one in ibc_proto
+/// has additional fields that were added in SDK v46 (uri and uri_hash). If we
+/// don't exclude them then we won't arrive at the same state hash as v45
+/// chains.
+#[derive(Clone, PartialEq, prost::Message)]
+pub struct RawMetadata {
+    #[prost(string, tag = "1")]
+    description: String,
+    #[prost(message, repeated, tag = "2")]
+    denom_units: Vec<RawDenomUnit>,
+    #[prost(string, tag = "3")]
+    base: String,
+    #[prost(string, tag = "4")]
+    display: String,
+    #[prost(string, tag = "5")]
+    name: String,
+    #[prost(string, tag = "6")]
+    symbol: String,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DenomUnit {
     pub denom: Denom,
     pub exponent: u32,
@@ -50,6 +73,7 @@ impl From<DenomUnit> for RawDenomUnit {
 #[nutype(validate(not_empty), derive(Debug, Clone, Deserialize, Serialize))]
 pub struct UriHash(String);
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Metadata {
     pub description: String,
     /// denom_units represents the list of DenomUnit's for a given coin
@@ -64,11 +88,6 @@ pub struct Metadata {
     /// symbol is the token symbol usually shown on exchanges (eg: ATOM). This can
     /// be the same as the display.
     pub symbol: String,
-    /// URI to a document (on or off-chain) that contains additional information. Optional.
-    pub uri: String,
-    /// URIHash is a sha256 hash of a document pointed by URI. It's used to verify that
-    /// the document didn't change. Optional.
-    pub uri_hash: Option<UriHash>,
 }
 
 impl Metadata {
@@ -78,6 +97,8 @@ impl Metadata {
         meta.try_into()
     }
 }
+
+impl Protobuf<RawMetadata> for Metadata {}
 
 impl TryFrom<RawMetadata> for Metadata {
     type Error = Error;
@@ -90,8 +111,6 @@ impl TryFrom<RawMetadata> for Metadata {
             display,
             name,
             symbol,
-            uri,
-            uri_hash,
         } = value;
 
         let mut mapped_denom: Vec<DenomUnit> = Vec::with_capacity(denom_units.len());
@@ -109,14 +128,6 @@ impl TryFrom<RawMetadata> for Metadata {
             display,
             name,
             symbol,
-            uri,
-            uri_hash: {
-                if uri_hash.is_empty() {
-                    None
-                } else {
-                    Some(UriHash::new(uri_hash).map_err(|e| Error::Custom(e.to_string()))?)
-                }
-            },
         })
     }
 }
@@ -130,15 +141,7 @@ impl From<Metadata> for RawMetadata {
             display,
             name,
             symbol,
-            uri,
-            uri_hash,
         } = value;
-
-        let uri_hash = if let Some(uri) = uri_hash {
-            uri.into_inner()
-        } else {
-            String::new()
-        };
 
         Self {
             description,
@@ -147,8 +150,6 @@ impl From<Metadata> for RawMetadata {
             display,
             name,
             symbol,
-            uri,
-            uri_hash,
         }
     }
 }

@@ -1,6 +1,8 @@
 use bytes::Bytes;
-use proto_messages::cosmos::bank::v1beta1::MsgSend;
-use proto_messages::cosmos::ibc::protobuf::{Any, Protobuf};
+use proto_messages::{
+    any::Any,
+    cosmos::{bank::v1beta1::MsgSend, ibc::protobuf::Protobuf},
+};
 use proto_types::AccAddress;
 use serde::Serialize;
 
@@ -48,7 +50,8 @@ impl TryFrom<Any> for Message {
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
             "/cosmos.bank.v1beta1.MsgSend" => {
-                let msg = MsgSend::decode::<Bytes>(value.value.clone().into())?;
+                let msg = MsgSend::decode::<Bytes>(value.value.clone().into())
+                    .map_err(|e| proto_messages::Error::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Send(msg))
             }
             _ => Err(proto_messages::Error::DecodeGeneral(

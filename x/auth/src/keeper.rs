@@ -2,7 +2,6 @@ use bytes::Bytes;
 use database::Database;
 
 use gears::{
-    baseapp::ante::AuthKeeper,
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
@@ -18,9 +17,9 @@ use proto_messages::cosmos::{
     ibc::protobuf::Protobuf,
 };
 use proto_types::AccAddress;
-use store::StoreKey;
+use store::{KVStoreTrait, StoreKey};
 
-use crate::{AuthParamsKeeper, GenesisState};
+use crate::{ante::AuthKeeper, AuthParamsKeeper, GenesisState};
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
@@ -33,9 +32,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     auth_params_keeper: AuthParamsKeeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::AuthKeeper<SK>
-    for Keeper<SK, PSK>
-{
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     fn get_auth_params<DB: Database>(
         &self,
         ctx: &Context<'_, '_, DB, SK>,
@@ -142,10 +139,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         };
 
         let next_acct_num = acct_num + 1;
-        auth_store.set(
-            GLOBAL_ACCOUNT_NUMBER_KEY.into(),
-            next_acct_num.encode_to_vec(),
-        );
+        auth_store.set(GLOBAL_ACCOUNT_NUMBER_KEY, next_acct_num.encode_to_vec());
 
         acct_num
     }

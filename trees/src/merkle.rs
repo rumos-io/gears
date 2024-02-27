@@ -7,6 +7,10 @@ pub const EMPTY_HASH: [u8; 32] = [
     100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
 ]; // = Sha256::digest([]).into()
 
+pub const HASH_LENGTH: usize = 32;
+
+pub type Sha256Hash = [u8; HASH_LENGTH];
+
 pub fn root_hash(items: &[Vec<u8>]) -> [u8; 32] {
     match items.len() {
         0 => EMPTY_HASH,

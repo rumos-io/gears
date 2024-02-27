@@ -2,24 +2,35 @@ use std::marker::PhantomData;
 
 use database::Database;
 
+use gears::{
+    error::AppError,
+    types::context::{context::Context, read_context::ReadContext},
+    x::auth::{Module, Params},
+};
 use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
+    ibc_types::tx::SignDoc,
+    tx::v1beta1::{
+        message::Message,
+        mode_info::{ModeInfo, SignMode},
+        public_key::PublicKey,
+        signer_data::{ChainId, SignerData},
+        tx::tx::Tx,
+        tx_data::TxData,
+        tx_metadata::Metadata,
+        tx_raw::TxWithRaw,
+    },
     ibc::tx::SignDoc,
     tx::v1beta1::{message::Message, public_key::PublicKey, tx::tx::Tx, tx_raw::TxWithRaw},
 };
-use proto_types::AccAddress;
+use proto_types::{AccAddress, Denom};
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
-use store_crate::StoreKey;
+use store::StoreKey;
 
-use crate::types::context::context::Context;
-use crate::{
-    error::AppError,
-    x::auth::{Module, Params},
-};
+use crate::signing::handler::SignModeHandler;
 
-// TODO: this doesn't belong here
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
@@ -28,9 +39,14 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         to_module: Module,
         amount: SendCoins,
     ) -> Result<(), AppError>;
+
+    fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
+        &self,
+        ctx: &CTX,
+        base: Denom,
+    ) -> Option<Metadata>;
 }
 
-// TODO: this doesn't belong here
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_auth_params<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> Params;
 
@@ -275,20 +291,59 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                 )));
             }
 
-            // check signature
-            let sign_bytes = SignDoc {
-                body_bytes: tx.raw.body_bytes.clone(),
-                auth_info_bytes: tx.raw.auth_info_bytes.clone(),
-                chain_id: ctx.get_chain_id().to_owned(),
-                account_number: acct.get_account_number(),
-            }
-            .encode_to_vec();
-            let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
-
             let public_key = acct
                 .get_public_key()
                 .as_ref()
                 .expect("account pub keys are set in set_pub_key_ante_handler"); //TODO: but can't they be set to None?
+
+            let sign_bytes = match &signature_data.mode_info {
+                ModeInfo::Single(mode) => match mode {
+                    SignMode::Unspecified => {
+                        return Err(AppError::TxValidation(
+                            "unspecified sign mode not supported".to_string(),
+                        ));
+                    }
+                    SignMode::Direct => SignDoc {
+                        body_bytes: tx.raw.body_bytes.clone(),
+                        auth_info_bytes: tx.raw.auth_info_bytes.clone(),
+                        chain_id: ctx.get_chain_id().to_owned(),
+                        account_number: acct.get_account_number(),
+                    }
+                    .encode_to_vec(),
+                    SignMode::Textual => {
+                        let _handler = SignModeHandler;
+
+                        let _signer_data = SignerData {
+                            address: signer.to_owned(),
+                            chain_id: ChainId::new(ctx.get_chain_id().to_owned()).unwrap(), //TODO: remove unwrap
+                            account_number: acct.get_account_number(),
+                            sequence: account_seq,
+                            pub_key: public_key.to_owned(),
+                        };
+
+                        let _tx_data = TxData {
+                            body: tx.tx.body.clone(),
+                            auth_info: tx.tx.auth_info.clone(),
+                        };
+
+                        //handler.sign_bytes_get(ctx, signer_data, tx_data).unwrap()
+                        //TODO: remove unwrap
+                        todo!()
+                    }
+                    _ => {
+                        return Err(AppError::TxValidation(
+                            "sign mode not supported".to_string(),
+                        ))
+                    }
+                },
+                ModeInfo::Multi(_) => {
+                    return Err(AppError::TxValidation(
+                        "multi sig not supported".to_string(),
+                    ));
+                }
+            };
+
+            let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
 
             //TODO: move sig verification into PublicKey
             match public_key {

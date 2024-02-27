@@ -7,7 +7,7 @@ use crate::{
     cosmos::base::v1beta1::SendCoins, cosmos::tx::v1beta1::message::Message, error::Error,
 };
 
-use ibc_proto::{cosmos::tx::v1beta1::Tx as RawTx, protobuf::Protobuf};
+use ibc_proto::{cosmos::tx::v1beta1::Tx as RawTx, Protobuf};
 
 use super::{
     auth_info::AuthInfo, public_key::PublicKey, signature_data::SignatureData, tx_body::TxBody,
@@ -131,6 +131,7 @@ impl<M: Message> TryFrom<RawTx> for Tx<M> {
                 signature: signature.clone(),
                 // the check above, tx.signatures.len() != tx.auth_info.signer_infos.len(), ensures that this indexing is safe
                 sequence: auth_info.signer_infos[i].sequence,
+                mode_info: auth_info.signer_infos[i].mode_info.clone(),
             })
         }
 

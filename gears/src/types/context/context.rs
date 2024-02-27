@@ -23,25 +23,7 @@ pub enum Context<'a, 'b, T: Database, SK: StoreKey> {
     DynamicContext(&'a mut dyn ContextTrait<T, SK>),
 }
 
-impl<'a, 'b, T: Database, SK: StoreKey> Context<'a, 'b, T, SK> {
-    ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
-        match self {
-            Context::TxContext(ctx) => ctx.get_kv_store(store_key),
-            Context::InitContext(ctx) => ctx.multi_store.get_kv_store(store_key),
-            Context::DynamicContext(ctx) => ctx.get_kv_store(store_key),
-        }
-    }
-
-    /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>> {
-        match self {
-            Context::TxContext(ctx) => ctx.get_mutable_kv_store(store_key),
-            Context::InitContext(ctx) => ctx.multi_store.get_mutable_kv_store(store_key),
-            Context::DynamicContext(ctx) => ctx.get_mutable_kv_store(store_key),
-        }
-    }
-
+impl<T: Database, SK: StoreKey> Context<'_, '_, T, SK> {
     pub fn get_height(&self) -> u64 {
         match self {
             Context::TxContext(ctx) => ctx.height,
@@ -81,6 +63,24 @@ impl<'a, 'b, T: Database, SK: StoreKey> Context<'a, 'b, T, SK> {
             Context::TxContext(ctx) => ctx.metadata_get(),
             Context::InitContext(ctx) => ctx.metadata_get(),
             Context::DynamicContext(ctx) => ctx.metadata_get(),
+        }
+    }
+
+    ///  Fetches an immutable ref to a KVStore from the MultiStore.
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<T>> {
+        match self {
+            Context::TxContext(ctx) => ctx.get_kv_store(store_key),
+            Context::InitContext(ctx) => ctx.get_kv_store(store_key),
+            Context::DynamicContext(ctx) => ctx.get_kv_store(store_key),
+        }
+    }
+
+    /// Fetches a mutable ref to a KVStore from the MultiStore.
+    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<T>> {
+        match self {
+            Context::TxContext(ctx) => ctx.get_mutable_kv_store(store_key),
+            Context::InitContext(ctx) => ctx.get_mutable_kv_store(store_key),
+            Context::DynamicContext(ctx) => ctx.get_mutable_kv_store(store_key),
         }
     }
 }

@@ -1,20 +1,18 @@
-use database::RocksDB;
+use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::tx::v1beta1::{public_key::PublicKey, screen::Screen};
 use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::ValueRenderer;
 
-impl<DefaultValueRenderer, SK: StoreKey> ValueRenderer<DefaultValueRenderer, SK> for PublicKey {
+impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for PublicKey {
     fn format(
         &self,
-        ctx: &Context<'_, '_, RocksDB, SK>,
+        ctx: &Context<'_, '_, DB, SK>,
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         // I prefer to implement formating for each key in own module to keep things as small as possible
         match self {
-            PublicKey::Secp256k1(key) => {
-                ValueRenderer::<DefaultValueRenderer, SK>::format(key, ctx)
-            }
+            PublicKey::Secp256k1(key) => ValueRenderer::<SK, DB>::format(key, ctx),
         }
     }
 }
@@ -27,10 +25,7 @@ mod tests {
         tx::v1beta1::screen::{Content, Indent, Screen},
     };
 
-    use crate::signing::renderer::{
-        value_renderer::{DefaultValueRenderer, ValueRenderer},
-        KeyMock, MockContext,
-    };
+    use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {
@@ -61,7 +56,7 @@ mod tests {
         let context: Context<'_, '_, database::RocksDB, KeyMock> =
             Context::DynamicContext(&mut ctx);
 
-        let actual_screens = ValueRenderer::<DefaultValueRenderer, KeyMock>::format(&key, &context)
+        let actual_screens = ValueRenderer::<KeyMock, _>::format(&key, &context)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actual_screens);

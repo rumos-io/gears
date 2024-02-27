@@ -1,8 +1,7 @@
-use ibc_proto::google::protobuf::Any;
 use proto_types::AccAddress;
 use serde::Serialize;
 
-use crate::error::Error;
+use crate::{any::Any, error::Error};
 
 pub trait Message:
     Serialize + Clone + Send + Sync + 'static + Into<Any> + TryFrom<Any, Error = Error>

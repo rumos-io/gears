@@ -1,5 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
+use auth::ante::{AuthKeeper, BankKeeper};
 use bnum::types::U256;
 use bytes::Bytes;
 use database::Database;
@@ -7,11 +8,13 @@ use database::Database;
 use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
+use gears::types::context::read_context::ReadContext;
 use gears::{
-    baseapp::ante::AuthKeeper,
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
 };
+use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
+use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use proto_messages::cosmos::{
     bank::v1beta1::{
@@ -28,6 +31,7 @@ use crate::{BankParamsKeeper, GenesisState};
 
 const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
+const DENOM_METADATA_PREFIX: [u8; 1] = [1];
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -36,9 +40,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     auth_keeper: auth::Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::BankKeeper<SK>
-    for Keeper<SK, PSK>
-{
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
     fn send_coins_from_account_to_module<DB: Database>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
@@ -56,6 +58,23 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> gears::baseapp::ante::BankKeeper<SK>
         };
 
         self.send_coins(ctx, msg)
+    }
+
+    fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
+        &self,
+        ctx: &CTX,
+        base: Denom,
+    ) -> Option<Metadata> {
+        let bank_store = ctx.get_kv_store(&self.store_key);
+        let denom_metadata_store =
+            bank_store.get_immutable_prefix_store(denom_metadata_key(base.to_string()));
+
+        denom_metadata_store
+            .get(&base.to_string().into_bytes())
+            .map(|metadata| {
+                Metadata::decode::<&[u8]>(&metadata)
+                    .expect("invalid data in database - possible database corruption")
+            })
     }
 }
 
@@ -97,7 +116,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
+                denom_balance_store.set(
+                    coin.denom.to_string().into_bytes(),
+                    coin.clone().encode_vec(),
+                );
                 let zero = U256::ZERO;
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount.0 + current_balance);
@@ -113,6 +135,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     amount: coin.1.into(),
                 },
             );
+        }
+
+        for denom_metadata in genesis.denom_metadata {
+            self.set_denom_metadata(&mut ctx.as_any(), denom_metadata);
         }
     }
 
@@ -269,8 +295,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    //#######
-
     pub fn set_supply<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
@@ -290,6 +314,53 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let prefix = create_denom_balance_prefix(address.to_owned());
         bank_store.get_mutable_prefix_store(prefix)
     }
+
+    /// Sets the denominations metadata
+    pub fn set_denom_metadata<DB: Database>(
+        &self,
+        ctx: &mut Context<'_, '_, DB, SK>,
+        denom_metadata: Metadata,
+    ) {
+        // NOTE: we use the denom twice, once for the prefix and once for the key.
+        // This seems unnecessary, I'm not sure why they do this in the SDK.
+        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        let mut denom_metadata_store =
+            bank_store.get_mutable_prefix_store(denom_metadata_key(denom_metadata.base.clone()));
+
+        denom_metadata_store.set(
+            denom_metadata.base.clone().into_bytes(),
+            denom_metadata.encode_vec(),
+        );
+    }
+
+    pub fn query_denoms_metadata<DB: Database>(
+        &self,
+        ctx: &QueryContext<'_, DB, SK>,
+    ) -> QueryDenomsMetadataResponse {
+        let bank_store = ctx.get_kv_store(&self.store_key);
+        let mut denoms_metadata = vec![];
+
+        for (_, metadata) in bank_store
+            .get_immutable_prefix_store(DENOM_METADATA_PREFIX.into())
+            .range(..)
+        {
+            let metadata: Metadata = Metadata::decode::<Bytes>(metadata.to_owned().into())
+                .expect("invalid data in database - possible database corruption");
+            denoms_metadata.push(metadata);
+        }
+
+        QueryDenomsMetadataResponse {
+            metadatas: denoms_metadata,
+            pagination: None,
+        }
+    }
+}
+
+fn denom_metadata_key(denom: String) -> Vec<u8> {
+    let mut key = Vec::new();
+    key.extend(DENOM_METADATA_PREFIX);
+    key.extend(denom.into_bytes());
+    key
 }
 
 fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {

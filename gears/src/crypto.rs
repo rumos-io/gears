@@ -3,11 +3,16 @@ use prost::Message;
 use proto_messages::cosmos::{
     ibc::{
         protobuf::Protobuf,
-        tx::{ModeInfo, SignDoc, Single, Sum, TxRaw},
+        tx::{SignDoc, TxRaw},
     },
     tx::v1beta1::{
-        auth_info::AuthInfo, fee::Fee, message::Message as SDKMessage, signer::SignerInfo,
-        tip::Tip, tx_body::TxBody,
+        auth_info::AuthInfo,
+        fee::Fee,
+        message::Message as SDKMessage,
+        mode_info::{ModeInfo, SignMode},
+        signer::SignerInfo,
+        tip::Tip,
+        tx_body::TxBody,
     },
 };
 use tendermint::informal::chain::Id;
@@ -33,9 +38,7 @@ pub fn create_signed_transaction<M: SDKMessage>(
 
             SignerInfo {
                 public_key,
-                mode_info: Some(ModeInfo {
-                    sum: Some(Sum::Single(Single { mode: 1 })),
-                }),
+                mode_info: ModeInfo::Single(SignMode::Direct),
                 sequence: s.sequence,
             }
         })
