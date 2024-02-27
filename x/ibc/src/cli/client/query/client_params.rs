@@ -28,7 +28,7 @@ pub(super) fn query_command_handler<DB, SK>(
 
     let result = run_query::<QueryClientParamsResponse, RawQueryClientParamsResponse>(
         query.encode_to_vec(),
-        "/cosmos.bank.v1beta1.Query/AllBalances".to_owned(),
+        "/ibc.core.client.v1.Query/ClientParams".to_owned(),
         node,
         height,
     )?;
