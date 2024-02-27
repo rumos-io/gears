@@ -1,8 +1,6 @@
 use database::Database;
 use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
-use proto_messages::cosmos::ibc::{
-    protobuf::{PrimitiveAny, PrimitiveProtobuf},
-    types::{
+use proto_messages::{any::{Any, PrimitiveAny}, cosmos::ibc::{protobuf::Protobuf, types::{
         core::{
             client::{
                 context::{
@@ -28,8 +26,7 @@ use proto_messages::cosmos::ibc::{
         tendermint::{
             consensus_state::WrappedConsensusState, informal::Event, WrappedTendermintClientState,
         },
-    },
-};
+    }}};
 use store::StoreKey;
 
 use crate::{
@@ -200,11 +197,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &mut self,
         ctx: &mut TxContext<'_, DB, SK>,
         client_id: &ClientId,
-        client_message: PrimitiveAny,
+        client_message: Any,
     ) -> Result<(), ClientUpdateError> {
         let client_state = self.client_state_get(ctx, client_id)?;
         let client_type = client_state.client_type();
         let params = self.params_get(ctx)?;
+
+        let client_message = PrimitiveAny::from(client_message);
 
         let mut shim_ctx = ContextShim(ctx);
 
@@ -425,7 +424,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .get(CLIENT_STATE_KEY.as_bytes())
             .ok_or(SearchError::NotFound)?;
         let state =
-            <WrappedTendermintClientState as PrimitiveProtobuf<PrimitiveAny>>::decode_vec(&bytes)
+            <WrappedTendermintClientState as Protobuf<PrimitiveAny>>::decode_vec(&bytes)
                 .map_err(|e| SearchError::DecodeError(e.to_string()))?;
 
         Ok(state)

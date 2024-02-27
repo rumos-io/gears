@@ -1,7 +1,4 @@
-use proto_messages::cosmos::ibc::{
-    protobuf::Any,
-    tx::{MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient},
-};
+use proto_messages::{any::Any, cosmos::ibc::tx::{MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient}};
 use proto_types::AccAddress;
 
 #[derive(Debug, Clone, serde::Serialize)]

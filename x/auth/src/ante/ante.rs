@@ -11,7 +11,6 @@ use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
-    ibc_types::tx::SignDoc,
     tx::v1beta1::{
         message::Message,
         mode_info::{ModeInfo, SignMode},
@@ -23,7 +22,6 @@ use proto_messages::cosmos::{
         tx_raw::TxWithRaw,
     },
     ibc::tx::SignDoc,
-    tx::v1beta1::{message::Message, public_key::PublicKey, tx::tx::Tx, tx_raw::TxWithRaw},
 };
 use proto_types::{AccAddress, Denom};
 use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};

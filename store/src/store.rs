@@ -151,7 +151,6 @@ impl<DB: Database> KVStore<DB> {
         })
     }
 
-    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
     pub fn get(&self, key: impl AsRef<[u8]>) -> Option<Vec<u8>> {
         let tx_cache_val = self.tx_cache.get(key.as_ref());
 
@@ -166,15 +165,6 @@ impl<DB: Database> KVStore<DB> {
         }
 
         tx_cache_val.cloned()
-    }
-
-    pub fn set(&mut self, key: Vec<u8>, value: Vec<u8>) {
-        if key.is_empty() {
-            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
-            panic!("key is empty")
-        }
-
-        self.tx_cache.insert(key, value);
     }
 
     pub fn get_immutable_prefix_store(
@@ -568,3 +558,4 @@ mod tests {
     //     assert_eq!(expected_pairs, got_pairs);
     // }
 }
+

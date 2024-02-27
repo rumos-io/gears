@@ -1,8 +1,8 @@
-use ibc::primitives::proto::Any as PrimitiveAny;
-use ibc_proto::google::protobuf::Any as GoogleAny;
+pub use ibc::primitives::proto::Any as PrimitiveAny;
+pub use ibc_proto::google::protobuf::Any as GoogleAny;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, ::prost::Message, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, ::prost::Message, Serialize, Deserialize)]
 pub struct Any {
     /// A URL/resource name that uniquely identifies the type of the serialized
     /// protocol buffer message. This string must contain at least

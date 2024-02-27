@@ -1,8 +1,6 @@
 use database::Database;
 use gears::types::context::{query_context::QueryContext, tx_context::TxContext};
-use proto_messages::cosmos::ibc::{
-    protobuf::PrimitiveAny,
-    types::{
+use proto_messages::{any::PrimitiveAny, cosmos::ibc::types::{
         core::{
             channel::{
                 channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment, PacketCommitment,
@@ -28,8 +26,7 @@ use proto_messages::cosmos::ibc::{
             consensus_state::WrappedConsensusState, context::CommonContext,
             WrappedTendermintClientState,
         },
-    },
-};
+    }};
 use store::StoreKey;
 
 // TODO: try to find this const in external crates
