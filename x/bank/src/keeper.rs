@@ -14,8 +14,8 @@ use gears::{
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
-use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
+use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,

@@ -1,32 +1,39 @@
 use database::Database;
 use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
-use proto_messages::{any::{Any, PrimitiveAny}, cosmos::ibc::{protobuf::Protobuf, types::{
-        core::{
-            client::{
-                context::{
-                    client_state::{
-                        ClientStateCommon, ClientStateExecution, ClientStateValidation,
-                    },
-                    types::{
-                        events::{
-                            CLIENT_ID_ATTRIBUTE_KEY, CLIENT_MISBEHAVIOUR_EVENT,
-                            CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHTS_ATTRIBUTE_KEY,
-                            CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT,
-                            UPDATE_CLIENT_EVENT, UPGRADE_CLIENT_EVENT,
+use proto_messages::{
+    any::{Any, PrimitiveAny},
+    cosmos::ibc::{
+        protobuf::Protobuf,
+        types::{
+            core::{
+                client::{
+                    context::{
+                        client_state::{
+                            ClientStateCommon, ClientStateExecution, ClientStateValidation,
                         },
-                        Status, UpdateKind,
+                        types::{
+                            events::{
+                                CLIENT_ID_ATTRIBUTE_KEY, CLIENT_MISBEHAVIOUR_EVENT,
+                                CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHTS_ATTRIBUTE_KEY,
+                                CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT,
+                                UPDATE_CLIENT_EVENT, UPGRADE_CLIENT_EVENT,
+                            },
+                            Status, UpdateKind,
+                        },
                     },
+                    proto::RawParams,
+                    types::Params,
                 },
-                proto::RawParams,
-                types::Params,
+                commitment::{CommitmentProofBytes, CommitmentRoot},
+                host::identifiers::{ClientId, ClientType},
             },
-            commitment::{CommitmentProofBytes, CommitmentRoot},
-            host::identifiers::{ClientId, ClientType},
+            tendermint::{
+                consensus_state::WrappedConsensusState, informal::Event,
+                WrappedTendermintClientState,
+            },
         },
-        tendermint::{
-            consensus_state::WrappedConsensusState, informal::Event, WrappedTendermintClientState,
-        },
-    }}};
+    },
+};
 use store::StoreKey;
 
 use crate::{
@@ -423,9 +430,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let bytes = store
             .get(CLIENT_STATE_KEY.as_bytes())
             .ok_or(SearchError::NotFound)?;
-        let state =
-            <WrappedTendermintClientState as Protobuf<PrimitiveAny>>::decode_vec(&bytes)
-                .map_err(|e| SearchError::DecodeError(e.to_string()))?;
+        let state = <WrappedTendermintClientState as Protobuf<PrimitiveAny>>::decode_vec(&bytes)
+            .map_err(|e| SearchError::DecodeError(e.to_string()))?;
 
         Ok(state)
     }

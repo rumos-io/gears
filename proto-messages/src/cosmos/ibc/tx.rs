@@ -72,7 +72,7 @@ impl TryFrom<RawMsgUpgradeClient> for MsgUpgradeClient {
 pub struct MsgUpdateClient {
     pub client_id: RawClientId,
     pub client_message: Any, // TODO: Concrete validated type?
-    pub signer: RawSigner,            // TODO: Is validation required?
+    pub signer: RawSigner,   // TODO: Is validation required?
 }
 
 impl From<RawMsgUpdateClient> for MsgUpdateClient {
@@ -85,7 +85,7 @@ impl From<RawMsgUpdateClient> for MsgUpdateClient {
 
         Self {
             client_id,
-            client_message : client_message.into(),
+            client_message: client_message.into(),
             signer,
         }
     }

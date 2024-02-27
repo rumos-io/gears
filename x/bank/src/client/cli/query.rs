@@ -7,7 +7,8 @@ use proto_messages::cosmos::{
     bank::v1beta1::{
         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
         QueryDenomsMetadataResponse, RawQueryDenomsMetadataResponse,
-    }, ibc::{bank::RawQueryAllBalancesResponse, protobuf::Protobuf},
+    },
+    ibc::{bank::RawQueryAllBalancesResponse, protobuf::Protobuf},
 };
 use proto_types::AccAddress;
 use tendermint::informal::block::Height;

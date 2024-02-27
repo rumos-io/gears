@@ -57,6 +57,16 @@ pub mod core {
                 }
             }
 
+            impl From<Params> for RawParams {
+                fn from(value: Params) -> Self {
+                    let Params { allowed_clients } = value;
+
+                    Self {
+                        allowed_clients: allowed_clients.into_iter().collect(),
+                    }
+                }
+            }
+
             impl Params {
                 pub fn is_client_allowed(
                     &self,

@@ -1,5 +1,6 @@
 use ibc::core::client::types::proto::v1::QueryClientParamsResponse as RawQueryClientParamsResponse;
 pub use ibc_proto::cosmos::base::query::v1beta1::PageResponse;
+use ibc_proto::Protobuf;
 use serde::{Deserialize, Serialize};
 
 use super::types::core::client::types::Params;
@@ -8,6 +9,8 @@ use super::types::core::client::types::Params;
 pub struct QueryClientParamsResponse {
     pub params: Params,
 }
+
+impl Protobuf<RawQueryClientParamsResponse> for QueryClientParamsResponse {}
 
 impl TryFrom<RawQueryClientParamsResponse> for QueryClientParamsResponse {
     type Error = std::convert::Infallible;
@@ -19,3 +22,12 @@ impl TryFrom<RawQueryClientParamsResponse> for QueryClientParamsResponse {
     }
 }
 
+impl From<QueryClientParamsResponse> for RawQueryClientParamsResponse {
+    fn from(value: QueryClientParamsResponse) -> Self {
+        let QueryClientParamsResponse { params } = value;
+
+        Self {
+            params: Some(params.into()),
+        }
+    }
+}
