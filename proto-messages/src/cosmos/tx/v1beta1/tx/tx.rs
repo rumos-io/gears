@@ -7,7 +7,7 @@ use crate::{
     cosmos::base::v1beta1::SendCoins, cosmos::tx::v1beta1::message::Message, error::Error,
 };
 
-use ibc_proto::{cosmos::tx::v1beta1::Tx as RawTx, protobuf::Protobuf};
+use ibc_proto::{cosmos::tx::v1beta1::Tx as RawTx, Protobuf};
 
 use super::{
     auth_info::AuthInfo, public_key::PublicKey, signature_data::SignatureData, tx_body::TxBody,

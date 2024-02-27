@@ -71,8 +71,8 @@ impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRender
         screens.append(&mut ValueRenderer::<SK, DB>::format(auth_info, ctx)?);
 
         // =========================
-        let body_bytes = body.encode_vec();
-        let auth_info_bytes = auth_info.encode_vec();
+        let body_bytes = body.to_owned().encode_vec();
+        let auth_info_bytes = auth_info.to_owned().encode_vec();
 
         screens.push(Screen {
             title: "Hash of raw bytes".to_string(),

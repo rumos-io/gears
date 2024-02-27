@@ -1,5 +1,5 @@
 use ibc_proto::cosmos::bank::v1beta1::DenomUnit as RawDenomUnit;
-use ibc_proto::protobuf::Protobuf;
+use ibc_proto::Protobuf;
 use nutype::nutype;
 use prost::bytes::Bytes;
 use prost::Message;
