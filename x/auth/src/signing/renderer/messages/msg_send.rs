@@ -2,7 +2,6 @@ use std::error::Error;
 
 use proto_messages::cosmos::{
     bank::v1beta1::MsgSend,
-    base::v1beta1::Coin,
     tx::v1beta1::{
         screen::{Content, Indent, Screen},
         tx_metadata::Metadata,
@@ -58,9 +57,7 @@ impl ValueRenderer for MsgSend {
             expert: false,
         });
 
-        for coin_raw in self.amount.clone() {
-            let coin: Coin = coin_raw.try_into()?;
-
+        for coin in self.amount.clone() {
             screens_vec.append(&mut ValueRenderer::format(&coin, get_metadata)?)
         }
 

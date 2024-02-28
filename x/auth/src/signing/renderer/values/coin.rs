@@ -21,7 +21,7 @@ impl ValueRenderer for Coin {
             display,
             denom_units,
             ..
-        } = get_metadata(&self.denom).ok_or("Metadata not found")?;
+        } = get_metadata(&self.denom).ok_or("metadata not found")?;
 
         let coin_exp = denom_units.iter().find(|this| this.denom == self.denom);
         let denom_exp = denom_units
@@ -83,6 +83,28 @@ mod tests {
         let expected_screens = Screen {
             title: "Amount".to_string(),
             content: Content::new("10 ATOM".to_string())?,
+            indent: Some(Indent::new(2)?),
+            expert: false,
+        };
+
+        let actual_screen = ValueRenderer::format(&coin, &get_metadata);
+
+        assert!(actual_screen.is_ok(), "Failed to retrieve screens");
+        assert_eq!(vec![expected_screens], actual_screen.unwrap());
+
+        Ok(())
+    }
+
+    #[test]
+    fn formatting_small_amounts_works() -> anyhow::Result<()> {
+        let coin = Coin {
+            denom: "uatom".try_into()?,
+            amount: U256::from_digit(1).into(),
+        };
+
+        let expected_screens = Screen {
+            title: "Amount".to_string(),
+            content: Content::new("1 uatom".to_string())?,
             indent: Some(Indent::new(2)?),
             expert: false,
         };
