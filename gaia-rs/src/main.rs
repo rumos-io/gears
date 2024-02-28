@@ -16,7 +16,6 @@ mod abci_handler;
 mod client;
 mod config;
 mod genesis;
-mod ibc;
 mod message;
 mod rest;
 mod store_keys;

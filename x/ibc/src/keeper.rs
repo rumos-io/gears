@@ -426,7 +426,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // TODO: Unsure in this code https://github.com/cosmos/ibc-go/blob/41e7bf14f717d5cc2815688c8c590769ed164389/modules/core/02-client/keeper/keeper.go#L78
         let store = ctx
             .get_kv_store(&self.store_key)
-            .get_immutable_prefix_store(client_id.as_bytes().iter().cloned());
+            .get_immutable_prefix_store( format!( "clients/{client_id}").into_bytes() );
         let bytes = store
             .get(CLIENT_STATE_KEY.as_bytes())
             .ok_or(SearchError::NotFound)?;
