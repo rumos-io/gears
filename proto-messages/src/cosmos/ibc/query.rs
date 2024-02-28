@@ -3,6 +3,7 @@ use ibc_proto::Protobuf;
 use serde::{Deserialize, Serialize};
 
 use super::types::core::client::proto::IdentifiedClientState;
+use super::types::core::client::types::ConsensusStateWithHeight;
 use super::types::core::client::types::Height;
 use super::types::core::client::types::HeightError;
 use super::types::core::client::types::Params;
@@ -260,6 +261,54 @@ impl From<QueryConsensusStateResponse> for RawQueryConsensusStateResponse {
             consensus_state: consensus_state.map(Any::into),
             proof,
             proof_height: proof_height.map(Height::into),
+        }
+    }
+}
+
+pub use ibc::core::client::types::proto::v1::QueryConsensusStatesResponse as RawQueryConsensusStatesResponse;
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct QueryConsensusStatesResponse {
+    pub consensus_states: Vec<ConsensusStateWithHeight>,
+    pub pagination: Option<PageResponse>,
+}
+
+impl Protobuf<RawQueryConsensusStatesResponse> for QueryConsensusStatesResponse {}
+
+impl TryFrom<RawQueryConsensusStatesResponse> for QueryConsensusStatesResponse {
+    type Error = HeightError;
+
+    fn try_from(value: RawQueryConsensusStatesResponse) -> Result<Self, Self::Error> {
+        let RawQueryConsensusStatesResponse {
+            consensus_states,
+            pagination: _,
+        } = value;
+
+        let mut states = Vec::with_capacity(consensus_states.len());
+        for state in consensus_states {
+            states.push(state.try_into()?);
+        }
+
+        Ok(Self {
+            consensus_states: states,
+            pagination: None,
+        })
+    }
+}
+
+impl From<QueryConsensusStatesResponse> for RawQueryConsensusStatesResponse {
+    fn from(value: QueryConsensusStatesResponse) -> Self {
+        let QueryConsensusStatesResponse {
+            consensus_states,
+            pagination: _,
+        } = value;
+
+        Self {
+            consensus_states: consensus_states
+                .into_iter()
+                .map(ConsensusStateWithHeight::into)
+                .collect(),
+            pagination: None,
         }
     }
 }

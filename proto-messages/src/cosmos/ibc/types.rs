@@ -75,6 +75,8 @@ pub mod core {
 
             use serde::{Deserialize, Serialize};
 
+            use crate::any::Any;
+
             use super::proto::RawParams;
             pub use ibc::core::client::context::types::proto::v1::Height as ProtoHeight;
             pub use ibc::core::client::types::Height as RawHeight;
@@ -161,6 +163,50 @@ pub mod core {
                     } else {
                         self.allowed_clients.contains(client_type.as_str())
                     }
+                }
+            }
+
+            pub use ibc::core::client::types::proto::v1::ConsensusStateWithHeight as RawConsensusStateWithHeight;
+
+            #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+            pub struct ConsensusStateWithHeight {
+                pub height: Option<Height>,
+                pub consensus_state: Option<Any>,
+            }
+
+            impl From<ConsensusStateWithHeight> for RawConsensusStateWithHeight {
+                fn from(value: ConsensusStateWithHeight) -> Self {
+                    let ConsensusStateWithHeight {
+                        height,
+                        consensus_state,
+                    } = value;
+
+                    Self {
+                        height: height.map(Height::into),
+                        consensus_state: consensus_state.map(Any::into),
+                    }
+                }
+            }
+
+            impl TryFrom<RawConsensusStateWithHeight> for ConsensusStateWithHeight {
+                type Error = HeightError;
+
+                fn try_from(value: RawConsensusStateWithHeight) -> Result<Self, Self::Error> {
+                    let RawConsensusStateWithHeight {
+                        height,
+                        consensus_state,
+                    } = value;
+
+                    let height = if let Some(height) = height {
+                        Some(height.try_into()?)
+                    } else {
+                        None
+                    };
+
+                    Ok(Self {
+                        height,
+                        consensus_state: consensus_state.map(Any::from),
+                    })
                 }
             }
         }
