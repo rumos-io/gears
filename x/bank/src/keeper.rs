@@ -13,7 +13,7 @@ use gears::{
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
-use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::{
     bank::v1beta1::{
@@ -298,7 +298,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
-        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
+        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY);
 
         supply_store.set(
             coin.denom.to_string().into(),

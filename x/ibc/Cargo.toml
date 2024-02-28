@@ -1,0 +1,30 @@
+[package]
+name = "ibc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+#local
+proto-types = { path = "../../proto-types" }
+proto-messages = { path = "../../proto-messages" }
+store = { path = "../../store" }
+gears = { path = "../../gears" }
+database = { path = "../../database" }
+tendermint = {path = "../../tendermint"}
+
+#serialization
+serde = { version = "1.0", default-features = false }
+serde_json = "1.0.93"
+prost = { workspace = true }
+schemars = "0.8.16"
+
+#utils
+clap = { version = "4.2.2", features = ["derive"] }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+#networking
+tonic = "0.11.0"
+http = "1.0.0"

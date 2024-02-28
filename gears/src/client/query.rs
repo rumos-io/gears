@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use prost::Message;
-use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use serde::Serialize;
 use tendermint::informal::block::Height;
 use tendermint::rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};

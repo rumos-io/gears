@@ -1,7 +1,7 @@
 use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
-    ibc_types::protobuf::Protobuf,
+    ibc::protobuf::Protobuf,
     tx::v1beta1::{
         message::Message,
         screen::{Content, Indent, Screen},

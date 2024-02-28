@@ -1449,6 +1449,7 @@ dependencies = [
  "database",
  "gears",
  "gears-derive",
+ "ibc 0.1.0",
  "proto-messages",
  "proto-types",
  "serde",
@@ -1555,9 +1556,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.3.23"
+version = "0.3.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b553656127a00601c8ae5590fcfdc118e4083a7924b6cf4ffc1ea4b99dc429d7"
+checksum = "bb2c4422095b67ee78da96fbb51a4cc413b3b25883c7717ff7ca1ab31022c9c9"
 dependencies = [
  "bytes",
  "fnv",
@@ -1825,6 +1826,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f31827a206f56af32e590ba56d5d2d085f558508192593743f16b2306495269f"
 dependencies = [
  "cc",
+]
+
+[[package]]
+name = "ibc"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "database",
+ "gears",
+ "http 1.0.0",
+ "prost 0.12.3",
+ "proto-messages",
+ "proto-types",
+ "schemars",
+ "serde",
+ "serde_json",
+ "store",
+ "tendermint 0.1.0",
+ "thiserror",
+ "tonic 0.11.0",
 ]
 
 [[package]]
@@ -2332,7 +2354,7 @@ dependencies = [
  "prost 0.12.3",
  "subtle-encoding",
  "tendermint-proto 0.34.1",
- "tonic",
+ "tonic 0.10.2",
 ]
 
 [[package]]
@@ -3334,7 +3356,7 @@ dependencies = [
  "cosmwasm-std",
  "data-encoding",
  "hex",
- "ibc",
+ "ibc 0.50.0",
  "ibc-proto 0.42.0",
  "num-traits",
  "nutype",
@@ -4660,6 +4682,33 @@ name = "tonic"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d560933a0de61cf715926b9cac824d4c883c2c43142f787595e48280c40a1d0e"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "axum",
+ "base64 0.21.7",
+ "bytes",
+ "h2",
+ "http 0.2.11",
+ "http-body",
+ "hyper",
+ "hyper-timeout",
+ "percent-encoding",
+ "pin-project",
+ "prost 0.12.3",
+ "tokio",
+ "tokio-stream",
+ "tower",
+ "tower-layer",
+ "tower-service",
+ "tracing",
+]
+
+[[package]]
+name = "tonic"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76c4eb7a4e9ef9d4763600161f12f5070b92a578e1b634db88a6887844c91a13"
 dependencies = [
  "async-stream",
  "async-trait",

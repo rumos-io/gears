@@ -42,7 +42,11 @@ pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Se
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 
-    fn tx<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>, msg: &M) -> Result<(), AppError>;
+    fn tx<DB: Database + Sync + Send>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &M,
+    ) -> Result<(), AppError>;
 
     #[allow(unused_variables)]
     fn begin_block<DB: Database>(
@@ -491,7 +495,7 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
         }
     }
 
-    fn run_msgs<T: Database>(
+    fn run_msgs<T: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, T, SK>,
         msgs: &Vec<M>,

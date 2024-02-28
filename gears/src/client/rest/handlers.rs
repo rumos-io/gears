@@ -3,7 +3,7 @@ use axum::Json;
 use bytes::Bytes;
 use proto_messages::cosmos::bank::v1beta1::PageResponse;
 use proto_messages::cosmos::base::abci::v1beta1::TxResponse;
-use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::response::tx_event::GetTxsEventResponse;
 use proto_messages::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message, tx::tx::Tx};
 use serde::{Deserialize, Serialize};

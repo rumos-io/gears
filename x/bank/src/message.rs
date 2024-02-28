@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use proto_messages::{
     any::Any,
-    cosmos::{bank::v1beta1::MsgSend, ibc_types::protobuf::Protobuf},
+    cosmos::{bank::v1beta1::MsgSend, ibc::protobuf::Protobuf},
 };
 use proto_types::AccAddress;
 use serde::Serialize;

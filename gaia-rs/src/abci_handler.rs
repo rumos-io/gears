@@ -20,6 +20,7 @@ use crate::{
 pub struct ABCIHandler {
     bank_abci_handler: bank::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
+    ibc_handler: ibc::handler::Handler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
         BankKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
         AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
@@ -39,27 +40,35 @@ impl ABCIHandler {
 
         let bank_keeper = bank::Keeper::new(
             GaiaStoreKey::Bank,
-            params_keeper,
+            params_keeper.clone(),
             GaiaParamsStoreKey::Bank,
             auth_keeper.clone(),
         );
 
+        let ibc_keeper =
+            ibc::keeper::Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
+
         ABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
+            ibc_handler: ibc::handler::Handler::new(ibc_keeper),
             ante_handler: BaseAnteHandler::new(bank_keeper, auth_keeper),
         }
     }
 }
 
 impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHandler {
-    fn tx<DB: Database>(
+    fn tx<DB: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
+            Message::Ibc(msg) => self
+                .ibc_handler
+                .tx(ctx, msg.clone())
+                .map_err(|e| AppError::IBC(e.to_string())),
         }
     }
 
