@@ -1,4 +1,3 @@
-use bnum::types::U256 as BU256;
 use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
@@ -8,6 +7,7 @@ use proto_messages::cosmos::{
         tx_metadata::Metadata,
     },
 };
+use proto_types::Uint256;
 use store::StoreKey;
 
 use crate::signing::renderer::value_renderer::{
@@ -41,15 +41,15 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SendCoins {
                         false => denom_exp.exponent - coin_exp.exponent,
                     };
 
-                    let denominator = BU256::from_digit(10).pow(power);
+                    let denominator = Uint256::from(10u32).pow(power);
 
                     let amount = coin.amount;
 
-                    let disp_amount = amount.0.div(denominator);
+                    let disp_amount = amount / denominator;
 
                     if disp_amount.is_zero() {
-                        let reminder = amount.0 % denominator;
-                        let padding = power - amount.0.trailing_zeros();
+                        let reminder = amount % denominator;
+                        let padding = power - 4; //TODO: this is hard coded for now but will be removed in the future when this is properly implemented
                         let padding_str = {
                             let mut var = String::with_capacity(padding as usize);
                             for _ in 0..padding {
@@ -73,7 +73,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SendCoins {
                 }
                 _ => format!(
                     "{} {display}",
-                    DefaultPrimitiveRenderer::format(coin.amount.0.clone())
+                    DefaultPrimitiveRenderer::format(coin.amount.clone())
                 ),
             };
 
@@ -95,12 +95,12 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SendCoins {
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256 as BU256;
     use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::screen::{Content, Screen},
     };
+    use proto_types::Uint256;
 
     use crate::signing::renderer::{
         value_renderer::ValueRenderer,
@@ -111,7 +111,7 @@ mod tests {
     fn check_formate() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: BU256::from_digit(2000).into(),
+            amount: Uint256::from(2000u32),
         };
 
         let expected_screens = Screen {

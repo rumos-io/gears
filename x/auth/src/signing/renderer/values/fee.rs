@@ -56,7 +56,6 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Fee {
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256;
     use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
@@ -65,7 +64,7 @@ mod tests {
             screen::{Content, Screen},
         },
     };
-    use proto_types::{AccAddress, Denom};
+    use proto_types::{AccAddress, Denom, Uint256};
 
     use crate::signing::renderer::{value_renderer::ValueRenderer, KeyMock, MockContext};
 
@@ -103,7 +102,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000).into(),
+                amount: Uint256::from(2000u32),
             }])?),
             gas_limit: 1,
             payer: None,
@@ -143,7 +142,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000).into(),
+                amount: Uint256::from(2000u32),
             }])?),
             gas_limit: 1,
             payer: Some(AccAddress::from_bech32(
@@ -191,7 +190,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000).into(),
+                amount: Uint256::from(2000u32),
             }])?),
             gas_limit: 1,
             payer: Some(AccAddress::from_bech32(
