@@ -31,7 +31,42 @@ pub mod core {
         }
 
         pub mod proto {
+            pub use ibc::core::client::types::proto::v1::IdentifiedClientState as RawIdentifiedClientState;
             pub use ibc::core::client::types::proto::v1::Params as RawParams;
+
+            #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+            pub struct IdentifiedClientState {
+                pub client_id: String,
+                pub client_state: Option<crate::any::Any>,
+            }
+
+            impl From<RawIdentifiedClientState> for IdentifiedClientState {
+                fn from(value: RawIdentifiedClientState) -> Self {
+                    let RawIdentifiedClientState {
+                        client_id,
+                        client_state,
+                    } = value;
+
+                    Self {
+                        client_id,
+                        client_state: client_state.map(crate::any::Any::from),
+                    }
+                }
+            }
+
+            impl From<IdentifiedClientState> for RawIdentifiedClientState {
+                fn from(value: IdentifiedClientState) -> Self {
+                    let IdentifiedClientState {
+                        client_id,
+                        client_state,
+                    } = value;
+
+                    Self {
+                        client_id,
+                        client_state: client_state.map(ibc::primitives::proto::Any::from),
+                    }
+                }
+            }
         }
 
         pub mod types {
