@@ -1,14 +1,12 @@
 use clap::Args;
-use gears::{client::query::run_query, types::context::query_context::QueryContext};
+use gears::client::query::run_query;
 use proto_messages::cosmos::ibc::types::tendermint::types::{Header, ProtoHeader};
 use tendermint::informal::block::Height;
 
 #[derive(Args, Debug, Clone)]
 pub struct CliClientParams;
 
-#[allow(dead_code)]
-pub(super) fn query_command_handler<DB, SK>(
-    _ctx: &QueryContext<'_, DB, SK>,
+pub(super) fn query_command_handler(
     _args: CliClientParams,
     node: &str,
     height: Option<Height>,

@@ -1,5 +1,5 @@
 use clap::Args;
-use gears::{client::query::run_query, types::context::query_context::QueryContext};
+use gears::client::query::run_query;
 use prost::Message;
 use proto_messages::cosmos::ibc::{
     query::{QueryClientStatesResponse, RawQueryClientStatesResponse},
@@ -10,10 +10,8 @@ use tendermint::informal::block::Height;
 #[derive(Args, Debug, Clone)]
 pub struct CliClientParams; // TODO: pagination
 
-#[allow(dead_code)]
-pub(super) fn query_command_handler<DB, SK>(
-    _ctx: &QueryContext<'_, DB, SK>,
-    _args: &CliClientParams,
+pub(super) fn query_command_handler(
+    _args: CliClientParams,
     node: &str,
     height: Option<Height>,
 ) -> anyhow::Result<String> {

@@ -1,5 +1,5 @@
 use clap::Args;
-use gears::{client::query::run_query, types::context::query_context::QueryContext};
+use gears::client::query::run_query;
 use prost::Message;
 use proto_messages::cosmos::ibc::{
     query::{QueryConsensusStatesResponse, RawQueryConsensusStatesResponse},
@@ -13,9 +13,7 @@ pub struct CliClientParams {
     client_id: String,
 }
 
-#[allow(dead_code)]
-pub(super) fn query_command_handler<DB, SK>(
-    _ctx: &QueryContext<'_, DB, SK>,
+pub(super) fn query_command_handler(
     args: CliClientParams,
     node: &str,
     height: Option<Height>,
