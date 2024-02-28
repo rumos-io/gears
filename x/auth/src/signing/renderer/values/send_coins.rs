@@ -152,4 +152,48 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn more_check_format() -> anyhow::Result<()> {
+        let coin = Coin {
+            denom: "uatom".try_into()?,
+            amount: Uint256::from(2047u32).into(),
+        };
+
+        let expected_screens = Screen {
+            title: "Fees".to_string(),
+            content: Content::new("0.002047 ATOM".to_string())?,
+            indent: None,
+            expert: false,
+        };
+
+        let actual_screen = ValueRenderer::format(&SendCoins::new(vec![coin])?, &get_metadata)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+
+        assert_eq!(vec![expected_screens], actual_screen);
+
+        Ok(())
+    }
+
+    #[test]
+    fn more_more_check_format() -> anyhow::Result<()> {
+        let coin = Coin {
+            denom: "uatom".try_into()?,
+            amount: Uint256::from(2_123_456u32).into(),
+        };
+
+        let expected_screens = Screen {
+            title: "Fees".to_string(),
+            content: Content::new("2.123456 ATOM".to_string())?,
+            indent: None,
+            expert: false,
+        };
+
+        let actual_screen = ValueRenderer::format(&SendCoins::new(vec![coin])?, &get_metadata)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+
+        assert_eq!(vec![expected_screens], actual_screen);
+
+        Ok(())
+    }
 }
