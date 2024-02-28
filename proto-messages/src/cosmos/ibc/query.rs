@@ -149,8 +149,7 @@ pub struct QueryClientStatusResponse {
 
 impl Protobuf<RawQueryClientStatusResponse> for QueryClientStatusResponse {}
 
-impl From<QueryClientStatusResponse> for RawQueryClientStatusResponse
-{
+impl From<QueryClientStatusResponse> for RawQueryClientStatusResponse {
     fn from(value: QueryClientStatusResponse) -> Self {
         let QueryClientStatusResponse { status } = value;
 
@@ -158,11 +157,61 @@ impl From<QueryClientStatusResponse> for RawQueryClientStatusResponse
     }
 }
 
-impl From<RawQueryClientStatusResponse> for QueryClientStatusResponse
-{
+impl From<RawQueryClientStatusResponse> for QueryClientStatusResponse {
     fn from(value: RawQueryClientStatusResponse) -> Self {
         let RawQueryClientStatusResponse { status } = value;
 
         Self { status }
+    }
+}
+
+pub use ibc::core::client::context::types::proto::v1::QueryConsensusStateHeightsResponse as RawQueryConsensusStateHeightsResponse;
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct QueryConsensusStateHeightsResponse {
+    pub consensus_state_heights: Vec<Height>,
+    pub pagination: Option<PageResponse>,
+}
+
+impl Protobuf<RawQueryConsensusStateHeightsResponse> for QueryConsensusStateHeightsResponse {}
+
+impl TryFrom<RawQueryConsensusStateHeightsResponse> for QueryConsensusStateHeightsResponse {
+    type Error = ibc::core::client::types::error::ClientError;
+
+    fn try_from(value: RawQueryConsensusStateHeightsResponse) -> Result<Self, Self::Error> {
+        let RawQueryConsensusStateHeightsResponse {
+            consensus_state_heights,
+            pagination: _,
+        } = value;
+
+        let mut heights = Vec::with_capacity(consensus_state_heights.capacity());
+        for height in consensus_state_heights {
+            heights.push(Height::new(height.revision_number, height.revision_height)?);
+        }
+
+        Ok(Self {
+            consensus_state_heights: heights,
+            pagination: None,
+        })
+    }
+}
+
+impl From<QueryConsensusStateHeightsResponse> for RawQueryConsensusStateHeightsResponse {
+    fn from(value: QueryConsensusStateHeightsResponse) -> Self {
+        let QueryConsensusStateHeightsResponse {
+            consensus_state_heights,
+            pagination: _,
+        } = value;
+
+        Self {
+            consensus_state_heights: consensus_state_heights
+                .into_iter()
+                .map(|e| ibc::core::client::context::types::proto::v1::Height {
+                    revision_number: e.revision_number(),
+                    revision_height: e.revision_height(),
+                })
+                .collect(),
+            pagination: None,
+        }
     }
 }
