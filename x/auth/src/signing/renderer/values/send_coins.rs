@@ -133,4 +133,58 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn more_check_format() -> anyhow::Result<()> {
+        let coin = Coin {
+            denom: "uatom".try_into()?,
+            amount: BU256::from_digit(2047).into(),
+        };
+
+        let expected_screens = Screen {
+            title: "Fees".to_string(),
+            content: Content::new("0.002047 ATOM".to_string())?,
+            indent: None,
+            expert: false,
+        };
+        let mut ctx = MockContext;
+
+        let context: Context<'_, '_, database::RocksDB, KeyMock> =
+            Context::DynamicContext(&mut ctx);
+
+        let actual_screen =
+            ValueRenderer::<KeyMock, _>::format(&SendCoins::new(vec![coin])?, &context)
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+
+        assert_eq!(vec![expected_screens], actual_screen);
+
+        Ok(())
+    }
+
+    #[test]
+    fn more_more_check_format() -> anyhow::Result<()> {
+        let coin = Coin {
+            denom: "uatom".try_into()?,
+            amount: BU256::from_digit(2_123_456).into(),
+        };
+
+        let expected_screens = Screen {
+            title: "Fees".to_string(),
+            content: Content::new("2.123456 ATOM".to_string())?,
+            indent: None,
+            expert: false,
+        };
+        let mut ctx = MockContext;
+
+        let context: Context<'_, '_, database::RocksDB, KeyMock> =
+            Context::DynamicContext(&mut ctx);
+
+        let actual_screen =
+            ValueRenderer::<KeyMock, _>::format(&SendCoins::new(vec![coin])?, &context)
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+
+        assert_eq!(vec![expected_screens], actual_screen);
+
+        Ok(())
+    }
 }
