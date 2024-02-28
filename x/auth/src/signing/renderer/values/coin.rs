@@ -1,7 +1,6 @@
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
-use bnum::types::U256;
 use proto_messages::cosmos::{
     base::v1beta1::Coin,
     tx::v1beta1::{
@@ -10,6 +9,7 @@ use proto_messages::cosmos::{
     },
 };
 use proto_types::Denom;
+use proto_types::Uint256;
 
 impl ValueRenderer for Coin {
     /// Format `Coin` into `Screen`.
@@ -35,7 +35,7 @@ impl ValueRenderer for Coin {
                     false => denom_exp.exponent - coin_exp.exponent,
                 };
 
-                let disp_amount = self.amount.0.clone().div(U256::from_digit(10).pow(power));
+                let disp_amount = self.amount.clone() / (Uint256::from(10u32).pow(power));
 
                 let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
 
@@ -52,7 +52,7 @@ impl ValueRenderer for Coin {
                 title: "Amount".to_string(),
                 content: Content::new(format!(
                     "{} {display}",
-                    DefaultPrimitiveRenderer::format(self.amount.0.clone())
+                    DefaultPrimitiveRenderer::format(self.amount.clone())
                 ))?,
                 indent: Some(Indent::new(2)?),
                 expert: false,
@@ -67,17 +67,17 @@ mod tests {
         value_renderer::ValueRenderer, values::test_functions::get_metadata,
     };
     use anyhow::Ok;
-    use bnum::types::U256;
     use proto_messages::cosmos::{
         base::v1beta1::Coin,
         tx::v1beta1::screen::{Content, Indent, Screen},
     };
+    use proto_types::Uint256;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: U256::from_digit(10000000_u64).into(),
+            amount: Uint256::from(10000000_u64).into(),
         };
 
         let expected_screens = Screen {
@@ -99,7 +99,7 @@ mod tests {
     fn formatting_small_amounts_works() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: U256::from_digit(1).into(),
+            amount: Uint256::from(1u8).into(),
         };
 
         let expected_screens = Screen {

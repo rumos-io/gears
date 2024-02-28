@@ -1,5 +1,5 @@
 use ibc_proto::{
-    cosmos::tx::v1beta1::SignerInfo as RawSignerInfo, google::protobuf::Any, protobuf::Protobuf,
+    cosmos::tx::v1beta1::SignerInfo as RawSignerInfo, google::protobuf::Any, Protobuf,
 };
 
 use serde::{Deserialize, Serialize};

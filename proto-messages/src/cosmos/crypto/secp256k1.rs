@@ -5,7 +5,7 @@ pub mod v1beta1 {
         engine::general_purpose::{self},
         Engine,
     };
-    use ibc_proto::protobuf::Protobuf;
+    use ibc_proto::Protobuf;
     use proto_types::AccAddress;
     use ripemd::Ripemd160;
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};

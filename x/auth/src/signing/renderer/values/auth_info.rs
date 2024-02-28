@@ -62,7 +62,6 @@ impl ValueRenderer for AuthInfo {
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::{
@@ -73,7 +72,7 @@ mod tests {
             signer::SignerInfo,
         },
     };
-    use proto_types::Denom;
+    use proto_types::{Denom, Uint256};
 
     use crate::signing::renderer::{
         value_renderer::ValueRenderer, values::test_functions::get_metadata,
@@ -96,7 +95,7 @@ mod tests {
                 amount: Some(
                     SendCoins::new(vec![Coin {
                         denom: Denom::try_from("uatom".to_owned())?,
-                        amount: U256::from_digit(2000).into(),
+                        amount: Uint256::from(2000u32),
                     }])
                     .unwrap(),
                 ),

@@ -14,7 +14,7 @@ use proto_messages::cosmos::{
     auth::v1beta1::{
         Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
     },
-    ibc_types::protobuf::Protobuf,
+    ibc::protobuf::Protobuf,
 };
 use proto_types::AccAddress;
 use store::{KVStoreTrait, StoreKey};

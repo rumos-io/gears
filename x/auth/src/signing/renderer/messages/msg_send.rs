@@ -67,9 +67,7 @@ impl ValueRenderer for MsgSend {
 
 #[cfg(test)]
 mod tests {
-    use proto_messages::cosmos::{
-        bank::v1beta1::MsgSend, ibc_types::bank::MsgSendRaw, tx::v1beta1::screen::Screen,
-    };
+    use proto_messages::cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::screen::Screen};
 
     use crate::signing::renderer::{
         value_renderer::ValueRenderer, values::test_functions::get_metadata,
@@ -110,8 +108,7 @@ mod tests {
             "amount": [{ "denom": "uatom", "amount": "10000000" }]
         }"#;
 
-        let msg: MsgSendRaw = serde_json::from_str(MESSAGE)?;
-        let msg: MsgSend = msg.try_into()?;
+        let msg: MsgSend = serde_json::from_str(MESSAGE)?;
 
         const SCREENS: &str = r#"[
     		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },

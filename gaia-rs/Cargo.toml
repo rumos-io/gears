@@ -8,6 +8,7 @@ version = "0.1.0"
 #local
 auth = {path = "../x/auth"}
 bank = {path = "../x/bank"}
+ibc = {path = "../x/ibc"}
 database = {path = "../database"}
 gears = {path = "../gears"}
 gears-derive = {path = "../gears-derive"}

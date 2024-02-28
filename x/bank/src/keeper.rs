@@ -1,7 +1,6 @@
 use std::{collections::HashMap, str::FromStr};
 
 use auth::ante::{AuthKeeper, BankKeeper};
-use bnum::types::U256;
 use bytes::Bytes;
 use database::Database;
 
@@ -14,7 +13,7 @@ use gears::{
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
-use proto_messages::cosmos::ibc_types::protobuf::Protobuf;
+use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use proto_messages::cosmos::{
     bank::v1beta1::{
@@ -23,7 +22,7 @@ use proto_messages::cosmos::{
     },
     base::v1beta1::{Coin, SendCoins},
 };
-use proto_types::{AccAddress, Denom};
+use proto_types::{AccAddress, Denom, Uint256};
 use store::{KVStore, MutablePrefixStore, StoreKey};
 use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
@@ -110,16 +109,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
 
-        let mut total_supply: HashMap<Denom, U256> = HashMap::new();
+        let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
-                let zero = U256::ZERO;
+                denom_balance_store.set(
+                    coin.denom.to_string().into_bytes(),
+                    coin.clone().encode_vec(),
+                );
+                let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
-                total_supply.insert(coin.denom, coin.amount.0 + current_balance);
+                total_supply.insert(coin.denom, coin.amount + current_balance);
             }
         }
 
@@ -200,7 +202,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .expect("invalid data in database - possible database corruption");
-                let amount = U256::from_str(&String::from_utf8_lossy(&raw_coin.1))
+                let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
                     .expect("invalid data in database - possible database corruption")
                     .into();
                 Coin { denom, amount }
@@ -252,7 +254,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 return Err(AppError::Send("Insufficient funds".into()));
             }
 
-            from_balance.amount.0 -= send_coin.amount.0;
+            from_balance.amount -= send_coin.amount;
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into(),
@@ -269,11 +271,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     .expect("invalid data in database - possible database corruption"),
                 None => Coin {
                     denom: send_coin.denom.clone(),
-                    amount: U256::ZERO.into(),
+                    amount: Uint256::zero(),
                 },
             };
 
-            to_balance.amount.0 += send_coin.amount.0;
+            to_balance.amount += send_coin.amount;
 
             to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
 
@@ -296,7 +298,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
-        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY.into());
+        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY);
 
         supply_store.set(
             coin.denom.to_string().into(),

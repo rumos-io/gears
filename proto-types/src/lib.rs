@@ -6,6 +6,7 @@ mod denom;
 mod error;
 
 pub use address::{AccAddress, ValAddress};
+pub use cosmwasm_std::Uint256;
 pub use decimal256::Decimal256;
 pub use denom::Denom;
 pub use error::{AddressError, Error};

@@ -6,7 +6,7 @@ use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
     base::v1beta1::SendCoins,
-    ibc_types::{auth::RawQueryAccountResponse, protobuf::Protobuf, tx::TxRaw},
+    ibc::{auth::RawQueryAccountResponse, protobuf::Protobuf, tx::TxRaw},
     tx::v1beta1::{fee::Fee, message::Message as SDKMessage, tx_body::TxBody},
 };
 use proto_types::AccAddress;

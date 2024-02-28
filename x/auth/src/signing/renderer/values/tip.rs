@@ -33,7 +33,6 @@ impl ValueRenderer for Tip {
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::{
@@ -41,7 +40,7 @@ mod tests {
             tip::Tip,
         },
     };
-    use proto_types::{AccAddress, Denom};
+    use proto_types::{AccAddress, Denom, Uint256};
 
     use crate::signing::renderer::{
         value_renderer::ValueRenderer, values::test_functions::get_metadata,
@@ -68,7 +67,7 @@ mod tests {
         let tip = Tip {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000).into(),
+                amount: Uint256::from(2000u32),
             }])?),
             tipper: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
         };

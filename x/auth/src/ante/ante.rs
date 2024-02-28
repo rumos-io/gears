@@ -11,7 +11,7 @@ use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     auth::v1beta1::Account,
     base::v1beta1::SendCoins,
-    ibc_types::tx::SignDoc,
+    ibc::tx::SignDoc,
     tx::v1beta1::{
         message::Message,
         mode_info::{ModeInfo, SignMode},

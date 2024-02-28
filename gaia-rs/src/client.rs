@@ -5,6 +5,10 @@ use bank::cli::{
     tx::{run_bank_tx_command, Cli},
 };
 use clap::Subcommand;
+use ibc::cli::client::{
+    query::{run_ibc_query_command, IbcQueryCli},
+    tx::{run_ibc_tx_command, IbcCli},
+};
 use proto_types::AccAddress;
 use tendermint::informal::block::Height;
 
@@ -14,11 +18,14 @@ use crate::message::Message;
 pub enum Commands {
     /// Bank transaction subcommands
     Bank(Cli),
+    /// IBC transaction subcommands
+    IBC(IbcCli),
 }
 
 pub fn tx_command_handler(command: Commands, from_address: AccAddress) -> Result<Message> {
     match command {
         Commands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
+        Commands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
     }
 }
 
@@ -28,6 +35,7 @@ pub enum QueryCommands {
     Bank(BankQueryCli),
     /// Querying commands for the auth module
     Auth(AuthQueryCli),
+    Ibc(IbcQueryCli),
 }
 
 pub fn query_command_handler(
@@ -38,6 +46,7 @@ pub fn query_command_handler(
     let res = match command {
         QueryCommands::Bank(args) => run_bank_query_command(args, node, height),
         QueryCommands::Auth(args) => run_auth_query_command(args, node, height),
+        QueryCommands::Ibc(args) => run_ibc_query_command(args, node, height),
     }?;
 
     println!("{}", res);

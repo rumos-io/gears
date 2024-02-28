@@ -1,4 +1,4 @@
-use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, protobuf::Protobuf};
+use ibc_proto::{cosmos::base::v1beta1::Coin as RawCoin, Protobuf};
 
 pub use ibc_proto::cosmos::tx::v1beta1::Tip as RawTip;
 

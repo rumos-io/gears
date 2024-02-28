@@ -55,7 +55,6 @@ impl ValueRenderer for Fee {
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256;
     use proto_messages::cosmos::{
         base::v1beta1::{Coin, SendCoins},
         tx::v1beta1::{
@@ -63,7 +62,7 @@ mod tests {
             screen::{Content, Screen},
         },
     };
-    use proto_types::{AccAddress, Denom};
+    use proto_types::{AccAddress, Denom, Uint256};
 
     use crate::signing::renderer::{
         value_renderer::ValueRenderer, values::test_functions::get_metadata,
@@ -98,7 +97,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000).into(),
+                amount: Uint256::from(2000u32),
             }])?),
             gas_limit: 1,
             payer: None,
@@ -133,7 +132,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000).into(),
+                amount: Uint256::from(2000u32),
             }])?),
             gas_limit: 1,
             payer: Some(AccAddress::from_bech32(
@@ -176,7 +175,7 @@ mod tests {
         let fee = Fee {
             amount: Some(SendCoins::new(vec![Coin {
                 denom: Denom::try_from("uatom".to_owned())?,
-                amount: U256::from_digit(2000).into(),
+                amount: Uint256::from(2000u32),
             }])?),
             gas_limit: 1,
             payer: Some(AccAddress::from_bech32(

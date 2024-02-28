@@ -1,5 +1,5 @@
 use proto_messages::cosmos::{
-    ibc_types::protobuf::Protobuf,
+    ibc::protobuf::Protobuf,
     tx::v1beta1::{
         message::Message,
         screen::{Content, Indent, Screen},
@@ -68,8 +68,8 @@ impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
         screens.append(&mut ValueRenderer::format(auth_info, get_metadata)?);
 
         // =========================
-        let body_bytes = body.encode_vec();
-        let auth_info_bytes = auth_info.encode_vec();
+        let body_bytes = body.to_owned().encode_vec();
+        let auth_info_bytes = auth_info.to_owned().encode_vec();
 
         screens.push(Screen {
             title: "Hash of raw bytes".to_string(),
@@ -84,7 +84,6 @@ impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256;
     use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
     use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
     use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
@@ -100,7 +99,7 @@ mod tests {
             tx_data::TxData,
         },
     };
-    use proto_types::{AccAddress, Denom};
+    use proto_types::{AccAddress, Denom, Uint256};
 
     use crate::signing::renderer::value_renderer::ValueRenderer;
     use crate::signing::renderer::values::test_functions::get_metadata;
@@ -141,7 +140,7 @@ mod tests {
                 amount: Some(
                     SendCoins::new(vec![Coin {
                         denom: Denom::try_from("uatom".to_owned())?,
-                        amount: U256::from_digit(2000).into(),
+                        amount: Uint256::from(2000u32),
                     }])
                     .unwrap(),
                 ),
@@ -175,7 +174,7 @@ mod tests {
                 )?,
                 amount: SendCoins::new(vec![Coin {
                     denom: Denom::try_from("uatom".to_string())?,
-                    amount: U256::from_digit(10000000).into(),
+                    amount: Uint256::from(10000000u32),
                 }])
                 .unwrap(),
             }],

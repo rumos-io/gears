@@ -1,12 +1,12 @@
-use ibc_proto::{
-    cosmos::tx::v1beta1::TxBody as RawTxBody, google::protobuf::Any, protobuf::Protobuf,
-};
+use ibc_proto::{cosmos::tx::v1beta1::TxBody as RawTxBody, Protobuf};
 
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 
+use crate::any::Any;
 use crate::{cosmos::tx::v1beta1::message::Message, error::Error};
+use ibc_proto::google::protobuf::Any as GoogleAny;
 
 // TxBody is the body of a transaction that all signers sign over.
 #[serde_as]
@@ -44,16 +44,20 @@ impl<M: Message> TryFrom<RawTxBody> for TxBody<M> {
     fn try_from(raw: RawTxBody) -> Result<Self, Self::Error> {
         let mut messages: Vec<M> = vec![];
 
-        for msg in &raw.messages {
-            messages.push(Any::try_into(msg.to_owned())?);
+        for msg in raw.messages {
+            messages.push(Any::from(msg).try_into()?);
         }
 
         Ok(TxBody {
             messages,
             memo: raw.memo,
             timeout_height: raw.timeout_height,
-            extension_options: raw.extension_options,
-            non_critical_extension_options: raw.non_critical_extension_options,
+            extension_options: raw.extension_options.into_iter().map(Any::from).collect(),
+            non_critical_extension_options: raw
+                .non_critical_extension_options
+                .into_iter()
+                .map(Any::from)
+                .collect(),
         })
     }
 }
@@ -61,11 +65,23 @@ impl<M: Message> TryFrom<RawTxBody> for TxBody<M> {
 impl<M: Message> From<TxBody<M>> for RawTxBody {
     fn from(tx_body: TxBody<M>) -> RawTxBody {
         RawTxBody {
-            messages: tx_body.messages.into_iter().map(|m| m.into()).collect(),
+            messages: tx_body
+                .messages
+                .into_iter()
+                .map(|this| this.into().into())
+                .collect(),
             memo: tx_body.memo,
             timeout_height: tx_body.timeout_height,
-            extension_options: tx_body.extension_options,
-            non_critical_extension_options: tx_body.non_critical_extension_options,
+            extension_options: tx_body
+                .extension_options
+                .into_iter()
+                .map(GoogleAny::from)
+                .collect(),
+            non_critical_extension_options: tx_body
+                .non_critical_extension_options
+                .into_iter()
+                .map(GoogleAny::from)
+                .collect(),
         }
     }
 }

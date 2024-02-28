@@ -45,7 +45,6 @@ impl SignModeHandler {
 mod tests {
     use std::collections::BTreeMap;
 
-    use bnum::types::U256;
     use ciborium::Value;
 
     use proto_messages::cosmos::{
@@ -63,7 +62,7 @@ mod tests {
             tx_data::TxData,
         },
     };
-    use proto_types::{AccAddress, Denom};
+    use proto_types::{AccAddress, Denom, Uint256};
 
     use crate::signing::{handler::SignModeHandler, renderer::get_metadata};
 
@@ -86,7 +85,7 @@ mod tests {
                 amount: Some(
                     SendCoins::new(vec![Coin {
                         denom: Denom::try_from("uatom".to_owned())?,
-                        amount: U256::from_digit(2000).into(),
+                        amount: Uint256::from(2000u32),
                     }])
                     .unwrap(),
                 ),
@@ -120,7 +119,7 @@ mod tests {
                 )?,
                 amount: SendCoins::new(vec![Coin {
                     denom: Denom::try_from("uatom".to_string())?,
-                    amount: U256::from_digit(10000000).into(),
+                    amount: Uint256::from(10000000u32),
                 }])
                 .unwrap(),
             }],
@@ -313,7 +312,7 @@ mod tests {
                 )?,
                 amount: SendCoins::new(vec![Coin {
                     denom: Denom::try_from("uatom".to_string())?,
-                    amount: U256::from_digit(1).into(),
+                    amount: Uint256::from(1u8).into(),
                 }])
                 .unwrap(),
             }],

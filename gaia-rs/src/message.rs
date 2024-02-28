@@ -9,6 +9,8 @@ use serde::Serialize;
 pub enum Message {
     #[gears(url = "/cosmos.bank.v1beta1")]
     Bank(bank::Message),
+    #[gears(url = "/ibc.core.client.v1")]
+    Ibc(ibc::message::Message),
 }
 
 impl ValueRenderer for Message {
@@ -18,6 +20,7 @@ impl ValueRenderer for Message {
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         match self {
             Message::Bank(msg) => msg.format(get_metadata),
+            Message::Ibc(_) => todo!(), //TODO: Implement IBC message formatting
         }
     }
 }
