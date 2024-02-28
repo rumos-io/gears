@@ -271,4 +271,43 @@ pub mod tendermint {
     pub mod error {
         pub use ::tendermint::proto::Error;
     }
+
+    pub mod types {
+
+        pub use ibc::clients::tendermint::types::proto::v1::Header as ProtoHeader;
+        pub use ibc::clients::tendermint::types::Header as RawHeader;
+        use ibc_proto::Protobuf;
+
+        #[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+        #[serde(transparent)]
+        pub struct Header(pub RawHeader);
+
+        impl Protobuf<ProtoHeader> for Header {}
+
+        impl From<RawHeader> for Header {
+            fn from(value: RawHeader) -> Self {
+                Self(value)
+            }
+        }
+
+        impl From<Header> for RawHeader {
+            fn from(value: Header) -> Self {
+                value.0
+            }
+        }
+
+        impl TryFrom<ProtoHeader> for Header {
+            type Error = ibc::clients::tendermint::types::error::Error;
+
+            fn try_from(value: ProtoHeader) -> Result<Self, Self::Error> {
+                Ok(Self(value.try_into()?))
+            }
+        }
+
+        impl From<Header> for ProtoHeader {
+            fn from(value: Header) -> Self {
+                value.0.into()
+            }
+        }
+    }
 }
