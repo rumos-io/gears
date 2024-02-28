@@ -1,10 +1,10 @@
-use ibc::core::client::types::{
-    proto::v1::QueryClientParamsResponse as RawQueryClientParamsResponse, Height,
-};
+use ibc::core::client::types::proto::v1::QueryClientParamsResponse as RawQueryClientParamsResponse;
 use ibc_proto::Protobuf;
 use serde::{Deserialize, Serialize};
 
 use super::types::core::client::proto::IdentifiedClientState;
+use super::types::core::client::types::Height;
+use super::types::core::client::types::HeightError;
 use super::types::core::client::types::Params;
 use crate::any::Any;
 use crate::cosmos::bank::v1beta1::PageResponse;
@@ -48,7 +48,7 @@ pub struct QueryClientStateResponse {
 impl Protobuf<RawQueryClientStateResponse> for QueryClientStateResponse {}
 
 impl TryFrom<RawQueryClientStateResponse> for QueryClientStateResponse {
-    type Error = ibc::core::client::types::error::ClientError;
+    type Error = HeightError;
 
     fn try_from(value: RawQueryClientStateResponse) -> Result<Self, Self::Error> {
         let RawQueryClientStateResponse {
@@ -176,7 +176,7 @@ pub struct QueryConsensusStateHeightsResponse {
 impl Protobuf<RawQueryConsensusStateHeightsResponse> for QueryConsensusStateHeightsResponse {}
 
 impl TryFrom<RawQueryConsensusStateHeightsResponse> for QueryConsensusStateHeightsResponse {
-    type Error = ibc::core::client::types::error::ClientError;
+    type Error = HeightError;
 
     fn try_from(value: RawQueryConsensusStateHeightsResponse) -> Result<Self, Self::Error> {
         let RawQueryConsensusStateHeightsResponse {
@@ -186,7 +186,7 @@ impl TryFrom<RawQueryConsensusStateHeightsResponse> for QueryConsensusStateHeigh
 
         let mut heights = Vec::with_capacity(consensus_state_heights.capacity());
         for height in consensus_state_heights {
-            heights.push(Height::new(height.revision_number, height.revision_height)?);
+            heights.push(Height::try_from(height)?);
         }
 
         Ok(Self {
@@ -206,12 +206,60 @@ impl From<QueryConsensusStateHeightsResponse> for RawQueryConsensusStateHeightsR
         Self {
             consensus_state_heights: consensus_state_heights
                 .into_iter()
-                .map(|e| ibc::core::client::context::types::proto::v1::Height {
-                    revision_number: e.revision_number(),
-                    revision_height: e.revision_height(),
-                })
+                .map(ibc::core::client::types::proto::v1::Height::from)
                 .collect(),
             pagination: None,
+        }
+    }
+}
+
+pub use ibc::core::client::context::types::proto::v1::QueryConsensusStateResponse as RawQueryConsensusStateResponse;
+
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+pub struct QueryConsensusStateResponse {
+    pub consensus_state: Option<Any>,
+    pub proof: Vec<u8>,
+    pub proof_height: Option<Height>,
+}
+
+impl Protobuf<RawQueryConsensusStateResponse> for QueryConsensusStateResponse {}
+
+impl TryFrom<RawQueryConsensusStateResponse> for QueryConsensusStateResponse {
+    type Error = HeightError;
+
+    fn try_from(value: RawQueryConsensusStateResponse) -> Result<Self, Self::Error> {
+        let RawQueryConsensusStateResponse {
+            consensus_state,
+            proof,
+            proof_height,
+        } = value;
+
+        let proof_height = if let Some(var) = proof_height {
+            Some(var.try_into()?)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            consensus_state: consensus_state.map(Any::from),
+            proof,
+            proof_height,
+        })
+    }
+}
+
+impl From<QueryConsensusStateResponse> for RawQueryConsensusStateResponse {
+    fn from(value: QueryConsensusStateResponse) -> Self {
+        let QueryConsensusStateResponse {
+            consensus_state,
+            proof,
+            proof_height,
+        } = value;
+
+        Self {
+            consensus_state: consensus_state.map(Any::into),
+            proof,
+            proof_height: proof_height.map(Height::into),
         }
     }
 }

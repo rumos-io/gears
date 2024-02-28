@@ -76,6 +76,51 @@ pub mod core {
             use serde::{Deserialize, Serialize};
 
             use super::proto::RawParams;
+            pub use ibc::core::client::context::types::proto::v1::Height as ProtoHeight;
+            pub use ibc::core::client::types::Height as RawHeight;
+
+            #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+            pub struct Height(pub RawHeight);
+
+            impl From<RawHeight> for Height {
+                fn from(value: RawHeight) -> Self {
+                    Self(value)
+                }
+            }
+
+            impl From<Height> for RawHeight {
+                fn from(value: Height) -> Self {
+                    value.0
+                }
+            }
+
+            impl From<Height> for ProtoHeight {
+                fn from(value: Height) -> Self {
+                    Self {
+                        revision_number: value.0.revision_number(),
+                        revision_height: value.0.revision_height(),
+                    }
+                }
+            }
+
+            #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+            #[error("Invalid height")]
+            pub struct HeightError;
+            impl TryFrom<ProtoHeight> for Height {
+                type Error = HeightError;
+
+                fn try_from(value: ProtoHeight) -> Result<Self, Self::Error> {
+                    let ProtoHeight {
+                        revision_number,
+                        revision_height,
+                    } = value;
+
+                    Ok(Self(
+                        RawHeight::new(revision_number, revision_height)
+                            .map_err(|_| HeightError)?,
+                    ))
+                }
+            }
 
             pub const ALLOW_ALL_CLIENTS: &str = "*";
 
