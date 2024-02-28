@@ -2,16 +2,16 @@
 
 use std::str::FromStr;
 
-use bnum::types::U256;
 use num_bigint::BigUint;
 use num_format::WriteFormatted;
+use proto_types::Uint256;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
 use super::int::format_get;
 
-impl PrimitiveValueRenderer<U256> for DefaultPrimitiveRenderer {
-    fn format(value: U256) -> String {
+impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
+    fn format(value: Uint256) -> String {
         let value = BigUint::from_str(&value.to_string()).expect("Failed to map"); //TODO:
 
         // Small comment: For this num we required to use heap allocated buffer
@@ -20,14 +20,14 @@ impl PrimitiveValueRenderer<U256> for DefaultPrimitiveRenderer {
         buf
     }
 
-    fn format_try(value: U256) -> Result<String, Box<dyn std::error::Error>> {
+    fn format_try(value: Uint256) -> Result<String, Box<dyn std::error::Error>> {
         Ok(Self::format(value))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use bnum::types::U256;
+    use proto_types::Uint256;
 
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
@@ -51,7 +51,7 @@ mod tests {
         ];
 
         for (i, expected) in test_data {
-            let actual = DefaultPrimitiveRenderer::format(U256::from(i));
+            let actual = DefaultPrimitiveRenderer::format(Uint256::from(i));
 
             assert_eq!(expected, &actual);
         }

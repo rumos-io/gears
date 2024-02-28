@@ -1,7 +1,6 @@
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
 };
-use bnum::types::U256;
 use database::Database;
 use gears::types::context::context::Context;
 use proto_messages::cosmos::{
@@ -11,6 +10,7 @@ use proto_messages::cosmos::{
         tx_metadata::Metadata,
     },
 };
+use proto_types::Uint256;
 use store::StoreKey;
 
 impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Coin {
@@ -37,7 +37,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Coin {
                     false => denom_exp.exponent - coin_exp.exponent,
                 };
 
-                let disp_amount = self.amount.0.clone().div(U256::from_digit(10).pow(power));
+                let disp_amount = self.amount.clone() / (Uint256::from(10u32).pow(power));
 
                 let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
 
@@ -54,7 +54,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for Coin {
                 title: "Amount".to_string(),
                 content: Content::new(format!(
                     "{} {display}",
-                    DefaultPrimitiveRenderer::format(self.amount.0.clone())
+                    DefaultPrimitiveRenderer::format(self.amount.clone())
                 ))?,
                 indent: Some(Indent::new(2)?),
                 expert: false,
@@ -70,18 +70,18 @@ mod tests {
         values::test_mocks::{KeyMock, MockContext},
     };
     use anyhow::Ok;
-    use bnum::types::U256;
     use gears::types::context::context::Context;
     use proto_messages::cosmos::{
         base::v1beta1::Coin,
         tx::v1beta1::screen::{Content, Indent, Screen},
     };
+    use proto_types::Uint256;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: U256::from_digit(10000000_u64).into(),
+            amount: Uint256::from(10000000_u64).into(),
         };
 
         let expected_screens = Screen {
