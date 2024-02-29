@@ -1,4 +1,4 @@
-//! Default formating implementation for bool
+//! Default formatting implementation for bool
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 

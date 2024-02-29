@@ -1,4 +1,4 @@
-//! Default formating implementation for `i64`
+//! Default formatting implementation for `i64`
 
 use num_format::{Buffer, CustomFormat, Grouping};
 use once_cell::sync::OnceCell;

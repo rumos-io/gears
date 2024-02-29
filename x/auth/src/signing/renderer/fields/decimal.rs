@@ -1,4 +1,4 @@
-//! Default formating implementation for `Decimal`
+//! Default formatting implementation for `Decimal`
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 

@@ -1,10 +1,10 @@
-//! Default formating implementation for `u64`
+//! Default formatting implementation for `u64`
 
 use num_format::Buffer;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
-use super::int::format_get;
+use super::i64::format_get;
 
 impl PrimitiveValueRenderer<u64> for DefaultPrimitiveRenderer {
     fn format(value: u64) -> String {

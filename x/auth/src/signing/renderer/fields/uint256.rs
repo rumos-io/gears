@@ -8,7 +8,7 @@ use proto_types::Uint256;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
-use super::int::format_get;
+use super::i64::format_get;
 
 impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
     fn format(value: Uint256) -> String {

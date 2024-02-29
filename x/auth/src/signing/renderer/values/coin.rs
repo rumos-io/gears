@@ -37,11 +37,11 @@ impl ValueRenderer for Coin {
 
                 let disp_amount = self.amount.clone() / (Uint256::from(10u32).pow(power));
 
-                let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
+                let formatted_amount = DefaultPrimitiveRenderer::format(disp_amount);
 
                 let screen = Screen {
                     title: "Amount".to_string(),
-                    content: Content::new(format!("{formated_amount} {display}"))?,
+                    content: Content::new(format!("{formatted_amount} {display}"))?,
                     indent: Some(Indent::new(2)?),
                     expert: false,
                 };

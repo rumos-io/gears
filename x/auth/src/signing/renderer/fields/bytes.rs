@@ -1,4 +1,4 @@
-//! Default formating implementation for bytes - `&[u8]`
+//! Default formatting implementation for bytes - `&[u8]`
 use sha2::{Digest, Sha256};
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
