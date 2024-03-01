@@ -16,6 +16,7 @@ pub struct InitOptions<'a, G> {
 
 #[derive(Debug, thiserror::Error)]
 pub enum InitError {
+    // TODO: reduce error count
     #[error("Could not create config directory {0}")]
     CreateConfigDirectory(#[source] std::io::Error),
     #[error("Could not create data directory {0}")]
@@ -56,18 +57,15 @@ pub fn init_tendermint<'a, G: Serialize, AC: gears::config::ApplicationConfig>(
     } = opt;
 
     // Create config directory
-    let mut config_dir = home.clone();
-    config_dir.push("config");
+    let config_dir = home.join("config");
     std::fs::create_dir_all(&config_dir).map_err(|e| InitError::CreateConfigDirectory(e))?;
 
     // Create data directory
-    let mut data_dir = home.clone();
-    data_dir.push("data");
+    let data_dir = home.join("data");
     std::fs::create_dir_all(&data_dir).map_err(|e| InitError::CreateDataDirectory(e))?;
 
     // Write tendermint config file
-    let mut tm_config_file_path = config_dir.clone();
-    tm_config_file_path.push("config.toml");
+    let tm_config_file_path = config_dir.join("config.toml");
     let tm_config_file = std::fs::File::create(&tm_config_file_path)
         .map_err(|e| InitError::CreateConfigDirectory(e))?;
 
@@ -80,14 +78,12 @@ pub fn init_tendermint<'a, G: Serialize, AC: gears::config::ApplicationConfig>(
     );
 
     // Create node key file
-    let mut node_key_file_path = config_dir.clone();
-    node_key_file_path.push("node_key.json");
+    let node_key_file_path = config_dir.join("node_key.json");
     let node_key_file =
         std::fs::File::create(&node_key_file_path).map_err(|e| InitError::CreateNodeKeyFile(e))?;
 
     // Create private validator key file
-    let mut priv_validator_key_file_path = config_dir.clone();
-    priv_validator_key_file_path.push("priv_validator_key.json");
+    let priv_validator_key_file_path = config_dir.join("priv_validator_key.json");
     let priv_validator_key_file = std::fs::File::create(&priv_validator_key_file_path)
         .map_err(|e| InitError::PrivValidatorKey(e))?;
 
@@ -128,8 +124,7 @@ pub fn init_tendermint<'a, G: Serialize, AC: gears::config::ApplicationConfig>(
     info!("Genesis file written to {}", genesis_file_path.display());
 
     // Write private validator state file
-    let mut state_file_path = data_dir.clone();
-    state_file_path.push("priv_validator_state.json");
+    let state_file_path = data_dir.join("priv_validator_state.json");
     let state_file =
         std::fs::File::create(&state_file_path).map_err(|e| InitError::PrivValidatorKey(e))?;
 
