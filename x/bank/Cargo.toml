@@ -11,6 +11,7 @@ store = { path = "../../store" }
 database = { path = "../../database" }
 proto-types = { path = "../../proto-types" }
 proto-messages = { path = "../../proto-messages" }
+utils = { path = "../../utils" }
 auth = { path = "../auth" }
 
 #newtypes

@@ -9,10 +9,14 @@ edition = "2021"
 # local
 tendermint = {path = "../tendermint"}
 gears = { path = "../gears" }
+proto-types = { path = "../proto-types" }
+proto-messages = { path = "../proto-messages" }
 
 #utils
 thiserror = { workspace = true }
 log = { workspace = true }
+derive_builder = "0.20.0"
+dirs = "5.0.1"
 
 #serialization
 serde = { version = "1.0", default-features = false }
