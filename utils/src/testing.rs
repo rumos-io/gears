@@ -1,6 +1,7 @@
 use std::{path::Path, process::Child, str::FromStr, time::Duration};
 
-use assert_fs::{fixture::PathCopy, TempDir};
+use anyhow::anyhow;
+use assert_fs::TempDir;
 use gears::baseapp::Genesis;
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::informal::chain::Id;
@@ -19,9 +20,12 @@ impl Drop for TmpChild {
 }
 
 impl TmpChild {
-    pub fn start_tendermint< G : Genesis, AC: gears::config::ApplicationConfig>( path_to_tendermint : &impl AsRef<Path>, genesis : &G ) -> anyhow::Result<Self> {
+    pub fn start_tendermint< G : Genesis, AC: gears::config::ApplicationConfig>( path_to_tendermint : &(impl AsRef<Path> + ?Sized), genesis : &G ) -> anyhow::Result<Self> {        
         let tmp_dir = TempDir::new()?;
-        tmp_dir.copy_from(path_to_tendermint, &["*"] )?;
+
+        dircpy::CopyBuilder::new( path_to_tendermint, &tmp_dir )
+  .overwrite( true )
+  .run()?;
 
         let opt = InitOptionsBuilder::default()
         .chain_id( Id::from_str( "test-chain")? )
@@ -50,10 +54,12 @@ impl TmpChild {
             &options,
         )?; // TODO: make it work for windows too?
 
-        let script = format!( "./tendermint start --home {:?}", tmp_dir.path() );
         let child = run_script::spawn(
-            &script,
-            &vec![],
+            "./tendermint start",
+            &vec![
+                "--home".to_owned(),
+                tmp_dir.to_str().ok_or( anyhow!( "failed to get path to tmp folder"))?.to_owned()
+            ],
             &options,
         )?;
 

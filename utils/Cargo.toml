@@ -18,6 +18,7 @@ thiserror = { workspace = true }
 log = { workspace = true }
 derive_builder = "0.20.0"
 dirs = "5.0.1"
+dircpy = "0.3.15"
 
 #serialization
 serde = { version = "1.0", default-features = false }
