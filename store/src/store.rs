@@ -150,7 +150,7 @@ impl<DB: Database> KVStore<DB> {
             tx_cache: BTreeMap::new(),
         })
     }
-    
+
     pub fn get_immutable_prefix_store(
         &self,
         prefix: impl IntoIterator<Item = u8>,
