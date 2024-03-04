@@ -18,7 +18,66 @@ use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 use super::{ABCIHandler, Genesis};
 
-pub fn run_run_command<
+#[derive(Debug, Clone)]
+pub struct RunOptions {
+    home: Option<PathBuf>,
+    address: Option<SocketAddr>,
+    rest_listen_addr: Option<SocketAddr>,
+    read_buf_size: usize,
+    verbose: bool,
+    quiet: bool,
+}
+
+// #[cfg(feature = "cli")]
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Error parsing args {0}")]
+pub struct RunOptionsParseError(pub String);
+
+// #[cfg(feature = "cli")]
+impl TryFrom<&ArgMatches> for RunOptions {
+    type Error = RunOptionsParseError;
+
+    fn try_from(value: &ArgMatches) -> Result<Self, Self::Error> {
+        let address = value.get_one::<SocketAddr>("address").cloned();
+
+        let read_buf_size = value
+            .get_one::<usize>("read_buf_size")
+            .ok_or(RunOptionsParseError(
+                "Read buf size arg has a default value so this cannot be `None`.".to_owned(),
+            ))?
+            .clone();
+
+        let rest_listen_addr = value.get_one::<SocketAddr>("rest_listen_addr").cloned();
+
+        let verbose = value.get_flag("verbose");
+        let quiet = value.get_flag("quiet");
+
+        let home = value.get_one::<PathBuf>("home").cloned();
+
+        Ok(Self {
+            home,
+            address,
+            rest_listen_addr,
+            read_buf_size,
+            verbose,
+            quiet,
+        })
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum RunError {
+    #[error("{0}")]
+    HomeDirectory(String),
+    #[error("{0}")]
+    Database(#[from] database::error::Error),
+    #[error("{0}")]
+    TendermintServer(#[from] tendermint::abci::Error),
+    #[error("{0}")]
+    Custom(String),
+}
+
+pub fn run<
     'a,
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
@@ -27,24 +86,22 @@ pub fn run_run_command<
     G: Genesis,
     AC: ApplicationConfig,
 >(
-    matches: &ArgMatches,
+    options: RunOptions,
     app_name: &'static str,
     app_version: &'static str,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     abci_handler_builder: &'a dyn Fn(Config<AC>) -> H,
     router: Router<RestState<SK, PSK, M, H, G>, Body>,
-) {
-    let address = matches.get_one::<SocketAddr>("address").cloned();
-
-    let read_buf_size = matches
-        .get_one::<usize>("read_buf_size")
-        .expect("Read buf size arg has a default value so this cannot be `None`.");
-
-    let rest_listen_addr = matches.get_one::<SocketAddr>("rest_listen_addr").cloned();
-
-    let verbose = matches.get_flag("verbose");
-    let quiet = matches.get_flag("quiet");
+) -> Result<(), RunError> {
+    let RunOptions {
+        home,
+        address,
+        rest_listen_addr,
+        read_buf_size,
+        verbose,
+        quiet,
+    } = options;
 
     let log_level = if quiet {
         LevelFilter::OFF
@@ -54,33 +111,31 @@ pub fn run_run_command<
         LevelFilter::INFO
     };
 
-    tracing_subscriber::fmt().with_max_level(log_level).init();
+    tracing_subscriber::fmt()
+        .with_max_level(log_level)
+        .try_init()
+        .map_err(|_| RunError::Custom("failed to set tracing".to_owned()))?;
 
     let default_home_directory = get_default_home_dir(app_name);
-    let home = matches
-        .get_one::<PathBuf>("home")
-        .or(default_home_directory.as_ref())
-        .unwrap_or_else(|| {
-            error!("Home argument not provided and OS does not provide a default home directory");
-            std::process::exit(1)
-        });
+    let home = home
+        .or(default_home_directory)
+        .ok_or(RunError::HomeDirectory(
+            "Home argument not provided and OS does not provide a default home directory"
+                .to_owned(),
+        ))?;
+
     info!("Using directory {} for config and data", home.display());
 
     let mut db_dir = home.clone();
     db_dir.push("data");
     db_dir.push("application.db");
-    let db = RocksDB::new(db_dir).unwrap_or_else(|e| {
-        error!("Could not open database: {}", e);
-        std::process::exit(1)
-    });
+    let db = RocksDB::new(db_dir)?;
 
     let mut cfg_file_path = home.clone();
     get_config_file_from_home_dir(&mut cfg_file_path);
 
-    let config: Config<AC> = Config::from_file(cfg_file_path).unwrap_or_else(|err| {
-        error!("Error reading config file: {:?}", err);
-        std::process::exit(1)
-    });
+    let config: Config<AC> = Config::from_file(cfg_file_path)
+        .map_err(|e| RunError::Custom(format!("Error reading config file: {:?}", e)))?;
 
     let abci_handler = abci_handler_builder(config.clone());
 
@@ -104,20 +159,12 @@ pub fn run_run_command<
 
     let address = address.unwrap_or(config.address);
 
-    let server = ServerBuilder::new(*read_buf_size)
-        .bind(address, app)
-        .unwrap_or_else(|e| {
-            error!("Error binding to host: {}", e);
-            std::process::exit(1)
-        });
-    server.listen().unwrap_or_else(|e| {
-        error!("Fatal server error: {}", e);
-        std::process::exit(1)
-    });
+    let server = ServerBuilder::new(read_buf_size).bind(address, app)?;
 
-    unreachable!("server.listen() will not return `Ok`")
+    server.listen().map_err(|e| e.into())
 }
 
+// #[cfg(feature = "cli")]
 pub fn get_run_command(app_name: &str) -> Command {
     Command::new("run")
         .about("Run the full node application")

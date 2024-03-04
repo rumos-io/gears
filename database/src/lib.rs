@@ -1,6 +1,6 @@
 #![warn(rust_2018_idioms)]
 
-mod error;
+pub mod error;
 mod memory;
 mod prefix;
 mod rocks;

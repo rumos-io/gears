@@ -1,4 +1,4 @@
-use crate::baseapp::cli::get_run_command;
+use crate::baseapp::run::get_run_command;
 use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::genesis_account::{
     get_add_genesis_account_command, run_add_genesis_account_command,
@@ -22,12 +22,9 @@ use std::env;
 use store_crate::StoreKey;
 use tendermint::informal::block::Height;
 
-use crate::{
-    baseapp::cli::run_run_command,
-    client::{
-        init::run_init_command,
-        keys::{get_keys_command, run_keys_command},
-    },
+use crate::client::{
+    init::run_init_command,
+    keys::{get_keys_command, run_keys_command},
 };
 
 fn get_completions_command() -> Command {
@@ -182,15 +179,15 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
                 &AppCore::Genesis::default(),
             ),
             Some(("run", sub_matches)) => {
-                run_run_command::<_, _, _, _, _, AppCore::ApplicationConfig>(
-                    sub_matches,
+                crate::baseapp::run::run::<_, _, _, _, _, AppCore::ApplicationConfig>(
+                    sub_matches.try_into()?,
                     AppCore::APP_NAME,
                     AppCore::APP_VERSION,
                     ParamsKeeper::new(self.params_store_key),
                     self.params_subspace_key,
                     self.abci_handler_builder,
                     self.router,
-                )
+                )?
             }
             Some(("query", sub_matches)) => {
                 run_query_command(sub_matches, |command, node, height| {

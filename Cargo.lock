@@ -1616,6 +1616,7 @@ dependencies = [
  "strum",
  "tendermint 0.1.0",
  "text_io",
+ "thiserror",
  "tokio",
  "toml 0.8.8",
  "tower-http",
