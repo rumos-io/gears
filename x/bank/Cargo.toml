@@ -11,7 +11,6 @@ store = { path = "../../store" }
 database = { path = "../../database" }
 proto-types = { path = "../../proto-types" }
 proto-messages = { path = "../../proto-messages" }
-utils = { path = "../../utils" }
 auth = { path = "../auth" }
 
 #newtypes
@@ -35,6 +34,3 @@ axum = { workspace = true }
 
 [dev-dependencies]
 hex = "0.4.3"
-run_script = "0.10.1"
-assert_fs = "1.1.1"
-thiserror = { workspace = true }

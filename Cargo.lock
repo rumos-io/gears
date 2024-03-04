@@ -316,7 +316,6 @@ name = "bank"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "assert_fs",
  "auth",
  "axum",
  "bnum 0.10.0",
@@ -329,15 +328,12 @@ dependencies = [
  "prost 0.12.3",
  "proto-messages",
  "proto-types",
- "run_script",
  "serde",
  "serde_json",
  "store",
  "strum",
  "tendermint 0.1.0",
- "thiserror",
  "tokio",
- "utils",
 ]
 
 [[package]]
