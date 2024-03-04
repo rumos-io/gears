@@ -8,11 +8,12 @@ use proto_types::AccAddress;
 use serde::Serialize;
 use tendermint::informal::{chain::Id, Genesis};
 
-pub const DEFAULT_DIR_NAME : &str = ".tendermint";
+pub const DEFAULT_DIR_NAME: &str = ".tendermint";
 
-fn default_home() -> PathBuf
-{
-    dirs::home_dir().expect("Failed to retrieve home dir").join(DEFAULT_DIR_NAME)
+fn default_home() -> PathBuf {
+    dirs::home_dir()
+        .expect("Failed to retrieve home dir")
+        .join(DEFAULT_DIR_NAME)
 }
 
 #[derive(Debug, Clone, Builder)]

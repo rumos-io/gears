@@ -15,23 +15,28 @@ pub struct TmpChild(pub Child, pub TempDir);
 impl Drop for TmpChild {
     fn drop(&mut self) {
         // Stop child process before deletion of tmp dir
-        while let Err(_) = self.0.kill() { std::thread::sleep(Duration::from_millis(100))}
+        while let Err(_) = self.0.kill() {
+            std::thread::sleep(Duration::from_millis(100))
+        }
     }
 }
 
 impl TmpChild {
-    pub fn start_tendermint< G : Genesis, AC: gears::config::ApplicationConfig>( path_to_tendermint : &(impl AsRef<Path> + ?Sized), genesis : &G ) -> anyhow::Result<Self> {        
+    pub fn start_tendermint<G: Genesis, AC: gears::config::ApplicationConfig>(
+        path_to_tendermint: &(impl AsRef<Path> + ?Sized),
+        genesis: &G,
+    ) -> anyhow::Result<Self> {
         let tmp_dir = TempDir::new()?;
 
-        dircpy::CopyBuilder::new( path_to_tendermint, &tmp_dir )
-  .overwrite( true )
-  .run()?;
+        dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
+            .overwrite(true)
+            .run()?;
 
         let opt = InitOptionsBuilder::default()
-        .chain_id( Id::from_str( "test-chain")? )
-        .app_genesis_state( &genesis )
-        .moniker( "test".to_owned() )
-        .build()?;
+            .chain_id(Id::from_str("test-chain")?)
+            .app_genesis_state(&genesis)
+            .moniker("test".to_owned())
+            .build()?;
 
         crate::tendermint::init_tendermint::<_, AC>(opt)?;
 
@@ -58,7 +63,10 @@ impl TmpChild {
             "./tendermint start",
             &vec![
                 "--home".to_owned(),
-                tmp_dir.to_str().ok_or( anyhow!( "failed to get path to tmp folder"))?.to_owned()
+                tmp_dir
+                    .to_str()
+                    .ok_or(anyhow!("failed to get path to tmp folder"))?
+                    .to_owned(),
             ],
             &options,
         )?;
