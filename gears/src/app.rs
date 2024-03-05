@@ -23,7 +23,7 @@ use store_crate::StoreKey;
 use tendermint::informal::block::Height;
 
 use crate::client::{
-    init::run_init_command,
+    init::init,
     keys::{get_keys_command, run_keys_command},
 };
 
@@ -173,11 +173,10 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
         let matches = cli.get_matches();
 
         match matches.subcommand() {
-            Some(("init", sub_matches)) => run_init_command::<_, AppCore::ApplicationConfig>(
-                sub_matches,
-                AppCore::APP_NAME,
+            Some(("init", sub_matches)) => init::<_, AppCore::ApplicationConfig>(
+                sub_matches.try_into()?,
                 &AppCore::Genesis::default(),
-            ),
+            )?,
             Some(("run", sub_matches)) => {
                 crate::baseapp::run::run::<_, _, _, _, _, AppCore::ApplicationConfig>(
                     sub_matches.try_into()?,
