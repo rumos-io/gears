@@ -6,14 +6,6 @@ use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use tendermint::informal::Genesis;
 
-pub const DEFAULT_DIR_NAME: &str = ".tendermint";
-
-fn default_home() -> PathBuf {
-    dirs::home_dir()
-        .expect("Failed to retrieve home dir")
-        .join(DEFAULT_DIR_NAME)
-}
-
 #[derive(Debug, Clone, Builder)]
 pub struct GenesisOptions {
     #[builder(default = "default_home()")]

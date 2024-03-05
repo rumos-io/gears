@@ -1,10 +1,10 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use bip32::Mnemonic;
 use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, ValueEnum};
 use std::path::PathBuf;
 use text_io::read;
 
-use crate::utils::get_default_home_dir;
+use crate::utils::{self, get_default_home_dir};
 
 const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
 const KEYRING_SUB_DIR_TEST: &str = "keyring-test";
@@ -16,7 +16,7 @@ pub fn get_keys_command(app_name: &str) -> Command {
         .subcommand_required(true)
 }
 
-#[derive(ValueEnum, Clone, Default)]
+#[derive(ValueEnum, Clone, Default, Debug)]
 pub enum KeyringBackend {
     #[default]
     File,
@@ -68,33 +68,73 @@ pub fn get_keys_sub_commands(app_name: &str) -> Command {
         )
 }
 
-pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
-    match matches.subcommand() {
-        Some(("add", sub_matches)) => {
-            let name = sub_matches
-                .get_one::<String>("name")
-                .expect("name argument is required preventing None")
-                .to_owned();
+#[derive(Debug, Clone)]
+pub enum KeyCommand {
+    Add {
+        name: String,
+        recover: bool,
+        home: PathBuf,
+        keyring_backend: KeyringBackend,
+    },
+}
 
-            let recover = sub_matches.get_flag("recover");
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("{0}")]
+pub struct KeyCommandParseError(pub String);
+impl TryFrom<&ArgMatches> for KeyCommand {
+    type Error = KeyCommandParseError;
 
-            let default_home_directory = get_default_home_dir(app_name);
-            let home = sub_matches
-                .get_one::<PathBuf>("home")
-                .or(default_home_directory.as_ref())
-                .ok_or(anyhow!(
-                    "Home argument not provided and OS does not provide a default home directory"
-                ))?
-                .to_owned();
+    fn try_from(value: &ArgMatches) -> Result<Self, Self::Error> {
+        match value.subcommand() {
+            Some(("add", sub_matches)) => {
+                let name = sub_matches
+                    .get_one::<String>("name")
+                    .ok_or(KeyCommandParseError(
+                        "name argument is required preventing None".to_owned(),
+                    ))?
+                    .to_owned();
 
-            let backend = sub_matches
-                .get_one::<KeyringBackend>("keyring-backend")
-                .cloned()
-                .unwrap_or_default();
+                let recover = sub_matches.get_flag("recover");
 
-            let keyring_home = home.join(backend.get_sub_dir());
+                let home = sub_matches
+                    .get_one::<PathBuf>("home")
+                    .cloned()
+                    .or(utils::default_home())
+                    .ok_or(KeyCommandParseError(
+                        "Home argument not provided and OS does not provide a default home directory".to_owned()
+                    ))?
+                    .to_owned();
 
-            let backend = backend.to_keyring_backend(&keyring_home);
+                let keyring_backend = sub_matches
+                    .get_one::<KeyringBackend>("keyring-backend")
+                    .cloned()
+                    .unwrap_or_default();
+
+                Ok(Self::Add {
+                    name,
+                    recover,
+                    home,
+                    keyring_backend,
+                })
+            }
+            _ => Err(KeyCommandParseError(
+                "exhausted list of subcommands and subcommand_required prevents None".to_owned(),
+            )),
+        }
+    }
+}
+
+pub fn keys(command: KeyCommand) -> Result<()> {
+    match command {
+        KeyCommand::Add {
+            name,
+            recover,
+            home,
+            keyring_backend,
+        } => {
+            let keyring_home = home.join(keyring_backend.get_sub_dir());
+
+            let backend = keyring_backend.to_keyring_backend(&keyring_home);
 
             if recover {
                 println!("> Enter your bip39 mnemonic");
@@ -117,6 +157,5 @@ pub fn run_keys_command(matches: &ArgMatches, app_name: &str) -> Result<()> {
                 Ok(())
             }
         }
-        _ => unreachable!("exhausted list of subcommands and subcommand_required prevents None"),
     }
 }

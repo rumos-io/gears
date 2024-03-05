@@ -24,7 +24,7 @@ use tendermint::informal::block::Height;
 
 use crate::client::{
     init::init,
-    keys::{get_keys_command, run_keys_command},
+    keys::{get_keys_command, keys},
 };
 
 fn get_completions_command() -> Command {
@@ -189,11 +189,12 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
                 )?
             }
             Some(("query", sub_matches)) => {
+                // TODO: refactor this for new approach
                 run_query_command(sub_matches, |command, node, height| {
                     self.app_core.handle_query_command(command, node, height)
                 })?
             }
-            Some(("keys", sub_matches)) => run_keys_command(sub_matches, AppCore::APP_NAME)?,
+            Some(("keys", sub_matches)) => keys(sub_matches.try_into()?)?,
             Some(("tx", sub_matches)) => {
                 run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
                     self.app_core.handle_tx_command(command, from_address)
