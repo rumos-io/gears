@@ -16,6 +16,10 @@ impl ValueRenderer for Tip {
 
         if let Some(amount) = amount {
             let mut screens = ValueRenderer::format(amount, get_metadata)?;
+            screens
+                .get_mut(0)
+                .expect("vec will always contain exactly one element")
+                .title = "Fees".to_string();
 
             screens.push(Screen {
                 title: "Tipper".to_string(),

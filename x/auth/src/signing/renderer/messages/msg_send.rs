@@ -57,9 +57,13 @@ impl ValueRenderer for MsgSend {
             expert: false,
         });
 
-        for coin in self.amount.clone() {
-            screens_vec.append(&mut ValueRenderer::format(&coin, get_metadata)?)
-        }
+        let mut amount = ValueRenderer::format(&self.amount, get_metadata)?
+            .get(0)
+            .expect("this vec always contains exactly one element")
+            .clone();
+        amount.title = "Amount".to_string();
+        amount.indent = Some(Indent::new(2)?);
+        screens_vec.push(amount);
 
         Ok(screens_vec)
     }
@@ -73,35 +77,34 @@ mod tests {
         value_renderer::ValueRenderer, values::test_functions::get_metadata,
     };
 
-    // TODO: fix this test
-    // #[test]
-    // fn screen_result_no_coins() -> anyhow::Result<()> {
-    //     const MESSAGE: &str = r#"{
-    //         "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-    //         "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
-    //         "amount": []
-    //     }"#;
+    #[test]
+    fn msg_send_multiple_coins() -> anyhow::Result<()> {
+        const MESSAGE: &str = r#"{
+            "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
+            "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
+            "amount": [{ "denom": "uatom", "amount": "10000000" }, { "denom": "ucosm", "amount": "10000000"}]
+        }"#;
 
-    //     let msg: MsgSendRaw = serde_json::from_str(MESSAGE)?;
-    //     let msg: MsgSend = msg.try_into()?;
+        let msg: MsgSend = serde_json::from_str(MESSAGE)?;
 
-    //     const SCREENS: &str = r#"[
-    // 		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
-    // 		{ "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 }
-    // 	]"#;
+        const SCREENS: &str = r#"[
+    		{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
+    		{ "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 },
+            { "title": "Amount", "content": "10 ATOM, 10'000'000 ucosm", "indent": 2 }
+    	]"#;
 
-    //     let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
+        let expected_screens: Vec<Screen> = serde_json::from_str(SCREENS)?;
 
-    //     let actual_screens = ValueRenderer::format(&msg, &get_metadata);
+        let actual_screens = ValueRenderer::format(&msg, &get_metadata);
 
-    //     assert!(actual_screens.is_ok(), "Failed to retrieve screens");
-    //     assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
+        assert!(actual_screens.is_ok(), "Failed to retrieve screens");
+        assert_eq!(expected_screens, actual_screens.expect("Unreachable"));
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 
     #[test]
-    fn screen_result_with_coin() -> anyhow::Result<()> {
+    fn msg_send_works() -> anyhow::Result<()> {
         const MESSAGE: &str = r#"{
             "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
             "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",

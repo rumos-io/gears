@@ -6,11 +6,8 @@ use proto_messages::cosmos::{
     },
 };
 use proto_types::Denom;
-use proto_types::Uint256;
 
-use crate::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
-};
+use crate::signing::renderer::value_renderer::ValueRenderer;
 impl ValueRenderer for SendCoins {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
@@ -18,73 +15,31 @@ impl ValueRenderer for SendCoins {
     ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
         let inner_coins = self.clone().into_inner();
 
-        let mut final_content = String::new();
+        let mut formatted_coins = Vec::with_capacity(inner_coins.len());
 
-        for (i, coin) in inner_coins.into_iter().enumerate() {
-            let Metadata {
-                display,
-                denom_units,
-                ..
-            } = get_metadata(&coin.denom).ok_or("metadata not found")?; //TODO: check that returning an error is the right thing to do here
+        for coin in inner_coins.into_iter() {
+            let formatted_coin = ValueRenderer::format(&coin, get_metadata)?
+                .get(0)
+                .expect("this vec always contains exactly one element")
+                .content
+                .clone()
+                .into_inner();
 
-            let coin_exp = denom_units.iter().find(|this| this.denom == coin.denom);
-            let denom_exp = denom_units
-                .iter()
-                .find(|this| this.denom.as_ref() == display);
-
-            let formated = match (coin_exp, denom_exp) {
-                (Some(coin_exp), Some(denom_exp)) => {
-                    let power = match coin_exp.exponent > denom_exp.exponent {
-                        true => coin_exp.exponent - denom_exp.exponent,
-                        false => denom_exp.exponent - coin_exp.exponent,
-                    };
-
-                    let denominator = Uint256::from(10u32).pow(power);
-
-                    let amount = coin.amount;
-
-                    let disp_amount = amount / denominator;
-
-                    if disp_amount.is_zero() {
-                        let reminder = amount % denominator;
-                        let padding = power - 4; //TODO: this is hard coded for now but will be removed in the future when this is properly implemented
-                        let padding_str = {
-                            let mut var = String::with_capacity(padding as usize);
-                            for _ in 0..padding {
-                                var.push('0');
-                            }
-                            var
-                        };
-
-                        let mut formated_string = format!("0.{}{}", padding_str, reminder);
-
-                        while formated_string.ends_with('0') {
-                            let _ = formated_string.pop();
-                        }
-
-                        format!("{formated_string} {display}")
-                    } else {
-                        let formated_amount = DefaultPrimitiveRenderer::format(disp_amount);
-
-                        format!("{formated_amount} {display}")
-                    }
-                }
-                _ => format!(
-                    "{} {display}",
-                    DefaultPrimitiveRenderer::format(coin.amount.clone())
-                ),
-            };
-
-            if i == 0 {
-                final_content = formated;
-            } else {
-                final_content = format!("{final_content}, {formated}");
-            }
+            formatted_coins.push(formatted_coin);
         }
 
+        formatted_coins.sort();
+        let formatted_coins = formatted_coins.iter().fold(String::new(), |mut acc, coin| {
+            if !acc.is_empty() {
+                acc.push_str(", ");
+            }
+            acc.push_str(&coin);
+            acc
+        });
+
         Ok(vec![Screen {
-            title: "Fees".to_string(),
-            content: Content::new(final_content)?,
+            title: "".to_string(),
+            content: Content::new(formatted_coins).expect("send coins are never empty"),
             indent: None,
             expert: false,
         }])
@@ -104,14 +59,14 @@ mod tests {
     };
 
     #[test]
-    fn check_format() -> anyhow::Result<()> {
+    fn send_coins_check_format() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2000u32),
         };
 
         let expected_screens = Screen {
-            title: "Fees".to_string(),
+            title: "".to_string(),
             content: Content::new("0.002 ATOM".to_string())?,
             indent: None,
             expert: false,
@@ -126,7 +81,7 @@ mod tests {
     }
 
     #[test]
-    fn check_format_multi_denom() -> anyhow::Result<()> {
+    fn send_coins_check_format_multi_denom_alphabetical() -> anyhow::Result<()> {
         let coin1 = Coin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2000u32).into(),
@@ -138,8 +93,8 @@ mod tests {
         };
 
         let expected_screens = Screen {
-            title: "Fees".to_string(),
-            content: Content::new("0.002 ATOM, 0.002 UON".to_string())?,
+            title: "".to_string(),
+            content: Content::new("0.002 AAUON, 0.002 ATOM".to_string())?,
             indent: None,
             expert: false,
         };
@@ -154,14 +109,14 @@ mod tests {
     }
 
     #[test]
-    fn more_check_format() -> anyhow::Result<()> {
+    fn send_coins_check_format_more_sig_figs() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2047u32).into(),
         };
 
         let expected_screens = Screen {
-            title: "Fees".to_string(),
+            title: "".to_string(),
             content: Content::new("0.002047 ATOM".to_string())?,
             indent: None,
             expert: false,
@@ -176,14 +131,14 @@ mod tests {
     }
 
     #[test]
-    fn more_more_check_format() -> anyhow::Result<()> {
+    fn send_coins_check_format_int_and_dec_part() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2_123_456u32).into(),
         };
 
         let expected_screens = Screen {
-            title: "Fees".to_string(),
+            title: "".to_string(),
             content: Content::new("2.123456 ATOM".to_string())?,
             indent: None,
             expert: false,

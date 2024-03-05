@@ -21,12 +21,12 @@ pub(super) mod test_functions {
                 description: String::new(),
                 denom_units: vec![
                     DenomUnit {
-                        denom: "ATOM".parse().expect("Test data should be valid"),
+                        denom: "ATOM".parse().expect("this is a valid denom"),
                         exponent: 6,
                         aliases: Vec::new(),
                     },
                     DenomUnit {
-                        denom: "uatom".parse().expect("Test data should be valid"),
+                        denom: "uatom".parse().expect("this is a valid denom"),
                         exponent: 0,
                         aliases: Vec::new(),
                     },
@@ -40,18 +40,18 @@ pub(super) mod test_functions {
                 description: String::new(),
                 denom_units: vec![
                     DenomUnit {
-                        denom: "UON".parse().expect("Test data should be valid"),
+                        denom: "AAUON".parse().expect("this is a valid denom"),
                         exponent: 6,
                         aliases: Vec::new(),
                     },
                     DenomUnit {
-                        denom: "uon".parse().expect("Test data should be valid"),
+                        denom: "uon".parse().expect("this is a valid denom"),
                         exponent: 0,
                         aliases: Vec::new(),
                     },
                 ],
                 base: "uon".into(),
-                display: "UON".into(),
+                display: "AAUON".into(),
                 name: String::new(),
                 symbol: String::new(),
             }),

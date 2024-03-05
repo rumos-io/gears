@@ -19,8 +19,4 @@ impl PrimitiveValueRenderer<&[u8]> for DefaultPrimitiveRenderer {
             data_encoding::HEXLOWER.encode(&result)
         }
     }
-
-    fn format_try(value: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(Self::format(value))
-    }
 }

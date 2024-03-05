@@ -10,8 +10,4 @@ impl PrimitiveValueRenderer<bool> for DefaultPrimitiveRenderer {
             "False".to_string()
         }
     }
-
-    fn format_try(value: bool) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(Self::format(value))
-    }
 }

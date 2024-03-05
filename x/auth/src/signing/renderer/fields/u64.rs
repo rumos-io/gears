@@ -13,10 +13,6 @@ impl PrimitiveValueRenderer<u64> for DefaultPrimitiveRenderer {
 
         buf.to_string()
     }
-
-    fn format_try(value: u64) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(Self::format(value))
-    }
 }
 
 #[cfg(test)]

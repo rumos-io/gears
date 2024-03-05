@@ -23,7 +23,12 @@ impl ValueRenderer for Fee {
 
         let mut screens = Vec::<Screen>::new();
         if let Some(amount) = amount {
-            screens.append(&mut ValueRenderer::format(amount, get_metadata)?);
+            let mut amount_screens = ValueRenderer::format(amount, get_metadata)?;
+            let amount = amount_screens
+                .get_mut(0)
+                .expect("this vec always contains exactly one element");
+            amount.title = "Fees".to_string();
+            screens.append(&mut amount_screens);
         }
         if let Some(payer) = payer {
             screens.push(Screen {

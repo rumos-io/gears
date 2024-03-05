@@ -11,18 +11,10 @@ impl PrimitiveValueRenderer<&str> for DefaultPrimitiveRenderer {
     fn format(value: &str) -> String {
         value.to_string()
     }
-
-    fn format_try(value: &str) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(Self::format(value))
-    }
 }
 
 impl PrimitiveValueRenderer<String> for DefaultPrimitiveRenderer {
     fn format(value: String) -> String {
         value
-    }
-
-    fn format_try(value: String) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(Self::format(value))
     }
 }

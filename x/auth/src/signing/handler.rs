@@ -284,7 +284,7 @@ mod tests {
                 amount: None,
                 gas_limit: 200000,
                 payer: None,
-                granter: String::new(), //TODO: check this
+                granter: String::new(),
             },
             tip: None,
         };
@@ -317,7 +317,7 @@ mod tests {
                 .unwrap(),
             }],
             memo: String::new(),
-            timeout_height: 0, //TODO: check this
+            timeout_height: 0,
             extension_options: Vec::new(),
             non_critical_extension_options: Vec::new(),
         };
@@ -329,7 +329,7 @@ mod tests {
 
         let handler = SignModeHandler;
 
-        let cbor = handler.sign_bytes_get(&get_metadata, signer_data, tx_data)?;
+        let cbor = handler.sign_bytes_get(&|_| None, signer_data, tx_data)?;
 
         let expected = [
             161u8, 1, 142, 162, 1, 104, 67, 104, 97, 105, 110, 32, 105, 100, 2, 106, 116, 101, 115,
@@ -364,6 +364,112 @@ mod tests {
             49, 56, 56, 101, 97, 97, 50, 50, 101, 48, 51, 52, 49, 52, 53, 51, 50, 97, 57, 98, 98,
             51, 57, 49, 54, 102, 102, 53, 53, 98, 97, 49, 99, 55, 48, 56, 100, 49, 97, 100, 97,
             100, 101, 99, 55, 57, 98, 53, 100, 48, 53, 57, 57, 51, 99, 101, 97, 49, 4, 245,
+        ];
+
+        assert_eq!(cbor, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_sign_bytes_works_v2() -> anyhow::Result<()> {
+        let signer_info = SignerInfo {
+            public_key: Some(serde_json::from_str(
+                r#"{
+                        "@type": "/cosmos.crypto.secp256k1.PubKey",
+                        "key": "A7Jg0Wg+RHwI7CAkSbCjpfWFROGtYYkUlaBVxCT6UXJ4"
+                    }"#,
+            )?),
+            mode_info: ModeInfo::Single(SignMode::Textual),
+            sequence: 13,
+        };
+
+        let auth_inf = AuthInfo {
+            signer_infos: vec![signer_info],
+            fee: Fee {
+                amount: None,
+                gas_limit: 200_000,
+                payer: None,
+                granter: String::new(),
+            },
+            tip: None,
+        };
+
+        let signer_data = SignerData {
+            address: AccAddress::from_bech32("cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z")?,
+            chain_id: ChainId::new("test-chain".to_string())?,
+            account_number: 8,
+            sequence: 13,
+            pub_key: serde_json::from_str(
+                r#"{
+                    "@type": "/cosmos.crypto.secp256k1.PubKey",
+        		"key": "A7Jg0Wg+RHwI7CAkSbCjpfWFROGtYYkUlaBVxCT6UXJ4"
+        	}"#,
+            )?,
+        };
+
+        let tx_body = TxBody::<MsgSend> {
+            messages: vec![MsgSend {
+                from_address: AccAddress::from_bech32(
+                    "cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z",
+                )?,
+                to_address: AccAddress::from_bech32(
+                    "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
+                )?,
+                amount: SendCoins::new(vec![Coin {
+                    denom: Denom::try_from("uatom".to_string())?,
+                    amount: Uint256::from(1u8).into(),
+                }])
+                .unwrap(),
+            }],
+            memo: String::new(),
+            timeout_height: 0,
+            extension_options: Vec::new(),
+            non_critical_extension_options: Vec::new(),
+        };
+
+        let tx_data = TxData::<MsgSend> {
+            body: tx_body,
+            auth_info: auth_inf,
+        };
+
+        let handler = SignModeHandler;
+
+        let cbor = handler.sign_bytes_get(&|_| None, signer_data, tx_data)?;
+
+        let expected = [
+            161, 1, 142, 162, 1, 104, 67, 104, 97, 105, 110, 32, 105, 100, 2, 106, 116, 101, 115,
+            116, 45, 99, 104, 97, 105, 110, 162, 1, 110, 65, 99, 99, 111, 117, 110, 116, 32, 110,
+            117, 109, 98, 101, 114, 2, 97, 56, 162, 1, 104, 83, 101, 113, 117, 101, 110, 99, 101,
+            2, 98, 49, 51, 163, 1, 103, 65, 100, 100, 114, 101, 115, 115, 2, 120, 45, 99, 111, 115,
+            109, 111, 115, 49, 50, 118, 114, 103, 117, 110, 119, 118, 115, 122, 103, 122, 112, 121,
+            107, 100, 114, 113, 108, 120, 51, 109, 54, 112, 117, 101, 100, 118, 99, 97, 106, 108,
+            120, 99, 121, 119, 56, 122, 4, 245, 163, 1, 106, 80, 117, 98, 108, 105, 99, 32, 107,
+            101, 121, 2, 120, 31, 47, 99, 111, 115, 109, 111, 115, 46, 99, 114, 121, 112, 116, 111,
+            46, 115, 101, 99, 112, 50, 53, 54, 107, 49, 46, 80, 117, 98, 75, 101, 121, 4, 245, 164,
+            1, 99, 75, 101, 121, 2, 120, 82, 48, 51, 66, 50, 32, 54, 48, 68, 49, 32, 54, 56, 51,
+            69, 32, 52, 52, 55, 67, 32, 48, 56, 69, 67, 32, 50, 48, 50, 52, 32, 52, 57, 66, 48, 32,
+            65, 51, 65, 53, 32, 70, 53, 56, 53, 32, 52, 52, 69, 49, 32, 65, 68, 54, 49, 32, 56, 57,
+            49, 52, 32, 57, 53, 65, 48, 32, 53, 53, 67, 52, 32, 50, 52, 70, 65, 32, 53, 49, 55, 50,
+            32, 55, 56, 3, 1, 4, 245, 161, 2, 120, 30, 84, 104, 105, 115, 32, 116, 114, 97, 110,
+            115, 97, 99, 116, 105, 111, 110, 32, 104, 97, 115, 32, 49, 32, 77, 101, 115, 115, 97,
+            103, 101, 163, 1, 109, 77, 101, 115, 115, 97, 103, 101, 32, 40, 49, 47, 49, 41, 2, 120,
+            28, 47, 99, 111, 115, 109, 111, 115, 46, 98, 97, 110, 107, 46, 118, 49, 98, 101, 116,
+            97, 49, 46, 77, 115, 103, 83, 101, 110, 100, 3, 1, 163, 1, 108, 70, 114, 111, 109, 32,
+            97, 100, 100, 114, 101, 115, 115, 2, 120, 45, 99, 111, 115, 109, 111, 115, 49, 50, 118,
+            114, 103, 117, 110, 119, 118, 115, 122, 103, 122, 112, 121, 107, 100, 114, 113, 108,
+            120, 51, 109, 54, 112, 117, 101, 100, 118, 99, 97, 106, 108, 120, 99, 121, 119, 56,
+            122, 3, 2, 163, 1, 106, 84, 111, 32, 97, 100, 100, 114, 101, 115, 115, 2, 120, 45, 99,
+            111, 115, 109, 111, 115, 49, 115, 121, 97, 118, 121, 50, 110, 112, 102, 121, 116, 57,
+            116, 99, 110, 99, 100, 116, 115, 100, 122, 102, 55, 107, 110, 121, 57, 108, 104, 55,
+            55, 55, 112, 97, 104, 117, 117, 120, 3, 2, 163, 1, 102, 65, 109, 111, 117, 110, 116, 2,
+            103, 49, 32, 117, 97, 116, 111, 109, 3, 2, 161, 2, 110, 69, 110, 100, 32, 111, 102, 32,
+            77, 101, 115, 115, 97, 103, 101, 163, 1, 105, 71, 97, 115, 32, 108, 105, 109, 105, 116,
+            2, 103, 50, 48, 48, 39, 48, 48, 48, 4, 245, 163, 1, 113, 72, 97, 115, 104, 32, 111,
+            102, 32, 114, 97, 119, 32, 98, 121, 116, 101, 115, 2, 120, 64, 48, 56, 56, 56, 48, 97,
+            53, 100, 54, 51, 98, 52, 99, 55, 100, 51, 56, 100, 101, 53, 48, 98, 102, 49, 55, 98,
+            50, 100, 57, 99, 55, 51, 56, 48, 52, 56, 54, 52, 97, 52, 55, 97, 97, 49, 49, 54, 101,
+            56, 101, 50, 99, 57, 51, 52, 51, 48, 101, 54, 55, 57, 53, 97, 102, 56, 4, 245,
         ];
 
         assert_eq!(cbor, expected);

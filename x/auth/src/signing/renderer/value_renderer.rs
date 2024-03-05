@@ -9,9 +9,6 @@ use std::error::Error;
 pub trait PrimitiveValueRenderer<V> {
     /// Get string representation of some `V`
     fn format(value: V) -> String;
-
-    /// Try format specific value
-    fn format_try(value: V) -> Result<String, Box<dyn Error>>;
 }
 
 pub trait ValueRenderer {

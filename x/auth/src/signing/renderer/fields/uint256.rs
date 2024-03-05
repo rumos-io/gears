@@ -1,4 +1,4 @@
-//! Default formating implementation for `BigUint` - 256 bit unsigned integer
+//! Default formatting implementation for `Uint256` - 256 bit unsigned integer
 
 use std::str::FromStr;
 
@@ -12,16 +12,13 @@ use super::i64::format_get;
 
 impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
     fn format(value: Uint256) -> String {
-        let value = BigUint::from_str(&value.to_string()).expect("Failed to map"); //TODO:
+        let value = BigUint::from_str(&value.to_string())
+            .expect("the Uint256 to_string format can always be parsed to a BigUint");
 
         // Small comment: For this num we required to use heap allocated buffer
         let mut buf = String::new();
         let _ = buf.write_formatted(&value, format_get()); // writing into `String` never fails.
         buf
-    }
-
-    fn format_try(value: Uint256) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(Self::format(value))
     }
 }
 
