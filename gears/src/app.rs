@@ -1,6 +1,7 @@
 use crate::baseapp::run::get_run_command;
 use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::genesis_account::{genesis_account_add, get_add_genesis_account_command};
+use crate::client::init;
 use crate::client::query::{get_query_command, run_query_command};
 use crate::client::rest::RestState;
 use crate::client::tx::{get_tx_command, run_tx_command};
@@ -9,7 +10,6 @@ use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
 use axum::body::Body;
 use axum::Router;
-use clap::FromArgMatches;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
@@ -125,6 +125,12 @@ pub struct ApplicationBuilder<'a, AppCore: ApplicationCore> {
     params_subspace_key: AppCore::ParamsSubspaceKey,
 }
 
+#[derive(Debug, Clone)]
+pub enum ApplicationCommands
+{
+    Init( crate::client::init::InitCommand),
+}
+
 impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
     pub fn new(
         app_core: AppCore,
@@ -155,65 +161,72 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
         }
     }
 
+
+
     /// Runs the command passed on the command line.
-    pub fn execute(self) -> Result<()> {
+    pub fn execute(self, command : ApplicationCommands) -> Result<()> {
         setup_panic!();
 
-        let cli = build_cli::<AppCore::TxSubcommand, AppCore::QuerySubcommand, AppCore::AuxCommands>(
-            AppCore::APP_NAME,
-            AppCore::APP_VERSION,
-        );
+        match command 
+        {
+            ApplicationCommands::Init( cmd ) => init::init::<_, AppCore::ApplicationConfig>( cmd, &AppCore::Genesis::default()),
+        }?;
 
-        let matches = cli.get_matches();
+        // let cli = build_cli::<AppCore::TxSubcommand, AppCore::QuerySubcommand, AppCore::AuxCommands>(
+        //     AppCore::APP_NAME,
+        //     AppCore::APP_VERSION,
+        // );
 
-        match matches.subcommand() {
-            Some(("init", _sub_matches)) => (),
-            //  init::<_, AppCore::ApplicationConfig>(
-            //     sub_matches.try_into()?,
-            //     &AppCore::Genesis::default(),
-            // )?,
-            Some(("run", sub_matches)) => {
-                crate::baseapp::run::run::<_, _, _, _, _, AppCore::ApplicationConfig>(
-                    sub_matches.try_into()?,
-                    AppCore::APP_NAME,
-                    AppCore::APP_VERSION,
-                    ParamsKeeper::new(self.params_store_key),
-                    self.params_subspace_key,
-                    self.abci_handler_builder,
-                    self.router,
-                )?
-            }
-            Some(("query", sub_matches)) => {
-                // TODO: refactor this for new approach
-                run_query_command(sub_matches, |command, node, height| {
-                    self.app_core.handle_query_command(command, node, height)
-                })?
-            }
-            Some(("keys", sub_matches)) => keys(sub_matches.try_into()?)?,
-            Some(("tx", sub_matches)) => {
-                // TODO: refactor this for new approach
-                run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
-                    self.app_core.handle_tx_command(command, from_address)
-                })?
-            }
-            Some(("completions", sub_matches)) => {
-                run_completions_command::<
-                    AppCore::TxSubcommand,
-                    AppCore::QuerySubcommand,
-                    AppCore::AuxCommands,
-                >(sub_matches, AppCore::APP_NAME, AppCore::APP_VERSION)
-            }
-            Some(("add-genesis-account", sub_matches)) => {
-                genesis_account_add::<AppCore::Genesis>(sub_matches.try_into()?)?
-            }
-            _ => {
-                self.app_core.handle_aux_commands(
-                    AppCore::AuxCommands::from_arg_matches(&matches).expect(
-                        "exhausted list of subcommands and subcommand_required prevents `None`",
-                    ),
-                )?;
-            }
-        };
+        // let matches = cli.get_matches();
+
+        // match matches.subcommand() {
+        //     Some(("init", _sub_matches)) => (),
+        //     //  init::<_, AppCore::ApplicationConfig>(
+        //     //     sub_matches.try_into()?,
+        //     //     &AppCore::Genesis::default(),
+        //     // )?,
+        //     Some(("run", sub_matches)) => {
+        //         crate::baseapp::run::run::<_, _, _, _, _, AppCore::ApplicationConfig>(
+        //             sub_matches.try_into()?,
+        //             AppCore::APP_NAME,
+        //             AppCore::APP_VERSION,
+        //             ParamsKeeper::new(self.params_store_key),
+        //             self.params_subspace_key,
+        //             self.abci_handler_builder,
+        //             self.router,
+        //         )?
+        //     }
+        //     Some(("query", sub_matches)) => {
+        //         // TODO: refactor this for new approach
+        //         run_query_command(sub_matches, |command, node, height| {
+        //             self.app_core.handle_query_command(command, node, height)
+        //         })?
+        //     }
+        //     Some(("keys", sub_matches)) => keys(sub_matches.try_into()?)?,
+        //     Some(("tx", sub_matches)) => {
+        //         // TODO: refactor this for new approach
+        //         run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
+        //             self.app_core.handle_tx_command(command, from_address)
+        //         })?
+        //     }
+        //     Some(("completions", sub_matches)) => {
+        //         run_completions_command::<
+        //             AppCore::TxSubcommand,
+        //             AppCore::QuerySubcommand,
+        //             AppCore::AuxCommands,
+        //         >(sub_matches, AppCore::APP_NAME, AppCore::APP_VERSION)
+        //     }
+        //     Some(("add-genesis-account", sub_matches)) => {
+        //         genesis_account_add::<AppCore::Genesis>(sub_matches.try_into()?)?
+        //     }
+        //     _ => {
+        //         self.app_core.handle_aux_commands(
+        //             AppCore::AuxCommands::from_arg_matches(&matches).expect(
+        //                 "exhausted list of subcommands and subcommand_required prevents `None`",
+        //             ),
+        //         )?;
+        //     }
+        // };
 
         Ok(())
     }

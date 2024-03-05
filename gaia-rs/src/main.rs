@@ -1,8 +1,10 @@
 #![warn(rust_2018_idioms)]
 
 use anyhow::Result;
+use clap::Parser;
 use client::query_command_handler;
 use client::tx_command_handler;
+use gears::cli::DefaultCli;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
 use gears::NilAuxCommand;
@@ -54,6 +56,8 @@ impl ApplicationCore for GaiaCore {
 }
 
 fn main() -> Result<()> {
+    let args: gears::cli::CliApplicationArgs<DefaultCli> = gears::cli::CliApplicationArgs::parse();
+
     ApplicationBuilder::new(
         GaiaCore,
         get_router(),
@@ -61,5 +65,5 @@ fn main() -> Result<()> {
         GaiaStoreKey::Params,
         GaiaParamsStoreKey::BaseApp,
     )
-    .execute()
+    .execute(args.into())
 }

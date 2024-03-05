@@ -4,7 +4,7 @@ use clap::ArgAction;
 use rand::distributions::DistString;
 use tendermint::informal::chain::Id;
 
-use crate::client::init::InitCommand;
+use crate::{client::init::InitCommand, ApplicationCommands};
 
 pub trait ApplicationCli {
     const APP_NAME: &'static str;
@@ -23,6 +23,7 @@ pub(crate) fn rand_string() -> String
     rand::distributions::Alphanumeric.sample_string(&mut  rand::thread_rng(), RAND_LENGHT)
 }
 
+#[derive(Debug, Clone)]
 pub struct DefaultCli;
 
 impl ApplicationCli for DefaultCli
@@ -55,7 +56,24 @@ impl<T : ApplicationCli> From<CliInitCommand<T>> for InitCommand
 
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum ApplicationCommands<T : ApplicationCli>
+pub enum CliApplicationCommands<T : ApplicationCli>
 {
     Init( CliInitCommand<T>),
+}
+
+#[derive(Debug, Clone, ::clap::Parser)]
+pub struct CliApplicationArgs<T : ApplicationCli + Clone + Send + Sync>
+{
+    #[command(subcommand, value_parser = value_parser!(PhantomData))]
+    command : CliApplicationCommands<T>, 
+}
+
+impl<T : ApplicationCli + Clone + Send + Sync> From<CliApplicationArgs<T>> for ApplicationCommands
+{
+    fn from(value: CliApplicationArgs<T>) -> Self {
+        match value.command
+        {
+            CliApplicationCommands::Init( cmd ) => Self::Init( cmd.into() ),
+        }
+    }
 }
