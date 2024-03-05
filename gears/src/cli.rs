@@ -11,25 +11,24 @@ pub trait ApplicationCli {
     const APP_VERSION: &'static str;
 }
 
-pub fn home_dir<T : ApplicationCli>() -> std::path::PathBuf
+pub(crate) fn home_dir<T : ApplicationCli>() -> std::path::PathBuf
 {
     dirs::home_dir().expect( "failed to get home dir").join( T ::APP_NAME)
 }
 
-pub const RAND_LENGHT : usize = 10;
+pub(crate) const RAND_LENGHT : usize = 10;
 
-pub fn rand_string() -> String
+pub(crate) fn rand_string() -> String
 {
     rand::distributions::Alphanumeric.sample_string(&mut  rand::thread_rng(), RAND_LENGHT)
 }
 
-pub struct TmpImpl;
+pub struct DefaultCli;
 
-impl ApplicationCli for TmpImpl
+impl ApplicationCli for DefaultCli
 {
-    const APP_NAME: &'static str = "";
-
-    const APP_VERSION: &'static str = "";
+    const APP_NAME: &'static str = ".gaia";
+    const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
 }
 
 #[derive(Debug, Clone, ::clap::Args)]
