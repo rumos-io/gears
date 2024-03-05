@@ -3,6 +3,7 @@ use gears::{
     baseapp::{ABCIHandler, Genesis},
     client::rest::RestState,
     x::params::ParamsSubspaceKey,
+    ApplicationInfo,
 };
 use proto_messages::cosmos::tx::v1beta1::message::Message;
 use store::StoreKey;
@@ -13,6 +14,7 @@ pub fn get_router<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
->() -> Router<RestState<SK, PSK, M, H, G>, Body> {
+    AI: ApplicationInfo,
+>() -> Router<RestState<SK, PSK, M, H, G, AI>, Body> {
     Router::new().nest("/cosmos/bank", bank::rest::get_router())
 }

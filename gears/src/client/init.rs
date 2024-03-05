@@ -14,14 +14,14 @@ pub struct InitCommand {
 }
 
 pub fn init<G: Serialize, AC: ApplicationConfig>(
-    opt: InitCommand,
+    cmd: InitCommand,
     app_genesis_state: &G,
 ) -> Result<(), InitError> {
     let InitCommand {
         moniker,
         home,
         chain_id,
-    } = opt;
+    } = cmd;
 
     // Create config directory
     let config_dir = home.join("config");

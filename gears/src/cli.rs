@@ -1,17 +1,13 @@
-use std::{marker::PhantomData, path::PathBuf};
+use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 
 use clap::ArgAction;
 use rand::distributions::DistString;
 use tendermint::informal::chain::Id;
 
-use crate::{client::init::InitCommand, ApplicationCommands};
+use crate::{baseapp::run::RunCommand, client::init::InitCommand, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo};
 
-pub trait ApplicationCli {
-    const APP_NAME: &'static str;
-    const APP_VERSION: &'static str;
-}
 
-pub(crate) fn home_dir<T : ApplicationCli>() -> std::path::PathBuf
+pub(crate) fn home_dir<T : ApplicationInfo>() -> std::path::PathBuf
 {
     dirs::home_dir().expect( "failed to get home dir").join( T ::APP_NAME)
 }
@@ -23,17 +19,8 @@ pub(crate) fn rand_string() -> String
     rand::distributions::Alphanumeric.sample_string(&mut  rand::thread_rng(), RAND_LENGHT)
 }
 
-#[derive(Debug, Clone)]
-pub struct DefaultCli;
-
-impl ApplicationCli for DefaultCli
-{
-    const APP_NAME: &'static str = ".gaia";
-    const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
-}
-
 #[derive(Debug, Clone, ::clap::Args)]
-pub struct CliInitCommand< T : ApplicationCli> {
+pub struct CliInitCommand< T : ApplicationInfo> {
     #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = format!( "directory for config and data (default \"{:?}\")", crate::cli::home_dir::<T>() ))]
     pub home: PathBuf,
     #[arg(required = true)]
@@ -45,7 +32,7 @@ pub struct CliInitCommand< T : ApplicationCli> {
     _marker : PhantomData<T>,
 }
 
-impl<T : ApplicationCli> From<CliInitCommand<T>> for InitCommand
+impl<T : ApplicationInfo> From<CliInitCommand<T>> for InitCommand
 {
     fn from(value: CliInitCommand<T>) -> Self {
         let CliInitCommand { home, moniker, chain_id, _marker } = value;
@@ -54,26 +41,57 @@ impl<T : ApplicationCli> From<CliInitCommand<T>> for InitCommand
     }
 }
 
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct CliRunCommand< T : ApplicationInfo>
+{
+    #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = format!( "directory for config and data (default \"{:?}\")", crate::cli::home_dir::<T>() ))]
+    pub home: PathBuf,
+    #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_ADDRESS, help = format!("Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]",DEFAULT_ADDRESS ) )]
+    address : SocketAddr,
+    #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_REST_LISTEN_ADDR, help = format!("Bind the REST server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]",DEFAULT_REST_LISTEN_ADDR ))]
+    rest_listen_addr : SocketAddr,
+    #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
+    read_buf_size : usize,
+    #[arg(short, long, action = ArgAction::SetTrue, help = "Increase output logging verbosity to DEBUG level" )]
+    verbose : bool,
+    #[arg(short, long, action = ArgAction::SetTrue, help = format!("Suppress all output logging (overrides --{})", stringify!( verbose )) )]
+    quiet : bool,
+
+    #[arg(skip)]
+    _marker : PhantomData<T>,
+}
+
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum CliApplicationCommands<T : ApplicationCli>
+pub enum CliApplicationCommands<T : ApplicationInfo>
 {
     Init( CliInitCommand<T>),
+    Run( CliRunCommand<T>),
+}
+
+impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
+{
+    fn from(value: CliRunCommand<T>) -> Self {
+        let CliRunCommand { home, address, rest_listen_addr, read_buf_size, verbose, quiet, _marker } = value;
+
+        Self { home, address, rest_listen_addr, read_buf_size, verbose, quiet }
+    }
 }
 
 #[derive(Debug, Clone, ::clap::Parser)]
-pub struct CliApplicationArgs<T : ApplicationCli + Clone + Send + Sync>
+pub struct CliApplicationArgs<T : ApplicationInfo + Clone + Send + Sync>
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
     command : CliApplicationCommands<T>, 
 }
 
-impl<T : ApplicationCli + Clone + Send + Sync> From<CliApplicationArgs<T>> for ApplicationCommands
+impl<T : ApplicationInfo + Clone + Send + Sync> From<CliApplicationArgs<T>> for ApplicationCommands
 {
     fn from(value: CliApplicationArgs<T>) -> Self {
         match value.command
         {
             CliApplicationCommands::Init( cmd ) => Self::Init( cmd.into() ),
+            CliApplicationCommands::Run( cmd ) => Self::Run( cmd.into() ),
         }
     }
 }

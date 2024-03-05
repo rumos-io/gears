@@ -4,9 +4,9 @@ use anyhow::Result;
 use clap::Parser;
 use client::query_command_handler;
 use client::tx_command_handler;
-use gears::cli::DefaultCli;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
+use gears::DefaultApplication;
 use gears::NilAuxCommand;
 use genesis::GenesisState;
 use rest::get_router;
@@ -25,8 +25,6 @@ mod store_keys;
 struct GaiaCore;
 
 impl ApplicationCore for GaiaCore {
-    const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-    const APP_VERSION: &'static str = env!("GIT_HASH");
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
@@ -56,9 +54,10 @@ impl ApplicationCore for GaiaCore {
 }
 
 fn main() -> Result<()> {
-    let args: gears::cli::CliApplicationArgs<DefaultCli> = gears::cli::CliApplicationArgs::parse();
+    let args: gears::cli::CliApplicationArgs<DefaultApplication> =
+        gears::cli::CliApplicationArgs::parse();
 
-    ApplicationBuilder::new(
+    ApplicationBuilder::<'_, _, DefaultApplication>::new(
         GaiaCore,
         get_router(),
         &ABCIHandler::new,

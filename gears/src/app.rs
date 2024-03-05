@@ -1,4 +1,4 @@
-use crate::baseapp::run::get_run_command;
+use crate::baseapp::run::{self, run};
 use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::genesis_account::{genesis_account_add, get_add_genesis_account_command};
 use crate::client::init;
@@ -20,6 +20,20 @@ use store_crate::StoreKey;
 use tendermint::informal::block::Height;
 
 use crate::client::keys::{get_keys_command, keys};
+
+pub trait ApplicationInfo : Clone + Sync + Send + 'static {
+    const APP_NAME: &'static str;
+    const APP_VERSION: &'static str;
+}
+
+#[derive(Debug, Clone)]
+pub struct DefaultApplication;
+
+impl ApplicationInfo for DefaultApplication
+{
+    const APP_NAME: &'static str = ".gaia";
+    const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
+}
 
 fn get_completions_command() -> Command {
     Command::new("completions")
@@ -59,7 +73,7 @@ fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands:
         .version(version)
         .subcommand_required(true)
         // .subcommand(InitCommand<TmpImpl>) // TODO:
-        .subcommand(get_run_command(app_name))
+        // .subcommand(get_run_command(app_name))
         .subcommand(get_query_command::<QuerySubcommand>())
         .subcommand(get_keys_command(app_name))
         .subcommand(get_tx_command::<TxSubcommand>(app_name))
@@ -75,8 +89,8 @@ pub enum NilAuxCommand {}
 
 /// A Gears application.
 pub trait ApplicationCore {
-    const APP_NAME: &'static str;
-    const APP_VERSION: &'static str;
+    // const APP_NAME: &'static str;
+    // const APP_VERSION: &'static str;
 
     type Genesis: Genesis;
     type StoreKey: StoreKey;
@@ -107,7 +121,7 @@ pub trait ApplicationCore {
     }
 }
 
-pub struct ApplicationBuilder<'a, AppCore: ApplicationCore> {
+pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI : ApplicationInfo> {
     app_core: AppCore,
     router: Router<
         RestState<
@@ -116,6 +130,7 @@ pub struct ApplicationBuilder<'a, AppCore: ApplicationCore> {
             AppCore::Message,
             AppCore::ABCIHandler,
             AppCore::Genesis,
+            AI
         >,
         Body,
     >,
@@ -129,9 +144,10 @@ pub struct ApplicationBuilder<'a, AppCore: ApplicationCore> {
 pub enum ApplicationCommands
 {
     Init( crate::client::init::InitCommand),
+    Run( crate::baseapp::run::RunCommand ),
 }
 
-impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
+impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, AppCore, AI> {
     pub fn new(
         app_core: AppCore,
         router: Router<
@@ -141,6 +157,7 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
                 AppCore::Message,
                 AppCore::ABCIHandler,
                 AppCore::Genesis,
+                AI,
             >,
             Body,
         >,
@@ -169,8 +186,9 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
 
         match command 
         {
-            ApplicationCommands::Init( cmd ) => init::init::<_, AppCore::ApplicationConfig>( cmd, &AppCore::Genesis::default()),
-        }?;
+            ApplicationCommands::Init( cmd ) => init::init::<_, AppCore::ApplicationConfig>( cmd, &AppCore::Genesis::default())?,
+            ApplicationCommands::Run( cmd ) => run::run(cmd, ParamsKeeper::new(self.params_store_key), self.params_subspace_key, self.abci_handler_builder, self.router)?,
+        };
 
         // let cli = build_cli::<AppCore::TxSubcommand, AppCore::QuerySubcommand, AppCore::AuxCommands>(
         //     AppCore::APP_NAME,
