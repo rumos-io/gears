@@ -1,8 +1,6 @@
 use crate::baseapp::run::get_run_command;
 use crate::baseapp::{ABCIHandler, Genesis};
-use crate::client::genesis_account::{
-    get_add_genesis_account_command, run_add_genesis_account_command,
-};
+use crate::client::genesis_account::{genesis_account_add, get_add_genesis_account_command};
 use crate::client::init::get_init_command;
 use crate::client::query::{get_query_command, run_query_command};
 use crate::client::rest::RestState;
@@ -196,6 +194,7 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
             }
             Some(("keys", sub_matches)) => keys(sub_matches.try_into()?)?,
             Some(("tx", sub_matches)) => {
+                // TODO: refactor this for new approach
                 run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
                     self.app_core.handle_tx_command(command, from_address)
                 })?
@@ -208,7 +207,7 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
                 >(sub_matches, AppCore::APP_NAME, AppCore::APP_VERSION)
             }
             Some(("add-genesis-account", sub_matches)) => {
-                run_add_genesis_account_command::<AppCore::Genesis>(sub_matches, AppCore::APP_NAME)?
+                genesis_account_add::<AppCore::Genesis>(sub_matches.try_into()?)?
             }
             _ => {
                 self.app_core.handle_aux_commands(
