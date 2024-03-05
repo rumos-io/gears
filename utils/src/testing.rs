@@ -2,7 +2,7 @@ use std::{path::Path, process::Child, str::FromStr, time::Duration};
 
 use anyhow::anyhow;
 use assert_fs::TempDir;
-use gears::baseapp::Genesis;
+use gears::{baseapp::Genesis, cli::ApplicationCli};
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::informal::chain::Id;
 
@@ -20,7 +20,7 @@ impl Drop for TmpChild {
 }
 
 impl TmpChild {
-    pub fn start_tendermint<G: Genesis, AC: gears::config::ApplicationConfig>(
+    pub fn start_tendermint<G: Genesis, AC: gears::config::ApplicationConfig, CL : ApplicationCli + Clone>(
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
         genesis: &G,
     ) -> anyhow::Result<Self> {
@@ -30,12 +30,12 @@ impl TmpChild {
             .overwrite(true)
             .run()?;
 
-        let opt = gears::client::init::InitOptionsBuilder::default()
+        let opt: gears::client::init::InitCommand<CL> = gears::client::init::InitOptionsBuilder::default()
             .chain_id(Id::from_str("test-chain")?)
             .moniker("test".to_owned())
             .build()?;
 
-        gears::client::init::init::<_, AC>(opt, genesis)?;
+        gears::client::init::init::<_, AC, _>(opt, genesis)?;
 
         let options = ScriptOptions {
             runner: None,

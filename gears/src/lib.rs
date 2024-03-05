@@ -1,6 +1,8 @@
 #![warn(rust_2018_idioms)]
 
 mod app;
+#[cfg(feature = "cli")]
+pub mod cli;
 pub mod baseapp;
 pub mod client;
 pub mod config;

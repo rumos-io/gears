@@ -1,7 +1,6 @@
 use crate::baseapp::run::get_run_command;
 use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::genesis_account::{genesis_account_add, get_add_genesis_account_command};
-use crate::client::init::get_init_command;
 use crate::client::query::{get_query_command, run_query_command};
 use crate::client::rest::RestState;
 use crate::client::tx::{get_tx_command, run_tx_command};
@@ -20,10 +19,7 @@ use std::env;
 use store_crate::StoreKey;
 use tendermint::informal::block::Height;
 
-use crate::client::{
-    init::init,
-    keys::{get_keys_command, keys},
-};
+use crate::client::keys::{get_keys_command, keys};
 
 fn get_completions_command() -> Command {
     Command::new("completions")
@@ -62,7 +58,7 @@ fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands:
     let cli = Command::new(app_name)
         .version(version)
         .subcommand_required(true)
-        .subcommand(get_init_command(app_name))
+        // .subcommand(InitCommand<TmpImpl>) // TODO:
         .subcommand(get_run_command(app_name))
         .subcommand(get_query_command::<QuerySubcommand>())
         .subcommand(get_keys_command(app_name))
@@ -171,10 +167,11 @@ impl<'a, AppCore: ApplicationCore> ApplicationBuilder<'a, AppCore> {
         let matches = cli.get_matches();
 
         match matches.subcommand() {
-            Some(("init", sub_matches)) => init::<_, AppCore::ApplicationConfig>(
-                sub_matches.try_into()?,
-                &AppCore::Genesis::default(),
-            )?,
+            Some(("init", _sub_matches)) => (),
+            //  init::<_, AppCore::ApplicationConfig>(
+            //     sub_matches.try_into()?,
+            //     &AppCore::Genesis::default(),
+            // )?,
             Some(("run", sub_matches)) => {
                 crate::baseapp::run::run::<_, _, _, _, _, AppCore::ApplicationConfig>(
                     sub_matches.try_into()?,
