@@ -14,7 +14,7 @@ use proto_types::AccAddress;
 use tendermint::informal::block::Height;
 
 #[derive(Args, Debug)]
-pub struct QueryCli {
+pub struct BankQueryCli {
     #[command(subcommand)]
     command: BankCommands,
 }
@@ -30,7 +30,7 @@ pub enum BankCommands {
 }
 
 pub fn run_bank_query_command(
-    args: QueryCli,
+    args: BankQueryCli,
     node: &str,
     height: Option<Height>,
 ) -> Result<String> {

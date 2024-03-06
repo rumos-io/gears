@@ -1,13 +1,13 @@
 use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 
-use clap::{ArgAction, Args, ValueHint};
+use clap::{ArgAction, Args, Subcommand, ValueHint};
 use clap_complete::Shell;
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use rand::distributions::DistString;
 use tendermint::informal::chain::Id;
 
-use crate::{baseapp::run::RunCommand, client::{genesis_account::GenesisCommand, init::InitCommand, keys::{AddKeyCommand, KeyCommand, KeyringBackend}}, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo, NilAuxCommand};
+use crate::{baseapp::run::RunCommand, client::{genesis_account::GenesisCommand, init::InitCommand, keys::{AddKeyCommand, KeyCommand, KeyringBackend}, tx::TxCommand}, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR, DEFAULT_TENDERMINT_RPC_ADDRESS}, ApplicationCommands, ApplicationInfo, NilAuxCommand};
 
 
 pub(crate) fn home_dir<T : ApplicationInfo>() -> std::path::PathBuf
@@ -82,7 +82,8 @@ pub struct CliAddKeyCommand< T : ApplicationInfo>
     recover: bool,
     #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
     home: PathBuf,
-    #[arg(long = "keyring-backend",  action = ArgAction::SetTrue, default_value_t = KeyringBackend::File, help = "Select keyring's backend" )]
+    /// select keyring's backend
+    #[arg(long = "keyring-backend",  action = ArgAction::Set, default_value_t = KeyringBackend::File )]
     keyring_backend: KeyringBackend,
 
     #[arg(skip)]
@@ -111,7 +112,6 @@ impl< T : ApplicationInfo> From<CliKeyCommand<T>> for KeyCommand
 /// Add a genesis account to genesis.json. The provided account must specify the 
 /// account address and a list of initial coins. The list of initial tokens must contain valid denominations.
 #[derive(Debug, Clone, ::clap::Args)]
-#[command()]
 pub struct CliGenesisCommand< T : ApplicationInfo> {
     #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
     home: PathBuf,
@@ -148,8 +148,54 @@ impl< T : ApplicationInfo> From<CliNilAuxCommand<T>> for NilAuxCommand
     }
 }
 
+/// Transaction subcommands
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct CliTxCommand< T : ApplicationInfo, C : Subcommand>
+{
+    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
+    pub home: PathBuf,
+    /// <host>:<port> to Tendermint RPC interface for this chain
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
+    pub node : tendermint::rpc::Url,
+    /// From key
+    #[arg( required = true)]
+    pub from_key : String,
+    /// file chain-id, if left blank will be randomly created
+    #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = Id::try_from( crate::cli::rand_string() ).expect("rand should be valid"),)]
+    pub chain_id: Id,
+    /// TODO
+    #[arg(long, global = true, action = ArgAction::Set)]
+    pub fee : Option<SendCoins>,
+    /// select keyring's backend
+    #[arg(long = "keyring-backend",  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
+    pub keyring_backend: KeyringBackend,
+
+    #[command(subcommand)]
+    pub command : C,
+
+    #[arg(skip)]
+    _marker : PhantomData<T>,
+}
+
+impl< T, C, AC> From<CliTxCommand<T, C>> for TxCommand<AC>
+where
+    T : ApplicationInfo, 
+    C : Subcommand,
+    AC : From<C>
+{
+    fn from(value: CliTxCommand<T, C>) -> Self {
+        let CliTxCommand { home, node, from_key, chain_id, fee, keyring_backend, _marker, command } = value;
+
+        Self { home, node, from_key, chain_id, fee, keyring_backend, inner: command.into() }
+    }
+}
+
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum CliApplicationCommands<T : ApplicationInfo, CliAUX : Args>
+pub enum CliApplicationCommands<T, CliAUX, CliTX>
+where
+    T : ApplicationInfo,
+    CliAUX : Args,
+    CliTX : Subcommand,
 {
     Init( CliInitCommand<T>),
     Run( CliRunCommand<T>),
@@ -157,6 +203,7 @@ pub enum CliApplicationCommands<T : ApplicationInfo, CliAUX : Args>
     Keys( CliKeyCommand<T>),
     GenesisAdd( CliGenesisCommand<T>),
     Aux( CliAUX ),
+    Tx( CliTxCommand<T, CliTX> ),
 }
 
 impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
@@ -170,19 +217,26 @@ impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
 
 #[derive(Debug, Clone, ::clap::Parser)]
 #[command(name = T::APP_NAME)]
-pub struct CliApplicationArgs<T : ApplicationInfo, CliAUX : Args>
+pub struct CliApplicationArgs<T, CliAUX, CliTX>
+where
+    T : ApplicationInfo,
+    CliAUX : Args,
+    CliTX : Subcommand,
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
-    pub command : Option<CliApplicationCommands<T, CliAUX>>, 
+    pub command : Option<CliApplicationCommands<T, CliAUX, CliTX>>, 
     /// If provided, outputs the completion file for given shell
     #[clap(long = "completion")]
     pub completion: Option<Shell>,
 }
 
-impl<T : ApplicationInfo, CliAUX, AUX> From<CliApplicationCommands<T, CliAUX>> for ApplicationCommands<AUX>
-where CliAUX : Args + Into<AUX>
+impl<T : ApplicationInfo, CliAUX, AUX, CliTX, TX> From<CliApplicationCommands<T, CliAUX, CliTX>> for ApplicationCommands<AUX,TX>
+where 
+    CliAUX : Args + Into<AUX>,
+    CliTX : Subcommand, 
+    TX: From<CliTX>
 {
-    fn from(value: CliApplicationCommands<T, CliAUX>) -> Self {
+    fn from(value: CliApplicationCommands<T, CliAUX, CliTX>) -> Self {
         match value
         {
             CliApplicationCommands::Init( cmd ) => Self::Init( cmd.into() ),
@@ -190,6 +244,7 @@ where CliAUX : Args + Into<AUX>
             CliApplicationCommands::Keys( cmd ) => Self::Keys( cmd.into() ),
             CliApplicationCommands::GenesisAdd( cmd ) => Self::GenesisAdd( cmd.into() ),
             CliApplicationCommands::Aux( cmd ) => Self::Aux( cmd.into() ),
+            CliApplicationCommands::Tx( cmd ) => Self::Tx( cmd.into() ),
         }
     }
 }

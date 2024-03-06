@@ -10,7 +10,7 @@ use proto_types::AccAddress;
 use crate::Message as BankMessage;
 
 #[derive(Args, Debug)]
-pub struct Cli {
+pub struct BankTxCli {
     #[command(subcommand)]
     command: BankCommands,
 }
@@ -26,7 +26,7 @@ pub enum BankCommands {
     },
 }
 
-pub fn run_bank_tx_command(args: Cli, from_address: AccAddress) -> Result<BankMessage> {
+pub fn run_bank_tx_command(args: BankTxCli, from_address: AccAddress) -> Result<BankMessage> {
     match args.command {
         BankCommands::Send { to_address, amount } => Ok(BankMessage::Send(MsgSend {
             from_address,

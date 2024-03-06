@@ -1,13 +1,13 @@
 use anyhow::Result;
-use auth::cli::query::{run_auth_query_command, QueryCli as AuthQueryCli};
+use auth::cli::query::{run_auth_query_command, AuthQueryCli as AuthQueryCli};
 use bank::cli::{
-    query::{run_bank_query_command, QueryCli as BankQueryCli},
-    tx::{run_bank_tx_command, Cli},
+    query::{run_bank_query_command, BankQueryCli as BankQueryCli},
+    tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
 use ibc::cli::client::{
     query::{run_ibc_query_command, IbcQueryCli},
-    tx::{run_ibc_tx_command, IbcCli},
+    tx::{run_ibc_tx_command, IbcTxCli},
 };
 use proto_types::AccAddress;
 use tendermint::informal::block::Height;
@@ -15,17 +15,17 @@ use tendermint::informal::block::Height;
 use crate::message::Message;
 
 #[derive(Subcommand, Debug)]
-pub enum Commands {
+pub enum GaiaCommands {
     /// Bank transaction subcommands
-    Bank(Cli),
+    Bank(BankTxCli),
     /// IBC transaction subcommands
-    IBC(IbcCli),
+    IBC(IbcTxCli),
 }
 
-pub fn tx_command_handler(command: Commands, from_address: AccAddress) -> Result<Message> {
+pub fn _tx_command_handler(command: GaiaCommands, from_address: AccAddress) -> Result<Message> {
     match command {
-        Commands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
-        Commands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
+        GaiaCommands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
+        GaiaCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
     }
 }
 
