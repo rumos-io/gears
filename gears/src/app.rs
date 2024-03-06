@@ -33,8 +33,8 @@ impl ApplicationInfo for DefaultApplication
 }
 
 /// An empty AUX command if the user does not want to add auxillary commands.
-#[derive(Subcommand, Debug)]
-pub enum NilAuxCommand {}
+#[derive(Debug, Clone)]
+pub struct NilAuxCommand;
 
 /// A Gears application.
 pub trait ApplicationCore {
@@ -46,7 +46,7 @@ pub trait ApplicationCore {
     type QuerySubcommand: Subcommand;
     type TxSubcommand: Subcommand;
     type ApplicationConfig: ApplicationConfig;
-    type AuxCommands: Subcommand; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
+    type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
 
     fn handle_tx_command(
         &self,
@@ -61,10 +61,7 @@ pub trait ApplicationCore {
         height: Option<Height>,
     ) -> Result<()>;
 
-    #[allow(unused_variables)]
-    fn handle_aux_commands(&self, command: Self::AuxCommands) -> Result<()> {
-        Ok(())
-    }
+    fn handle_aux_commands(&self, command: Self::AuxCommands) -> Result<()>;
 }
 
 pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI : ApplicationInfo> {
@@ -87,12 +84,13 @@ pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI : ApplicationInfo
 }
 
 #[derive(Debug, Clone)]
-pub enum ApplicationCommands
+pub enum ApplicationCommands<AUX>
 {
     Init( crate::client::init::InitCommand),
     Run( crate::baseapp::run::RunCommand ),
     Keys( crate::client::keys::KeyCommand),
     GenesisAdd( crate::client::genesis_account::GenesisCommand ),
+    Aux( AUX ),
 }
 
 impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, AppCore, AI> {
@@ -127,7 +125,7 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
     }
 
     /// Runs the command passed on the command line.
-    pub fn execute(self, command : ApplicationCommands) -> Result<()> {
+    pub fn execute(self, command : ApplicationCommands<AppCore::AuxCommands>) -> Result<()> {
         setup_panic!();
 
         match command 
@@ -136,6 +134,7 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
             ApplicationCommands::Run( cmd ) => run::run(cmd, ParamsKeeper::new(self.params_store_key), self.params_subspace_key, self.abci_handler_builder, self.router)?,
             ApplicationCommands::Keys( cmd ) => keys::keys( cmd)?,
             ApplicationCommands::GenesisAdd( cmd ) => genesis_account::genesis_account_add::<AppCore::Genesis>(cmd)?,
+            ApplicationCommands::Aux( cmd ) => self.app_core.handle_aux_commands(cmd)?,
         };
 
         // match matches.subcommand() {

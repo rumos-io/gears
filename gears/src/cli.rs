@@ -1,13 +1,13 @@
 use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 
-use clap::{ArgAction, ValueHint};
+use clap::{ArgAction, Args, ValueHint};
 use clap_complete::Shell;
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use rand::distributions::DistString;
 use tendermint::informal::chain::Id;
 
-use crate::{baseapp::run::RunCommand, client::{genesis_account::GenesisCommand, init::InitCommand, keys::{AddKeyCommand, KeyCommand, KeyringBackend}}, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo};
+use crate::{baseapp::run::RunCommand, client::{genesis_account::GenesisCommand, init::InitCommand, keys::{AddKeyCommand, KeyCommand, KeyringBackend}}, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo, NilAuxCommand};
 
 
 pub(crate) fn home_dir<T : ApplicationInfo>() -> std::path::PathBuf
@@ -131,14 +131,30 @@ impl< T : ApplicationInfo>  From<CliGenesisCommand<T>> for GenesisCommand
     }
 }
 
+#[derive(Debug, Clone, ::clap::Args)]
+#[command( about = format!( "{} doesn't handle any aux command", T::APP_NAME))]
+pub struct CliNilAuxCommand< T : ApplicationInfo>
+{
+    #[arg(skip)]
+    _marker : PhantomData<T>,
+}
+
+impl< T : ApplicationInfo> From<CliNilAuxCommand<T>> for NilAuxCommand
+{
+    fn from(_value: CliNilAuxCommand<T>) -> Self {
+        Self
+    }
+}
+
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum CliApplicationCommands<T : ApplicationInfo>
+pub enum CliApplicationCommands<T : ApplicationInfo, CliAUX : Args>
 {
     Init( CliInitCommand<T>),
     Run( CliRunCommand<T>),
     #[command(subcommand)]
     Keys( CliKeyCommand<T>),
     GenesisAdd( CliGenesisCommand<T>),
+    Aux( CliAUX ),
 }
 
 impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
@@ -152,24 +168,26 @@ impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
 
 #[derive(Debug, Clone, ::clap::Parser)]
 #[command(name = T::APP_NAME)]
-pub struct CliApplicationArgs<T : ApplicationInfo + Clone + Send + Sync>
+pub struct CliApplicationArgs<T : ApplicationInfo, CliAUX : Args>
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
-    pub command : Option<CliApplicationCommands<T>>, 
+    pub command : Option<CliApplicationCommands<T, CliAUX>>, 
     /// If provided, outputs the completion file for given shell
     #[clap(long = "completion")]
     pub completion: Option<Shell>,
 }
 
-impl<T : ApplicationInfo> From<CliApplicationCommands<T>> for ApplicationCommands
+impl<T : ApplicationInfo, CliAUX, AUX> From<CliApplicationCommands<T, CliAUX>> for ApplicationCommands<AUX>
+where CliAUX : Args + Into<AUX>
 {
-    fn from(value: CliApplicationCommands<T>) -> Self {
+    fn from(value: CliApplicationCommands<T, CliAUX>) -> Self {
         match value
         {
             CliApplicationCommands::Init( cmd ) => Self::Init( cmd.into() ),
             CliApplicationCommands::Run( cmd ) => Self::Run( cmd.into() ),
             CliApplicationCommands::Keys( cmd ) => Self::Keys( cmd.into() ),
             CliApplicationCommands::GenesisAdd( cmd ) => Self::GenesisAdd( cmd.into() ),
+            CliApplicationCommands::Aux( cmd ) => Self::Aux( cmd.into() ),
         }
     }
 }

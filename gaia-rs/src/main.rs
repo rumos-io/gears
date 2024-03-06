@@ -10,6 +10,7 @@ use client::query_command_handler;
 use client::tx_command_handler;
 use gaia_rs::GaiaApplication;
 use gears::cli::CliApplicationArgs;
+use gears::cli::CliNilAuxCommand;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
 use gears::NilAuxCommand;
@@ -56,17 +57,23 @@ impl ApplicationCore for GaiaCore {
     ) -> Result<()> {
         query_command_handler(command, node, height)
     }
+
+    fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
+        Ok(())
+    }
 }
 
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
 }
 
+type Args = CliApplicationArgs<GaiaApplication, CliNilAuxCommand<GaiaApplication>>;
+
 fn main() -> Result<()> {
-    let args: CliApplicationArgs<GaiaApplication> = CliApplicationArgs::parse();
+    let args = Args::parse();
 
     if let Some(generator) = args.completion {
-        let mut cmd = CliApplicationArgs::<GaiaApplication>::command();
+        let mut cmd = Args::command();
         print_completions(generator, &mut cmd);
     }
 
@@ -80,7 +87,7 @@ fn main() -> Result<()> {
         )
         .execute(command.into())
     } else {
-        CliApplicationArgs::<GaiaApplication>::command().print_long_help()?;
+        Args::command().print_long_help()?;
         Ok(())
     }
 }
