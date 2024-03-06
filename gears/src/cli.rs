@@ -15,13 +15,14 @@ pub(crate) fn home_dir<T : ApplicationInfo>() -> std::path::PathBuf
     dirs::home_dir().expect( "failed to get home dir").join( T ::APP_NAME)
 }
 
-pub(crate) const RAND_LENGHT : usize = 10;
+pub(crate) const RAND_LENGTH : usize = 10;
 
 pub(crate) fn rand_string() -> String
 {
-    rand::distributions::Alphanumeric.sample_string(&mut  rand::thread_rng(), RAND_LENGHT)
+    rand::distributions::Alphanumeric.sample_string(&mut  rand::thread_rng(), RAND_LENGTH)
 }
 
+/// Initialize configuration files
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliInitCommand< T : ApplicationInfo> {
     #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
@@ -44,6 +45,7 @@ impl<T : ApplicationInfo> From<CliInitCommand<T>> for InitCommand
     }
 }
 
+/// Run the full node application
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliRunCommand< T : ApplicationInfo>
 {
