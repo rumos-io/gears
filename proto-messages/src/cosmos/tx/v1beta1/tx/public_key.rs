@@ -21,6 +21,16 @@ impl PublicKey {
             PublicKey::Secp256k1(key) => key.get_address(),
         }
     }
+
+    pub fn verify_signature(
+        &self,
+        message: impl AsRef<[u8]>,
+        signature: impl AsRef<[u8]>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        match self {
+            PublicKey::Secp256k1(key) => key.verify_signature(message, signature),
+        }
+    }
 }
 
 impl TryFrom<Any> for PublicKey {

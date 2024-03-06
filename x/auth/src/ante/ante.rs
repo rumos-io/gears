@@ -15,7 +15,6 @@ use proto_messages::cosmos::{
     tx::v1beta1::{
         message::Message,
         mode_info::{ModeInfo, SignMode},
-        public_key::PublicKey,
         signer_data::{ChainId, SignerData},
         tx::tx::Tx,
         tx_data::TxData,
@@ -24,7 +23,6 @@ use proto_messages::cosmos::{
     },
 };
 use proto_types::{AccAddress, Denom};
-use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 use store::StoreKey;
 
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
@@ -344,22 +342,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                 }
             };
 
-            let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
-
-            //TODO: move sig verification into PublicKey
-            match public_key {
-                PublicKey::Secp256k1(pub_key) => {
-                    let public_key =
-                        Secp256k1PubKey::from_slice(&Vec::from(pub_key.to_owned())).unwrap(); //TODO: remove unwrap
-
-                    let signature =
-                        ecdsa::Signature::from_compact(&signature_data.signature).unwrap(); //TODO: remove unwrap
-
-                    Secp256k1::verification_only()
-                        .verify_ecdsa(&message, &signature, &public_key) //TODO: lib cannot be used for bitcoin sig verification
-                        .map_err(|_| AppError::TxValidation("invalid signature".to_string()))?;
-                }
-            }
+            public_key
+                .verify_signature(&sign_bytes, &signature_data.signature)
+                .map_err(|_| AppError::TxValidation("invalid signature".to_string()))?;
         }
 
         Ok(())

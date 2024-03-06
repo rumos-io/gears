@@ -58,7 +58,7 @@ mod tests {
     };
 
     #[test]
-    fn signer_data_formating() -> anyhow::Result<()> {
+    fn signer_data_formatting() -> anyhow::Result<()> {
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
             chain_id: ChainId::new("my-chain".to_string())?,
