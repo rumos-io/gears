@@ -1,10 +1,12 @@
 use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 
 use clap::ArgAction;
+use proto_messages::cosmos::base::v1beta1::SendCoins;
+use proto_types::AccAddress;
 use rand::distributions::DistString;
 use tendermint::informal::chain::Id;
 
-use crate::{baseapp::run::RunCommand, client::{init::InitCommand, keys::{AddKeyCommand, KeyCommand, KeyringBackend}}, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo};
+use crate::{baseapp::run::RunCommand, client::{genesis_account::GenesisCommand, init::InitCommand, keys::{AddKeyCommand, KeyCommand, KeyringBackend}}, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo};
 
 
 pub(crate) fn home_dir<T : ApplicationInfo>() -> std::path::PathBuf
@@ -68,7 +70,7 @@ pub enum CliKeyCommand< T : ApplicationInfo> {
 }
 
 #[derive(Debug, Clone, ::clap::Args)]
-#[command(about = "Add a private key (either newly generated or recovered) saving it to <name> file")]
+#[command(about = "Add a private key (either newly generated or recovered) saving it to <NAME> file")]
 pub struct CliAddKeyCommand< T : ApplicationInfo>
 {
     #[arg(required = true)]
@@ -103,6 +105,30 @@ impl< T : ApplicationInfo> From<CliKeyCommand<T>> for KeyCommand
     }
 }
 
+#[derive(Debug, Clone, ::clap::Args)]
+#[command( about = "Add a genesis account to genesis.json. The provided account must specify the 
+account address and a list of initial coins. The list of initial tokens must contain valid denominations.")]
+pub struct CliGenesisCommand< T : ApplicationInfo> {
+    #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
+    home: PathBuf,
+    #[arg( required = true)]
+    address: AccAddress,
+    #[arg( required = true)]
+    coins: SendCoins,
+
+    #[arg(skip)]
+    _marker : PhantomData<T>,
+}
+
+impl< T : ApplicationInfo>  From<CliGenesisCommand<T>> for GenesisCommand
+{
+    fn from(value: CliGenesisCommand<T>) -> Self {
+        let CliGenesisCommand { home, address, coins, _marker } = value;
+        
+        Self { home, address, coins }
+    }
+}
+
 #[derive(Debug, Clone, ::clap::Subcommand)]
 pub enum CliApplicationCommands<T : ApplicationInfo>
 {
@@ -110,6 +136,7 @@ pub enum CliApplicationCommands<T : ApplicationInfo>
     Run( CliRunCommand<T>),
     #[command(subcommand)]
     Keys( CliKeyCommand<T>),
+    GenesisAdd( CliGenesisCommand<T>),
 }
 
 impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
@@ -136,6 +163,7 @@ impl<T : ApplicationInfo + Clone + Send + Sync> From<CliApplicationArgs<T>> for 
             CliApplicationCommands::Init( cmd ) => Self::Init( cmd.into() ),
             CliApplicationCommands::Run( cmd ) => Self::Run( cmd.into() ),
             CliApplicationCommands::Keys( cmd ) => Self::Keys( cmd.into() ),
+            CliApplicationCommands::GenesisAdd( cmd ) => Self::GenesisAdd( cmd.into() ),
         }
     }
 }

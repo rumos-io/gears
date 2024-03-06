@@ -1,7 +1,6 @@
 use crate::baseapp::run::{self, run};
 use crate::baseapp::{ABCIHandler, Genesis};
-use crate::client::genesis_account::{genesis_account_add, get_add_genesis_account_command};
-use crate::client::{init, keys};
+use crate::client::{genesis_account, init, keys};
 use crate::client::keys::keys;
 use crate::client::query::{get_query_command, run_query_command};
 use crate::client::rest::RestState;
@@ -30,7 +29,7 @@ pub struct DefaultApplication;
 
 impl ApplicationInfo for DefaultApplication
 {
-    const APP_NAME: &'static str = ".gaia";
+    const APP_NAME: &'static str = ".gears";
     const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
 }
 
@@ -77,8 +76,8 @@ fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands:
         // .subcommand(get_keys_command(app_name))
         .subcommand(get_tx_command::<TxSubcommand>(app_name))
         .subcommand(get_completions_command())
-        .subcommand(get_add_genesis_account_command(app_name));
-
+        // .subcommand(get_add_genesis_account_command(app_name));
+;
     AuxCommands::augment_subcommands(cli)
 }
 
@@ -145,6 +144,7 @@ pub enum ApplicationCommands
     Init( crate::client::init::InitCommand),
     Run( crate::baseapp::run::RunCommand ),
     Keys( crate::client::keys::KeyCommand),
+    GenesisAdd( crate::client::genesis_account::GenesisCommand ),
 }
 
 impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, AppCore, AI> {
@@ -189,6 +189,7 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
             ApplicationCommands::Init( cmd ) => init::init::<_, AppCore::ApplicationConfig>( cmd, &AppCore::Genesis::default())?,
             ApplicationCommands::Run( cmd ) => run::run(cmd, ParamsKeeper::new(self.params_store_key), self.params_subspace_key, self.abci_handler_builder, self.router)?,
             ApplicationCommands::Keys( cmd ) => keys::keys( cmd)?,
+            ApplicationCommands::GenesisAdd( cmd ) => genesis_account::genesis_account_add::<AppCore::Genesis>(cmd)?,
         };
 
         // let cli = build_cli::<AppCore::TxSubcommand, AppCore::QuerySubcommand, AppCore::AuxCommands>(
@@ -199,29 +200,12 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
         // let matches = cli.get_matches();
 
         // match matches.subcommand() {
-        //     Some(("init", _sub_matches)) => (),
-        //     //  init::<_, AppCore::ApplicationConfig>(
-        //     //     sub_matches.try_into()?,
-        //     //     &AppCore::Genesis::default(),
-        //     // )?,
-        //     Some(("run", sub_matches)) => {
-        //         crate::baseapp::run::run::<_, _, _, _, _, AppCore::ApplicationConfig>(
-        //             sub_matches.try_into()?,
-        //             AppCore::APP_NAME,
-        //             AppCore::APP_VERSION,
-        //             ParamsKeeper::new(self.params_store_key),
-        //             self.params_subspace_key,
-        //             self.abci_handler_builder,
-        //             self.router,
-        //         )?
-        //     }
         //     Some(("query", sub_matches)) => {
         //         // TODO: refactor this for new approach
         //         run_query_command(sub_matches, |command, node, height| {
         //             self.app_core.handle_query_command(command, node, height)
         //         })?
         //     }
-        //     Some(("keys", sub_matches)) => keys(sub_matches.try_into()?)?,
         //     Some(("tx", sub_matches)) => {
         //         // TODO: refactor this for new approach
         //         run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
@@ -234,9 +218,6 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
         //             AppCore::QuerySubcommand,
         //             AppCore::AuxCommands,
         //         >(sub_matches, AppCore::APP_NAME, AppCore::APP_VERSION)
-        //     }
-        //     Some(("add-genesis-account", sub_matches)) => {
-        //         genesis_account_add::<AppCore::Genesis>(sub_matches.try_into()?)?
         //     }
         //     _ => {
         //         self.app_core.handle_aux_commands(
