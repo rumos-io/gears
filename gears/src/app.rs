@@ -32,33 +32,12 @@ impl ApplicationInfo for DefaultApplication
     const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
 }
 
-fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands: Subcommand>(
-    app_name: &'static str,
-    version: &'static str,
-) -> Command {
-    let cli = Command::new(app_name)
-        .version(version)
-        .subcommand_required(true)
-        // .subcommand(InitCommand<TmpImpl>) // TODO:
-        // .subcommand(get_run_command(app_name))
-        .subcommand(get_query_command::<QuerySubcommand>())
-        // .subcommand(get_keys_command(app_name))
-        .subcommand(get_tx_command::<TxSubcommand>(app_name))
-        // .subcommand(get_completions_command())
-        // .subcommand(get_add_genesis_account_command(app_name));
-;
-    AuxCommands::augment_subcommands(cli)
-}
-
 /// An empty AUX command if the user does not want to add auxillary commands.
 #[derive(Subcommand, Debug)]
 pub enum NilAuxCommand {}
 
 /// A Gears application.
 pub trait ApplicationCore {
-    // const APP_NAME: &'static str;
-    // const APP_VERSION: &'static str;
-
     type Genesis: Genesis;
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
@@ -147,8 +126,6 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
         }
     }
 
-
-
     /// Runs the command passed on the command line.
     pub fn execute(self, command : ApplicationCommands) -> Result<()> {
         setup_panic!();
@@ -160,13 +137,6 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
             ApplicationCommands::Keys( cmd ) => keys::keys( cmd)?,
             ApplicationCommands::GenesisAdd( cmd ) => genesis_account::genesis_account_add::<AppCore::Genesis>(cmd)?,
         };
-
-        // let cli = build_cli::<AppCore::TxSubcommand, AppCore::QuerySubcommand, AppCore::AuxCommands>(
-        //     AppCore::APP_NAME,
-        //     AppCore::APP_VERSION,
-        // );
-
-        // let matches = cli.get_matches();
 
         // match matches.subcommand() {
         //     Some(("query", sub_matches)) => {
