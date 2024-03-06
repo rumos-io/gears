@@ -4,7 +4,7 @@ use clap::ArgAction;
 use rand::distributions::DistString;
 use tendermint::informal::chain::Id;
 
-use crate::{baseapp::run::RunCommand, client::init::InitCommand, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo};
+use crate::{baseapp::run::RunCommand, client::{init::InitCommand, keys::{AddKeyCommand, KeyCommand, KeyringBackend}}, config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR}, ApplicationCommands, ApplicationInfo};
 
 
 pub(crate) fn home_dir<T : ApplicationInfo>() -> std::path::PathBuf
@@ -61,12 +61,55 @@ pub struct CliRunCommand< T : ApplicationInfo>
     _marker : PhantomData<T>,
 }
 
+#[derive(Debug, Clone, ::clap::Subcommand)]
+#[command( about = "Manage your application's keys")]
+pub enum CliKeyCommand< T : ApplicationInfo> {
+    Add( CliAddKeyCommand<T>)
+}
+
+#[derive(Debug, Clone, ::clap::Args)]
+#[command(about = "Add a private key (either newly generated or recovered) saving it to <name> file")]
+pub struct CliAddKeyCommand< T : ApplicationInfo>
+{
+    #[arg(required = true)]
+    name: String,
+    #[arg(short, long, action = ArgAction::SetTrue, help = "Provide seed phrase to recover existing key instead of creating" )]
+    recover: bool,
+    #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
+    home: PathBuf,
+    #[arg(long = "keyring-backend",  action = ArgAction::SetTrue, default_value_t = KeyringBackend::File, help = "Select keyring's backend" )]
+    keyring_backend: KeyringBackend,
+
+    #[arg(skip)]
+    _marker : PhantomData<T>,
+}
+
+impl< T : ApplicationInfo> From< CliAddKeyCommand<T>> for  AddKeyCommand
+{
+    fn from(value: CliAddKeyCommand<T>) -> Self {
+        let CliAddKeyCommand { name, recover, home, keyring_backend, _marker } = value;
+
+        Self{ name, recover, home, keyring_backend }
+    }
+}
+
+impl< T : ApplicationInfo> From<CliKeyCommand<T>> for KeyCommand
+{
+    fn from(value: CliKeyCommand<T>) -> Self {
+        match value
+        {
+            CliKeyCommand::Add( cmd ) => KeyCommand::Add( cmd.into() ),
+        }
+    }
+}
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
 pub enum CliApplicationCommands<T : ApplicationInfo>
 {
     Init( CliInitCommand<T>),
     Run( CliRunCommand<T>),
+    #[command(subcommand)]
+    Keys( CliKeyCommand<T>),
 }
 
 impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
@@ -92,6 +135,7 @@ impl<T : ApplicationInfo + Clone + Send + Sync> From<CliApplicationArgs<T>> for 
         {
             CliApplicationCommands::Init( cmd ) => Self::Init( cmd.into() ),
             CliApplicationCommands::Run( cmd ) => Self::Run( cmd.into() ),
+            CliApplicationCommands::Keys( cmd ) => Self::Keys( cmd.into() ),
         }
     }
 }
