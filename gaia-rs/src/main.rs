@@ -1,9 +1,14 @@
 #![warn(rust_2018_idioms)]
 
 use anyhow::Result;
+use clap::Command;
+use clap::CommandFactory;
 use clap::Parser;
+use clap_complete::generate;
+use clap_complete::Generator;
 use client::query_command_handler;
 use client::tx_command_handler;
+use gears::cli::CliApplicationArgs;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
 use gears::DefaultApplication;
@@ -53,16 +58,29 @@ impl ApplicationCore for GaiaCore {
     }
 }
 
-fn main() -> Result<()> {
-    let args: gears::cli::CliApplicationArgs<DefaultApplication> =
-        gears::cli::CliApplicationArgs::parse();
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
+}
 
-    ApplicationBuilder::<'_, _, DefaultApplication>::new(
-        GaiaCore,
-        get_router(),
-        &ABCIHandler::new,
-        GaiaStoreKey::Params,
-        GaiaParamsStoreKey::BaseApp,
-    )
-    .execute(args.into())
+fn main() -> Result<()> {
+    let args: CliApplicationArgs<DefaultApplication> = CliApplicationArgs::parse();
+
+    if let Some(generator) = args.completion {
+        let mut cmd = CliApplicationArgs::<DefaultApplication>::command();
+        print_completions(generator, &mut cmd);
+    }
+
+    if let Some(command) = args.command {
+        ApplicationBuilder::<'_, _, DefaultApplication>::new(
+            GaiaCore,
+            get_router(),
+            &ABCIHandler::new,
+            GaiaStoreKey::Params,
+            GaiaParamsStoreKey::BaseApp,
+        )
+        .execute(command.into())
+    } else {
+        CliApplicationArgs::<DefaultApplication>::command().print_long_help()?;
+        Ok(())
+    }
 }

@@ -11,7 +11,6 @@ use anyhow::Result;
 use axum::body::Body;
 use axum::Router;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
-use clap_complete::{generate, Generator, Shell};
 use human_panic::setup_panic;
 use proto_messages::cosmos::tx::v1beta1::message::Message;
 use proto_types::AccAddress;
@@ -33,36 +32,6 @@ impl ApplicationInfo for DefaultApplication
     const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
 }
 
-fn get_completions_command() -> Command {
-    Command::new("completions")
-        .about("Output shell completions")
-        .arg(
-            Arg::new("shell")
-                .required(true)
-                .action(ArgAction::Set)
-                .value_parser(value_parser!(Shell)),
-        )
-}
-
-fn run_completions_command<
-    TxSubcommand: Subcommand,
-    QuerySubcommand: Subcommand,
-    AuxCommands: Subcommand,
->(
-    matches: &ArgMatches,
-    app_name: &'static str,
-    version: &'static str,
-) {
-    if let Some(generator) = matches.get_one::<Shell>("shell").copied() {
-        let mut cmd = build_cli::<TxSubcommand, QuerySubcommand, AuxCommands>(app_name, version);
-        print_completions(generator, &mut cmd);
-    }
-}
-
-fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
-    generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
-}
-
 fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands: Subcommand>(
     app_name: &'static str,
     version: &'static str,
@@ -75,7 +44,7 @@ fn build_cli<TxSubcommand: Subcommand, QuerySubcommand: Subcommand, AuxCommands:
         .subcommand(get_query_command::<QuerySubcommand>())
         // .subcommand(get_keys_command(app_name))
         .subcommand(get_tx_command::<TxSubcommand>(app_name))
-        .subcommand(get_completions_command())
+        // .subcommand(get_completions_command())
         // .subcommand(get_add_genesis_account_command(app_name));
 ;
     AuxCommands::augment_subcommands(cli)
@@ -211,13 +180,6 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
         //         run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
         //             self.app_core.handle_tx_command(command, from_address)
         //         })?
-        //     }
-        //     Some(("completions", sub_matches)) => {
-        //         run_completions_command::<
-        //             AppCore::TxSubcommand,
-        //             AppCore::QuerySubcommand,
-        //             AppCore::AuxCommands,
-        //         >(sub_matches, AppCore::APP_NAME, AppCore::APP_VERSION)
         //     }
         //     _ => {
         //         self.app_core.handle_aux_commands(

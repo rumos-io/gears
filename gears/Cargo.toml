@@ -23,8 +23,6 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = {version = "0.1", default-features = false}
 tracing-subscriber = {version = "0.3.18", optional = false, default-features = true}
-clap = {version = "4.2.2", features = ["derive"]}
-clap_complete = "4.2.1"
 integer-encoding = "4.0.0"
 lazy_static = "1.4.0" # TODO: replace with once_cell from std or crate
 sha2 = "0.10.6"
@@ -52,8 +50,13 @@ tokio = "1.27.0"
 tower-http = {version = "0.4.1", features = ["cors"]}
 derive_builder = "0.20.0"
 
+#cli
+clap = {version = "4.2.2", features = ["derive"], optional = true}
+clap_complete = { version = "4.2.1", optional = true}
+# clap_generate = { version = "3.0.3", optional = true} #"dep:clap_generate"
+
 [dev-dependencies]
 
 [features]
 default = [ "cli"]
-cli = []
+cli = [ "dep:clap", "dep:clap_complete", ]

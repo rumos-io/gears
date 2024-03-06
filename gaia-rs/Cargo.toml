@@ -23,6 +23,7 @@ bytes = {workspace = true}
 #utils 
 anyhow = {workspace = true}
 clap = {version = "4.2.2", features = ["derive"]}
+clap_complete = { version = "4.2.1"}
 strum = {version = "0.25", features = ["derive"]}
 
 #serialization

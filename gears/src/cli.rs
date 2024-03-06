@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 
 use clap::ArgAction;
+use clap_complete::Shell;
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use rand::distributions::DistString;
@@ -105,9 +106,10 @@ impl< T : ApplicationInfo> From<CliKeyCommand<T>> for KeyCommand
     }
 }
 
+/// Add a genesis account to genesis.json. The provided account must specify the 
+/// account address and a list of initial coins. The list of initial tokens must contain valid denominations.
 #[derive(Debug, Clone, ::clap::Args)]
-#[command( about = "Add a genesis account to genesis.json. The provided account must specify the 
-account address and a list of initial coins. The list of initial tokens must contain valid denominations.")]
+#[command()]
 pub struct CliGenesisCommand< T : ApplicationInfo> {
     #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
     home: PathBuf,
@@ -152,13 +154,16 @@ impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
 pub struct CliApplicationArgs<T : ApplicationInfo + Clone + Send + Sync>
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
-    command : CliApplicationCommands<T>, 
+    pub command : Option<CliApplicationCommands<T>>, 
+    /// If provided, outputs the completion file for given shell
+    #[clap(long = "completion")]
+    pub completion: Option<Shell>,
 }
 
-impl<T : ApplicationInfo + Clone + Send + Sync> From<CliApplicationArgs<T>> for ApplicationCommands
+impl<T : ApplicationInfo> From<CliApplicationCommands<T>> for ApplicationCommands
 {
-    fn from(value: CliApplicationArgs<T>) -> Self {
-        match value.command
+    fn from(value: CliApplicationCommands<T>) -> Self {
+        match value
         {
             CliApplicationCommands::Init( cmd ) => Self::Init( cmd.into() ),
             CliApplicationCommands::Run( cmd ) => Self::Run( cmd.into() ),
