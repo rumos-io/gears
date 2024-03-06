@@ -8,10 +8,10 @@ use clap_complete::generate;
 use clap_complete::Generator;
 use client::query_command_handler;
 use client::tx_command_handler;
+use gaia_rs::GaiaApplication;
 use gears::cli::CliApplicationArgs;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
-use gears::DefaultApplication;
 use gears::NilAuxCommand;
 use genesis::GenesisState;
 use rest::get_router;
@@ -63,15 +63,15 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
 }
 
 fn main() -> Result<()> {
-    let args: CliApplicationArgs<DefaultApplication> = CliApplicationArgs::parse();
+    let args: CliApplicationArgs<GaiaApplication> = CliApplicationArgs::parse();
 
     if let Some(generator) = args.completion {
-        let mut cmd = CliApplicationArgs::<DefaultApplication>::command();
+        let mut cmd = CliApplicationArgs::<GaiaApplication>::command();
         print_completions(generator, &mut cmd);
     }
 
     if let Some(command) = args.command {
-        ApplicationBuilder::<'_, _, DefaultApplication>::new(
+        ApplicationBuilder::<'_, _, GaiaApplication>::new(
             GaiaCore,
             get_router(),
             &ABCIHandler::new,
@@ -80,7 +80,7 @@ fn main() -> Result<()> {
         )
         .execute(command.into())
     } else {
-        CliApplicationArgs::<DefaultApplication>::command().print_long_help()?;
+        CliApplicationArgs::<GaiaApplication>::command().print_long_help()?;
         Ok(())
     }
 }

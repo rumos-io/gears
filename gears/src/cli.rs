@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 
-use clap::ArgAction;
+use clap::{ArgAction, ValueHint};
 use clap_complete::Shell;
 use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
@@ -24,7 +24,7 @@ pub(crate) fn rand_string() -> String
 
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliInitCommand< T : ApplicationInfo> {
-    #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
     pub home: PathBuf,
     #[arg(required = true)]
     pub moniker: String,
@@ -47,7 +47,7 @@ impl<T : ApplicationInfo> From<CliInitCommand<T>> for InitCommand
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliRunCommand< T : ApplicationInfo>
 {
-    #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
     pub home: PathBuf,
     #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_ADDRESS, help = "Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided" )]
     address : SocketAddr,
@@ -78,7 +78,7 @@ pub struct CliAddKeyCommand< T : ApplicationInfo>
     name: String,
     #[arg(short, long, action = ArgAction::SetTrue, help = "Provide seed phrase to recover existing key instead of creating" )]
     recover: bool,
-    #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
     home: PathBuf,
     #[arg(long = "keyring-backend",  action = ArgAction::SetTrue, default_value_t = KeyringBackend::File, help = "Select keyring's backend" )]
     keyring_backend: KeyringBackend,
@@ -111,7 +111,7 @@ impl< T : ApplicationInfo> From<CliKeyCommand<T>> for KeyCommand
 #[derive(Debug, Clone, ::clap::Args)]
 #[command()]
 pub struct CliGenesisCommand< T : ApplicationInfo> {
-    #[arg(long, action = ArgAction::Set, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = crate::cli::home_dir:: <T>(), help = "directory for config and data")]
     home: PathBuf,
     #[arg( required = true)]
     address: AccAddress,
@@ -151,6 +151,7 @@ impl<T : ApplicationInfo> From<CliRunCommand<T>> for RunCommand
 }
 
 #[derive(Debug, Clone, ::clap::Parser)]
+#[command(name = T::APP_NAME)]
 pub struct CliApplicationArgs<T : ApplicationInfo + Clone + Send + Sync>
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
