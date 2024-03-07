@@ -52,7 +52,7 @@ pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
     let message = handler.handle_tx_command(inner, address.clone())?;
 
     let fee = Fee {
-        amount: fee.clone(),
+        amount: fee,
         gas_limit: 100000000, //TODO: remove hard coded gas limit
         payer: None,          //TODO: remove hard coded payer
         granter: "".into(),   //TODO: remove hard coded granter
@@ -76,9 +76,9 @@ pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
 
     let tip = None; //TODO: remove hard coded
 
-    let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id.clone());
+    let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id);
 
-    let client = HttpClient::new(node.clone())?;
+    let client = HttpClient::new(node)?;
 
     broadcast_tx_commit(client, raw_tx).await
 }
