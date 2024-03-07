@@ -104,7 +104,7 @@ fn main() -> Result<()> {
             GaiaStoreKey::Params,
             GaiaParamsStoreKey::BaseApp,
         )
-        .execute(command.into())
+        .execute(command.try_into()?)
     } else {
         Args::command().print_long_help()?;
         Ok(())

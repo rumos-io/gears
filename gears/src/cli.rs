@@ -39,8 +39,8 @@ pub struct CliInitCommand<T: ApplicationInfo> {
     pub home: PathBuf,
     #[arg(required = true)]
     pub moniker: String,
-    #[arg(long =  "chain-id",  action = ArgAction::Set, default_value_t = Id::try_from( crate::cli::rand_string() ).expect("rand should be valid"), help = "genesis file chain-id, if left blank will be randomly created",)]
-    pub chain_id: Id,
+    #[arg(long =  "chain-id",  action = ArgAction::Set, help = "genesis file chain-id, if left blank will be randomly created",)]
+    pub chain_id: Option<Id>,
 
     #[arg(skip)]
     _marker: PhantomData<T>,
@@ -58,7 +58,8 @@ impl<T: ApplicationInfo> From<CliInitCommand<T>> for InitCommand {
         Self {
             home,
             moniker,
-            chain_id,
+            chain_id: chain_id
+                .unwrap_or(Id::try_from(crate::cli::rand_string()).expect("rand should be valid")),
         }
     }
 }
@@ -192,8 +193,8 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     #[arg(required = true)]
     pub from_key: String,
     /// file chain-id, if left blank will be randomly created
-    #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = Id::try_from( crate::cli::rand_string() ).expect("rand should be valid"),)]
-    pub chain_id: Id,
+    #[arg(long =  "chain-id", global = true, action = ArgAction::Set)]
+    pub chain_id: Option<Id>,
     /// TODO
     #[arg(long, global = true, action = ArgAction::Set)]
     pub fee: Option<SendCoins>,
@@ -208,13 +209,15 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     _marker: PhantomData<T>,
 }
 
-impl<T, C, AC> From<CliTxCommand<T, C>> for TxCommand<AC>
+impl<T, C, AC, ERR> TryFrom<CliTxCommand<T, C>> for TxCommand<AC>
 where
     T: ApplicationInfo,
     C: Subcommand,
-    AC: From<C>,
+    AC: TryFrom<C, Error = ERR>,
 {
-    fn from(value: CliTxCommand<T, C>) -> Self {
+    type Error = ERR;
+
+    fn try_from(value: CliTxCommand<T, C>) -> Result<Self, Self::Error> {
         let CliTxCommand {
             home,
             node,
@@ -226,15 +229,16 @@ where
             command,
         } = value;
 
-        Self {
+        Ok(Self {
             home,
             node,
             from_key,
-            chain_id,
+            chain_id: chain_id
+                .unwrap_or(Id::try_from(crate::cli::rand_string()).expect("rand should be valid")),
             fee,
             keyring_backend,
-            inner: command.into(),
-        }
+            inner: command.try_into()?,
+        })
     }
 }
 
@@ -252,23 +256,25 @@ pub struct CliQueryCommand<C: Subcommand> {
     pub command: C,
 }
 
-impl<C, AC> From<CliQueryCommand<C>> for QueryCommand<AC>
+impl<C, AC, ERR> TryFrom<CliQueryCommand<C>> for QueryCommand<AC>
 where
     C: Subcommand,
-    AC: From<C>,
+    AC: TryFrom<C, Error = ERR>,
 {
-    fn from(value: CliQueryCommand<C>) -> Self {
+    type Error = ERR;
+
+    fn try_from(value: CliQueryCommand<C>) -> Result<Self, Self::Error> {
         let CliQueryCommand {
             node,
             height,
             command,
         } = value;
 
-        Self {
+        Ok(Self {
             node,
             height,
-            inner: command.into(),
-        }
+            inner: command.try_into()?,
+        })
     }
 }
 
@@ -329,24 +335,31 @@ where
     pub completion: Option<Shell>,
 }
 
-impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE>
-    From<CliApplicationCommands<T, CliAUX, CliTX, CliQue>> for ApplicationCommands<AUX, TX, QUE>
+impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE, ERR>
+    TryFrom<CliApplicationCommands<T, CliAUX, CliTX, CliQue>> for ApplicationCommands<AUX, TX, QUE>
 where
-    CliAUX: Args + Into<AUX>,
+    CliAUX: Args,
+    AUX: TryFrom<CliAUX, Error = ERR>,
     CliTX: Subcommand,
-    TX: From<CliTX>,
+    TX: TryFrom<CliTX, Error = ERR>,
     CliQue: Subcommand,
-    QUE: From<CliQue>,
+    QUE: TryFrom<CliQue, Error = ERR>,
 {
-    fn from(value: CliApplicationCommands<T, CliAUX, CliTX, CliQue>) -> Self {
-        match value {
+    type Error = ERR;
+
+    fn try_from(
+        value: CliApplicationCommands<T, CliAUX, CliTX, CliQue>,
+    ) -> Result<Self, Self::Error> {
+        let res = match value {
             CliApplicationCommands::Init(cmd) => Self::Init(cmd.into()),
             CliApplicationCommands::Run(cmd) => Self::Run(cmd.into()),
             CliApplicationCommands::Keys(cmd) => Self::Keys(cmd.into()),
             CliApplicationCommands::GenesisAdd(cmd) => Self::GenesisAdd(cmd.into()),
-            CliApplicationCommands::Aux(cmd) => Self::Aux(cmd.into()),
-            CliApplicationCommands::Tx(cmd) => Self::Tx(cmd.into()),
-            CliApplicationCommands::Query(cmd) => Self::Query(cmd.into()),
-        }
+            CliApplicationCommands::Aux(cmd) => Self::Aux(cmd.try_into()?),
+            CliApplicationCommands::Tx(cmd) => Self::Tx(cmd.try_into()?),
+            CliApplicationCommands::Query(cmd) => Self::Query(cmd.try_into()?),
+        };
+
+        Ok(res)
     }
 }
