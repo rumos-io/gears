@@ -1571,7 +1571,6 @@ dependencies = [
  "bank",
  "bytes",
  "clap",
- "clap_complete",
  "cosmwasm-std",
  "database",
  "gears",

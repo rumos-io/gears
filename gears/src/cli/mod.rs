@@ -1,5 +1,8 @@
-use clap::{Args, Subcommand};
-use clap_complete::Shell;
+use std::io::Write;
+
+use clap::{Args, Command, CommandFactory, Subcommand};
+pub use clap_complete::Shell;
+use clap_complete::{generate, Generator};
 
 use crate::{ApplicationCommands, ApplicationInfo};
 
@@ -49,6 +52,41 @@ where
     /// If provided, outputs the completion file for given shell
     #[clap(long = "completion")]
     pub completion: Option<Shell>,
+}
+
+fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Write) {
+    generate(gen, cmd, cmd.get_name().to_string(), buf);
+}
+
+impl<T, CliAUX, CliTX, CliQue> CliApplicationArgs<T, CliAUX, CliTX, CliQue>
+where
+    T: ApplicationInfo,
+    CliAUX: Args,
+    CliTX: Subcommand,
+    CliQue: Subcommand,
+{
+    pub fn execute_or_help(
+        self,
+        executor: impl FnOnce(CliApplicationCommands<T, CliAUX, CliTX, CliQue>) -> anyhow::Result<()>,
+    ) -> anyhow::Result<()> {
+        if let Some(generator) = self.completion {
+            let mut cmd = <Self as CommandFactory>::command();
+            write_completions(generator, &mut cmd, &mut std::io::stdout());
+            return Ok(());
+        }
+
+        if let Some(command) = self.command {
+            executor(command)
+        } else {
+            <Self as CommandFactory>::command().print_long_help()?;
+            Ok(())
+        }
+    }
+
+    pub fn write_completions(shell: Shell, buf: &mut dyn Write) {
+        let mut cmd = <Self as CommandFactory>::command();
+        write_completions(shell, &mut cmd, buf);
+    }
 }
 
 impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE, ERR>

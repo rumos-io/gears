@@ -1,11 +1,7 @@
 #![warn(rust_2018_idioms)]
 
 use anyhow::Result;
-use clap::Command;
-use clap::CommandFactory;
 use clap::Parser;
-use clap_complete::generate;
-use clap_complete::Generator;
 use client::query_command_handler;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
@@ -76,10 +72,6 @@ impl QueryHandler for GaiaCore {
     }
 }
 
-fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
-    generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
-}
-
 type Args = CliApplicationArgs<
     GaiaApplication,
     CliNilAuxCommand<GaiaApplication>,
@@ -90,13 +82,7 @@ type Args = CliApplicationArgs<
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    if let Some(generator) = args.completion {
-        let mut cmd = Args::command();
-        print_completions(generator, &mut cmd);
-        return Ok(());
-    }
-
-    if let Some(command) = args.command {
+    args.execute_or_help(|command| {
         ApplicationBuilder::<'_, _, GaiaApplication>::new(
             GaiaCore,
             get_router(),
@@ -105,8 +91,5 @@ fn main() -> Result<()> {
             GaiaParamsStoreKey::BaseApp,
         )
         .execute(command.try_into()?)
-    } else {
-        Args::command().print_long_help()?;
-        Ok(())
-    }
+    })
 }
