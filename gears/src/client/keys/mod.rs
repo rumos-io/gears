@@ -11,7 +11,9 @@ const KEYRING_SUB_DIR_TEST: &str = "keyring-test";
 #[derive(ValueEnum, Clone, Default, Debug, Display)]
 pub enum KeyringBackend {
     #[default]
+    #[strum(to_string = "file")]
     File,
+    #[strum(to_string = "test")]
     Test,
 }
 
