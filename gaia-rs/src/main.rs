@@ -57,20 +57,16 @@ impl ApplicationCore for GaiaCore {
     fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
         Ok(())
     }
-  
-    
-
 }
 
-impl TxHandler for GaiaCore
-{
+impl TxHandler for GaiaCore {
     type Message = message::Message;
     type TxCommands = client::GaiaCommands;
-  
+
     fn handle_tx_command(
         &self,
         command: &TxCommand<Self::TxCommands>,
-        from_address : AccAddress,
+        from_address: AccAddress,
     ) -> Result<Self::Message> {
         tx_command_handler(command.inner.clone(), from_address)
     }

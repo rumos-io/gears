@@ -1,7 +1,7 @@
 use anyhow::Result;
-use auth::cli::query::{run_auth_query_command, AuthQueryCli as AuthQueryCli};
+use auth::cli::query::{run_auth_query_command, AuthQueryCli};
 use bank::cli::{
-    query::{run_bank_query_command, BankQueryCli as BankQueryCli},
+    query::{run_bank_query_command, BankQueryCli},
     tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
