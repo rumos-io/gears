@@ -1,6 +1,5 @@
-use crate::baseapp::run::{self, run};
+use crate::baseapp::run;
 use crate::baseapp::{ABCIHandler, Genesis};
-use crate::client::keys::keys;
 use crate::client::query::{run_query_command, QueryCommand};
 use crate::client::rest::RestState;
 use crate::client::tx::{run_tx_command, TxCommand};
@@ -10,7 +9,6 @@ use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
 use axum::body::Body;
 use axum::Router;
-use clap::{value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use human_panic::setup_panic;
 use proto_messages::cosmos::tx::v1beta1::message::Message;
 use proto_types::AccAddress;
@@ -167,21 +165,6 @@ impl<'a, AppCore: ApplicationCore, AI: ApplicationInfo> ApplicationBuilder<'a, A
             }
             ApplicationCommands::Query(cmd) => run_query_command(cmd, &self.app_core)?,
         };
-
-        // match matches.subcommand() {
-        //     Some(("query", sub_matches)) => {
-        //         // TODO: refactor this for new approach
-        //         run_query_command(sub_matches, |command, node, height| {
-        //             self.app_core.handle_query_command(command, node, height)
-        //         })?
-        //     }
-        //     Some(("tx", sub_matches)) => {
-        //         // TODO: refactor this for new approach
-        //         run_tx_command(sub_matches, AppCore::APP_NAME, |command, from_address| {
-        //             self.app_core.handle_tx_command(command, from_address)
-        //         })?
-        //     }
-        // };
 
         Ok(())
     }

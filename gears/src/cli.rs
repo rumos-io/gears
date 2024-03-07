@@ -245,7 +245,7 @@ pub struct CliQueryCommand<C: Subcommand> {
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
     pub node: tendermint::rpc::Url,
     /// TODO
-    #[arg(long, global = true, action = ArgAction::Set,)]
+    #[arg(long, global = true)]
     pub height: Option<Height>,
 
     #[command(subcommand)]

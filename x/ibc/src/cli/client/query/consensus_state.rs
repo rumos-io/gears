@@ -12,6 +12,7 @@ pub struct CliClientParams {
     pub client_id: String,
     pub revision_number: u64,
     pub revision_height: u64,
+    #[arg(long)]
     pub latest_height: bool,
 }
 

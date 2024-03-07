@@ -1,6 +1,5 @@
 #![warn(rust_2018_idioms)]
 
-#[allow(dead_code, unused_variables, unused_imports)] // TODO: remove
 mod app;
 pub mod baseapp;
 #[cfg(feature = "cli")]

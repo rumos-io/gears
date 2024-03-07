@@ -93,6 +93,7 @@ fn main() -> Result<()> {
     if let Some(generator) = args.completion {
         let mut cmd = Args::command();
         print_completions(generator, &mut cmd);
+        return Ok(());
     }
 
     if let Some(command) = args.command {
