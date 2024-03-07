@@ -30,7 +30,7 @@ pub fn run_bank_tx_command(args: BankTxCli, from_address: AccAddress) -> Result<
     match &args.command {
         BankCommands::Send { to_address, amount } => Ok(BankMessage::Send(MsgSend {
             from_address,
-            to_address : to_address.clone(),
+            to_address: to_address.clone(),
             amount: SendCoins::new(vec![amount.clone()])?,
         })),
     }

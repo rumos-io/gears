@@ -48,7 +48,7 @@ pub fn run<
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AC: ApplicationConfig,
-    AI : ApplicationInfo,
+    AI: ApplicationInfo,
 >(
     cmd: RunCommand,
     params_keeper: Keeper<SK, PSK>,
@@ -93,12 +93,8 @@ pub fn run<
 
     let abci_handler = abci_handler_builder(config.clone());
 
-    let app: BaseApp<SK, PSK, M, H, G, AI> = BaseApp::new(
-        db,
-        params_keeper,
-        params_subspace_key,
-        abci_handler,
-    );
+    let app: BaseApp<SK, PSK, M, H, G, AI> =
+        BaseApp::new(db, params_keeper, params_subspace_key, abci_handler);
 
     run_rest_server(
         app.clone(),

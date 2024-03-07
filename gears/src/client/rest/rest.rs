@@ -10,7 +10,8 @@ use tower_http::cors::{Any, CorsLayer};
 use crate::{
     baseapp::{ABCIHandler, BaseApp, Genesis},
     client::rest::handlers::{node_info, staking_params, txs},
-    x::params::ParamsSubspaceKey, ApplicationInfo,
+    x::params::ParamsSubspaceKey,
+    ApplicationInfo,
 };
 
 pub fn run_rest_server<
@@ -19,7 +20,7 @@ pub fn run_rest_server<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    AI : ApplicationInfo,
+    AI: ApplicationInfo,
 >(
     app: BaseApp<SK, PSK, M, H, G, AI>,
     listen_addr: SocketAddr,
@@ -39,23 +40,35 @@ pub struct RestState<
     PSK: ParamsSubspaceKey,
     M: Message,
     H: ABCIHandler<M, SK, G>,
-    G: Genesis, 
-    AI : ApplicationInfo,
+    G: Genesis,
+    AI: ApplicationInfo,
 > {
     app: BaseApp<SK, PSK, M, H, G, AI>,
     tendermint_rpc_address: Url,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Message, H: ABCIHandler<M, SK, G>, G: Genesis, AI : ApplicationInfo>
-    FromRef<RestState<SK, PSK, M, H, G, AI>> for BaseApp<SK, PSK, M, H, G, AI>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Message,
+        H: ABCIHandler<M, SK, G>,
+        G: Genesis,
+        AI: ApplicationInfo,
+    > FromRef<RestState<SK, PSK, M, H, G, AI>> for BaseApp<SK, PSK, M, H, G, AI>
 {
     fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI>) -> BaseApp<SK, PSK, M, H, G, AI> {
         rest_state.app.clone()
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Message, H: ABCIHandler<M, SK, G>, G: Genesis, AI : ApplicationInfo>
-    FromRef<RestState<SK, PSK, M, H, G,  AI>> for Url
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Message,
+        H: ABCIHandler<M, SK, G>,
+        G: Genesis,
+        AI: ApplicationInfo,
+    > FromRef<RestState<SK, PSK, M, H, G, AI>> for Url
 {
     fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI>) -> Url {
         rest_state.tendermint_rpc_address.clone()
@@ -71,7 +84,8 @@ async fn launch<
     PSK: ParamsSubspaceKey,
     M: Message,
     H: ABCIHandler<M, SK, G>,
-    G: Genesis, AI : ApplicationInfo
+    G: Genesis,
+    AI: ApplicationInfo,
 >(
     app: BaseApp<SK, PSK, M, H, G, AI>,
     listen_addr: SocketAddr,

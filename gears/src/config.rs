@@ -8,9 +8,11 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tendermint::rpc::Url;
 
-pub const DEFAULT_REST_LISTEN_ADDR: SocketAddr = SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1317);
-pub const DEFAULT_ADDRESS: SocketAddr = SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 26658);
-pub const DEFAULT_TENDERMINT_RPC_ADDRESS : &str = "http://localhost:26657";
+pub const DEFAULT_REST_LISTEN_ADDR: SocketAddr =
+    SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1317);
+pub const DEFAULT_ADDRESS: SocketAddr =
+    SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 26658);
+pub const DEFAULT_TENDERMINT_RPC_ADDRESS: &str = "http://localhost:26657";
 
 pub trait ApplicationConfig: Serialize + DeserializeOwned + Default + Clone {}
 impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T {}
@@ -56,8 +58,8 @@ impl<AC: ApplicationConfig> Default for Config<AC> {
     fn default() -> Config<AC> {
         Self {
             tendermint_rpc_address: DEFAULT_TENDERMINT_RPC_ADDRESS
-            .parse()
-            .expect( "const should be valid"),
+                .parse()
+                .expect("const should be valid"),
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             address: DEFAULT_ADDRESS,
             app_config: AC::default(),

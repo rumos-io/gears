@@ -8,14 +8,15 @@ use clap_complete::generate;
 use clap_complete::Generator;
 use client::query_command_handler;
 use client::tx_command_handler;
-use client::GaiaCommands;
+use client::GaiaQueryCommands;
+use client::GaiaTxCommands;
 use gaia_rs::GaiaApplication;
 use gears::cli::CliApplicationArgs;
 use gears::cli::CliNilAuxCommand;
-use gears::client::tx::TxCommand;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
 use gears::NilAuxCommand;
+use gears::QueryHandler;
 use gears::TxHandler;
 use genesis::GenesisState;
 use proto_types::AccAddress;
@@ -40,19 +41,9 @@ impl ApplicationCore for GaiaCore {
     type ParamsSubspaceKey = GaiaParamsStoreKey;
 
     type ABCIHandler = ABCIHandler;
-    type QuerySubcommand = client::QueryCommands;
 
     type ApplicationConfig = config::AppConfig;
     type AuxCommands = NilAuxCommand;
-
-    fn handle_query_command(
-        &self,
-        command: Self::QuerySubcommand,
-        node: &str,
-        height: Option<tendermint::informal::block::Height>,
-    ) -> Result<()> {
-        query_command_handler(command, node, height)
-    }
 
     fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
         Ok(())
@@ -61,14 +52,27 @@ impl ApplicationCore for GaiaCore {
 
 impl TxHandler for GaiaCore {
     type Message = message::Message;
-    type TxCommands = client::GaiaCommands;
+    type TxCommands = client::GaiaTxCommands;
 
     fn handle_tx_command(
         &self,
-        command: &TxCommand<Self::TxCommands>,
+        command: Self::TxCommands,
         from_address: AccAddress,
     ) -> Result<Self::Message> {
-        tx_command_handler(command.inner.clone(), from_address)
+        tx_command_handler(command, from_address)
+    }
+}
+
+impl QueryHandler for GaiaCore {
+    type QueryCommands = client::GaiaQueryCommands;
+
+    fn handle_query_command(
+        &self,
+        command: Self::QueryCommands,
+        node: &str,
+        height: Option<tendermint::informal::block::Height>,
+    ) -> Result<()> {
+        query_command_handler(command, node, height)
     }
 }
 
@@ -76,7 +80,12 @@ fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut std::io::stdout());
 }
 
-type Args = CliApplicationArgs<GaiaApplication, CliNilAuxCommand<GaiaApplication>, GaiaCommands>;
+type Args = CliApplicationArgs<
+    GaiaApplication,
+    CliNilAuxCommand<GaiaApplication>,
+    GaiaTxCommands,
+    GaiaQueryCommands,
+>;
 
 fn main() -> Result<()> {
     let args = Args::parse();

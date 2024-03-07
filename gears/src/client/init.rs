@@ -6,7 +6,7 @@ use tendermint::informal::chain::Id;
 
 use crate::config::ApplicationConfig;
 
-#[derive(Debug, Clone, derive_builder::Builder,)]
+#[derive(Debug, Clone, derive_builder::Builder)]
 pub struct InitCommand {
     pub home: PathBuf,
     pub moniker: String,

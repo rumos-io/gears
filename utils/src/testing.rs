@@ -30,10 +30,11 @@ impl TmpChild {
             .overwrite(true)
             .run()?;
 
-        let opt: gears::client::init::InitCommand = gears::client::init::InitCommandBuilder::default()
-            .chain_id(Id::from_str("test-chain")?)
-            .moniker("test".to_owned())
-            .build()?;
+        let opt: gears::client::init::InitCommand =
+            gears::client::init::InitCommandBuilder::default()
+                .chain_id(Id::from_str("test-chain")?)
+                .moniker("test".to_owned())
+                .build()?;
 
         gears::client::init::init::<_, AC>(opt, genesis)?;
 

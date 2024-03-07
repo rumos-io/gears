@@ -23,13 +23,13 @@ use tendermint::proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::{types::context::query_context::QueryContext, ApplicationInfo};
 use crate::types::context::tx_context::TxContext;
 use crate::types::context::{context::Context, init_context::InitContext};
 use crate::{
     error::AppError,
     x::params::{Keeper, ParamsSubspaceKey},
 };
+use crate::{types::context::query_context::QueryContext, ApplicationInfo};
 
 use super::params::BaseAppParamsKeeper;
 
@@ -89,7 +89,7 @@ pub struct BaseApp<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    AI : ApplicationInfo,
+    AI: ApplicationInfo,
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
@@ -98,11 +98,17 @@ pub struct BaseApp<
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
     pub m: PhantomData<M>,
     pub g: PhantomData<G>,
-    _info_marker : PhantomData<AI>,
+    _info_marker: PhantomData<AI>,
 }
 
-impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>, G: Genesis, AI : ApplicationInfo>
-    Application for BaseApp<SK, PSK, M, H, G, AI>
+impl<
+        M: Message,
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        H: ABCIHandler<M, SK, G>,
+        G: Genesis,
+        AI: ApplicationInfo,
+    > Application for BaseApp<SK, PSK, M, H, G, AI>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
@@ -368,8 +374,14 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
     }
 }
 
-impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>, G: Genesis, AI : ApplicationInfo>
-    BaseApp<SK, PSK, M, H, G, AI>
+impl<
+        M: Message,
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        H: ABCIHandler<M, SK, G>,
+        G: Genesis,
+        AI: ApplicationInfo,
+    > BaseApp<SK, PSK, M, H, G, AI>
 {
     pub fn new(
         db: RocksDB,
@@ -391,7 +403,7 @@ impl<M: Message, SK: StoreKey, PSK: ParamsSubspaceKey, H: ABCIHandler<M, SK, G>,
             height: Arc::new(RwLock::new(height)),
             m: PhantomData,
             g: PhantomData,
-            _info_marker : PhantomData,
+            _info_marker: PhantomData,
         }
     }
 

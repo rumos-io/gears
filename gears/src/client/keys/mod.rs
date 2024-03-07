@@ -1,8 +1,8 @@
 use anyhow::Result;
 use bip32::Mnemonic;
 use clap::ValueEnum;
-use strum::Display;
 use std::path::PathBuf;
+use strum::Display;
 use text_io::read;
 
 const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
@@ -33,11 +33,11 @@ impl KeyringBackend {
 
 #[derive(Debug, Clone)]
 pub enum KeyCommand {
-    Add( AddKeyCommand),
+    Add(AddKeyCommand),
 }
 
-#[derive(Debug, Clone, derive_builder::Builder,)]
-pub struct AddKeyCommand{
+#[derive(Debug, Clone, derive_builder::Builder)]
+pub struct AddKeyCommand {
     pub name: String,
     pub recover: bool,
     pub home: PathBuf,
@@ -46,11 +46,14 @@ pub struct AddKeyCommand{
 
 // TODO: remove this cli code
 pub fn keys(command: KeyCommand) -> Result<()> {
-    match command
-    {
-        KeyCommand::Add( cmd) => 
-        {
-            let AddKeyCommand { name, recover, home, keyring_backend } = cmd;
+    match command {
+        KeyCommand::Add(cmd) => {
+            let AddKeyCommand {
+                name,
+                recover,
+                home,
+                keyring_backend,
+            } = cmd;
 
             let keyring_home = home.join(keyring_backend.get_sub_dir());
 
@@ -72,7 +75,7 @@ pub fn keys(command: KeyCommand) -> Result<()> {
                 println!("\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account.\n");
                 println!("{}", mnemonic.phrase());
             }
-        },
+        }
     }
 
     Ok(())

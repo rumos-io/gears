@@ -1,5 +1,4 @@
 use anyhow::{anyhow, Result};
-use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
 use prost::Message;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use serde::Serialize;
@@ -7,45 +6,27 @@ use tendermint::informal::block::Height;
 use tendermint::rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};
 use tokio::runtime::Runtime;
 
-pub fn get_query_command<QuerySubcommand: Subcommand>() -> Command {
-    let cli = Command::new("query")
-        .about("Querying subcommands")
-        .subcommand_required(true)
-        .arg(
-            arg!(--node)
-                .help("<host>:<port> to Tendermint RPC interface for this chain")
-                .default_value("http://localhost:26657")
-                .action(ArgAction::Set)
-                .global(true),
-        )
-        .arg(
-            Arg::new("height")
-                .long("height")
-                .action(ArgAction::Set)
-                .value_parser(value_parser!(Height))
-                .global(true),
-        );
+use crate::QueryHandler;
 
-    QuerySubcommand::augment_subcommands(cli)
+#[derive(Debug, Clone, derive_builder::Builder)]
+pub struct QueryCommand<C> {
+    pub node: tendermint::rpc::Url,
+    pub height: Option<Height>,
+
+    pub inner: C,
 }
 
-pub fn run_query_command<QuerySubcommand: Subcommand, QueryCmdHandler>(
-    matches: &ArgMatches,
-    query_command_handler: QueryCmdHandler,
-) -> Result<()>
-where
-    QueryCmdHandler: FnOnce(QuerySubcommand, &str, Option<Height>) -> Result<()>,
-{
-    let args = QuerySubcommand::from_arg_matches(matches)
-        .expect("presumably this should work otherwise CLAP would have complained earlier");
+pub fn run_query_command<C, H: QueryHandler<QueryCommands = C>>(
+    cmd: QueryCommand<C>,
+    handler: &H,
+) -> Result<()> {
+    let QueryCommand {
+        node,
+        height,
+        inner,
+    } = cmd;
 
-    let node = matches
-        .get_one::<String>("node")
-        .expect("Node arg has a default value so this cannot be `None`.");
-
-    let height = matches.get_one::<Height>("height");
-
-    query_command_handler(args, node, height.cloned())
+    handler.handle_query_command(inner, node.path(), height)
 }
 
 /// Convenience method for running queries

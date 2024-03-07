@@ -15,22 +15,22 @@ use tendermint::informal::block::Height;
 use crate::message::Message;
 
 #[derive(Subcommand, Debug, Clone)]
-pub enum GaiaCommands {
+pub enum GaiaTxCommands {
     /// Bank transaction subcommands
     Bank(BankTxCli),
     /// IBC transaction subcommands
     IBC(IbcTxCli),
 }
 
-pub fn tx_command_handler(command: GaiaCommands, from_address: AccAddress) -> Result<Message> {
+pub fn tx_command_handler(command: GaiaTxCommands, from_address: AccAddress) -> Result<Message> {
     match command {
-        GaiaCommands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
-        GaiaCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
+        GaiaTxCommands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
+        GaiaTxCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
     }
 }
 
 #[derive(Subcommand, Debug)]
-pub enum QueryCommands {
+pub enum GaiaQueryCommands {
     /// Querying commands for the bank module
     Bank(BankQueryCli),
     /// Querying commands for the auth module
@@ -39,14 +39,14 @@ pub enum QueryCommands {
 }
 
 pub fn query_command_handler(
-    command: QueryCommands,
+    command: GaiaQueryCommands,
     node: &str,
     height: Option<Height>,
 ) -> Result<()> {
     let res = match command {
-        QueryCommands::Bank(args) => run_bank_query_command(args, node, height),
-        QueryCommands::Auth(args) => run_auth_query_command(args, node, height),
-        QueryCommands::Ibc(args) => run_ibc_query_command(args, node, height),
+        GaiaQueryCommands::Bank(args) => run_bank_query_command(args, node, height),
+        GaiaQueryCommands::Auth(args) => run_auth_query_command(args, node, height),
+        GaiaQueryCommands::Ibc(args) => run_ibc_query_command(args, node, height),
     }?;
 
     println!("{}", res);

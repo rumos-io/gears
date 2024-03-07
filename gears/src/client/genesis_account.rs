@@ -6,10 +6,7 @@ use proto_messages::cosmos::base::v1beta1::SendCoins;
 use proto_types::AccAddress;
 use tendermint::informal::Genesis;
 
-use crate::{
-    baseapp::Genesis as SDKGenesis,
-    error::AppError,
-};
+use crate::{baseapp::Genesis as SDKGenesis, error::AppError};
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct GenesisCommand {

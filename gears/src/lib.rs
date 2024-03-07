@@ -2,9 +2,9 @@
 
 #[allow(dead_code, unused_variables, unused_imports)] // TODO: remove
 mod app;
+pub mod baseapp;
 #[cfg(feature = "cli")]
 pub mod cli;
-pub mod baseapp;
 pub mod client;
 pub mod config;
 pub mod crypto;

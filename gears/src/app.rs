@@ -1,10 +1,10 @@
 use crate::baseapp::run::{self, run};
 use crate::baseapp::{ABCIHandler, Genesis};
-use crate::client::{genesis_account, init, keys};
 use crate::client::keys::keys;
-use crate::client::query::{get_query_command, run_query_command};
+use crate::client::query::{run_query_command, QueryCommand};
 use crate::client::rest::RestState;
 use crate::client::tx::{run_tx_command, TxCommand};
+use crate::client::{genesis_account, init, keys};
 use crate::config::{ApplicationConfig, Config};
 use crate::x::params::{Keeper as ParamsKeeper, ParamsSubspaceKey};
 use anyhow::Result;
@@ -18,7 +18,7 @@ use std::env;
 use store_crate::StoreKey;
 use tendermint::informal::block::Height;
 
-pub trait ApplicationInfo : Clone + Sync + Send + 'static {
+pub trait ApplicationInfo: Clone + Sync + Send + 'static {
     const APP_NAME: &'static str;
     const APP_VERSION: &'static str;
 }
@@ -26,8 +26,7 @@ pub trait ApplicationInfo : Clone + Sync + Send + 'static {
 #[derive(Debug, Clone)]
 pub struct DefaultApplication;
 
-impl ApplicationInfo for DefaultApplication
-{
+impl ApplicationInfo for DefaultApplication {
     const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
     const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
 }
@@ -36,42 +35,41 @@ impl ApplicationInfo for DefaultApplication
 #[derive(Debug, Clone)]
 pub struct NilAuxCommand;
 
-pub trait TxHandler
-{
+pub trait TxHandler {
     type Message: Message;
     type TxCommands;
 
     fn handle_tx_command(
         &self,
-        command: &TxCommand<Self::TxCommands>,
-        from_address : AccAddress,
+        command: Self::TxCommands,
+        from_address: AccAddress,
     ) -> Result<Self::Message>;
 }
 
+pub trait QueryHandler {
+    type QueryCommands;
+
+    fn handle_query_command(
+        &self,
+        command: Self::QueryCommands,
+        node: &str,
+        height: Option<Height>,
+    ) -> Result<()>;
+}
+
 /// A Gears application.
-pub trait ApplicationCore : TxHandler {
+pub trait ApplicationCore: TxHandler + QueryHandler {
     type Genesis: Genesis;
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
     type ABCIHandler: ABCIHandler<Self::Message, Self::StoreKey, Self::Genesis>;
-    type QuerySubcommand: Subcommand;
-
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
-
-   
-
-    fn handle_query_command(
-        &self,
-        command: Self::QuerySubcommand,
-        node: &str,
-        height: Option<Height>,
-    ) -> Result<()>;
 
     fn handle_aux_commands(&self, command: Self::AuxCommands) -> Result<()>;
 }
 
-pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI : ApplicationInfo> {
+pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI: ApplicationInfo> {
     app_core: AppCore,
     router: Router<
         RestState<
@@ -80,7 +78,7 @@ pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI : ApplicationInfo
             AppCore::Message,
             AppCore::ABCIHandler,
             AppCore::Genesis,
-            AI
+            AI,
         >,
         Body,
     >,
@@ -91,17 +89,17 @@ pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI : ApplicationInfo
 }
 
 #[derive(Debug, Clone)]
-pub enum ApplicationCommands<AUX, TX>
-{
-    Init( crate::client::init::InitCommand),
-    Run( crate::baseapp::run::RunCommand ),
-    Keys( crate::client::keys::KeyCommand),
-    GenesisAdd( crate::client::genesis_account::GenesisCommand ),
-    Aux( AUX ),
-    Tx( TxCommand<TX> ),
+pub enum ApplicationCommands<AUX, TX, QUE> {
+    Init(crate::client::init::InitCommand),
+    Run(crate::baseapp::run::RunCommand),
+    Keys(crate::client::keys::KeyCommand),
+    GenesisAdd(crate::client::genesis_account::GenesisCommand),
+    Aux(AUX),
+    Tx(TxCommand<TX>),
+    Query(QueryCommand<QUE>),
 }
 
-impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, AppCore, AI> {
+impl<'a, AppCore: ApplicationCore, AI: ApplicationInfo> ApplicationBuilder<'a, AppCore, AI> {
     pub fn new(
         app_core: AppCore,
         router: Router<
@@ -133,22 +131,41 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
     }
 
     /// Runs the command passed on the command line.
-    pub fn execute(self, command : ApplicationCommands<AppCore::AuxCommands, AppCore::TxCommands>) -> Result<()> {
+    pub fn execute(
+        self,
+        command: ApplicationCommands<
+            AppCore::AuxCommands,
+            AppCore::TxCommands,
+            AppCore::QueryCommands,
+        >,
+    ) -> Result<()> {
         setup_panic!();
 
-        match command 
-        {
-            ApplicationCommands::Init( cmd ) => init::init::<_, AppCore::ApplicationConfig>( cmd, &AppCore::Genesis::default())?,
-            ApplicationCommands::Run( cmd ) => run::run(cmd, ParamsKeeper::new(self.params_store_key), self.params_subspace_key, self.abci_handler_builder, self.router)?,
-            ApplicationCommands::Keys( cmd ) => keys::keys( cmd)?,
-            ApplicationCommands::GenesisAdd( cmd ) => genesis_account::genesis_account_add::<AppCore::Genesis>(cmd)?,
-            ApplicationCommands::Aux( cmd ) => self.app_core.handle_aux_commands(cmd)?,
-            ApplicationCommands::Tx( cmd ) => 
-            {
-                tokio::runtime:: Runtime::new()
-                .expect("unclear why this would ever fail")
-                .block_on(run_tx_command::<AppCore::Message, _, _>(cmd, &self.app_core))?;
-            },
+        match command {
+            ApplicationCommands::Init(cmd) => {
+                init::init::<_, AppCore::ApplicationConfig>(cmd, &AppCore::Genesis::default())?
+            }
+            ApplicationCommands::Run(cmd) => run::run(
+                cmd,
+                ParamsKeeper::new(self.params_store_key),
+                self.params_subspace_key,
+                self.abci_handler_builder,
+                self.router,
+            )?,
+            ApplicationCommands::Keys(cmd) => keys::keys(cmd)?,
+            ApplicationCommands::GenesisAdd(cmd) => {
+                genesis_account::genesis_account_add::<AppCore::Genesis>(cmd)?
+            }
+            ApplicationCommands::Aux(cmd) => self.app_core.handle_aux_commands(cmd)?,
+            ApplicationCommands::Tx(cmd) => {
+                tokio::runtime::Runtime::new()
+                    .expect("unclear why this would ever fail")
+                    .block_on(run_tx_command::<AppCore::Message, _, _>(
+                        cmd,
+                        &self.app_core,
+                    ))?;
+            }
+            ApplicationCommands::Query(cmd) => run_query_command(cmd, &self.app_core)?,
         };
 
         // match matches.subcommand() {

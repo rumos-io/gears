@@ -10,7 +10,8 @@ use axum::{
 use gears::{
     baseapp::{ABCIHandler, BaseApp, Genesis},
     client::rest::{error::Error, Pagination, RestState},
-    x::params::ParamsSubspaceKey, ApplicationInfo,
+    x::params::ParamsSubspaceKey,
+    ApplicationInfo,
 };
 use proto_messages::cosmos::{
     bank::v1beta1::{
@@ -30,7 +31,8 @@ pub async fn supply<
     PSK: ParamsSubspaceKey,
     M: Message,
     H: ABCIHandler<M, SK, G>,
-    G: Genesis, AI : ApplicationInfo
+    G: Genesis,
+    AI: ApplicationInfo,
 >(
     State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
@@ -56,7 +58,7 @@ pub async fn get_balances<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    AI : ApplicationInfo
+    AI: ApplicationInfo,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
@@ -96,7 +98,7 @@ pub async fn get_balances_by_denom<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    AI : ApplicationInfo
+    AI: ApplicationInfo,
 >(
     Path(address): Path<AccAddress>,
     denom: Query<RawDenom>,
@@ -132,7 +134,7 @@ pub fn get_router<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
-    AI : ApplicationInfo
+    AI: ApplicationInfo,
 >() -> Router<RestState<SK, PSK, M, H, G, AI>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
