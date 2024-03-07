@@ -12,7 +12,7 @@ use proto_types::AccAddress;
 use tendermint::informal::chain::Id;
 use tendermint::rpc::{Client, HttpClient};
 
-use crate::client::keys::KeyringBackend;
+use crate::{client::keys::KeyringBackend, TxHandler};
 use crate::crypto::{create_signed_transaction, SigningInfo};
 
 use super::query::run_query;
@@ -30,17 +30,19 @@ pub struct TxCommand<C>
     pub inner : C,
 }
 
-pub async fn run_tx_command<M : SDKMessage, C>(
+pub async fn run_tx_command<M : SDKMessage, C, H : TxHandler< TxCommands = C >>(
     cmd : TxCommand<C>,
-    message: M,
+    handler : &H,
 ) -> Result<()>
 {
-    let TxCommand { home, node, from_key, chain_id, fee, keyring_backend, inner : _ } = cmd;
+    let TxCommand { home, node, from_key, chain_id, fee, keyring_backend, inner : _ } = &cmd;
 
     let keyring_home = home.join(keyring_backend.get_sub_dir());
 
     let key = keyring::get_key_by_name(from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
     let address = key.get_address();
+
+    let message = handler.handle_tx_command(&cmd, address.clone())?;
 
     let fee = Fee {
         amount: fee.clone(),

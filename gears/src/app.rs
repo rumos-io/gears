@@ -36,22 +36,30 @@ impl ApplicationInfo for DefaultApplication
 #[derive(Debug, Clone)]
 pub struct NilAuxCommand;
 
+pub trait TxHandler
+{
+    type Message: Message;
+    type TxCommands;
+
+    fn handle_tx_command(
+        &self,
+        command: &TxCommand<Self::TxCommands>,
+        from_address : AccAddress,
+    ) -> Result<Self::Message>;
+}
+
 /// A Gears application.
-pub trait ApplicationCore {
+pub trait ApplicationCore : TxHandler {
     type Genesis: Genesis;
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
     type ABCIHandler: ABCIHandler<Self::Message, Self::StoreKey, Self::Genesis>;
     type QuerySubcommand: Subcommand;
-    type Message: Message;
-    type TxCommands;
+
     type ApplicationConfig: ApplicationConfig;
     type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
 
-    fn handle_tx_command(
-        &self,
-        command: &TxCommand<Self::TxCommands>
-    ) -> Result<Self::Message>;
+   
 
     fn handle_query_command(
         &self,
@@ -137,11 +145,9 @@ impl<'a, AppCore: ApplicationCore, AI : ApplicationInfo> ApplicationBuilder<'a, 
             ApplicationCommands::Aux( cmd ) => self.app_core.handle_aux_commands(cmd)?,
             ApplicationCommands::Tx( cmd ) => 
             {
-                let message = self.app_core.handle_tx_command(&cmd)?; 
-
                 tokio::runtime:: Runtime::new()
                 .expect("unclear why this would ever fail")
-                .block_on(run_tx_command(cmd, message))?;
+                .block_on(run_tx_command::<AppCore::Message, _, _>(cmd, &self.app_core))?;
             },
         };
 

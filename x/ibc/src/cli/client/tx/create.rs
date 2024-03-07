@@ -8,7 +8,7 @@ use proto_messages::cosmos::ibc::{
 
 use crate::types::Signer;
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct CliCreateClient {
     pub client_state: String,
     pub consensus_state: String,

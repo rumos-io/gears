@@ -11,7 +11,7 @@ use proto_messages::cosmos::ibc::{
 
 use crate::types::{ClientId, Signer};
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct CliUpgradeClient {
     pub client_id: ClientId,
     pub upgraded_client_state: String,

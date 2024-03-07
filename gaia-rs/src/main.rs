@@ -7,14 +7,18 @@ use clap::Parser;
 use clap_complete::generate;
 use clap_complete::Generator;
 use client::query_command_handler;
+use client::tx_command_handler;
 use client::GaiaCommands;
 use gaia_rs::GaiaApplication;
 use gears::cli::CliApplicationArgs;
 use gears::cli::CliNilAuxCommand;
+use gears::client::tx::TxCommand;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
 use gears::NilAuxCommand;
+use gears::TxHandler;
 use genesis::GenesisState;
+use proto_types::AccAddress;
 use rest::get_router;
 
 use crate::abci_handler::ABCIHandler;
@@ -34,10 +38,10 @@ impl ApplicationCore for GaiaCore {
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
-    type Message = message::Message;
+
     type ABCIHandler = ABCIHandler;
     type QuerySubcommand = client::QueryCommands;
-    type TxCommands = client::GaiaCommands;
+
     type ApplicationConfig = config::AppConfig;
     type AuxCommands = NilAuxCommand;
 
@@ -53,17 +57,23 @@ impl ApplicationCore for GaiaCore {
     fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
         Ok(())
     }
+  
     
+
+}
+
+impl TxHandler for GaiaCore
+{
+    type Message = message::Message;
+    type TxCommands = client::GaiaCommands;
+  
     fn handle_tx_command(
         &self,
-        _command: &gears::client::tx::TxCommand<Self::TxCommands>
+        command: &TxCommand<Self::TxCommands>,
+        from_address : AccAddress,
     ) -> Result<Self::Message> {
-        // tx_command_handler(command, from_address)
-
-        todo!()
+        tx_command_handler(command.inner.clone(), from_address)
     }
-    
-
 }
 
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {

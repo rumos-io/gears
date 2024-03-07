@@ -14,13 +14,13 @@ use self::{
 
 pub mod create;
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct IbcTxCli {
     #[command(subcommand)]
     command: IbcCommands,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum IbcCommands {
     ClientCreate(CliCreateClient),
     ClientUpdate(CliUpdateClient),

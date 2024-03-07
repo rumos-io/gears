@@ -14,7 +14,7 @@ use tendermint::informal::block::Height;
 
 use crate::message::Message;
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum GaiaCommands {
     /// Bank transaction subcommands
     Bank(BankTxCli),
@@ -22,7 +22,7 @@ pub enum GaiaCommands {
     IBC(IbcTxCli),
 }
 
-pub fn _tx_command_handler(command: GaiaCommands, from_address: AccAddress) -> Result<Message> {
+pub fn tx_command_handler(command: GaiaCommands, from_address: AccAddress) -> Result<Message> {
     match command {
         GaiaCommands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
         GaiaCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),

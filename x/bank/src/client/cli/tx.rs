@@ -9,13 +9,13 @@ use proto_types::AccAddress;
 
 use crate::Message as BankMessage;
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct BankTxCli {
     #[command(subcommand)]
     command: BankCommands,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum BankCommands {
     /// Send funds from one account to another
     Send {
@@ -27,11 +27,11 @@ pub enum BankCommands {
 }
 
 pub fn run_bank_tx_command(args: BankTxCli, from_address: AccAddress) -> Result<BankMessage> {
-    match args.command {
+    match &args.command {
         BankCommands::Send { to_address, amount } => Ok(BankMessage::Send(MsgSend {
             from_address,
-            to_address,
-            amount: SendCoins::new(vec![amount])?,
+            to_address : to_address.clone(),
+            amount: SendCoins::new(vec![amount.clone()])?,
         })),
     }
 }

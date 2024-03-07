@@ -6,7 +6,7 @@ use proto_messages::{any::Any, cosmos::ibc::tx::MsgUpdateClient};
 
 use crate::types::{ClientId, Signer};
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct CliUpdateClient {
     pub client_id: ClientId,
     pub client_message: String, // TODO: more appriate type
