@@ -11,12 +11,12 @@ use crate::{
     ApplicationInfo,
 };
 
-use super::utils::{home_dir, rand_string};
+use super::utils::rand_string;
 
 /// Transaction subcommands
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
-    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     pub home: PathBuf,
     /// <host>:<port> to Tendermint RPC interface for this chain
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]

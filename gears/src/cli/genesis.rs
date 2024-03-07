@@ -6,13 +6,11 @@ use proto_types::AccAddress;
 
 use crate::{client::genesis_account::GenesisCommand, ApplicationInfo};
 
-use super::utils::home_dir;
-
 /// Add a genesis account to genesis.json. The provided account must specify the
 /// account address and a list of initial coins. The list of initial tokens must contain valid denominations.
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliGenesisCommand<T: ApplicationInfo> {
-    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     home: PathBuf,
     #[arg(required = true)]
     address: AccAddress,

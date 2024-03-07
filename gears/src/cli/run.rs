@@ -8,12 +8,10 @@ use crate::{
     ApplicationInfo,
 };
 
-use super::utils::home_dir;
-
 /// Run the full node application
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliRunCommand<T: ApplicationInfo> {
-    #[arg(long,  global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long,  global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     pub home: PathBuf,
     #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_ADDRESS, help = "Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided" )]
     pub address: SocketAddr,

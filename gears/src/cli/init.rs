@@ -5,12 +5,12 @@ use tendermint::informal::chain::Id;
 
 use crate::{client::init::InitCommand, ApplicationInfo};
 
-use super::utils::{home_dir, rand_string};
+use super::utils::rand_string;
 
 /// Initialize configuration files
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliInitCommand<T: ApplicationInfo> {
-    #[arg(long,  global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = home_dir:: <T>(), help = "directory for config and data")]
+    #[arg(long,  global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     pub home: PathBuf,
     #[arg(required = true)]
     pub moniker: String,
