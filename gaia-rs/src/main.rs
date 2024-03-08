@@ -63,7 +63,9 @@ impl QueryHandler for GaiaCore {
         node: &str,
         height: Option<tendermint::informal::block::Height>,
     ) -> Result<()> {
-        query_command_handler(command, node, height)
+        tokio::runtime::Runtime::new()
+                    .expect("unclear why this would ever fail")
+                    .block_on(query_command_handler(command, node, height))
     }
 }
 

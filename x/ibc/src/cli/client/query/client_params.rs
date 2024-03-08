@@ -15,7 +15,7 @@ pub struct CliClientParams {
     client_id: String,
 }
 
-pub(super) fn query_command_handler(
+pub(super) async fn query_command_handler(
     args: CliClientParams,
     node: &str,
     height: Option<Height>,
@@ -29,7 +29,7 @@ pub(super) fn query_command_handler(
         "/ibc.core.client.v1.Query/ClientParams".to_owned(),
         node,
         height,
-    )?;
+    ).await?;
 
     let result = serde_json::to_string_pretty(&result)?;
 

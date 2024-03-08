@@ -58,7 +58,7 @@ pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
         granter: "".into(),   //TODO: remove hard coded granter
     };
 
-    let account = get_account_latest(address, node.as_str())?;
+    let account = get_account_latest(address, node.as_str()).await?;
 
     let signing_info = SigningInfo {
         key,
@@ -91,7 +91,7 @@ pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()
 }
 
 // TODO: we're assuming here that the app has an auth module which handles this query
-fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountResponse> {
+async fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
     run_query::<QueryAccountResponse, RawQueryAccountResponse>(
@@ -99,5 +99,5 @@ fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountRes
         "/cosmos.auth.v1beta1.Query/Account".into(),
         node,
         None,
-    )
+    ).await
 }

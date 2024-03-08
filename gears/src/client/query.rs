@@ -4,7 +4,6 @@ use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use serde::Serialize;
 use tendermint::informal::block::Height;
 use tendermint::rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};
-use tokio::runtime::Runtime;
 
 use crate::QueryHandler;
 
@@ -30,7 +29,7 @@ pub fn run_query_command<C, H: QueryHandler<QueryCommands = C>>(
 }
 
 /// Convenience method for running queries
-pub fn run_query<
+pub async fn run_query<
     Response: Protobuf<Raw> + std::convert::TryFrom<Raw> + Serialize,
     Raw: Message + Default + std::convert::From<Response>,
 >(
@@ -44,9 +43,7 @@ where
 {
     let client = HttpClient::new(node)?;
 
-    let res = Runtime::new()
-        .expect("unclear why this would ever fail")
-        .block_on(run_query_async(client, query_bytes, height, path))?;
+    let res = run_query_async(client, query_bytes, height, path).await?;
 
     if res.code.is_err() {
         return Err(anyhow!("node returned an error: {}", res.log));
