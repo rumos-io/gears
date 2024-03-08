@@ -764,9 +764,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.4.7"
+version = "4.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfb0d4825b75ff281318c393e8e1b80c4da9fb75a6b1d98547d389d6fe1f48d2"
+checksum = "885e4d7d5af40bfb99ae6f9433e292feac98d452dcb3ec3d25dfe7552b77da8c"
 dependencies = [
  "clap",
 ]
@@ -1582,6 +1582,7 @@ dependencies = [
  "store",
  "strum",
  "tendermint 0.1.0",
+ "tokio",
 ]
 
 [[package]]
@@ -1597,6 +1598,7 @@ dependencies = [
  "clap_complete",
  "cosmwasm-std",
  "database",
+ "derive_builder",
  "dirs",
  "handlebars",
  "hex",
@@ -1604,6 +1606,7 @@ dependencies = [
  "integer-encoding 4.0.0",
  "keyring",
  "lazy_static",
+ "log",
  "prost 0.12.3",
  "proto-messages",
  "proto-types",
@@ -1616,12 +1619,14 @@ dependencies = [
  "strum",
  "tendermint 0.1.0",
  "text_io",
+ "thiserror",
  "tokio",
  "toml 0.8.8",
  "tower-http",
  "tracing",
  "tracing-subscriber",
  "trees",
+ "url",
 ]
 
 [[package]]

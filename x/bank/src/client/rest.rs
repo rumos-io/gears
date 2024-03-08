@@ -11,6 +11,7 @@ use gears::{
     baseapp::{ABCIHandler, BaseApp, Genesis},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
+    ApplicationInfo,
 };
 use proto_messages::cosmos::{
     bank::v1beta1::{
@@ -31,8 +32,9 @@ pub async fn supply<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    AI: ApplicationInfo,
 >(
-    State(app): State<BaseApp<SK, PSK, M, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
     let request = RequestQuery {
         data: Default::default(),
@@ -56,10 +58,11 @@ pub async fn get_balances<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    AI: ApplicationInfo,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
-    State(app): State<BaseApp<SK, PSK, M, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
 ) -> Result<Json<QueryAllBalancesResponse>, Error> {
     let req = QueryAllBalancesRequest {
         address,
@@ -95,10 +98,11 @@ pub async fn get_balances_by_denom<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    AI: ApplicationInfo,
 >(
     Path(address): Path<AccAddress>,
     denom: Query<RawDenom>,
-    State(app): State<BaseApp<SK, PSK, M, H, G>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
 ) -> Result<Json<QueryBalanceResponse>, Error> {
     let req = QueryBalanceRequest {
         address,
@@ -130,7 +134,8 @@ pub fn get_router<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
->() -> Router<RestState<SK, PSK, M, H, G>, Body> {
+    AI: ApplicationInfo,
+>() -> Router<RestState<SK, PSK, M, H, G, AI>, Body> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))

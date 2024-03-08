@@ -6,8 +6,6 @@ use gears::baseapp::Genesis;
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::informal::chain::Id;
 
-use crate::tendermint::InitOptionsBuilder;
-
 /// Struct for process which lauched from tmp dir
 #[derive(Debug)]
 pub struct TmpChild(pub Child, pub TempDir);
@@ -32,13 +30,13 @@ impl TmpChild {
             .overwrite(true)
             .run()?;
 
-        let opt = InitOptionsBuilder::default()
-            .chain_id(Id::from_str("test-chain")?)
-            .app_genesis_state(&genesis)
-            .moniker("test".to_owned())
-            .build()?;
+        let opt: gears::client::init::InitCommand =
+            gears::client::init::InitCommandBuilder::default()
+                .chain_id(Id::from_str("test-chain")?)
+                .moniker("test".to_owned())
+                .build()?;
 
-        crate::tendermint::init_tendermint::<_, AC>(opt)?;
+        gears::client::init::init::<_, AC>(opt, genesis)?;
 
         let options = ScriptOptions {
             runner: None,

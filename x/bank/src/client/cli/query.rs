@@ -14,7 +14,7 @@ use proto_types::AccAddress;
 use tendermint::informal::block::Height;
 
 #[derive(Args, Debug)]
-pub struct QueryCli {
+pub struct BankQueryCli {
     #[command(subcommand)]
     command: BankCommands,
 }
@@ -29,8 +29,8 @@ pub enum BankCommands {
     DenomMetadata,
 }
 
-pub fn run_bank_query_command(
-    args: QueryCli,
+pub async fn run_bank_query_command(
+    args: BankQueryCli,
     node: &str,
     height: Option<Height>,
 ) -> Result<String> {
@@ -46,7 +46,7 @@ pub fn run_bank_query_command(
                 "/cosmos.bank.v1beta1.Query/AllBalances".into(),
                 node,
                 height,
-            )?;
+            ).await?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }
@@ -58,7 +58,7 @@ pub fn run_bank_query_command(
                 "/cosmos.bank.v1beta1.Query/DenomsMetadata".into(),
                 node,
                 height,
-            )?;
+            ).await?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }

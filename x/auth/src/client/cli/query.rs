@@ -12,7 +12,7 @@ use proto_messages::cosmos::{
 use proto_types::AccAddress;
 
 #[derive(Args, Debug)]
-pub struct QueryCli {
+pub struct AuthQueryCli {
     #[command(subcommand)]
     command: AuthCommands,
 }
@@ -26,8 +26,8 @@ pub enum AuthCommands {
     },
 }
 
-pub fn run_auth_query_command(
-    args: QueryCli,
+pub async fn run_auth_query_command(
+    args: AuthQueryCli,
     node: &str,
     height: Option<Height>,
 ) -> Result<String> {
@@ -40,7 +40,7 @@ pub fn run_auth_query_command(
                 "/cosmos.auth.v1beta1.Query/Account".into(),
                 node,
                 height,
-            )?;
+            ).await?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }

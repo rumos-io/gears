@@ -12,10 +12,11 @@ pub struct CliClientParams {
     pub client_id: String,
     pub revision_number: u64,
     pub revision_height: u64,
+    #[arg(long)]
     pub latest_height: bool,
 }
 
-pub(super) fn query_command_handler(
+pub(super) async fn query_command_handler(
     args: CliClientParams,
     node: &str,
     height: Option<Height>,
@@ -38,7 +39,7 @@ pub(super) fn query_command_handler(
         "/ibc.core.client.v1.Query/ConsensusState".to_owned(),
         node,
         height,
-    )?;
+    ).await?;
 
     let result = serde_json::to_string_pretty(&result)?;
 

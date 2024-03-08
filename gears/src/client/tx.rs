@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
-use clap::{arg, value_parser, Arg, ArgAction, ArgMatches, Command, Subcommand};
+use anyhow::Result;
 use prost::Message;
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
@@ -12,125 +11,54 @@ use proto_messages::cosmos::{
 use proto_types::AccAddress;
 use tendermint::informal::chain::Id;
 use tendermint::rpc::{Client, HttpClient};
-use tokio::runtime::Runtime;
 
-use crate::client::keys::KeyringBackend;
-use crate::{
-    crypto::{create_signed_transaction, SigningInfo},
-    utils::get_default_home_dir,
-};
+use crate::crypto::{create_signed_transaction, SigningInfo};
+use crate::{client::keys::KeyringBackend, TxHandler};
 
 use super::query::run_query;
 
-pub fn get_tx_command<TxSubcommand: Subcommand>(app_name: &str) -> Command {
-    let cli = Command::new("tx")
-        .about("Transaction subcommands")
-        .subcommand_required(true)
-        .arg(
-            arg!(--node)
-                .help("<host>:<port> to Tendermint RPC interface for this chain")
-                .default_value("http://localhost:26657")
-                .action(ArgAction::Set)
-                .global(true),
-        )
-        .arg(
-            arg!(--home)
-                .help(format!(
-                    "Directory for config and data [default: {}]",
-                    get_default_home_dir(app_name).unwrap_or_default().display()
-                ))
-                .action(ArgAction::Set)
-                .value_parser(value_parser!(PathBuf))
-                .global(true),
-        )
-        .arg(
-            Arg::new("from_key")
-                .required(true)
-                .help("From key")
-                .value_parser(clap::value_parser!(String)),
-        )
-        .arg(
-            Arg::new("chain-id")
-                .long("chain-id")
-                .default_value("test-chain")
-                .action(ArgAction::Set)
-                .value_parser(value_parser!(Id))
-                .global(true),
-        )
-        .arg(
-            Arg::new("fee")
-                .long("fee")
-                .action(ArgAction::Set)
-                .value_parser(clap::value_parser!(SendCoins))
-                .global(true),
-        )
-        .arg(
-            Arg::new("keyring-backend")
-                .long("keyring-backend")
-                .help("Select keyring's backend (default \"file\")")
-                .action(ArgAction::Set)
-                .value_parser(value_parser!(KeyringBackend))
-                .global(true),
-        );
-    TxSubcommand::augment_subcommands(cli)
+#[derive(Debug, Clone, derive_builder::Builder)]
+pub struct TxCommand<C> {
+    pub home: PathBuf,
+    pub node: url::Url,
+    pub from_key: String,
+    pub chain_id: Id,
+    pub fee: Option<SendCoins>,
+    pub keyring_backend: KeyringBackend,
+
+    pub inner: C,
 }
 
-pub fn run_tx_command<TxSubcommand: Subcommand, TxCmdHandler, M>(
-    matches: &ArgMatches,
-    app_name: &str,
-    tx_command_handler: TxCmdHandler,
-) -> Result<()>
-where
-    M: SDKMessage,
-    TxCmdHandler: FnOnce(TxSubcommand, AccAddress) -> Result<M>,
-{
-    let node = matches
-        .get_one::<String>("node")
-        .expect("Node arg has a default value so this cannot be `None`.")
-        .as_str();
+pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
+    cmd: TxCommand<C>,
+    handler: &H,
+) -> Result<()> {
+    let TxCommand {
+        home,
+        node,
+        from_key,
+        chain_id,
+        fee,
+        keyring_backend,
+        inner,
+    } = cmd;
 
-    let default_home_directory = get_default_home_dir(app_name);
-    let home = matches
-        .get_one::<PathBuf>("home")
-        .or(default_home_directory.as_ref())
-        .ok_or(anyhow!(
-            "Home argument not provided and OS does not provide a default home directory"
-        ))?
-        .to_owned();
+    let keyring_home = home.join(keyring_backend.get_sub_dir());
 
-    let from = matches
-        .get_one::<String>("from_key")
-        .expect("from address argument is required preventing `None`")
-        .to_owned();
-
-    let chain_id = matches
-        .get_one::<Id>("chain-id")
-        .expect("has a default value so will never be None")
-        .clone();
-
-    let backend = matches
-        .get_one::<KeyringBackend>("keyring-backend")
-        .cloned()
-        .unwrap_or_default();
-
-    let keyring_home = home.join(backend.get_sub_dir());
-
-    let fee_amount = matches.get_one::<SendCoins>("fee").cloned();
-
-    let key = keyring::get_key_by_name(&from, backend.to_keyring_backend(&keyring_home))?;
+    let key =
+        keyring::get_key_by_name(from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
     let address = key.get_address();
 
-    let args = TxSubcommand::from_arg_matches(matches).unwrap(); // TODO: remove unwrap
-    let message = tx_command_handler(args, address.clone())?;
+    let message = handler.handle_tx_command(inner, address.clone())?;
 
     let fee = Fee {
-        amount: fee_amount,
+        amount: fee,
         gas_limit: 100000000, //TODO: remove hard coded gas limit
         payer: None,          //TODO: remove hard coded payer
         granter: "".into(),   //TODO: remove hard coded granter
     };
 
-    let account = get_account_latest(address, node)?;
+    let account = get_account_latest(address, node.as_str()).await?;
 
     let signing_info = SigningInfo {
         key,
@@ -140,7 +68,7 @@ where
 
     let tx_body = TxBody {
         messages: vec![message],
-        memo: "".into(),                        // TODO: remove hard coded
+        memo: String::new(),                    // TODO: remove hard coded
         timeout_height: 0,                      // TODO: remove hard coded
         extension_options: vec![],              // TODO: remove hard coded
         non_critical_extension_options: vec![], // TODO: remove hard coded
@@ -150,12 +78,9 @@ where
 
     let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id);
 
-    let client = HttpClient::new(node)?;
-    Runtime::new()
-        .expect("unclear why this would ever fail")
-        .block_on(broadcast_tx_commit(client, raw_tx))?;
+    let client = HttpClient::new(tendermint::rpc::Url::try_from(node)?)?;
 
-    Ok(())
+    broadcast_tx_commit(client, raw_tx).await
 }
 
 pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()> {
@@ -166,7 +91,7 @@ pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()
 }
 
 // TODO: we're assuming here that the app has an auth module which handles this query
-fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountResponse> {
+async fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
     run_query::<QueryAccountResponse, RawQueryAccountResponse>(
@@ -174,5 +99,5 @@ fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAccountRes
         "/cosmos.auth.v1beta1.Query/Account".into(),
         node,
         None,
-    )
+    ).await
 }

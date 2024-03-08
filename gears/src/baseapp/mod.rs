@@ -1,5 +1,5 @@
 mod baseapp;
-pub mod cli;
 mod params;
+pub mod run;
 
 pub use baseapp::*;

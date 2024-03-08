@@ -5,7 +5,7 @@ use proto_messages::cosmos::ibc::{tx::MsgRecoverClient, types::core::host::ident
 
 use crate::types::Signer;
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct CliRecoverClient {
     pub subject_client_id: String,
     pub substitute_client_id: String,
