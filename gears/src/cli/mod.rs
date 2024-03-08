@@ -31,6 +31,7 @@ where
     Run(CliRunCommand<T>),
     #[command(subcommand)]
     Keys(CliKeyCommand<T>),
+    #[command(name = "add-genesis-account")]
     GenesisAdd(CliGenesisCommand<T>),
     #[command(flatten)]
     Aux(CliAUX),
