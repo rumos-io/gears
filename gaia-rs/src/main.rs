@@ -76,12 +76,8 @@ impl AuxHandler for GaiaCore {
     }
 }
 
-type Args = CliApplicationArgs<
-    GaiaApplication,
-    CliNilAuxCommand,
-    GaiaTxCommands,
-    GaiaQueryCommands,
->;
+type Args =
+    CliApplicationArgs<GaiaApplication, CliNilAuxCommand, GaiaTxCommands, GaiaQueryCommands>;
 
 fn main() -> Result<()> {
     let args = Args::parse();

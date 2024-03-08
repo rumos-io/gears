@@ -49,10 +49,27 @@ where
     CliQue: Subcommand,
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
-    pub command: Option<CliApplicationCommands<T, CliAUX, CliTX, CliQue>>,
-    /// If provided, outputs the completion file for given shell
-    #[clap(long = "completion")]
-    pub completion: Option<Shell>,
+    pub command: CliCommands<T, CliAUX, CliTX, CliQue>,
+}
+
+#[derive(Debug, Clone, ::clap::Subcommand)]
+pub enum CliCommands<T, CliAUX, CliTX, CliQue>
+where
+    T: ApplicationInfo,
+    CliAUX: Subcommand,
+    CliTX: Subcommand,
+    CliQue: Subcommand,
+{
+    #[command(flatten, value_parser = value_parser!(PhantomData))]
+    Cli(CliApplicationCommands<T, CliAUX, CliTX, CliQue>),
+    Completion(CliCompletionArgs),
+}
+
+/// If provided, outputs the completion file for given shell
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct CliCompletionArgs {
+    #[arg(required = true)]
+    shell: Shell,
 }
 
 fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Write) {
@@ -70,17 +87,14 @@ where
         self,
         executor: impl FnOnce(CliApplicationCommands<T, CliAUX, CliTX, CliQue>) -> anyhow::Result<()>,
     ) -> anyhow::Result<()> {
-        if let Some(generator) = self.completion {
-            let mut cmd = <Self as CommandFactory>::command();
-            write_completions(generator, &mut cmd, &mut std::io::stdout());
-            return Ok(());
-        }
+        match self.command {
+            CliCommands::Cli(command) => executor(command),
+            CliCommands::Completion(command) => {
+                let mut cmd = <Self as CommandFactory>::command();
+                write_completions(command.shell, &mut cmd, &mut std::io::stdout());
 
-        if let Some(command) = self.command {
-            executor(command)
-        } else {
-            <Self as CommandFactory>::command().print_long_help()?;
-            Ok(())
+                Ok(())
+            }
         }
     }
 
