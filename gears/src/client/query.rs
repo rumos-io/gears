@@ -10,7 +10,7 @@ use crate::QueryHandler;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct QueryCommand<C> {
-    pub node: tendermint::rpc::Url,
+    pub node: url::Url,
     pub height: Option<Height>,
 
     pub inner: C,
@@ -26,7 +26,7 @@ pub fn run_query_command<C, H: QueryHandler<QueryCommands = C>>(
         inner,
     } = cmd;
 
-    handler.handle_query_command(inner, node.path(), height)
+    handler.handle_query_command(inner, node.as_str(), height)
 }
 
 /// Convenience method for running queries

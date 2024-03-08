@@ -16,6 +16,7 @@ trees = {path = "../trees"}
 #newtypes
 secp256k1 = {version = "0.28.1", features = ["hashes"]}
 bytes = { workspace = true }
+url = "2.5.0"
 
 #utils
 rand = "0.8.5"

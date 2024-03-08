@@ -20,7 +20,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     pub home: PathBuf,
     /// <host>:<port> to Tendermint RPC interface for this chain
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
-    pub node: tendermint::rpc::Url,
+    pub node: url::Url,
     /// From key
     #[arg(required = true)]
     pub from_key: String,

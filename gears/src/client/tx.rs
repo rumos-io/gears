@@ -20,7 +20,7 @@ use super::query::run_query;
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct TxCommand<C> {
     pub home: PathBuf,
-    pub node: tendermint::rpc::Url,
+    pub node: url::Url,
     pub from_key: String,
     pub chain_id: Id,
     pub fee: Option<SendCoins>,
@@ -58,7 +58,7 @@ pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
         granter: "".into(),   //TODO: remove hard coded granter
     };
 
-    let account = get_account_latest(address, node.path())?;
+    let account = get_account_latest(address, node.as_str())?;
 
     let signing_info = SigningInfo {
         key,
@@ -78,7 +78,7 @@ pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
 
     let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id);
 
-    let client = HttpClient::new(node)?;
+    let client = HttpClient::new( tendermint::rpc::Url::try_from( node )?)?;
 
     broadcast_tx_commit(client, raw_tx).await
 }
