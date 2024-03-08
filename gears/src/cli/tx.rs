@@ -11,8 +11,6 @@ use crate::{
     ApplicationInfo,
 };
 
-use super::utils::rand_string;
-
 /// Transaction subcommands
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
@@ -25,8 +23,8 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     #[arg(required = true)]
     pub from_key: String,
     /// file chain-id, if left blank will be randomly created
-    #[arg(long =  "chain-id", global = true, action = ArgAction::Set)]
-    pub chain_id: Option<Id>,
+    #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = Id::try_from( "test-chain" ).expect("unrechable: default should be valid"))]
+    pub chain_id: Id,
     /// TODO
     #[arg(long, global = true, action = ArgAction::Set)]
     pub fee: Option<SendCoins>,
@@ -65,8 +63,7 @@ where
             home,
             node,
             from_key,
-            chain_id: chain_id
-                .unwrap_or(Id::try_from(rand_string()).expect("rand should be valid")),
+            chain_id,
             fee,
             keyring_backend,
             inner: command.try_into()?,

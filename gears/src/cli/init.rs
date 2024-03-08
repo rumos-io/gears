@@ -5,8 +5,6 @@ use tendermint::informal::chain::Id;
 
 use crate::{client::init::InitCommand, ApplicationInfo};
 
-use super::utils::rand_string;
-
 /// Initialize configuration files
 #[derive(Debug, Clone, ::clap::Args)]
 pub struct CliInitCommand<T: ApplicationInfo> {
@@ -14,8 +12,8 @@ pub struct CliInitCommand<T: ApplicationInfo> {
     pub home: PathBuf,
     #[arg(required = true)]
     pub moniker: String,
-    #[arg(long =  "chain-id",  action = ArgAction::Set, help = "genesis file chain-id, if left blank will be randomly created",)]
-    pub chain_id: Option<Id>,
+    #[arg(long =  "chain-id",  action = ArgAction::Set, default_value_t = Id::try_from( "test-chain" ).expect("unrechable: default should be valid"), help = "genesis file chain-id, if left blank will be randomly created",)]
+    pub chain_id: Id,
 
     #[arg(skip)]
     _marker: PhantomData<T>,
@@ -33,8 +31,7 @@ impl<T: ApplicationInfo> From<CliInitCommand<T>> for InitCommand {
         Self {
             home,
             moniker,
-            chain_id: chain_id
-                .unwrap_or(Id::try_from(rand_string()).expect("rand should be valid")),
+            chain_id,
         }
     }
 }

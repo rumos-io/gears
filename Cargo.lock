@@ -1609,7 +1609,6 @@ dependencies = [
  "prost 0.12.3",
  "proto-messages",
  "proto-types",
- "rand",
  "secp256k1",
  "serde",
  "serde-aux",

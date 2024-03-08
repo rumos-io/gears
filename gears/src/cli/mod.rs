@@ -18,7 +18,6 @@ pub mod key;
 pub mod query;
 pub mod run;
 pub mod tx;
-mod utils;
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
 pub enum CliApplicationCommands<T, CliAUX, CliTX, CliQue>

@@ -19,7 +19,6 @@ bytes = { workspace = true }
 url = "2.5.0"
 
 #utils
-rand = "0.8.5"
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = {version = "0.1", default-features = false}
