@@ -22,7 +22,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     /// From key
     #[arg(required = true)]
     pub from_key: String,
-    /// file chain-id, if left blank will be randomly created
+    /// file chain-id
     #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = Id::try_from( "test-chain" ).expect("unrechable: default should be valid"))]
     pub chain_id: Id,
     /// TODO
