@@ -78,7 +78,7 @@ impl AuxHandler for GaiaCore {
 
 type Args = CliApplicationArgs<
     GaiaApplication,
-    CliNilAuxCommand<GaiaApplication>,
+    CliNilAuxCommand,
     GaiaTxCommands,
     GaiaQueryCommands,
 >;

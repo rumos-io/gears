@@ -1,16 +1,14 @@
-use std::marker::PhantomData;
-
-use crate::{ApplicationInfo, NilAuxCommand};
+use crate::NilAuxCommand;
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
-#[command( about = format!( "{} doesn't handle any aux command", T::APP_NAME))]
-pub enum CliNilAuxCommand<T: ApplicationInfo> {
+#[command()]
+pub enum CliNilAuxCommand {
     #[command(skip)]
-    None(PhantomData<T>),
+    None,
 }
 
-impl<T: ApplicationInfo> From<CliNilAuxCommand<T>> for NilAuxCommand {
-    fn from(_value: CliNilAuxCommand<T>) -> Self {
+impl From<CliNilAuxCommand> for NilAuxCommand {
+    fn from(_value: CliNilAuxCommand) -> Self {
         Self
     }
 }
