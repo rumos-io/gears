@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use clap::{Args, Command, CommandFactory, Subcommand};
+use clap::{Command, CommandFactory, Subcommand};
 pub use clap_complete::Shell;
 use clap_complete::{generate, Generator};
 
@@ -24,7 +24,7 @@ mod utils;
 pub enum CliApplicationCommands<T, CliAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
-    CliAUX: Args,
+    CliAUX: Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
@@ -33,6 +33,7 @@ where
     #[command(subcommand)]
     Keys(CliKeyCommand<T>),
     GenesisAdd(CliGenesisCommand<T>),
+    #[command(flatten)]
     Aux(CliAUX),
     Tx(CliTxCommand<T, CliTX>),
     Query(CliQueryCommand<CliQue>),
@@ -43,7 +44,7 @@ where
 pub struct CliApplicationArgs<T, CliAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
-    CliAUX: Args,
+    CliAUX: Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
@@ -61,7 +62,7 @@ fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Writ
 impl<T, CliAUX, CliTX, CliQue> CliApplicationArgs<T, CliAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
-    CliAUX: Args,
+    CliAUX: Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
@@ -92,7 +93,7 @@ where
 impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE, ERR>
     TryFrom<CliApplicationCommands<T, CliAUX, CliTX, CliQue>> for ApplicationCommands<AUX, TX, QUE>
 where
-    CliAUX: Args,
+    CliAUX: Subcommand,
     AUX: TryFrom<CliAUX, Error = ERR>,
     CliTX: Subcommand,
     TX: TryFrom<CliTX, Error = ERR>,

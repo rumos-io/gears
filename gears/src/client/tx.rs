@@ -78,7 +78,7 @@ pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
 
     let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id);
 
-    let client = HttpClient::new( tendermint::rpc::Url::try_from( node )?)?;
+    let client = HttpClient::new(tendermint::rpc::Url::try_from(node)?)?;
 
     broadcast_tx_commit(client, raw_tx).await
 }

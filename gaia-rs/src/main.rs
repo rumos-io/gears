@@ -11,6 +11,8 @@ use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
+use gears::ApplicationInfo;
+use gears::AuxHandler;
 use gears::NilAuxCommand;
 use gears::QueryHandler;
 use gears::TxHandler;
@@ -35,15 +37,8 @@ impl ApplicationCore for GaiaCore {
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
-
     type ABCIHandler = ABCIHandler;
-
     type ApplicationConfig = config::AppConfig;
-    type AuxCommands = NilAuxCommand;
-
-    fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl TxHandler for GaiaCore {
@@ -69,6 +64,15 @@ impl QueryHandler for GaiaCore {
         height: Option<tendermint::informal::block::Height>,
     ) -> Result<()> {
         query_command_handler(command, node, height)
+    }
+}
+
+impl AuxHandler for GaiaCore {
+    type AuxCommands = NilAuxCommand;
+
+    fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
+        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
+        Ok(())
     }
 }
 

@@ -23,7 +23,7 @@ pub trait ApplicationInfo: Clone + Sync + Send + 'static {
     fn home_dir() -> std::path::PathBuf {
         dirs::home_dir()
             .expect("failed to get home dir")
-            .join(format!( ".{}", Self::APP_NAME) ) // TODO: what about using version as prefix?
+            .join(format!(".{}", Self::APP_NAME)) // TODO: what about using version as prefix?
     }
 }
 
@@ -61,16 +61,24 @@ pub trait QueryHandler {
     ) -> Result<()>;
 }
 
+/// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.
+/// It's reason exists to add user specific commands which doesn't supports usually.
+pub trait AuxHandler {
+    type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
+
+    #[allow(unused_variables)]
+    fn handle_aux_commands(&self, command: Self::AuxCommands) -> Result<()> {
+        Ok(())
+    }
+}
+
 /// A Gears application.
-pub trait ApplicationCore: TxHandler + QueryHandler {
+pub trait ApplicationCore: TxHandler + QueryHandler + AuxHandler {
     type Genesis: Genesis;
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
     type ABCIHandler: ABCIHandler<Self::Message, Self::StoreKey, Self::Genesis>;
     type ApplicationConfig: ApplicationConfig;
-    type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
-
-    fn handle_aux_commands(&self, command: Self::AuxCommands) -> Result<()>;
 }
 
 pub struct ApplicationBuilder<'a, AppCore: ApplicationCore, AI: ApplicationInfo> {
