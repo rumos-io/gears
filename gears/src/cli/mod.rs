@@ -62,7 +62,7 @@ where
 {
     #[command(flatten, value_parser = value_parser!(PhantomData))]
     Cli(CliApplicationCommands<T, CliAUX, CliTX, CliQue>),
-    Completion(CliCompletionArgs),
+    Completions(CliCompletionArgs),
 }
 
 /// If provided, outputs the completion file for given shell
@@ -89,7 +89,7 @@ where
     ) -> anyhow::Result<()> {
         match self.command {
             CliCommands::Cli(command) => executor(command),
-            CliCommands::Completion(command) => {
+            CliCommands::Completions(command) => {
                 let mut cmd = <Self as CommandFactory>::command();
                 write_completions(command.shell, &mut cmd, &mut std::io::stdout());
 
