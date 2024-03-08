@@ -40,7 +40,7 @@ where
 }
 
 #[derive(Debug, Clone, ::clap::Parser)]
-#[command(name = T::APP_NAME)]
+#[command(name = T::APP_NAME, version = T::APP_VERSION)]
 pub struct CliApplicationArgs<T, CliAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
