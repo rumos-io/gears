@@ -8,7 +8,7 @@ use tokio::runtime::Runtime;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    app_v2::ApplicationInfo,
+    application::ApplicationInfo,
     baseapp::{ABCIHandler, BaseApp, Genesis},
     client::rest::handlers::{node_info, staking_params, txs},
     x::params::ParamsSubspaceKey,

@@ -5,7 +5,7 @@ use serde::Serialize;
 use tendermint::informal::block::Height;
 use tendermint::rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};
 
-use crate::app_v2::handlers::QueryHandler;
+use crate::application::handlers::QueryHandler;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct QueryCommand<C> {

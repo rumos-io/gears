@@ -14,7 +14,7 @@ use tendermint::rpc::{Client, HttpClient};
 
 use crate::client::keys::KeyringBackend;
 use crate::{
-    app_v2::handlers::TxHandler,
+    application::handlers::TxHandler,
     crypto::{create_signed_transaction, SigningInfo},
 };
 

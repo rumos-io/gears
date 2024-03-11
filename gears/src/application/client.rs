@@ -6,17 +6,15 @@ use super::{
 };
 
 /// A Gears client application.
-pub trait ClientApplicationTrait: TxHandler + QueryHandler + AuxHandler {}
+pub trait ClientTrait: TxHandler + QueryHandler + AuxHandler {}
 
-pub struct ClientApplication<Core: ClientApplicationTrait> {
+pub struct ClientApplication<Core: ClientTrait> {
     app_core: Core,
 }
 
-impl<'a, Core: ClientApplicationTrait> ClientApplication<Core> {
+impl<'a, Core: ClientTrait> ClientApplication<Core> {
     pub fn new(app_core: Core) -> Self {
-        Self {
-            app_core,
-        }
+        Self { app_core }
     }
 
     /// Runs the command passed on the command line.

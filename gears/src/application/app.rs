@@ -9,10 +9,7 @@ use crate::{
     x::params::ParamsSubspaceKey,
 };
 
-use super::{
-    command::app::AppCommands,
-    ApplicationInfo,
-};
+use super::{command::app::AppCommands, ApplicationInfo};
 use crate::x::params::Keeper as ParamsKeeper;
 
 /// A Gears application.
@@ -55,17 +52,15 @@ pub struct Application<'a, AppCore: ApplicationTrait, AI: ApplicationInfo> {
     params_subspace_key: AppCore::ParamsSubspaceKey,
 }
 
-impl<'a, AppCore: ApplicationTrait, AI: ApplicationInfo> Application<'a, AppCore, AI> {
+impl<'a, Core: ApplicationTrait, AI: ApplicationInfo> Application<'a, Core, AI> {
     pub fn new(
-        abci_handler_builder: &'a dyn Fn(
-            Config<AppCore::ApplicationConfig>,
-        ) -> AppCore::ABCIHandler,
+        abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
 
-        params_store_key: AppCore::StoreKey,
-        params_subspace_key: AppCore::ParamsSubspaceKey,
+        params_store_key: Core::StoreKey,
+        params_subspace_key: Core::ParamsSubspaceKey,
     ) -> Self {
         Self {
-            router : AppCore::router(),
+            router: Core::router(),
             abci_handler_builder,
             params_store_key,
             params_subspace_key,
@@ -76,7 +71,7 @@ impl<'a, AppCore: ApplicationTrait, AI: ApplicationInfo> Application<'a, AppCore
     pub fn execute(self, command: AppCommands) -> anyhow::Result<()> {
         match command {
             AppCommands::Init(cmd) => {
-                init::init::<_, AppCore::ApplicationConfig>(cmd, &AppCore::Genesis::default())?
+                init::init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
             }
             AppCommands::Run(cmd) => run::run(
                 cmd,
@@ -87,7 +82,7 @@ impl<'a, AppCore: ApplicationTrait, AI: ApplicationInfo> Application<'a, AppCore
             )?,
             AppCommands::Keys(cmd) => keys::keys(cmd)?,
             AppCommands::GenesisAdd(cmd) => {
-                genesis_account::genesis_account_add::<AppCore::Genesis>(cmd)?
+                genesis_account::genesis_account_add::<Core::Genesis>(cmd)?
             }
         };
 

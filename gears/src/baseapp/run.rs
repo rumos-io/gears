@@ -9,7 +9,7 @@ use tendermint::abci::ServerBuilder;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
-use crate::app_v2::ApplicationInfo;
+use crate::application::ApplicationInfo;
 use crate::baseapp::BaseApp;
 use crate::client::rest::{run_rest_server, RestState};
 use crate::config::{ApplicationConfig, Config};

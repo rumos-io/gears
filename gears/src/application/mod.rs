@@ -22,6 +22,5 @@ impl ApplicationInfo for DefaultApplication {
     const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
 }
 
-
 #[derive(Debug, Clone, Default)]
 pub struct ApplicationBuilder;

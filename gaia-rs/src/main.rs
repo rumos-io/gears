@@ -7,15 +7,17 @@ use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::GaiaTxCommands;
 use gaia_rs::GaiaApplication;
-use gears::app_v2::handlers::AuxHandler;
-use gears::app_v2::handlers::QueryHandler;
-use gears::app_v2::handlers::TxHandler;
-use gears::app_v2::ApplicationInfo;
+use gears::application::app::Application;
+use gears::application::app::ApplicationTrait;
+use gears::application::client::ClientApplication;
+use gears::application::client::ClientTrait;
+use gears::application::command::NilAuxCommand;
+use gears::application::handlers::AuxHandler;
+use gears::application::handlers::QueryHandler;
+use gears::application::handlers::TxHandler;
+use gears::application::ApplicationInfo;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
-use gears::ApplicationBuilder;
-use gears::ApplicationCore;
-use gears::NilAuxCommand;
 use genesis::GenesisState;
 use proto_types::AccAddress;
 use rest::get_router;
@@ -32,14 +34,6 @@ mod rest;
 mod store_keys;
 
 struct GaiaCore;
-
-impl ApplicationCore for GaiaCore {
-    type Genesis = GenesisState;
-    type StoreKey = GaiaStoreKey;
-    type ParamsSubspaceKey = GaiaParamsStoreKey;
-    type ABCIHandler = ABCIHandler;
-    type ApplicationConfig = config::AppConfig;
-}
 
 impl TxHandler for GaiaCore {
     type Message = message::Message;
@@ -78,20 +72,46 @@ impl AuxHandler for GaiaCore {
     }
 }
 
+impl ClientTrait for GaiaCore {}
+
+impl ApplicationTrait for GaiaCore {
+    type Message = message::Message;
+    type Genesis = GenesisState;
+    type StoreKey = GaiaStoreKey;
+    type ParamsSubspaceKey = GaiaParamsStoreKey;
+    type ABCIHandler = ABCIHandler;
+    type ApplicationConfig = config::AppConfig;
+
+    fn router<AI: ApplicationInfo>() -> axum::Router<
+        gears::client::rest::RestState<
+            Self::StoreKey,
+            Self::ParamsSubspaceKey,
+            Self::Message,
+            Self::ABCIHandler,
+            Self::Genesis,
+            AI,
+        >,
+        axum::body::Body,
+    > {
+        get_router()
+    }
+}
+
 type Args =
     CliApplicationArgs<GaiaApplication, CliNilAuxCommand, GaiaTxCommands, GaiaQueryCommands>;
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    args.execute_or_help(|command| {
-        ApplicationBuilder::<'_, _, GaiaApplication>::new(
-            GaiaCore,
-            get_router(),
-            &ABCIHandler::new,
-            GaiaStoreKey::Params,
-            GaiaParamsStoreKey::BaseApp,
-        )
-        .execute(command.try_into()?)
-    })
+    args.execute_or_help(
+        |command| ClientApplication::new(GaiaCore).execute(command.try_into()?),
+        |command| {
+            Application::<'_, GaiaCore, GaiaApplication>::new(
+                &ABCIHandler::new,
+                GaiaStoreKey::Params,
+                GaiaParamsStoreKey::BaseApp,
+            )
+            .execute(command.try_into()?)
+        },
+    )
 }

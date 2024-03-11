@@ -1,6 +1,9 @@
 use axum::{body::Body, Router};
 use gears::{
-    app_v2::ApplicationInfo, baseapp::{ABCIHandler, Genesis}, client::rest::RestState, x::params::ParamsSubspaceKey
+    application::ApplicationInfo,
+    baseapp::{ABCIHandler, Genesis},
+    client::rest::RestState,
+    x::params::ParamsSubspaceKey,
 };
 use proto_messages::cosmos::tx::v1beta1::message::Message;
 use store::StoreKey;

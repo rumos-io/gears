@@ -25,7 +25,7 @@ use tracing::{error, info};
 
 use crate::types::context::query_context::QueryContext;
 use crate::types::context::{context::Context, init_context::InitContext};
-use crate::{app_v2::ApplicationInfo, types::context::tx_context::TxContext};
+use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
 use crate::{
     error::AppError,
     x::params::{Keeper, ParamsSubspaceKey},

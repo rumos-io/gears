@@ -1,4 +1,4 @@
-use gears::app_v2::ApplicationInfo;
+use gears::application::ApplicationInfo;
 
 #[derive(Debug, Clone)]
 pub struct GaiaApplication;

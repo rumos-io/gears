@@ -6,7 +6,7 @@ use proto_messages::cosmos::base::v1beta1::SendCoins;
 use tendermint::informal::chain::Id;
 
 use crate::{
-    app_v2::ApplicationInfo,
+    application::ApplicationInfo,
     client::{keys::KeyringBackend, tx::TxCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
 };
