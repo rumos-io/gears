@@ -3,9 +3,9 @@ use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 use clap::{ArgAction, ValueHint};
 
 use crate::{
+    app_v2::ApplicationInfo,
     baseapp::run::RunCommand,
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
-    ApplicationInfo,
 };
 
 /// Run the full node application

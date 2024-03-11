@@ -36,10 +36,18 @@ pub async fn run_ibc_query_command(
     height: Option<Height>,
 ) -> anyhow::Result<String> {
     match args.command {
-        IbcCommands::ClientParams(args) => client_params::query_command_handler(args, node, height).await,
-        IbcCommands::ClientState(args) => client_state::query_command_handler(args, node, height).await,
-        IbcCommands::ClientStates(args) => client_states::query_command_handler(args, node, height).await,
-        IbcCommands::ClientStatus(args) => client_status::query_command_handler(args, node, height).await,
+        IbcCommands::ClientParams(args) => {
+            client_params::query_command_handler(args, node, height).await
+        }
+        IbcCommands::ClientState(args) => {
+            client_state::query_command_handler(args, node, height).await
+        }
+        IbcCommands::ClientStates(args) => {
+            client_states::query_command_handler(args, node, height).await
+        }
+        IbcCommands::ClientStatus(args) => {
+            client_status::query_command_handler(args, node, height).await
+        }
         IbcCommands::ConsensusState(args) => {
             consensus_state::query_command_handler(args, node, height).await
         }

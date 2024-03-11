@@ -12,8 +12,11 @@ use proto_types::AccAddress;
 use tendermint::informal::chain::Id;
 use tendermint::rpc::{Client, HttpClient};
 
-use crate::crypto::{create_signed_transaction, SigningInfo};
-use crate::{client::keys::KeyringBackend, TxHandler};
+use crate::client::keys::KeyringBackend;
+use crate::{
+    app_v2::handlers::TxHandler,
+    crypto::{create_signed_transaction, SigningInfo},
+};
 
 use super::query::run_query;
 
@@ -99,5 +102,6 @@ async fn get_account_latest(address: AccAddress, node: &str) -> Result<QueryAcco
         "/cosmos.auth.v1beta1.Query/Account".into(),
         node,
         None,
-    ).await
+    )
+    .await
 }

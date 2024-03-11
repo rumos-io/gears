@@ -3,8 +3,8 @@ use std::{marker::PhantomData, path::PathBuf};
 use clap::{ArgAction, ValueHint};
 
 use crate::{
+    app_v2::ApplicationInfo,
     client::keys::{AddKeyCommand, KeyringBackend},
-    ApplicationInfo,
 };
 
 #[derive(Debug, Clone, ::clap::Args)]

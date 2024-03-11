@@ -1,3 +1,5 @@
+use crate::app_v2::handlers::{AuxHandler, QueryHandler, TxHandler};
+use crate::app_v2::ApplicationInfo;
 use crate::baseapp::run;
 use crate::baseapp::{ABCIHandler, Genesis};
 use crate::client::query::{run_query_command, QueryCommand};
@@ -10,67 +12,12 @@ use anyhow::Result;
 use axum::body::Body;
 use axum::Router;
 use human_panic::setup_panic;
-use proto_messages::cosmos::tx::v1beta1::message::Message;
-use proto_types::AccAddress;
 use std::env;
 use store_crate::StoreKey;
-use tendermint::informal::block::Height;
-
-pub trait ApplicationInfo: Clone + Sync + Send + 'static {
-    const APP_NAME: &'static str;
-    const APP_VERSION: &'static str;
-
-    fn home_dir() -> std::path::PathBuf {
-        dirs::home_dir()
-            .expect("failed to get home dir")
-            .join(format!(".{}", Self::APP_NAME)) // TODO: what about using version as prefix?
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DefaultApplication;
-
-impl ApplicationInfo for DefaultApplication {
-    const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-    const APP_VERSION: &'static str = "1"; // TODO: GIT_HASH
-}
 
 /// An empty AUX command if the user does not want to add auxillary commands.
 #[derive(Debug, Clone)]
 pub struct NilAuxCommand;
-
-pub trait TxHandler {
-    type Message: Message;
-    type TxCommands;
-
-    fn handle_tx_command(
-        &self,
-        command: Self::TxCommands,
-        from_address: AccAddress,
-    ) -> Result<Self::Message>;
-}
-
-pub trait QueryHandler {
-    type QueryCommands;
-
-    fn handle_query_command(
-        &self,
-        command: Self::QueryCommands,
-        node: &str,
-        height: Option<Height>,
-    ) -> Result<()>;
-}
-
-/// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.
-/// It's reason exists to add user specific commands which doesn't supports usually.
-pub trait AuxHandler {
-    type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
-
-    #[allow(unused_variables)]
-    fn handle_aux_commands(&self, command: Self::AuxCommands) -> Result<()> {
-        Ok(())
-    }
-}
 
 /// A Gears application.
 pub trait ApplicationCore: TxHandler + QueryHandler + AuxHandler {

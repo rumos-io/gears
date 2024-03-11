@@ -46,7 +46,8 @@ pub async fn run_bank_query_command(
                 "/cosmos.bank.v1beta1.Query/AllBalances".into(),
                 node,
                 height,
-            ).await?;
+            )
+            .await?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }
@@ -58,7 +59,8 @@ pub async fn run_bank_query_command(
                 "/cosmos.bank.v1beta1.Query/DenomsMetadata".into(),
                 node,
                 height,
-            ).await?;
+            )
+            .await?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }

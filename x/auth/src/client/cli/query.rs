@@ -40,7 +40,8 @@ pub async fn run_auth_query_command(
                 "/cosmos.auth.v1beta1.Query/Account".into(),
                 node,
                 height,
-            ).await?;
+            )
+            .await?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }

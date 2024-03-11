@@ -4,7 +4,7 @@ use clap::{Command, CommandFactory, Subcommand};
 pub use clap_complete::Shell;
 use clap_complete::{generate, Generator};
 
-use crate::{ApplicationCommands, ApplicationInfo};
+use crate::{app_v2::ApplicationInfo, ApplicationCommands};
 
 use self::{
     genesis::CliGenesisCommand, init::CliInitCommand, key::CliKeyCommand, query::CliQueryCommand,

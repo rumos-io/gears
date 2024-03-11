@@ -7,15 +7,15 @@ use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::GaiaTxCommands;
 use gaia_rs::GaiaApplication;
+use gears::app_v2::handlers::AuxHandler;
+use gears::app_v2::handlers::QueryHandler;
+use gears::app_v2::handlers::TxHandler;
+use gears::app_v2::ApplicationInfo;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
 use gears::ApplicationBuilder;
 use gears::ApplicationCore;
-use gears::ApplicationInfo;
-use gears::AuxHandler;
 use gears::NilAuxCommand;
-use gears::QueryHandler;
-use gears::TxHandler;
 use genesis::GenesisState;
 use proto_types::AccAddress;
 use rest::get_router;
@@ -64,8 +64,8 @@ impl QueryHandler for GaiaCore {
         height: Option<tendermint::informal::block::Height>,
     ) -> Result<()> {
         tokio::runtime::Runtime::new()
-                    .expect("unclear why this would ever fail")
-                    .block_on(query_command_handler(command, node, height))
+            .expect("unclear why this would ever fail")
+            .block_on(query_command_handler(command, node, height))
     }
 }
 

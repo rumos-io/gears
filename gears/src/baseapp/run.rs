@@ -9,12 +9,12 @@ use tendermint::abci::ServerBuilder;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
+use crate::app_v2::ApplicationInfo;
 use crate::baseapp::BaseApp;
 use crate::client::rest::{run_rest_server, RestState};
 use crate::config::{ApplicationConfig, Config};
 use crate::utils::get_config_file_from_home_dir;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
-use crate::ApplicationInfo;
 
 use super::{ABCIHandler, Genesis};
 
