@@ -1,4 +1,4 @@
-use crate::client::{keys, query::run_query_command, tx::run_tx_command};
+use crate::client::{keys, query::run_query_command, tx::run_tx};
 
 use super::{
     command::client::ClientCommands,
@@ -24,11 +24,7 @@ impl<'a, Core: Client> ClientApplication<Core> {
     ) -> anyhow::Result<()> {
         match command {
             ClientCommands::Aux(cmd) => self.app_core.handle_aux_commands(cmd)?,
-            ClientCommands::Tx(cmd) => {
-                tokio::runtime::Runtime::new()
-                    .expect("unclear why this would ever fail")
-                    .block_on(run_tx_command::<Core::Message, _, _>(cmd, &self.app_core))?;
-            }
+            ClientCommands::Tx(cmd) => run_tx(cmd, &self.app_core)?,
             ClientCommands::Query(cmd) => run_query_command(cmd, &self.app_core)?,
             ClientCommands::Keys(cmd) => keys::keys(cmd)?,
         };

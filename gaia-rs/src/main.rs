@@ -39,7 +39,7 @@ impl TxHandler for GaiaCore {
     type Message = message::Message;
     type TxCommands = client::GaiaTxCommands;
 
-    fn handle_tx_command(
+    fn prepare_tx(
         &self,
         command: Self::TxCommands,
         from_address: AccAddress,
