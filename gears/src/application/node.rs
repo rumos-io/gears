@@ -4,7 +4,7 @@ use store_crate::StoreKey;
 
 use crate::{
     baseapp::{run, ABCIHandler, Genesis},
-    client::{genesis_account, init, keys, rest::RestState},
+    client::{genesis_account, init, rest::RestState},
     config::{ApplicationConfig, Config},
     x::params::ParamsSubspaceKey,
 };
@@ -81,7 +81,6 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
                 self.abci_handler_builder,
                 self.router,
             )?,
-            AppCommands::Keys(cmd) => keys::keys(cmd)?,
             AppCommands::GenesisAdd(cmd) => {
                 genesis_account::genesis_account_add::<Core::Genesis>(cmd)?
             }

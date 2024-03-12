@@ -141,6 +141,8 @@ where
     Aux(CliAUX),
     Tx(CliTxCommand<T, CliTX>),
     Query(CliQueryCommand<CliQue>),
+    #[command(subcommand)]
+    Keys(CliKeyCommand<T>),
 }
 
 impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE, ERR>
@@ -160,6 +162,7 @@ where
             CliClientCommands::Aux(cmd) => Self::Aux(cmd.try_into()?),
             CliClientCommands::Tx(cmd) => Self::Tx(cmd.try_into()?),
             CliClientCommands::Query(cmd) => Self::Query(cmd.try_into()?),
+            CliClientCommands::Keys(cmd) => Self::Keys(cmd.into()),
         };
 
         Ok(res)
@@ -170,8 +173,6 @@ where
 pub enum CliAppCommands<T: ApplicationInfo> {
     Init(CliInitCommand<T>),
     Run(CliRunCommand<T>),
-    #[command(subcommand)]
-    Keys(CliKeyCommand<T>),
     #[command(name = "add-genesis-account")]
     GenesisAdd(CliGenesisCommand<T>),
 }
@@ -181,7 +182,6 @@ impl<T: ApplicationInfo> From<CliAppCommands<T>> for AppCommands {
         match value {
             CliAppCommands::Init(cmd) => Self::Init(cmd.into()),
             CliAppCommands::Run(cmd) => Self::Run(cmd.into()),
-            CliAppCommands::Keys(cmd) => Self::Keys(cmd.into()),
             CliAppCommands::GenesisAdd(cmd) => Self::GenesisAdd(cmd.into()),
         }
     }

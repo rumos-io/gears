@@ -1,4 +1,4 @@
-use crate::client::{query::run_query_command, tx::run_tx_command};
+use crate::client::{keys, query::run_query_command, tx::run_tx_command};
 
 use super::{
     command::client::ClientCommands,
@@ -30,6 +30,7 @@ impl<'a, Core: Client> ClientApplication<Core> {
                     .block_on(run_tx_command::<Core::Message, _, _>(cmd, &self.app_core))?;
             }
             ClientCommands::Query(cmd) => run_query_command(cmd, &self.app_core)?,
+            ClientCommands::Keys(cmd) => keys::keys(cmd)?,
         };
 
         Ok(())

@@ -18,6 +18,7 @@ pub mod client {
         Aux(AUX),
         Tx(TxCommand<TX>),
         Query(QueryCommand<QUE>),
+        Keys(crate::client::keys::KeyCommand),
     }
 }
 
@@ -26,7 +27,6 @@ pub mod app {
     pub enum AppCommands {
         Init(crate::client::init::InitCommand),
         Run(crate::baseapp::run::RunCommand),
-        Keys(crate::client::keys::KeyCommand),
         GenesisAdd(crate::client::genesis_account::GenesisCommand),
     }
 }
