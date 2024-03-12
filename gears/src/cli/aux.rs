@@ -1,4 +1,4 @@
-use crate::NilAuxCommand;
+use crate::application::command::NilAuxCommand;
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
 #[command()]

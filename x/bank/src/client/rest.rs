@@ -8,10 +8,10 @@ use axum::{
     Json, Router,
 };
 use gears::{
+    application::ApplicationInfo,
     baseapp::{ABCIHandler, BaseApp, Genesis},
     client::rest::{error::Error, Pagination, RestState},
     x::params::ParamsSubspaceKey,
-    ApplicationInfo,
 };
 use proto_messages::cosmos::{
     bank::v1beta1::{

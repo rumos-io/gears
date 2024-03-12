@@ -1606,7 +1606,6 @@ dependencies = [
  "integer-encoding 4.0.0",
  "keyring",
  "lazy_static",
- "log",
  "prost 0.12.3",
  "proto-messages",
  "proto-types",

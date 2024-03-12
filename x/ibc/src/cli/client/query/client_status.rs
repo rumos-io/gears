@@ -26,7 +26,8 @@ pub(super) async fn query_command_handler(
         "/ibc.core.client.v1.Query/ClientStatus".to_owned(),
         node,
         height,
-    ).await?;
+    )
+    .await?;
 
     let result = serde_json::to_string_pretty(&result)?;
 

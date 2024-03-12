@@ -3,9 +3,9 @@ use std::{marker::PhantomData, net::SocketAddr, path::PathBuf};
 use clap::{ArgAction, ValueHint};
 
 use crate::{
-    baseapp::run::RunCommand,
+    application::ApplicationInfo,
+    baseapp::run::{LogLevel, RunCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
-    ApplicationInfo,
 };
 
 /// Run the full node application
@@ -19,34 +19,31 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub rest_listen_addr: SocketAddr,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
     pub read_buf_size: usize,
-    #[arg(short, long, action = ArgAction::SetTrue, help = "Increase output logging verbosity to DEBUG level" )]
-    pub verbose: bool,
-    #[arg(short, long, action = ArgAction::SetTrue, help = format!("Suppress all output logging (overrides --{})", stringify!( verbose )) )]
-    pub quiet: bool,
+    /// The logging level
+    #[arg(long, action = ArgAction::Set, default_value_t = LogLevel::Info)]
+    pub log_level: LogLevel,
 
     #[arg(skip)]
     pub _marker: PhantomData<T>,
 }
 
 impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
-    fn from(value: CliRunCommand<T>) -> Self {
-        let CliRunCommand {
+    fn from(
+        CliRunCommand {
             home,
             address,
             rest_listen_addr,
             read_buf_size,
-            verbose,
-            quiet,
             _marker,
-        } = value;
-
+            log_level,
+        }: CliRunCommand<T>,
+    ) -> Self {
         Self {
             home,
             address,
             rest_listen_addr,
             read_buf_size,
-            verbose,
-            quiet,
+            log_level,
         }
     }
 }
