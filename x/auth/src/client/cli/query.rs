@@ -26,7 +26,7 @@ pub enum AuthCommands {
     },
 }
 
-pub async fn run_auth_query_command(
+pub fn run_auth_query_command(
     args: AuthQueryCli,
     node: &str,
     height: Option<Height>,
@@ -40,8 +40,7 @@ pub async fn run_auth_query_command(
                 "/cosmos.auth.v1beta1.Query/Account".into(),
                 node,
                 height,
-            )
-            .await?;
+            )?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }

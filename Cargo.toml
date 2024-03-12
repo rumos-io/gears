@@ -22,3 +22,7 @@ prost = { version = "0.12.3" }
 axum = "0.6.18"
 anyhow = "1.0.70"
 log = "0.4.21"
+
+
+[workspace.lints.clippy]
+unused_async = "deny"

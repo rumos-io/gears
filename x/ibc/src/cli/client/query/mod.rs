@@ -30,34 +30,26 @@ pub enum IbcCommands {
     SelfState(self_consensus_state::CliClientParams),
 }
 
-pub async fn run_ibc_query_command(
+pub fn run_ibc_query_command(
     args: IbcQueryCli,
     node: &str,
     height: Option<Height>,
 ) -> anyhow::Result<String> {
     match args.command {
-        IbcCommands::ClientParams(args) => {
-            client_params::query_command_handler(args, node, height).await
-        }
-        IbcCommands::ClientState(args) => {
-            client_state::query_command_handler(args, node, height).await
-        }
-        IbcCommands::ClientStates(args) => {
-            client_states::query_command_handler(args, node, height).await
-        }
-        IbcCommands::ClientStatus(args) => {
-            client_status::query_command_handler(args, node, height).await
-        }
+        IbcCommands::ClientParams(args) => client_params::query_command_handler(args, node, height),
+        IbcCommands::ClientState(args) => client_state::query_command_handler(args, node, height),
+        IbcCommands::ClientStates(args) => client_states::query_command_handler(args, node, height),
+        IbcCommands::ClientStatus(args) => client_status::query_command_handler(args, node, height),
         IbcCommands::ConsensusState(args) => {
-            consensus_state::query_command_handler(args, node, height).await
+            consensus_state::query_command_handler(args, node, height)
         }
         IbcCommands::ConsensusStates(args) => {
-            consensus_states::query_command_handler(args, node, height).await
+            consensus_states::query_command_handler(args, node, height)
         }
         IbcCommands::ConsensusStateHeights(args) => {
-            consensus_heights::query_command_handler(args, node, height).await
+            consensus_heights::query_command_handler(args, node, height)
         }
-        IbcCommands::Header(args) => query_header::query_command_handler(args, node, height).await,
+        IbcCommands::Header(args) => query_header::query_command_handler(args, node, height),
         IbcCommands::SelfState(args) => {
             self_consensus_state::query_command_handler(args, node, height)
         }

@@ -6,7 +6,6 @@ use tendermint::{informal::block::Height, rpc::HttpClient};
 use crate::{
     client::{query::run_query, tx::broadcast_tx_commit},
     crypto::{create_signed_transaction, SigningInfo},
-    runtime::runtime,
 };
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
@@ -42,7 +41,7 @@ pub trait TxHandler {
 
         let address = key.get_address();
 
-        let account = runtime().block_on(get_account_latest(address, node.as_str()))?;
+        let account = get_account_latest(address, node.as_str())?;
 
         let signing_info = SigningInfo {
             key,
@@ -64,7 +63,7 @@ pub trait TxHandler {
 
         let client = HttpClient::new(tendermint::rpc::Url::try_from(node)?)?;
 
-        runtime().block_on(broadcast_tx_commit(client, raw_tx))
+        broadcast_tx_commit(client, raw_tx)
     }
 }
 
@@ -96,10 +95,7 @@ pub trait AuxHandler {
 }
 
 // TODO: we're assuming here that the app has an auth module which handles this query
-async fn get_account_latest(
-    address: AccAddress,
-    node: &str,
-) -> anyhow::Result<QueryAccountResponse> {
+fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
     run_query::<QueryAccountResponse, RawQueryAccountResponse>(
@@ -108,5 +104,4 @@ async fn get_account_latest(
         node,
         None,
     )
-    .await
 }

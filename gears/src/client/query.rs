@@ -3,9 +3,10 @@ use prost::Message;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use serde::Serialize;
 use tendermint::informal::block::Height;
-use tendermint::rpc::{endpoint::abci_query::AbciQuery, Client, HttpClient};
+use tendermint::rpc::{Client, HttpClient};
 
 use crate::application::handlers::QueryHandler;
+use crate::runtime::runtime;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct QueryCommand<C> {
@@ -29,7 +30,7 @@ pub fn run_query_command<C, H: QueryHandler<QueryCommands = C>>(
 }
 
 /// Convenience method for running queries
-pub async fn run_query<
+pub fn run_query<
     Response: Protobuf<Raw> + std::convert::TryFrom<Raw> + Serialize,
     Raw: Message + Default + std::convert::From<Response>,
 >(
@@ -43,22 +44,11 @@ where
 {
     let client = HttpClient::new(node)?;
 
-    let res = run_query_async(client, query_bytes, height, path).await?;
+    let res = runtime().block_on(client.abci_query(Some(path), query_bytes, height, false))?;
 
     if res.code.is_err() {
         return Err(anyhow!("node returned an error: {}", res.log));
     }
 
     Response::decode(&*res.value).map_err(|e| e.into())
-}
-
-async fn run_query_async(
-    client: HttpClient,
-    query_bytes: Vec<u8>,
-    height: Option<Height>,
-    path: String,
-) -> Result<AbciQuery, tendermint::rpc::Error> {
-    client
-        .abci_query(Some(path), query_bytes, height, false)
-        .await
 }

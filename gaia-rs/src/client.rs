@@ -38,15 +38,15 @@ pub enum GaiaQueryCommands {
     Ibc(IbcQueryCli),
 }
 
-pub async fn query_command_handler(
+pub fn query_command_handler(
     command: GaiaQueryCommands,
     node: &str,
     height: Option<Height>,
 ) -> Result<()> {
     let res = match command {
-        GaiaQueryCommands::Bank(args) => run_bank_query_command(args, node, height).await,
-        GaiaQueryCommands::Auth(args) => run_auth_query_command(args, node, height).await,
-        GaiaQueryCommands::Ibc(args) => run_ibc_query_command(args, node, height).await,
+        GaiaQueryCommands::Bank(args) => run_bank_query_command(args, node, height),
+        GaiaQueryCommands::Auth(args) => run_auth_query_command(args, node, height),
+        GaiaQueryCommands::Ibc(args) => run_ibc_query_command(args, node, height),
     }?;
 
     println!("{}", res);

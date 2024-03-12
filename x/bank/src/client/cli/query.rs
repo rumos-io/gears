@@ -29,7 +29,7 @@ pub enum BankCommands {
     DenomMetadata,
 }
 
-pub async fn run_bank_query_command(
+pub fn run_bank_query_command(
     args: BankQueryCli,
     node: &str,
     height: Option<Height>,
@@ -46,8 +46,7 @@ pub async fn run_bank_query_command(
                 "/cosmos.bank.v1beta1.Query/AllBalances".into(),
                 node,
                 height,
-            )
-            .await?;
+            )?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }
@@ -59,8 +58,7 @@ pub async fn run_bank_query_command(
                 "/cosmos.bank.v1beta1.Query/DenomsMetadata".into(),
                 node,
                 height,
-            )
-            .await?;
+            )?;
 
             Ok(serde_json::to_string_pretty(&res)?)
         }

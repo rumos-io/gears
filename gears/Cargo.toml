@@ -3,6 +3,9 @@ edition = "2021"
 name = "gears"
 version = "0.1.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 #local
 tendermint = {path = "../tendermint", features = [ "rpc", "abci", "proto" ]}

@@ -8,6 +8,7 @@ use tendermint::rpc::{Client, HttpClient};
 
 use crate::application::handlers::TxHandler;
 use crate::client::keys::KeyringBackend;
+use crate::runtime::runtime;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct TxCommand<C> {
@@ -43,8 +44,8 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     handler.handle_tx(message, key, node, chain_id, fee)
 }
 
-pub async fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()> {
-    let res = client.broadcast_tx_commit(raw_tx.encode_to_vec()).await?;
+pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()> {
+    let res = runtime().block_on(client.broadcast_tx_commit(raw_tx.encode_to_vec()))?;
 
     println!("{}", serde_json::to_string_pretty(&res)?);
     Ok(())
