@@ -1,6 +1,12 @@
+use std::borrow::Cow;
+
 pub use ibc::primitives::proto::Any as PrimitiveAny;
 pub use ibc_proto::google::protobuf::Any as GoogleAny;
 use serde::{Deserialize, Serialize};
+
+pub trait ProtoUrl {
+    fn type_url(&self) -> Cow<'static, str>;
+}
 
 #[derive(Clone, PartialEq, Eq, ::prost::Message, Serialize, Deserialize)]
 pub struct Any {
@@ -38,6 +44,12 @@ pub struct Any {
     /// Must be a valid serialized protocol buffer of the above specified type.
     #[prost(bytes = "vec", tag = "2")]
     pub value: ::prost::alloc::vec::Vec<u8>,
+}
+
+impl ProtoUrl for Any {
+    fn type_url(&self) -> Cow<'static, str> {
+        Cow::Owned(self.type_url.clone())
+    }
 }
 
 impl From<GoogleAny> for Any {

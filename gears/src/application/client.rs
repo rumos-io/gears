@@ -9,12 +9,12 @@ use super::{
 pub trait Client: TxHandler + QueryHandler + AuxHandler {}
 
 pub struct ClientApplication<Core: Client> {
-    app_core: Core,
+    core: Core,
 }
 
 impl<'a, Core: Client> ClientApplication<Core> {
-    pub fn new(app_core: Core) -> Self {
-        Self { app_core }
+    pub fn new(core: Core) -> Self {
+        Self { core }
     }
 
     /// Runs the command passed
@@ -23,9 +23,12 @@ impl<'a, Core: Client> ClientApplication<Core> {
         command: ClientCommands<Core::AuxCommands, Core::TxCommands, Core::QueryCommands>,
     ) -> anyhow::Result<()> {
         match command {
-            ClientCommands::Aux(cmd) => self.app_core.handle_aux_commands(cmd)?,
-            ClientCommands::Tx(cmd) => run_tx(cmd, &self.app_core)?,
-            ClientCommands::Query(cmd) => run_query_command(cmd, &self.app_core)?,
+            ClientCommands::Aux(cmd) => {
+                let cmd = self.core.prepare_aux(cmd)?;
+                self.core.handle_aux(cmd)?;
+            }
+            ClientCommands::Tx(cmd) => run_tx(cmd, &self.core)?,
+            ClientCommands::Query(cmd) => run_query_command(cmd, &self.core)?,
             ClientCommands::Keys(cmd) => keys::keys(cmd)?,
         };
 

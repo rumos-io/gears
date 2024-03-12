@@ -5,6 +5,9 @@ use self::{app::AppCommands, client::ClientCommands};
 pub struct NilAuxCommand;
 
 #[derive(Debug, Clone)]
+pub struct NilAux;
+
+#[derive(Debug, Clone)]
 pub enum ApplicationCommands<ClientAUX, AppAUX, TX, QUE> {
     Client(ClientCommands<ClientAUX, TX, QUE>),
     App(AppCommands<AppAUX>),

@@ -9,6 +9,7 @@ use client::GaiaTxCommands;
 use gaia_rs::GaiaApplication;
 use gears::application::client::Client;
 use gears::application::client::ClientApplication;
+use gears::application::command::NilAux;
 use gears::application::command::NilAuxCommand;
 use gears::application::handlers::AuxHandler;
 use gears::application::handlers::QueryHandler;
@@ -65,10 +66,11 @@ impl QueryHandler for GaiaCore {
 
 impl AuxHandler for GaiaCore {
     type AuxCommands = NilAuxCommand;
+    type Aux = NilAux;
 
-    fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
+    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
         println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
-        Ok(())
+        Ok(NilAux)
     }
 }
 
