@@ -1,6 +1,5 @@
 use anyhow::Result;
 use bip32::Mnemonic;
-use clap::ValueEnum;
 use std::path::PathBuf;
 use strum::Display;
 use text_io::read;
@@ -8,7 +7,8 @@ use text_io::read;
 const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
 const KEYRING_SUB_DIR_TEST: &str = "keyring-test";
 
-#[derive(ValueEnum, Clone, Default, Debug, Display)]
+#[derive(Clone, Default, Debug, Display)]
+#[cfg_attr(feature = "cli", derive( clap::ValueEnum  ))]
 pub enum KeyringBackend {
     #[default]
     #[strum(to_string = "file")]

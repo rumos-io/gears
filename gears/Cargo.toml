@@ -26,7 +26,6 @@ tracing-subscriber = {version = "0.3.18", optional = false, default-features = t
 integer-encoding = "4.0.0"
 lazy_static = "1.4.0" # TODO: replace with once_cell from std or crate
 sha2 = "0.10.6"
-log = { workspace = true }
 
 #serialization
 prost = { workspace = true }
