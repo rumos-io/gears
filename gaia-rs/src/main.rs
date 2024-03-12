@@ -98,7 +98,7 @@ impl Node for GaiaCore {
 }
 
 type Args =
-    CliApplicationArgs<GaiaApplication, CliNilAuxCommand, GaiaTxCommands, GaiaQueryCommands>;
+    CliApplicationArgs<GaiaApplication, CliNilAuxCommand, CliNilAuxCommand, GaiaTxCommands, GaiaQueryCommands>;
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -107,6 +107,7 @@ fn main() -> Result<()> {
         |command| ClientApplication::new(GaiaCore).execute(command.try_into()?),
         |command| {
             NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
+                GaiaCore,
                 &ABCIHandler::new,
                 GaiaStoreKey::Params,
                 GaiaParamsStoreKey::BaseApp,

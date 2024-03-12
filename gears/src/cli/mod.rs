@@ -28,28 +28,30 @@ fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Writ
 
 #[derive(Debug, Clone, ::clap::Parser)]
 #[command(name = T::APP_NAME, version = T::APP_VERSION)]
-pub struct CliApplicationArgs<T, CliAUX, CliTX, CliQue>
+pub struct CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
-    CliAUX: Subcommand,
+    CliClientAUX: Subcommand,
+    CliAppAUX : Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
-    pub command: CliCommands<T, CliAUX, CliTX, CliQue>,
+    pub command: CliCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>,
 }
 
-impl<T, CliAUX, CliTX, CliQue> CliApplicationArgs<T, CliAUX, CliTX, CliQue>
+impl<T, CliClientAUX, CliAppAUX, CliTX, CliQue> CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
-    CliAUX: Subcommand,
+    CliClientAUX: Subcommand,
+    CliAppAUX : Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
     pub fn execute_or_help(
         self,
-        client_executor: impl FnOnce(CliClientCommands<T, CliAUX, CliTX, CliQue>) -> anyhow::Result<()>,
-        executor: impl FnOnce(CliAppCommands<T>) -> anyhow::Result<()>,
+        client_executor: impl FnOnce(CliClientCommands<T, CliClientAUX, CliTX, CliQue>) -> anyhow::Result<()>,
+        executor: impl FnOnce(CliAppCommands<T, CliAppAUX>) -> anyhow::Result<()>,
     ) -> anyhow::Result<()> {
         match self.command {
             CliCommands::Cli(command) => match command {
@@ -71,11 +73,13 @@ where
     }
 }
 
-impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE, ERR>
-    TryFrom<CliApplicationCommands<T, CliAUX, CliTX, CliQue>> for ApplicationCommands<AUX, TX, QUE>
+impl<T: ApplicationInfo, CliClientAUX, ClientAUX, CliAppAUX, AppAUX, CliTX, TX, CliQue, QUE, ERR>
+    TryFrom<CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>> for ApplicationCommands<ClientAUX, AppAUX, TX, QUE>
 where
-    CliAUX: Subcommand,
-    AUX: TryFrom<CliAUX, Error = ERR>,
+    CliClientAUX: Subcommand,
+    ClientAUX: TryFrom<CliClientAUX, Error = ERR>,
+    CliAppAUX : Subcommand,
+    AppAUX : TryFrom<CliAppAUX, Error = ERR>,
     CliTX: Subcommand,
     TX: TryFrom<CliTX, Error = ERR>,
     CliQue: Subcommand,
@@ -84,11 +88,11 @@ where
     type Error = ERR;
 
     fn try_from(
-        value: CliApplicationCommands<T, CliAUX, CliTX, CliQue>,
+        value: CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>,
     ) -> Result<Self, Self::Error> {
         let res = match value {
             CliApplicationCommands::Client(cmd) => Self::Client(cmd.try_into()?),
-            CliApplicationCommands::App(cmd) => Self::App(cmd.into()),
+            CliApplicationCommands::App(cmd) => Self::App(cmd.try_into()?),
         };
 
         Ok(res)
@@ -96,15 +100,16 @@ where
 }
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum CliCommands<T, CliAUX, CliTX, CliQue>
+pub enum CliCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
-    CliAUX: Subcommand,
+    CliClientAUX: Subcommand,
+    CliAppAUX : Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
     #[command(flatten, value_parser = value_parser!(PhantomData))]
-    Cli(CliApplicationCommands<T, CliAUX, CliTX, CliQue>),
+    Cli(CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>),
     Completions(CliCompletionArgs),
 }
 
@@ -116,17 +121,18 @@ pub struct CliCompletionArgs {
 }
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum CliApplicationCommands<T, CliAUX, CliTX, CliQue>
+pub enum CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
-    CliAUX: Subcommand,
+    CliClientAUX: Subcommand,
+    CliAppAUX : Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
     #[command(flatten)]
-    Client(CliClientCommands<T, CliAUX, CliTX, CliQue>),
+    Client(CliClientCommands<T, CliClientAUX, CliTX, CliQue>),
     #[command(flatten)]
-    App(CliAppCommands<T>),
+    App(CliAppCommands<T, CliAppAUX>),
 }
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
@@ -170,19 +176,31 @@ where
 }
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum CliAppCommands<T: ApplicationInfo> {
+pub enum CliAppCommands<T: ApplicationInfo, CliAUX : Subcommand> {
     Init(CliInitCommand<T>),
     Run(CliRunCommand<T>),
     #[command(name = "add-genesis-account")]
     GenesisAdd(CliGenesisCommand<T>),
+    #[command(flatten)]
+    Aux(CliAUX),
 }
 
-impl<T: ApplicationInfo> From<CliAppCommands<T>> for AppCommands {
-    fn from(value: CliAppCommands<T>) -> Self {
-        match value {
+impl<T, AUX, CliAUX, ERR> TryFrom<CliAppCommands<T, CliAUX>> for AppCommands<AUX> 
+    where 
+    T : ApplicationInfo,
+    CliAUX: Subcommand,
+    AUX: TryFrom<CliAUX, Error = ERR>,
+{
+    type Error = ERR;
+
+    fn try_from(value: CliAppCommands<T, CliAUX>) -> Result<Self, Self::Error> {
+        let res = match value {
             CliAppCommands::Init(cmd) => Self::Init(cmd.into()),
             CliAppCommands::Run(cmd) => Self::Run(cmd.into()),
             CliAppCommands::GenesisAdd(cmd) => Self::GenesisAdd(cmd.into()),
-        }
+            CliAppCommands::Aux( cmd) => Self::Aux( cmd.try_into()?),
+        };
+
+        Ok(res)
     }
 }

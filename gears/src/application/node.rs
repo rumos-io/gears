@@ -9,11 +9,11 @@ use crate::{
     x::params::ParamsSubspaceKey,
 };
 
-use super::{command::app::AppCommands, ApplicationInfo};
+use super::{command::app::AppCommands, handlers::AuxHandler, ApplicationInfo};
 use crate::x::params::Keeper as ParamsKeeper;
 
 /// A Gears application.
-pub trait Node {
+pub trait Node : AuxHandler {
     type Message: Message;
     type Genesis: Genesis;
     type StoreKey: StoreKey;
@@ -35,32 +35,34 @@ pub trait Node {
     >;
 }
 
-pub struct NodeApplication<'a, AppCore: Node, AI: ApplicationInfo> {
+pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
+    core : Core,
     router: Router<
         RestState<
-            AppCore::StoreKey,
-            AppCore::ParamsSubspaceKey,
-            AppCore::Message,
-            AppCore::ABCIHandler,
-            AppCore::Genesis,
+            Core::StoreKey,
+            Core::ParamsSubspaceKey,
+            Core::Message,
+            Core::ABCIHandler,
+            Core::Genesis,
             AI,
         >,
         Body,
     >,
-    abci_handler_builder: &'a dyn Fn(Config<AppCore::ApplicationConfig>) -> AppCore::ABCIHandler,
+    abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
 
-    params_store_key: AppCore::StoreKey,
-    params_subspace_key: AppCore::ParamsSubspaceKey,
+    params_store_key: Core::StoreKey,
+    params_subspace_key: Core::ParamsSubspaceKey,
 }
 
 impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     pub fn new(
+        core : Core,
         abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
-
         params_store_key: Core::StoreKey,
         params_subspace_key: Core::ParamsSubspaceKey,
     ) -> Self {
         Self {
+            core,
             router: Core::router(),
             abci_handler_builder,
             params_store_key,
@@ -69,7 +71,7 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     }
 
     /// Runs the command passed on the command line.
-    pub fn execute(self, command: AppCommands) -> anyhow::Result<()> {
+    pub fn execute(self, command: AppCommands<Core::AuxCommands>) -> anyhow::Result<()> {
         match command {
             AppCommands::Init(cmd) => {
                 init::init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
@@ -84,6 +86,7 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
             AppCommands::GenesisAdd(cmd) => {
                 genesis_account::genesis_account_add::<Core::Genesis>(cmd)?
             }
+            AppCommands::Aux( cmd ) => self.core.handle_aux_commands(cmd)?,
         };
 
         Ok(())

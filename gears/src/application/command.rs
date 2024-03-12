@@ -5,9 +5,9 @@ use self::{app::AppCommands, client::ClientCommands};
 pub struct NilAuxCommand;
 
 #[derive(Debug, Clone)]
-pub enum ApplicationCommands<AUX, TX, QUE> {
-    Client(ClientCommands<AUX, TX, QUE>),
-    App(AppCommands),
+pub enum ApplicationCommands<ClientAUX, AppAUX, TX, QUE> {
+    Client(ClientCommands<ClientAUX, TX, QUE>),
+    App(AppCommands<AppAUX>),
 }
 
 pub mod client {
@@ -24,9 +24,10 @@ pub mod client {
 
 pub mod app {
     #[derive(Debug, Clone)]
-    pub enum AppCommands {
+    pub enum AppCommands<AUX> {
         Init(crate::client::init::InitCommand),
         Run(crate::baseapp::run::RunCommand),
         GenesisAdd(crate::client::genesis_account::GenesisCommand),
+        Aux(AUX),
     }
 }
