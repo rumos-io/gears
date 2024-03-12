@@ -19,24 +19,25 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub rest_listen_addr: SocketAddr,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
     pub read_buf_size: usize,
-/// The logging level
-#[arg(long, global = true, action = ArgAction::Set, default_value_t = LogLevel::Info)]
-pub log_level : LogLevel,
+    /// The logging level
+    #[arg(long, action = ArgAction::Set, default_value_t = LogLevel::Info)]
+    pub log_level: LogLevel,
 
     #[arg(skip)]
     pub _marker: PhantomData<T>,
 }
 
 impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
-    fn from(CliRunCommand {
-        home,
-        address,
-        rest_listen_addr,
-        read_buf_size,
-        _marker,
-        log_level,
-    }: CliRunCommand<T>) -> Self {
-
+    fn from(
+        CliRunCommand {
+            home,
+            address,
+            rest_listen_addr,
+            read_buf_size,
+            _marker,
+            log_level,
+        }: CliRunCommand<T>,
+    ) -> Self {
         Self {
             home,
             address,

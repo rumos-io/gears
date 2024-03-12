@@ -27,7 +27,6 @@ fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Writ
     generate(gen, cmd, cmd.get_name().to_string(), buf);
 }
 
-
 #[derive(Debug, Clone, ::clap::Parser)]
 #[command(name = T::APP_NAME, version = T::APP_VERSION)]
 pub struct CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>

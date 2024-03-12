@@ -8,7 +8,7 @@ const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
 const KEYRING_SUB_DIR_TEST: &str = "keyring-test";
 
 #[derive(Clone, Default, Debug, Display)]
-#[cfg_attr(feature = "cli", derive( clap::ValueEnum  ))]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 pub enum KeyringBackend {
     #[default]
     #[strum(to_string = "file")]

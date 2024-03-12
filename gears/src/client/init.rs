@@ -70,7 +70,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     crate::config::Config::<AC>::write_default(cfg_file)
         .map_err(|e| InitError::WriteDefaultConfigFile(e.to_string()))?;
 
-        println!("Config file written to {}", cfg_file_path.display());
+    println!("Config file written to {}", cfg_file_path.display());
 
     // Write key and genesis
     tendermint::write_keys_and_genesis(
@@ -97,7 +97,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     tendermint::write_priv_validator_state(state_file)
         .map_err(|e| InitError::WritePrivValidatorKey(e))?;
 
-        println!(
+    println!(
         "Private validator state written to {}",
         state_file_path.display()
     );

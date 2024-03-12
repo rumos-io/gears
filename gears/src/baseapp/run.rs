@@ -24,7 +24,7 @@ pub struct RunCommand {
     pub address: SocketAddr,
     pub rest_listen_addr: SocketAddr,
     pub read_buf_size: usize,
-    pub log_level : LogLevel,
+    pub log_level: LogLevel,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -40,27 +40,24 @@ pub enum RunError {
 }
 
 #[derive(Debug, Clone, Default, strum::Display)]
-#[cfg_attr(feature = "cli", derive( clap::ValueEnum  ))]
-pub enum LogLevel
-{
-    #[strum( to_string = "debug")]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
+pub enum LogLevel {
+    #[strum(to_string = "debug")]
     Debug,
     #[default]
-    #[strum( to_string = "info")]
+    #[strum(to_string = "info")]
     Info,
-    #[strum( to_string = "warn")]
+    #[strum(to_string = "warn")]
     Warn,
-    #[strum( to_string = "error")]
+    #[strum(to_string = "error")]
     Error,
-    #[strum( to_string = "off")]
+    #[strum(to_string = "off")]
     Off,
 }
 
-impl From<LogLevel> for LevelFilter
-{
+impl From<LogLevel> for LevelFilter {
     fn from(value: LogLevel) -> Self {
-        match value
-        {
+        match value {
             LogLevel::Debug => Self::DEBUG,
             LogLevel::Info => Self::INFO,
             LogLevel::Warn => Self::WARN,
@@ -95,9 +92,9 @@ pub fn run<
     } = cmd;
 
     tracing_subscriber::fmt()
-    .with_max_level(log_level)
-    .try_init()
-    .map_err( |e |RunError::Custom( format!( "Failed to set logger: {}", e.to_string())))?;
+        .with_max_level(log_level)
+        .try_init()
+        .map_err(|e| RunError::Custom(format!("Failed to set logger: {}", e.to_string())))?;
 
     info!("Using directory {} for config and data", home.display());
 
