@@ -1,8 +1,11 @@
 use std::io::Write;
 
-use clap::{Command, CommandFactory, Subcommand};
+use anyhow::anyhow;
+use clap::{ArgAction, Command, CommandFactory, Subcommand};
 pub use clap_complete::Shell;
 use clap_complete::{generate, Generator};
+use human_panic::setup_panic;
+use tracing::metadata::LevelFilter;
 
 use crate::application::{
     command::{app::AppCommands, client::ClientCommands, ApplicationCommands},
@@ -26,6 +29,37 @@ fn write_completions<G: Generator>(gen: G, cmd: &mut Command, buf: &mut dyn Writ
     generate(gen, cmd, cmd.get_name().to_string(), buf);
 }
 
+
+#[derive(Debug, Clone, Default, strum::Display, clap::ValueEnum)]
+pub enum LogLevel
+{
+    #[strum( to_string = "debug")]
+    Debug,
+    #[default]
+    #[strum( to_string = "info")]
+    Info,
+    #[strum( to_string = "warn")]
+    Warn,
+    #[strum( to_string = "error")]
+    Error,
+    #[strum( to_string = "off")]
+    Off,
+}
+
+impl From<LogLevel> for LevelFilter
+{
+    fn from(value: LogLevel) -> Self {
+        match value
+        {
+            LogLevel::Debug => Self::DEBUG,
+            LogLevel::Info => Self::INFO,
+            LogLevel::Warn => Self::WARN,
+            LogLevel::Error => Self::ERROR,
+            LogLevel::Off => Self::OFF,
+        }
+    }
+}
+
 #[derive(Debug, Clone, ::clap::Parser)]
 #[command(name = T::APP_NAME, version = T::APP_VERSION)]
 pub struct CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
@@ -38,6 +72,9 @@ where
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
     pub command: CliCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>,
+    /// The logging level
+    #[arg(long, global = true, action = ArgAction::Set, default_value_t = LogLevel::Info)]
+    pub log_level : LogLevel,
 }
 
 impl<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
@@ -56,6 +93,15 @@ where
         ) -> anyhow::Result<()>,
         executor: impl FnOnce(CliAppCommands<T, CliAppAUX>) -> anyhow::Result<()>,
     ) -> anyhow::Result<()> {
+        setup_panic!();
+
+        tracing_subscriber::fmt()
+        .with_max_level(self.log_level)
+        .without_time()
+        .with_target(false)
+        .try_init()
+        .map_err( |e | anyhow!( "Failed to set logger: {}", e.to_string() ))?;
+
         match self.command {
             CliCommands::Cli(command) => match command {
                 CliApplicationCommands::Client(command) => client_executor(command),

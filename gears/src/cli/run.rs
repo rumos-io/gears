@@ -19,10 +19,6 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub rest_listen_addr: SocketAddr,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
     pub read_buf_size: usize,
-    #[arg(short, long, action = ArgAction::SetTrue, help = "Increase output logging verbosity to DEBUG level" )]
-    pub verbose: bool,
-    #[arg(short, long, action = ArgAction::SetTrue, help = format!("Suppress all output logging (overrides --{})", stringify!( verbose )) )]
-    pub quiet: bool,
 
     #[arg(skip)]
     pub _marker: PhantomData<T>,
@@ -35,8 +31,6 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             address,
             rest_listen_addr,
             read_buf_size,
-            verbose,
-            quiet,
             _marker,
         } = value;
 
@@ -45,8 +39,6 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             address,
             rest_listen_addr,
             read_buf_size,
-            verbose,
-            quiet,
         }
     }
 }

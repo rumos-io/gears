@@ -6,7 +6,6 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
-use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
 use crate::application::ApplicationInfo;
@@ -24,8 +23,6 @@ pub struct RunCommand {
     pub address: SocketAddr,
     pub rest_listen_addr: SocketAddr,
     pub read_buf_size: usize,
-    pub verbose: bool,
-    pub quiet: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -61,22 +58,7 @@ pub fn run<
         address,
         rest_listen_addr,
         read_buf_size,
-        verbose,
-        quiet,
     } = cmd;
-
-    let log_level = if quiet {
-        LevelFilter::OFF
-    } else if verbose {
-        LevelFilter::DEBUG
-    } else {
-        LevelFilter::INFO
-    };
-
-    tracing_subscriber::fmt()
-        .with_max_level(log_level)
-        .try_init()
-        .map_err(|_| RunError::Custom("failed to set tracing".to_owned()))?;
 
     info!("Using directory {} for config and data", home.display());
 
