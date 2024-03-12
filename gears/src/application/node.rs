@@ -13,7 +13,7 @@ use super::{command::app::AppCommands, handlers::AuxHandler, ApplicationInfo};
 use crate::x::params::Keeper as ParamsKeeper;
 
 /// A Gears application.
-pub trait Node : AuxHandler {
+pub trait Node: AuxHandler {
     type Message: Message;
     type Genesis: Genesis;
     type StoreKey: StoreKey;
@@ -36,7 +36,7 @@ pub trait Node : AuxHandler {
 }
 
 pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
-    core : Core,
+    core: Core,
     router: Router<
         RestState<
             Core::StoreKey,
@@ -56,7 +56,7 @@ pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
 
 impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     pub fn new(
-        core : Core,
+        core: Core,
         abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
         params_store_key: Core::StoreKey,
         params_subspace_key: Core::ParamsSubspaceKey,
@@ -86,7 +86,7 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
             AppCommands::GenesisAdd(cmd) => {
                 genesis_account::genesis_account_add::<Core::Genesis>(cmd)?
             }
-            AppCommands::Aux( cmd ) => self.core.handle_aux_commands(cmd)?,
+            AppCommands::Aux(cmd) => self.core.handle_aux_commands(cmd)?,
         };
 
         Ok(())

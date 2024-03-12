@@ -7,14 +7,14 @@ use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::GaiaTxCommands;
 use gaia_rs::GaiaApplication;
-use gears::application::node::NodeApplication;
-use gears::application::node::Node;
-use gears::application::client::ClientApplication;
 use gears::application::client::Client;
+use gears::application::client::ClientApplication;
 use gears::application::command::NilAuxCommand;
 use gears::application::handlers::AuxHandler;
 use gears::application::handlers::QueryHandler;
 use gears::application::handlers::TxHandler;
+use gears::application::node::Node;
+use gears::application::node::NodeApplication;
 use gears::application::ApplicationInfo;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
@@ -97,8 +97,13 @@ impl Node for GaiaCore {
     }
 }
 
-type Args =
-    CliApplicationArgs<GaiaApplication, CliNilAuxCommand, CliNilAuxCommand, GaiaTxCommands, GaiaQueryCommands>;
+type Args = CliApplicationArgs<
+    GaiaApplication,
+    CliNilAuxCommand,
+    CliNilAuxCommand,
+    GaiaTxCommands,
+    GaiaQueryCommands,
+>;
 
 fn main() -> Result<()> {
     let args = Args::parse();

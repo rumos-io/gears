@@ -32,7 +32,7 @@ pub struct CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
-    CliAppAUX : Subcommand,
+    CliAppAUX: Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
@@ -40,17 +40,20 @@ where
     pub command: CliCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>,
 }
 
-impl<T, CliClientAUX, CliAppAUX, CliTX, CliQue> CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
+impl<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
+    CliApplicationArgs<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
-    CliAppAUX : Subcommand,
+    CliAppAUX: Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
     pub fn execute_or_help(
         self,
-        client_executor: impl FnOnce(CliClientCommands<T, CliClientAUX, CliTX, CliQue>) -> anyhow::Result<()>,
+        client_executor: impl FnOnce(
+            CliClientCommands<T, CliClientAUX, CliTX, CliQue>,
+        ) -> anyhow::Result<()>,
         executor: impl FnOnce(CliAppCommands<T, CliAppAUX>) -> anyhow::Result<()>,
     ) -> anyhow::Result<()> {
         match self.command {
@@ -73,13 +76,24 @@ where
     }
 }
 
-impl<T: ApplicationInfo, CliClientAUX, ClientAUX, CliAppAUX, AppAUX, CliTX, TX, CliQue, QUE, ERR>
-    TryFrom<CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>> for ApplicationCommands<ClientAUX, AppAUX, TX, QUE>
+impl<
+        T: ApplicationInfo,
+        CliClientAUX,
+        ClientAUX,
+        CliAppAUX,
+        AppAUX,
+        CliTX,
+        TX,
+        CliQue,
+        QUE,
+        ERR,
+    > TryFrom<CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>>
+    for ApplicationCommands<ClientAUX, AppAUX, TX, QUE>
 where
     CliClientAUX: Subcommand,
     ClientAUX: TryFrom<CliClientAUX, Error = ERR>,
-    CliAppAUX : Subcommand,
-    AppAUX : TryFrom<CliAppAUX, Error = ERR>,
+    CliAppAUX: Subcommand,
+    AppAUX: TryFrom<CliAppAUX, Error = ERR>,
     CliTX: Subcommand,
     TX: TryFrom<CliTX, Error = ERR>,
     CliQue: Subcommand,
@@ -104,7 +118,7 @@ pub enum CliCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
-    CliAppAUX : Subcommand,
+    CliAppAUX: Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
@@ -125,7 +139,7 @@ pub enum CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
-    CliAppAUX : Subcommand,
+    CliAppAUX: Subcommand,
     CliTX: Subcommand,
     CliQue: Subcommand,
 {
@@ -176,7 +190,7 @@ where
 }
 
 #[derive(Debug, Clone, ::clap::Subcommand)]
-pub enum CliAppCommands<T: ApplicationInfo, CliAUX : Subcommand> {
+pub enum CliAppCommands<T: ApplicationInfo, CliAUX: Subcommand> {
     Init(CliInitCommand<T>),
     Run(CliRunCommand<T>),
     #[command(name = "add-genesis-account")]
@@ -185,9 +199,9 @@ pub enum CliAppCommands<T: ApplicationInfo, CliAUX : Subcommand> {
     Aux(CliAUX),
 }
 
-impl<T, AUX, CliAUX, ERR> TryFrom<CliAppCommands<T, CliAUX>> for AppCommands<AUX> 
-    where 
-    T : ApplicationInfo,
+impl<T, AUX, CliAUX, ERR> TryFrom<CliAppCommands<T, CliAUX>> for AppCommands<AUX>
+where
+    T: ApplicationInfo,
     CliAUX: Subcommand,
     AUX: TryFrom<CliAUX, Error = ERR>,
 {
@@ -198,7 +212,7 @@ impl<T, AUX, CliAUX, ERR> TryFrom<CliAppCommands<T, CliAUX>> for AppCommands<AUX
             CliAppCommands::Init(cmd) => Self::Init(cmd.into()),
             CliAppCommands::Run(cmd) => Self::Run(cmd.into()),
             CliAppCommands::GenesisAdd(cmd) => Self::GenesisAdd(cmd.into()),
-            CliAppCommands::Aux( cmd) => Self::Aux( cmd.try_into()?),
+            CliAppCommands::Aux(cmd) => Self::Aux(cmd.try_into()?),
         };
 
         Ok(res)
