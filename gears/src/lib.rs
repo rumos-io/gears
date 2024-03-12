@@ -8,6 +8,7 @@ pub mod client;
 pub mod config;
 pub mod crypto;
 pub mod error;
+pub(crate) mod runtime;
 pub mod types;
 pub mod utils;
 pub mod x;

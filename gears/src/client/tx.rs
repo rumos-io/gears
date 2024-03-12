@@ -12,11 +12,11 @@ use proto_types::AccAddress;
 use tendermint::informal::chain::Id;
 use tendermint::rpc::{Client, HttpClient};
 
-use crate::client::keys::KeyringBackend;
 use crate::{
     application::handlers::TxHandler,
     crypto::{create_signed_transaction, SigningInfo},
 };
+use crate::{application::handlers_v2::TxHandlerV2, client::keys::KeyringBackend};
 
 use super::query::run_query;
 
@@ -30,6 +30,28 @@ pub struct TxCommand<C> {
     pub keyring_backend: KeyringBackend,
 
     pub inner: C,
+}
+
+pub fn run_tx_v2<M: SDKMessage, C, H: TxHandlerV2<TxCommands = C>>(
+    TxCommand {
+        home,
+        node,
+        from_key,
+        chain_id,
+        fee,
+        keyring_backend,
+        inner,
+    }: TxCommand<C>,
+    handler: &H,
+) -> anyhow::Result<()> {
+    let keyring_home = home.join(keyring_backend.get_sub_dir());
+
+    let key =
+        keyring::get_key_by_name(&from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
+
+    let message = handler.prepare_tx(inner, key.get_address())?;
+
+    handler.handle_tx(message, key, node, chain_id, fee)
 }
 
 pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
@@ -49,7 +71,7 @@ pub async fn run_tx_command<M: SDKMessage, C, H: TxHandler<TxCommands = C>>(
     let keyring_home = home.join(keyring_backend.get_sub_dir());
 
     let key =
-        keyring::get_key_by_name(from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
+        keyring::get_key_by_name(&from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
     let address = key.get_address();
 
     let message = handler.handle_tx_command(inner, address.clone())?;
