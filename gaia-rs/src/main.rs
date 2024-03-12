@@ -7,10 +7,10 @@ use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::GaiaTxCommands;
 use gaia_rs::GaiaApplication;
-use gears::application::app::Application;
-use gears::application::app::ApplicationTrait;
+use gears::application::node::NodeApplication;
+use gears::application::node::Node;
 use gears::application::client::ClientApplication;
-use gears::application::client::ClientTrait;
+use gears::application::client::Client;
 use gears::application::command::NilAuxCommand;
 use gears::application::handlers::AuxHandler;
 use gears::application::handlers::QueryHandler;
@@ -72,9 +72,9 @@ impl AuxHandler for GaiaCore {
     }
 }
 
-impl ClientTrait for GaiaCore {}
+impl Client for GaiaCore {}
 
-impl ApplicationTrait for GaiaCore {
+impl Node for GaiaCore {
     type Message = message::Message;
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
@@ -106,7 +106,7 @@ fn main() -> Result<()> {
     args.execute_or_help(
         |command| ClientApplication::new(GaiaCore).execute(command.try_into()?),
         |command| {
-            Application::<'_, GaiaCore, GaiaApplication>::new(
+            NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
                 &ABCIHandler::new,
                 GaiaStoreKey::Params,
                 GaiaParamsStoreKey::BaseApp,

@@ -1,4 +1,4 @@
-pub mod app;
+pub mod node;
 pub mod client;
 pub mod command;
 pub mod handlers;

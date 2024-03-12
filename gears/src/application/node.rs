@@ -13,7 +13,7 @@ use super::{command::app::AppCommands, ApplicationInfo};
 use crate::x::params::Keeper as ParamsKeeper;
 
 /// A Gears application.
-pub trait ApplicationTrait {
+pub trait Node {
     type Message: Message;
     type Genesis: Genesis;
     type StoreKey: StoreKey;
@@ -21,6 +21,7 @@ pub trait ApplicationTrait {
     type ABCIHandler: ABCIHandler<Self::Message, Self::StoreKey, Self::Genesis>;
     type ApplicationConfig: ApplicationConfig;
 
+    /// Builder method for defining routes of rest server
     fn router<AI: ApplicationInfo>() -> Router<
         RestState<
             Self::StoreKey,
@@ -34,7 +35,7 @@ pub trait ApplicationTrait {
     >;
 }
 
-pub struct Application<'a, AppCore: ApplicationTrait, AI: ApplicationInfo> {
+pub struct NodeApplication<'a, AppCore: Node, AI: ApplicationInfo> {
     router: Router<
         RestState<
             AppCore::StoreKey,
@@ -52,7 +53,7 @@ pub struct Application<'a, AppCore: ApplicationTrait, AI: ApplicationInfo> {
     params_subspace_key: AppCore::ParamsSubspaceKey,
 }
 
-impl<'a, Core: ApplicationTrait, AI: ApplicationInfo> Application<'a, Core, AI> {
+impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     pub fn new(
         abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
 
