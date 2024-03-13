@@ -1,7 +1,6 @@
 use prost::Message;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use proto_messages::cosmos::query::Query;
-use serde::Serialize;
 use tendermint::{
     informal::block::Height,
     rpc::{Client, HttpClient},
@@ -15,9 +14,7 @@ where
 {
     type Query: Query;
     type RawQueryResponse: Message + Default + From<Self::QueryResponse>;
-    type QueryResponse: Protobuf<Self::RawQueryResponse>
-        + TryFrom<Self::RawQueryResponse>
-        + Serialize;
+    type QueryResponse: Protobuf<Self::RawQueryResponse> + TryFrom<Self::RawQueryResponse>;
     type QueryCommand;
 
     fn prepare_query(
