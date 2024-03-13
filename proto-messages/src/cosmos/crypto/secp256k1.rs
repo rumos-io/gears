@@ -65,24 +65,6 @@ pub mod v1beta1 {
             res
         }
 
-        pub fn formatted_address(&self) -> String {
-            let pub_key = self.key.serialize().to_vec();
-            let hex = data_encoding::HEXUPPER.encode(&pub_key);
-
-            let mut result = String::new();
-            let mut counter = 0;
-            for ch in hex.chars() {
-                if counter == 4 {
-                    result.push(' ');
-                    counter = 0;
-                }
-                result.push(ch);
-                counter += 1;
-            }
-
-            result.to_ascii_uppercase()
-        }
-
         pub fn verify_signature(
             &self,
             message: impl AsRef<[u8]>,

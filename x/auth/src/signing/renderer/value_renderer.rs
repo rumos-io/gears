@@ -26,6 +26,7 @@ pub trait TryPrimitiveValueRendererWithMetadata<V> {
     ) -> Result<Content, Error>;
 }
 
+#[cfg_attr(test, derive(PartialEq, Eq))]
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("not implemented")]

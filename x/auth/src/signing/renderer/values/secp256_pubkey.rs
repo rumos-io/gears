@@ -28,8 +28,10 @@ impl ValueRenderer for PubKey {
             },
             Screen {
                 title: "Key".to_string(),
-                content: DefaultPrimitiveRenderer::try_format(self.formatted_address())
-                    .expect("address is not empty so it will never fail to parse"),
+                content: DefaultPrimitiveRenderer::try_format(
+                    Vec::<u8>::from(self.clone()).as_slice(),
+                )
+                .expect("key is not empty so it will never fail to parse"),
                 indent: Some(Indent::one()),
                 expert: true,
             },
