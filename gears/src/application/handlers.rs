@@ -1,11 +1,15 @@
 use keyring::key_pair::KeyPair;
-use proto_messages::cosmos::tx::v1beta1::message::Message;
+use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
 use proto_types::AccAddress;
-use tendermint::{informal::block::Height, rpc::HttpClient};
+use tendermint::{
+    informal::block::Height,
+    rpc::{Client, HttpClient},
+};
 
 use crate::{
-    client::{query::run_query, tx::broadcast_tx_commit},
+    client::{query::execute_query, tx::broadcast_tx_commit},
     crypto::{create_signed_transaction, SigningInfo},
+    runtime::runtime,
 };
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
@@ -67,15 +71,43 @@ pub trait TxHandler {
     }
 }
 
-pub trait QueryHandler {
+pub trait QueryHandler
+where
+    <Self::QueryResponse as TryFrom<Self::RawQueryResponse>>::Error: std::fmt::Display,
+{
+    type Query: Query;
     type QueryCommands;
+    type QueryResponse: Protobuf<Self::RawQueryResponse> + TryFrom<Self::RawQueryResponse>;
+    type RawQueryResponse: prost::Message + Default + From<Self::QueryResponse>;
 
-    fn handle_query_command(
+    fn prepare_query(
         &self,
         command: Self::QueryCommands,
         node: &str,
         height: Option<Height>,
-    ) -> anyhow::Result<()>;
+    ) -> anyhow::Result<Self::Query>;
+
+    fn handle_query(
+        &self,
+        query: Self::Query,
+        node: &str,
+        height: Option<Height>,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let client = HttpClient::new(node)?;
+
+        let res = runtime().block_on(client.abci_query(
+            Some(query.query_url().into_owned()),
+            query.as_bytes(),
+            height,
+            false,
+        ))?;
+
+        if res.code.is_err() {
+            return Err(anyhow::anyhow!("node returned an error: {}", res.log));
+        }
+
+        Self::QueryResponse::decode(&*res.value).map_err(|e| e.into())
+    }
 }
 
 /// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.
@@ -98,7 +130,7 @@ pub trait AuxHandler {
 fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
-    run_query::<QueryAccountResponse, RawQueryAccountResponse>(
+    execute_query::<QueryAccountResponse, RawQueryAccountResponse>(
         query.encode_vec(),
         "/cosmos.auth.v1beta1.Query/Account".into(),
         node,

@@ -1,10 +1,8 @@
 use std::borrow::Cow;
 
-use anyhow::Result;
 use clap::{Args, Subcommand};
 
-use gears::{application::handlers_v2::QueryHandler, client::query::run_query};
-
+use gears::application::handlers::QueryHandler;
 use serde::{Deserialize, Serialize};
 use tendermint::informal::block::Height;
 
@@ -158,26 +156,5 @@ impl QueryHandler for AuthQueryHandler {
         };
 
         Ok(res)
-    }
-}
-
-pub fn run_auth_query_command(
-    args: AuthQueryCli,
-    node: &str,
-    height: Option<Height>,
-) -> Result<String> {
-    match args.command {
-        AuthCommands::Account { address } => {
-            let query = QueryAccountRequest { address };
-
-            let res = run_query::<QueryAccountResponse, RawQueryAccountResponse>(
-                query.encode_vec(),
-                "/cosmos.auth.v1beta1.Query/Account".into(),
-                node,
-                height,
-            )?;
-
-            Ok(serde_json::to_string_pretty(&res)?)
-        }
     }
 }

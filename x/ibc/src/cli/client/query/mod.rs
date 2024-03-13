@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use clap::{Args, Subcommand};
-use gears::application::handlers_v2::QueryHandler;
+use gears::application::handlers::QueryHandler;
 use prost::Message;
 use proto_messages::cosmos::ibc::types::core::client::context::types::proto::v1::QueryClientParamsResponse as RawQueryClientParamsResponse;
 use proto_messages::cosmos::{
@@ -64,39 +64,6 @@ pub enum IbcQueryCommands {
     ConsensusStateHeights(consensus_heights::CliClientHeight),
     // Header(query_header::CliClientParams),
     // SelfState(self_consensus_state::CliClientParams),
-}
-
-pub fn run_ibc_query_command(
-    args: IbcQueryCli,
-    node: &str,
-    height: Option<Height>,
-) -> anyhow::Result<String> {
-    match args.command {
-        IbcQueryCommands::ClientParams(args) => {
-            client_params::query_command_handler(args, node, height)
-        }
-        IbcQueryCommands::ClientState(args) => {
-            client_state::query_command_handler(args, node, height)
-        }
-        IbcQueryCommands::ClientStates(args) => {
-            client_states::query_command_handler(args, node, height)
-        }
-        IbcQueryCommands::ClientStatus(args) => {
-            client_status::query_command_handler(args, node, height)
-        }
-        IbcQueryCommands::ConsensusState(args) => {
-            consensus_state::query_command_handler(args, node, height)
-        }
-        IbcQueryCommands::ConsensusStates(args) => {
-            consensus_states::query_command_handler(args, node, height)
-        }
-        IbcQueryCommands::ConsensusStateHeights(args) => {
-            consensus_heights::query_command_handler(args, node, height)
-        } // IbcCommands::Header(args) => query_header::query_command_handler(args, node, height),
-          // IbcCommands::SelfState(args) => {
-          //     self_consensus_state::query_command_handler(args, node, height)
-          // }
-    }
 }
 
 #[derive(Debug, Clone)]

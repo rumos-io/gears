@@ -1,13 +1,11 @@
+use crate::application::handlers::QueryHandler;
+use crate::runtime::runtime;
 use anyhow::{anyhow, Result};
 use prost::Message;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use serde::Serialize;
 use tendermint::informal::block::Height;
 use tendermint::rpc::{Client, HttpClient};
-
-use crate::application::handlers::QueryHandler;
-use crate::application::handlers_v2::QueryHandler as QueryHandlerV2;
-use crate::runtime::runtime;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct QueryCommand<C> {
@@ -17,7 +15,7 @@ pub struct QueryCommand<C> {
     pub inner: C,
 }
 
-pub fn run_query_v2<Q, QC, QR, RQR, H>(
+pub fn run_query<Q, QC, QR, RQR, H>(
     QueryCommand {
         node,
         height,
@@ -26,7 +24,7 @@ pub fn run_query_v2<Q, QC, QR, RQR, H>(
     handler: &H,
 ) -> anyhow::Result<()>
 where
-    H: QueryHandlerV2<Query = Q, QueryCommands = QC, QueryResponse = QR, RawQueryResponse = RQR>,
+    H: QueryHandler<Query = Q, QueryCommands = QC, QueryResponse = QR, RawQueryResponse = RQR>,
     QR: TryFrom<RQR> + Serialize,
     <QR as TryFrom<RQR>>::Error: std::fmt::Display,
 {
@@ -38,21 +36,8 @@ where
     Ok(())
 }
 
-pub fn run_query_command<C, H: QueryHandler<QueryCommands = C>>(
-    cmd: QueryCommand<C>,
-    handler: &H,
-) -> Result<()> {
-    let QueryCommand {
-        node,
-        height,
-        inner,
-    } = cmd;
-
-    handler.handle_query_command(inner, node.as_str(), height)
-}
-
 /// Convenience method for running queries
-pub fn run_query<
+pub fn execute_query<
     Response: Protobuf<Raw> + std::convert::TryFrom<Raw> + Serialize,
     Raw: Message + Default + std::convert::From<Response>,
 >(

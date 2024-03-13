@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use anyhow::Result;
 use clap::{Args, Subcommand};
 
-use gears::{application::handlers_v2::QueryHandler, client::query::run_query};
+use gears::application::handlers::QueryHandler;
 use prost::encoding::{DecodeContext, WireType};
 use prost::Message;
 use proto_messages::cosmos::{
@@ -32,42 +32,6 @@ pub enum BankCommands {
         address: AccAddress,
     },
     DenomMetadata,
-}
-
-pub fn run_bank_query_command(
-    args: BankQueryCli,
-    node: &str,
-    height: Option<Height>,
-) -> Result<String> {
-    match args.command {
-        BankCommands::Balances { address } => {
-            let query = QueryAllBalancesRequest {
-                address,
-                pagination: None,
-            };
-
-            let res = run_query::<QueryAllBalancesResponse, RawQueryAllBalancesResponse>(
-                query.encode_vec(),
-                "/cosmos.bank.v1beta1.Query/AllBalances".into(),
-                node,
-                height,
-            )?;
-
-            Ok(serde_json::to_string_pretty(&res)?)
-        }
-        BankCommands::DenomMetadata => {
-            let query = QueryDenomsMetadataRequest { pagination: None };
-
-            let res = run_query::<QueryDenomsMetadataResponse, RawQueryDenomsMetadataResponse>(
-                query.encode_to_vec(),
-                "/cosmos.bank.v1beta1.Query/DenomsMetadata".into(),
-                node,
-                height,
-            )?;
-
-            Ok(serde_json::to_string_pretty(&res)?)
-        }
-    }
 }
 
 #[derive(Debug, Clone)]

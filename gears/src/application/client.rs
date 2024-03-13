@@ -1,11 +1,10 @@
 use serde::Serialize;
 
-use crate::client::{keys, query::run_query_v2, tx::run_tx};
+use crate::client::{keys, query::run_query, tx::run_tx};
 
 use super::{
     command::client::ClientCommands,
-    handlers::{AuxHandler, TxHandler},
-    handlers_v2::QueryHandler,
+    handlers::{AuxHandler, QueryHandler, TxHandler},
 };
 
 /// A Gears client application.
@@ -42,7 +41,7 @@ where
                 self.core.handle_aux(cmd)?;
             }
             ClientCommands::Tx(cmd) => run_tx(cmd, &self.core)?,
-            ClientCommands::Query(cmd) => run_query_v2(cmd, &self.core)?,
+            ClientCommands::Query(cmd) => run_query(cmd, &self.core)?,
             ClientCommands::Keys(cmd) => keys::keys(cmd)?,
         };
 
