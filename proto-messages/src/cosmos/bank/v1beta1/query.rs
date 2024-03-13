@@ -111,7 +111,7 @@ impl From<PageRequest> for RawPageRequest {
 }
 
 /// QueryAllBalanceRequest is the request type for the Query/AllBalances RPC method.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct QueryAllBalancesRequest {
     /// address is the address to query balances for.
     pub address: proto_types::AccAddress,

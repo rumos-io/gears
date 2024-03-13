@@ -115,6 +115,11 @@ impl From<AuthQueryResponse> for RawAuthQueryResponse {
     }
 }
 
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+pub enum AuthQueryResponse {
+    Account(QueryAccountResponse),
+}
+
 #[derive(Clone, PartialEq, Debug)]
 pub enum RawAuthQueryResponse {
     Account(RawQueryAccountResponse),
@@ -126,22 +131,17 @@ impl Default for RawAuthQueryResponse {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
-pub enum AuthQueryResponse {
-    Account(QueryAccountResponse),
-}
-
 #[derive(Debug, Clone)]
 pub struct AuthQueryHandler;
 
 impl QueryHandler for AuthQueryHandler {
     type Query = AuthQuery;
 
-    type RawQueryResponse = RawAuthQueryResponse;
+    type QueryCommands = AuthQueryCli;
 
     type QueryResponse = AuthQueryResponse;
 
-    type QueryCommands = AuthQueryCli;
+    type RawQueryResponse = RawAuthQueryResponse;
 
     fn prepare_query(
         &self,
