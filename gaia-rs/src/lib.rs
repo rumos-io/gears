@@ -1,3 +1,4 @@
+pub mod query;
 use gears::application::ApplicationInfo;
 
 #[derive(Debug, Clone)]

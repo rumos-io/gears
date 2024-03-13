@@ -25,11 +25,13 @@ bytes = {workspace = true}
 
 #utils 
 anyhow = {workspace = true}
+thiserror = { workspace = true }
 clap = {version = "4.2.2", features = ["derive"]}
 strum = {version = "0.25", features = ["derive"]}
 
 #serialization
 serde = {version = "1.0", default-features = false}
+prost = { workspace = true }
 
 #other
 axum = {workspace = true}

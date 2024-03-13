@@ -1,18 +1,32 @@
-use crate::client::{keys, query::run_query_command, tx::run_tx};
+use serde::Serialize;
+
+use crate::client::{keys, query::run_query_v2, tx::run_tx};
 
 use super::{
     command::client::ClientCommands,
-    handlers::{AuxHandler, QueryHandler, TxHandler},
+    handlers::{AuxHandler, TxHandler},
+    handlers_v2::QueryHandler,
 };
 
 /// A Gears client application.
-pub trait Client: TxHandler + QueryHandler + AuxHandler {}
+pub trait Client: TxHandler + QueryHandler + AuxHandler
+where
+    <Self::QueryResponse as TryFrom<Self::RawQueryResponse>>::Error: std::fmt::Display,
+{
+}
 
-pub struct ClientApplication<Core: Client> {
+pub struct ClientApplication<Core: Client>
+where
+    <Core::QueryResponse as TryFrom<Core::RawQueryResponse>>::Error: std::fmt::Display,
+{
     core: Core,
 }
 
-impl<'a, Core: Client> ClientApplication<Core> {
+impl<'a, Core: Client> ClientApplication<Core>
+where
+    <Core::QueryResponse as TryFrom<Core::RawQueryResponse>>::Error: std::fmt::Display,
+    Core::QueryResponse: Serialize,
+{
     pub fn new(core: Core) -> Self {
         Self { core }
     }
@@ -28,7 +42,7 @@ impl<'a, Core: Client> ClientApplication<Core> {
                 self.core.handle_aux(cmd)?;
             }
             ClientCommands::Tx(cmd) => run_tx(cmd, &self.core)?,
-            ClientCommands::Query(cmd) => run_query_command(cmd, &self.core)?,
+            ClientCommands::Query(cmd) => run_query_v2(cmd, &self.core)?,
             ClientCommands::Keys(cmd) => keys::keys(cmd)?,
         };
 

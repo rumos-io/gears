@@ -13,13 +13,13 @@ where
     <Self::QueryResponse as TryFrom<Self::RawQueryResponse>>::Error: std::fmt::Display,
 {
     type Query: Query;
-    type QueryCommand;
+    type QueryCommands;
     type QueryResponse: Protobuf<Self::RawQueryResponse> + TryFrom<Self::RawQueryResponse>;
     type RawQueryResponse: Message + Default + From<Self::QueryResponse>;
 
     fn prepare_query(
         &self,
-        command: Self::QueryCommand,
+        command: Self::QueryCommands,
         node: &str,
         height: Option<Height>,
     ) -> anyhow::Result<Self::Query>;

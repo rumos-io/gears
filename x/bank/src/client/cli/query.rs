@@ -15,6 +15,7 @@ use proto_messages::cosmos::{
     query::Query,
 };
 use proto_types::AccAddress;
+use serde::Serialize;
 use tendermint::informal::block::Height;
 
 #[derive(Args, Debug)]
@@ -79,11 +80,11 @@ impl QueryHandler for BankQueryHandler {
 
     type QueryResponse = BankQueryResponse;
 
-    type QueryCommand = BankQueryCli;
+    type QueryCommands = BankQueryCli;
 
     fn prepare_query(
         &self,
-        command: Self::QueryCommand,
+        command: Self::QueryCommands,
         _node: &str,
         _height: Option<Height>,
     ) -> anyhow::Result<Self::Query> {
@@ -125,7 +126,7 @@ impl Query for BankQuery {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub enum BankQueryResponse {
     Balances(QueryAllBalancesResponse),
     DenomMetadata(QueryDenomsMetadataResponse),

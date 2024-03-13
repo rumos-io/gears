@@ -6,6 +6,7 @@ use tendermint::informal::block::Height;
 use tendermint::rpc::{Client, HttpClient};
 
 use crate::application::handlers::QueryHandler;
+use crate::application::handlers_v2::QueryHandler as QueryHandlerV2;
 use crate::runtime::runtime;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
@@ -14,6 +15,27 @@ pub struct QueryCommand<C> {
     pub height: Option<Height>,
 
     pub inner: C,
+}
+
+pub fn run_query_v2<Q, QC, QR, RQR, H>(
+    QueryCommand {
+        node,
+        height,
+        inner,
+    }: QueryCommand<QC>,
+    handler: &H,
+) -> anyhow::Result<()>
+where
+    H: QueryHandlerV2<Query = Q, QueryCommands = QC, QueryResponse = QR, RawQueryResponse = RQR>,
+    QR: TryFrom<RQR> + Serialize,
+    <QR as TryFrom<RQR>>::Error: std::fmt::Display,
+{
+    let query = handler.prepare_query(inner, node.as_str(), height.clone())?;
+    let response = handler.handle_query(query, node.as_str(), height)?;
+
+    println!("{}", serde_json::to_string_pretty(&response)?);
+
+    Ok(())
 }
 
 pub fn run_query_command<C, H: QueryHandler<QueryCommands = C>>(

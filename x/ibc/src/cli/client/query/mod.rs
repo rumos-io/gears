@@ -1,4 +1,3 @@
-mod proto;
 use std::borrow::Cow;
 
 use clap::{Args, Subcommand};
@@ -23,6 +22,7 @@ use proto_messages::cosmos::{
     },
     query::Query,
 };
+use serde::Serialize;
 use tendermint::informal::block::Height;
 
 use self::{
@@ -38,10 +38,13 @@ pub mod client_status;
 pub mod consensus_heights;
 pub mod consensus_state;
 pub mod consensus_states;
+mod proto;
 #[allow(dead_code)]
 pub mod query_header;
 #[allow(dead_code)]
 pub mod self_consensus_state;
+
+pub use self::proto::IbcProtoError;
 
 /// Querying commands for the ibc module
 #[derive(Args, Debug)]
@@ -101,13 +104,13 @@ pub struct IbcQueryHandler;
 
 impl QueryHandler for IbcQueryHandler {
     type Query = IbcQuery;
-    type QueryCommand = IbcQueryCli;
+    type QueryCommands = IbcQueryCli;
     type QueryResponse = IbcQueryResponse;
     type RawQueryResponse = RawIbcQueryResponse;
 
     fn prepare_query(
         &self,
-        command: Self::QueryCommand,
+        command: Self::QueryCommands,
         node: &str,
         height: Option<Height>,
     ) -> anyhow::Result<Self::Query> {
@@ -139,6 +142,7 @@ impl QueryHandler for IbcQueryHandler {
     }
 }
 
+#[derive(Clone, PartialEq)]
 pub enum IbcQuery {
     ClientParams(QueryClientParamsRequest),
     ClientState(QueryClientStateRequest),
@@ -175,7 +179,7 @@ impl Query for IbcQuery {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub enum IbcQueryResponse {
     ClientParams(QueryClientParamsResponse),
     ClientState(QueryClientStateResponse),

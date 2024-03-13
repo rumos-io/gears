@@ -1,25 +1,30 @@
 #![warn(rust_2018_idioms)]
 
 use anyhow::Result;
+use auth::cli::query::AuthQueryHandler;
+use bank::cli::query::BankQueryHandler;
 use clap::Parser;
-use client::query_command_handler;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::GaiaTxCommands;
+use gaia_rs::query::GaiaQuery;
+use gaia_rs::query::GaiaQueryResponse;
+use gaia_rs::query::RawGaiaQueryResponse;
 use gaia_rs::GaiaApplication;
 use gears::application::client::Client;
 use gears::application::client::ClientApplication;
 use gears::application::command::NilAux;
 use gears::application::command::NilAuxCommand;
 use gears::application::handlers::AuxHandler;
-use gears::application::handlers::QueryHandler;
 use gears::application::handlers::TxHandler;
+use gears::application::handlers_v2::QueryHandler;
 use gears::application::node::Node;
 use gears::application::node::NodeApplication;
 use gears::application::ApplicationInfo;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
 use genesis::GenesisState;
+use ibc::cli::client::query::IbcQueryHandler;
 use proto_types::AccAddress;
 use rest::get_router;
 
@@ -50,15 +55,33 @@ impl TxHandler for GaiaCore {
 }
 
 impl QueryHandler for GaiaCore {
-    type QueryCommands = client::GaiaQueryCommands;
+    type Query = GaiaQuery;
 
-    fn handle_query_command(
+    type QueryCommands = GaiaQueryCommands;
+
+    type QueryResponse = GaiaQueryResponse;
+
+    type RawQueryResponse = RawGaiaQueryResponse;
+
+    fn prepare_query(
         &self,
         command: Self::QueryCommands,
         node: &str,
         height: Option<tendermint::informal::block::Height>,
-    ) -> Result<()> {
-        query_command_handler(command, node, height)
+    ) -> anyhow::Result<Self::Query> {
+        let res = match command {
+            GaiaQueryCommands::Bank(command) => {
+                Self::Query::Bank(BankQueryHandler.prepare_query(command, node, height)?)
+            }
+            GaiaQueryCommands::Auth(command) => {
+                Self::Query::Auth(AuthQueryHandler.prepare_query(command, node, height)?)
+            }
+            GaiaQueryCommands::Ibc(command) => {
+                Self::Query::Ibc(IbcQueryHandler.prepare_query(command, node, height)?)
+            }
+        };
+
+        Ok(res)
     }
 }
 

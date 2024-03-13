@@ -143,11 +143,11 @@ impl QueryHandler for AuthQueryHandler {
 
     type QueryResponse = AuthQueryResponse;
 
-    type QueryCommand = AuthQueryCli;
+    type QueryCommands = AuthQueryCli;
 
     fn prepare_query(
         &self,
-        command: Self::QueryCommand,
+        command: Self::QueryCommands,
         _node: &str,
         _height: Option<Height>,
     ) -> anyhow::Result<Self::Query> {
