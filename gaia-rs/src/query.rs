@@ -30,7 +30,7 @@ impl Query for GaiaQuery {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum GaiaQueryResponse {
     Auth(AuthQueryResponse),
     Bank(BankQueryResponse),

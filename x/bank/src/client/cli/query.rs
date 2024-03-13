@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::fmt::Debug;
 
 use anyhow::Result;
 use clap::{Args, Subcommand};
@@ -90,7 +91,7 @@ impl Query for BankQuery {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum BankQueryResponse {
     Balances(QueryAllBalancesResponse),
     DenomMetadata(QueryDenomsMetadataResponse),

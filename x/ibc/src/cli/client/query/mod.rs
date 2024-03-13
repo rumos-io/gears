@@ -146,7 +146,7 @@ impl Query for IbcQuery {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 pub enum IbcQueryResponse {
     ClientParams(QueryClientParamsResponse),
     ClientState(QueryClientStateResponse),
