@@ -1,6 +1,6 @@
 use prost::Message;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use proto_messages::cosmos::query::QueryUrl;
+use proto_messages::cosmos::query::Query;
 use serde::Serialize;
 use tendermint::{
     informal::block::Height,
@@ -13,10 +13,10 @@ pub trait QueryHandler
 where
     <Self::QueryResponse as TryFrom<Self::RawQueryResponse>>::Error: std::fmt::Display,
 {
-    type Query: QueryUrl + Message;
-    type RawQueryResponse: Message + Default + std::convert::From<Self::QueryResponse>;
+    type Query: Query;
+    type RawQueryResponse: Message + Default + From<Self::QueryResponse>;
     type QueryResponse: Protobuf<Self::RawQueryResponse>
-        + std::convert::TryFrom<Self::RawQueryResponse>
+        + TryFrom<Self::RawQueryResponse>
         + Serialize;
     type QueryCommand;
 
@@ -30,15 +30,14 @@ where
     fn handle_query(
         &self,
         query: Self::Query,
-        path: String,
         node: &str,
         height: Option<Height>,
     ) -> anyhow::Result<Self::QueryResponse> {
         let client = HttpClient::new(node)?;
 
         let res = runtime().block_on(client.abci_query(
-            Some(path),
-            query.encode_to_vec(),
+            Some(query.query_url().into_owned()),
+            query.as_bytes(),
             height,
             false,
         ))?;
