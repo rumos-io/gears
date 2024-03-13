@@ -38,11 +38,11 @@ where
 
 /// Convenience method for running queries
 pub fn execute_query<
-    Response: Protobuf<Raw> + std::convert::TryFrom<Raw> + Serialize,
+    Response: Protobuf<Raw> + std::convert::TryFrom<Raw>,
     Raw: Message + Default + std::convert::From<Response>,
 >(
-    query_bytes: Vec<u8>,
     path: String,
+    query_bytes: Vec<u8>,
     node: &str,
     height: Option<Height>,
 ) -> Result<Response>

@@ -3,13 +3,12 @@ use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
 use proto_types::AccAddress;
 use tendermint::{
     informal::block::Height,
-    rpc::{Client, HttpClient},
+    rpc::HttpClient,
 };
 
 use crate::{
     client::{query::execute_query, tx::broadcast_tx_commit},
     crypto::{create_signed_transaction, SigningInfo},
-    runtime::runtime,
 };
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
@@ -93,20 +92,7 @@ where
         node: &str,
         height: Option<Height>,
     ) -> anyhow::Result<Self::QueryResponse> {
-        let client = HttpClient::new(node)?;
-
-        let res = runtime().block_on(client.abci_query(
-            Some(query.query_url().into_owned()),
-            query.as_bytes(),
-            height,
-            false,
-        ))?;
-
-        if res.code.is_err() {
-            return Err(anyhow::anyhow!("node returned an error: {}", res.log));
-        }
-
-        Self::QueryResponse::decode(&*res.value).map_err(|e| e.into())
+        execute_query::<Self::QueryResponse, Self::RawQueryResponse>(  query.query_url().into_owned(), query.as_bytes(),  node, height)
     }
 }
 
@@ -131,8 +117,8 @@ fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAc
     let query = QueryAccountRequest { address };
 
     execute_query::<QueryAccountResponse, RawQueryAccountResponse>(
-        query.encode_vec(),
         "/cosmos.auth.v1beta1.Query/Account".into(),
+        query.encode_vec(),
         node,
         None,
     )
