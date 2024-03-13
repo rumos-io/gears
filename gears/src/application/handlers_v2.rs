@@ -13,9 +13,9 @@ where
     <Self::QueryResponse as TryFrom<Self::RawQueryResponse>>::Error: std::fmt::Display,
 {
     type Query: Query;
-    type RawQueryResponse: Message + Default + From<Self::QueryResponse>;
-    type QueryResponse: Protobuf<Self::RawQueryResponse> + TryFrom<Self::RawQueryResponse>;
     type QueryCommand;
+    type QueryResponse: Protobuf<Self::RawQueryResponse> + TryFrom<Self::RawQueryResponse>;
+    type RawQueryResponse: Message + Default + From<Self::QueryResponse>;
 
     fn prepare_query(
         &self,

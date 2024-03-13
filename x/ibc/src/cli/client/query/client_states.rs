@@ -7,11 +7,21 @@ use proto_messages::cosmos::ibc::{
 };
 use tendermint::informal::block::Height;
 
+pub(crate) const STATES_URL: &str = "/ibc.core.client.v1.Query/ClientStates";
+
 #[derive(Args, Debug, Clone)]
-pub struct CliClientParams; // TODO: pagination
+pub struct CliClientStates; // TODO: pagination
+
+pub(super) fn handle_query(
+    _args: CliClientStates,
+    _node: &str,
+    _height: Option<Height>,
+) -> QueryClientStatesRequest {
+    QueryClientStatesRequest { pagination: None }
+}
 
 pub(super) fn query_command_handler(
-    _args: CliClientParams,
+    _args: CliClientStates,
     node: &str,
     height: Option<Height>,
 ) -> anyhow::Result<String> {

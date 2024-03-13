@@ -7,13 +7,25 @@ use proto_messages::cosmos::ibc::{
 };
 use tendermint::informal::block::Height;
 
+pub(crate) const STATE_URL: &str = "/ibc.core.client.v1.Query/UpgradedClientState";
+
 #[derive(Args, Debug, Clone)]
-pub struct CliClientParams {
+pub struct CliClientState {
     client_id: String,
 }
 
+pub(super) fn handle_query(
+    args: CliClientState,
+    _node: &str,
+    _height: Option<Height>,
+) -> QueryClientStateRequest {
+    QueryClientStateRequest {
+        client_id: args.client_id,
+    }
+}
+
 pub(super) fn query_command_handler(
-    args: CliClientParams,
+    args: CliClientState,
     node: &str,
     height: Option<Height>,
 ) -> anyhow::Result<String> {
