@@ -1,4 +1,4 @@
-use auth::signing::renderer::value_renderer::ValueRenderer;
+use auth::signing::renderer::value_renderer::{Error, ValueRenderer};
 use bytes::Bytes;
 use proto_messages::cosmos::bank::v1beta1::MsgSend;
 use proto_messages::cosmos::tx::v1beta1::screen::Screen;
@@ -19,7 +19,7 @@ impl ValueRenderer for Message {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         match self {
             Message::Send(msg) => msg.format(get_metadata),
         }

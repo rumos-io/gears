@@ -1,19 +1,21 @@
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
+use proto_messages::cosmos::tx::v1beta1::screen::Content;
 use proto_types::Decimal256;
 
 impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
-    fn format(value: Decimal256) -> String {
+    fn format(value: Decimal256) -> Content {
         let int_part = value.to_uint_floor();
-        let formatted_int = DefaultPrimitiveRenderer::format(int_part);
+        let int_part_content = DefaultPrimitiveRenderer::format(int_part);
 
         let value = value.to_string();
         let parts = value.split('.').collect::<Vec<_>>();
         let dec_part = parts.get(1); // there will always be an int part before the decimal point
 
         if let Some(dec_part) = dec_part {
-            format!("{formatted_int}.{dec_part}")
+            let formatted_int = int_part_content.into_inner();
+            Content::new(format!("{formatted_int}.{dec_part}")).expect("this String is not empty")
         } else {
-            formatted_int
+            int_part_content
         }
     }
 }
@@ -22,6 +24,7 @@ impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
 mod tests {
     use std::str::FromStr;
 
+    use proto_messages::cosmos::tx::v1beta1::screen::Content;
     use proto_types::Decimal256;
 
     use crate::signing::renderer::value_renderer::{
@@ -47,7 +50,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(Decimal256::from_str(i).unwrap());
 
-            assert_eq!(expected, &actual);
+            assert_eq!(Content::new(expected).unwrap(), actual);
         }
     }
 }

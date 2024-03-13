@@ -1,29 +1,34 @@
-use proto_messages::cosmos::tx::v1beta1::{
-    screen::{Content, Screen},
-    tip::Tip,
-    tx_metadata::Metadata,
-};
+use proto_messages::cosmos::tx::v1beta1::{screen::Screen, tip::Tip, tx_metadata::Metadata};
 use proto_types::Denom;
 
-use crate::signing::renderer::value_renderer::ValueRenderer;
+use crate::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, TryPrimitiveValueRendererWithMetadata,
+    ValueRenderer,
+};
 
 impl ValueRenderer for Tip {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         let Tip { amount, tipper } = &self;
 
         if let Some(amount) = amount {
-            let mut screens = ValueRenderer::format(amount, get_metadata)?;
-            screens
-                .get_mut(0)
-                .expect("vec will always contain exactly one element")
-                .title = "Fees".to_string();
+            let mut screens = Vec::<Screen>::with_capacity(2);
+
+            screens.push(Screen {
+                title: "Fees".to_string(),
+                content: DefaultPrimitiveRenderer::try_format_with_metadata(
+                    amount.to_owned(),
+                    get_metadata,
+                )?,
+                indent: None,
+                expert: false,
+            });
 
             screens.push(Screen {
                 title: "Tipper".to_string(),
-                content: Content::new(tipper.as_hex())?,
+                content: DefaultPrimitiveRenderer::format(tipper.to_owned()),
                 indent: None,
                 expert: false,
             });
@@ -85,7 +90,7 @@ mod tests {
             },
             Screen {
                 title: "Tipper".to_string(),
-                content: Content::new(tip.tipper.as_hex())?,
+                content: Content::new(tip.tipper.clone())?,
                 indent: None,
                 expert: false,
             },

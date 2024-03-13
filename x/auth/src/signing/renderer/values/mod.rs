@@ -1,10 +1,8 @@
 pub mod auth_info;
-pub mod coin;
 pub mod fee;
 pub mod mode_info;
 pub mod public_key_enum;
 pub mod secp256_pubkey;
-pub mod send_coins;
 pub mod signer_data;
 pub mod signer_info;
 pub mod textual_data;

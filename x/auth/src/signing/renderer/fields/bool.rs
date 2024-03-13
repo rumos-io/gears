@@ -1,13 +1,15 @@
 //! Default formatting implementation for bool
 
+use proto_messages::cosmos::tx::v1beta1::screen::Content;
+
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
 impl PrimitiveValueRenderer<bool> for DefaultPrimitiveRenderer {
-    fn format(value: bool) -> String {
+    fn format(value: bool) -> Content {
         if value {
-            "True".to_string()
+            Content::new("True").expect("hard coded String is not empty")
         } else {
-            "False".to_string()
+            Content::new("False").expect("hard coded String is not empty")
         }
     }
 }

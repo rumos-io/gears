@@ -19,8 +19,7 @@ impl SignModeHandler {
         signer_data: SignerData,
         tx_data: TxData<impl Message + ValueRenderer>,
     ) -> Result<Vec<u8>, SigningErrors> {
-        let data = TextualData::new(signer_data, tx_data)
-            .map_err(|e| SigningErrors::CustomError(e.to_string()))?;
+        let data = TextualData::new(signer_data, tx_data);
 
         let screens = data
             .format(get_metadata)
@@ -57,12 +56,13 @@ mod tests {
             mode_info::{ModeInfo, SignMode},
             screen::{Content, Indent, Screen},
             signer::SignerInfo,
-            signer_data::{ChainId, SignerData},
+            signer_data::SignerData,
             tx_body::TxBody,
             tx_data::TxData,
         },
     };
     use proto_types::{AccAddress, Denom, Uint256};
+    use tendermint::informal::chain::Id;
 
     use crate::signing::{handler::SignModeHandler, renderer::get_metadata};
 
@@ -98,7 +98,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
-            chain_id: ChainId::new("my-chain".to_string())?,
+            chain_id: Id::try_from("my-chain".to_string()).expect("this is a valid chain id"),
             account_number: 1,
             sequence: 2,
             pub_key: serde_json::from_str(
@@ -291,7 +291,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z")?,
-            chain_id: ChainId::new("test-chain".to_string())?,
+            chain_id: Id::try_from("test-chain".to_string()).expect("this is a valid chain id"),
             account_number: 8,
             sequence: 6,
             pub_key: serde_json::from_str(
@@ -397,7 +397,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z")?,
-            chain_id: ChainId::new("test-chain".to_string())?,
+            chain_id: Id::try_from("test-chain".to_string()).expect("this is a valid chain id"),
             account_number: 8,
             sequence: 13,
             pub_key: serde_json::from_str(

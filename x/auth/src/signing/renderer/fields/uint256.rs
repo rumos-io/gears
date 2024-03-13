@@ -4,6 +4,7 @@ use std::str::FromStr;
 
 use num_bigint::BigUint;
 use num_format::WriteFormatted;
+use proto_messages::cosmos::tx::v1beta1::screen::Content;
 use proto_types::Uint256;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
@@ -11,19 +12,20 @@ use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, Primiti
 use super::i64::format_get;
 
 impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
-    fn format(value: Uint256) -> String {
+    fn format(value: Uint256) -> Content {
         let value = BigUint::from_str(&value.to_string())
             .expect("the Uint256 to_string format can always be parsed to a BigUint");
 
         // Small comment: For this num we required to use heap allocated buffer
         let mut buf = String::new();
         let _ = buf.write_formatted(&value, format_get()); // writing into `String` never fails.
-        buf
+        Content::new(buf).expect("String will never be empty")
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use proto_messages::cosmos::tx::v1beta1::screen::Content;
     use proto_types::Uint256;
 
     use crate::signing::renderer::value_renderer::{
@@ -50,7 +52,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(Uint256::from(i));
 
-            assert_eq!(expected, &actual);
+            assert_eq!(Content::new(expected).unwrap(), actual);
         }
     }
 }

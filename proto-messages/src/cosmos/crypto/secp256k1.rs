@@ -12,7 +12,7 @@ pub mod v1beta1 {
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
     use sha2::{Digest, Sha256};
 
-    use crate::Error;
+    use crate::{cosmos::tx::v1beta1::public_key::SigningError, Error};
 
     pub use secp256k1::PublicKey as Secp256k1PubKey;
 
@@ -87,7 +87,7 @@ pub mod v1beta1 {
             &self,
             message: impl AsRef<[u8]>,
             signature: impl AsRef<[u8]>,
-        ) -> Result<(), Box<dyn std::error::Error>> {
+        ) -> Result<(), SigningError> {
             //TODO: secp256k1 lib cannot be used for bitcoin sig verification
             let signature = Signature::from_compact(signature.as_ref())?;
             let message = Message::from_hashed_data::<sha256::Hash>(message.as_ref());

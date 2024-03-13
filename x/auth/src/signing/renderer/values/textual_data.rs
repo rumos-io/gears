@@ -2,20 +2,25 @@ use proto_messages::cosmos::{
     ibc::protobuf::Protobuf,
     tx::v1beta1::{
         message::Message,
-        screen::{Content, Indent, Screen},
+        screen::{Indent, Screen},
         textual_data::TextualData,
         tx_metadata::Metadata,
     },
 };
 use proto_types::Denom;
 
-use crate::signing::{hasher::hash_get, renderer::value_renderer::ValueRenderer};
+use crate::signing::{
+    hasher::hash_get,
+    renderer::value_renderer::{
+        DefaultPrimitiveRenderer, Error, TryPrimitiveValueRenderer, ValueRenderer,
+    },
+};
 
 impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         let TextualData {
             body,
             auth_info,
@@ -32,10 +37,11 @@ impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
         // Transaction message section
         screens.push(Screen {
             title: String::new(),
-            content: Content::new(match messages_count {
+            content: DefaultPrimitiveRenderer::try_format(match messages_count {
                 1 => format!("This transaction has 1 Message"),
                 _ => format!("This transaction has {} Messages", body.messages.len()),
-            })?,
+            })
+            .expect("hard coded Strings are not empty"),
             indent: None,
             expert: false,
         });
@@ -43,19 +49,20 @@ impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
         for (i, ms) in body.messages.iter().enumerate() {
             screens.push(Screen {
                 title: format!("Message ({}/{messages_count})", i + 1),
-                content: Content::new(ms.type_url().to_string())?,
-                indent: Some(Indent::new(1)?),
+                content: DefaultPrimitiveRenderer::try_format(ms.type_url().to_string())?,
+                indent: Some(Indent::one()),
                 expert: false,
             });
             screens.append(&mut ValueRenderer::format(ms, get_metadata)?);
         }
         screens.push(Screen {
             title: String::new(),
-            content: Content::new("End of Message".to_string())?,
+            content: DefaultPrimitiveRenderer::try_format("End of Message".to_string())
+                .expect("hard coded String is not empty"),
             indent: None,
             expert: false,
         });
-        if let Ok(memo) = Content::new(body.memo.clone()) {
+        if let Ok(memo) = DefaultPrimitiveRenderer::try_format(body.memo.clone()) {
             screens.push(Screen {
                 title: "Memo".to_string(),
                 content: memo,
@@ -73,7 +80,7 @@ impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
 
         screens.push(Screen {
             title: "Hash of raw bytes".to_string(),
-            content: Content::new(hash_get(&body_bytes, &auth_info_bytes))?,
+            content: DefaultPrimitiveRenderer::try_format(hash_get(&body_bytes, &auth_info_bytes))?,
             indent: None,
             expert: true,
         });
@@ -86,7 +93,7 @@ impl<M: Message + ValueRenderer> ValueRenderer for TextualData<M> {
 mod tests {
     use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
     use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
-    use proto_messages::cosmos::tx::v1beta1::signer_data::{ChainId, SignerData};
+    use proto_messages::cosmos::tx::v1beta1::signer_data::SignerData;
     use proto_messages::cosmos::{
         bank::v1beta1::MsgSend,
         base::v1beta1::{Coin, SendCoins},
@@ -100,6 +107,7 @@ mod tests {
         },
     };
     use proto_types::{AccAddress, Denom, Uint256};
+    use tendermint::informal::chain::Id;
 
     use crate::signing::renderer::value_renderer::ValueRenderer;
     use crate::signing::renderer::values::test_functions::get_metadata;
@@ -153,7 +161,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
-            chain_id: ChainId::new("my-chain".to_string())?,
+            chain_id: Id::try_from("my-chain".to_string()).expect("this is a valid chain id"),
             account_number: 1,
             sequence: 2,
             pub_key: serde_json::from_str(
@@ -189,7 +197,7 @@ mod tests {
             auth_info: auth_info,
         };
 
-        let data = TextualData::new(signer_data, tx_data)?;
+        let data = TextualData::new(signer_data, tx_data);
 
         Ok(data)
     }
@@ -229,7 +237,7 @@ mod tests {
             Screen {
                 title: "Key".to_string(),
                 content: Content::new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
-                indent: Some(Indent::new(1)?),
+                indent: Some(Indent::one()),
                 expert: true,
             },
             Screen {
@@ -241,25 +249,25 @@ mod tests {
             Screen {
                 title: "Message (1/1)".to_string(),
                 content: Content::new("/cosmos.bank.v1beta1.MsgSend")?,
-                indent: Some(Indent::new(1)?),
+                indent: Some(Indent::one()),
                 expert: false,
             },
             Screen {
                 title: "From address".to_string(),
                 content: Content::new("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
-                indent: Some(Indent::new(2)?),
+                indent: Some(Indent::two()),
                 expert: false,
             },
             Screen {
                 title: "To address".to_string(),
                 content: Content::new("cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t")?,
-                indent: Some(Indent::new(2)?),
+                indent: Some(Indent::two()),
                 expert: false,
             },
             Screen {
                 title: "Amount".to_string(),
                 content: Content::new("10 ATOM")?,
-                indent: Some(Indent::new(2)?),
+                indent: Some(Indent::two()),
                 expert: false,
             },
             Screen {

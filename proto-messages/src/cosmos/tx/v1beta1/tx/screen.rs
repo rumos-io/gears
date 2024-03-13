@@ -25,6 +25,16 @@ pub struct Content(String);
 )]
 pub struct Indent(u8);
 
+impl Indent {
+    pub fn one() -> Indent {
+        Indent::new(1).expect("indent is less than 16")
+    }
+
+    pub fn two() -> Indent {
+        Indent::new(2).expect("indent is less than 16")
+    }
+}
+
 /// Screen is the abstract unit of Textual rendering.
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Screen {

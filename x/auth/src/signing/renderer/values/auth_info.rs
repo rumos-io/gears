@@ -5,13 +5,13 @@ use proto_messages::cosmos::tx::v1beta1::{
 };
 use proto_types::Denom;
 
-use crate::signing::renderer::value_renderer::ValueRenderer;
+use crate::signing::renderer::value_renderer::{Error, ValueRenderer};
 
 impl ValueRenderer for AuthInfo {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         let AuthInfo {
             signer_infos,
             fee,
@@ -33,7 +33,8 @@ impl ValueRenderer for AuthInfo {
                 content: Content::new(match signer_count {
                     1 => format!("1 SignerInfo"),
                     _ => format!("{signer_count} SignerInfos"),
-                })?,
+                })
+                .expect("hard coded string is not empty"),
                 indent: None,
                 expert: true,
             });
@@ -41,8 +42,9 @@ impl ValueRenderer for AuthInfo {
             for (i, info) in signer_infos.iter().enumerate() {
                 final_screens.push(Screen {
                     title: format!("Other signer ({}/{signer_count})", i + 1),
-                    content: Content::new("SignerInfo object")?,
-                    indent: Some(Indent::new(1)?),
+                    content: Content::new("SignerInfo object")
+                        .expect("hard coded string is not empty"),
+                    indent: Some(Indent::one()),
                     expert: true,
                 });
                 final_screens.append(&mut ValueRenderer::format(info, get_metadata)?);
@@ -50,7 +52,8 @@ impl ValueRenderer for AuthInfo {
 
             final_screens.push(Screen {
                 title: String::new(),
-                content: Content::new("End of Other signer")?,
+                content: Content::new("End of Other signer")
+                    .expect("hard coded string is not empty"),
                 indent: None,
                 expert: true,
             });

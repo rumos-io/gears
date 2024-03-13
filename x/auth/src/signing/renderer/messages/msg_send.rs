@@ -1,15 +1,16 @@
-use std::error::Error;
-
 use proto_messages::cosmos::{
     bank::v1beta1::MsgSend,
     tx::v1beta1::{
-        screen::{Content, Indent, Screen},
+        screen::{Indent, Screen},
         tx_metadata::Metadata,
     },
 };
 use proto_types::Denom;
 
-use crate::signing::renderer::value_renderer::ValueRenderer;
+use crate::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, TryPrimitiveValueRendererWithMetadata,
+    ValueRenderer,
+};
 
 impl ValueRenderer for MsgSend {
     /// Format `MsgSend` with `MessageDefaultRenderer`
@@ -40,30 +41,32 @@ impl ValueRenderer for MsgSend {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         let mut screens_vec = Vec::new();
 
         screens_vec.push(Screen {
             title: "From address".to_string(),
-            content: Content::new(self.from_address.clone())?,
-            indent: Some(Indent::new(2)?),
+            content: DefaultPrimitiveRenderer::format(self.from_address.clone()),
+            indent: Some(Indent::two()),
             expert: false,
         });
 
         screens_vec.push(Screen {
             title: "To address".to_string(),
-            content: Content::new(self.to_address.to_string())?,
-            indent: Some(Indent::new(2)?),
+            content: DefaultPrimitiveRenderer::format(self.to_address.clone()),
+            indent: Some(Indent::two()),
             expert: false,
         });
 
-        let mut amount = ValueRenderer::format(&self.amount, get_metadata)?
-            .get(0)
-            .expect("this vec always contains exactly one element")
-            .clone();
-        amount.title = "Amount".to_string();
-        amount.indent = Some(Indent::new(2)?);
-        screens_vec.push(amount);
+        screens_vec.push(Screen {
+            title: "Amount".to_string(),
+            content: DefaultPrimitiveRenderer::try_format_with_metadata(
+                self.amount.to_owned(),
+                get_metadata,
+            )?,
+            indent: Some(Indent::two()),
+            expert: false,
+        });
 
         Ok(screens_vec)
     }

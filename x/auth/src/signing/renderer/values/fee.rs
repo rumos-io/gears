@@ -1,19 +1,16 @@
-use proto_messages::cosmos::tx::v1beta1::{
-    fee::Fee,
-    screen::{Content, Screen},
-    tx_metadata::Metadata,
-};
+use proto_messages::cosmos::tx::v1beta1::{fee::Fee, screen::Screen, tx_metadata::Metadata};
 use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
+    DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, TryPrimitiveValueRenderer,
+    TryPrimitiveValueRendererWithMetadata, ValueRenderer,
 };
 
 impl ValueRenderer for Fee {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         let Fee {
             amount,
             gas_limit,
@@ -22,23 +19,28 @@ impl ValueRenderer for Fee {
         } = &self;
 
         let mut screens = Vec::<Screen>::new();
+
         if let Some(amount) = amount {
-            let mut amount_screens = ValueRenderer::format(amount, get_metadata)?;
-            let amount = amount_screens
-                .get_mut(0)
-                .expect("this vec always contains exactly one element");
-            amount.title = "Fees".to_string();
-            screens.append(&mut amount_screens);
+            screens.push(Screen {
+                title: "Fees".to_string(),
+                content: DefaultPrimitiveRenderer::try_format_with_metadata(
+                    amount.to_owned(),
+                    get_metadata,
+                )?,
+                indent: None,
+                expert: false,
+            });
         }
+
         if let Some(payer) = payer {
             screens.push(Screen {
                 title: "Fee payer".to_string(),
-                content: Content::new(payer.as_hex())?,
+                content: DefaultPrimitiveRenderer::format(payer.to_owned()),
                 indent: None,
                 expert: true,
             });
         }
-        if let Ok(granter) = Content::new(granter) {
+        if let Ok(granter) = DefaultPrimitiveRenderer::try_format(granter.to_owned()) {
             screens.push(Screen {
                 title: "Fee granter".to_string(),
                 content: granter,
@@ -49,7 +51,7 @@ impl ValueRenderer for Fee {
 
         screens.push(Screen {
             title: "Gas limit".to_string(),
-            content: Content::new(DefaultPrimitiveRenderer::format(*gas_limit))?,
+            content: DefaultPrimitiveRenderer::format(*gas_limit),
             indent: None,
             expert: true,
         });
@@ -155,7 +157,7 @@ mod tests {
             },
             Screen {
                 title: "Fee payer".to_string(),
-                content: Content::new(fee.payer.clone().unwrap().as_hex())?,
+                content: Content::new(fee.payer.clone().unwrap())?,
                 indent: None,
                 expert: true,
             },
@@ -198,7 +200,7 @@ mod tests {
             },
             Screen {
                 title: "Fee payer".to_string(),
-                content: Content::new(fee.payer.clone().unwrap().as_hex())?,
+                content: Content::new("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs").unwrap(),
                 indent: None,
                 expert: true,
             },

@@ -1,13 +1,15 @@
 use proto_messages::cosmos::{
     crypto::secp256k1::v1beta1::PubKey,
     tx::v1beta1::{
-        screen::{Content, Indent, Screen},
+        screen::{Indent, Screen},
         tx_metadata::Metadata,
     },
 };
 use proto_types::Denom;
 
-use crate::signing::renderer::value_renderer::ValueRenderer;
+use crate::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, Error, TryPrimitiveValueRenderer, ValueRenderer,
+};
 
 const TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
@@ -15,18 +17,20 @@ impl ValueRenderer for PubKey {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         _get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         Ok(vec![
             Screen {
                 title: "Public key".to_string(),
-                content: Content::new(TYPE_URL)?,
+                content: DefaultPrimitiveRenderer::try_format(TYPE_URL)
+                    .expect("hard coded type URL is not empty"),
                 indent: None,
                 expert: true,
             },
             Screen {
                 title: "Key".to_string(),
-                content: Content::new(self.formatted_address())?,
-                indent: Some(Indent::new(1)?),
+                content: DefaultPrimitiveRenderer::try_format(self.formatted_address())
+                    .expect("address is not empty so it will never fail to parse"),
+                indent: Some(Indent::one()),
                 expert: true,
             },
         ])
@@ -63,7 +67,7 @@ mod tests {
             Screen {
                 title: "Key".to_string(),
                 content: Content::new("02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D")?,
-                indent: Some(Indent::new(1)?),
+                indent: Some(Indent::one()),
                 expert: true,
             },
         ];

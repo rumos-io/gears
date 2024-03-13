@@ -15,7 +15,7 @@ use proto_messages::cosmos::{
     tx::v1beta1::{
         message::Message,
         mode_info::{ModeInfo, SignMode},
-        signer_data::{ChainId, SignerData},
+        signer_data::SignerData,
         tx::tx::Tx,
         tx_data::TxData,
         tx_metadata::Metadata,
@@ -294,15 +294,10 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
             let sign_bytes = match &signature_data.mode_info {
                 ModeInfo::Single(mode) => match mode {
-                    SignMode::Unspecified => {
-                        return Err(AppError::TxValidation(
-                            "unspecified sign mode not supported".to_string(),
-                        ));
-                    }
                     SignMode::Direct => SignDoc {
                         body_bytes: tx.raw.body_bytes.clone(),
                         auth_info_bytes: tx.raw.auth_info_bytes.clone(),
-                        chain_id: ctx.get_chain_id().to_owned(),
+                        chain_id: ctx.get_chain_id().to_string(),
                         account_number: acct.get_account_number(),
                     }
                     .encode_to_vec(),
@@ -311,7 +306,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
                         let signer_data = SignerData {
                             address: signer.to_owned(),
-                            chain_id: ChainId::new(ctx.get_chain_id().to_owned()).unwrap(), //TODO: remove unwrap
+                            chain_id: ctx.get_chain_id().to_owned(),
                             account_number: acct.get_account_number(),
                             sequence: account_seq,
                             pub_key: public_key.to_owned(),
@@ -344,7 +339,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
             public_key
                 .verify_signature(&sign_bytes, &signature_data.signature)
-                .map_err(|_| AppError::TxValidation("invalid signature".to_string()))?;
+                .map_err(|e| AppError::TxValidation(format!("invalid signature: {}", e)))?;
         }
 
         Ok(())

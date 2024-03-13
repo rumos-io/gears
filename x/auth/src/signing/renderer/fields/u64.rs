@@ -1,17 +1,18 @@
 //! Default formatting implementation for `u64`
 
 use num_format::Buffer;
+use proto_messages::cosmos::tx::v1beta1::screen::Content;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
 use super::i64::format_get;
 
 impl PrimitiveValueRenderer<u64> for DefaultPrimitiveRenderer {
-    fn format(value: u64) -> String {
+    fn format(value: u64) -> Content {
         let mut buf = Buffer::new();
         buf.write_formatted(&value, format_get());
 
-        buf.to_string()
+        Content::new(buf.to_string()).expect("String will never be empty")
     }
 }
 
@@ -41,7 +42,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(i);
 
-            assert_eq!(expected, &actual);
+            assert_eq!(expected, &actual.into_inner());
         }
     }
 }

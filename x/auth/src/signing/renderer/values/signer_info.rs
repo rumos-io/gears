@@ -1,19 +1,19 @@
 use proto_messages::cosmos::tx::v1beta1::{
-    screen::{Content, Indent, Screen},
+    screen::{Indent, Screen},
     signer::SignerInfo,
     tx_metadata::Metadata,
 };
 use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, PrimitiveValueRenderer, ValueRenderer,
+    DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, ValueRenderer,
 };
 
 impl ValueRenderer for SignerInfo {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Screen>, Error> {
         let SignerInfo {
             public_key,
             mode_info,
@@ -29,8 +29,8 @@ impl ValueRenderer for SignerInfo {
 
         final_screens.push(Screen {
             title: "Sequence".to_string(),
-            content: Content::new(DefaultPrimitiveRenderer::format(*sequence))?,
-            indent: Some(Indent::new(2)?),
+            content: DefaultPrimitiveRenderer::format(*sequence),
+            indent: Some(Indent::two()),
             expert: true,
         });
 
@@ -73,13 +73,13 @@ mod tests {
             Screen {
                 title: "Key".to_string(),
                 content: Content::new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
-                indent: Some(Indent::new(1)?),
+                indent: Some(Indent::one()),
                 expert: true,
             },
             Screen {
                 title: "Sequence".to_string(),
                 content: Content::new(2.to_string())?,
-                indent: Some(Indent::new(2)?),
+                indent: Some(Indent::two()),
                 expert: true,
             },
         ];

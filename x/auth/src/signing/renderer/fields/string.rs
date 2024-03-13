@@ -1,20 +1,27 @@
-//! This implementation simply returns String without any changes and made for convenient usage as for other types
+use proto_messages::cosmos::tx::v1beta1::screen::Content;
 
+use crate::signing::renderer::value_renderer::Error;
 #[doc(inline)]
-use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
+use crate::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, TryPrimitiveValueRenderer,
+};
 
-// This is unnecessary but let's keep things convenient
-
-// TODO: Will it be good idea to try_parse to some types like `i64`?
-
-impl PrimitiveValueRenderer<&str> for DefaultPrimitiveRenderer {
-    fn format(value: &str) -> String {
-        value.to_string()
+impl TryPrimitiveValueRenderer<&str> for DefaultPrimitiveRenderer {
+    fn try_format(value: &str) -> Result<Content, Error> {
+        if value.is_empty() {
+            Err(Error::Rendering("cannot render empty string".to_string()))
+        } else {
+            Ok(Content::new(value).expect("slice is not empty"))
+        }
     }
 }
 
-impl PrimitiveValueRenderer<String> for DefaultPrimitiveRenderer {
-    fn format(value: String) -> String {
-        value
+impl TryPrimitiveValueRenderer<String> for DefaultPrimitiveRenderer {
+    fn try_format(value: String) -> Result<Content, Error> {
+        if value.is_empty() {
+            Err(Error::Rendering("cannot render empty string".to_string()))
+        } else {
+            Ok(Content::new(value).expect("String is not empty"))
+        }
     }
 }

@@ -3,14 +3,13 @@ use proto_messages::cosmos::tx::v1beta1::{
 };
 use proto_types::Denom;
 
-use crate::signing::renderer::value_renderer::ValueRenderer;
+use crate::signing::renderer::value_renderer::{Error, ValueRenderer};
 
 impl ValueRenderer for PublicKey {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Box<dyn std::error::Error>> {
-        // I prefer to implement formatting for each key in own module to keep things as small as possible
+    ) -> Result<Vec<Screen>, Error> {
         match self {
             PublicKey::Secp256k1(key) => ValueRenderer::format(key, get_metadata),
         }
@@ -47,7 +46,7 @@ mod tests {
             Screen {
                 title: "Key".to_string(),
                 content: Content::new("02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D")?,
-                indent: Some(Indent::new(1)?),
+                indent: Some(Indent::one()),
                 expert: true,
             },
         ];

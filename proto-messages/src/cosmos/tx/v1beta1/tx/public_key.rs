@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{cosmos::crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey, error::Error};
 
+pub type SigningError = secp256k1::Error;
+
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(tag = "@type")]
 pub enum PublicKey {
@@ -26,7 +28,7 @@ impl PublicKey {
         &self,
         message: impl AsRef<[u8]>,
         signature: impl AsRef<[u8]>,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), SigningError> {
         match self {
             PublicKey::Secp256k1(key) => key.verify_signature(message, signature),
         }

@@ -3,11 +3,11 @@ use crate::types::context::tx_context::TxContext;
 use database::{Database, PrefixDB};
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use store_crate::{KVStore, StoreKey};
-use tendermint::informal::abci::Event;
+use tendermint::informal::{abci::Event, chain::Id};
 
 pub trait ContextTrait<T, SK> {
     fn height(&self) -> u64;
-    fn chain_id(&self) -> &str;
+    fn chain_id(&self) -> &Id;
     fn push_event(&mut self, event: Event);
     fn append_events(&mut self, events: Vec<Event>);
     fn metadata_get(&self) -> Metadata;
@@ -32,9 +32,9 @@ impl<T: Database, SK: StoreKey> Context<'_, '_, T, SK> {
         }
     }
 
-    pub fn get_chain_id(&self) -> &str {
+    pub fn get_chain_id(&self) -> &Id {
         match self {
-            Context::TxContext(ctx) => ctx.header.chain_id.as_str(),
+            Context::TxContext(ctx) => &ctx.header.chain_id,
             Context::InitContext(ctx) => &ctx.chain_id,
             Context::DynamicContext(ctx) => ctx.chain_id(),
         }
