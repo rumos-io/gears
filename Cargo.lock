@@ -1576,14 +1576,12 @@ dependencies = [
  "gears",
  "gears-derive",
  "ibc 0.1.0",
- "prost 0.12.3",
  "proto-messages",
  "proto-types",
  "serde",
  "store",
  "strum",
  "tendermint 0.1.0",
- "thiserror",
 ]
 
 [[package]]

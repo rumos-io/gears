@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use crate::client::{keys, query::run_query, tx::run_tx};
 
 use super::{
@@ -23,10 +21,7 @@ impl<'a, Core: Client> ClientApplication<Core> {
     pub fn execute(
         &self,
         command: ClientCommands<Core::AuxCommands, Core::TxCommands, Core::QueryCommands>,
-    ) -> anyhow::Result<()>
-    where
-        <Core as QueryHandler>::QueryResponse: Serialize,
-    {
+    ) -> anyhow::Result<()> {
         match command {
             ClientCommands::Aux(cmd) => {
                 let cmd = self.core.prepare_aux(cmd)?;
