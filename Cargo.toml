@@ -11,7 +11,9 @@ members = [
   "store",
   "x/bank",
   "x/auth",
-  "keyring", "x/ibc", "utils",
+  "keyring", 
+  "x/ibc", 
+  "utils",
 ]
 resolver = "2"
 

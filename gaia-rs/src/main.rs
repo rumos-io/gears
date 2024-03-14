@@ -9,7 +9,6 @@ use client::GaiaQueryCommands;
 use client::GaiaTxCommands;
 use gaia_rs::query::GaiaQuery;
 use gaia_rs::query::GaiaQueryResponse;
-use gaia_rs::query::RawGaiaQueryResponse;
 use gaia_rs::GaiaApplication;
 use gears::application::client::Client;
 use gears::application::client::ClientApplication;
@@ -60,24 +59,47 @@ impl QueryHandler for GaiaCore {
 
     type QueryResponse = GaiaQueryResponse;
 
-    type RawQueryResponse = RawGaiaQueryResponse;
-
-    fn prepare_query(
-        &self,
-        command: Self::QueryCommands,
-        node: &str,
-        height: Option<tendermint::informal::block::Height>,
-    ) -> anyhow::Result<Self::Query> {
+    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
         let res = match command {
             GaiaQueryCommands::Bank(command) => {
-                Self::Query::Bank(BankQueryHandler.prepare_query(command, node, height)?)
+                Self::Query::Bank(BankQueryHandler.prepare_query(command)?)
             }
             GaiaQueryCommands::Auth(command) => {
-                Self::Query::Auth(AuthQueryHandler.prepare_query(command, node, height)?)
+                Self::Query::Auth(AuthQueryHandler.prepare_query(command)?)
             }
             GaiaQueryCommands::Ibc(command) => {
-                Self::Query::Ibc(IbcQueryHandler.prepare_query(command, node, height)?)
+                Self::Query::Ibc(IbcQueryHandler.prepare_query(command)?)
             }
+        };
+
+        Ok(res)
+    }
+
+    fn handle_query(
+        &self,
+        query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let res = match command {
+            GaiaQueryCommands::Bank(command) => {
+                Self::QueryResponse::Bank(BankQueryHandler.handle_query(query_bytes, command)?)
+            }
+            GaiaQueryCommands::Auth(command) => {
+                Self::QueryResponse::Auth(AuthQueryHandler.handle_query(query_bytes, command)?)
+            }
+            GaiaQueryCommands::Ibc(command) => {
+                Self::QueryResponse::Ibc(IbcQueryHandler.handle_query(query_bytes, command)?)
+            }
+        };
+
+        Ok(res)
+    }
+
+    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
+        let res = match query {
+            GaiaQueryResponse::Auth(query) => AuthQueryHandler.render_query(query)?,
+            GaiaQueryResponse::Bank(query) => BankQueryHandler.render_query(query)?,
+            GaiaQueryResponse::Ibc(query) => IbcQueryHandler.render_query(query)?,
         };
 
         Ok(res)
