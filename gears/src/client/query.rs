@@ -3,7 +3,6 @@ use crate::runtime::runtime;
 use anyhow::{anyhow, Result};
 use prost::Message;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use serde::Serialize;
 use tendermint::informal::block::Height;
 use tendermint::rpc::{Client, HttpClient};
 
@@ -15,7 +14,7 @@ pub struct QueryCommand<C> {
     pub inner: C,
 }
 
-pub fn run_query<Q, QC, QR, RQR, H>(
+pub fn run_query<Q, QC, QR, H>(
     QueryCommand {
         node,
         height,
@@ -24,12 +23,13 @@ pub fn run_query<Q, QC, QR, RQR, H>(
     handler: &H,
 ) -> anyhow::Result<()>
 where
-    H: QueryHandler<Query = Q, QueryCommands = QC, QueryResponse = QR, RawQueryResponse = RQR>,
-    QR: TryFrom<RQR> + Serialize,
-    <QR as TryFrom<RQR>>::Error: std::fmt::Display,
+    H: QueryHandler<Query = Q, QueryCommands = QC, QueryResponse = QR>,
+    QR : serde::Serialize,
 {
-    let query = handler.prepare_query(inner, node.as_str(), height.clone())?;
-    let response = handler.handle_query(query, node.as_str(), height)?;
+    let query = handler.prepare_query(inner)?;
+    let query_bytes = handler.execute_query(query, node, height)?;
+
+    let response = handler.handle_query(query_bytes)?;
 
     println!("{}", serde_json::to_string_pretty(&response)?);
 

@@ -3,12 +3,12 @@ use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
 use proto_types::AccAddress;
 use tendermint::{
     informal::block::Height,
-    rpc::HttpClient,
+    rpc::{Client, HttpClient},
 };
 
 use crate::{
     client::{query::execute_query, tx::broadcast_tx_commit},
-    crypto::{create_signed_transaction, SigningInfo},
+    crypto::{create_signed_transaction, SigningInfo}, runtime::runtime,
 };
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
@@ -71,29 +71,33 @@ pub trait TxHandler {
 }
 
 pub trait QueryHandler
-where
-    <Self::QueryResponse as TryFrom<Self::RawQueryResponse>>::Error: std::fmt::Display,
 {
     type Query: Query;
     type QueryCommands;
-    type QueryResponse: Protobuf<Self::RawQueryResponse> + TryFrom<Self::RawQueryResponse>;
-    type RawQueryResponse: prost::Message + Default + From<Self::QueryResponse>;
+    type QueryResponse;
 
     fn prepare_query(
         &self,
         command: Self::QueryCommands,
-        node: &str,
-        height: Option<Height>,
     ) -> anyhow::Result<Self::Query>;
+
+    fn execute_query( &self, query: Self::Query, node: url::Url, height: Option<Height>, ) -> anyhow::Result<Vec<u8>>
+    {
+        let client = HttpClient::new(node.as_str())?;
+
+        let res = runtime().block_on(client.abci_query(Some(query.query_url().into_owned()), query.as_bytes(), height, false))?;
+    
+        if res.code.is_err() {
+            return Err(anyhow::anyhow!("node returned an error: {}", res.log));
+        }
+
+        Ok(res.value)
+    }
 
     fn handle_query(
         &self,
-        query: Self::Query,
-        node: &str,
-        height: Option<Height>,
-    ) -> anyhow::Result<Self::QueryResponse> {
-        execute_query::<Self::QueryResponse, Self::RawQueryResponse>(  query.query_url().into_owned(), query.as_bytes(),  node, height)
-    }
+        query_bytes: Vec<u8>,
+    ) -> anyhow::Result<Self::QueryResponse>;
 }
 
 /// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.

@@ -9,22 +9,15 @@ use super::{
 
 /// A Gears client application.
 pub trait Client: TxHandler + QueryHandler + AuxHandler
-where
-    <Self::QueryResponse as TryFrom<Self::RawQueryResponse>>::Error: std::fmt::Display,
 {
 }
 
 pub struct ClientApplication<Core: Client>
-where
-    <Core::QueryResponse as TryFrom<Core::RawQueryResponse>>::Error: std::fmt::Display,
 {
     core: Core,
 }
 
 impl<'a, Core: Client> ClientApplication<Core>
-where
-    <Core::QueryResponse as TryFrom<Core::RawQueryResponse>>::Error: std::fmt::Display,
-    Core::QueryResponse: Serialize,
 {
     pub fn new(core: Core) -> Self {
         Self { core }
@@ -34,7 +27,7 @@ where
     pub fn execute(
         &self,
         command: ClientCommands<Core::AuxCommands, Core::TxCommands, Core::QueryCommands>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<()> where <Core as QueryHandler>::QueryResponse: Serialize {
         match command {
             ClientCommands::Aux(cmd) => {
                 let cmd = self.core.prepare_aux(cmd)?;
