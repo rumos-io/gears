@@ -24,14 +24,13 @@ pub fn run_query<Q, QC, QR, H>(
 ) -> anyhow::Result<()>
 where
     H: QueryHandler<Query = Q, QueryCommands = QC, QueryResponse = QR>,
-    QR : serde::Serialize,
 {
-    let query = handler.prepare_query(inner)?;
+    let query = handler.prepare_query(&inner)?;
     let query_bytes = handler.execute_query(query, node, height)?;
 
-    let response = handler.handle_query(query_bytes)?;
+    let response = handler.handle_query(query_bytes, &inner)?;
 
-    println!("{}", serde_json::to_string_pretty(&response)?);
+    println!("{}", handler.render_query(response)?);
 
     Ok(())
 }

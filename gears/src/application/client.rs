@@ -8,17 +8,13 @@ use super::{
 };
 
 /// A Gears client application.
-pub trait Client: TxHandler + QueryHandler + AuxHandler
-{
-}
+pub trait Client: TxHandler + QueryHandler + AuxHandler {}
 
-pub struct ClientApplication<Core: Client>
-{
+pub struct ClientApplication<Core: Client> {
     core: Core,
 }
 
-impl<'a, Core: Client> ClientApplication<Core>
-{
+impl<'a, Core: Client> ClientApplication<Core> {
     pub fn new(core: Core) -> Self {
         Self { core }
     }
@@ -27,7 +23,10 @@ impl<'a, Core: Client> ClientApplication<Core>
     pub fn execute(
         &self,
         command: ClientCommands<Core::AuxCommands, Core::TxCommands, Core::QueryCommands>,
-    ) -> anyhow::Result<()> where <Core as QueryHandler>::QueryResponse: Serialize {
+    ) -> anyhow::Result<()>
+    where
+        <Core as QueryHandler>::QueryResponse: Serialize,
+    {
         match command {
             ClientCommands::Aux(cmd) => {
                 let cmd = self.core.prepare_aux(cmd)?;

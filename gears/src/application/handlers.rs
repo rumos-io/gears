@@ -8,7 +8,8 @@ use tendermint::{
 
 use crate::{
     client::{query::execute_query, tx::broadcast_tx_commit},
-    crypto::{create_signed_transaction, SigningInfo}, runtime::runtime,
+    crypto::{create_signed_transaction, SigningInfo},
+    runtime::runtime,
 };
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
@@ -70,23 +71,28 @@ pub trait TxHandler {
     }
 }
 
-pub trait QueryHandler
-{
+pub trait QueryHandler {
     type Query: Query;
     type QueryCommands;
     type QueryResponse;
 
-    fn prepare_query(
-        &self,
-        command: Self::QueryCommands,
-    ) -> anyhow::Result<Self::Query>;
+    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query>;
 
-    fn execute_query( &self, query: Self::Query, node: url::Url, height: Option<Height>, ) -> anyhow::Result<Vec<u8>>
-    {
+    fn execute_query(
+        &self,
+        query: Self::Query,
+        node: url::Url,
+        height: Option<Height>,
+    ) -> anyhow::Result<Vec<u8>> {
         let client = HttpClient::new(node.as_str())?;
 
-        let res = runtime().block_on(client.abci_query(Some(query.query_url().into_owned()), query.as_bytes(), height, false))?;
-    
+        let res = runtime().block_on(client.abci_query(
+            Some(query.query_url().into_owned()),
+            query.as_bytes(),
+            height,
+            false,
+        ))?;
+
         if res.code.is_err() {
             return Err(anyhow::anyhow!("node returned an error: {}", res.log));
         }
@@ -97,7 +103,10 @@ pub trait QueryHandler
     fn handle_query(
         &self,
         query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse>;
+
+    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String>;
 }
 
 /// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.
