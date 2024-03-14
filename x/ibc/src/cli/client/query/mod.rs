@@ -2,17 +2,15 @@ use std::borrow::Cow;
 
 use clap::{Args, Subcommand};
 use gears::application::handlers::QueryHandler;
+use prost::bytes::Bytes;
 use prost::Message;
-use proto_messages::cosmos::ibc::types::core::client::context::types::proto::v1::QueryClientParamsResponse as RawQueryClientParamsResponse;
 use proto_messages::cosmos::{
     ibc::{
+        protobuf::Protobuf,
         query::{
             QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
             QueryClientStatusResponse, QueryConsensusStateHeightsResponse,
-            QueryConsensusStateResponse, QueryConsensusStatesResponse, RawQueryClientStateResponse,
-            RawQueryClientStatesResponse, RawQueryClientStatusResponse,
-            RawQueryConsensusStateHeightsResponse, RawQueryConsensusStateResponse,
-            RawQueryConsensusStatesResponse,
+            QueryConsensusStateResponse, QueryConsensusStatesResponse,
         },
         types::core::client::context::types::proto::v1::{
             QueryClientParamsRequest, QueryClientStateRequest, QueryClientStatesRequest,
@@ -23,7 +21,6 @@ use proto_messages::cosmos::{
     query::Query,
 };
 use serde::Serialize;
-use tendermint::informal::block::Height;
 
 use self::{
     client_params::PARAMS_URL, client_state::STATE_URL, client_states::STATES_URL,
@@ -38,13 +35,10 @@ pub mod client_status;
 pub mod consensus_heights;
 pub mod consensus_state;
 pub mod consensus_states;
-mod proto;
 #[allow(dead_code)]
 pub mod query_header;
 #[allow(dead_code)]
 pub mod self_consensus_state;
-
-pub use self::proto::IbcProtoError;
 
 /// Querying commands for the ibc module
 #[derive(Args, Debug)]
@@ -73,36 +67,77 @@ impl QueryHandler for IbcQueryHandler {
     type Query = IbcQuery;
     type QueryCommands = IbcQueryCli;
     type QueryResponse = IbcQueryResponse;
-    type RawQueryResponse = RawIbcQueryResponse;
 
-    fn prepare_query(
-        &self,
-        command: Self::QueryCommands,
-        node: &str,
-        height: Option<Height>,
-    ) -> anyhow::Result<Self::Query> {
-        let res = match command.command {
+    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+        let res = match &command.command {
             IbcQueryCommands::ClientParams(args) => {
-                Self::Query::ClientParams(client_params::handle_query(args, node, height))
+                Self::Query::ClientParams(client_params::handle_query(args))
             }
             IbcQueryCommands::ClientState(args) => {
-                Self::Query::ClientState(client_state::handle_query(args, node, height))
+                Self::Query::ClientState(client_state::handle_query(args))
             }
             IbcQueryCommands::ClientStates(args) => {
-                Self::Query::ClientStates(client_states::handle_query(args, node, height))
+                Self::Query::ClientStates(client_states::handle_query(args))
             }
             IbcQueryCommands::ClientStatus(args) => {
-                Self::Query::ClientStatus(client_status::handle_query(args, node, height))
+                Self::Query::ClientStatus(client_status::handle_query(args))
             }
             IbcQueryCommands::ConsensusState(args) => {
-                Self::Query::ConsensusState(consensus_state::handle_query(args, node, height))
+                Self::Query::ConsensusState(consensus_state::handle_query(args))
             }
             IbcQueryCommands::ConsensusStates(args) => {
-                Self::Query::ConsensusStates(consensus_states::handle_query(args, node, height))
+                Self::Query::ConsensusStates(consensus_states::handle_query(args))
             }
-            IbcQueryCommands::ConsensusStateHeights(args) => Self::Query::ConsensusStateHeights(
-                consensus_heights::handle_query(args, node, height),
+            IbcQueryCommands::ConsensusStateHeights(args) => {
+                Self::Query::ConsensusStateHeights(consensus_heights::handle_query(args))
+            }
+        };
+
+        Ok(res)
+    }
+
+    fn handle_query(
+        &self,
+        query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let res = match &command.command {
+            // *This is fine*.png
+            IbcQueryCommands::ClientParams(_) => IbcQueryResponse::ClientParams(
+                QueryClientParamsResponse::decode::<Bytes>(query_bytes.into())?,
             ),
+            IbcQueryCommands::ClientState(_) => IbcQueryResponse::ClientState(
+                QueryClientStateResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            IbcQueryCommands::ClientStates(_) => IbcQueryResponse::ClientStates(
+                QueryClientStatesResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            IbcQueryCommands::ClientStatus(_) => IbcQueryResponse::ClientStatus(
+                QueryClientStatusResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            IbcQueryCommands::ConsensusState(_) => IbcQueryResponse::ConsensusState(
+                QueryConsensusStateResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            IbcQueryCommands::ConsensusStates(_) => IbcQueryResponse::ConsensusStates(
+                QueryConsensusStatesResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            IbcQueryCommands::ConsensusStateHeights(_) => IbcQueryResponse::ConsensusStateHeights(
+                QueryConsensusStateHeightsResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+        };
+
+        Ok(res)
+    }
+
+    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
+        let res = match query {
+            IbcQueryResponse::ClientParams(value) => serde_json::to_string_pretty(&value)?,
+            IbcQueryResponse::ClientState(value) => serde_json::to_string_pretty(&value)?,
+            IbcQueryResponse::ClientStates(value) => serde_json::to_string_pretty(&value)?,
+            IbcQueryResponse::ClientStatus(value) => serde_json::to_string_pretty(&value)?,
+            IbcQueryResponse::ConsensusState(value) => serde_json::to_string_pretty(&value)?,
+            IbcQueryResponse::ConsensusStates(value) => serde_json::to_string_pretty(&value)?,
+            IbcQueryResponse::ConsensusStateHeights(value) => serde_json::to_string_pretty(&value)?,
         };
 
         Ok(res)
@@ -155,15 +190,4 @@ pub enum IbcQueryResponse {
     ConsensusState(QueryConsensusStateResponse),
     ConsensusStates(QueryConsensusStatesResponse),
     ConsensusStateHeights(QueryConsensusStateHeightsResponse),
-}
-
-#[derive(Debug, Clone)]
-pub enum RawIbcQueryResponse {
-    ClientParams(RawQueryClientParamsResponse),
-    ClientState(RawQueryClientStateResponse),
-    ClientStates(RawQueryClientStatesResponse),
-    ClientStatus(RawQueryClientStatusResponse),
-    ConsensusState(RawQueryConsensusStateResponse),
-    ConsensusStates(RawQueryConsensusStatesResponse),
-    ConsensusStateHeights(RawQueryConsensusStateHeightsResponse),
 }

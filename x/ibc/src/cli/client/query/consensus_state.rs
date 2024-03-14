@@ -1,7 +1,6 @@
 use clap::Args;
 
 use proto_messages::cosmos::ibc::types::core::client::context::types::proto::v1::QueryConsensusStateRequest;
-use tendermint::informal::block::Height;
 
 pub(crate) const CONSENSUS_STATE_URL: &str = "/ibc.core.client.v1.Query/ConsensusState";
 
@@ -14,17 +13,13 @@ pub struct CliConsensusState {
     pub latest_height: bool,
 }
 
-pub(super) fn handle_query(
-    args: CliConsensusState,
-    _node: &str,
-    _height: Option<Height>,
-) -> QueryConsensusStateRequest {
+pub(super) fn handle_query(args: &CliConsensusState) -> QueryConsensusStateRequest {
     let CliConsensusState {
         client_id,
         revision_number,
         revision_height,
         latest_height,
-    } = args;
+    } = args.clone();
 
     QueryConsensusStateRequest {
         client_id,

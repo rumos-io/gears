@@ -1,7 +1,6 @@
 use clap::Args;
 
 use proto_messages::cosmos::ibc::types::core::client::context::types::proto::v1::QueryClientStatusRequest;
-use tendermint::informal::block::Height;
 
 pub(crate) const STATUS_URL: &str = "/ibc.core.client.v1.Query/ClientStatus";
 
@@ -10,12 +9,8 @@ pub struct CliClientStatus {
     client_id: String,
 }
 
-pub(super) fn handle_query(
-    args: CliClientStatus,
-    _node: &str,
-    _height: Option<Height>,
-) -> QueryClientStatusRequest {
+pub(super) fn handle_query(args: &CliClientStatus) -> QueryClientStatusRequest {
     QueryClientStatusRequest {
-        client_id: args.client_id,
+        client_id: args.client_id.clone(),
     }
 }
