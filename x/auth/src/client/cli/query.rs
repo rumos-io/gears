@@ -91,11 +91,10 @@ impl QueryHandler for AuthQueryHandler {
 
         Ok(res)
     }
-    
+
     fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
-        let res = match query
-        {
-            AuthQueryResponse::Account( value ) => serde_json::to_string_pretty( &value)?,
+        let res = match query {
+            AuthQueryResponse::Account(value) => serde_json::to_string_pretty(&value)?,
         };
 
         Ok(res)
