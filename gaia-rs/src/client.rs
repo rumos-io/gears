@@ -1,16 +1,15 @@
 use anyhow::Result;
-use auth::cli::query::{run_auth_query_command, AuthQueryCli};
+use auth::cli::query::AuthQueryCli;
 use bank::cli::{
-    query::{run_bank_query_command, BankQueryCli},
+    query::BankQueryCli,
     tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
 use ibc::cli::client::{
-    query::{run_ibc_query_command, IbcQueryCli},
+    query::IbcQueryCli,
     tx::{run_ibc_tx_command, IbcTxCli},
 };
 use proto_types::AccAddress;
-use tendermint::informal::block::Height;
 
 use crate::message::Message;
 
@@ -36,19 +35,4 @@ pub enum GaiaQueryCommands {
     /// Querying commands for the auth module
     Auth(AuthQueryCli),
     Ibc(IbcQueryCli),
-}
-
-pub async fn query_command_handler(
-    command: GaiaQueryCommands,
-    node: &str,
-    height: Option<Height>,
-) -> Result<()> {
-    let res = match command {
-        GaiaQueryCommands::Bank(args) => run_bank_query_command(args, node, height).await,
-        GaiaQueryCommands::Auth(args) => run_auth_query_command(args, node, height).await,
-        GaiaQueryCommands::Ibc(args) => run_ibc_query_command(args, node, height).await,
-    }?;
-
-    println!("{}", res);
-    Ok(())
 }

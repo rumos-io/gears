@@ -86,7 +86,10 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
             AppCommands::GenesisAdd(cmd) => {
                 genesis_account::genesis_account_add::<Core::Genesis>(cmd)?
             }
-            AppCommands::Aux(cmd) => self.core.handle_aux_commands(cmd)?,
+            AppCommands::Aux(cmd) => {
+                let cmd = self.core.prepare_aux(cmd)?;
+                self.core.handle_aux(cmd)?;
+            }
         };
 
         Ok(())

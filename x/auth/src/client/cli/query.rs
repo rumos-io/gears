@@ -1,13 +1,15 @@
-use anyhow::Result;
+use std::borrow::Cow;
+
+use bytes::Bytes;
 use clap::{Args, Subcommand};
 
-use gears::client::query::run_query;
-
-use tendermint::informal::block::Height;
+use gears::application::handlers::QueryHandler;
+use serde::{Deserialize, Serialize};
 
 use proto_messages::cosmos::{
     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
-    ibc::{auth::RawQueryAccountResponse, protobuf::Protobuf},
+    ibc::protobuf::Protobuf,
+    query::Query,
 };
 use proto_types::AccAddress;
 
@@ -19,31 +21,78 @@ pub struct AuthQueryCli {
 
 #[derive(Subcommand, Debug)]
 pub enum AuthCommands {
-    /// Query for account by address
-    Account {
-        /// address
-        address: AccAddress,
-    },
+    Account(AccountCommand),
 }
 
-pub async fn run_auth_query_command(
-    args: AuthQueryCli,
-    node: &str,
-    height: Option<Height>,
-) -> Result<String> {
-    match args.command {
-        AuthCommands::Account { address } => {
-            let query = QueryAccountRequest { address };
+/// Query for account by address
+#[derive(Args, Debug, Clone)]
+pub struct AccountCommand {
+    /// address
+    address: AccAddress,
+}
 
-            let res = run_query::<QueryAccountResponse, RawQueryAccountResponse>(
-                query.encode_vec(),
-                "/cosmos.auth.v1beta1.Query/Account".into(),
-                node,
-                height,
-            )
-            .await?;
+#[derive(Clone, PartialEq)]
+pub enum AuthQuery {
+    Account(QueryAccountRequest),
+}
 
-            Ok(serde_json::to_string_pretty(&res)?)
+impl Query for AuthQuery {
+    fn query_url(&self) -> Cow<'static, str> {
+        match self {
+            AuthQuery::Account(_) => Cow::Borrowed("/cosmos.auth.v1beta1.Query/Account"),
         }
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        match self {
+            AuthQuery::Account(cmd) => cmd.encode_vec(),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum AuthQueryResponse {
+    Account(QueryAccountResponse),
+}
+
+#[derive(Debug, Clone)]
+pub struct AuthQueryHandler;
+
+impl QueryHandler for AuthQueryHandler {
+    type QueryRequest = AuthQuery;
+
+    type QueryCommands = AuthQueryCli;
+
+    type QueryResponse = AuthQueryResponse;
+
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
+        let res = match &command.command {
+            AuthCommands::Account(AccountCommand { address }) => {
+                AuthQuery::Account(QueryAccountRequest {
+                    address: address.clone(),
+                })
+            }
+        };
+
+        Ok(res)
+    }
+
+    fn handle_raw_response(
+        &self,
+        query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let res =
+            match command.command {
+                AuthCommands::Account(_) => AuthQueryResponse::Account(
+                    QueryAccountResponse::decode::<Bytes>(query_bytes.into())?,
+                ),
+            };
+
+        Ok(res)
     }
 }

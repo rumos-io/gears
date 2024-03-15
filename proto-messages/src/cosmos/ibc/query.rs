@@ -10,7 +10,7 @@ use super::types::core::client::types::Params;
 use crate::any::Any;
 use crate::cosmos::bank::v1beta1::PageResponse;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryClientParamsResponse {
     pub params: Params,
 }
@@ -39,7 +39,7 @@ impl From<QueryClientParamsResponse> for RawQueryClientParamsResponse {
 
 pub use ibc::core::client::types::proto::v1::QueryClientStateResponse as RawQueryClientStateResponse;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryClientStateResponse {
     pub client_state: Option<Any>,
     pub proof: Vec<u8>,

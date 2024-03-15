@@ -194,12 +194,12 @@ fn open<'a>(
 /// Gets the entry with the given name.
 /// Returns [`Error`] if no entry with the given name can be found.
 pub fn get_key_by_name<S>(
-    name: S,
+    name: &S,
     path: impl AsRef<Path>,
     backend: Backend,
 ) -> Result<KeyPair, Error>
 where
-    S: AsRef<str>,
+    S: AsRef<str> + ?Sized,
 {
     let password = open(&path, false, backend)?;
     let mut path = path.as_ref().join(name.as_ref());

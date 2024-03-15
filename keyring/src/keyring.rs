@@ -62,9 +62,9 @@ where
 }
 
 /// Get a key by name.
-pub fn get_key_by_name<S>(name: S, backend: Backend) -> Result<KeyPair, Error>
+pub fn get_key_by_name<S>(name: &S, backend: Backend) -> Result<KeyPair, Error>
 where
-    S: AsRef<str>,
+    S: AsRef<str> + ?Sized,
 {
     match backend {
         Backend::File(path) => {

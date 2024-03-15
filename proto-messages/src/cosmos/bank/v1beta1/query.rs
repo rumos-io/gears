@@ -111,7 +111,7 @@ impl From<PageRequest> for RawPageRequest {
 }
 
 /// QueryAllBalanceRequest is the request type for the Query/AllBalances RPC method.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct QueryAllBalancesRequest {
     /// address is the address to query balances for.
     pub address: proto_types::AccAddress,
@@ -283,7 +283,7 @@ pub struct RawQueryDenomsMetadataResponse {
 
 /// QueryDenomsMetadataResponse is the response type for the
 /// Query/DenomsMetadata RPC method.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryDenomsMetadataResponse {
     // metadata provides the client information for all the registered tokens.
     pub metadatas: Vec<Metadata>,

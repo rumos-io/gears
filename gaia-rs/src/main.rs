@@ -1,24 +1,28 @@
 #![warn(rust_2018_idioms)]
 
 use anyhow::Result;
+use auth::cli::query::AuthQueryHandler;
+use bank::cli::query::BankQueryHandler;
 use clap::Parser;
-use client::query_command_handler;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::GaiaTxCommands;
+use gaia_rs::query::GaiaQuery;
+use gaia_rs::query::GaiaQueryResponse;
 use gaia_rs::GaiaApplication;
 use gears::application::client::Client;
 use gears::application::client::ClientApplication;
+use gears::application::command::NilAux;
 use gears::application::command::NilAuxCommand;
 use gears::application::handlers::AuxHandler;
-use gears::application::handlers::QueryHandler;
-use gears::application::handlers::TxHandler;
+use gears::application::handlers::{QueryHandler, TxHandler};
 use gears::application::node::Node;
 use gears::application::node::NodeApplication;
 use gears::application::ApplicationInfo;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
 use genesis::GenesisState;
+use ibc::cli::client::query::IbcQueryHandler;
 use proto_types::AccAddress;
 use rest::get_router;
 
@@ -39,7 +43,7 @@ impl TxHandler for GaiaCore {
     type Message = message::Message;
     type TxCommands = client::GaiaTxCommands;
 
-    fn handle_tx_command(
+    fn prepare_tx(
         &self,
         command: Self::TxCommands,
         from_address: AccAddress,
@@ -49,26 +53,59 @@ impl TxHandler for GaiaCore {
 }
 
 impl QueryHandler for GaiaCore {
-    type QueryCommands = client::GaiaQueryCommands;
+    type QueryRequest = GaiaQuery;
 
-    fn handle_query_command(
+    type QueryCommands = GaiaQueryCommands;
+
+    type QueryResponse = GaiaQueryResponse;
+
+    fn prepare_query_request(
         &self,
-        command: Self::QueryCommands,
-        node: &str,
-        height: Option<tendermint::informal::block::Height>,
-    ) -> Result<()> {
-        tokio::runtime::Runtime::new()
-            .expect("unclear why this would ever fail")
-            .block_on(query_command_handler(command, node, height))
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
+        let res = match command {
+            GaiaQueryCommands::Bank(command) => {
+                Self::QueryRequest::Bank(BankQueryHandler.prepare_query_request(command)?)
+            }
+            GaiaQueryCommands::Auth(command) => {
+                Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
+            }
+            GaiaQueryCommands::Ibc(command) => {
+                Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
+            }
+        };
+
+        Ok(res)
+    }
+
+    fn handle_raw_response(
+        &self,
+        query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let res = match command {
+            GaiaQueryCommands::Bank(command) => Self::QueryResponse::Bank(
+                BankQueryHandler.handle_raw_response(query_bytes, command)?,
+            ),
+            GaiaQueryCommands::Auth(command) => Self::QueryResponse::Auth(
+                AuthQueryHandler.handle_raw_response(query_bytes, command)?,
+            ),
+            GaiaQueryCommands::Ibc(command) => {
+                Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
+            }
+        };
+
+        Ok(res)
     }
 }
 
 impl AuxHandler for GaiaCore {
     type AuxCommands = NilAuxCommand;
+    type Aux = NilAux;
 
-    fn handle_aux_commands(&self, _command: Self::AuxCommands) -> Result<()> {
+    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
         println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
-        Ok(())
+        Ok(NilAux)
     }
 }
 

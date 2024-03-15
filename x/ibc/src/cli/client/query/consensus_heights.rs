@@ -1,38 +1,18 @@
 use clap::Args;
-use gears::client::query::run_query;
-use prost::Message;
-use proto_messages::cosmos::ibc::{
-    query::{QueryConsensusStateHeightsResponse, RawQueryConsensusStateHeightsResponse},
-    types::core::client::context::types::proto::v1::QueryConsensusStateHeightsRequest,
-};
-use tendermint::informal::block::Height;
+
+use proto_messages::cosmos::ibc::types::core::client::context::types::proto::v1::QueryConsensusStateHeightsRequest;
+
+pub(crate) const CONSESUS_HEIGHTS_URL: &str = "/ibc.core.client.v1.Query/ConsensusStateHeights";
 
 #[derive(Args, Debug, Clone)]
-pub struct CliClientParams {
+pub struct CliClientHeight {
     // TODO: Pagination
     client_id: String,
 }
 
-pub(super) async fn query_command_handler(
-    args: CliClientParams,
-    node: &str,
-    height: Option<Height>,
-) -> anyhow::Result<String> {
-    let query = QueryConsensusStateHeightsRequest {
-        client_id: args.client_id,
+pub(super) fn handle_query(args: &CliClientHeight) -> QueryConsensusStateHeightsRequest {
+    QueryConsensusStateHeightsRequest {
+        client_id: args.client_id.clone(),
         pagination: None,
-    };
-
-    let result =
-        run_query::<QueryConsensusStateHeightsResponse, RawQueryConsensusStateHeightsResponse>(
-            query.encode_to_vec(),
-            "/ibc.core.client.v1.Query/ConsensusStateHeights".to_owned(),
-            node,
-            height,
-        )
-        .await?;
-
-    let result = serde_json::to_string_pretty(&result)?;
-
-    Ok(result)
+    }
 }
