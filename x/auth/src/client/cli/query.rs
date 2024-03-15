@@ -59,13 +59,13 @@ pub enum AuthQueryResponse {
 pub struct AuthQueryHandler;
 
 impl QueryHandler for AuthQueryHandler {
-    type Query = AuthQuery;
+    type QueryRequest = AuthQuery;
 
     type QueryCommands = AuthQueryCli;
 
     type QueryResponse = AuthQueryResponse;
 
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             AuthCommands::Account(AccountCommand { address }) => {
                 AuthQuery::Account(QueryAccountRequest {
@@ -77,7 +77,7 @@ impl QueryHandler for AuthQueryHandler {
         Ok(res)
     }
 
-    fn handle_query_bytes(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,

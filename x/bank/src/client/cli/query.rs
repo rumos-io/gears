@@ -40,13 +40,13 @@ pub struct BalancesCommand {
 pub struct BankQueryHandler;
 
 impl QueryHandler for BankQueryHandler {
-    type Query = BankQuery;
+    type QueryRequest = BankQuery;
 
     type QueryResponse = BankQueryResponse;
 
     type QueryCommands = BankQueryCli;
 
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             BankCommands::Balances(BalancesCommand { address }) => {
                 BankQuery::Balances(QueryAllBalancesRequest {
@@ -62,7 +62,7 @@ impl QueryHandler for BankQueryHandler {
         Ok(res)
     }
 
-    fn handle_query_bytes(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,

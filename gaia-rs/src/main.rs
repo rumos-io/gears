@@ -53,42 +53,42 @@ impl TxHandler for GaiaCore {
 }
 
 impl QueryHandler for GaiaCore {
-    type Query = GaiaQuery;
+    type QueryRequest = GaiaQuery;
 
     type QueryCommands = GaiaQueryCommands;
 
     type QueryResponse = GaiaQueryResponse;
 
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest> {
         let res = match command {
             GaiaQueryCommands::Bank(command) => {
-                Self::Query::Bank(BankQueryHandler.prepare_query_request(command)?)
+                Self::QueryRequest::Bank(BankQueryHandler.prepare_query_request(command)?)
             }
             GaiaQueryCommands::Auth(command) => {
-                Self::Query::Auth(AuthQueryHandler.prepare_query_request(command)?)
+                Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
             }
             GaiaQueryCommands::Ibc(command) => {
-                Self::Query::Ibc(IbcQueryHandler.prepare_query_request(command)?)
+                Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
             }
         };
 
         Ok(res)
     }
 
-    fn handle_query_bytes(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
         let res = match command {
             GaiaQueryCommands::Bank(command) => {
-                Self::QueryResponse::Bank(BankQueryHandler.handle_query_bytes(query_bytes, command)?)
+                Self::QueryResponse::Bank(BankQueryHandler.handle_raw_response(query_bytes, command)?)
             }
             GaiaQueryCommands::Auth(command) => {
-                Self::QueryResponse::Auth(AuthQueryHandler.handle_query_bytes(query_bytes, command)?)
+                Self::QueryResponse::Auth(AuthQueryHandler.handle_raw_response(query_bytes, command)?)
             }
             GaiaQueryCommands::Ibc(command) => {
-                Self::QueryResponse::Ibc(IbcQueryHandler.handle_query_bytes(query_bytes, command)?)
+                Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
             }
         };
 

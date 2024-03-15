@@ -23,12 +23,12 @@ pub fn run_query<Q, QC, QR, H>(
     handler: &H,
 ) -> anyhow::Result<()>
 where
-    H: QueryHandler<Query = Q, QueryCommands = QC, QueryResponse = QR>,
+    H: QueryHandler<QueryRequest = Q, QueryCommands = QC, QueryResponse = QR>,
 {
     let query = handler.prepare_query_request(&inner)?;
     let query_bytes = handler.execute_query_request(query, node, height)?;
 
-    let response = handler.handle_query_bytes(query_bytes, &inner)?;
+    let response = handler.handle_raw_response(query_bytes, &inner)?;
 
     println!("{}", handler.render_query_response(response)?);
 

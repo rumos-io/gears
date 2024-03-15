@@ -74,21 +74,22 @@ pub trait TxHandler {
 /// Handles query request, serialization and displaying it as `String`
 pub trait QueryHandler {
     /// Query request which contains all information needed for request
-    type Query: Query;
-    /// Additional context to use
+    type QueryRequest: Query;
+    /// Additional context to use. \ 
+    /// In most cases you would expect this to be some sort of cli command
     type QueryCommands;
     /// Serialized response from query request
     type QueryResponse;
 
     /// Prepare query to execute based on input command. 
     /// Return `Self::Query` which should be used in `Self::execute_query` to retrieve raw bytes of query
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query>;
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest>;
 
     /// Executes request to node
     /// Returns raw bytes of `Self::QueryResponse`
     fn execute_query_request(
         &self,
-        query: Self::Query,
+        query: Self::QueryRequest,
         node: url::Url,
         height: Option<Height>,
     ) -> anyhow::Result<Vec<u8>> {
@@ -112,7 +113,7 @@ pub trait QueryHandler {
     /// # Motivation
     /// This method allows to use custom serialization logic without introducing any new trait bound 
     /// and allows to use it with enum which stores all responses from you module
-    fn handle_query_bytes(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,

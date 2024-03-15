@@ -64,39 +64,39 @@ pub enum IbcQueryCommands {
 pub struct IbcQueryHandler;
 
 impl QueryHandler for IbcQueryHandler {
-    type Query = IbcQuery;
+    type QueryRequest = IbcQuery;
     type QueryCommands = IbcQueryCli;
     type QueryResponse = IbcQueryResponse;
 
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             IbcQueryCommands::ClientParams(args) => {
-                Self::Query::ClientParams(client_params::handle_query(args))
+                Self::QueryRequest::ClientParams(client_params::handle_query(args))
             }
             IbcQueryCommands::ClientState(args) => {
-                Self::Query::ClientState(client_state::handle_query(args))
+                Self::QueryRequest::ClientState(client_state::handle_query(args))
             }
             IbcQueryCommands::ClientStates(args) => {
-                Self::Query::ClientStates(client_states::handle_query(args))
+                Self::QueryRequest::ClientStates(client_states::handle_query(args))
             }
             IbcQueryCommands::ClientStatus(args) => {
-                Self::Query::ClientStatus(client_status::handle_query(args))
+                Self::QueryRequest::ClientStatus(client_status::handle_query(args))
             }
             IbcQueryCommands::ConsensusState(args) => {
-                Self::Query::ConsensusState(consensus_state::handle_query(args))
+                Self::QueryRequest::ConsensusState(consensus_state::handle_query(args))
             }
             IbcQueryCommands::ConsensusStates(args) => {
-                Self::Query::ConsensusStates(consensus_states::handle_query(args))
+                Self::QueryRequest::ConsensusStates(consensus_states::handle_query(args))
             }
             IbcQueryCommands::ConsensusStateHeights(args) => {
-                Self::Query::ConsensusStateHeights(consensus_heights::handle_query(args))
+                Self::QueryRequest::ConsensusStateHeights(consensus_heights::handle_query(args))
             }
         };
 
         Ok(res)
     }
 
-    fn handle_query_bytes(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
