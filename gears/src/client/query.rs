@@ -25,12 +25,12 @@ pub fn run_query<Q, QC, QR, H>(
 where
     H: QueryHandler<Query = Q, QueryCommands = QC, QueryResponse = QR>,
 {
-    let query = handler.prepare_query(&inner)?;
-    let query_bytes = handler.execute_query(query, node, height)?;
+    let query = handler.prepare_query_request(&inner)?;
+    let query_bytes = handler.execute_query_request(query, node, height)?;
 
-    let response = handler.handle_query(query_bytes, &inner)?;
+    let response = handler.handle_query_bytes(query_bytes, &inner)?;
 
-    println!("{}", handler.render_query(response)?);
+    println!("{}", handler.render_query_response(response)?);
 
     Ok(())
 }

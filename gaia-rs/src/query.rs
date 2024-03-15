@@ -20,11 +20,11 @@ impl Query for GaiaQuery {
         }
     }
 
-    fn as_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         match self {
-            GaiaQuery::Auth(var) => var.as_bytes(),
-            GaiaQuery::Bank(var) => var.as_bytes(),
-            GaiaQuery::Ibc(var) => var.as_bytes(),
+            GaiaQuery::Auth(var) => var.into_bytes(),
+            GaiaQuery::Bank(var) => var.into_bytes(),
+            GaiaQuery::Ibc(var) => var.into_bytes(),
         }
     }
 }

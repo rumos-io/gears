@@ -71,14 +71,22 @@ pub trait TxHandler {
     }
 }
 
+/// Handles query request, serialization and displaying it as `String`
 pub trait QueryHandler {
+    /// Query request which contains all information needed for request
     type Query: Query;
+    /// Additional context to use
     type QueryCommands;
+    /// Serialized response from query request
     type QueryResponse;
 
-    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query>;
+    /// Prepare query to execute based on input command. 
+    /// Return `Self::Query` which should be used in `Self::execute_query` to retrieve raw bytes of query
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query>;
 
-    fn execute_query(
+    /// Executes request to node
+    /// Returns raw bytes of `Self::QueryResponse`
+    fn execute_query_request(
         &self,
         query: Self::Query,
         node: url::Url,
@@ -88,7 +96,7 @@ pub trait QueryHandler {
 
         let res = runtime().block_on(client.abci_query(
             Some(query.query_url().into_owned()),
-            query.as_bytes(),
+            query.into_bytes(),
             height,
             false,
         ))?;
@@ -100,13 +108,20 @@ pub trait QueryHandler {
         Ok(res.value)
     }
 
-    fn handle_query(
+    /// Handle serialization of query bytes into concrete type. \
+    /// # Motivation
+    /// This method allows to use custom serialization logic without introducing any new trait bound 
+    /// and allows to use it with enum which stores all responses from you module
+    fn handle_query_bytes(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse>;
 
-    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String>;
+    /// Render query into some `String` representation. 
+    /// # Motivation
+    /// This method allows to define custom render logic without introducing any new trait bound
+    fn render_query_response(&self, query: Self::QueryResponse) -> anyhow::Result<String>;
 }
 
 /// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.

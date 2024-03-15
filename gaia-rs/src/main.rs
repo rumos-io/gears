@@ -59,47 +59,47 @@ impl QueryHandler for GaiaCore {
 
     type QueryResponse = GaiaQueryResponse;
 
-    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
         let res = match command {
             GaiaQueryCommands::Bank(command) => {
-                Self::Query::Bank(BankQueryHandler.prepare_query(command)?)
+                Self::Query::Bank(BankQueryHandler.prepare_query_request(command)?)
             }
             GaiaQueryCommands::Auth(command) => {
-                Self::Query::Auth(AuthQueryHandler.prepare_query(command)?)
+                Self::Query::Auth(AuthQueryHandler.prepare_query_request(command)?)
             }
             GaiaQueryCommands::Ibc(command) => {
-                Self::Query::Ibc(IbcQueryHandler.prepare_query(command)?)
+                Self::Query::Ibc(IbcQueryHandler.prepare_query_request(command)?)
             }
         };
 
         Ok(res)
     }
 
-    fn handle_query(
+    fn handle_query_bytes(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
         let res = match command {
             GaiaQueryCommands::Bank(command) => {
-                Self::QueryResponse::Bank(BankQueryHandler.handle_query(query_bytes, command)?)
+                Self::QueryResponse::Bank(BankQueryHandler.handle_query_bytes(query_bytes, command)?)
             }
             GaiaQueryCommands::Auth(command) => {
-                Self::QueryResponse::Auth(AuthQueryHandler.handle_query(query_bytes, command)?)
+                Self::QueryResponse::Auth(AuthQueryHandler.handle_query_bytes(query_bytes, command)?)
             }
             GaiaQueryCommands::Ibc(command) => {
-                Self::QueryResponse::Ibc(IbcQueryHandler.handle_query(query_bytes, command)?)
+                Self::QueryResponse::Ibc(IbcQueryHandler.handle_query_bytes(query_bytes, command)?)
             }
         };
 
         Ok(res)
     }
 
-    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
+    fn render_query_response(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
         let res = match query {
-            GaiaQueryResponse::Auth(query) => AuthQueryHandler.render_query(query)?,
-            GaiaQueryResponse::Bank(query) => BankQueryHandler.render_query(query)?,
-            GaiaQueryResponse::Ibc(query) => IbcQueryHandler.render_query(query)?,
+            GaiaQueryResponse::Auth(query) => AuthQueryHandler.render_query_response(query)?,
+            GaiaQueryResponse::Bank(query) => BankQueryHandler.render_query_response(query)?,
+            GaiaQueryResponse::Ibc(query) => IbcQueryHandler.render_query_response(query)?,
         };
 
         Ok(res)

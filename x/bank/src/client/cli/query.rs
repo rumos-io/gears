@@ -46,7 +46,7 @@ impl QueryHandler for BankQueryHandler {
 
     type QueryCommands = BankQueryCli;
 
-    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
         let res = match &command.command {
             BankCommands::Balances(BalancesCommand { address }) => {
                 BankQuery::Balances(QueryAllBalancesRequest {
@@ -62,7 +62,7 @@ impl QueryHandler for BankQueryHandler {
         Ok(res)
     }
 
-    fn handle_query(
+    fn handle_query_bytes(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
@@ -79,7 +79,7 @@ impl QueryHandler for BankQueryHandler {
         Ok(res)
     }
 
-    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
+    fn render_query_response(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
         let res = match query {
             BankQueryResponse::Balances(value) => serde_json::to_string_pretty(&value)?,
             BankQueryResponse::DenomMetadata(value) => serde_json::to_string_pretty(&value)?,
@@ -105,7 +105,7 @@ impl Query for BankQuery {
         }
     }
 
-    fn as_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         match self {
             BankQuery::Balances(var) => var.encode_vec(),
             BankQuery::DenomMetadata(var) => var.encode_to_vec(),
