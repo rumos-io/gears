@@ -27,8 +27,8 @@ impl KeyringBackend {
 
     pub fn to_keyring_backend<'a>(&self, path: &'a PathBuf) -> keyring::Backend<'a> {
         match self {
-            KeyringBackend::File => keyring::Backend::File(&path),
-            KeyringBackend::Test => keyring::Backend::Test(&path),
+            KeyringBackend::File => keyring::Backend::File(path),
+            KeyringBackend::Test => keyring::Backend::Test(path),
         }
     }
 }

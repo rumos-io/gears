@@ -73,7 +73,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for SendCoins {
                 }
                 _ => format!(
                     "{} {display}",
-                    DefaultPrimitiveRenderer::format(coin.amount.clone())
+                    DefaultPrimitiveRenderer::format(coin.amount)
                 ),
             };
 

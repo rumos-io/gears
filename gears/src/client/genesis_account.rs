@@ -38,7 +38,7 @@ pub fn genesis_account_add<G: SDKGenesis>(cmd: GenesisCommand) -> Result<(), Gen
     let raw_genesis = std::fs::read_to_string(genesis_file_path.clone())?;
     let mut genesis: Genesis<G> = serde_json::from_str(&raw_genesis)?;
     genesis.app_state.add_genesis_account(address, coins)?;
-    std::fs::write(genesis_file_path, &serde_json::to_string_pretty(&genesis)?)?;
+    std::fs::write(genesis_file_path, serde_json::to_string_pretty(&genesis)?)?;
 
     Ok(())
 }

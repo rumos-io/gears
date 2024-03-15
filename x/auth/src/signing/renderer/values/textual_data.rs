@@ -36,7 +36,7 @@ impl<SK: StoreKey, DB: Database, M: Message + ValueRenderer<SK, DB>> ValueRender
         screens.push(Screen {
             title: String::new(),
             content: Content::new(match messages_count {
-                1 => format!("This transaction has 1 Message"),
+                1 => "This transaction has 1 Message".to_string(),
                 _ => format!("This transaction has {} Messages", body.messages.len()),
             })?,
             indent: None,
@@ -194,7 +194,7 @@ mod tests {
 
         let tx_data = TxData::<MsgSend> {
             body: tx_body,
-            auth_info: auth_info,
+            auth_info,
         };
 
         let data = TextualData::new(signer_data, tx_data)?;

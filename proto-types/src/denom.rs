@@ -47,7 +47,7 @@ impl TryFrom<&str> for Denom {
     type Error = Error;
 
     fn try_from(v: &str) -> Result<Self, Self::Error> {
-        if !RE.is_match(&v) {
+        if !RE.is_match(v) {
             return Err(Error::InvalidDenom);
         };
 

@@ -218,11 +218,11 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("atom").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
             Coin {
                 denom: String::from("atom1").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
         ];
         SendCoins::new(coins).unwrap();
@@ -235,7 +235,7 @@ mod tests {
                 )
                 .try_into()
                 .unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
             Coin {
                 denom: String::from(
@@ -252,7 +252,7 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("big").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
             Coin {
                 denom: String::from("bigger").try_into().unwrap(),
@@ -276,7 +276,7 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("tree").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
@@ -297,7 +297,7 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
             Coin {
                 denom: String::from("true").try_into().unwrap(),
@@ -317,7 +317,7 @@ mod tests {
         // not positive
         let coins = vec![Coin {
             denom: String::from("truer").try_into().unwrap(),
-            amount: Uint256::zero().into(),
+            amount: Uint256::zero(),
         }];
         let err = SendCoins::new(coins).unwrap_err();
         assert_eq!(
@@ -329,7 +329,7 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
             Coin {
                 denom: String::from("true").try_into().unwrap(),
@@ -337,7 +337,7 @@ mod tests {
             },
             Coin {
                 denom: String::from("truer").try_into().unwrap(),
-                amount: Uint256::zero().into(),
+                amount: Uint256::zero(),
             },
         ];
         let err = SendCoins::new(coins).unwrap_err();
@@ -350,7 +350,7 @@ mod tests {
         let coins = vec![
             Coin {
                 denom: String::from("gas").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
             Coin {
                 denom: String::from("truer").try_into().unwrap(),
@@ -358,7 +358,7 @@ mod tests {
             },
             Coin {
                 denom: String::from("truer").try_into().unwrap(),
-                amount: Uint256::one().into(),
+                amount: Uint256::one(),
             },
         ];
         let err = SendCoins::new(coins).unwrap_err();

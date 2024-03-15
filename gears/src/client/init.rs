@@ -24,19 +24,19 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
 
     // Create config directory
     let config_dir = home.join("config");
-    std::fs::create_dir_all(&config_dir).map_err(|e| InitError::CreateConfigDirectory(e))?;
+    std::fs::create_dir_all(&config_dir).map_err(InitError::CreateConfigDirectory)?;
 
     // Create data directory
     let data_dir = home.join("data");
-    std::fs::create_dir_all(&data_dir).map_err(|e| InitError::CreateDataDirectory(e))?;
+    std::fs::create_dir_all(&data_dir).map_err(InitError::CreateDataDirectory)?;
 
     // Write tendermint config file
     let tm_config_file_path = config_dir.join("config.toml");
     let tm_config_file = std::fs::File::create(&tm_config_file_path)
-        .map_err(|e| InitError::CreateConfigDirectory(e))?;
+        .map_err(InitError::CreateConfigDirectory)?;
 
     tendermint::write_tm_config(tm_config_file, &moniker)
-        .map_err(|e| InitError::WriteConfigFile(e))?;
+        .map_err(InitError::WriteConfigFile)?;
 
     println!(
         "Tendermint config written to {}",
@@ -46,12 +46,12 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     // Create node key file
     let node_key_file_path = config_dir.join("node_key.json");
     let node_key_file =
-        std::fs::File::create(&node_key_file_path).map_err(|e| InitError::CreateNodeKeyFile(e))?;
+        std::fs::File::create(&node_key_file_path).map_err(InitError::CreateNodeKeyFile)?;
 
     // Create private validator key file
     let priv_validator_key_file_path = config_dir.join("priv_validator_key.json");
     let priv_validator_key_file = std::fs::File::create(&priv_validator_key_file_path)
-        .map_err(|e| InitError::PrivValidatorKey(e))?;
+        .map_err(InitError::PrivValidatorKey)?;
 
     let app_state = serde_json::to_value(app_genesis_state)?;
 
@@ -59,13 +59,13 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     let mut genesis_file_path = home.clone();
     crate::utils::get_genesis_file_from_home_dir(&mut genesis_file_path);
     let genesis_file =
-        std::fs::File::create(&genesis_file_path).map_err(|e| InitError::CreateGenesisFile(e))?;
+        std::fs::File::create(&genesis_file_path).map_err(InitError::CreateGenesisFile)?;
 
     // Create config file
     let mut cfg_file_path = home.clone();
     crate::utils::get_config_file_from_home_dir(&mut cfg_file_path);
     let cfg_file =
-        std::fs::File::create(&cfg_file_path).map_err(|e| InitError::CreateConfigFile(e))?;
+        std::fs::File::create(&cfg_file_path).map_err(InitError::CreateConfigFile)?;
 
     crate::config::Config::<AC>::write_default(cfg_file)
         .map_err(|e| InitError::WriteDefaultConfigFile(e.to_string()))?;
@@ -80,7 +80,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
         app_state,
         chain_id,
     )
-    .map_err(|e| InitError::WriteKeysAndGenesis(e))?;
+    .map_err(InitError::WriteKeysAndGenesis)?;
 
     println!(
         "Key files written to {} and {}",
@@ -92,10 +92,10 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     // Write private validator state file
     let state_file_path = data_dir.join("priv_validator_state.json");
     let state_file =
-        std::fs::File::create(&state_file_path).map_err(|e| InitError::PrivValidatorKey(e))?;
+        std::fs::File::create(&state_file_path).map_err(InitError::PrivValidatorKey)?;
 
     tendermint::write_priv_validator_state(state_file)
-        .map_err(|e| InitError::WritePrivValidatorKey(e))?;
+        .map_err(InitError::WritePrivValidatorKey)?;
 
     println!(
         "Private validator state written to {}",

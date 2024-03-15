@@ -65,5 +65,5 @@ pub(super) fn tx_command_handler(msg: CliUpgradeClient) -> anyhow::Result<crate:
         signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 
-    Ok(crate::message::Message::ClientUpgrade(raw_msg.into()))
+    Ok(crate::message::Message::ClientUpgrade(raw_msg))
 }

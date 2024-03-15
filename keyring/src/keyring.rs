@@ -56,7 +56,7 @@ pub fn create_key<S>(
 where
     S: AsRef<str>,
 {
-    let mnemonic = Mnemonic::random(&mut OsRng, bip32::Language::English);
+    let mnemonic = Mnemonic::random(OsRng, bip32::Language::English);
     let key_pair = add_key(name, &mnemonic, key_type, backend)?;
     Ok((mnemonic, key_pair))
 }

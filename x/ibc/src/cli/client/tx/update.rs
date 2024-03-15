@@ -38,5 +38,5 @@ pub(super) fn tx_command_handler(msg: CliUpdateClient) -> anyhow::Result<crate::
         signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 
-    Ok(crate::message::Message::ClientUpdate(raw_msg.into()))
+    Ok(crate::message::Message::ClientUpdate(raw_msg))
 }
