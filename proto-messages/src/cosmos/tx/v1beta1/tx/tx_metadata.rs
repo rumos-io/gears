@@ -29,7 +29,7 @@ pub struct RawMetadata {
     symbol: String,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct DenomUnit {
     pub denom: Denom,
     pub exponent: u32,
@@ -73,7 +73,7 @@ impl From<DenomUnit> for RawDenomUnit {
 #[nutype(validate(not_empty), derive(Debug, Clone, Deserialize, Serialize))]
 pub struct UriHash(String);
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct Metadata {
     pub description: String,
     /// denom_units represents the list of DenomUnit's for a given coin

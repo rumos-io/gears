@@ -2,7 +2,7 @@ use auth::cli::query::{AuthQuery, AuthQueryResponse};
 use bank::cli::query::{BankQuery, BankQueryResponse};
 use ibc::cli::client::query::{IbcQuery, IbcQueryResponse};
 use proto_messages::cosmos::query::Query;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq)]
 pub enum GaiaQuery {
@@ -29,7 +29,8 @@ impl Query for GaiaQuery {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum GaiaQueryResponse {
     Auth(AuthQueryResponse),
     Bank(BankQueryResponse),

@@ -51,6 +51,7 @@ impl Query for AuthQuery {
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum AuthQueryResponse {
     Account(QueryAccountResponse),
 }
@@ -65,7 +66,10 @@ impl QueryHandler for AuthQueryHandler {
 
     type QueryResponse = AuthQueryResponse;
 
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest> {
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             AuthCommands::Account(AccountCommand { address }) => {
                 AuthQuery::Account(QueryAccountRequest {
@@ -88,14 +92,6 @@ impl QueryHandler for AuthQueryHandler {
                     QueryAccountResponse::decode::<Bytes>(query_bytes.into())?,
                 ),
             };
-
-        Ok(res)
-    }
-
-    fn render_query_response(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
-        let res = match query {
-            AuthQueryResponse::Account(value) => serde_json::to_string_pretty(&value)?,
-        };
 
         Ok(res)
     }

@@ -20,7 +20,7 @@ use proto_messages::cosmos::{
     },
     query::Query,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use self::{
     client_params::PARAMS_URL, client_state::STATE_URL, client_states::STATES_URL,
@@ -68,7 +68,10 @@ impl QueryHandler for IbcQueryHandler {
     type QueryCommands = IbcQueryCli;
     type QueryResponse = IbcQueryResponse;
 
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest> {
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             IbcQueryCommands::ClientParams(args) => {
                 Self::QueryRequest::ClientParams(client_params::handle_query(args))
@@ -128,20 +131,6 @@ impl QueryHandler for IbcQueryHandler {
 
         Ok(res)
     }
-
-    fn render_query_response(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
-        let res = match query {
-            IbcQueryResponse::ClientParams(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ClientState(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ClientStates(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ClientStatus(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ConsensusState(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ConsensusStates(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ConsensusStateHeights(value) => serde_json::to_string_pretty(&value)?,
-        };
-
-        Ok(res)
-    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -181,7 +170,8 @@ impl Query for IbcQuery {
     }
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum IbcQueryResponse {
     ClientParams(QueryClientParamsResponse),
     ClientState(QueryClientStateResponse),

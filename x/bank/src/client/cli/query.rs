@@ -15,7 +15,7 @@ use proto_messages::cosmos::{
     query::Query,
 };
 use proto_types::AccAddress;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Args, Debug)]
 pub struct BankQueryCli {
@@ -46,7 +46,10 @@ impl QueryHandler for BankQueryHandler {
 
     type QueryCommands = BankQueryCli;
 
-    fn prepare_query_request(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::QueryRequest> {
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             BankCommands::Balances(BalancesCommand { address }) => {
                 BankQuery::Balances(QueryAllBalancesRequest {
@@ -78,15 +81,6 @@ impl QueryHandler for BankQueryHandler {
 
         Ok(res)
     }
-
-    fn render_query_response(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
-        let res = match query {
-            BankQueryResponse::Balances(value) => serde_json::to_string_pretty(&value)?,
-            BankQueryResponse::DenomMetadata(value) => serde_json::to_string_pretty(&value)?,
-        };
-
-        Ok(res)
-    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -113,7 +107,8 @@ impl Query for BankQuery {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum BankQueryResponse {
     Balances(QueryAllBalancesResponse),
     DenomMetadata(QueryDenomsMetadataResponse),
