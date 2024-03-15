@@ -15,7 +15,7 @@ use proto_messages::cosmos::{
     query::Query,
 };
 use proto_types::AccAddress;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Args, Debug)]
 pub struct BankQueryCli {
@@ -40,13 +40,16 @@ pub struct BalancesCommand {
 pub struct BankQueryHandler;
 
 impl QueryHandler for BankQueryHandler {
-    type Query = BankQuery;
+    type QueryRequest = BankQuery;
 
     type QueryResponse = BankQueryResponse;
 
     type QueryCommands = BankQueryCli;
 
-    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             BankCommands::Balances(BalancesCommand { address }) => {
                 BankQuery::Balances(QueryAllBalancesRequest {
@@ -62,7 +65,7 @@ impl QueryHandler for BankQueryHandler {
         Ok(res)
     }
 
-    fn handle_query(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
@@ -74,15 +77,6 @@ impl QueryHandler for BankQueryHandler {
             BankCommands::DenomMetadata => BankQueryResponse::DenomMetadata(
                 QueryDenomsMetadataResponse::decode::<Bytes>(query_bytes.into())?,
             ),
-        };
-
-        Ok(res)
-    }
-
-    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
-        let res = match query {
-            BankQueryResponse::Balances(value) => serde_json::to_string_pretty(&value)?,
-            BankQueryResponse::DenomMetadata(value) => serde_json::to_string_pretty(&value)?,
         };
 
         Ok(res)
@@ -105,7 +99,7 @@ impl Query for BankQuery {
         }
     }
 
-    fn as_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         match self {
             BankQuery::Balances(var) => var.encode_vec(),
             BankQuery::DenomMetadata(var) => var.encode_to_vec(),
@@ -113,7 +107,8 @@ impl Query for BankQuery {
     }
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum BankQueryResponse {
     Balances(QueryAllBalancesResponse),
     DenomMetadata(QueryDenomsMetadataResponse),

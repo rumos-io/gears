@@ -43,7 +43,7 @@ impl Query for AuthQuery {
         }
     }
 
-    fn as_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         match self {
             AuthQuery::Account(cmd) => cmd.encode_vec(),
         }
@@ -51,6 +51,7 @@ impl Query for AuthQuery {
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum AuthQueryResponse {
     Account(QueryAccountResponse),
 }
@@ -59,13 +60,16 @@ pub enum AuthQueryResponse {
 pub struct AuthQueryHandler;
 
 impl QueryHandler for AuthQueryHandler {
-    type Query = AuthQuery;
+    type QueryRequest = AuthQuery;
 
     type QueryCommands = AuthQueryCli;
 
     type QueryResponse = AuthQueryResponse;
 
-    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             AuthCommands::Account(AccountCommand { address }) => {
                 AuthQuery::Account(QueryAccountRequest {
@@ -77,7 +81,7 @@ impl QueryHandler for AuthQueryHandler {
         Ok(res)
     }
 
-    fn handle_query(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
@@ -88,14 +92,6 @@ impl QueryHandler for AuthQueryHandler {
                     QueryAccountResponse::decode::<Bytes>(query_bytes.into())?,
                 ),
             };
-
-        Ok(res)
-    }
-
-    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
-        let res = match query {
-            AuthQueryResponse::Account(value) => serde_json::to_string_pretty(&value)?,
-        };
 
         Ok(res)
     }

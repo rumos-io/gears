@@ -20,7 +20,7 @@ use proto_messages::cosmos::{
     },
     query::Query,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use self::{
     client_params::PARAMS_URL, client_state::STATE_URL, client_states::STATES_URL,
@@ -64,39 +64,42 @@ pub enum IbcQueryCommands {
 pub struct IbcQueryHandler;
 
 impl QueryHandler for IbcQueryHandler {
-    type Query = IbcQuery;
+    type QueryRequest = IbcQuery;
     type QueryCommands = IbcQueryCli;
     type QueryResponse = IbcQueryResponse;
 
-    fn prepare_query(&self, command: &Self::QueryCommands) -> anyhow::Result<Self::Query> {
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
             IbcQueryCommands::ClientParams(args) => {
-                Self::Query::ClientParams(client_params::handle_query(args))
+                Self::QueryRequest::ClientParams(client_params::handle_query(args))
             }
             IbcQueryCommands::ClientState(args) => {
-                Self::Query::ClientState(client_state::handle_query(args))
+                Self::QueryRequest::ClientState(client_state::handle_query(args))
             }
             IbcQueryCommands::ClientStates(args) => {
-                Self::Query::ClientStates(client_states::handle_query(args))
+                Self::QueryRequest::ClientStates(client_states::handle_query(args))
             }
             IbcQueryCommands::ClientStatus(args) => {
-                Self::Query::ClientStatus(client_status::handle_query(args))
+                Self::QueryRequest::ClientStatus(client_status::handle_query(args))
             }
             IbcQueryCommands::ConsensusState(args) => {
-                Self::Query::ConsensusState(consensus_state::handle_query(args))
+                Self::QueryRequest::ConsensusState(consensus_state::handle_query(args))
             }
             IbcQueryCommands::ConsensusStates(args) => {
-                Self::Query::ConsensusStates(consensus_states::handle_query(args))
+                Self::QueryRequest::ConsensusStates(consensus_states::handle_query(args))
             }
             IbcQueryCommands::ConsensusStateHeights(args) => {
-                Self::Query::ConsensusStateHeights(consensus_heights::handle_query(args))
+                Self::QueryRequest::ConsensusStateHeights(consensus_heights::handle_query(args))
             }
         };
 
         Ok(res)
     }
 
-    fn handle_query(
+    fn handle_raw_response(
         &self,
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
@@ -128,20 +131,6 @@ impl QueryHandler for IbcQueryHandler {
 
         Ok(res)
     }
-
-    fn render_query(&self, query: Self::QueryResponse) -> anyhow::Result<String> {
-        let res = match query {
-            IbcQueryResponse::ClientParams(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ClientState(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ClientStates(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ClientStatus(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ConsensusState(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ConsensusStates(value) => serde_json::to_string_pretty(&value)?,
-            IbcQueryResponse::ConsensusStateHeights(value) => serde_json::to_string_pretty(&value)?,
-        };
-
-        Ok(res)
-    }
 }
 
 #[derive(Clone, PartialEq)]
@@ -168,7 +157,7 @@ impl Query for IbcQuery {
         }
     }
 
-    fn as_bytes(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         match self {
             IbcQuery::ClientParams(var) => var.encode_to_vec(),
             IbcQuery::ClientState(var) => var.encode_to_vec(),
@@ -181,7 +170,8 @@ impl Query for IbcQuery {
     }
 }
 
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum IbcQueryResponse {
     ClientParams(QueryClientParamsResponse),
     ClientState(QueryClientStateResponse),
