@@ -50,7 +50,7 @@ impl TmpChild {
         };
 
         let (_code, _output, _error) = run_script::run(
-            &r#"
+            r#"
             tar -xf tendermint.tar.gz
             "#,
             &vec![],

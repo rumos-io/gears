@@ -23,8 +23,7 @@ impl PrimitiveValueRenderer<DecimalString<'_>> for DefaultPrimitiveRenderer {
                 Err(DecimalFormatting("Found 2 or more dots".to_string()))?
             }
 
-            let parsed_int = parts
-                .get(0)
+            let parsed_int = parts.first()
                 .ok_or(DecimalFormatting(
                     "Failed to get integer part of decimal".to_string(),
                 ))?
@@ -33,7 +32,7 @@ impl PrimitiveValueRenderer<DecimalString<'_>> for DefaultPrimitiveRenderer {
             let formatted_int = DefaultPrimitiveRenderer::format(parsed_int);
 
             if let Some(dec_part) = parts.get(1) {
-                let dec_formatted = dec_part.trim().replace("0", "");
+                let dec_formatted = dec_part.trim().replace('0', "");
 
                 if dec_formatted.is_empty() {
                     Ok(formatted_int)
@@ -45,7 +44,7 @@ impl PrimitiveValueRenderer<DecimalString<'_>> for DefaultPrimitiveRenderer {
             }
         } else {
             let is_negative = value.contains('-');
-            let value = value.replace("-", "");
+            let value = value.replace('-', "");
 
             if value.len() > 1 && value.starts_with('0') {
                 Err(DecimalFormatting(

@@ -7,6 +7,12 @@ pub struct InfiniteGasMeter {
     consumed: Gas,
 }
 
+impl Default for InfiniteGasMeter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InfiniteGasMeter {
     /// Create new `InfiniteGasMeter` with zero consumed gas.
     pub fn new() -> Self {

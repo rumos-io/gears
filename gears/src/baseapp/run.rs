@@ -68,7 +68,6 @@ impl From<LogLevel> for LevelFilter {
 }
 
 pub fn run<
-    'a,
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Message,
@@ -80,7 +79,7 @@ pub fn run<
     cmd: RunCommand,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
-    abci_handler_builder: &'a dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
+    abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
     router: Router<RestState<SK, PSK, M, H, G, AI>, Body>,
 ) -> Result<(), RunError> {
     let RunCommand {
@@ -94,7 +93,7 @@ pub fn run<
     tracing_subscriber::fmt()
         .with_max_level(log_level)
         .try_init()
-        .map_err(|e| RunError::Custom(format!("Failed to set logger: {}", e.to_string())))?;
+        .map_err(|e| RunError::Custom(format!("Failed to set logger: {}", e)))?;
 
     info!("Using directory {} for config and data", home.display());
 

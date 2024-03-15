@@ -157,7 +157,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         {
             let upgraded_height = upgraded_client_state.latest_height();
 
-            if !(upgraded_height > last_height) {
+            if upgraded_height <= last_height {
                 return Err(ClientUpgradeError::HeightError {
                     upgraded: upgraded_height,
                     current: last_height,
@@ -375,7 +375,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut ctx = gears::types::context::context::Context::TxContext(ctx);
         self.params_keeper.set(
             &mut ctx,
-            params::NEXT_CLIENT_SEQUENCE.as_bytes().into_iter().cloned(),
+            params::NEXT_CLIENT_SEQUENCE.as_bytes().iter().cloned(),
             sequence.to_be_bytes(),
         )
     }

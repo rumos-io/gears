@@ -32,7 +32,7 @@ impl<SK: StoreKey, DB: Database> ValueRenderer<SK, DB> for AuthInfo {
             final_screens.push(Screen {
                 title: "Other signer".to_string(),
                 content: Content::new(match signer_count {
-                    1 => format!("1 SignerInfo"),
+                    1 => "1 SignerInfo".to_string(),
                     _ => format!("{signer_count} SignerInfos"),
                 })?,
                 indent: None,

@@ -70,7 +70,7 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
                 max: MAX_ADDR_LEN,
                 found: v.len(),
             })
-        } else if v.len() == 0 {
+        } else if v.is_empty() {
             Err(AddressError::EmptyAddress)
         } else {
             Ok(())
