@@ -1,9 +1,10 @@
 use std::collections::BTreeMap;
 
+use crate::signing::renderer::tx::Envelope;
 use ciborium::{value::CanonicalValue, Value};
 use proto_messages::cosmos::tx::v1beta1::{
-    message::Message, screen::Screen, signer_data::SignerData, textual_data::TextualData,
-    tx_data::TxData, tx_metadata::Metadata,
+    message::Message, screen::Screen, signer_data::SignerData, tx_data::TxData,
+    tx_metadata::Metadata,
 };
 use proto_types::Denom;
 
@@ -19,7 +20,7 @@ impl SignModeHandler {
         signer_data: SignerData,
         tx_data: TxData<impl Message + ValueRenderer>,
     ) -> Result<Vec<u8>, SigningErrors> {
-        let data = TextualData::new(signer_data, tx_data);
+        let data = Envelope::new(signer_data, tx_data);
 
         let screens = data
             .format(get_metadata)
@@ -64,7 +65,7 @@ mod tests {
     use proto_types::{AccAddress, Denom, Uint256};
     use tendermint::informal::chain::Id;
 
-    use crate::signing::{handler::SignModeHandler, renderer::get_metadata};
+    use crate::signing::{handler::SignModeHandler, renderer::test_functions::get_metadata};
 
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {

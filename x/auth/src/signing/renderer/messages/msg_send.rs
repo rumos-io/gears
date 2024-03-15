@@ -13,31 +13,8 @@ use crate::signing::renderer::value_renderer::{
 };
 
 impl ValueRenderer for MsgSend {
-    /// Format `MsgSend` with `MessageDefaultRenderer`
-    ///
-    /// ## Example
-    ///
-    /// `MsgSend` structure in json format
-    /// ```json
-    /// {
-    /// "from_address": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
-    /// "to_address": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
-    /// "amount": []
-    /// }
-    /// ```
-    ///
-    /// Formatted into
-    ///
-    /// ```json
-    /// [
-    /// 	{ "title": "From address", "content": "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs", "indent": 2 },
-    ///     { "title": "To address", "content": "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t", "indent": 2 }
-    /// ]
-    /// ```
-    ///
-    ///
-    /// ## Note
-    /// This implementation doesn't include `Screen` with information about beginning of message and name
+    /// Format `MsgSend`
+    /// Note: This implementation doesn't include `Screen` with information about beginning of message and name
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
@@ -76,9 +53,7 @@ impl ValueRenderer for MsgSend {
 mod tests {
     use proto_messages::cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::screen::Screen};
 
-    use crate::signing::renderer::{
-        value_renderer::ValueRenderer, values::test_functions::get_metadata,
-    };
+    use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
 
     #[test]
     fn msg_send_multiple_coins() -> anyhow::Result<()> {

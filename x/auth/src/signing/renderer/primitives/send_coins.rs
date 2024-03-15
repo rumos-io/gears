@@ -45,8 +45,8 @@ mod tests {
     use proto_types::Uint256;
 
     use crate::signing::renderer::{
+        test_functions::get_metadata,
         value_renderer::{DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata},
-        values::test_functions::get_metadata,
     };
 
     #[test]

@@ -109,8 +109,8 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
 #[cfg(test)]
 mod tests {
     use crate::signing::renderer::{
+        test_functions::get_metadata,
         value_renderer::{DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata},
-        values::test_functions::get_metadata,
     };
     use anyhow::Ok;
     use proto_messages::cosmos::{base::v1beta1::Coin, tx::v1beta1::screen::Content};
