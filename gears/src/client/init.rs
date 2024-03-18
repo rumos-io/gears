@@ -32,11 +32,10 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
 
     // Write tendermint config file
     let tm_config_file_path = config_dir.join("config.toml");
-    let tm_config_file = std::fs::File::create(&tm_config_file_path)
-        .map_err(InitError::CreateConfigDirectory)?;
+    let tm_config_file =
+        std::fs::File::create(&tm_config_file_path).map_err(InitError::CreateConfigDirectory)?;
 
-    tendermint::write_tm_config(tm_config_file, &moniker)
-        .map_err(InitError::WriteConfigFile)?;
+    tendermint::write_tm_config(tm_config_file, &moniker).map_err(InitError::WriteConfigFile)?;
 
     println!(
         "Tendermint config written to {}",
@@ -64,8 +63,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     // Create config file
     let mut cfg_file_path = home.clone();
     crate::utils::get_config_file_from_home_dir(&mut cfg_file_path);
-    let cfg_file =
-        std::fs::File::create(&cfg_file_path).map_err(InitError::CreateConfigFile)?;
+    let cfg_file = std::fs::File::create(&cfg_file_path).map_err(InitError::CreateConfigFile)?;
 
     crate::config::Config::<AC>::write_default(cfg_file)
         .map_err(|e| InitError::WriteDefaultConfigFile(e.to_string()))?;
@@ -94,8 +92,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     let state_file =
         std::fs::File::create(&state_file_path).map_err(InitError::PrivValidatorKey)?;
 
-    tendermint::write_priv_validator_state(state_file)
-        .map_err(InitError::WritePrivValidatorKey)?;
+    tendermint::write_priv_validator_state(state_file).map_err(InitError::WritePrivValidatorKey)?;
 
     println!(
         "Private validator state written to {}",

@@ -34,7 +34,6 @@ pub(crate) struct InnerNode {
 impl InnerNode {
     fn get_mut_left_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         self.left_node.get_or_insert_with(|| {
-            
             node_db
                 .get_node(&self.left_hash)
                 .expect("node should be in db")
@@ -43,8 +42,6 @@ impl InnerNode {
 
     fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         self.right_node.get_or_insert_with(|| {
-            
-
             node_db
                 .get_node(&self.right_hash)
                 .expect("node should be in db")
@@ -272,7 +269,7 @@ impl Node {
                     if right_node.get_balance_factor(node_db) <= 0 {
                         return {
                             Self::left_rotate(self, version, node_db)
-                            .expect("given the imbalance, expect rotation to always succeed");
+                                .expect("given the imbalance, expect rotation to always succeed");
                             Ok(())
                         };
                     }
@@ -280,7 +277,7 @@ impl Node {
                     Self::right_rotate(right_node, version, node_db)
                         .expect("given the imbalance, expect rotation to always succeed");
                     Self::left_rotate(self, version, node_db)
-                    .expect("given the imbalance, expect rotation to always succeed");
+                        .expect("given the imbalance, expect rotation to always succeed");
                     Ok(())
                 }
 
@@ -290,7 +287,7 @@ impl Node {
                     if left_node.get_balance_factor(node_db) >= 0 {
                         return {
                             Self::right_rotate(self, version, node_db)
-                            .expect("given the imbalance, expect rotation to always succeed");
+                                .expect("given the imbalance, expect rotation to always succeed");
                             Ok(())
                         };
                     }
@@ -298,7 +295,7 @@ impl Node {
                     Self::left_rotate(left_node, version, node_db)
                         .expect("given the imbalance, expect rotation to always succeed");
                     Self::right_rotate(self, version, node_db)
-                    .expect("given the imbalance, expect rotation to always succeed");
+                        .expect("given the imbalance, expect rotation to always succeed");
                     Ok(())
                 }
                 -1..=1 => {

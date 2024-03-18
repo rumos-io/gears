@@ -23,7 +23,8 @@ impl PrimitiveValueRenderer<DecimalString<'_>> for DefaultPrimitiveRenderer {
                 Err(DecimalFormatting("Found 2 or more dots".to_string()))?
             }
 
-            let parsed_int = parts.first()
+            let parsed_int = parts
+                .first()
                 .ok_or(DecimalFormatting(
                     "Failed to get integer part of decimal".to_string(),
                 ))?
