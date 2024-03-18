@@ -31,25 +31,26 @@ impl Default for GenesisState {
             //TODO: this denom metadata should not be hard coded into the bank module
             // this has been added here for short term convenience. There should be a
             // CLI command to add denom metadata to the genesis state
-            denom_metadata: vec![Metadata {
-                description: String::new(),
-                denom_units: vec![
-                    DenomUnit {
-                        denom: "ATOM".parse().expect("hard coded value is valid"),
-                        exponent: 6,
-                        aliases: Vec::new(),
-                    },
-                    DenomUnit {
-                        denom: "uatom".parse().expect("hard coded value is valid"),
-                        exponent: 0,
-                        aliases: Vec::new(),
-                    },
-                ],
-                base: "uatom".into(),
-                display: "ATOM".into(),
-                name: String::new(),
-                symbol: String::new(),
-            }],
+            denom_metadata: vec![],
+            // denom_metadata: vec![Metadata {
+            //     description: String::new(),
+            //     denom_units: vec![
+            //         DenomUnit {
+            //             denom: "ATOM".parse().expect("hard coded value is valid"),
+            //             exponent: 6,
+            //             aliases: Vec::new(),
+            //         },
+            //         DenomUnit {
+            //             denom: "uatom".parse().expect("hard coded value is valid"),
+            //             exponent: 0,
+            //             aliases: Vec::new(),
+            //         },
+            //     ],
+            //     base: "uatom".into(),
+            //     display: "ATOM".into(),
+            //     name: String::new(),
+            //     symbol: String::new(),
+            // }],
         }
     }
 }
