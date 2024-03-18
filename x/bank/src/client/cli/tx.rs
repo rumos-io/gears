@@ -12,7 +12,7 @@ use crate::Message as BankMessage;
 #[derive(Args, Debug, Clone)]
 pub struct BankTxCli {
     #[command(subcommand)]
-    command: BankCommands,
+    pub command: BankCommands,
 }
 
 #[derive(Subcommand, Debug, Clone)]
