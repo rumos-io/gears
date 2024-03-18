@@ -8,7 +8,7 @@ use proto_messages::cosmos::ibc::{
 
 use crate::types::Signer;
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct CliCreateClient {
     pub client_state: String,
     pub consensus_state: String,
@@ -41,8 +41,8 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
     };
 
     let raw_msg = MsgCreateClient {
-        client_state: client_state.into(),
-        consensus_state: consensus_state.into(),
+        client_state,
+        consensus_state,
         signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 

@@ -8,6 +8,7 @@ use tokio::runtime::Runtime;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
+    application::ApplicationInfo,
     baseapp::{ABCIHandler, BaseApp, Genesis},
     client::rest::handlers::{node_info, staking_params, txs},
     x::params::ParamsSubspaceKey,
@@ -19,10 +20,11 @@ pub fn run_rest_server<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    AI: ApplicationInfo,
 >(
-    app: BaseApp<SK, PSK, M, H, G>,
+    app: BaseApp<SK, PSK, M, H, G, AI>,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G>, Body>,
+    router: Router<RestState<SK, PSK, M, H, G, AI>, Body>,
     tendermint_rpc_address: Url,
 ) {
     std::thread::spawn(move || {
@@ -39,23 +41,36 @@ pub struct RestState<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    AI: ApplicationInfo,
 > {
-    app: BaseApp<SK, PSK, M, H, G>,
+    app: BaseApp<SK, PSK, M, H, G, AI>,
     tendermint_rpc_address: Url,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Message, H: ABCIHandler<M, SK, G>, G: Genesis>
-    FromRef<RestState<SK, PSK, M, H, G>> for BaseApp<SK, PSK, M, H, G>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Message,
+        H: ABCIHandler<M, SK, G>,
+        G: Genesis,
+        AI: ApplicationInfo,
+    > FromRef<RestState<SK, PSK, M, H, G, AI>> for BaseApp<SK, PSK, M, H, G, AI>
 {
-    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G>) -> BaseApp<SK, PSK, M, H, G> {
+    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI>) -> BaseApp<SK, PSK, M, H, G, AI> {
         rest_state.app.clone()
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Message, H: ABCIHandler<M, SK, G>, G: Genesis>
-    FromRef<RestState<SK, PSK, M, H, G>> for Url
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Message,
+        H: ABCIHandler<M, SK, G>,
+        G: Genesis,
+        AI: ApplicationInfo,
+    > FromRef<RestState<SK, PSK, M, H, G, AI>> for Url
 {
-    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G>) -> Url {
+    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI>) -> Url {
         rest_state.tendermint_rpc_address.clone()
     }
 }
@@ -70,10 +85,11 @@ async fn launch<
     M: Message,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
+    AI: ApplicationInfo,
 >(
-    app: BaseApp<SK, PSK, M, H, G>,
+    app: BaseApp<SK, PSK, M, H, G, AI>,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G>, Body>,
+    router: Router<RestState<SK, PSK, M, H, G, AI>, Body>,
     tendermint_rpc_address: Url,
 ) {
     let cors = CorsLayer::new()

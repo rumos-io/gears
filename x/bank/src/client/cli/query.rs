@@ -1,66 +1,115 @@
-use anyhow::Result;
+use std::borrow::Cow;
+use std::fmt::Debug;
+
+use bytes::Bytes;
 use clap::{Args, Subcommand};
 
-use gears::client::query::run_query;
+use gears::application::handlers::QueryHandler;
 use prost::Message;
 use proto_messages::cosmos::{
     bank::v1beta1::{
         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
-        QueryDenomsMetadataResponse, RawQueryDenomsMetadataResponse,
+        QueryDenomsMetadataResponse,
     },
-    ibc::{bank::RawQueryAllBalancesResponse, protobuf::Protobuf},
+    ibc::protobuf::Protobuf,
+    query::Query,
 };
 use proto_types::AccAddress;
-use tendermint::informal::block::Height;
+use serde::{Deserialize, Serialize};
 
 #[derive(Args, Debug)]
-pub struct QueryCli {
+pub struct BankQueryCli {
     #[command(subcommand)]
     command: BankCommands,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum BankCommands {
-    /// Query for account balances by address
-    Balances {
-        /// address
-        address: AccAddress,
-    },
+    Balances(BalancesCommand),
     DenomMetadata,
 }
 
-pub fn run_bank_query_command(
-    args: QueryCli,
-    node: &str,
-    height: Option<Height>,
-) -> Result<String> {
-    match args.command {
-        BankCommands::Balances { address } => {
-            let query = QueryAllBalancesRequest {
-                address,
-                pagination: None,
-            };
+/// Query for account balances by address
+#[derive(Args, Debug, Clone)]
+pub struct BalancesCommand {
+    /// address
+    address: AccAddress,
+}
 
-            let res = run_query::<QueryAllBalancesResponse, RawQueryAllBalancesResponse>(
-                query.encode_vec(),
-                "/cosmos.bank.v1beta1.Query/AllBalances".into(),
-                node,
-                height,
-            )?;
+#[derive(Debug, Clone)]
+pub struct BankQueryHandler;
 
-            Ok(serde_json::to_string_pretty(&res)?)
-        }
-        BankCommands::DenomMetadata => {
-            let query = QueryDenomsMetadataRequest { pagination: None };
+impl QueryHandler for BankQueryHandler {
+    type QueryRequest = BankQuery;
 
-            let res = run_query::<QueryDenomsMetadataResponse, RawQueryDenomsMetadataResponse>(
-                query.encode_to_vec(),
-                "/cosmos.bank.v1beta1.Query/DenomsMetadata".into(),
-                node,
-                height,
-            )?;
+    type QueryResponse = BankQueryResponse;
 
-            Ok(serde_json::to_string_pretty(&res)?)
+    type QueryCommands = BankQueryCli;
+
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
+        let res = match &command.command {
+            BankCommands::Balances(BalancesCommand { address }) => {
+                BankQuery::Balances(QueryAllBalancesRequest {
+                    address: address.clone(),
+                    pagination: None,
+                })
+            }
+            BankCommands::DenomMetadata => {
+                BankQuery::DenomMetadata(QueryDenomsMetadataRequest { pagination: None })
+            }
+        };
+
+        Ok(res)
+    }
+
+    fn handle_raw_response(
+        &self,
+        query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let res = match &command.command {
+            BankCommands::Balances(_) => BankQueryResponse::Balances(
+                QueryAllBalancesResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            BankCommands::DenomMetadata => BankQueryResponse::DenomMetadata(
+                QueryDenomsMetadataResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+        };
+
+        Ok(res)
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub enum BankQuery {
+    Balances(QueryAllBalancesRequest),
+    DenomMetadata(QueryDenomsMetadataRequest),
+}
+
+impl Query for BankQuery {
+    fn query_url(&self) -> Cow<'static, str> {
+        match self {
+            BankQuery::Balances(_) => Cow::Borrowed("/cosmos.bank.v1beta1.Query/AllBalances"),
+            BankQuery::DenomMetadata(_) => {
+                Cow::Borrowed("/cosmos.bank.v1beta1.Query/DenomsMetadata")
+            }
         }
     }
+
+    fn into_bytes(self) -> Vec<u8> {
+        match self {
+            BankQuery::Balances(var) => var.encode_vec(),
+            BankQuery::DenomMetadata(var) => var.encode_to_vec(),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+pub enum BankQueryResponse {
+    Balances(QueryAllBalancesResponse),
+    DenomMetadata(QueryDenomsMetadataResponse),
 }

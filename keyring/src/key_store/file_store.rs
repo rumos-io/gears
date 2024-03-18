@@ -25,7 +25,7 @@ fn verify_password(
 ) -> Result<(), Error> {
     match password {
         Some(password) => {
-            let parsed_hash = PasswordHash::new(&password_hash).map_err(|e| Error::KeyHash {
+            let parsed_hash = PasswordHash::new(password_hash).map_err(|e| Error::KeyHash {
                 source: e,
                 path: key_hash_path.display().to_string(),
                 msg: e.to_string(),
@@ -59,7 +59,7 @@ fn calculate_password_hash(password: Option<impl AsRef<str>>) -> Result<String, 
             })?
             .to_string())
     } else {
-        return Ok("".into());
+        Ok("".into())
     }
 }
 
@@ -111,26 +111,24 @@ fn open<'a>(
                         found: Backend::Encrypted.into(),
                     })
                 }
+            } else if password_hash.is_empty() {
+                Err(Error::IncorrectBackend {
+                    path: path.as_ref().display().to_string(),
+                    expected: backend.into(),
+                    found: Backend::Test.into(),
+                })
             } else {
-                if password_hash.is_empty() {
-                    Err(Error::IncorrectBackend {
-                        path: path.as_ref().display().to_string(),
-                        expected: backend.into(),
-                        found: Backend::Test.into(),
-                    })
-                } else {
-                    let password = Some(
-                        //TODO: wrap password in secret
-                        rpassword::prompt_password("Enter keyring passphrase: ").map_err(|e| {
-                            Error::IO {
-                                msg: e.to_string(),
-                                source: e,
-                            }
-                        })?,
-                    );
-                    verify_password(password.as_deref(), &password_hash, &key_hash_path)?;
-                    Ok(password)
-                }
+                let password = Some(
+                    //TODO: wrap password in secret
+                    rpassword::prompt_password("Enter keyring passphrase: ").map_err(|e| {
+                        Error::IO {
+                            msg: e.to_string(),
+                            source: e,
+                        }
+                    })?,
+                );
+                verify_password(password.as_deref(), &password_hash, &key_hash_path)?;
+                Ok(password)
             }
         }
         Err(e) => {
@@ -165,7 +163,7 @@ fn open<'a>(
                             path: path.as_ref().display().to_string(),
                         })?;
 
-                    file.write_all(&password_hash.as_bytes())
+                    file.write_all(password_hash.as_bytes())
                         .map_err(|e| Error::FileIO {
                             msg: e.to_string(),
                             source: e,
@@ -194,12 +192,12 @@ fn open<'a>(
 /// Gets the entry with the given name.
 /// Returns [`Error`] if no entry with the given name can be found.
 pub fn get_key_by_name<S>(
-    name: S,
+    name: &S,
     path: impl AsRef<Path>,
     backend: Backend,
 ) -> Result<KeyPair, Error>
 where
-    S: AsRef<str>,
+    S: AsRef<str> + ?Sized,
 {
     let password = open(&path, false, backend)?;
     let mut path = path.as_ref().join(name.as_ref());
@@ -277,7 +275,7 @@ pub fn set_key_pair<S: AsRef<str>>(
         None => key_pair.to_pkcs8_pem(),
     };
 
-    file.write_all(&key.as_bytes()).map_err(|e| Error::FileIO {
+    file.write_all(key.as_bytes()).map_err(|e| Error::FileIO {
         msg: e.to_string(),
         source: e,
         path: path.display().to_string(),
@@ -371,7 +369,7 @@ mod tests {
         let password_hash = "$argon2id$v=19$m=19456,t=2,p=1$0Wzy7RqEZA/HDKXNHAy6lQ$QAhM6YYWd5ZLZcgcMXYIRztBL0IfyHjacsF6X4kbYR0";
         let path = path::PathBuf::from("test");
 
-        let err = verify_password(Some(password), &password_hash, &path).unwrap_err();
+        let err = verify_password(Some(password), password_hash, &path).unwrap_err();
 
         assert!(matches!(err, Error::IncorrectPassword));
     }

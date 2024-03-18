@@ -131,7 +131,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 &mut ctx.as_any(),
                 Coin {
                     denom: coin.0,
-                    amount: coin.1.into(),
+                    amount: coin.1,
                 },
             );
         }
@@ -203,8 +203,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .expect("invalid data in database - possible database corruption");
                 let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
-                    .expect("invalid data in database - possible database corruption")
-                    .into();
+                    .expect("invalid data in database - possible database corruption");
                 Coin { denom, amount }
             })
             .collect()

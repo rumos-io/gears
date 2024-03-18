@@ -7,6 +7,12 @@ pub struct MemDB {
     store: RefCell<BTreeMap<Vec<u8>, Vec<u8>>>, // we use a refcell because the set method on the DB trait doesn't take a mutable ref
 }
 
+impl Default for MemDB {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MemDB {
     pub fn new() -> MemDB {
         MemDB {

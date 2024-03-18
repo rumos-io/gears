@@ -3,6 +3,9 @@ edition = "2021"
 name = "gaia-rs"
 version = "0.1.0"
 
+[lints]
+workspace = true
+
 [dependencies]
 
 #local
@@ -10,7 +13,7 @@ auth = {path = "../x/auth"}
 bank = {path = "../x/bank"}
 ibc = {path = "../x/ibc"}
 database = {path = "../database"}
-gears = {path = "../gears"}
+gears = {path = "../gears", features = [ "cli"]}
 gears-derive = {path = "../gears-derive"}
 proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}

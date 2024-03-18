@@ -34,20 +34,20 @@ pub(crate) struct InnerNode {
 impl InnerNode {
     fn get_mut_left_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         self.left_node.get_or_insert_with(|| {
-            let node = node_db
+            
+            node_db
                 .get_node(&self.left_hash)
-                .expect("node should be in db");
-            node
+                .expect("node should be in db")
         })
     }
 
     fn get_mut_right_node<T: Database>(&mut self, node_db: &NodeDB<T>) -> &mut Node {
         self.right_node.get_or_insert_with(|| {
-            let node = node_db
-                .get_node(&self.right_hash)
-                .expect("node should be in db");
+            
 
-            node
+            node_db
+                .get_node(&self.right_hash)
+                .expect("node should be in db")
         })
     }
 
@@ -270,28 +270,36 @@ impl Node {
                     let right_node = inner.get_mut_right_node(node_db);
 
                     if right_node.get_balance_factor(node_db) <= 0 {
-                        return Ok(Self::left_rotate(self, version, node_db)
-                            .expect("given the imbalance, expect rotation to always succeed"));
+                        return {
+                            Self::left_rotate(self, version, node_db)
+                            .expect("given the imbalance, expect rotation to always succeed");
+                            Ok(())
+                        };
                     }
 
                     Self::right_rotate(right_node, version, node_db)
                         .expect("given the imbalance, expect rotation to always succeed");
-                    Ok(Self::left_rotate(self, version, node_db)
-                        .expect("given the imbalance, expect rotation to always succeed"))
+                    Self::left_rotate(self, version, node_db)
+                    .expect("given the imbalance, expect rotation to always succeed");
+                    Ok(())
                 }
 
                 2 => {
                     let left_node = inner.get_mut_left_node(node_db);
 
                     if left_node.get_balance_factor(node_db) >= 0 {
-                        return Ok(Self::right_rotate(self, version, node_db)
-                            .expect("given the imbalance, expect rotation to always succeed"));
+                        return {
+                            Self::right_rotate(self, version, node_db)
+                            .expect("given the imbalance, expect rotation to always succeed");
+                            Ok(())
+                        };
                     }
 
                     Self::left_rotate(left_node, version, node_db)
                         .expect("given the imbalance, expect rotation to always succeed");
-                    Ok(Self::right_rotate(self, version, node_db)
-                        .expect("given the imbalance, expect rotation to always succeed"))
+                    Self::right_rotate(self, version, node_db)
+                    .expect("given the imbalance, expect rotation to always succeed");
+                    Ok(())
                 }
                 -1..=1 => {
                     // The node is balanced
@@ -654,12 +662,12 @@ where
         ) -> (Option<NodeValue>, Option<Sha256Hash>, bool, Option<NodeKey>) {
             match node {
                 Node::Leaf(leaf) => {
-                    return if leaf.key != key.as_ref() {
+                    if leaf.key != key.as_ref() {
                         (None, None, false, None)
                     } else {
                         orphaned.push(Node::Leaf(leaf.clone()));
                         (Some(NodeValue(leaf.value.clone())), None, true, None)
-                    };
+                    }
                 }
                 Node::Inner(inner) => {
                     match key.as_ref().cmp(&inner.key) {
@@ -671,7 +679,7 @@ where
 
                             if value.is_none() {
                                 // The key was not found in the left subtree, so nothing changed
-                                return (None, None, false, None);
+                                (None, None, false, None)
                             } else {
                                 // The key was found in the left subtree, either we just removed a leaf node
                                 // or we updated the left subtree's root hash. Either way, we need to orphan
@@ -720,7 +728,7 @@ where
 
                             if value.is_none() {
                                 // The key was not found in the right subtree, so nothing changed
-                                return (None, None, false, None);
+                                (None, None, false, None)
                             } else {
                                 // The key was found in the right subtree, either we just removed a leaf node
                                 // or we updated the right subtree's root hash. Either way, we need to orphan
@@ -740,7 +748,7 @@ where
                                     // Since we promoted the left node to the root of the subtree, the leftmost leaf key remains the same
                                     // Also, the left node's height and size were correct so don't need re-calculating
                                     // on the new root node.
-                                    return (value, Some(node.hash()), false, None);
+                                    (value, Some(node.hash()), false, None)
                                 } else if let Some(new_hash) = new_hash {
                                     // The right subtree's root hash has changed, so update the node's hash
                                     // By updating the node's hash we're essentially creating a new node, so we need to
@@ -760,7 +768,7 @@ where
                                 }
                             }
                         }
-                    };
+                    }
                 }
             }
         }

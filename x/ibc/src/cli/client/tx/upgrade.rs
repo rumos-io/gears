@@ -11,7 +11,7 @@ use proto_messages::cosmos::ibc::{
 
 use crate::types::{ClientId, Signer};
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Clone)]
 pub struct CliUpgradeClient {
     pub client_id: ClientId,
     pub upgraded_client_state: String,
@@ -65,5 +65,5 @@ pub(super) fn tx_command_handler(msg: CliUpgradeClient) -> anyhow::Result<crate:
         signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };
 
-    Ok(crate::message::Message::ClientUpgrade(raw_msg.into()))
+    Ok(crate::message::Message::ClientUpgrade(raw_msg))
 }

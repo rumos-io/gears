@@ -14,13 +14,13 @@ use self::{
 
 pub mod create;
 
-#[derive(Args, Debug)]
-pub struct IbcCli {
+#[derive(Args, Debug, Clone)]
+pub struct IbcTxCli {
     #[command(subcommand)]
     command: IbcCommands,
 }
 
-#[derive(Subcommand, Debug)]
+#[derive(Subcommand, Debug, Clone)]
 pub enum IbcCommands {
     ClientCreate(CliCreateClient),
     ClientUpdate(CliUpdateClient),
@@ -29,7 +29,7 @@ pub enum IbcCommands {
     // IBCUpgradeProposal,
 }
 
-pub fn run_ibc_tx_command(args: IbcCli, _from_address: AccAddress) -> Result<IbcMessage> {
+pub fn run_ibc_tx_command(args: IbcTxCli, _from_address: AccAddress) -> Result<IbcMessage> {
     match args.command {
         IbcCommands::ClientCreate(msg) => create::tx_command_handler(msg),
         IbcCommands::ClientUpdate(msg) => update::tx_command_handler(msg),

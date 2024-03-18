@@ -56,15 +56,15 @@ pub fn create_key<S>(
 where
     S: AsRef<str>,
 {
-    let mnemonic = Mnemonic::random(&mut OsRng, bip32::Language::English);
+    let mnemonic = Mnemonic::random(OsRng, bip32::Language::English);
     let key_pair = add_key(name, &mnemonic, key_type, backend)?;
     Ok((mnemonic, key_pair))
 }
 
 /// Get a key by name.
-pub fn get_key_by_name<S>(name: S, backend: Backend) -> Result<KeyPair, Error>
+pub fn get_key_by_name<S>(name: &S, backend: Backend) -> Result<KeyPair, Error>
 where
-    S: AsRef<str>,
+    S: AsRef<str> + ?Sized,
 {
     match backend {
         Backend::File(path) => {

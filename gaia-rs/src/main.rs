@@ -1,12 +1,29 @@
 #![warn(rust_2018_idioms)]
 
 use anyhow::Result;
-use client::query_command_handler;
+use auth::cli::query::AuthQueryHandler;
+use bank::cli::query::BankQueryHandler;
+use clap::Parser;
 use client::tx_command_handler;
-use gears::ApplicationBuilder;
-use gears::ApplicationCore;
-use gears::NilAuxCommand;
+use client::GaiaQueryCommands;
+use client::GaiaTxCommands;
+use gaia_rs::query::GaiaQuery;
+use gaia_rs::query::GaiaQueryResponse;
+use gaia_rs::GaiaApplication;
+use gears::application::client::Client;
+use gears::application::client::ClientApplication;
+use gears::application::command::NilAux;
+use gears::application::command::NilAuxCommand;
+use gears::application::handlers::AuxHandler;
+use gears::application::handlers::{QueryHandler, TxHandler};
+use gears::application::node::Node;
+use gears::application::node::NodeApplication;
+use gears::application::ApplicationInfo;
+use gears::cli::aux::CliNilAuxCommand;
+use gears::cli::CliApplicationArgs;
 use genesis::GenesisState;
+use ibc::cli::client::query::IbcQueryHandler;
+use proto_types::AccAddress;
 use rest::get_router;
 
 use crate::abci_handler::ABCIHandler;
@@ -22,44 +39,122 @@ mod store_keys;
 
 struct GaiaCore;
 
-impl ApplicationCore for GaiaCore {
-    const APP_NAME: &'static str = env!("CARGO_PKG_NAME");
-    const APP_VERSION: &'static str = env!("GIT_HASH");
-    type Genesis = GenesisState;
-    type StoreKey = GaiaStoreKey;
-    type ParamsSubspaceKey = GaiaParamsStoreKey;
+impl TxHandler for GaiaCore {
     type Message = message::Message;
-    type ABCIHandler = ABCIHandler;
-    type QuerySubcommand = client::QueryCommands;
-    type TxSubcommand = client::Commands;
-    type ApplicationConfig = config::AppConfig;
-    type AuxCommands = NilAuxCommand;
+    type TxCommands = client::GaiaTxCommands;
 
-    fn handle_tx_command(
+    fn prepare_tx(
         &self,
-        command: Self::TxSubcommand,
-        from_address: proto_types::AccAddress,
+        command: Self::TxCommands,
+        from_address: AccAddress,
     ) -> Result<Self::Message> {
         tx_command_handler(command, from_address)
     }
+}
 
-    fn handle_query_command(
+impl QueryHandler for GaiaCore {
+    type QueryRequest = GaiaQuery;
+
+    type QueryCommands = GaiaQueryCommands;
+
+    type QueryResponse = GaiaQueryResponse;
+
+    fn prepare_query_request(
         &self,
-        command: Self::QuerySubcommand,
-        node: &str,
-        height: Option<tendermint::informal::block::Height>,
-    ) -> Result<()> {
-        query_command_handler(command, node, height)
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
+        let res = match command {
+            GaiaQueryCommands::Bank(command) => {
+                Self::QueryRequest::Bank(BankQueryHandler.prepare_query_request(command)?)
+            }
+            GaiaQueryCommands::Auth(command) => {
+                Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
+            }
+            GaiaQueryCommands::Ibc(command) => {
+                Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
+            }
+        };
+
+        Ok(res)
+    }
+
+    fn handle_raw_response(
+        &self,
+        query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let res = match command {
+            GaiaQueryCommands::Bank(command) => Self::QueryResponse::Bank(
+                BankQueryHandler.handle_raw_response(query_bytes, command)?,
+            ),
+            GaiaQueryCommands::Auth(command) => Self::QueryResponse::Auth(
+                AuthQueryHandler.handle_raw_response(query_bytes, command)?,
+            ),
+            GaiaQueryCommands::Ibc(command) => {
+                Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
+            }
+        };
+
+        Ok(res)
     }
 }
 
+impl AuxHandler for GaiaCore {
+    type AuxCommands = NilAuxCommand;
+    type Aux = NilAux;
+
+    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
+        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
+        Ok(NilAux)
+    }
+}
+
+impl Client for GaiaCore {}
+
+impl Node for GaiaCore {
+    type Message = message::Message;
+    type Genesis = GenesisState;
+    type StoreKey = GaiaStoreKey;
+    type ParamsSubspaceKey = GaiaParamsStoreKey;
+    type ABCIHandler = ABCIHandler;
+    type ApplicationConfig = config::AppConfig;
+
+    fn router<AI: ApplicationInfo>() -> axum::Router<
+        gears::client::rest::RestState<
+            Self::StoreKey,
+            Self::ParamsSubspaceKey,
+            Self::Message,
+            Self::ABCIHandler,
+            Self::Genesis,
+            AI,
+        >,
+        axum::body::Body,
+    > {
+        get_router()
+    }
+}
+
+type Args = CliApplicationArgs<
+    GaiaApplication,
+    CliNilAuxCommand,
+    CliNilAuxCommand,
+    GaiaTxCommands,
+    GaiaQueryCommands,
+>;
+
 fn main() -> Result<()> {
-    ApplicationBuilder::new(
-        GaiaCore,
-        get_router(),
-        &ABCIHandler::new,
-        GaiaStoreKey::Params,
-        GaiaParamsStoreKey::BaseApp,
+    let args = Args::parse();
+
+    args.execute_or_help(
+        |command| ClientApplication::new(GaiaCore).execute(command.try_into()?),
+        |command| {
+            NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
+                GaiaCore,
+                &ABCIHandler::new,
+                GaiaStoreKey::Params,
+                GaiaParamsStoreKey::BaseApp,
+            )
+            .execute(command.try_into()?)
+        },
     )
-    .execute()
 }
