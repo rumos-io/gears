@@ -33,7 +33,7 @@ where
     let response = handler.handle_raw_response(query_bytes, &inner)?;
     let str_response = serde_json::to_string_pretty(&response)?;
 
-    println!("{str_response}" );
+    println!("{str_response}");
 
     Ok(str_response)
 }

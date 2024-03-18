@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Args, Debug)]
 pub struct BankQueryCli {
     #[command(subcommand)]
-    command: BankCommands,
+    pub command: BankCommands,
 }
 
 #[derive(Subcommand, Debug)]
@@ -33,7 +33,7 @@ pub enum BankCommands {
 #[derive(Args, Debug, Clone)]
 pub struct BalancesCommand {
     /// address
-    address: AccAddress,
+    pub address: AccAddress,
 }
 
 #[derive(Debug, Clone)]
