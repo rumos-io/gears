@@ -28,7 +28,7 @@ impl<'a, Core: Client> ClientApplication<Core> {
                 self.core.handle_aux(cmd)?;
             }
             ClientCommands::Tx(cmd) => run_tx(cmd, &self.core)?,
-            ClientCommands::Query(cmd) => run_query(cmd, &self.core)?,
+            ClientCommands::Query(cmd) => { let _ = run_query(cmd, &self.core)?; },
             ClientCommands::Keys(cmd) => keys::keys(cmd)?,
         };
 

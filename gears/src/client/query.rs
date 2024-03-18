@@ -22,7 +22,7 @@ pub fn run_query<Q, QC, QR, H>(
         inner,
     }: QueryCommand<QC>,
     handler: &H,
-) -> anyhow::Result<()>
+) -> anyhow::Result<String>
 where
     H: QueryHandler<QueryRequest = Q, QueryCommands = QC, QueryResponse = QR>,
     QR: Serialize,
@@ -31,10 +31,11 @@ where
     let query_bytes = handler.execute_query_request(query, node, height)?;
 
     let response = handler.handle_raw_response(query_bytes, &inner)?;
+    let str_response = serde_json::to_string_pretty(&response)?;
 
-    println!("{}", serde_json::to_string_pretty(&response)?);
+    println!("{str_response}" );
 
-    Ok(())
+    Ok(str_response)
 }
 
 /// Convenience method for running queries
