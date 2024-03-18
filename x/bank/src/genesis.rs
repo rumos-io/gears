@@ -1,7 +1,4 @@
-use proto_messages::cosmos::{
-    base::v1beta1::SendCoins,
-    tx::v1beta1::tx_metadata::{DenomUnit, Metadata},
-};
+use proto_messages::cosmos::{base::v1beta1::SendCoins, tx::v1beta1::tx_metadata::Metadata};
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
