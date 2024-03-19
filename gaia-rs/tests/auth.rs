@@ -4,6 +4,7 @@ use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResp
 use gaia_rs::{
     abci_handler::ABCIHandler,
     client::GaiaQueryCommands,
+    config::AppConfig,
     genesis::GenesisState,
     query::GaiaQueryResponse,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
@@ -60,7 +61,11 @@ fn account_query() -> anyhow::Result<()> {
 
     std::thread::sleep(Duration::from_secs(2));
 
-    let _tendermint = TmpChild::run_tendermint(tmp_dir, TENDERMINT_PATH)?;
+    let _tendermint = TmpChild::run_tendermint::<_, AppConfig>(
+        tmp_dir,
+        TENDERMINT_PATH,
+        &MockGenesis::default(),
+    )?;
 
     std::thread::sleep(Duration::from_secs(2));
 

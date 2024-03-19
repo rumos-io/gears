@@ -17,6 +17,7 @@ use genesis::GenesisState;
 use ibc::cli::client::query::IbcQueryHandler;
 use proto_types::AccAddress;
 use rest::get_router;
+use serde::Serialize;
 
 use crate::abci_handler::ABCIHandler;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
@@ -30,7 +31,7 @@ pub mod query;
 pub mod rest;
 pub mod store_keys;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct GaiaApplication;
 
 impl ApplicationInfo for GaiaApplication {
