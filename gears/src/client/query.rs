@@ -3,7 +3,6 @@ use crate::runtime::runtime;
 use anyhow::{anyhow, Result};
 use prost::Message;
 use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use serde::Serialize;
 use tendermint::informal::block::Height;
 use tendermint::rpc::{Client, HttpClient};
 
@@ -22,20 +21,16 @@ pub fn run_query<Q, QC, QR, H>(
         inner,
     }: QueryCommand<QC>,
     handler: &H,
-) -> anyhow::Result<String>
+) -> anyhow::Result<QR>
 where
     H: QueryHandler<QueryRequest = Q, QueryCommands = QC, QueryResponse = QR>,
-    QR: Serialize,
 {
     let query = handler.prepare_query_request(&inner)?;
     let query_bytes = handler.execute_query_request(query, node, height)?;
 
     let response = handler.handle_raw_response(query_bytes, &inner)?;
-    let str_response = serde_json::to_string_pretty(&response)?;
 
-    println!("{str_response}");
-
-    Ok(str_response)
+    Ok(response)
 }
 
 /// Convenience method for running queries

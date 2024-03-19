@@ -27,9 +27,15 @@ impl<'a, Core: Client> ClientApplication<Core> {
                 let cmd = self.core.prepare_aux(cmd)?;
                 self.core.handle_aux(cmd)?;
             }
-            ClientCommands::Tx(cmd) => run_tx(cmd, &self.core)?,
+            ClientCommands::Tx(cmd) => {
+                let tx = run_tx(cmd, &self.core)?;
+
+                println!("{}", serde_json::to_string_pretty(&tx)?);
+            }
             ClientCommands::Query(cmd) => {
-                let _ = run_query(cmd, &self.core)?;
+                let query = run_query(cmd, &self.core)?;
+
+                println!("{}", serde_json::to_string_pretty(&query)?);
             }
             ClientCommands::Keys(cmd) => keys::keys(cmd)?,
         };

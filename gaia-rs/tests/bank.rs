@@ -1,14 +1,14 @@
 use std::{str::FromStr, time::Duration};
 
 use bank::cli::{
-    query::{BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli},
+    query::{BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse},
     tx::{BankCommands, BankTxCli},
 };
 use gaia_rs::{
     abci_handler::ABCIHandler,
     client::GaiaTxCommands,
-    config::AppConfig,
     genesis::GenesisState,
+    query::GaiaQueryResponse,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaApplication, GaiaCore,
 };
@@ -22,8 +22,11 @@ use gears::{
     },
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR, DEFAULT_TENDERMINT_RPC_ADDRESS},
 };
-use proto_messages::cosmos::base::v1beta1::Coin;
-use proto_types::AccAddress;
+use proto_messages::cosmos::{
+    bank::v1beta1::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
+    base::v1beta1::Coin,
+};
+use proto_types::{AccAddress, Denom};
 use tendermint::informal::chain::Id;
 use utils::testing::TmpChild;
 
@@ -44,8 +47,7 @@ const TENDERMINT_PATH: &str = "./tests/assets";
 
 #[test]
 fn balances_query() -> anyhow::Result<()> {
-    let tendermint =
-        TmpChild::start_tendermint::<_, AppConfig>(TENDERMINT_PATH, &MockGenesis::default())?;
+    let tendermint = TmpChild::start_tendermint(TENDERMINT_PATH)?;
 
     let _server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
@@ -83,25 +85,24 @@ fn balances_query() -> anyhow::Result<()> {
         &GaiaCore,
     )?;
 
-    let expected = r#"{
-            "balances": [
-              {
-                "denom": "uatom",
-                "amount": "34"
-              }
-            ],
-            "pagination": null
-          }"#;
+    let expected = GaiaQueryResponse::Bank(bank::cli::query::BankQueryResponse::Balances(
+        QueryAllBalancesResponse {
+            balances: vec![Coin {
+                denom: Denom::from_str("uatom")?,
+                amount: 34_u32.into(),
+            }],
+            pagination: None,
+        },
+    ));
 
-    assert_eq!(&result, expected);
+    assert_eq!(result, expected);
 
     Ok(())
 }
 
 #[test]
 fn denom_query() -> anyhow::Result<()> {
-    let tendermint =
-        TmpChild::start_tendermint::<_, AppConfig>(TENDERMINT_PATH, &MockGenesis::default())?;
+    let tendermint = TmpChild::start_tendermint(TENDERMINT_PATH)?;
 
     let _server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
@@ -135,17 +136,21 @@ fn denom_query() -> anyhow::Result<()> {
         &GaiaCore,
     )?;
 
-    let expected = r#""#;
+    let expected = GaiaQueryResponse::Bank(BankQueryResponse::DenomMetadata(
+        QueryDenomsMetadataResponse {
+            metadatas: Vec::new(),
+            pagination: None,
+        },
+    ));
 
-    assert_eq!(&result, expected);
+    assert_eq!(result, expected);
 
     Ok(())
 }
 
 #[test]
 fn send_tx() -> anyhow::Result<()> {
-    let tendermint =
-        TmpChild::start_tendermint::<_, AppConfig>(TENDERMINT_PATH, &MockGenesis::default())?;
+    let tendermint = TmpChild::start_tendermint(TENDERMINT_PATH)?;
 
     let home = tendermint.1.to_path_buf();
 
@@ -175,7 +180,7 @@ fn send_tx() -> anyhow::Result<()> {
         amount: Coin::from_str("10uatom")?,
     };
 
-    run_tx(
+    let _result = run_tx(
         TxCommand {
             home,
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,

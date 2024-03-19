@@ -1,10 +1,8 @@
-use std::{path::Path, process::Child, str::FromStr, time::Duration};
+use std::{path::Path, process::Child, time::Duration};
 
 use anyhow::anyhow;
 use assert_fs::TempDir;
-use gears::baseapp::Genesis;
 use run_script::{IoOptions, ScriptOptions};
-use tendermint::informal::chain::Id;
 
 /// Struct for process which lauched from tmp dir
 #[derive(Debug)]
@@ -20,23 +18,14 @@ impl Drop for TmpChild {
 }
 
 impl TmpChild {
-    pub fn start_tendermint<G: Genesis, AC: gears::config::ApplicationConfig>(
+    pub fn start_tendermint(
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
-        genesis: &G,
     ) -> anyhow::Result<Self> {
         let tmp_dir = TempDir::new()?;
 
         dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
             .overwrite(true)
             .run()?;
-
-        let opt: gears::client::init::InitCommand =
-            gears::client::init::InitCommandBuilder::default()
-                .chain_id(Id::from_str("test-chain")?)
-                .moniker("test".to_owned())
-                .build()?;
-
-        gears::client::init::init::<_, AC>(opt, genesis)?;
 
         let options = ScriptOptions {
             runner: None,

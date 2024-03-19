@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli};
+use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
 use gaia_rs::{
     abci_handler::ABCIHandler,
     client::GaiaQueryCommands,
-    config::AppConfig,
     genesis::GenesisState,
+    query::GaiaQueryResponse,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaApplication, GaiaCore,
 };
@@ -15,6 +15,7 @@ use gears::{
     client::query::{run_query, QueryCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR, DEFAULT_TENDERMINT_RPC_ADDRESS},
 };
+use proto_messages::cosmos::auth::v1beta1::{Account, BaseAccount, QueryAccountResponse};
 use proto_types::AccAddress;
 use utils::testing::TmpChild;
 
@@ -35,8 +36,7 @@ const TENDERMINT_PATH: &str = "./tests/assets";
 
 #[test]
 fn account_query() -> anyhow::Result<()> {
-    let tendermint =
-        TmpChild::start_tendermint::<_, AppConfig>(TENDERMINT_PATH, &MockGenesis::default())?;
+    let tendermint = TmpChild::start_tendermint(TENDERMINT_PATH)?;
 
     let _server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
@@ -59,8 +59,11 @@ fn account_query() -> anyhow::Result<()> {
 
     std::thread::sleep(Duration::from_secs(2));
 
+    let acc_adress = AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
+        .expect("Valid value");
+
     let query = AccountCommand {
-        address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")?,
+        address: acc_adress.clone(),
     };
 
     let cmd = QueryCommand {
@@ -73,17 +76,16 @@ fn account_query() -> anyhow::Result<()> {
 
     let result = run_query(cmd, &GaiaCore)?;
 
-    let expected = r#"{
-        "balances": [
-          {
-            "denom": "uatom",
-            "amount": "34"
-          }
-        ],
-        "pagination": null
-      }"#;
+    let expected = GaiaQueryResponse::Auth(AuthQueryResponse::Account(QueryAccountResponse {
+        account: Account::Base(BaseAccount {
+            address: acc_adress,
+            pub_key: None,
+            account_number: 0,
+            sequence: 0,
+        }),
+    }));
 
-    assert_eq!(&result, expected);
+    assert_eq!(result, expected);
 
     Ok(())
 }
