@@ -1,7 +1,7 @@
 use std::{path::Path, process::Child, time::Duration};
 
 use anyhow::anyhow;
-use assert_fs::TempDir;
+pub use assert_fs::TempDir;
 use run_script::{IoOptions, ScriptOptions};
 
 /// Struct for process which lauched from tmp dir
@@ -18,6 +18,48 @@ impl Drop for TmpChild {
 }
 
 impl TmpChild {
+    pub fn run_tendermint(
+        tmp_dir: TempDir,
+        path_to_tendermint: &(impl AsRef<Path> + ?Sized),
+    ) -> anyhow::Result<Self> {
+        dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
+            .overwrite(true)
+            .run()?;
+
+        let options = ScriptOptions {
+            runner: None,
+            runner_args: None,
+            working_directory: Some(tmp_dir.to_path_buf()),
+            input_redirection: IoOptions::Inherit,
+            output_redirection: IoOptions::Pipe,
+            exit_on_error: false,
+            print_commands: false,
+            env_vars: None,
+        };
+
+        let (_code, _output, _error) = run_script::run(
+            r#"
+                tar -xf tendermint.tar.gz
+                "#,
+            &vec![],
+            &options,
+        )?; // TODO: make it work for windows too?
+
+        let child = run_script::spawn(
+            "./tendermint start",
+            &vec![
+                "--home".to_owned(),
+                tmp_dir
+                    .to_str()
+                    .ok_or(anyhow!("failed to get path to tmp folder"))?
+                    .to_owned(),
+            ],
+            &options,
+        )?;
+
+        Ok(Self(child, tmp_dir))
+    }
+
     pub fn start_tendermint(
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
     ) -> anyhow::Result<Self> {

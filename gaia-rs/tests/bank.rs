@@ -28,7 +28,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::{AccAddress, Denom};
 use tendermint::informal::chain::Id;
-use utils::testing::TmpChild;
+use utils::testing::{TempDir, TmpChild};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
 struct MockGenesis(pub GenesisState);
@@ -47,7 +47,8 @@ const TENDERMINT_PATH: &str = "./tests/assets";
 
 #[test]
 fn balances_query() -> anyhow::Result<()> {
-    let tendermint = TmpChild::start_tendermint(TENDERMINT_PATH)?;
+    let tmp_dir = TempDir::new()?;
+    let tmp_path = tmp_dir.to_path_buf();
 
     let _server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
@@ -58,7 +59,7 @@ fn balances_query() -> anyhow::Result<()> {
         );
 
         let cmd = RunCommand {
-            home: tendermint.1.to_path_buf(),
+            home: tmp_path,
             address: DEFAULT_ADDRESS,
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             read_buf_size: 1048576,
@@ -67,6 +68,10 @@ fn balances_query() -> anyhow::Result<()> {
 
         let _ = node.execute(AppCommands::Run(cmd));
     });
+
+    std::thread::sleep(Duration::from_secs(2));
+
+    let _tendermint = TmpChild::run_tendermint(tmp_dir, TENDERMINT_PATH)?;
 
     std::thread::sleep(Duration::from_secs(2));
 
@@ -102,7 +107,8 @@ fn balances_query() -> anyhow::Result<()> {
 
 #[test]
 fn denom_query() -> anyhow::Result<()> {
-    let tendermint = TmpChild::start_tendermint(TENDERMINT_PATH)?;
+    let tmp_dir = TempDir::new()?;
+    let tmp_path = tmp_dir.to_path_buf();
 
     let _server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
@@ -113,7 +119,7 @@ fn denom_query() -> anyhow::Result<()> {
         );
 
         let cmd = RunCommand {
-            home: tendermint.1.to_path_buf(),
+            home: tmp_path,
             address: DEFAULT_ADDRESS,
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             read_buf_size: 1048576,
@@ -122,6 +128,10 @@ fn denom_query() -> anyhow::Result<()> {
 
         let _ = node.execute(AppCommands::Run(cmd));
     });
+
+    std::thread::sleep(Duration::from_secs(2));
+
+    let _tendermint = TmpChild::run_tendermint(tmp_dir, TENDERMINT_PATH)?;
 
     std::thread::sleep(Duration::from_secs(2));
 
