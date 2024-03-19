@@ -1,4 +1,4 @@
-use std::{io::Read, str::FromStr, time::Duration};
+use std::{str::FromStr, time::Duration};
 
 use bank::cli::{
     query::{BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse},
