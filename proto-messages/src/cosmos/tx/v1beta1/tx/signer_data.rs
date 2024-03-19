@@ -1,11 +1,8 @@
-use nutype::nutype;
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
+use tendermint::informal::chain::Id;
 
 use super::public_key::PublicKey;
-
-#[nutype(validate(not_empty), derive(Debug, Clone, Serialize, Deserialize))]
-pub struct ChainId(String);
 
 /// SignerData is the specific information needed to sign a transaction that generally
 /// isn't included in the transaction body itself
@@ -17,7 +14,7 @@ pub struct SignerData {
     pub address: AccAddress,
 
     /// ChainID is the chain that this transaction is targeting.
-    pub chain_id: ChainId,
+    pub chain_id: Id,
 
     /// AccountNumber is the account number of the signer.
     ///

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{cosmos::tx::v1beta1::message::Message, Error};
+use crate::cosmos::tx::v1beta1::message::Message;
 
 use super::{auth_info::AuthInfo, signer_data::SignerData, tx_body::TxBody, tx_data::TxData};
 
@@ -21,13 +21,11 @@ pub struct TextualData<M: Message> {
 }
 
 impl<M: Message> TextualData<M> {
-    pub fn new(signer_data: SignerData, tx_data: TxData<M>) -> Result<Self, Error> {
-        let data = TextualData {
+    pub fn new(signer_data: SignerData, tx_data: TxData<M>) -> Self {
+        TextualData {
             signer_data,
             body: tx_data.body,
             auth_info: tx_data.auth_info,
-        };
-
-        Ok(data)
+        }
     }
 }

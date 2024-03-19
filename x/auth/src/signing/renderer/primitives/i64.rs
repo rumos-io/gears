@@ -1,7 +1,8 @@
-//! Default formating implementation for `i64`
+//! Default formatting implementation for `i64`
 
 use num_format::{Buffer, CustomFormat, Grouping};
 use once_cell::sync::OnceCell;
+use proto_messages::cosmos::tx::v1beta1::screen::Content;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
@@ -23,15 +24,11 @@ pub(super) fn format_get() -> &'static CustomFormat {
 }
 
 impl PrimitiveValueRenderer<i64> for DefaultPrimitiveRenderer {
-    fn format(value: i64) -> String {
+    fn format(value: i64) -> Content {
         let mut buf = Buffer::new();
         buf.write_formatted(&value, format_get());
 
-        buf.to_string()
-    }
-
-    fn format_try(value: i64) -> Result<String, Box<dyn std::error::Error>> {
-        Ok(Self::format(value))
+        Content::new(buf.to_string()).expect("String will never be empty")
     }
 }
 
@@ -61,7 +58,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(i);
 
-            assert_eq!(expected, &actual);
+            assert_eq!(expected, &actual.into_inner());
         }
     }
 
@@ -85,7 +82,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(i);
 
-            assert_eq!(expected, &actual);
+            assert_eq!(expected, &actual.into_inner());
         }
     }
 }

@@ -119,7 +119,12 @@ impl<
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), request.chain_id);
+        let chain_id = request.chain_id.try_into().unwrap_or_else(|_| {
+            error!("Invalid chain id provided by Tendermint.\nTerminating process\n");
+            std::process::exit(1)
+        });
+
+        let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), chain_id);
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper

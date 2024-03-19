@@ -1,32 +1,49 @@
 //! Trait for formatting all kind of values into `Screen`
 
-use std::error::Error;
-
-use database::Database;
-use gears::types::context::context::Context;
-use proto_messages::cosmos::tx::v1beta1::screen::Screen;
-use store::StoreKey;
+use proto_messages::cosmos::tx::v1beta1::{
+    screen::{Content, Screen},
+    tx_metadata::Metadata,
+};
+use proto_types::Denom;
 
 /// Render primitive type into content for `Screen`.
-/// Use for formatting simple primitive `Copy` types that doesn't require error handling
 pub trait PrimitiveValueRenderer<V> {
-    /// Get string representation of some `V`
-    fn format(value: V) -> String;
-
-    /// Try format specific value
-    fn format_try(value: V) -> Result<String, Box<dyn Error>>;
+    /// Get string representation of some `V` wrapped in a Content
+    fn format(value: V) -> Content;
 }
 
-/// The notion of "value renderer" is defined in ADR-050.
-pub trait ValueRenderer<SK: StoreKey, DB: Database> {
+pub trait TryPrimitiveValueRenderer<V> {
+    /// Try to get a string representation of some `V` wrapped in a Content
+    fn try_format(value: V) -> Result<Content, Error>;
+}
+
+pub trait TryPrimitiveValueRendererWithMetadata<V> {
+    /// Try to get a string representation of some `V` wrapped in a Content. This method also
+    /// takes a function to get metadata for the denom.
+    fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
+        value: V,
+        get_metadata: &F,
+    ) -> Result<Content, Error>;
+}
+
+#[cfg_attr(test, derive(PartialEq, Eq))]
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("not implemented")]
+    NotImplemented,
+    #[error("`{0}`")]
+    Rendering(String),
+}
+
+pub trait ValueRenderer {
     /// Format renders the Protobuf value to a list of Screens.
-    fn format(&self, ctx: &Context<'_, '_, DB, SK>) -> Result<Vec<Screen>, Box<dyn Error>>;
+    fn format<F: Fn(&Denom) -> Option<Metadata>>(
+        &self,
+        get_metadata: &F,
+    ) -> Result<Vec<Screen>, Error>;
 }
 
-/// Static structure which implement trait for formatting primitive types
-/// like `i64` or `bool` and made for using in `gears`
+/// Default implementation of `PrimitiveValueRenderer` for `Screen`. This is an attempt
+/// at a blanket implementation for all primitive types described in the Cosmos SDK:
+/// https://docs.cosmos.network/v0.50/build/architecture/adr-050-sign-mode-textual-annex1#bytes
 pub struct DefaultPrimitiveRenderer;
-
-/// Static structure which implement trait for formatting messages
-/// like `Coin` or `Tx<M : Message>`
-pub struct DefaultValueRenderer;
