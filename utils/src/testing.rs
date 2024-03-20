@@ -1,4 +1,4 @@
-use std::{path::Path, process::Child, str::FromStr, time::Duration};
+use std::{path::Path, process::Child, str::FromStr};
 
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
@@ -15,7 +15,7 @@ impl Drop for TmpChild {
     fn drop(&mut self) {
         // Stop child process before deletion of tmp dir
         while let Err(_) = self.0.kill() {
-            std::thread::sleep(Duration::from_millis(100))
+            std::thread::sleep(std::time::Duration::from_millis(100))
         }
     }
 }
