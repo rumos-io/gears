@@ -9,7 +9,7 @@ use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
 use trees::iavl::{Range, Tree};
 
-use crate::{error::Error, QueryKVStore};
+use crate::{error::Error, utils::MergedRange, QueryKVStore};
 
 use super::hash::{self, StoreInfo};
 
@@ -171,21 +171,27 @@ impl<DB: Database> KVStore<DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<'a, R>(
+        &'a self,
+        range: R,
+    ) -> MergedRange<::std::collections::btree_map::IntoIter<Vec<u8>, Vec<u8>>, Range<'a, R, DB>>
     where
-        R: RangeBounds<Vec<u8>> + Clone,
+        R: RangeBounds<Vec<u8>> + Clone + 'a,
     {
-        //TODO: this doesn't iterate over cached values
-        // let tx_cached_values = self.tx_cache.range(range.clone());
-        // let block_cached_values = self.block_cache.range(range.clone());
-        // let persisted_values = self.persistent_store.range(range.clone());
+        let tx_cached_values = self.tx_cache.range(range.clone());
+        let mut block_cached_values = self
+            .block_cache
+            .range(range.clone())
+            .collect::<BTreeMap<_, _>>();
+        let persisted_values = self.persistent_store.range(range);
 
-        // MergedRange::merge(
-        //     tx_cached_values,
-        //     MergedRange::merge(block_cached_values, persisted_values),
-        // );
+        block_cached_values.extend(tx_cached_values);
+        let block_cached_values = block_cached_values
+            .into_iter()
+            .map(|(key, value)| (key.clone(), value.clone()))
+            .collect::<BTreeMap<_, _>>();
 
-        self.persistent_store.range(range)
+        MergedRange::merge(block_cached_values.into_iter(), persisted_values)
     }
 
     pub fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>) {
@@ -281,13 +287,36 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<R>(&self, range: R) -> AnyMergedRange<'_, R, DB>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {
         match self {
-            AnyKVStore::KVStore(store) => store.range(range),
-            AnyKVStore::QueryKVStore(store) => store.range(range),
+            AnyKVStore::KVStore(store) => AnyMergedRange::KvMergedRange(store.range(range)),
+            AnyKVStore::QueryKVStore(store) => AnyMergedRange::QueryRange(
+                store.range(range).collect::<HashMap<_, _>>().into_iter(),
+            ),
+        }
+    }
+}
+
+pub enum AnyMergedRange<'a, R, DB: Database>
+where
+    R: RangeBounds<Vec<u8>> + Clone + 'a,
+{
+    KvMergedRange(
+        MergedRange<::std::collections::btree_map::IntoIter<Vec<u8>, Vec<u8>>, Range<'a, R, DB>>,
+    ),
+    QueryRange(std::collections::hash_map::IntoIter<Vec<u8>, Vec<u8>>),
+}
+
+impl<'a, R: RangeBounds<Vec<u8>> + Clone + 'a, T: Database> Iterator for AnyMergedRange<'a, R, T> {
+    type Item = (Vec<u8>, Vec<u8>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            AnyMergedRange::KvMergedRange(iter) => iter.next(),
+            AnyMergedRange::QueryRange(iter) => iter.next(),
         }
     }
 
@@ -311,7 +340,10 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
         self.store.get(&full_key)
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange<'a, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>>>(
+        &'a self,
+        range: R,
+    ) -> PrefixRange<'_, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
         let new_start = match range.start_bound() {
             Bound::Included(b) => Bound::Included([self.prefix.clone(), b.clone()].concat()),
             Bound::Excluded(b) => Bound::Excluded([self.prefix.clone(), b.clone()].concat()),
@@ -331,12 +363,12 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
     }
 }
 
-pub struct PrefixRange<'a, DB: Database> {
-    parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
+pub struct PrefixRange<'a, R: RangeBounds<Vec<u8>> + Clone, T: Database> {
+    parent_range: AnyMergedRange<'a, R, T>,
     prefix_length: usize,
 }
 
-impl<'a, DB: Database> Iterator for PrefixRange<'a, DB> {
+impl<'a, R: RangeBounds<Vec<u8>> + Clone + 'a, T: Database> Iterator for PrefixRange<'a, R, T> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -495,50 +527,49 @@ mod tests {
         assert!(matches!(prefix_end_bound(prefix), Bound::Unbounded));
     }
 
-    // TODO: uncomment this test once merged range works
-    // /// Tests whether kv range works with cached and persisted values
-    // #[test]
-    // fn kv_store_merged_range_works() {
-    //     let db = MemDB::new();
-    //     let mut store = KVStore::new(db, None).unwrap();
+    /// Tests whether kv range works with cached and persisted values
+    #[test]
+    fn kv_store_merged_range_works() {
+        let db = MemDB::new();
+        let mut store = KVStore::new(db, None).unwrap();
 
-    //     // values in this group will be in the persistent store
-    //     store.set(vec![1], vec![1]);
-    //     store.set(vec![7], vec![13]); // shadowed by value in tx cache
-    //     store.set(vec![10], vec![2]); // shadowed by value in block cache
-    //     store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
-    //     store.commit();
+        // values in this group will be in the persistent store
+        store.set(vec![1], vec![1]);
+        store.set(vec![7], vec![13]); // shadowed by value in tx cache
+        store.set(vec![10], vec![2]); // shadowed by value in block cache
+        store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
+        store.commit();
 
-    //     // values in this group will be in the block cache
-    //     store.set(vec![2], vec![3]);
-    //     store.set(vec![9], vec![4]); // shadowed by value in tx cache
-    //     store.set(vec![10], vec![7]); // shadows a persisted value
-    //     store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
-    //     store.write_then_clear_tx_cache();
+        // values in this group will be in the block cache
+        store.set(vec![2], vec![3]);
+        store.set(vec![9], vec![4]); // shadowed by value in tx cache
+        store.set(vec![10], vec![7]); // shadows a persisted value
+        store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
+        store.write_then_clear_tx_cache();
 
-    //     // values in this group will be in the tx cache
-    //     store.set(vec![3], vec![5]);
-    //     store.set(vec![8], vec![6]);
-    //     store.set(vec![7], vec![5]); // shadows a persisted value
-    //     store.set(vec![9], vec![6]); // shadows a block cache value
-    //     store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
+        // values in this group will be in the tx cache
+        store.set(vec![3], vec![5]);
+        store.set(vec![8], vec![6]);
+        store.set(vec![7], vec![5]); // shadows a persisted value
+        store.set(vec![9], vec![6]); // shadows a block cache value
+        store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
 
-    //     let start = vec![0];
-    //     let stop = vec![20];
-    //     let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
-    //         .range((Bound::Excluded(start), Bound::Excluded(stop)))
-    //         .collect();
-    //     let expected_pairs = vec![
-    //         (vec![1], vec![1]),
-    //         (vec![2], vec![3]),
-    //         (vec![3], vec![5]),
-    //         (vec![7], vec![5]),
-    //         (vec![8], vec![6]),
-    //         (vec![9], vec![6]),
-    //         (vec![10], vec![7]),
-    //         (vec![14], vec![212]),
-    //     ];
+        let start = vec![0];
+        let stop = vec![20];
+        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
+            .range((Bound::Excluded(start), Bound::Excluded(stop)))
+            .collect();
+        let expected_pairs = vec![
+            (vec![1], vec![1]),
+            (vec![2], vec![3]),
+            (vec![3], vec![5]),
+            (vec![7], vec![5]),
+            (vec![8], vec![6]),
+            (vec![9], vec![6]),
+            (vec![10], vec![7]),
+            (vec![14], vec![212]),
+        ];
 
-    //     assert_eq!(expected_pairs, got_pairs);
-    // }
+        assert_eq!(expected_pairs, got_pairs);
+    }
 }
