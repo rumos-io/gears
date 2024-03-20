@@ -2,18 +2,18 @@ use crate::types::context::context::Context;
 use database::{Database, PrefixDB};
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, MultiStore, StoreKey};
-use tendermint::informal::abci::Event;
+use tendermint::informal::{abci::Event, chain::Id};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
     pub multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
     pub events: Vec<Event>,
-    pub chain_id: String,
+    pub chain_id: Id,
 }
 
 impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
-    pub fn new(multi_store: &'a mut MultiStore<DB, SK>, height: u64, chain_id: String) -> Self {
+    pub fn new(multi_store: &'a mut MultiStore<DB, SK>, height: u64, chain_id: Id) -> Self {
         InitContext {
             multi_store,
             height,

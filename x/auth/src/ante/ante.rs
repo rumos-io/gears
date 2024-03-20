@@ -15,8 +15,7 @@ use proto_messages::cosmos::{
     tx::v1beta1::{
         message::Message,
         mode_info::{ModeInfo, SignMode},
-        public_key::PublicKey,
-        signer_data::{ChainId, SignerData},
+        signer_data::SignerData,
         tx::tx::Tx,
         tx_data::TxData,
         tx_metadata::Metadata,
@@ -24,10 +23,9 @@ use proto_messages::cosmos::{
     },
 };
 use proto_types::{AccAddress, Denom};
-use secp256k1::{ecdsa, hashes::sha256, PublicKey as Secp256k1PubKey, Secp256k1};
 use store::StoreKey;
 
-use crate::signing::handler::SignModeHandler;
+use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database>(
@@ -41,7 +39,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_denom_metadata<DB: Database, CTX: ReadContext<SK, DB>>(
         &self,
         ctx: &CTX,
-        base: Denom,
+        base: &Denom,
     ) -> Option<Metadata>;
 }
 
@@ -60,7 +58,7 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 }
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: Message>(
+    fn run<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -80,7 +78,7 @@ where
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
 {
-    fn run<DB: Database, M: Message>(
+    fn run<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -97,7 +95,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, M: Message>(
+    pub fn run<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -256,7 +254,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn sig_verification_handler<DB: Database, M: Message>(
+    fn sig_verification_handler<DB: Database, M: Message + ValueRenderer>(
         &self,
         ctx: &mut Context<'_, '_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -296,37 +294,35 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
             let sign_bytes = match &signature_data.mode_info {
                 ModeInfo::Single(mode) => match mode {
-                    SignMode::Unspecified => {
-                        return Err(AppError::TxValidation(
-                            "unspecified sign mode not supported".to_string(),
-                        ));
-                    }
                     SignMode::Direct => SignDoc {
                         body_bytes: tx.raw.body_bytes.clone(),
                         auth_info_bytes: tx.raw.auth_info_bytes.clone(),
-                        chain_id: ctx.get_chain_id().to_owned(),
+                        chain_id: ctx.get_chain_id().to_string(),
                         account_number: acct.get_account_number(),
                     }
                     .encode_to_vec(),
                     SignMode::Textual => {
-                        let _handler = SignModeHandler;
+                        let handler = SignModeHandler;
 
-                        let _signer_data = SignerData {
+                        let signer_data = SignerData {
                             address: signer.to_owned(),
-                            chain_id: ChainId::new(ctx.get_chain_id().to_owned()).unwrap(), //TODO: remove unwrap
+                            chain_id: ctx.get_chain_id().to_owned(),
                             account_number: acct.get_account_number(),
                             sequence: account_seq,
                             pub_key: public_key.to_owned(),
                         };
 
-                        let _tx_data = TxData {
+                        let tx_data = TxData {
                             body: tx.tx.body.clone(),
                             auth_info: tx.tx.auth_info.clone(),
                         };
 
-                        //handler.sign_bytes_get(ctx, signer_data, tx_data).unwrap()
+                        let f = |denom: &Denom| -> Option<Metadata> {
+                            self.bank_keeper.get_denom_metadata(ctx, denom)
+                        };
+
+                        handler.sign_bytes_get(&f, signer_data, tx_data).unwrap()
                         //TODO: remove unwrap
-                        todo!()
                     }
                     _ => {
                         return Err(AppError::TxValidation(
@@ -341,22 +337,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                 }
             };
 
-            let message = secp256k1::Message::from_hashed_data::<sha256::Hash>(&sign_bytes);
-
-            //TODO: move sig verification into PublicKey
-            match public_key {
-                PublicKey::Secp256k1(pub_key) => {
-                    let public_key =
-                        Secp256k1PubKey::from_slice(&Vec::from(pub_key.to_owned())).unwrap(); //TODO: remove unwrap
-
-                    let signature =
-                        ecdsa::Signature::from_compact(&signature_data.signature).unwrap(); //TODO: remove unwrap
-
-                    Secp256k1::verification_only()
-                        .verify_ecdsa(&message, &signature, &public_key) //TODO: lib cannot be used for bitcoin sig verification
-                        .map_err(|_| AppError::TxValidation("invalid signature".to_string()))?;
-                }
-            }
+            public_key
+                .verify_signature(&sign_bytes, &signature_data.signature)
+                .map_err(|e| AppError::TxValidation(format!("invalid signature: {}", e)))?;
         }
 
         Ok(())
