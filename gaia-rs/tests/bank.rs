@@ -40,13 +40,7 @@ impl Genesis for MockGenesis {
 const TENDERMINT_PATH: &str = "./tests/assets";
 
 #[test]
-fn test_runner() -> anyhow::Result<()> {
-    balances_query()?;
-    denom_query()?;
-
-    Ok(())
-}
-
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn balances_query() -> anyhow::Result<()> {
     let (_tendermint, _server_thread) = run_gaia_and_tendermint()?;
 
@@ -80,6 +74,8 @@ fn balances_query() -> anyhow::Result<()> {
     Ok(())
 }
 
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn denom_query() -> anyhow::Result<()> {
     let (_tendermint, _server_thread) = run_gaia_and_tendermint()?;
 

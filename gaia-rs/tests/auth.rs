@@ -36,6 +36,7 @@ impl Genesis for MockGenesis {
 const TENDERMINT_PATH: &str = "./tests/assets";
 
 #[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn account_query() -> anyhow::Result<()> {
     let (_tendermint, _server_thread) = run_gaia_and_tendermint()?;
 
