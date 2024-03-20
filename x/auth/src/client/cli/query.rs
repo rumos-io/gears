@@ -16,7 +16,7 @@ use proto_types::AccAddress;
 #[derive(Args, Debug)]
 pub struct AuthQueryCli {
     #[command(subcommand)]
-    command: AuthCommands,
+    pub command: AuthCommands,
 }
 
 #[derive(Subcommand, Debug)]
@@ -28,7 +28,7 @@ pub enum AuthCommands {
 #[derive(Args, Debug, Clone)]
 pub struct AccountCommand {
     /// address
-    address: AccAddress,
+    pub address: AccAddress,
 }
 
 #[derive(Clone, PartialEq)]

@@ -1582,6 +1582,7 @@ dependencies = [
  "store",
  "strum",
  "tendermint 0.1.0",
+ "utils",
 ]
 
 [[package]]

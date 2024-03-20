@@ -4,6 +4,7 @@ use anyhow::Result;
 use prost::Message;
 use proto_messages::cosmos::{base::v1beta1::SendCoins, ibc::tx::TxRaw};
 use tendermint::informal::chain::Id;
+use tendermint::rpc::endpoint::broadcast::tx_commit::Response;
 use tendermint::rpc::{Client, HttpClient};
 
 use crate::application::handlers::TxHandler;
@@ -33,7 +34,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
         inner,
     }: TxCommand<C>,
     handler: &H,
-) -> anyhow::Result<()> {
+) -> anyhow::Result<Response> {
     let keyring_home = home.join(keyring_backend.get_sub_dir());
 
     let key =
@@ -44,9 +45,8 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     handler.handle_tx(message, key, node, chain_id, fee)
 }
 
-pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<()> {
+pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<Response> {
     let res = runtime().block_on(client.broadcast_tx_commit(raw_tx.encode_to_vec()))?;
 
-    println!("{}", serde_json::to_string_pretty(&res)?);
-    Ok(())
+    Ok(res)
 }

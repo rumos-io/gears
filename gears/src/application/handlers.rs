@@ -4,7 +4,7 @@ use proto_types::AccAddress;
 use serde::Serialize;
 use tendermint::{
     informal::block::Height,
-    rpc::{Client, HttpClient},
+    rpc::{endpoint::broadcast::tx_commit::Response, Client, HttpClient},
 };
 
 use crate::{
@@ -36,7 +36,7 @@ pub trait TxHandler {
         node: url::Url,
         chain_id: tendermint::informal::chain::Id,
         fee: Option<SendCoins>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Response> {
         let fee = Fee {
             amount: fee,
             gas_limit: 100000000, //TODO: remove hard coded gas limit
