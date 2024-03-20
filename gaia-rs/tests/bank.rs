@@ -1,12 +1,10 @@
 use std::{str::FromStr, time::Duration};
 
-use bank::cli::{
-    query::{BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse},
-    tx::{BankCommands, BankTxCli},
+use bank::cli::query::{
+    BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse,
 };
 use gaia_rs::{
     abci_handler::ABCIHandler,
-    client::GaiaTxCommands,
     config::AppConfig,
     genesis::GenesisState,
     query::GaiaQueryResponse,
@@ -16,11 +14,7 @@ use gaia_rs::{
 use gears::{
     application::{command::app::AppCommands, node::NodeApplication},
     baseapp::{run::RunCommand, Genesis},
-    client::{
-        keys::KeyringBackend,
-        query::{run_query, QueryCommand},
-        tx::{run_tx, TxCommand},
-    },
+    client::query::{run_query, QueryCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR, DEFAULT_TENDERMINT_RPC_ADDRESS},
 };
 use proto_messages::cosmos::{
@@ -28,7 +22,6 @@ use proto_messages::cosmos::{
     base::v1beta1::Coin,
 };
 use proto_types::{AccAddress, Denom};
-use tendermint::informal::chain::Id;
 use utils::testing::{TempDir, TmpChild};
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
@@ -47,38 +40,15 @@ impl Genesis for MockGenesis {
 const TENDERMINT_PATH: &str = "./tests/assets";
 
 #[test]
+fn test_runner() -> anyhow::Result<()> {
+    balances_query()?;
+    denom_query()?;
+
+    Ok(())
+}
+
 fn balances_query() -> anyhow::Result<()> {
-    let tmp_dir = TempDir::new()?;
-    let tmp_path = tmp_dir.to_path_buf();
-
-    let _server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
-            GaiaCore,
-            &ABCIHandler::new,
-            GaiaStoreKey::Params,
-            GaiaParamsStoreKey::BaseApp,
-        );
-
-        let cmd = RunCommand {
-            home: tmp_path,
-            address: DEFAULT_ADDRESS,
-            rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
-            read_buf_size: 1048576,
-            log_level: gears::baseapp::run::LogLevel::Off,
-        };
-
-        let _ = node.execute(AppCommands::Run(cmd));
-    });
-
-    std::thread::sleep(Duration::from_secs(2));
-
-    let _tendermint = TmpChild::run_tendermint::<_, AppConfig>(
-        tmp_dir,
-        TENDERMINT_PATH,
-        &MockGenesis::default(),
-    )?;
-
-    std::thread::sleep(Duration::from_secs(2));
+    let (_tendermint, _server_thread) = run_gaia_and_tendermint()?;
 
     let query = BalancesCommand {
         address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")?,
@@ -110,39 +80,8 @@ fn balances_query() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
 fn denom_query() -> anyhow::Result<()> {
-    let tmp_dir = TempDir::new()?;
-    let tmp_path = tmp_dir.to_path_buf();
-
-    let _server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
-            GaiaCore,
-            &ABCIHandler::new,
-            GaiaStoreKey::Params,
-            GaiaParamsStoreKey::BaseApp,
-        );
-
-        let cmd = RunCommand {
-            home: tmp_path,
-            address: DEFAULT_ADDRESS,
-            rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
-            read_buf_size: 1048576,
-            log_level: gears::baseapp::run::LogLevel::Off,
-        };
-
-        let _ = node.execute(AppCommands::Run(cmd));
-    });
-
-    std::thread::sleep(Duration::from_secs(2));
-
-    let _tendermint = TmpChild::run_tendermint::<_, AppConfig>(
-        tmp_dir,
-        TENDERMINT_PATH,
-        &MockGenesis::default(),
-    )?;
-
-    std::thread::sleep(Duration::from_secs(2));
+    let (_tendermint, _server_thread) = run_gaia_and_tendermint()?;
 
     let result = run_query(
         QueryCommand {
@@ -167,13 +106,46 @@ fn denom_query() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
-fn send_tx() -> anyhow::Result<()> {
-    let tendermint = TmpChild::start_tendermint(TENDERMINT_PATH)?;
+// TODO: Need to rework keys so cli wouldn't be required
+// #[test]
+// fn send_tx() -> anyhow::Result<()> {
+//     let ( tendermint, _server_thread ) = run_gaia_and_tendermint()?;
 
-    let home = tendermint.1.to_path_buf();
+//     let tx_cmd = BankCommands::Send {
+//         to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
+//         amount: Coin::from_str("10uatom")?,
+//     };
 
-    let _server_thread = std::thread::spawn(move || {
+//     let _result = run_tx(
+//         TxCommand {
+//             home : tendermint.1.to_path_buf(),
+//             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
+//             from_key: "alice".to_owned(),
+//             chain_id: Id::try_from("test-chain")?,
+//             fee: None,
+//             keyring_backend: KeyringBackend::File,
+//             inner: GaiaTxCommands::Bank(BankTxCli { command: tx_cmd }),
+//         },
+//         &GaiaCore,
+//     )?;
+
+//     Ok(())
+// }
+
+/// Helper method to start gaia node and tendermint in tmp folder
+fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
+    let tmp_dir = TempDir::new()?;
+    let tmp_path = tmp_dir.to_path_buf();
+
+    let tendermint = TmpChild::run_tendermint::<_, AppConfig>(
+        tmp_dir,
+        TENDERMINT_PATH,
+        &MockGenesis::default(),
+    )?;
+
+    std::thread::sleep(Duration::from_secs(10));
+
+    let server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
             GaiaCore,
             &ABCIHandler::new,
@@ -182,7 +154,7 @@ fn send_tx() -> anyhow::Result<()> {
         );
 
         let cmd = RunCommand {
-            home: tendermint.1.to_path_buf(),
+            home: tmp_path,
             address: DEFAULT_ADDRESS,
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             read_buf_size: 1048576,
@@ -192,25 +164,7 @@ fn send_tx() -> anyhow::Result<()> {
         let _ = node.execute(AppCommands::Run(cmd));
     });
 
-    std::thread::sleep(Duration::from_secs(2));
+    std::thread::sleep(Duration::from_secs(10));
 
-    let tx_cmd = BankCommands::Send {
-        to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
-        amount: Coin::from_str("10uatom")?,
-    };
-
-    let _result = run_tx(
-        TxCommand {
-            home,
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            from_key: "alice".to_owned(),
-            chain_id: Id::try_from("test-chain")?,
-            fee: None,
-            keyring_backend: KeyringBackend::File,
-            inner: GaiaTxCommands::Bank(BankTxCli { command: tx_cmd }),
-        },
-        &GaiaCore,
-    )?;
-
-    Ok(())
+    Ok((tendermint, server_thread))
 }

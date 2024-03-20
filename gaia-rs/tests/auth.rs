@@ -37,37 +37,7 @@ const TENDERMINT_PATH: &str = "./tests/assets";
 
 #[test]
 fn account_query() -> anyhow::Result<()> {
-    let tmp_dir = TempDir::new()?;
-    let tmp_path = tmp_dir.to_path_buf();
-
-    let _server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
-            GaiaCore,
-            &ABCIHandler::new,
-            GaiaStoreKey::Params,
-            GaiaParamsStoreKey::BaseApp,
-        );
-
-        let cmd = RunCommand {
-            home: tmp_path,
-            address: DEFAULT_ADDRESS,
-            rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
-            read_buf_size: 1048576,
-            log_level: gears::baseapp::run::LogLevel::Off,
-        };
-
-        let _ = node.execute(AppCommands::Run(cmd));
-    });
-
-    std::thread::sleep(Duration::from_secs(2));
-
-    let _tendermint = TmpChild::run_tendermint::<_, AppConfig>(
-        tmp_dir,
-        TENDERMINT_PATH,
-        &MockGenesis::default(),
-    )?;
-
-    std::thread::sleep(Duration::from_secs(2));
+    let (_tendermint, _server_thread) = run_gaia_and_tendermint()?;
 
     let acc_adress = AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
         .expect("Valid value");
@@ -98,4 +68,41 @@ fn account_query() -> anyhow::Result<()> {
     assert_eq!(result, expected);
 
     Ok(())
+}
+
+/// Helper method to start gaia node and tendermint in tmp folder
+fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
+    let tmp_dir = TempDir::new()?;
+    let tmp_path = tmp_dir.to_path_buf();
+
+    let tendermint = TmpChild::run_tendermint::<_, AppConfig>(
+        tmp_dir,
+        TENDERMINT_PATH,
+        &MockGenesis::default(),
+    )?;
+
+    std::thread::sleep(Duration::from_secs(10));
+
+    let server_thread = std::thread::spawn(move || {
+        let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
+            GaiaCore,
+            &ABCIHandler::new,
+            GaiaStoreKey::Params,
+            GaiaParamsStoreKey::BaseApp,
+        );
+
+        let cmd = RunCommand {
+            home: tmp_path,
+            address: DEFAULT_ADDRESS,
+            rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
+            read_buf_size: 1048576,
+            log_level: gears::baseapp::run::LogLevel::Off,
+        };
+
+        let _ = node.execute(AppCommands::Run(cmd));
+    });
+
+    std::thread::sleep(Duration::from_secs(10));
+
+    Ok((tendermint, server_thread))
 }
