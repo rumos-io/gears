@@ -71,17 +71,14 @@ impl TmpChild {
             &options,
         )?; // TODO: make it work for windows too?
 
-        let child = run_script::spawn(
-            "./tendermint start",
-            &vec![
-                "--home".to_owned(),
-                tmp_dir
-                    .to_str()
-                    .ok_or(anyhow!("failed to get path to tmp folder"))?
-                    .to_owned(),
-            ],
-            &options,
-        )?;
+        let script = format!(
+            "./tendermint start --home {}",
+            tmp_dir
+                .to_str()
+                .ok_or(anyhow!("failed to get path to tmp folder"))?
+        );
+
+        let child = run_script::spawn(&script, &vec![], &options)?;
 
         Ok(Self(child, tmp_dir))
     }
