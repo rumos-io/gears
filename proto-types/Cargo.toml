@@ -22,7 +22,7 @@ serde = { workspace = true, default-features = false, features = [
 ]}
 
 #other
-cosmwasm-std = { workspace = true }
+cosmwasm-std = "2.0.0"
 schemars = { workspace = true }
 
 

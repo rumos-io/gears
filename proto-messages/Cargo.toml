@@ -33,7 +33,6 @@ serde_with = { workspace = true }
 
 #other
 byteorder = { workspace = true }
-cosmwasm-std = { workspace = true }
 num-traits = { workspace = true }
 schemars = { workspace = true }
 

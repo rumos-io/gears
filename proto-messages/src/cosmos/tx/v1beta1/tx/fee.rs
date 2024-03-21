@@ -1,11 +1,12 @@
 use std::str::FromStr;
 
-use cosmwasm_std::Uint256;
+// use cosmwasm_std::Uint256;
 use ibc_proto::{
     cosmos::base::v1beta1::Coin as RawCoin, cosmos::tx::v1beta1::Fee as RawFee, Protobuf,
 };
 
 use proto_types::AccAddress;
+use proto_types::Uint256;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;

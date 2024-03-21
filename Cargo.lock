@@ -3696,7 +3696,6 @@ dependencies = [
  "bnum 0.11.0",
  "byteorder",
  "ciborium",
- "cosmwasm-std",
  "data-encoding",
  "hex",
  "ibc 0.50.0",
