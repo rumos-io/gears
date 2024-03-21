@@ -29,6 +29,8 @@ prost = { version = "0.12.3" }
 anyhow = "1.0.70"
 log = "0.4.21"
 thiserror = "1.0.13"
+clap = {version = "4.2.2", features = ["derive"]}
+strum = {version = "0.26.2", features = ["derive"]}
 
 # networking
 axum = "0.7.4"

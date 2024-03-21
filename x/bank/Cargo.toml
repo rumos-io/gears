@@ -20,7 +20,7 @@ bytes = { workspace = true }
 #utils
 clap = { version = "4.2.2", features = ["derive"] }
 anyhow = { workspace = true }
-strum = "0.25.0"
+strum = { workspace = true }
 
 #serialization
 serde = { version = "1.0", default-features = false }

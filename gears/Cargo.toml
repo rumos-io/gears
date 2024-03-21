@@ -46,7 +46,7 @@ cosmwasm-std = "1.1.5"
 axum = { workspace = true }
 handlebars = "5.1.0"
 human-panic = "1.1.4"
-strum = { version = "0.25", features = [] } # "derive"
+strum = {workspace = true}
 text_io = "0.1.12"
 tokio = "1.27.0"
 tower-http = { workspace = true }

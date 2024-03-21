@@ -14,7 +14,7 @@ database = { path = "../database" }
 thiserror = { workspace = true }
 integer-encoding = "4.0.0"
 sha2 = "0.10.6"
-strum = { version = "0.25", features = [] } #"derive"
+strum = {workspace = true}
 
 #serialization
 
