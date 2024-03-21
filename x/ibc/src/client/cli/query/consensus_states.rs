@@ -9,7 +9,7 @@ pub struct CliConsensusStates {
     client_id: String,
 }
 
-pub(super) fn handle_query(args: &CliConsensusStates) -> QueryConsensusStatesRequest {
+pub(crate) fn handle_query(args: &CliConsensusStates) -> QueryConsensusStatesRequest {
     QueryConsensusStatesRequest {
         client_id: args.client_id.clone(),
         pagination: None,

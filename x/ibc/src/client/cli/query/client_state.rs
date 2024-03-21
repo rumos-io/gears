@@ -9,7 +9,7 @@ pub struct CliClientState {
     client_id: String,
 }
 
-pub(super) fn handle_query(args: &CliClientState) -> QueryClientStateRequest {
+pub(crate) fn handle_query(args: &CliClientState) -> QueryClientStateRequest {
     QueryClientStateRequest {
         client_id: args.client_id.clone(),
     }

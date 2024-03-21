@@ -9,7 +9,7 @@ pub struct CliClientStatus {
     client_id: String,
 }
 
-pub(super) fn handle_query(args: &CliClientStatus) -> QueryClientStatusRequest {
+pub(crate) fn handle_query(args: &CliClientStatus) -> QueryClientStatusRequest {
     QueryClientStatusRequest {
         client_id: args.client_id.clone(),
     }

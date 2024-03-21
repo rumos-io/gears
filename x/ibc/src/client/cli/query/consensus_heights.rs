@@ -10,7 +10,7 @@ pub struct CliClientHeight {
     client_id: String,
 }
 
-pub(super) fn handle_query(args: &CliClientHeight) -> QueryConsensusStateHeightsRequest {
+pub(crate) fn handle_query(args: &CliClientHeight) -> QueryConsensusStateHeightsRequest {
     QueryConsensusStateHeightsRequest {
         client_id: args.client_id.clone(),
         pagination: None,

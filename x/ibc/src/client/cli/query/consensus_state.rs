@@ -13,7 +13,7 @@ pub struct CliConsensusState {
     pub latest_height: bool,
 }
 
-pub(super) fn handle_query(args: &CliConsensusState) -> QueryConsensusStateRequest {
+pub(crate) fn handle_query(args: &CliConsensusState) -> QueryConsensusStateRequest {
     let CliConsensusState {
         client_id,
         revision_number,

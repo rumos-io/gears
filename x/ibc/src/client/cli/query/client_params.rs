@@ -8,6 +8,6 @@ pub struct CliClientParams {
     client_id: String,
 }
 
-pub(super) fn handle_query(_args: &CliClientParams) -> QueryClientParamsRequest {
+pub(crate) fn handle_query(_args: &CliClientParams) -> QueryClientParamsRequest {
     QueryClientParamsRequest {}
 }
