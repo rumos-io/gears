@@ -27,7 +27,6 @@ thiserror = { workspace = true }
 tracing = {version = "0.1", default-features = false}
 tracing-subscriber = {version = "0.3.18", optional = false, default-features = true}
 integer-encoding = "4.0.0"
-lazy_static = "1.4.0" # TODO: replace with once_cell from std or crate
 sha2 = { workspace = true }
 
 #serialization
