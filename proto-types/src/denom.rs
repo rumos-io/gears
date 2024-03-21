@@ -1,9 +1,8 @@
 use std::{
     fmt::{self, Display},
-    str::FromStr,
+    str::FromStr, sync::OnceLock,
 };
 
-use lazy_static::lazy_static;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
@@ -11,9 +10,11 @@ use crate::error::Error;
 
 // Denominations can be 3 ~ 128 characters long and support letters, followed by either
 // a letter, a number or a separator ('/').
-lazy_static! {
-    static ref RE: Regex =
-        Regex::new(r"^[a-zA-Z][a-zA-Z0-9/-]{2,127}$").expect("hard coded RE won't fail");
+pub fn regex() -> &'static Regex
+{
+    static RE : OnceLock<Regex> = OnceLock::new();
+
+    RE.get_or_init( || Regex::new(r"^[a-zA-Z][a-zA-Z0-9/-]{2,127}$").expect("hard coded RE won't fail"))
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Eq, Hash)]
@@ -35,7 +36,7 @@ impl TryFrom<String> for Denom {
     type Error = Error;
 
     fn try_from(v: String) -> Result<Self, Self::Error> {
-        if !RE.is_match(&v) {
+        if !regex().is_match(&v) {
             return Err(Error::InvalidDenom);
         };
 
@@ -47,7 +48,7 @@ impl TryFrom<&str> for Denom {
     type Error = Error;
 
     fn try_from(v: &str) -> Result<Self, Self::Error> {
-        if !RE.is_match(v) {
+        if !regex().is_match(v) {
             return Err(Error::InvalidDenom);
         };
 

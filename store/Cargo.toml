@@ -12,9 +12,9 @@ database = { path = "../database" }
 
 #utils
 thiserror = { workspace = true }
-integer-encoding = "4.0.0"
+integer-encoding = { workspace = true }
 sha2 = { workspace = true }
-strum = {workspace = true}
+strum = { workspace = true }
 
 #serialization
 
@@ -22,4 +22,4 @@ strum = {workspace = true}
 
 
 [dev-dependencies]
-hex = "0.4.3"
+hex = { workspace = true }

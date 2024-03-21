@@ -10,9 +10,9 @@ database = {path = "../database"}
 #newtypes
 
 #utils
-anyhow = {workspace = true}
-integer-encoding = "3.0.4"
-nutype = {version = "0.4.0"}
+anyhow = { workspace = true }
+integer-encoding = { workspace = true }
+nutype = { workspace = true }
 sha2 = { workspace = true }
 thiserror = {workspace = true}
 
@@ -23,12 +23,12 @@ caches = "0.2.4"
 
 [dev-dependencies]
 criterion = "0.5.1"
-handlebars = "5.1.0"
-hex = "0.4.3"
-pprof = {version = "0.13.0", features = ["flamegraph", "criterion"]}
-rand = "0.8.5"
-serde = "1.0.176"
-serde_json = "1.0.104"
+handlebars = { workspace = true }
+hex = { workspace = true }
+pprof = { version = "0.13.0", features = ["flamegraph", "criterion"] }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [[bench]]
 harness = false
