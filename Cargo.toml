@@ -25,6 +25,12 @@ bytes = "1.2.1"
 # serialization
 prost = { version = "0.12.3" }
 
+# cashing/encryption
+sha2 = "0.10.6"
+bip32 = "0.5.1"
+k256 = { version = "0.13.1" }
+pkcs8 = { version = "0.10.2" }
+
 # utils
 anyhow = "1.0.70"
 log = "0.4.21"

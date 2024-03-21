@@ -18,7 +18,7 @@ bnum = {version = "0.10.0", features = ["serde"]}
 bytes = { workspace = true }
 
 #utils
-clap = { version = "4.2.2", features = ["derive"] }
+clap = { workspace = true }
 anyhow = { workspace = true }
 strum = { workspace = true }
 

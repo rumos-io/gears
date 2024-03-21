@@ -2,7 +2,7 @@ use std::fmt::{Display, Formatter, Result};
 
 #[derive(Debug, PartialEq)]
 pub enum AppError {
-    Bech32(bech32::Error),
+    Bech32Decode(bech32::DecodeError),
     InvalidRequest(String),
     Send(String),
     AccountNotFound,
@@ -20,7 +20,7 @@ pub enum AppError {
 impl Display for AppError {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self {
-            AppError::Bech32(err) => err.fmt(f),
+            AppError::Bech32Decode(err) => err.fmt(f),
             AppError::InvalidRequest(msg) => write!(f, "invalid request: {}", msg),
             AppError::Send(msg) => write!(f, "send error: {}", msg),
             AppError::AccountNotFound => write!(f, "account does not exist"),
@@ -49,9 +49,9 @@ impl AppError {
 
 impl std::error::Error for AppError {}
 
-impl From<bech32::Error> for AppError {
-    fn from(err: bech32::Error) -> AppError {
-        AppError::Bech32(err)
+impl From<bech32::DecodeError> for AppError {
+    fn from(err: bech32::DecodeError) -> AppError {
+        AppError::Bech32Decode(err)
     }
 }
 

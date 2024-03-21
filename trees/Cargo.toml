@@ -13,7 +13,7 @@ database = {path = "../database"}
 anyhow = {workspace = true}
 integer-encoding = "3.0.4"
 nutype = {version = "0.4.0"}
-sha2 = "0.10.6"
+sha2 = { workspace = true }
 thiserror = {workspace = true}
 
 #serialization

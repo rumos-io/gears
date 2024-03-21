@@ -21,7 +21,7 @@ prost = { workspace = true }
 schemars = "0.8.16"
 
 #utils
-clap = { version = "4.2.2", features = ["derive"] }
+clap = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 
