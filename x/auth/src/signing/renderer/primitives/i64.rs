@@ -1,7 +1,8 @@
 //! Default formatting implementation for `i64`
 
+use std::sync::OnceLock;
+
 use num_format::{Buffer, CustomFormat, Grouping};
-use once_cell::sync::OnceCell;
 use proto_messages::cosmos::tx::v1beta1::screen::Content;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
@@ -10,7 +11,7 @@ const THOUSAND_SEPARATOR: &str = "'";
 
 /// Get reference to defined format
 pub(super) fn format_get() -> &'static CustomFormat {
-    static FORMAT: OnceCell<CustomFormat> = OnceCell::new();
+    static FORMAT: OnceLock<CustomFormat> = OnceLock::new();
 
     FORMAT.get_or_init(|| {
         CustomFormat::builder()

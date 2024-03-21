@@ -1,4 +1,4 @@
-use axum::{body::Body, Router};
+use axum::Router;
 use gears::{
     application::ApplicationInfo,
     baseapp::{ABCIHandler, Genesis},
@@ -15,6 +15,6 @@ pub fn get_router<
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
->() -> Router<RestState<SK, PSK, M, H, G, AI>, Body> {
+>() -> Router<RestState<SK, PSK, M, H, G, AI>> {
     Router::new().nest("/cosmos/bank", bank::rest::get_router())
 }

@@ -14,30 +14,30 @@ ed25519-consensus = { version = "2" }
 
 #utils
 thiserror = { workspace = true }
-rand = "0.8"
+rand = { workspace = true }
 
 #serialization
-serde = { version = "1.0", default-features = false }
-serde_json = "1.0.93"
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 #other
-handlebars = "5.1.0"
+handlebars = { workspace = true }
 
 #tendermint git
-tendermint-informal = {package = "tendermint", git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-proto = {git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-abci = {git = "https://github.com/joneskm/tendermint-rs"}
-tendermint-rpc = {git = "https://github.com/joneskm/tendermint-rs", features = [
+tendermint-informal = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs", optional = true }
+tendermint-proto = { git = "https://github.com/joneskm/tendermint-rs", optional = true }
+tendermint-abci = { git = "https://github.com/joneskm/tendermint-rs", optional = true }
+tendermint-rpc = { git = "https://github.com/joneskm/tendermint-rs", features = [
   "http-client",
-]}
+], optional = true }
 tendermint-config = { git = "https://github.com/joneskm/tendermint-rs" }
 
 
 [dev-dependencies]
 
 [features]
-informal = []
-abci = []
+informal = [ "dep:tendermint-informal"]
+abci = [ "dep:tendermint-proto", "dep:tendermint-abci"]
 config = []
-proto = []
-rpc = []
+proto = [ "dep:tendermint-proto"]
+rpc = [ "dep:tendermint-rpc"]

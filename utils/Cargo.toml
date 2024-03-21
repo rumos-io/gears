@@ -16,14 +16,14 @@ proto-messages = { path = "../proto-messages" }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 log = { workspace = true }
-derive_builder = "0.20.0"
-dirs = "5.0.1"
-dircpy = "0.3.15"
+derive_builder = { workspace = true }
+dirs = { workspace = true }
+dircpy = { workspace = true }
 
 #serialization
-serde = { version = "1.0", default-features = false }
-serde_json = "1.0.93"
+serde = { workspace = true, default-features = false }
+serde_json = { workspace = true }
 
 # test utils
-run_script = "0.10.1"
-assert_fs = "1.1.1"
+run_script = { workspace = true }
+assert_fs = { workspace = true }
