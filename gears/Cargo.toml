@@ -41,7 +41,6 @@ toml = { workspace = true }
 #other
 dirs = { workspace = true }
 bip32 = { workspace = true }
-cosmwasm-std = { workspace = true }
 handlebars = { workspace = true }
 human-panic = "1.1.4"
 strum = { workspace = true }

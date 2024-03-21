@@ -28,7 +28,6 @@ serde_json = { workspace = true }
 prost = { workspace = true }
 
 #other
-cosmwasm-std = { workspace = true }
 tokio = { workspace = true }
 axum = { workspace = true }
 

@@ -33,7 +33,6 @@ serde = { workspace = true }
 
 #other
 axum = { workspace = true }
-cosmwasm-std = { workspace = true }
 
 [dev-dependencies]
 utils = { path = "../utils"}
