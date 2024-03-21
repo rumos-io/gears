@@ -20,7 +20,7 @@ use proto_messages::cosmos::{
 use serde::{Deserialize, Serialize};
 
 use self::{
-    client_params::PARAMS_URL, client_state::STATE_URL, client_states::STATES_URL,
+    client_params::CLIENT_PARAMS_URL, client_state::STATE_URL, client_states::STATES_URL,
     client_status::STATUS_URL, consensus_heights::CONSESUS_HEIGHTS_URL,
     consensus_state::CONSENSUS_STATE_URL, consensus_states::CONSENSUS_STATES_URL,
 };
@@ -71,7 +71,7 @@ pub enum IbcQuery {
 impl Query for IbcQuery {
     fn query_url(&self) -> Cow<'static, str> {
         match self {
-            IbcQuery::ClientParams(_) => Cow::Borrowed(PARAMS_URL),
+            IbcQuery::ClientParams(_) => Cow::Borrowed(CLIENT_PARAMS_URL),
             IbcQuery::ClientState(_) => Cow::Borrowed(STATE_URL),
             IbcQuery::ClientStates(_) => Cow::Borrowed(STATES_URL),
             IbcQuery::ClientStatus(_) => Cow::Borrowed(STATUS_URL),

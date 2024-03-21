@@ -128,7 +128,7 @@ pub mod core {
 
             #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
             pub struct Params {
-                allowed_clients: HashSet<String>,
+                pub allowed_clients: HashSet<String>,
             }
 
             impl From<RawParams> for Params {
