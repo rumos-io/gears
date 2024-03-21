@@ -2,7 +2,6 @@ use proto_types::AccAddress;
 use tendermint::abci::Application;
 
 use axum::{
-    body::Body,
     extract::{Path, Query, State},
     routing::get,
     Json, Router,
@@ -135,7 +134,7 @@ pub fn get_router<
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
->() -> Router<RestState<SK, PSK, M, H, G, AI>, Body> {
+>() -> Router<RestState<SK, PSK, M, H, G, AI>> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))

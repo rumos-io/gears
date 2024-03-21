@@ -1,4 +1,3 @@
-use axum::body::Body;
 use axum::Router;
 use database::RocksDB;
 use proto_messages::cosmos::tx::v1beta1::message::Message;
@@ -80,7 +79,7 @@ pub fn run<
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
-    router: Router<RestState<SK, PSK, M, H, G, AI>, Body>,
+    router: Router<RestState<SK, PSK, M, H, G, AI>>,
 ) -> Result<(), RunError> {
     let RunCommand {
         home,
