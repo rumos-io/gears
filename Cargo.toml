@@ -18,13 +18,21 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-thiserror = "1.0.13"
+
+# nutype
 bytes = "1.2.1"
+
+# serialization
 prost = { version = "0.12.3" }
-axum = "0.6.18"
+
+# utils
 anyhow = "1.0.70"
 log = "0.4.21"
+thiserror = "1.0.13"
 
+# networking
+axum = "0.7.4"
+tower-http = {version = "0.5.2", features = ["cors"]}
 
 [workspace.lints.clippy]
 unused_async = "deny"

@@ -49,7 +49,7 @@ human-panic = "1.1.4"
 strum = { version = "0.25", features = [] } # "derive"
 text_io = "0.1.12"
 tokio = "1.27.0"
-tower-http = {version = "0.4.1", features = ["cors"]}
+tower-http = { workspace = true }
 derive_builder = "0.20.0"
 
 #cli

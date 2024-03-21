@@ -1,17 +1,13 @@
-use axum::{body::Body, extract::FromRef, http::Method, routing::get, Router};
+use axum::{extract::FromRef, http::Method, routing::get, Router};
 use proto_messages::cosmos::tx::v1beta1::message::Message;
 use tendermint::rpc::Url;
 
 use std::net::SocketAddr;
 use store_crate::StoreKey;
-use tokio::runtime::Runtime;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    application::ApplicationInfo,
-    baseapp::{ABCIHandler, BaseApp, Genesis},
-    client::rest::handlers::{node_info, staking_params, txs},
-    x::params::ParamsSubspaceKey,
+    application::ApplicationInfo, baseapp::{ABCIHandler, BaseApp, Genesis}, client::rest::handlers::{node_info, staking_params, txs}, runtime::runtime, x::params::ParamsSubspaceKey
 };
 
 pub fn run_rest_server<
@@ -24,13 +20,18 @@ pub fn run_rest_server<
 >(
     app: BaseApp<SK, PSK, M, H, G, AI>,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G, AI>, Body>,
+    router: Router<RestState<SK, PSK, M, H, G, AI>>,
     tendermint_rpc_address: Url,
 ) {
     std::thread::spawn(move || {
-        Runtime::new()
-            .expect("unclear why this would ever fail")
+        let result = runtime()
             .block_on(launch(app, listen_addr, router, tendermint_rpc_address));
+        if let Err( err ) = result {
+            panic!( "Failed to run rest server with err: {}", err)
+        }
+        else {
+            return;
+        }
     });
 }
 
@@ -89,9 +90,9 @@ async fn launch<
 >(
     app: BaseApp<SK, PSK, M, H, G, AI>,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G, AI>, Body>,
+    router: Router<RestState<SK, PSK, M, H, G, AI>>,
     tendermint_rpc_address: Url,
-) {
+) -> anyhow::Result<()> {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
         .allow_origin(Any);
@@ -109,9 +110,10 @@ async fn launch<
         .layer(cors)
         .with_state(rest_state);
 
+    let listener = tokio::net::TcpListener::bind(listen_addr).await?;
+
     tracing::info!("REST server running at {}", listen_addr);
-    axum::Server::bind(&listen_addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }

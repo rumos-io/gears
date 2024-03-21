@@ -1,4 +1,4 @@
-use axum::{body::Body, Router};
+use axum::Router;
 use proto_messages::cosmos::tx::v1beta1::message::Message;
 use store_crate::StoreKey;
 
@@ -30,8 +30,7 @@ pub trait Node: AuxHandler {
             Self::ABCIHandler,
             Self::Genesis,
             AI,
-        >,
-        Body,
+        >
     >;
 }
 
@@ -45,8 +44,7 @@ pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
             Core::ABCIHandler,
             Core::Genesis,
             AI,
-        >,
-        Body,
+        >
     >,
     abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
 
