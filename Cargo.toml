@@ -20,7 +20,7 @@ resolver = "2"
 [workspace.dependencies]
 
 # cosmos
-cosmwasm-std = "1.1.5"
+cosmwasm-std = "2.0.0"
 
 # nutype
 bytes = { version = "1.2.1" }
