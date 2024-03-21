@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-// use cosmwasm_std::Uint256;
 use ibc_proto::{
     cosmos::base::v1beta1::Coin as RawCoin, cosmos::tx::v1beta1::Fee as RawFee, Protobuf,
 };
