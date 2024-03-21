@@ -14,7 +14,7 @@ use gears::application::node::Node;
 use gears::application::ApplicationInfo;
 
 use genesis::GenesisState;
-use ibc::cli::client::query::IbcQueryHandler;
+use ibc::client::cli::query::IbcQueryHandler;
 use proto_types::AccAddress;
 use rest::get_router;
 use serde::Serialize;

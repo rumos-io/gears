@@ -1,4 +1,4 @@
-pub mod cli;
+pub mod client;
 pub mod errors;
 pub mod handler;
 pub mod keeper;
