@@ -1,22 +1,25 @@
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{
+    extract::{Query, State},
+    routing::get,
+    Json, Router,
+};
 use gears::{
     application::ApplicationInfo,
     baseapp::{ABCIHandler, BaseApp, Genesis},
-    client::rest::RestState,
+    client::rest::{error::Error, RestState},
     x::params::ParamsSubspaceKey,
 };
 use proto_messages::cosmos::{
+    bank::v1beta1::PageRequest,
     ibc::{
-        query::QueryClientParamsResponse,
-        types::core::client::context::types::proto::v1::QueryClientParamsRequest,
+        query::QueryClientStateResponse,
+        types::core::client::context::types::proto::v1::QueryClientStatesRequest,
     },
     tx::v1beta1::message::Message,
 };
 use store::StoreKey;
 
-use gears::client::rest::error::Error;
-
-use crate::client::cli::query::client_params::PARAMS_URL;
+use crate::client::cli::query::client_states::STATES_URL;
 
 async fn handle<
     SK: StoreKey,
@@ -26,9 +29,10 @@ async fn handle<
     G: Genesis,
     AI: ApplicationInfo,
 >(
+    Query(_pagination): Query<Option<PageRequest>>,
     State(_app): State<BaseApp<SK, PSK, M, H, G, AI>>,
-) -> Result<Json<QueryClientParamsResponse>, Error> {
-    let _req = QueryClientParamsRequest {};
+) -> Result<Json<QueryClientStateResponse>, Error> {
+    let _req = QueryClientStatesRequest { pagination: None };
 
     todo!()
 }
@@ -41,5 +45,5 @@ pub fn router<
     G: Genesis,
     AI: ApplicationInfo,
 >() -> Router<RestState<SK, PSK, M, H, G, AI>> {
-    Router::new().route(PARAMS_URL, get(handle))
+    Router::new().route(STATES_URL, get(handle))
 }

@@ -1,7 +1,7 @@
 use clap::Args;
 use proto_messages::cosmos::ibc::types::core::client::context::types::proto::v1::QueryClientParamsRequest;
 
-pub(crate) const CLIENT_PARAMS_URL: &str = "/ibc.core.client.v1.Query/ClientParams";
+pub(crate) const PARAMS_URL: &str = "/ibc.core.client.v1.Query/ClientParams";
 
 #[derive(Args, Debug, Clone)]
 pub struct CliClientParams {

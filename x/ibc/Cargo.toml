@@ -24,6 +24,7 @@ schemars = { workspace = true }
 clap = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+constcat = { workspace = true }
 
 #networking
 tonic = { workspace = true }

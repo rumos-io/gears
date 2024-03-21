@@ -7,7 +7,11 @@ use store_crate::StoreKey;
 use tower_http::cors::{Any, CorsLayer};
 
 use crate::{
-    application::ApplicationInfo, baseapp::{ABCIHandler, BaseApp, Genesis}, client::rest::handlers::{node_info, staking_params, txs}, runtime::runtime, x::params::ParamsSubspaceKey
+    application::ApplicationInfo,
+    baseapp::{ABCIHandler, BaseApp, Genesis},
+    client::rest::handlers::{node_info, staking_params, txs},
+    runtime::runtime,
+    x::params::ParamsSubspaceKey,
 };
 
 pub fn run_rest_server<
@@ -24,12 +28,10 @@ pub fn run_rest_server<
     tendermint_rpc_address: Url,
 ) {
     std::thread::spawn(move || {
-        let result = runtime()
-            .block_on(launch(app, listen_addr, router, tendermint_rpc_address));
-        if let Err( err ) = result {
-            panic!( "Failed to run rest server with err: {}", err)
-        }
-        else {
+        let result = runtime().block_on(launch(app, listen_addr, router, tendermint_rpc_address));
+        if let Err(err) = result {
+            panic!("Failed to run rest server with err: {}", err)
+        } else {
             return;
         }
     });

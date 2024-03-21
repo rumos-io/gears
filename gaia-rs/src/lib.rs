@@ -129,7 +129,7 @@ impl Node for GaiaCore {
             Self::ABCIHandler,
             Self::Genesis,
             AI,
-        >
+        >,
     > {
         get_router()
     }
