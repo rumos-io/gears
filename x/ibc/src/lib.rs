@@ -1,3 +1,4 @@
+pub mod node;
 pub mod client;
 pub mod errors;
 pub mod handler;
