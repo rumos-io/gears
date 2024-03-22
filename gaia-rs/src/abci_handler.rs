@@ -45,8 +45,11 @@ impl ABCIHandler {
             auth_keeper.clone(),
         );
 
-        let ibc_keeper =
-            ibc::keeper::Keeper::new(GaiaStoreKey::Bank, params_keeper, GaiaParamsStoreKey::Bank);
+        let ibc_keeper = ibc::keeper::tx::TxKeeper::new(
+            GaiaStoreKey::Bank,
+            params_keeper,
+            GaiaParamsStoreKey::Bank,
+        );
 
         ABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),

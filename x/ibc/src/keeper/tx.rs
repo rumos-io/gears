@@ -45,13 +45,13 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct TxKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     store_key: SK,
     params_keeper: AbciParamsKeeper<SK, PSK>,
     // auth_keeper: auth::Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     pub fn new(
         store_key: SK,
         params_keeper: gears::x::params::Keeper<SK, PSK>,
@@ -61,7 +61,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             params_keeper,
             params_subspace_key,
         };
-        Keeper {
+        TxKeeper {
             store_key,
             params_keeper: abci_params_keeper,
         }

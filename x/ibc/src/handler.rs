@@ -7,15 +7,15 @@ use proto_messages::cosmos::ibc::tx::{
 };
 use store::StoreKey;
 
-use crate::{errors::ModuleErrors, keeper::Keeper, message::Message};
+use crate::{errors::ModuleErrors, keeper::tx::TxKeeper, message::Message};
 
 #[derive(Debug, Clone)]
 pub struct Handler<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    keeper: Arc<RwLock<Keeper<SK, PSK>>>, // TODO: Should signature for Handler always be &self or allow &mut self?
+    keeper: Arc<RwLock<TxKeeper<SK, PSK>>>, // TODO: Should signature for Handler always be &self or allow &mut self?
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
-    pub fn new(keeper: Keeper<SK, PSK>) -> Self {
+    pub fn new(keeper: TxKeeper<SK, PSK>) -> Self {
         Self {
             keeper: Arc::new(RwLock::new(keeper)),
         }
