@@ -2,7 +2,7 @@ use gears::application::handlers::QueryHandler;
 use prost::bytes::Bytes;
 use proto_messages::cosmos::ibc::{
     protobuf::Protobuf,
-    query::{
+    query::response::{
         QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
         QueryClientStatusResponse, QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
         QueryConsensusStatesResponse,

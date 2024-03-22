@@ -13,7 +13,7 @@ use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     ibc::{
         protobuf::Protobuf,
-        query::QueryClientStateResponse,
+        query::response::QueryClientStateResponse,
         types::core::{
             client::context::types::proto::v1::QueryClientStateRequest, host::identifiers::ClientId,
         },

@@ -2,13 +2,12 @@ use ibc::core::client::types::proto::v1::QueryClientParamsResponse as RawQueryCl
 use ibc_proto::Protobuf;
 use serde::{Deserialize, Serialize};
 
-use super::types::core::client::proto::IdentifiedClientState;
-use super::types::core::client::types::ConsensusStateWithHeight;
-use super::types::core::client::types::Height;
-use super::types::core::client::types::HeightError;
-use super::types::core::client::types::Params;
 use crate::any::Any;
 use crate::cosmos::bank::v1beta1::PageResponse;
+use crate::cosmos::ibc::types::core::client::{
+    proto::IdentifiedClientState,
+    types::{ConsensusStateWithHeight, Height, HeightError, Params},
+};
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryClientParamsResponse {
@@ -41,7 +40,7 @@ pub use ibc::core::client::types::proto::v1::QueryClientStateResponse as RawQuer
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryClientStateResponse {
-    pub client_state: Option<Any>,
+    pub client_state: Any,
     pub proof: Vec<u8>,
     pub proof_height: Option<Height>,
 }
@@ -65,7 +64,7 @@ impl TryFrom<RawQueryClientStateResponse> for QueryClientStateResponse {
         };
 
         Ok(Self {
-            client_state: client_state.map(Any::from),
+            client_state: client_state.map(Any::from).ok_or(HeightError )?,
             proof,
             proof_height: height,
         })
@@ -81,7 +80,7 @@ impl From<QueryClientStateResponse> for RawQueryClientStateResponse {
         } = value;
 
         Self {
-            client_state: client_state.map(|e| e.into()),
+            client_state: Some(client_state.into()),
             proof,
             proof_height: proof_height.map(|e| e.into()),
         }

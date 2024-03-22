@@ -267,6 +267,29 @@ pub mod tendermint {
 
     pub use ibc::clients::tendermint::client_state::ClientState as WrappedTendermintClientState;
     pub use ibc::clients::tendermint::types::ClientState as RawTendermintClientState;
+    // use std::time::Duration;
+    // use ibc::clients::tendermint::types::{AllowUpdate, TrustThreshold};
+    // use ibc::core::commitment_types::specs::ProofSpecs;
+    // use ibc::core::host::types::identifiers::ChainId;
+    // use serde::{Deserialize, Serialize};
+
+    // use super::core::client::types::Height;
+
+    // #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    // pub struct ClientState {
+    //     pub chain_id: ChainId,
+    //     pub trust_level: TrustThreshold,
+    //     pub trusting_period: Duration,
+    //     pub unbonding_period: Duration,
+    //     pub max_clock_drift: Duration,
+    //     pub latest_height: Height,
+    //     pub proof_specs: ProofSpecs,
+    //     pub upgrade_path: Vec<String>,
+    //     pub allow_update: AllowUpdate,
+    //     pub frozen_height: Option<Height>,
+    //     #[serde(skip)]
+    //     pub verifier: ProdVerifier,
+    // }
 
     pub mod error {
         pub use ::tendermint::proto::Error;

@@ -7,7 +7,7 @@ use gears::{
 };
 use proto_messages::cosmos::{
     ibc::{
-        protobuf::Protobuf, query::QueryClientParamsResponse,
+        protobuf::Protobuf, query::response::QueryClientParamsResponse,
         types::core::client::context::types::proto::v1::QueryClientParamsRequest,
     },
     tx::v1beta1::message::Message,

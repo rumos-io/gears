@@ -1,49 +1,76 @@
+use std::str::FromStr;
+
 use database::Database;
-use gears::{types::context::query_context::QueryContext, x::params::ParamsSubspaceKey};
-use proto_messages::cosmos::ibc::types::core::client::context::types::proto::v1::QueryClientStatesRequest;
+use gears::types::context::query_context::QueryContext;
+use proto_messages::cosmos::ibc::{
+    query::response::{
+        QueryClientParamsResponse, QueryClientStateResponse, RawQueryClientStateResponse,
+    },
+    types::core::{
+        client::{context::types::proto::v1::QueryClientStateRequest, types::ProtoHeight},
+        host::identifiers::ClientId,
+    },
+};
 use store::StoreKey;
 
-use crate::params::AbciParamsKeeper;
+use super::client_state_get;
 
 #[derive(Debug, Clone)]
-pub struct QueryKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct QueryKeeper<SK: StoreKey> {
     store_key: SK,
-    params_keeper: AbciParamsKeeper<SK, PSK>,
-    // auth_keeper: auth::Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
-    pub fn new(
-        store_key: SK,
-        params_keeper: gears::x::params::Keeper<SK, PSK>,
-        params_subspace_key: PSK,
-    ) -> Self {
-        let abci_params_keeper = AbciParamsKeeper {
-            params_keeper,
-            params_subspace_key,
-        };
-        QueryKeeper {
-            store_key,
-            params_keeper: abci_params_keeper,
-        }
+impl<SK: StoreKey> QueryKeeper<SK> {
+    pub fn new(store_key: SK) -> Self {
+        QueryKeeper { store_key }
     }
 
     pub fn client_params<DB: Database + Send + Sync>(
         &mut self,
-        ctx: &mut QueryContext<'_, DB, SK>,
-        query : QueryClientStatesRequest,
-    ) {
+        _ctx: &mut QueryContext<'_, DB, SK>,
+    ) -> QueryClientParamsResponse {
+        todo!()
     }
 
-    pub fn client_state() {}
+    pub fn client_state<DB: Database>(
+        &mut self,
+        ctx: &mut QueryContext<'_, DB, SK>,
+        QueryClientStateRequest { client_id }: QueryClientStateRequest,
+    ) -> anyhow::Result<QueryClientStateResponse> {
+        let client_id = ClientId::from_str(&client_id)?;
 
-    pub fn client_states() {}
+        let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
+        let revision_number = ctx.chain_id().revision_number();
 
-    pub fn client_status() {}
+        let response = RawQueryClientStateResponse {
+            client_state: Some(client_state.into()),
+            proof: Vec::new(), // TODO: ?
+            proof_height: Some(ProtoHeight {
+                revision_number,
+                revision_height: ctx.height(),
+            }),
+        };
 
-    pub fn consensus_state_height() {}
+        Ok(response.try_into()?)
+    }
 
-    pub fn consensus_state() {}
+    pub fn client_states() -> anyhow::Result<()> {
+        Ok(())
+    }
 
-    pub fn consensus_states() {}
+    pub fn client_status() -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    pub fn consensus_state_height() -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    pub fn consensus_state() -> anyhow::Result<()> {
+        Ok(())
+    }
+
+    pub fn consensus_states() -> anyhow::Result<()> {
+        Ok(())
+    }
 }

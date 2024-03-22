@@ -13,7 +13,7 @@ use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     bank::v1beta1::PageRequest,
     ibc::{
-        protobuf::Protobuf, query::QueryClientStateResponse,
+        protobuf::Protobuf, query::response::QueryClientStateResponse,
         types::core::client::context::types::proto::v1::QueryClientStatesRequest,
     },
     tx::v1beta1::message::Message,

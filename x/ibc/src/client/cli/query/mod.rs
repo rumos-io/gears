@@ -4,7 +4,7 @@ use clap::{Args, Subcommand};
 use prost::Message;
 use proto_messages::cosmos::{
     ibc::{
-        query::{
+        query::response::{
             QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
             QueryClientStatusResponse, QueryConsensusStateHeightsResponse,
             QueryConsensusStateResponse, QueryConsensusStatesResponse,

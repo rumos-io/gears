@@ -1,5 +1,6 @@
 use crate::error::AppError;
 use database::{Database, PrefixDB};
+use proto_messages::cosmos::ibc::types::core::host::identifiers::ChainId;
 use store_crate::{MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
 
 pub struct QueryContext<'a, DB, SK> {
@@ -22,7 +23,11 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
         return self.multi_store.get_kv_store(store_key);
     }
 
-    // pub fn _get_height(&self) -> u64 {
-    //     self._height
-    // }
+    pub fn height(&self) -> u64 {
+        unimplemented!()
+    }
+
+    pub fn chain_id(&self) -> &ChainId {
+        unimplemented!()
+    }
 }

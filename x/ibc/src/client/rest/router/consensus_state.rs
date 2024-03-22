@@ -14,7 +14,7 @@ use proto_messages::cosmos::{
     bank::v1beta1::PageRequest,
     ibc::{
         protobuf::Protobuf,
-        query::QueryConsensusStateResponse,
+        query::response::QueryConsensusStateResponse,
         types::core::{
             client::context::types::proto::v1::QueryConsensusStateRequest,
             host::identifiers::ClientId,

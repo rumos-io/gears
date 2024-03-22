@@ -6,6 +6,7 @@ use super::{
 };
 
 pub trait ReadContext<SK, DB: Database> {
+    ///  Fetches an immutable ref to a KVStore from the MultiStore.
     fn get_kv_store(&self, store_key: &SK) -> AnyKVStore<'_, PrefixDB<DB>>;
 }
 
