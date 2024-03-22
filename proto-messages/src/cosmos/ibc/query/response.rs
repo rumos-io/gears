@@ -1,3 +1,4 @@
+use ibc::core::client::types::error::ClientError;
 use ibc::core::client::types::proto::v1::QueryClientParamsResponse as RawQueryClientParamsResponse;
 use ibc_proto::Protobuf;
 use serde::{Deserialize, Serialize};
@@ -6,7 +7,7 @@ use crate::any::Any;
 use crate::cosmos::bank::v1beta1::PageResponse;
 use crate::cosmos::ibc::types::core::client::{
     proto::IdentifiedClientState,
-    types::{ConsensusStateWithHeight, Height, HeightError, Params},
+    types::{ConsensusStateWithHeight, Height, Params},
 };
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
@@ -48,7 +49,7 @@ pub struct QueryClientStateResponse {
 impl Protobuf<RawQueryClientStateResponse> for QueryClientStateResponse {}
 
 impl TryFrom<RawQueryClientStateResponse> for QueryClientStateResponse {
-    type Error = HeightError;
+    type Error = ClientError;
 
     fn try_from(value: RawQueryClientStateResponse) -> Result<Self, Self::Error> {
         let RawQueryClientStateResponse {
@@ -64,7 +65,9 @@ impl TryFrom<RawQueryClientStateResponse> for QueryClientStateResponse {
         };
 
         Ok(Self {
-            client_state: client_state.map(Any::from).ok_or(HeightError )?,
+            client_state: client_state
+                .map(Any::from)
+                .ok_or(ClientError::MissingRawClientState)?,
             proof,
             proof_height: height,
         })
@@ -176,7 +179,7 @@ pub struct QueryConsensusStateHeightsResponse {
 impl Protobuf<RawQueryConsensusStateHeightsResponse> for QueryConsensusStateHeightsResponse {}
 
 impl TryFrom<RawQueryConsensusStateHeightsResponse> for QueryConsensusStateHeightsResponse {
-    type Error = HeightError;
+    type Error = ClientError;
 
     fn try_from(value: RawQueryConsensusStateHeightsResponse) -> Result<Self, Self::Error> {
         let RawQueryConsensusStateHeightsResponse {
@@ -225,7 +228,7 @@ pub struct QueryConsensusStateResponse {
 impl Protobuf<RawQueryConsensusStateResponse> for QueryConsensusStateResponse {}
 
 impl TryFrom<RawQueryConsensusStateResponse> for QueryConsensusStateResponse {
-    type Error = HeightError;
+    type Error = ClientError;
 
     fn try_from(value: RawQueryConsensusStateResponse) -> Result<Self, Self::Error> {
         let RawQueryConsensusStateResponse {
@@ -275,7 +278,7 @@ pub struct QueryConsensusStatesResponse {
 impl Protobuf<RawQueryConsensusStatesResponse> for QueryConsensusStatesResponse {}
 
 impl TryFrom<RawQueryConsensusStatesResponse> for QueryConsensusStatesResponse {
-    type Error = HeightError;
+    type Error = ClientError;
 
     fn try_from(value: RawQueryConsensusStatesResponse) -> Result<Self, Self::Error> {
         let RawQueryConsensusStatesResponse {
