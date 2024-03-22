@@ -9,9 +9,11 @@ use gears::{
     client::rest::{error::Error, RestState},
     x::params::ParamsSubspaceKey,
 };
+use prost::Message as ProstMessage;
 use proto_messages::cosmos::{
     bank::v1beta1::PageRequest,
     ibc::{
+        protobuf::Protobuf,
         query::QueryConsensusStateResponse,
         types::core::{
             client::context::types::proto::v1::QueryConsensusStateRequest,
@@ -21,6 +23,8 @@ use proto_messages::cosmos::{
     tx::v1beta1::message::Message,
 };
 use store::StoreKey;
+use tendermint::abci::Application;
+use tendermint::proto::abci::RequestQuery;
 
 use crate::client::cli::query::consensus_state::CONSENSUS_STATE_URL;
 
@@ -39,16 +43,29 @@ async fn handle<
         bool,
     )>,
     Query(_pagination): Query<Option<PageRequest>>,
-    State(_app): State<BaseApp<SK, PSK, M, H, G, AI>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
 ) -> Result<Json<QueryConsensusStateResponse>, Error> {
-    let _req = QueryConsensusStateRequest {
+    let query = QueryConsensusStateRequest {
         client_id: client_id.to_string(),
         revision_number,
         revision_height,
         latest_height,
     };
 
-    todo!()
+    let request = RequestQuery {
+        data: ProstMessage::encode_to_vec(&query).into(),
+        path: CONSENSUS_STATE_URL.to_owned(),
+        height: 0,
+        prove: false,
+    };
+
+    let response = app.query(request);
+
+    Ok(Json(
+        QueryConsensusStateResponse::decode(response.value).map_err(|_| {
+            Error::bad_gateway_with_msg("should be a valid QueryConsensusStateResponse".to_owned())
+        })?,
+    ))
 }
 
 pub fn router<

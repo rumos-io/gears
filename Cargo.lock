@@ -2135,6 +2135,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "axum 0.7.4",
+ "bytes",
  "clap",
  "constcat",
  "database",

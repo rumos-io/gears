@@ -12,7 +12,10 @@ proto-messages = { path = "../../proto-messages" }
 store = { path = "../../store" }
 gears = { path = "../../gears" }
 database = { path = "../../database" }
-tendermint = {path = "../../tendermint"}
+tendermint = {path = "../../tendermint", features = [ "abci"]}
+
+# nutype
+bytes = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }
