@@ -27,7 +27,9 @@ use proto_messages::{
 use store::StoreKey;
 
 use crate::{
-    errors::{ClientCreateError, ClientRecoverError, ClientUpdateError, ClientUpgradeError},
+    errors::tx::client::{
+        ClientCreateError, ClientRecoverError, ClientUpdateError, ClientUpgradeError,
+    },
     params::{self, AbciParamsKeeper},
     types::ContextShim,
 };

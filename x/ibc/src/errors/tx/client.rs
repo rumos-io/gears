@@ -1,3 +1,4 @@
+use gears::error::SearchError;
 use proto_messages::cosmos::ibc::types::core::{
     client::{
         context::types::{Height, Status},
@@ -12,17 +13,17 @@ use proto_messages::cosmos::ibc::types::core::{
 use crate::params::ParamsError;
 
 #[derive(Debug, thiserror::Error)]
-pub enum ModuleErrors {
+pub enum ClientErrors {
     #[error("Error while creating client: {0}")]
-    ClientCreateError(#[from] ClientCreateError),
+    Create(#[from] ClientCreateError),
     #[error("Error while updating client: {0}")]
-    ClientUpdateError(#[from] ClientUpdateError),
+    Update(#[from] ClientUpdateError),
     #[error("Error while upgrading client: {0}")]
-    ClientUpgradeError(#[from] ClientUpgradeError),
+    Upgrade(#[from] ClientUpgradeError),
     #[error("Error while recovering client: {0}")]
-    ClientRecoverError(#[from] ClientRecoverError),
+    Recover(#[from] ClientRecoverError),
     #[error("Unexpected error: {0}")]
-    CustomError(String),
+    Custom(String),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -83,12 +84,4 @@ pub enum ClientCreateError {
     SearchError(#[from] SearchError),
     #[error("Unexpected error: {0}")]
     CustomError(String),
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum SearchError {
-    #[error("not found")]
-    NotFound,
-    #[error("Decode error: {0}")]
-    DecodeError(String),
 }

@@ -1,5 +1,5 @@
 use crate::{
-    errors::ModuleErrors,
+    errors::tx::client::ClientErrors,
     keeper::{query::QueryKeeper, tx::TxKeeper},
     message::Message,
 };
@@ -34,7 +34,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
-    ) -> Result<(), ModuleErrors> {
+    ) -> Result<(), ClientErrors> {
         match msg {
             Message::ClientCreate(msg) => {
                 let MsgCreateClient {

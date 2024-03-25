@@ -1,5 +1,7 @@
 use database::Database;
-use gears::{types::context::read_context::ReadContext, x::params::ParamsSubspaceKey};
+use gears::{
+    error::SearchError, types::context::read_context::ReadContext, x::params::ParamsSubspaceKey,
+};
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
@@ -19,7 +21,6 @@ use proto_messages::{
 use store::StoreKey;
 
 use crate::{
-    errors::SearchError,
     params::{self, AbciParamsKeeper},
     types::ConsensusState,
 };
