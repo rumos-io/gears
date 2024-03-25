@@ -42,32 +42,21 @@ use crate::types::ContextShim;
 use super::{client_consensus_state, client_state_get};
 
 #[derive(Debug, Clone)]
-pub struct QueryKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct QueryKeeper<SK: StoreKey> {
     store_key: SK,
-    params_keeper: AbciParamsKeeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
-    pub fn new(
-        store_key: SK,
-        params_keeper: gears::x::params::Keeper<SK, PSK>,
-        params_subspace_key: PSK,
-    ) -> Self {
-        let abci_params_keeper = AbciParamsKeeper {
-            params_keeper,
-            params_subspace_key,
-        };
-        Self {
-            store_key,
-            params_keeper: abci_params_keeper,
-        }
+impl<SK: StoreKey> QueryKeeper<SK> {
+    pub fn new(store_key: SK) -> Self {
+        Self { store_key }
     }
 
-    pub fn client_params<DB: Database + Send + Sync>(
+    pub fn client_params<DB: Database + Send + Sync, PSK: ParamsSubspaceKey>(
         &mut self,
         ctx: &mut QueryContext<'_, DB, SK>,
+        params_keeper: &AbciParamsKeeper<SK, PSK>,
     ) -> anyhow::Result<QueryClientParamsResponse> {
-        let params = params_get(&self.params_keeper, ctx)?;
+        let params = params_get(params_keeper, ctx)?;
 
         let response = QueryClientParamsResponse { params };
 
@@ -118,16 +107,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         Ok(response)
     }
 
-    pub fn client_status<DB: Database + Send + Sync>(
+    pub fn client_status<DB: Database + Send + Sync, PSK: ParamsSubspaceKey>(
         &mut self,
         ctx: &mut QueryContext<'_, DB, SK>,
+        params_keeper: &AbciParamsKeeper<SK, PSK>,
         QueryClientStatusRequest { client_id }: QueryClientStatusRequest,
     ) -> anyhow::Result<QueryClientStatusResponse> {
         let client_id = ClientId::from_str(&client_id)?;
         let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
         let client_type = client_state.client_type();
 
-        let params = params_get(&self.params_keeper, ctx)?;
+        let params = params_get(&params_keeper, ctx)?;
 
         let status = if !params.is_client_allowed(&client_type) {
             Status::Unauthorized
