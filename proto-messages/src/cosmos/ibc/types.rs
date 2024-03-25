@@ -269,7 +269,8 @@ pub mod tendermint {
     pub use ibc::clients::tendermint::types::ClientState as RawTendermintClientState;
 
     pub mod error {
-        pub use ::tendermint::proto::Error;
+        pub use ::tendermint::error::Error;
+        pub use ::tendermint::proto::Error as ProtoError;
     }
 
     pub mod types {
