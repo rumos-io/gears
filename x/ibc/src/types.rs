@@ -82,25 +82,19 @@ pub enum IbcContext<'a, 'b, DB, SK> {
 
 pub struct ContextShim<'a, 'b, DB, SK>(pub IbcContext<'a, 'b, DB, SK>); // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
-    From<IbcContext<'a, 'b, DB, SK>> for ContextShim<'a, 'b, DB, SK>
-{
+impl<'a, 'b, DB, SK> From<IbcContext<'a, 'b, DB, SK>> for ContextShim<'a, 'b, DB, SK> {
     fn from(value: IbcContext<'a, 'b, DB, SK>) -> Self {
         Self(value)
     }
 }
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync>
-    From<&'a QueryContext<'b, DB, SK>> for ContextShim<'a, 'b, DB, SK>
-{
+impl<'a, 'b, DB, SK> From<&'a QueryContext<'b, DB, SK>> for ContextShim<'a, 'b, DB, SK> {
     fn from(value: &'a QueryContext<'b, DB, SK>) -> Self {
         Self(IbcContext::Query(value))
     }
 }
 
-impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey + Send + Sync> From<&'a TxContext<'b, DB, SK>>
-    for ContextShim<'a, 'b, DB, SK>
-{
+impl<'a, 'b, DB, SK> From<&'a TxContext<'b, DB, SK>> for ContextShim<'a, 'b, DB, SK> {
     fn from(value: &'a TxContext<'b, DB, SK>) -> Self {
         Self(IbcContext::Tx(value))
     }
