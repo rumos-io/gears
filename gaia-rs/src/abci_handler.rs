@@ -100,7 +100,9 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
         } else if query.path.starts_with("/cosmos.bank") {
             self.bank_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/ibc.core.client") {
-            self.ibc_handler.query(ctx, query)
+            self.ibc_handler
+                .query(ctx, query)
+                .map_err(|e| AppError::Query(e.to_string()))
         } else {
             Err(AppError::InvalidRequest("query path not found".into()))
         }

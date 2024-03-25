@@ -15,6 +15,7 @@ pub enum AppError {
     Tree(trees::Error),
     IBC(String),
     Genesis(String),
+    Query(String),
 }
 
 impl Display for AppError {
@@ -37,6 +38,7 @@ impl Display for AppError {
             AppError::Tree(err) => err.fmt(f),
             AppError::IBC(msg) => write!(f, "ibc routing error: {}", msg),
             AppError::Genesis(msg) => write!(f, "{}", msg),
+            AppError::Query(msg) => write!(f, "Error executing query: {msg}"),
         }
     }
 }

@@ -1,11 +1,10 @@
 use crate::{
-    errors::tx::client::ClientErrors,
+    errors,
     keeper::{query::QueryKeeper, tx::TxKeeper},
     message::Message,
 };
 use database::Database;
 use gears::{
-    error::AppError,
     types::context::{query_context::QueryContext, tx_context::TxContext},
     x::params::ParamsSubspaceKey,
 };
@@ -34,7 +33,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
-    ) -> Result<(), ClientErrors> {
+    ) -> Result<(), errors::tx::client::ClientErrors> {
         match msg {
             Message::ClientCreate(msg) => {
                 let MsgCreateClient {
@@ -101,69 +100,42 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         query: tendermint::proto::abci::RequestQuery,
-    ) -> Result<bytes::Bytes, AppError> {
+    ) -> Result<bytes::Bytes, errors::query::client::ClientErrors> {
         match query.path.as_str() {
-            "/ibc.core.client.v1.Query/ClientParams" => Ok(self
-                .query_keeper
-                .client_params(ctx)
-                .map_err(|_| AppError::AccountNotFound)?
-                .encode_vec()
-                .into()),
+            "/ibc.core.client.v1.Query/ClientParams" => {
+                Ok(self.query_keeper.client_params(ctx)?.encode_vec().into())
+            }
             "/ibc.core.client.v1.Query/UpgradedClientState" => Ok(self
                 .query_keeper
-                .client_state(
-                    ctx,
-                    ProstMessage::decode(query.data).map_err(|_| AppError::AccountNotFound)?,
-                )
-                .map_err(|_| AppError::AccountNotFound)?
+                .client_state(ctx, ProstMessage::decode(query.data)?)?
                 .encode_vec()
                 .into()),
             "/ibc.core.client.v1.Query/ClientStates" => Ok(self
                 .query_keeper
-                .client_states(
-                    ctx,
-                    ProstMessage::decode(query.data).map_err(|_| AppError::AccountNotFound)?,
-                )
-                .map_err(|_| AppError::AccountNotFound)?
+                .client_states(ctx, ProstMessage::decode(query.data)?)?
                 .encode_vec()
                 .into()),
             "/ibc.core.client.v1.Query/ClientStatus" => Ok(self
                 .query_keeper
-                .client_status(
-                    ctx,
-                    ProstMessage::decode(query.data).map_err(|_| AppError::AccountNotFound)?,
-                )
-                .map_err(|_| AppError::AccountNotFound)?
+                .client_status(ctx, ProstMessage::decode(query.data)?)?
                 .encode_vec()
                 .into()),
             "/ibc.core.client.v1.Query/ConsensusStateHeights" => Ok(self
                 .query_keeper
-                .consensus_state_heights(
-                    ctx,
-                    ProstMessage::decode(query.data).map_err(|_| AppError::AccountNotFound)?,
-                )
-                .map_err(|_| AppError::AccountNotFound)?
+                .consensus_state_heights(ctx, ProstMessage::decode(query.data)?)?
                 .encode_vec()
                 .into()),
             "/ibc.core.client.v1.Query/ConsensusState" => Ok(self
                 .query_keeper
-                .consensus_state(
-                    ctx,
-                    ProstMessage::decode(query.data).map_err(|_| AppError::AccountNotFound)?,
-                )
-                .map_err(|_| AppError::AccountNotFound)?
+                .consensus_state(ctx, ProstMessage::decode(query.data)?)?
                 .encode_vec()
                 .into()),
             "/ibc.core.client.v1.Query/ConsensusStates" => Ok(self
                 .query_keeper
-                .consensus_states(
-                    ctx,
-                    ProstMessage::decode(query.data).map_err(|_| AppError::AccountNotFound)?,
-                )
-                .map_err(|_| AppError::AccountNotFound)?
+                .consensus_states(ctx, ProstMessage::decode(query.data)?)?
                 .encode_vec()
                 .into()),
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            _ => Err(errors::query::client::ClientErrors::PathNotFound),
         }
     }
 }

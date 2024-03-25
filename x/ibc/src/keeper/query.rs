@@ -35,6 +35,10 @@ use proto_messages::{
 };
 use store::StoreKey;
 
+use crate::errors::query::client::{
+    ConsensusStateError, ConsensusStateHeightError, ConsensusStatesError, ParamsError, StateError,
+    StatesError, StatusError,
+};
 use crate::keeper::{params_get, KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
 use crate::params::AbciParamsKeeper;
 use crate::types::ContextShim;
@@ -66,7 +70,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
     pub fn client_params<DB: Database + Send + Sync>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
-    ) -> anyhow::Result<QueryClientParamsResponse> {
+    ) -> Result<QueryClientParamsResponse, ParamsError> {
         let params = params_get(&self.params_keeper, ctx)?;
 
         let response = QueryClientParamsResponse { params };
@@ -78,7 +82,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         QueryClientStateRequest { client_id }: QueryClientStateRequest,
-    ) -> anyhow::Result<QueryClientStateResponse> {
+    ) -> Result<QueryClientStateResponse, StateError> {
         let client_id = ClientId::from_str(&client_id)?;
 
         let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
@@ -100,14 +104,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         QueryClientStatesRequest { pagination: _ }: QueryClientStatesRequest,
-    ) -> anyhow::Result<QueryClientStatesResponse> {
+    ) -> Result<QueryClientStatesResponse, StatesError> {
         let any_store = ctx.get_kv_store(&self.store_key);
         let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
             any_store.get_immutable_prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
 
         let mut states = Vec::<IdentifiedClientState>::new();
         for (_key, value) in store.range(..) {
-            states.push(RawIdentifiedClientState::decode::<Bytes>(value.into())?.try_into()?);
+            states.push(
+                RawIdentifiedClientState::decode::<Bytes>(value.into())?
+                    .try_into()
+                    .map_err(|e: std::convert::Infallible| StatesError::Custom(e.to_string()))?,
+            );
         }
 
         let response = QueryClientStatesResponse {
@@ -122,7 +130,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         QueryClientStatusRequest { client_id }: QueryClientStatusRequest,
-    ) -> anyhow::Result<QueryClientStatusResponse> {
+    ) -> Result<QueryClientStatusResponse, StatusError> {
         let client_id = ClientId::from_str(&client_id)?;
         let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
         let client_type = client_state.client_type();
@@ -149,7 +157,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
             client_id,
             pagination: _,
         }: QueryConsensusStateHeightsRequest,
-    ) -> anyhow::Result<QueryConsensusStateHeightsResponse> {
+    ) -> Result<QueryConsensusStateHeightsResponse, ConsensusStateHeightError> {
         let client_id = ClientId::from_str(&client_id)?;
         let store = ctx
             .get_kv_store(&self.store_key)
@@ -160,7 +168,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
 
         let mut heights = Vec::<Height>::new();
         for (_key, value) in store.range(..) {
-            heights.push(Height::decode_vec(&value)?);
+            heights.push(
+                Height::decode_vec(&value)
+                    .map_err(|e| ConsensusStateHeightError::Decode(e.to_string()))?,
+            );
         }
 
         let response = QueryConsensusStateHeightsResponse {
@@ -180,7 +191,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
             revision_height,
             latest_height,
         }: QueryConsensusStateRequest,
-    ) -> anyhow::Result<QueryConsensusStateResponse> {
+    ) -> Result<QueryConsensusStateResponse, ConsensusStateError> {
         let client_id = ClientId::from_str(&client_id)?;
 
         let height = Height::new(revision_number, revision_height)?;
@@ -211,7 +222,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
             client_id,
             pagination: _,
         }: QueryConsensusStatesRequest,
-    ) -> anyhow::Result<QueryConsensusStatesResponse> {
+    ) -> Result<QueryConsensusStatesResponse, ConsensusStatesError> {
         let client_id = ClientId::from_str(&client_id)?;
 
         let states = {
