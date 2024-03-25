@@ -9,16 +9,18 @@ use proto_messages::{
     cosmos::ibc::{
         protobuf::Protobuf,
         query::response::{
-            QueryClientParamsResponse, QueryClientStateResponse,
+            QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
             QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
             QueryConsensusStatesResponse, RawQueryClientStateResponse,
         },
         types::core::{
             client::{
                 context::types::proto::v1::{
-                    QueryClientStateRequest, QueryConsensusStateHeightsRequest,
-                    QueryConsensusStateRequest, QueryConsensusStatesRequest,
+                    QueryClientStateRequest, QueryClientStatesRequest,
+                    QueryConsensusStateHeightsRequest, QueryConsensusStateRequest,
+                    QueryConsensusStatesRequest,
                 },
+                proto::{IdentifiedClientState, RawIdentifiedClientState},
                 types::{
                     ConsensusStateWithHeight, Height, ProtoHeight, RawConsensusStateWithHeight,
                 },
@@ -72,8 +74,26 @@ impl<SK: StoreKey> QueryKeeper<SK> {
         Ok(response.try_into()?)
     }
 
-    pub fn client_states() -> anyhow::Result<()> {
-        Ok(())
+    pub fn client_states<DB: Database>(
+        &mut self,
+        ctx: &mut QueryContext<'_, DB, SK>,
+        QueryClientStatesRequest { pagination: _ }: QueryClientStatesRequest,
+    ) -> anyhow::Result<QueryClientStatesResponse> {
+        let any_store = ctx.get_kv_store(&self.store_key);
+        let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
+            any_store.get_immutable_prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
+
+        let mut states = Vec::<IdentifiedClientState>::new();
+        for (_key, value) in store.range(..) {
+            states.push(RawIdentifiedClientState::decode::<Bytes>(value.into())?.try_into()?);
+        }
+
+        let response = QueryClientStatesResponse {
+            client_states: states,
+            pagination: None,
+        };
+
+        Ok(response)
     }
 
     pub fn client_status() -> anyhow::Result<()> {
