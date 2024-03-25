@@ -251,7 +251,8 @@ pub mod tendermint {
     // }
 
     pub mod error {
-        pub use ::tendermint::proto::Error;
+        pub use ::tendermint::error::Error;
+        pub use ::tendermint::proto::Error as ProtoError;
     }
 
     pub mod types {
