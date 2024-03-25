@@ -1,8 +1,5 @@
 use database::Database;
-use gears::{
-    types::context::{context::Context, read_context::ReadContext},
-    x::params::ParamsSubspaceKey,
-};
+use gears::{types::context::read_context::ReadContext, x::params::ParamsSubspaceKey};
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
@@ -35,10 +32,10 @@ pub const KEY_CONSENSUS_STATE_PREFIX: &str = "consensusStates";
 
 pub(self) fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
     keeper: &AbciParamsKeeper<SK, PSK>,
-    ctx: Context<'_, '_, DB, SK>,
+    ctx: &impl ReadContext<SK, DB>,
 ) -> Result<Params, SearchError> {
     let bytes = keeper
-        .get(&ctx, &params::CLIENT_PARAMS_KEY)
+        .get(ctx, &params::CLIENT_PARAMS_KEY)
         .map_err(|_| SearchError::NotFound)?;
 
     Ok(serde_json::from_slice::<RawParams>(&bytes)

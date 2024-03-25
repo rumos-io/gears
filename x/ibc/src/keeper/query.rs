@@ -3,20 +3,24 @@ use std::str::FromStr;
 use bytes::Bytes;
 use database::Database;
 use gears::types::context::query_context::QueryContext;
+use gears::x::params::ParamsSubspaceKey;
 use prost::Message;
+use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateCommon;
+use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateValidation;
+use proto_messages::cosmos::ibc::types::core::client::context::types::Status;
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
         protobuf::Protobuf,
         query::response::{
             QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
-            QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
-            QueryConsensusStatesResponse, RawQueryClientStateResponse,
+            QueryClientStatusResponse, QueryConsensusStateHeightsResponse,
+            QueryConsensusStateResponse, QueryConsensusStatesResponse, RawQueryClientStateResponse,
         },
         types::core::{
             client::{
                 context::types::proto::v1::{
-                    QueryClientStateRequest, QueryClientStatesRequest,
+                    QueryClientStateRequest, QueryClientStatesRequest, QueryClientStatusRequest,
                     QueryConsensusStateHeightsRequest, QueryConsensusStateRequest,
                     QueryConsensusStatesRequest,
                 },
@@ -31,18 +35,32 @@ use proto_messages::{
 };
 use store::StoreKey;
 
-use crate::keeper::{KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
+use crate::keeper::{params_get, KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
+use crate::params::AbciParamsKeeper;
+use crate::types::ContextShim;
 
 use super::{client_consensus_state, client_state_get};
 
 #[derive(Debug, Clone)]
-pub struct QueryKeeper<SK: StoreKey> {
+pub struct QueryKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     store_key: SK,
+    params_keeper: AbciParamsKeeper<SK, PSK>,
 }
 
-impl<SK: StoreKey> QueryKeeper<SK> {
-    pub fn new(store_key: SK) -> Self {
-        QueryKeeper { store_key }
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
+    pub fn new(
+        store_key: SK,
+        params_keeper: gears::x::params::Keeper<SK, PSK>,
+        params_subspace_key: PSK,
+    ) -> Self {
+        let abci_params_keeper = AbciParamsKeeper {
+            params_keeper,
+            params_subspace_key,
+        };
+        Self {
+            store_key,
+            params_keeper: abci_params_keeper,
+        }
     }
 
     pub fn client_params<DB: Database + Send + Sync>(
@@ -96,8 +114,28 @@ impl<SK: StoreKey> QueryKeeper<SK> {
         Ok(response)
     }
 
-    pub fn client_status() -> anyhow::Result<()> {
-        Ok(())
+    pub fn client_status<DB: Database + Send + Sync>(
+        &mut self,
+        ctx: &mut QueryContext<'_, DB, SK>,
+        QueryClientStatusRequest { client_id }: QueryClientStatusRequest,
+    ) -> anyhow::Result<QueryClientStatusResponse> {
+        let client_id = ClientId::from_str(&client_id)?;
+        let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
+        let client_type = client_state.client_type();
+
+        let params = params_get(&self.params_keeper, ctx)?;
+
+        let status = if !params.is_client_allowed(&client_type) {
+            Status::Unauthorized
+        } else {
+            client_state.status(&ContextShim::from(&*ctx), &client_id)?
+        };
+
+        let response = QueryClientStatusResponse {
+            status: status.to_string(),
+        };
+
+        Ok(response)
     }
 
     pub fn consensus_state_heights<DB: Database>(

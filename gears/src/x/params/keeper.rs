@@ -1,7 +1,7 @@
 use database::{Database, PrefixDB};
 use store_crate::StoreKey;
 
-use crate::types::context::context::Context;
+use crate::types::context::{context::Context, read_context::ReadContext};
 use std::{hash::Hash, marker::PhantomData};
 use strum::IntoEnumIterator;
 
@@ -24,13 +24,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     pub fn get_raw_subspace<'a, DB: Database>(
-        &self,
-        ctx: &'a Context<'_, '_, DB, SK>,
+        &'a self,
+        ctx: &'a impl ReadContext<SK, DB>,
         params_subspace_key: &PSK,
-    ) -> store_crate::ImmutablePrefixStore<'a, PrefixDB<DB>> {
-        let params_store = ctx.get_kv_store(&self.store_key);
-
-        params_store.get_immutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())
+    ) -> store_crate::ImmutablePrefixStore<'_, PrefixDB<DB>> {
+        let store = ctx.get_kv_store(&self.store_key);
+        match store {
+            store_crate::AnyKVStore::KVStore(store) => {
+                store.get_immutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())
+            }
+            store_crate::AnyKVStore::QueryKVStore(store) => {
+                store.get_immutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())
+            }
+        }
     }
 
     pub fn get_mutable_raw_subspace<'a, DB: Database>(

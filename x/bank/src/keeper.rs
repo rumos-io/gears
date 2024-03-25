@@ -195,7 +195,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
     ) -> Vec<Coin> {
         let bank_store = ctx.get_kv_store(&self.store_key);
-        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into());
+        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into_iter());
 
         supply_store
             .range(..)
@@ -339,7 +339,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut denoms_metadata = vec![];
 
         for (_, metadata) in bank_store
-            .get_immutable_prefix_store(DENOM_METADATA_PREFIX.into())
+            .get_immutable_prefix_store(DENOM_METADATA_PREFIX.into_iter())
             .range(..)
         {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.to_owned().into())
