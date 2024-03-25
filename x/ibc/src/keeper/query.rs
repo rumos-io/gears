@@ -1,7 +1,9 @@
 use std::str::FromStr;
 
+use bytes::Bytes;
 use database::Database;
 use gears::types::context::query_context::QueryContext;
+use prost::Message;
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
@@ -9,15 +11,17 @@ use proto_messages::{
         query::response::{
             QueryClientParamsResponse, QueryClientStateResponse,
             QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
-            RawQueryClientStateResponse,
+            QueryConsensusStatesResponse, RawQueryClientStateResponse,
         },
         types::core::{
             client::{
                 context::types::proto::v1::{
                     QueryClientStateRequest, QueryConsensusStateHeightsRequest,
-                    QueryConsensusStateRequest,
+                    QueryConsensusStateRequest, QueryConsensusStatesRequest,
                 },
-                types::{Height, ProtoHeight},
+                types::{
+                    ConsensusStateWithHeight, Height, ProtoHeight, RawConsensusStateWithHeight,
+                },
             },
             host::identifiers::ClientId,
         },
@@ -138,7 +142,35 @@ impl<SK: StoreKey> QueryKeeper<SK> {
         Ok(response)
     }
 
-    pub fn consensus_states() -> anyhow::Result<()> {
-        Ok(())
+    pub fn consensus_states<DB: Database>(
+        &mut self,
+        ctx: &mut QueryContext<'_, DB, SK>,
+        QueryConsensusStatesRequest {
+            client_id,
+            pagination: _,
+        }: QueryConsensusStatesRequest,
+    ) -> anyhow::Result<QueryConsensusStatesResponse> {
+        let client_id = ClientId::from_str(&client_id)?;
+
+        let states = {
+            let any_store = ctx.get_kv_store(&self.store_key);
+            let store = any_store.get_immutable_prefix_store(
+                format!("{KEY_CONSENSUS_STATE_PREFIX}/{client_id}").into_bytes(),
+            );
+
+            let mut states = Vec::<ConsensusStateWithHeight>::new();
+            for (_key, value) in store.range(..) {
+                states.push(RawConsensusStateWithHeight::decode::<Bytes>(value.into())?.try_into()?)
+            }
+
+            states
+        };
+
+        let response = QueryConsensusStatesResponse {
+            consensus_states: states,
+            pagination: None,
+        };
+
+        Ok(response)
     }
 }
