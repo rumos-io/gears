@@ -5,7 +5,7 @@ use bank::cli::{
     tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
-use ibc::cli::client::{
+use ibc::client::cli::{
     query::IbcQueryCli,
     tx::{run_ibc_tx_command, IbcTxCli},
 };

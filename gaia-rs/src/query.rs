@@ -1,6 +1,6 @@
 use auth::cli::query::{AuthQuery, AuthQueryResponse};
 use bank::cli::query::{BankQuery, BankQueryResponse};
-use ibc::cli::client::query::{IbcQuery, IbcQueryResponse};
+use ibc::client::cli::query::{IbcQuery, IbcQueryResponse};
 use proto_messages::cosmos::query::Query;
 use serde::{Deserialize, Serialize};
 

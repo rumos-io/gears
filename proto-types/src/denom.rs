@@ -1,6 +1,7 @@
 use std::{
     fmt::{self, Display},
-    str::FromStr, sync::OnceLock,
+    str::FromStr,
+    sync::OnceLock,
 };
 
 use regex::Regex;
@@ -10,11 +11,12 @@ use crate::error::Error;
 
 // Denominations can be 3 ~ 128 characters long and support letters, followed by either
 // a letter, a number or a separator ('/').
-pub fn regex() -> &'static Regex
-{
-    static RE : OnceLock<Regex> = OnceLock::new();
+pub fn regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
 
-    RE.get_or_init( || Regex::new(r"^[a-zA-Z][a-zA-Z0-9/-]{2,127}$").expect("hard coded RE won't fail"))
+    RE.get_or_init(|| {
+        Regex::new(r"^[a-zA-Z][a-zA-Z0-9/-]{2,127}$").expect("hard coded RE won't fail")
+    })
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Eq, Hash)]

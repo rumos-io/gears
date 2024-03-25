@@ -1,6 +1,6 @@
 use database::Database;
 use gears::{
-    types::context::context::Context,
+    types::context::{context::Context, read_context::ReadContext},
     x::params::{Keeper, ParamsSubspaceKey},
 };
 use store::StoreKey;
@@ -22,7 +22,7 @@ pub struct ParamsError;
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AbciParamsKeeper<SK, PSK> {
     pub fn get<DB: Database>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        ctx: &impl ReadContext<SK, DB>,
         key: &impl AsRef<[u8]>,
     ) -> Result<Vec<u8>, ParamsError> {
         let value = self

@@ -15,6 +15,7 @@ pub enum AppError {
     Tree(trees::Error),
     IBC(String),
     Genesis(String),
+    Query(String),
 }
 
 impl Display for AppError {
@@ -37,6 +38,7 @@ impl Display for AppError {
             AppError::Tree(err) => err.fmt(f),
             AppError::IBC(msg) => write!(f, "ibc routing error: {}", msg),
             AppError::Genesis(msg) => write!(f, "{}", msg),
+            AppError::Query(msg) => write!(f, "Error executing query: {msg}"),
         }
     }
 }
@@ -70,5 +72,19 @@ impl From<proto_messages::Error> for AppError {
 impl From<tendermint::proto::Error> for AppError {
     fn from(value: tendermint::proto::Error) -> Self {
         AppError::InvalidRequest(value.to_string())
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SearchError {
+    #[error("not found")]
+    NotFound,
+    #[error("Decode error: {0}")]
+    DecodeError(String),
+}
+
+impl From<prost::DecodeError> for SearchError {
+    fn from(value: prost::DecodeError) -> Self {
+        Self::DecodeError(value.to_string())
     }
 }

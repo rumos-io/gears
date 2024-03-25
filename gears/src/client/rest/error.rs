@@ -44,6 +44,13 @@ impl Error {
         }
     }
 
+    pub fn bad_gateway_with_msg(description: String) -> Error {
+        Error {
+            status: StatusCode::BAD_GATEWAY,
+            description,
+        }
+    }
+
     fn to_serializable(self) -> PrintError {
         PrintError {
             error: PrintErrorCore {
