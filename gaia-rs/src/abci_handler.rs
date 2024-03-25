@@ -45,7 +45,13 @@ impl ABCIHandler {
             auth_keeper.clone(),
         );
 
-        let ibc_keeper = ibc::keeper::tx::TxKeeper::new(
+        let ibc_tx_keeper = ibc::keeper::tx::TxKeeper::new(
+            GaiaStoreKey::Bank,
+            params_keeper.clone(),
+            GaiaParamsStoreKey::Bank,
+        );
+
+        let ibc_query_keeper = ibc::keeper::query::QueryKeeper::new(
             GaiaStoreKey::Bank,
             params_keeper,
             GaiaParamsStoreKey::Bank,
@@ -54,7 +60,7 @@ impl ABCIHandler {
         ABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
-            ibc_handler: ibc::handler::Handler::new(ibc_keeper),
+            ibc_handler: ibc::handler::Handler::new(ibc_tx_keeper, ibc_query_keeper),
             ante_handler: BaseAnteHandler::new(bank_keeper, auth_keeper),
         }
     }
@@ -84,7 +90,7 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
         self.auth_abci_handler.genesis(ctx, genesis.auth);
     }
 
-    fn query<DB: Database>(
+    fn query<DB: Database + Send + Sync>(
         &self,
         ctx: &QueryContext<'_, DB, GaiaStoreKey>,
         query: RequestQuery,
@@ -93,6 +99,8 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
             self.bank_abci_handler.query(ctx, query)
+        } else if query.path.starts_with("/ibc.core.client") {
+            self.ibc_handler.query(ctx, query)
         } else {
             Err(AppError::InvalidRequest("query path not found".into()))
         }

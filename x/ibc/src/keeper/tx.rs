@@ -57,7 +57,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     pub fn recover_client<DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         subject_client_id: &ClientId,
         substitute_client_id: &ClientId,
@@ -121,7 +121,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     pub fn client_upgrade<DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         client_id: &ClientId,
         upgraded_client_state: WrappedTendermintClientState,
@@ -190,7 +190,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     pub fn client_update<DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         client_id: &ClientId,
         client_message: Any,
@@ -288,7 +288,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     pub fn client_create<'a, 'b, DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &'a mut TxContext<'b, DB, SK>,
         client_state: &(impl ClientStateCommon
               + ClientStateExecution<ContextShim<'a, 'b, DB, SK>>
@@ -342,7 +342,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     fn client_indentifier_generate<DB: Database>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         client_type: &ClientType,
     ) -> Result<ClientId, ClientCreateError> {
@@ -355,7 +355,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     fn next_client_sequence_set<DB: Database>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         sequence: u64,
     ) {
