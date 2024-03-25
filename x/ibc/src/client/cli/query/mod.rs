@@ -46,13 +46,20 @@ pub struct IbcQueryCli {
 
 #[derive(Subcommand, Debug)]
 pub enum IbcQueryCommands {
+    #[command(name = "params")]
     ClientParams(client_params::CliClientParams),
+    #[command(name = "state")]
     ClientState(client_state::CliClientState),
+    #[command(name = "states")]
     ClientStates(client_states::CliClientStates),
+    #[command(name = "status")]
     ClientStatus(client_status::CliClientStatus),
+    #[command(name = "consensus-state")]
     ConsensusState(consensus_state::CliConsensusState),
+    #[command(name = "consensus-states")]
     ConsensusStates(consensus_states::CliConsensusStates),
-    ConsensusStateHeights(consensus_heights::CliClientHeight),
+    #[command(name = "consensus-state-heights")]
+    ConsensusStateHeights(consensus_heights::CliConsensusHeight),
     // Header(query_header::CliClientParams),
     // SelfState(self_consensus_state::CliClientParams),
 }
