@@ -81,6 +81,7 @@ pub mod core {
             use super::proto::RawParams;
             pub use ibc::core::client::context::types::proto::v1::Height as ProtoHeight;
             pub use ibc::core::client::types::Height;
+            pub use ibc_proto::ibc::core::client::v1::Height as RawHeight;
 
             pub const ALLOW_ALL_CLIENTS: &str = "*";
 

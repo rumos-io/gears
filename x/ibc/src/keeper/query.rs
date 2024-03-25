@@ -5,13 +5,18 @@ use gears::types::context::query_context::QueryContext;
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
+        protobuf::Protobuf,
         query::response::{
-            QueryClientParamsResponse, QueryClientStateResponse, QueryConsensusStateResponse,
+            QueryClientParamsResponse, QueryClientStateResponse,
+            QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
             RawQueryClientStateResponse,
         },
         types::core::{
             client::{
-                context::types::proto::v1::{QueryClientStateRequest, QueryConsensusStateRequest},
+                context::types::proto::v1::{
+                    QueryClientStateRequest, QueryConsensusStateHeightsRequest,
+                    QueryConsensusStateRequest,
+                },
                 types::{Height, ProtoHeight},
             },
             host::identifiers::ClientId,
@@ -19,6 +24,8 @@ use proto_messages::{
     },
 };
 use store::StoreKey;
+
+use crate::keeper::{KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
 
 use super::{client_consensus_state, client_state_get};
 
@@ -69,8 +76,33 @@ impl<SK: StoreKey> QueryKeeper<SK> {
         Ok(())
     }
 
-    pub fn consensus_state_height() -> anyhow::Result<()> {
-        Ok(())
+    pub fn consensus_state_heights<DB: Database>(
+        &mut self,
+        ctx: &mut QueryContext<'_, DB, SK>,
+        QueryConsensusStateHeightsRequest {
+            client_id,
+            pagination: _,
+        }: QueryConsensusStateHeightsRequest,
+    ) -> anyhow::Result<QueryConsensusStateHeightsResponse> {
+        let client_id = ClientId::from_str(&client_id)?;
+        let store = ctx
+            .get_kv_store(&self.store_key)
+            .get_immutable_prefix_store(
+                format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}")
+                    .into_bytes(),
+            );
+
+        let mut heights = Vec::<Height>::new();
+        for (_key, value) in store.range(..) {
+            heights.push(Height::decode_vec(&value)?);
+        }
+
+        let response = QueryConsensusStateHeightsResponse {
+            consensus_state_heights: heights,
+            pagination: None,
+        };
+
+        Ok(response)
     }
 
     pub fn consensus_state<DB: Database>(
