@@ -1,23 +1,31 @@
-use std::sync::{Arc, RwLock};
-
+use crate::{
+    errors,
+    keeper::{query::QueryKeeper, tx::TxKeeper},
+    message::Message,
+};
 use database::Database;
-use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
+use gears::{
+    types::context::{query_context::QueryContext, tx_context::TxContext},
+    x::params::ParamsSubspaceKey,
+};
+use prost::Message as ProstMessage;
+use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use proto_messages::cosmos::ibc::tx::{
     MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient,
 };
 use store::StoreKey;
 
-use crate::{errors::ModuleErrors, keeper::Keeper, message::Message};
-
 #[derive(Debug, Clone)]
 pub struct Handler<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    keeper: Arc<RwLock<Keeper<SK, PSK>>>, // TODO: Should signature for Handler always be &self or allow &mut self?
+    tx_keeper: TxKeeper<SK, PSK>, // TODO: Should signature for Handler always be &self or allow &mut self?
+    query_keeper: QueryKeeper<SK, PSK>,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
-    pub fn new(keeper: Keeper<SK, PSK>) -> Self {
+    pub fn new(tx_keeper: TxKeeper<SK, PSK>, query_keeper: QueryKeeper<SK, PSK>) -> Self {
         Self {
-            keeper: Arc::new(RwLock::new(keeper)),
+            tx_keeper,
+            query_keeper,
         }
     }
 
@@ -25,7 +33,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
-    ) -> Result<(), ModuleErrors> {
+    ) -> Result<(), errors::tx::client::ClientErrors> {
         match msg {
             Message::ClientCreate(msg) => {
                 let MsgCreateClient {
@@ -35,9 +43,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
                 } = msg;
 
                 let _ = self
-                    .keeper
-                    .write()
-                    .map_err(|e| ModuleErrors::CustomError(e.to_string()))?
+                    .tx_keeper
                     .client_create(ctx, &client_state, consensus_state.into())?;
 
                 Ok(())
@@ -49,9 +55,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
                     signer: _signer,
                 } = msg;
 
-                self.keeper
-                    .write()
-                    .map_err(|e| ModuleErrors::CustomError(e.to_string()))?
+                self.tx_keeper
                     .client_update(ctx, &client_id, client_message)?;
 
                 Ok(())
@@ -66,17 +70,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
                     signer: _signer,
                 } = msg;
 
-                self.keeper
-                    .write()
-                    .map_err(|e| ModuleErrors::CustomError(e.to_string()))?
-                    .client_upgrade(
-                        ctx,
-                        &client_id,
-                        upgraded_client_state,
-                        upgraded_consensus_state,
-                        proof_upgrade_client,
-                        proof_upgrade_consensus_state,
-                    )?;
+                self.tx_keeper.client_upgrade(
+                    ctx,
+                    &client_id,
+                    upgraded_client_state,
+                    upgraded_consensus_state,
+                    proof_upgrade_client,
+                    proof_upgrade_consensus_state,
+                )?;
 
                 Ok(())
             }
@@ -87,13 +88,54 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Handler<SK, PSK> {
                     signer: _signer,
                 } = msg;
 
-                self.keeper
-                    .write()
-                    .map_err(|e| ModuleErrors::CustomError(e.to_string()))?
+                self.tx_keeper
                     .recover_client(ctx, &subject_client_id, &substitute_client_id)?;
 
                 Ok(())
             }
+        }
+    }
+
+    pub fn query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<'_, DB, SK>,
+        query: tendermint::proto::abci::RequestQuery,
+    ) -> Result<bytes::Bytes, errors::query::client::ClientErrors> {
+        match query.path.as_str() {
+            "/ibc.core.client.v1.Query/ClientParams" => {
+                Ok(self.query_keeper.client_params(ctx)?.encode_vec().into())
+            }
+            "/ibc.core.client.v1.Query/UpgradedClientState" => Ok(self
+                .query_keeper
+                .client_state(ctx, ProstMessage::decode(query.data)?)?
+                .encode_vec()
+                .into()),
+            "/ibc.core.client.v1.Query/ClientStates" => Ok(self
+                .query_keeper
+                .client_states(ctx, ProstMessage::decode(query.data)?)?
+                .encode_vec()
+                .into()),
+            "/ibc.core.client.v1.Query/ClientStatus" => Ok(self
+                .query_keeper
+                .client_status(ctx, ProstMessage::decode(query.data)?)?
+                .encode_vec()
+                .into()),
+            "/ibc.core.client.v1.Query/ConsensusStateHeights" => Ok(self
+                .query_keeper
+                .consensus_state_heights(ctx, ProstMessage::decode(query.data)?)?
+                .encode_vec()
+                .into()),
+            "/ibc.core.client.v1.Query/ConsensusState" => Ok(self
+                .query_keeper
+                .consensus_state(ctx, ProstMessage::decode(query.data)?)?
+                .encode_vec()
+                .into()),
+            "/ibc.core.client.v1.Query/ConsensusStates" => Ok(self
+                .query_keeper
+                .consensus_states(ctx, ProstMessage::decode(query.data)?)?
+                .encode_vec()
+                .into()),
+            _ => Err(errors::query::client::ClientErrors::PathNotFound),
         }
     }
 }

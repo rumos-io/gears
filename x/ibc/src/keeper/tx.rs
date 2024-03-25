@@ -2,56 +2,47 @@ use database::Database;
 use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
 use proto_messages::{
     any::{Any, PrimitiveAny},
-    cosmos::ibc::{
-        protobuf::Protobuf,
-        types::{
-            core::{
-                client::{
-                    context::{
-                        client_state::{
-                            ClientStateCommon, ClientStateExecution, ClientStateValidation,
-                        },
-                        types::{
-                            events::{
-                                CLIENT_ID_ATTRIBUTE_KEY, CLIENT_MISBEHAVIOUR_EVENT,
-                                CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHTS_ATTRIBUTE_KEY,
-                                CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT,
-                                UPDATE_CLIENT_EVENT, UPGRADE_CLIENT_EVENT,
-                            },
-                            Status, UpdateKind,
-                        },
+    cosmos::ibc::types::{
+        core::{
+            client::context::{
+                client_state::{ClientStateCommon, ClientStateExecution, ClientStateValidation},
+                types::{
+                    events::{
+                        CLIENT_ID_ATTRIBUTE_KEY, CLIENT_MISBEHAVIOUR_EVENT,
+                        CLIENT_TYPE_ATTRIBUTE_KEY, CONSENSUS_HEIGHTS_ATTRIBUTE_KEY,
+                        CONSENSUS_HEIGHT_ATTRIBUTE_KEY, CREATE_CLIENT_EVENT, UPDATE_CLIENT_EVENT,
+                        UPGRADE_CLIENT_EVENT,
                     },
-                    proto::RawParams,
-                    types::Params,
+                    Status, UpdateKind,
                 },
-                commitment::{CommitmentProofBytes, CommitmentRoot},
-                host::identifiers::{ClientId, ClientType},
             },
-            tendermint::{
-                consensus_state::WrappedConsensusState, informal::Event,
-                WrappedTendermintClientState,
-            },
+            commitment::{CommitmentProofBytes, CommitmentRoot},
+            host::identifiers::{ClientId, ClientType},
+        },
+        tendermint::{
+            consensus_state::WrappedConsensusState, informal::Event, WrappedTendermintClientState,
         },
     },
 };
 use store::StoreKey;
 
 use crate::{
-    errors::{
-        ClientCreateError, ClientRecoverError, ClientUpdateError, ClientUpgradeError, SearchError,
+    errors::tx::client::{
+        ClientCreateError, ClientRecoverError, ClientUpdateError, ClientUpgradeError,
     },
-    params::{self, AbciParamsKeeper, CLIENT_STATE_KEY},
+    params::{self, AbciParamsKeeper},
     types::ContextShim,
 };
 
+use super::{client_state_get, params_get};
+
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct TxKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     store_key: SK,
     params_keeper: AbciParamsKeeper<SK, PSK>,
-    // auth_keeper: auth::Keeper<SK, PSK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     pub fn new(
         store_key: SK,
         params_keeper: gears::x::params::Keeper<SK, PSK>,
@@ -61,21 +52,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             params_keeper,
             params_subspace_key,
         };
-        Keeper {
+        TxKeeper {
             store_key,
             params_keeper: abci_params_keeper,
         }
     }
 
     pub fn recover_client<DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         subject_client_id: &ClientId,
         substitute_client_id: &ClientId,
     ) -> Result<(), ClientRecoverError> {
-        let subj_client_state = self.client_state_get(ctx, subject_client_id)?;
+        let subj_client_state = client_state_get(&self.store_key, ctx, subject_client_id)?;
         {
-            let mut shim_ctx = ContextShim(ctx);
+            let mut shim_ctx = ContextShim::from(&*ctx);
             let subj_client_status = subj_client_state.status(&mut shim_ctx, subject_client_id)?;
             if subj_client_status == Status::Active {
                 return Err(ClientRecoverError::SubjectStatus {
@@ -85,7 +76,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             }
         }
 
-        let subs_client_state = self.client_state_get(ctx, substitute_client_id)?;
+        let subs_client_state = client_state_get(&self.store_key, ctx, substitute_client_id)?;
         if subj_client_state.latest_height() >= subs_client_state.latest_height() {
             return Err(ClientRecoverError::InvalidHeight {
                 subject: subj_client_state.latest_height(),
@@ -94,7 +85,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
 
         {
-            let mut shim_ctx = ContextShim(ctx);
+            let mut shim_ctx = ContextShim::from(&*ctx);
             let subs_client_status =
                 subj_client_state.status(&mut shim_ctx, substitute_client_id)?;
             if subs_client_status != Status::Active {
@@ -132,7 +123,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     pub fn client_upgrade<DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         client_id: &ClientId,
         upgraded_client_state: WrappedTendermintClientState,
@@ -140,9 +131,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         proof_upgrade_client: CommitmentProofBytes,
         proof_upgrade_consensus_state: CommitmentProofBytes,
     ) -> Result<(), ClientUpgradeError> {
-        let client_state = self.client_state_get(ctx, client_id)?;
+        let client_state = client_state_get(&self.store_key, ctx, client_id)?;
 
-        let mut shim_ctx = ContextShim(ctx);
+        let mut shim_ctx = ContextShim::from(&*ctx);
         let client_status = client_state.status(&mut shim_ctx, client_id)?;
 
         if client_status != Status::Active {
@@ -201,18 +192,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     pub fn client_update<DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         client_id: &ClientId,
         client_message: Any,
     ) -> Result<(), ClientUpdateError> {
-        let client_state = self.client_state_get(ctx, client_id)?;
+        let client_state = client_state_get(&self.store_key, ctx, client_id)?;
         let client_type = client_state.client_type();
-        let params = self.params_get(ctx)?;
+        let params = params_get(&self.params_keeper, ctx)?;
 
         let client_message = PrimitiveAny::from(client_message);
 
-        let mut shim_ctx = ContextShim(ctx);
+        let mut shim_ctx = ContextShim::from(&*ctx);
 
         let client_status = if params.is_client_allowed(&client_type) {
             Status::Unauthorized
@@ -299,7 +290,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     pub fn client_create<'a, 'b, DB: Database + Send + Sync>(
-        &mut self,
+        &self,
         ctx: &'a mut TxContext<'b, DB, SK>,
         client_state: &(impl ClientStateCommon
               + ClientStateExecution<ContextShim<'a, 'b, DB, SK>>
@@ -314,7 +305,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             return Err(ClientCreateError::InvalidType(client_state.client_type()));
         }
 
-        let params = self.params_get(ctx)?;
+        let params = params_get(&self.params_keeper, ctx)?;
 
         if !params.is_client_allowed(&client_type) {
             return Err(ClientCreateError::NotAllowed(client_type));
@@ -343,19 +334,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             ),
         ]);
 
-        {
-            // FIXME: fix lifetimes so borrow checker would be happy with this code before events
-            let mut ctx = ContextShim(ctx);
+        // FIXME: fix lifetimes so borrow checker would be happy with this code before events
+        let mut ctx = ContextShim::from(&*ctx);
 
-            client_state.initialise(&mut ctx, &client_id, consensus_state.into())?;
-            client_state.status(&mut ctx, &client_id)?;
-        }
+        client_state.initialise(&mut ctx, &client_id, consensus_state.into())?;
+        client_state.status(&mut ctx, &client_id)?;
 
         Ok(client_id)
     }
 
     fn client_indentifier_generate<DB: Database>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         client_type: &ClientType,
     ) -> Result<ClientId, ClientCreateError> {
@@ -368,7 +357,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     fn next_client_sequence_set<DB: Database>(
-        &mut self,
+        &self,
         ctx: &mut TxContext<'_, DB, SK>,
         sequence: u64,
     ) {
@@ -401,39 +390,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(u64::from_be_bytes(int_bytes.try_into().map_err(
             |e: std::array::TryFromSliceError| ClientCreateError::CustomError(e.to_string()),
         )?))
-    }
-
-    fn params_get<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-    ) -> Result<Params, SearchError> {
-        let ctx = gears::types::context::context::Context::TxContext(ctx);
-        let bytes = self
-            .params_keeper
-            .get(&ctx, &params::CLIENT_PARAMS_KEY)
-            .map_err(|_| SearchError::NotFound)?;
-
-        Ok(serde_json::from_slice::<RawParams>(&bytes)
-            .map_err(|e| SearchError::DecodeError(e.to_string()))?
-            .into())
-    }
-
-    fn client_state_get<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        client_id: &ClientId,
-    ) -> Result<WrappedTendermintClientState, SearchError> {
-        // TODO: Unsure in this code https://github.com/cosmos/ibc-go/blob/41e7bf14f717d5cc2815688c8c590769ed164389/modules/core/02-client/keeper/keeper.go#L78
-        let store = ctx
-            .get_kv_store(&self.store_key)
-            .get_immutable_prefix_store(format!("clients/{client_id}").into_bytes());
-        let bytes = store
-            .get(CLIENT_STATE_KEY.as_bytes())
-            .ok_or(SearchError::NotFound)?;
-        let state = <WrappedTendermintClientState as Protobuf<PrimitiveAny>>::decode_vec(&bytes)
-            .map_err(|e| SearchError::DecodeError(e.to_string()))?;
-
-        Ok(state)
     }
 
     fn root_hash<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>) -> [u8; 32] {

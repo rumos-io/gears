@@ -67,7 +67,7 @@ pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Se
 
     fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
 
-    fn query<DB: Database>(
+    fn query<DB: Database + Send + Sync>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
         query: RequestQuery,

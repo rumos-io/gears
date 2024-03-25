@@ -1,19 +1,26 @@
 use crate::error::AppError;
 use database::{Database, PrefixDB};
+use proto_messages::cosmos::ibc::types::core::host::identifiers::ChainId;
 use store_crate::{MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
 
 pub struct QueryContext<'a, DB, SK> {
     pub multi_store: QueryMultiStore<'a, DB, SK>,
-    //_height: u64,
+    pub height: u64,
+    pub chain_id: ChainId,
 }
 
 impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
-    pub fn new(multi_store: &'a MultiStore<DB, SK>, version: u32) -> Result<Self, AppError> {
+    pub fn new(
+        multi_store: &'a MultiStore<DB, SK>,
+        version: u32,
+        // chain_id: ChainId,
+    ) -> Result<Self, AppError> {
         let multi_store = QueryMultiStore::new(multi_store, version)
             .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
         Ok(QueryContext {
             multi_store,
-            //_height: height,
+            height: version as u64, // TODO:
+            chain_id: ChainId::new("todo-900").expect("default should be valid"), // TODO:
         })
     }
 
@@ -22,7 +29,11 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
         return self.multi_store.get_kv_store(store_key);
     }
 
-    // pub fn _get_height(&self) -> u64 {
-    //     self._height
-    // }
+    pub fn height(&self) -> u64 {
+        self.height
+    }
+
+    pub fn chain_id(&self) -> &ChainId {
+        &self.chain_id
+    }
 }

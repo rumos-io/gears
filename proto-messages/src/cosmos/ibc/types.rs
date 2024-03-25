@@ -73,62 +73,21 @@ pub mod core {
 
             use std::collections::HashSet;
 
+            use ibc::core::client::types::error::ClientError;
             use serde::{Deserialize, Serialize};
 
             use crate::any::Any;
 
             use super::proto::RawParams;
             pub use ibc::core::client::context::types::proto::v1::Height as ProtoHeight;
-            pub use ibc::core::client::types::Height as RawHeight;
-
-            #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-            pub struct Height(pub RawHeight);
-
-            impl From<RawHeight> for Height {
-                fn from(value: RawHeight) -> Self {
-                    Self(value)
-                }
-            }
-
-            impl From<Height> for RawHeight {
-                fn from(value: Height) -> Self {
-                    value.0
-                }
-            }
-
-            impl From<Height> for ProtoHeight {
-                fn from(value: Height) -> Self {
-                    Self {
-                        revision_number: value.0.revision_number(),
-                        revision_height: value.0.revision_height(),
-                    }
-                }
-            }
-
-            #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
-            #[error("Invalid height")]
-            pub struct HeightError;
-            impl TryFrom<ProtoHeight> for Height {
-                type Error = HeightError;
-
-                fn try_from(value: ProtoHeight) -> Result<Self, Self::Error> {
-                    let ProtoHeight {
-                        revision_number,
-                        revision_height,
-                    } = value;
-
-                    Ok(Self(
-                        RawHeight::new(revision_number, revision_height)
-                            .map_err(|_| HeightError)?,
-                    ))
-                }
-            }
+            pub use ibc::core::client::types::Height;
+            pub use ibc_proto::ibc::core::client::v1::Height as RawHeight;
 
             pub const ALLOW_ALL_CLIENTS: &str = "*";
 
             #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
             pub struct Params {
-                allowed_clients: HashSet<String>,
+                pub allowed_clients: HashSet<String>,
             }
 
             impl From<RawParams> for Params {
@@ -189,7 +148,7 @@ pub mod core {
             }
 
             impl TryFrom<RawConsensusStateWithHeight> for ConsensusStateWithHeight {
-                type Error = HeightError;
+                type Error = ClientError;
 
                 fn try_from(value: RawConsensusStateWithHeight) -> Result<Self, Self::Error> {
                     let RawConsensusStateWithHeight {
@@ -267,6 +226,29 @@ pub mod tendermint {
 
     pub use ibc::clients::tendermint::client_state::ClientState as WrappedTendermintClientState;
     pub use ibc::clients::tendermint::types::ClientState as RawTendermintClientState;
+    // use std::time::Duration;
+    // use ibc::clients::tendermint::types::{AllowUpdate, TrustThreshold};
+    // use ibc::core::commitment_types::specs::ProofSpecs;
+    // use ibc::core::host::types::identifiers::ChainId;
+    // use serde::{Deserialize, Serialize};
+
+    // use super::core::client::types::Height;
+
+    // #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+    // pub struct ClientState {
+    //     pub chain_id: ChainId,
+    //     pub trust_level: TrustThreshold,
+    //     pub trusting_period: Duration,
+    //     pub unbonding_period: Duration,
+    //     pub max_clock_drift: Duration,
+    //     pub latest_height: Height,
+    //     pub proof_specs: ProofSpecs,
+    //     pub upgrade_path: Vec<String>,
+    //     pub allow_update: AllowUpdate,
+    //     pub frozen_height: Option<Height>,
+    //     #[serde(skip)]
+    //     pub verifier: ProdVerifier,
+    // }
 
     pub mod error {
         pub use ::tendermint::error::Error;

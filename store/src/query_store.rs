@@ -56,10 +56,13 @@ impl<'a, DB: Database> QueryKVStore<'a, DB> {
         self.persistent_store.range(range)
     }
 
-    pub fn get_immutable_prefix_store(&'a self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
+    pub fn get_immutable_prefix_store(
+        &self,
+        prefix: impl IntoIterator<Item = u8>,
+    ) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
-            prefix,
+            prefix: prefix.into_iter().collect(),
         }
     }
 }

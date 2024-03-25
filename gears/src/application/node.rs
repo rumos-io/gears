@@ -30,7 +30,7 @@ pub trait Node: AuxHandler {
             Self::ABCIHandler,
             Self::Genesis,
             AI,
-        >
+        >,
     >;
 }
 
@@ -44,7 +44,7 @@ pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
             Core::ABCIHandler,
             Core::Genesis,
             AI,
-        >
+        >,
     >,
     abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
 

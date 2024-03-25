@@ -14,7 +14,7 @@ use gears::application::node::Node;
 use gears::application::ApplicationInfo;
 
 use genesis::GenesisState;
-use ibc::cli::client::query::IbcQueryHandler;
+use ibc::client::cli::query_handler::IbcQueryHandler;
 use proto_types::AccAddress;
 use rest::get_router;
 use serde::Serialize;
@@ -129,7 +129,7 @@ impl Node for GaiaCore {
             Self::ABCIHandler,
             Self::Genesis,
             AI,
-        >
+        >,
     > {
         get_router()
     }
