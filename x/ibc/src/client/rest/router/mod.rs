@@ -25,11 +25,11 @@ pub fn get_router<
     AI: ApplicationInfo,
 >() -> Router<RestState<SK, PSK, M, H, G, AI>> {
     Router::new()
-        .merge(client_params::router())
-        .merge(client_state::router())
-        .merge(client_states::router())
-        .merge(client_status::router())
-        .merge(consensus_heights::router())
-        .merge(consensus_state::router())
-        .merge(consensus_states::router())
+        .merge(client_params::Route::router())
+        .merge(client_state::Route::router())
+        .merge(client_states::Route::router())
+        .merge(client_status::Route::router())
+        .merge(consensus_heights::Route::router())
+        .merge(consensus_state::Route::router())
+        .merge(consensus_states::Route::router())
 }
