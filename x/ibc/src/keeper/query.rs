@@ -65,9 +65,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
 
     pub fn client_params<DB: Database + Send + Sync>(
         &mut self,
-        _ctx: &mut QueryContext<'_, DB, SK>,
-    ) -> QueryClientParamsResponse {
-        todo!()
+        ctx: &mut QueryContext<'_, DB, SK>,
+    ) -> anyhow::Result<QueryClientParamsResponse> {
+        let params = params_get(&self.params_keeper, ctx)?;
+
+        let response = QueryClientParamsResponse { params };
+
+        Ok(response)
     }
 
     pub fn client_state<DB: Database>(
