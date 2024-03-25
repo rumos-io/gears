@@ -1891,6 +1891,9 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "hex-conservative"
@@ -2905,13 +2908,17 @@ version = "0.1.0"
 dependencies = [
  "argon2",
  "bip32",
+ "hex",
  "k256",
  "pkcs8",
  "proto-messages",
  "proto-types",
  "ripemd",
  "rpassword",
+ "serde",
+ "serde_json",
  "sha2 0.10.8",
+ "tendermint 0.1.0",
  "thiserror",
 ]
 

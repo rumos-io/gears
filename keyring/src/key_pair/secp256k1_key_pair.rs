@@ -1,4 +1,7 @@
+use std::error::Error;
+
 use bip32::{DerivationPath, Mnemonic, PublicKey, XPrv};
+use hex::{FromHex, ToHex};
 use k256::ecdsa::signature::Signer;
 use k256::ecdsa::SigningKey;
 use k256::SecretKey;
@@ -48,6 +51,8 @@ impl Secp256k1KeyPair {
 
         let mut iv = [0u8; 16];
         rng.fill_bytes(&mut iv);
+
+        // TODO: remove unwraps
 
         // 14 = log_2(16384), 32 bytes = 256 bits
         let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap();
@@ -123,6 +128,25 @@ impl Secp256k1KeyPair {
         let signing_key: SigningKey = SigningKey::from(&self.0);
         let signature: k256::ecdsa::Signature = signing_key.sign(message);
         signature.to_vec()
+    }
+}
+
+impl ToHex for &Secp256k1KeyPair {
+    fn encode_hex<T: std::iter::FromIterator<char>>(&self) -> T {
+        self.0.to_bytes().encode_hex()
+    }
+
+    fn encode_hex_upper<T: std::iter::FromIterator<char>>(&self) -> T {
+        self.0.to_bytes().encode_hex_upper()
+    }
+}
+
+impl FromHex for Secp256k1KeyPair {
+    type Error = Box<dyn Error>;
+
+    fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
+        let secret_key = SecretKey::from_slice(&hex::decode(hex.as_ref())?)?;
+        Ok(Secp256k1KeyPair(secret_key))
     }
 }
 
