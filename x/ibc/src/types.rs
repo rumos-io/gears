@@ -1,32 +1,37 @@
+use crate::keeper::KEY_CLIENT_STORE_PREFIX;
 use database::Database;
 use gears::types::context::{query_context::QueryContext, tx_context::TxContext};
 use proto_messages::{
     any::PrimitiveAny,
-    cosmos::ibc::types::{
-        core::{
-            channel::{
-                channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment, PacketCommitment,
-            },
-            client::{
-                context::{types::Height, ClientExecutionContext, ClientValidationContext},
-                error::ClientError,
-            },
-            commitment::CommitmentPrefix,
-            connection::ConnectionEnd,
-            handler::{error::ContextError, events::IbcEvent},
-            host::{
-                identifiers::{ConnectionId, Sequence},
-                path::{
-                    AckPath, ChannelEndPath, ClientConnectionPath, ClientConsensusStatePath,
-                    ClientStatePath, CommitmentPath, ConnectionPath, ReceiptPath, SeqAckPath,
-                    SeqRecvPath, SeqSendPath,
+    cosmos::ibc::{
+        protobuf::Protobuf,
+        types::{
+            core::{
+                channel::{
+                    channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment,
+                    PacketCommitment,
+                },
+                client::{
+                    context::{types::Height, ClientExecutionContext, ClientValidationContext},
+                    error::ClientError,
+                },
+                commitment::CommitmentPrefix,
+                connection::ConnectionEnd,
+                handler::{error::ContextError, events::IbcEvent},
+                host::{
+                    identifiers::{ConnectionId, Sequence},
+                    path::{
+                        AckPath, ChannelEndPath, ClientConnectionPath, ClientConsensusStatePath,
+                        ClientStatePath, CommitmentPath, ConnectionPath, ReceiptPath, SeqAckPath,
+                        SeqRecvPath, SeqSendPath,
+                    },
                 },
             },
-        },
-        primitives::Timestamp,
-        tendermint::{
-            consensus_state::WrappedConsensusState, context::CommonContext,
-            WrappedTendermintClientState,
+            primitives::Timestamp,
+            tendermint::{
+                consensus_state::WrappedConsensusState, context::CommonContext,
+                WrappedTendermintClientState,
+            },
         },
     },
 };
@@ -57,16 +62,16 @@ impl From<&str> for Signer {
 
 pub enum IbcContext<'a, 'b, DB, SK> {
     Query(&'a QueryContext<'b, DB, SK>),
-    Tx(&'a TxContext<'b, DB, SK>),
+    Tx(&'a mut TxContext<'b, DB, SK>),
 }
 
 pub struct ContextShim<'a, 'b, DB, SK> {
-    pub ctx: IbcContext<'a, 'b, DB, SK>,
+    pub ctx: &'a mut TxContext<'b, DB, SK>,
     pub store_key: SK,
 } // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
 
 impl<'a, 'b, DB, SK: StoreKey> ContextShim<'a, 'b, DB, SK> {
-    pub fn new(ctx: IbcContext<'a, 'b, DB, SK>, store_key: SK) -> Self {
+    pub fn new(ctx: &'a mut TxContext<'b, DB, SK>, store_key: SK) -> Self {
         Self { ctx, store_key }
     }
 }
@@ -77,8 +82,8 @@ impl<'a, 'b, DB, SK> From<&'a QueryContext<'b, DB, SK>> for IbcContext<'a, 'b, D
     }
 }
 
-impl<'a, 'b, DB, SK> From<&'a TxContext<'b, DB, SK>> for IbcContext<'a, 'b, DB, SK> {
-    fn from(value: &'a TxContext<'b, DB, SK>) -> Self {
+impl<'a, 'b, DB, SK> From<&'a mut TxContext<'b, DB, SK>> for IbcContext<'a, 'b, DB, SK> {
+    fn from(value: &'a mut TxContext<'b, DB, SK>) -> Self {
         Self::Tx(value)
     }
 }
@@ -388,10 +393,18 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn store_client_state(
         &mut self,
-        _client_state_path: ClientStatePath,
-        _client_state: Self::AnyClientState,
+        client_state_path: ClientStatePath,
+        client_state: Self::AnyClientState,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let encoded_bytes =
+            <WrappedTendermintClientState as Protobuf<PrimitiveAny>>::encode_vec(client_state);
+
+        self.ctx.get_mutable_kv_store(&self.store_key).set(
+            format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
+            encoded_bytes,
+        );
+
+        Ok(())
     }
 
     fn store_consensus_state(

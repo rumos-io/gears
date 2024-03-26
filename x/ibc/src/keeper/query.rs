@@ -6,7 +6,6 @@ use gears::types::context::query_context::QueryContext;
 use gears::x::params::ParamsSubspaceKey;
 use prost::Message;
 use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateCommon;
-use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateValidation;
 use proto_messages::cosmos::ibc::types::core::client::context::types::Status;
 use proto_messages::{
     any::PrimitiveAny,
@@ -41,7 +40,6 @@ use crate::errors::query::client::{
 };
 use crate::keeper::{params_get, KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
 use crate::params::AbciParamsKeeper;
-use crate::types::ContextShim;
 
 use super::{client_consensus_state, client_state_get};
 
@@ -140,7 +138,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let status = if !params.is_client_allowed(&client_type) {
             Status::Unauthorized
         } else {
-            client_state.status(&ContextShim::new(ctx.into(), self.store_key.clone()), &client_id)?
+            // TODO
+            // client_state.status(&ContextShim::new(ctx.into(), self.store_key.clone()), &client_id)?
+            Status::Unauthorized
         };
 
         let response = QueryClientStatusResponse {
