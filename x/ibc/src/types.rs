@@ -1,4 +1,4 @@
-use crate::keeper::KEY_CLIENT_STORE_PREFIX;
+use crate::keeper::{KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
 use database::Database;
 use gears::types::context::{query_context::QueryContext, tx_context::TxContext};
 use proto_messages::{
@@ -397,7 +397,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
         client_state: Self::AnyClientState,
     ) -> Result<(), ContextError> {
         let encoded_bytes =
-            <WrappedTendermintClientState as Protobuf<PrimitiveAny>>::encode_vec(client_state);
+            <Self::AnyClientState as Protobuf<PrimitiveAny>>::encode_vec(client_state);
 
         self.ctx.get_mutable_kv_store(&self.store_key).set(
             format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
@@ -409,10 +409,22 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn store_consensus_state(
         &mut self,
-        _consensus_state_path: ClientConsensusStatePath,
-        _consensus_state: Self::AnyConsensusState,
+        consensus_state_path: ClientConsensusStatePath,
+        consensus_state: Self::AnyConsensusState,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let encoded_bytes =
+            <Self::AnyConsensusState as Protobuf<PrimitiveAny>>::encode_vec(consensus_state);
+
+        self.ctx.get_mutable_kv_store(&self.store_key).set(
+            format!(
+                "{KEY_CONSENSUS_STATE_PREFIX}/{}",
+                consensus_state_path.revision_height
+            )
+            .into_bytes(),
+            encoded_bytes,
+        );
+
+        Ok(())
     }
 
     fn delete_consensus_state(
