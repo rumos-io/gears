@@ -1,16 +1,17 @@
-use std::{fs::File, io::Read, str::FromStr};
+use std::{fs::File, io::Read};
 
 use clap::Args;
 use proto_messages::cosmos::ibc::{
     tx::MsgUpgradeClient,
     types::{
-        core::commitment::CommitmentProofBytes,
+        core::{commitment::CommitmentProofBytes, host::identifiers::ClientId},
         tendermint::{consensus_state::WrappedConsensusState, WrappedTendermintClientState},
     },
 };
 
-use crate::types::{ClientId, Signer};
+use crate::types::Signer;
 
+/// upgrade an IBC client
 #[derive(Args, Debug, Clone)]
 pub struct CliUpgradeClient {
     pub client_id: ClientId,
@@ -53,9 +54,7 @@ pub(super) fn tx_command_handler(msg: CliUpgradeClient) -> anyhow::Result<crate:
         };
 
     let raw_msg = MsgUpgradeClient {
-        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(
-            &client_id.0,
-        )?,
+        client_id,
         upgraded_client_state,
         upgraded_consensus_state,
         proof_upgrade_client: CommitmentProofBytes::try_from(proof_upgrade_client.into_bytes())?,
