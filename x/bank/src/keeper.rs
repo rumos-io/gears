@@ -195,7 +195,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
     ) -> Vec<Coin> {
         let bank_store = ctx.get_kv_store(&self.store_key);
-        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY.into_iter());
+        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY);
 
         supply_store
             .range(..)

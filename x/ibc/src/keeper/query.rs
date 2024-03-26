@@ -140,7 +140,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let status = if !params.is_client_allowed(&client_type) {
             Status::Unauthorized
         } else {
-            client_state.status(&ContextShim::from(&*ctx), &client_id)?
+            client_state.status(&ContextShim::from(ctx), &client_id)?
         };
 
         let response = QueryClientStatusResponse {

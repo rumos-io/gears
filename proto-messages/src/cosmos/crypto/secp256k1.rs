@@ -73,7 +73,7 @@ pub mod v1beta1 {
             //TODO: secp256k1 lib cannot be used for bitcoin sig verification
             let signature = Signature::from_compact(signature.as_ref())?;
             let message = Message::from_hashed_data::<sha256::Hash>(message.as_ref());
-            Ok(Secp256k1::verification_only().verify_ecdsa(&message, &signature, &self.key)?)
+            Secp256k1::verification_only().verify_ecdsa(&message, &signature, &self.key)
         }
     }
 
@@ -212,6 +212,6 @@ mod tests {
             109, 86, 11, 164, 83, 9, 12, 79,
         ];
 
-        key.verify_signature(&message, &signature).unwrap();
+        key.verify_signature(message, signature).unwrap();
     }
 }

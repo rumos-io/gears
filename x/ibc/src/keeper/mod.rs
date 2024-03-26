@@ -31,7 +31,7 @@ pub mod tx;
 pub const KEY_CLIENT_STORE_PREFIX: &str = "clients";
 pub const KEY_CONSENSUS_STATE_PREFIX: &str = "consensusStates";
 
-pub(self) fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
+fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
     keeper: &AbciParamsKeeper<SK, PSK>,
     ctx: &impl ReadContext<SK, DB>,
 ) -> Result<Params, SearchError> {
@@ -44,7 +44,7 @@ pub(self) fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
         .into())
 }
 
-pub(self) fn client_state_get<DB: Database, SK: StoreKey>(
+fn client_state_get<DB: Database, SK: StoreKey>(
     store_key: &SK,
     ctx: &impl ReadContext<SK, DB>,
     client_id: &ClientId,
@@ -64,7 +64,7 @@ pub(self) fn client_state_get<DB: Database, SK: StoreKey>(
     Ok(state)
 }
 
-pub(self) fn client_consensus_state<DB: Database, SK: StoreKey>(
+fn client_consensus_state<DB: Database, SK: StoreKey>(
     store_key: &SK,
     ctx: &impl ReadContext<SK, DB>,
     client_id: &ClientId,
