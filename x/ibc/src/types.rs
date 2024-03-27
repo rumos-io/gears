@@ -1,5 +1,8 @@
 use crate::{
-    keeper::{KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX},
+    keeper::{
+        client_consensus_state, client_state_get, KEY_CLIENT_STORE_PREFIX,
+        KEY_CONSENSUS_STATE_PREFIX,
+    },
     params::CLIENT_STATE_KEY,
 };
 use database::Database;
@@ -190,9 +193,12 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn client_state(
         &self,
-        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
     ) -> Result<Self::AnyClientState, ContextError> {
-        todo!()
+        let state = client_state_get(&self.store_key, self.ctx, client_id)
+            .map_err(|_| ClientError::MissingRawClientState)?;
+
+        Ok(state)
     }
 
     fn decode_client_state(
@@ -204,9 +210,21 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn consensus_state(
         &self,
-        _client_cons_state_path: &ClientConsensusStatePath,
+        ClientConsensusStatePath {
+            client_id,
+            revision_number,
+            revision_height,
+        }: &ClientConsensusStatePath,
     ) -> Result<Self::AnyConsensusState, ContextError> {
-        unimplemented!() // TODO: Implement
+        let state = client_consensus_state(
+            &self.store_key,
+            self.ctx,
+            client_id,
+            &Height::new(*revision_number, *revision_height).expect("msg"),
+        )
+        .map_err(|_| ClientError::MissingRawConsensusState)?;
+
+        Ok(state.0)
     }
 
     fn host_height(&self) -> Result<Height, ContextError> {
