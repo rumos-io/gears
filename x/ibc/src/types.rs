@@ -1,4 +1,7 @@
-use crate::keeper::{KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
+use crate::{
+    keeper::{KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX},
+    params::CLIENT_STATE_KEY,
+};
 use database::Database;
 use gears::types::context::{query_context::QueryContext, tx_context::TxContext};
 use proto_messages::{
@@ -35,7 +38,7 @@ use proto_messages::{
         },
     },
 };
-use store::StoreKey;
+use store::{KVStoreTrait, StoreKey};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";
@@ -102,6 +105,12 @@ impl From<InfallibleError> for ClientError {
 
 pub struct ConsensusState(pub WrappedConsensusState);
 
+impl From<WrappedConsensusState> for ConsensusState {
+    fn from(value: WrappedConsensusState) -> Self {
+        Self(value)
+    }
+}
+
 impl TryFrom<ConsensusState> for WrappedConsensusState {
     type Error = InfallibleError;
 
@@ -110,13 +119,15 @@ impl TryFrom<ConsensusState> for WrappedConsensusState {
     }
 }
 
-impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext for ContextShim<'a, 'b, DB, SK> {
+impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> CommonContext
+    for ContextShim<'a, 'b, DB, SK>
+{
     type ConversionError = InfallibleError;
 
     type AnyConsensusState = ConsensusState;
 
     fn host_timestamp(&self) -> Result<Timestamp, ContextError> {
-        todo!()
+        proto_messages::cosmos::ibc::types::core::host::ValidationContext::host_timestamp(self)
     }
 
     fn host_height(&self) -> Result<Height, ContextError> {
@@ -125,9 +136,28 @@ impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext for ContextShim<'a, 'b, D
 
     fn consensus_state(
         &self,
-        _client_cons_state_path: &ClientConsensusStatePath,
+        client_cons_state_path: &ClientConsensusStatePath,
     ) -> Result<Self::AnyConsensusState, ContextError> {
-        todo!()
+        let bytes = self
+            .ctx
+            .get_kv_store(&self.store_key)
+            .get(
+                format!(
+                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
+                    client_cons_state_path.revision_height
+                )
+                .as_bytes(),
+            )
+            .ok_or(ClientError::MissingRawConsensusState)?;
+
+        let state =
+            <WrappedConsensusState as Protobuf<PrimitiveAny>>::decode_vec(&bytes).map_err(|e| {
+                ClientError::Other {
+                    description: format!("Failed to decode consensus state: {e}"),
+                }
+            })?;
+
+        Ok(state.into())
     }
 
     fn consensus_state_heights(
@@ -177,18 +207,33 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     }
 
     fn host_height(&self) -> Result<Height, ContextError> {
-        todo!()
+        Ok(Height::new(0, self.ctx.height)?)
     }
 
     fn host_timestamp(&self) -> Result<Timestamp, ContextError> {
-        unimplemented!() // TODO: Implement
+        let host_height = <Self as proto_messages::cosmos::ibc::types::core::host::ValidationContext>::host_height(self)?;
+        let host_cons_state = self.host_consensus_state(&host_height)?;
+        Ok(host_cons_state.timestamp().into())
     }
 
     fn host_consensus_state(
         &self,
-        _height: &Height,
+        height: &Height,
     ) -> Result<Self::AnyConsensusState, ContextError> {
-        todo!()
+        let bytes = self
+            .ctx
+            .get_kv_store(&self.store_key)
+            .get(format!("{KEY_CONSENSUS_STATE_PREFIX}/{}", height.revision_height()).as_bytes())
+            .ok_or(ClientError::MissingRawConsensusState)?;
+
+        let state =
+            <WrappedConsensusState as Protobuf<PrimitiveAny>>::decode_vec(&bytes).map_err(|e| {
+                ClientError::Other {
+                    description: format!("Failed to decode consensus state: {e}"),
+                }
+            })?;
+
+        Ok(state.into())
     }
 
     fn client_counter(&self) -> Result<u64, ContextError> {
@@ -399,10 +444,12 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
         let encoded_bytes =
             <Self::AnyClientState as Protobuf<PrimitiveAny>>::encode_vec(client_state);
 
-        self.ctx.get_mutable_kv_store(&self.store_key).set(
-            format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
-            encoded_bytes,
-        );
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .get_mutable_prefix_store(
+                format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
+            )
+            .set(CLIENT_STATE_KEY.to_owned().into_bytes(), encoded_bytes);
 
         Ok(())
     }
@@ -415,14 +462,23 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
         let encoded_bytes =
             <Self::AnyConsensusState as Protobuf<PrimitiveAny>>::encode_vec(consensus_state);
 
-        self.ctx.get_mutable_kv_store(&self.store_key).set(
-            format!(
-                "{KEY_CONSENSUS_STATE_PREFIX}/{}",
-                consensus_state_path.revision_height
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .get_mutable_prefix_store(
+                format!(
+                    "{KEY_CLIENT_STORE_PREFIX}/{}",
+                    consensus_state_path.client_id
+                )
+                .into_bytes(),
             )
-            .into_bytes(),
-            encoded_bytes,
-        );
+            .set(
+                format!(
+                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
+                    consensus_state_path.revision_height
+                )
+                .into_bytes(),
+                encoded_bytes,
+            );
 
         Ok(())
     }
@@ -487,7 +543,7 @@ impl<DB: Database, SK: StoreKey> ClientValidationContext for ContextShim<'_, '_,
     }
 }
 
-impl<'a, 'b, DB: Database, SK: StoreKey>
+impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     proto_messages::cosmos::ibc::types::tendermint::context::ValidationContext
     for ContextShim<'a, 'b, DB, SK>
 {

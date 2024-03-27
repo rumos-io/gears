@@ -37,7 +37,7 @@ pub struct QueryKVStore<'a, DB> {
 }
 
 impl<DB: Database> KVStoreTrait for QueryKVStore<'_, DB> {
-    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         self.persistent_store.get(k.as_ref())
     }
 }

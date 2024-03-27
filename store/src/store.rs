@@ -121,7 +121,7 @@ pub struct KVStore<DB> {
 }
 
 impl<DB: Database> KVStoreTrait for KVStore<DB> {
-    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         let tx_cache_val = self.tx_cache.get(k.as_ref());
 
         if tx_cache_val.is_none() {
@@ -252,7 +252,7 @@ impl<DB: Database> KVStore<DB> {
 
 /// Equivalent to [`BasicKVStore`](https://docs.cosmos.network/v0.46/core/store.html#base-layer-kvstores) from cosmos
 pub trait KVStoreTrait {
-    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>>;
+    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>>;
     // TODO: range after PR merge
 }
 
