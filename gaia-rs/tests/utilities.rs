@@ -1,6 +1,7 @@
 //! This modules should be added to test modules with `#[path = "./utilities.rs"]` as it contains gaia specific code and dedicated crate is bothersome.
+#![allow(dead_code)]
 
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use gaia_rs::{
     abci_handler::ABCIHandler,
@@ -12,6 +13,7 @@ use gaia_rs::{
 use gears::{
     application::{command::app::AppCommands, node::NodeApplication},
     baseapp::{run::RunCommand, Genesis},
+    client::keys::{keys, AddKeyCommand, KeyCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
 };
 use utils::testing::{TempDir, TmpChild};
@@ -66,4 +68,19 @@ impl Genesis for MockGenesis {
     ) -> Result<(), gears::error::AppError> {
         self.0.add_genesis_account(address, coins)
     }
+}
+
+pub const KEY_NAME: &str = "alice";
+
+pub fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
+    let cmd = AddKeyCommand {
+        name: KEY_NAME.to_owned(),
+        recover: Default::default(),
+        home: home.into(),
+        keyring_backend: gears::client::keys::KeyringBackend::Test,
+    };
+
+    keys(KeyCommand::Add(cmd))?;
+
+    Ok(())
 }

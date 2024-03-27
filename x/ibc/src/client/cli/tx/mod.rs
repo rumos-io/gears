@@ -17,7 +17,7 @@ pub mod create;
 #[derive(Args, Debug, Clone)]
 pub struct IbcTxCli {
     #[command(subcommand)]
-    command: IbcCommands,
+    pub command: IbcCommands,
 }
 
 #[derive(Subcommand, Debug, Clone)]

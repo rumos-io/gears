@@ -36,3 +36,4 @@ axum = { workspace = true }
 
 [dev-dependencies]
 utils = { path = "../utils"}
+url = { workspace = true }
