@@ -42,6 +42,8 @@ use store::{KVStoreTrait, StoreKey};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";
+pub const PROCESSED_TIME: &str = "processedTime";
+pub const PROCESSED_HEIGHT: &str = "processedHeight";
 
 #[derive(
     serde::Serialize,
@@ -131,7 +133,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> CommonContext
     }
 
     fn host_height(&self) -> Result<Height, ContextError> {
-        todo!()
+        proto_messages::cosmos::ibc::types::core::host::ValidationContext::host_height(self)
     }
 
     fn consensus_state(
@@ -160,6 +162,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> CommonContext
         Ok(state.into())
     }
 
+    // https://github.com/informalsystems/basecoin-rs/blob/7aa5caa3464e17f9d5989fed93f40a1014e7baae/basecoin/modules/src/ibc/client_contexts.rs#L212
     fn consensus_state_heights(
         &self,
         _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
@@ -485,43 +488,98 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn delete_consensus_state(
         &mut self,
-        _consensus_state_path: ClientConsensusStatePath,
+        consensus_state_path: ClientConsensusStatePath,
     ) -> Result<(), ContextError> {
-        todo!()
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .get_mutable_prefix_store(
+                format!(
+                    "{KEY_CLIENT_STORE_PREFIX}/{}",
+                    consensus_state_path.client_id
+                )
+                .into_bytes(),
+            )
+            .delete(
+                format!(
+                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
+                    consensus_state_path.revision_height
+                )
+                .as_bytes(),
+            );
+
+        Ok(())
     }
 
     fn store_update_time(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
-        _host_timestamp: Timestamp,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
+        host_timestamp: Timestamp,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_TIME}", height.revision_number(), height.revision_height() );
+
+        let host_timestamp_bytes = serde_json::to_string(&host_timestamp)
+            .map_err(|e| ClientError::Other {
+                description: format!("Failed to serialized: {e}"),
+            })?
+            .into_bytes();
+
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .set(path.into_bytes(), host_timestamp_bytes);
+
+        Ok(())
     }
 
     fn store_update_height(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
-        _host_height: Height,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
+        host_height: Height,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_HEIGHT}", height.revision_number(), height.revision_height() );
+
+        let host_height_bytes = serde_json::to_string(&host_height)
+            .map_err(|e| ClientError::Other {
+                description: format!("Failed to serialized: {e}"),
+            })?
+            .into_bytes();
+
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .set(path.into_bytes(), host_height_bytes);
+
+        Ok(())
     }
 
     fn delete_update_time(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
     ) -> Result<(), ContextError> {
-        todo!()
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_TIME}", height.revision_number(), height.revision_height() );
+
+        let _ = self
+            .ctx
+            .get_mutable_kv_store(&self.store_key)
+            .delete(path.as_bytes());
+
+        Ok(())
     }
 
     fn delete_update_height(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
     ) -> Result<(), ContextError> {
-        todo!()
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_HEIGHT}", height.revision_number(), height.revision_height() );
+
+        let _ = self
+            .ctx
+            .get_mutable_kv_store(&self.store_key)
+            .delete(path.as_bytes());
+
+        Ok(())
     }
 }
 

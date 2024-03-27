@@ -207,6 +207,14 @@ impl<DB: Database> KVStore<DB> {
         self.tx_cache.insert(key, value.into_iter().collect());
     }
 
+    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        let tx_value = self.tx_cache.remove(k);
+        let block_value = self.block_cache.remove(k);
+        let persisted_value = self.persistent_store.remove(k);
+
+        tx_value.or(block_value).or(persisted_value)
+    }
+
     /// Writes tx cache into block cache then clears the tx cache
     pub fn write_then_clear_tx_cache(&mut self) {
         let mut keys: Vec<&Vec<u8>> = self.tx_cache.keys().collect();
@@ -397,6 +405,10 @@ impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
         // TODO: do we need to check for zero length keys as with the KVStore::set?
         let full_key = [self.prefix.clone(), k].concat();
         self.store.set(full_key, v)
+    }
+
+    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        self.store.delete(k)
     }
 }
 
