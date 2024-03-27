@@ -136,6 +136,14 @@ impl<DB: Database> KVStoreTrait for KVStore<DB> {
 
         tx_cache_val.cloned()
     }
+
+    // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
+    //     self.persistent_store
+    //         .range(..)
+    //         .map(|(key, _value)| key)
+    //         .filter(|key| key.starts_with(key_prefix.as_ref()))
+    //         .collect()
+    // }
 }
 
 impl<DB: Database> KVStore<DB> {
@@ -253,6 +261,7 @@ impl<DB: Database> KVStore<DB> {
 /// Equivalent to [`BasicKVStore`](https://docs.cosmos.network/v0.46/core/store.html#base-layer-kvstores) from cosmos
 pub trait KVStoreTrait {
     fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>>;
+    // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
     // TODO: range after PR merge
 }
 

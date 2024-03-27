@@ -547,19 +547,25 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     proto_messages::cosmos::ibc::types::tendermint::context::ValidationContext
     for ContextShim<'a, 'b, DB, SK>
 {
+    // https://github.com/informalsystems/basecoin-rs/blob/7aa5caa3464e17f9d5989fed93f40a1014e7baae/basecoin/modules/src/ibc/client_contexts.rs#L242
     fn next_consensus_state(
         &self,
-        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Option<Self::AnyConsensusState>, ContextError> {
+        let _path = format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}");
+        // TODO: implement
         todo!()
     }
 
+    // https://github.com/informalsystems/basecoin-rs/blob/7aa5caa3464e17f9d5989fed93f40a1014e7baae/basecoin/modules/src/ibc/client_contexts.rs#L276
     fn prev_consensus_state(
         &self,
-        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Option<Self::AnyConsensusState>, ContextError> {
+        let _path = format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}");
+        // TODO: implement
         todo!()
     }
 }
