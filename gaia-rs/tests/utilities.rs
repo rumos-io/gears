@@ -1,3 +1,5 @@
+//! This modules should be added to test modules with `#[path = "./utilities.rs"]` as it contains gaia specific code and dedicated crate is bothersome.
+
 use std::time::Duration;
 
 use gaia_rs::{
