@@ -203,9 +203,11 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn decode_client_state(
         &self,
-        _client_state: PrimitiveAny,
+        client_state: PrimitiveAny,
     ) -> Result<Self::AnyClientState, ContextError> {
-        todo!()
+        let state = Self::AnyClientState::try_from(client_state)?;
+
+        Ok(state)
     }
 
     fn consensus_state(
