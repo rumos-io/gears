@@ -8,6 +8,7 @@ use proto_messages::cosmos::ibc::{
 
 use crate::types::Signer;
 
+/// create new IBC client
 #[derive(Args, Debug, Clone)]
 pub struct CliCreateClient {
     pub client_state: String,

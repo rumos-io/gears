@@ -6,3 +6,7 @@ mod error;
 pub mod utils;
 
 pub use error::Error;
+
+pub mod prost {
+    pub use prost::*;
+}

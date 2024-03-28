@@ -1,11 +1,15 @@
-use std::{fs::File, io::Read, str::FromStr};
+use std::{fs::File, io::Read};
 
 use clap::Args;
 use prost::Message;
-use proto_messages::{any::Any, cosmos::ibc::tx::MsgUpdateClient};
+use proto_messages::{
+    any::Any,
+    cosmos::ibc::{tx::MsgUpdateClient, types::core::host::identifiers::ClientId},
+};
 
-use crate::types::{ClientId, Signer};
+use crate::types::Signer;
 
+/// update existing client with a client message
 #[derive(Args, Debug, Clone)]
 pub struct CliUpdateClient {
     pub client_id: ClientId,
@@ -31,9 +35,7 @@ pub(super) fn tx_command_handler(msg: CliUpdateClient) -> anyhow::Result<crate::
     };
 
     let raw_msg = MsgUpdateClient {
-        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId::from_str(
-            &client_id.0,
-        )?,
+        client_id,
         client_message,
         signer: proto_messages::cosmos::ibc::types::primitives::Signer::from(signer.0),
     };

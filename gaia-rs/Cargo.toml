@@ -36,3 +36,5 @@ axum = { workspace = true }
 
 [dev-dependencies]
 utils = { path = "../utils"}
+url = { workspace = true }
+serde_json = { workspace = true }

@@ -1,59 +1,52 @@
+use crate::{
+    keeper::{
+        client_consensus_state, client_state_get, KEY_CLIENT_STORE_PREFIX,
+        KEY_CONSENSUS_STATE_PREFIX,
+    },
+    params::CLIENT_STATE_KEY,
+};
 use database::Database;
 use gears::types::context::{query_context::QueryContext, tx_context::TxContext};
 use proto_messages::{
     any::PrimitiveAny,
-    cosmos::ibc::types::{
-        core::{
-            channel::{
-                channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment, PacketCommitment,
-            },
-            client::{
-                context::{types::Height, ClientExecutionContext, ClientValidationContext},
-                error::ClientError,
-            },
-            commitment::CommitmentPrefix,
-            connection::ConnectionEnd,
-            handler::{error::ContextError, events::IbcEvent},
-            host::{
-                identifiers::{ConnectionId, Sequence},
-                path::{
-                    AckPath, ChannelEndPath, ClientConnectionPath, ClientConsensusStatePath,
-                    ClientStatePath, CommitmentPath, ConnectionPath, ReceiptPath, SeqAckPath,
-                    SeqRecvPath, SeqSendPath,
+    cosmos::ibc::{
+        protobuf::Protobuf,
+        types::{
+            core::{
+                channel::{
+                    channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment,
+                    PacketCommitment,
+                },
+                client::{
+                    context::{types::Height, ClientExecutionContext, ClientValidationContext},
+                    error::ClientError,
+                },
+                commitment::CommitmentPrefix,
+                connection::ConnectionEnd,
+                handler::{error::ContextError, events::IbcEvent},
+                host::{
+                    identifiers::{ConnectionId, Sequence},
+                    path::{
+                        AckPath, ChannelEndPath, ClientConnectionPath, ClientConsensusStatePath,
+                        ClientStatePath, CommitmentPath, ConnectionPath, ReceiptPath, SeqAckPath,
+                        SeqRecvPath, SeqSendPath,
+                    },
                 },
             },
-        },
-        primitives::Timestamp,
-        tendermint::{
-            consensus_state::WrappedConsensusState, context::CommonContext,
-            WrappedTendermintClientState,
+            primitives::Timestamp,
+            tendermint::{
+                consensus_state::WrappedConsensusState, context::CommonContext,
+                WrappedTendermintClientState,
+            },
         },
     },
 };
-use store::StoreKey;
+use store::{KVStoreTrait, StoreKey};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";
-
-#[derive(
-    serde::Serialize,
-    serde::Deserialize,
-    schemars::JsonSchema,
-    Clone,
-    Debug,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-)]
-pub struct ClientId(pub String);
-
-impl From<&str> for ClientId {
-    fn from(value: &str) -> Self {
-        Self(value.to_owned())
-    }
-}
+pub const PROCESSED_TIME: &str = "processedTime";
+pub const PROCESSED_HEIGHT: &str = "processedHeight";
 
 #[derive(
     serde::Serialize,
@@ -77,26 +70,29 @@ impl From<&str> for Signer {
 
 pub enum IbcContext<'a, 'b, DB, SK> {
     Query(&'a QueryContext<'b, DB, SK>),
-    Tx(&'a TxContext<'b, DB, SK>),
+    Tx(&'a mut TxContext<'b, DB, SK>),
 }
 
-pub struct ContextShim<'a, 'b, DB, SK>(pub IbcContext<'a, 'b, DB, SK>); // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
+pub struct ContextShim<'a, 'b, DB, SK> {
+    pub ctx: &'a mut TxContext<'b, DB, SK>,
+    pub store_key: SK,
+} // TODO: What about using `Cow` so we could have option for owned and reference? Note: I don't think Cow support mutable borrowing
 
-impl<'a, 'b, DB, SK> From<IbcContext<'a, 'b, DB, SK>> for ContextShim<'a, 'b, DB, SK> {
-    fn from(value: IbcContext<'a, 'b, DB, SK>) -> Self {
-        Self(value)
+impl<'a, 'b, DB, SK: StoreKey> ContextShim<'a, 'b, DB, SK> {
+    pub fn new(ctx: &'a mut TxContext<'b, DB, SK>, store_key: SK) -> Self {
+        Self { ctx, store_key }
     }
 }
 
-impl<'a, 'b, DB, SK> From<&'a QueryContext<'b, DB, SK>> for ContextShim<'a, 'b, DB, SK> {
+impl<'a, 'b, DB, SK> From<&'a QueryContext<'b, DB, SK>> for IbcContext<'a, 'b, DB, SK> {
     fn from(value: &'a QueryContext<'b, DB, SK>) -> Self {
-        Self(IbcContext::Query(value))
+        Self::Query(value)
     }
 }
 
-impl<'a, 'b, DB, SK> From<&'a TxContext<'b, DB, SK>> for ContextShim<'a, 'b, DB, SK> {
-    fn from(value: &'a TxContext<'b, DB, SK>) -> Self {
-        Self(IbcContext::Tx(value))
+impl<'a, 'b, DB, SK> From<&'a mut TxContext<'b, DB, SK>> for IbcContext<'a, 'b, DB, SK> {
+    fn from(value: &'a mut TxContext<'b, DB, SK>) -> Self {
+        Self::Tx(value)
     }
 }
 
@@ -114,6 +110,12 @@ impl From<InfallibleError> for ClientError {
 
 pub struct ConsensusState(pub WrappedConsensusState);
 
+impl From<WrappedConsensusState> for ConsensusState {
+    fn from(value: WrappedConsensusState) -> Self {
+        Self(value)
+    }
+}
+
 impl TryFrom<ConsensusState> for WrappedConsensusState {
     type Error = InfallibleError;
 
@@ -122,26 +124,48 @@ impl TryFrom<ConsensusState> for WrappedConsensusState {
     }
 }
 
-impl<'a, 'b, DB: Database, SK: StoreKey> CommonContext for ContextShim<'a, 'b, DB, SK> {
+impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> CommonContext
+    for ContextShim<'a, 'b, DB, SK>
+{
     type ConversionError = InfallibleError;
 
     type AnyConsensusState = ConsensusState;
 
     fn host_timestamp(&self) -> Result<Timestamp, ContextError> {
-        todo!()
+        proto_messages::cosmos::ibc::types::core::host::ValidationContext::host_timestamp(self)
     }
 
     fn host_height(&self) -> Result<Height, ContextError> {
-        todo!()
+        proto_messages::cosmos::ibc::types::core::host::ValidationContext::host_height(self)
     }
 
     fn consensus_state(
         &self,
-        _client_cons_state_path: &ClientConsensusStatePath,
+        client_cons_state_path: &ClientConsensusStatePath,
     ) -> Result<Self::AnyConsensusState, ContextError> {
-        todo!()
+        let bytes = self
+            .ctx
+            .get_kv_store(&self.store_key)
+            .get(
+                format!(
+                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
+                    client_cons_state_path.revision_height
+                )
+                .as_bytes(),
+            )
+            .ok_or(ClientError::MissingRawConsensusState)?;
+
+        let state =
+            <WrappedConsensusState as Protobuf<PrimitiveAny>>::decode_vec(&bytes).map_err(|e| {
+                ClientError::Other {
+                    description: format!("Failed to decode consensus state: {e}"),
+                }
+            })?;
+
+        Ok(state.into())
     }
 
+    // https://github.com/informalsystems/basecoin-rs/blob/7aa5caa3464e17f9d5989fed93f40a1014e7baae/basecoin/modules/src/ibc/client_contexts.rs#L212
     fn consensus_state_heights(
         &self,
         _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
@@ -169,38 +193,70 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
 
     fn client_state(
         &self,
-        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
     ) -> Result<Self::AnyClientState, ContextError> {
-        todo!()
+        let state = client_state_get(&self.store_key, self.ctx, client_id)
+            .map_err(|_| ClientError::MissingRawClientState)?;
+
+        Ok(state)
     }
 
     fn decode_client_state(
         &self,
-        _client_state: PrimitiveAny,
+        client_state: PrimitiveAny,
     ) -> Result<Self::AnyClientState, ContextError> {
-        todo!()
+        let state = Self::AnyClientState::try_from(client_state)?;
+
+        Ok(state)
     }
 
     fn consensus_state(
         &self,
-        _client_cons_state_path: &ClientConsensusStatePath,
+        ClientConsensusStatePath {
+            client_id,
+            revision_number,
+            revision_height,
+        }: &ClientConsensusStatePath,
     ) -> Result<Self::AnyConsensusState, ContextError> {
-        unimplemented!() // TODO: Implement
+        let state = client_consensus_state(
+            &self.store_key,
+            self.ctx,
+            client_id,
+            &Height::new(*revision_number, *revision_height).expect("msg"),
+        )
+        .map_err(|_| ClientError::MissingRawConsensusState)?;
+
+        Ok(state.0)
     }
 
     fn host_height(&self) -> Result<Height, ContextError> {
-        todo!()
+        Ok(Height::new(0, self.ctx.height)?)
     }
 
     fn host_timestamp(&self) -> Result<Timestamp, ContextError> {
-        unimplemented!() // TODO: Implement
+        let host_height = <Self as proto_messages::cosmos::ibc::types::core::host::ValidationContext>::host_height(self)?;
+        let host_cons_state = self.host_consensus_state(&host_height)?;
+        Ok(host_cons_state.timestamp().into())
     }
 
     fn host_consensus_state(
         &self,
-        _height: &Height,
+        height: &Height,
     ) -> Result<Self::AnyConsensusState, ContextError> {
-        todo!()
+        let bytes = self
+            .ctx
+            .get_kv_store(&self.store_key)
+            .get(format!("{KEY_CONSENSUS_STATE_PREFIX}/{}", height.revision_height()).as_bytes())
+            .ok_or(ClientError::MissingRawConsensusState)?;
+
+        let state =
+            <WrappedConsensusState as Protobuf<PrimitiveAny>>::decode_vec(&bytes).map_err(|e| {
+                ClientError::Other {
+                    description: format!("Failed to decode consensus state: {e}"),
+                }
+            })?;
+
+        Ok(state.into())
     }
 
     fn client_counter(&self) -> Result<u64, ContextError> {
@@ -405,59 +461,145 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
     fn store_client_state(
         &mut self,
-        _client_state_path: ClientStatePath,
-        _client_state: Self::AnyClientState,
+        client_state_path: ClientStatePath,
+        client_state: Self::AnyClientState,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let encoded_bytes =
+            <Self::AnyClientState as Protobuf<PrimitiveAny>>::encode_vec(client_state);
+
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .get_mutable_prefix_store(
+                format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
+            )
+            .set(CLIENT_STATE_KEY.to_owned().into_bytes(), encoded_bytes);
+
+        Ok(())
     }
 
     fn store_consensus_state(
         &mut self,
-        _consensus_state_path: ClientConsensusStatePath,
-        _consensus_state: Self::AnyConsensusState,
+        consensus_state_path: ClientConsensusStatePath,
+        consensus_state: Self::AnyConsensusState,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let encoded_bytes =
+            <Self::AnyConsensusState as Protobuf<PrimitiveAny>>::encode_vec(consensus_state);
+
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .get_mutable_prefix_store(
+                format!(
+                    "{KEY_CLIENT_STORE_PREFIX}/{}",
+                    consensus_state_path.client_id
+                )
+                .into_bytes(),
+            )
+            .set(
+                format!(
+                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
+                    consensus_state_path.revision_height
+                )
+                .into_bytes(),
+                encoded_bytes,
+            );
+
+        Ok(())
     }
 
     fn delete_consensus_state(
         &mut self,
-        _consensus_state_path: ClientConsensusStatePath,
+        consensus_state_path: ClientConsensusStatePath,
     ) -> Result<(), ContextError> {
-        todo!()
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .get_mutable_prefix_store(
+                format!(
+                    "{KEY_CLIENT_STORE_PREFIX}/{}",
+                    consensus_state_path.client_id
+                )
+                .into_bytes(),
+            )
+            .delete(
+                format!(
+                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
+                    consensus_state_path.revision_height
+                )
+                .as_bytes(),
+            );
+
+        Ok(())
     }
 
     fn store_update_time(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
-        _host_timestamp: Timestamp,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
+        host_timestamp: Timestamp,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_TIME}", height.revision_number(), height.revision_height() );
+
+        let host_timestamp_bytes = serde_json::to_string(&host_timestamp)
+            .map_err(|e| ClientError::Other {
+                description: format!("Failed to serialized: {e}"),
+            })?
+            .into_bytes();
+
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .set(path.into_bytes(), host_timestamp_bytes);
+
+        Ok(())
     }
 
     fn store_update_height(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
-        _host_height: Height,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
+        host_height: Height,
     ) -> Result<(), ContextError> {
-        unimplemented!() // TODO: Implement
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_HEIGHT}", height.revision_number(), height.revision_height() );
+
+        let host_height_bytes = serde_json::to_string(&host_height)
+            .map_err(|e| ClientError::Other {
+                description: format!("Failed to serialized: {e}"),
+            })?
+            .into_bytes();
+
+        self.ctx
+            .get_mutable_kv_store(&self.store_key)
+            .set(path.into_bytes(), host_height_bytes);
+
+        Ok(())
     }
 
     fn delete_update_time(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
     ) -> Result<(), ContextError> {
-        todo!()
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_TIME}", height.revision_number(), height.revision_height() );
+
+        let _ = self
+            .ctx
+            .get_mutable_kv_store(&self.store_key)
+            .delete(path.as_bytes());
+
+        Ok(())
     }
 
     fn delete_update_height(
         &mut self,
-        _client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
-        _height: Height,
+        client_id: proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        height: Height,
     ) -> Result<(), ContextError> {
-        todo!()
+        let path = format!( "{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}/{}-{}/{PROCESSED_HEIGHT}", height.revision_number(), height.revision_height() );
+
+        let _ = self
+            .ctx
+            .get_mutable_kv_store(&self.store_key)
+            .delete(path.as_bytes());
+
+        Ok(())
     }
 }
 
@@ -479,23 +621,29 @@ impl<DB: Database, SK: StoreKey> ClientValidationContext for ContextShim<'_, '_,
     }
 }
 
-impl<'a, 'b, DB: Database, SK: StoreKey>
+impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     proto_messages::cosmos::ibc::types::tendermint::context::ValidationContext
     for ContextShim<'a, 'b, DB, SK>
 {
+    // https://github.com/informalsystems/basecoin-rs/blob/7aa5caa3464e17f9d5989fed93f40a1014e7baae/basecoin/modules/src/ibc/client_contexts.rs#L242
     fn next_consensus_state(
         &self,
-        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Option<Self::AnyConsensusState>, ContextError> {
+        let _path = format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}");
+        // TODO: implement
         todo!()
     }
 
+    // https://github.com/informalsystems/basecoin-rs/blob/7aa5caa3464e17f9d5989fed93f40a1014e7baae/basecoin/modules/src/ibc/client_contexts.rs#L276
     fn prev_consensus_state(
         &self,
-        _client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
+        client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
         _height: &Height,
     ) -> Result<Option<Self::AnyConsensusState>, ContextError> {
+        let _path = format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}");
+        // TODO: implement
         todo!()
     }
 }

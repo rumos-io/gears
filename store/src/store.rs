@@ -121,7 +121,7 @@ pub struct KVStore<DB> {
 }
 
 impl<DB: Database> KVStoreTrait for KVStore<DB> {
-    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         let tx_cache_val = self.tx_cache.get(k.as_ref());
 
         if tx_cache_val.is_none() {
@@ -136,6 +136,14 @@ impl<DB: Database> KVStoreTrait for KVStore<DB> {
 
         tx_cache_val.cloned()
     }
+
+    // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
+    //     self.persistent_store
+    //         .range(..)
+    //         .map(|(key, _value)| key)
+    //         .filter(|key| key.starts_with(key_prefix.as_ref()))
+    //         .collect()
+    // }
 }
 
 impl<DB: Database> KVStore<DB> {
@@ -199,6 +207,14 @@ impl<DB: Database> KVStore<DB> {
         self.tx_cache.insert(key, value.into_iter().collect());
     }
 
+    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        let tx_value = self.tx_cache.remove(k);
+        let block_value = self.block_cache.remove(k);
+        let persisted_value = self.persistent_store.remove(k);
+
+        tx_value.or(block_value).or(persisted_value)
+    }
+
     /// Writes tx cache into block cache then clears the tx cache
     pub fn write_then_clear_tx_cache(&mut self) {
         let mut keys: Vec<&Vec<u8>> = self.tx_cache.keys().collect();
@@ -252,7 +268,8 @@ impl<DB: Database> KVStore<DB> {
 
 /// Equivalent to [`BasicKVStore`](https://docs.cosmos.network/v0.46/core/store.html#base-layer-kvstores) from cosmos
 pub trait KVStoreTrait {
-    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>>;
+    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>>;
+    // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
     // TODO: range after PR merge
 }
 
@@ -388,6 +405,10 @@ impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
         // TODO: do we need to check for zero length keys as with the KVStore::set?
         let full_key = [self.prefix.clone(), k].concat();
         self.store.set(full_key, v)
+    }
+
+    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        self.store.delete(k)
     }
 }
 

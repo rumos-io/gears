@@ -28,7 +28,7 @@ impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRender
             if !acc.is_empty() {
                 acc.push_str(", ");
             }
-            acc.push_str(&coin);
+            acc.push_str(coin);
             acc
         });
 
@@ -72,12 +72,12 @@ mod tests {
     fn send_coins_check_format_multi_denom_alphabetical() -> anyhow::Result<()> {
         let coin1 = Coin {
             denom: "uatom".try_into()?,
-            amount: Uint256::from(2000u32).into(),
+            amount: Uint256::from(2000u32),
         };
 
         let coin2 = Coin {
             denom: "uon".try_into()?,
-            amount: Uint256::from(2000u32).into(),
+            amount: Uint256::from(2000u32),
         };
 
         let expected_content = Content::new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap();
@@ -96,7 +96,7 @@ mod tests {
     fn send_coins_check_format_more_sig_figs() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: Uint256::from(2047u32).into(),
+            amount: Uint256::from(2047u32),
         };
 
         let expected_content = Content::new("0.002047 ATOM".to_string()).unwrap();
@@ -115,7 +115,7 @@ mod tests {
     fn send_coins_check_format_int_and_dec_part() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: Uint256::from(2_123_456u32).into(),
+            amount: Uint256::from(2_123_456u32),
         };
 
         let expected_content = Content::new("2.123456 ATOM".to_string()).unwrap();
