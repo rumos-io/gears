@@ -1,3 +1,5 @@
+use std::{str::FromStr, time::Duration};
+
 use gaia_rs::{client::GaiaTxCommands, GaiaCore};
 use gears::client::{
     keys::KeyringBackend,
@@ -5,8 +7,18 @@ use gears::client::{
 };
 use ibc::{
     client::cli::tx::{create::CliCreateClient, IbcCommands, IbcTxCli},
-    types::Signer,
+    types::{ConsensusState, Signer},
 };
+use proto_messages::cosmos::ibc::types::{
+    core::{
+        client::types::Height, commitment_types::specs::ProofSpecs, host::identifiers::ChainId,
+    },
+    tendermint::{
+        consensus_state::RawConsensusState, AllowUpdate, RawTendermintClientState, TrustThreshold,
+    },
+};
+use serde_json::json;
+use tendermint::informal::{trust_threshold::TrustThresholdFraction, Time};
 use utilities::{key_add, run_gaia_and_tendermint};
 
 #[path = "./utilities.rs"]
@@ -20,8 +32,31 @@ fn client_create_tx() -> anyhow::Result<()> {
 
     key_add(tendermint.1.to_path_buf())?;
 
+    let state = RawTendermintClientState {
+        chain_id: ChainId::from_str("test-chain")?,
+        trust_level: TrustThreshold::ONE_THIRD,
+        trusting_period: Duration::from_secs(2000),
+        unbonding_period: Duration::from_secs(2000),
+        max_clock_drift: Duration::from_secs(2000),
+        latest_height: Height::new(1, 3)?,
+        proof_specs: ProofSpecs::cosmos(),
+        upgrade_path: Vec::new(),
+        allow_update: AllowUpdate {
+            after_expiry: true,
+            after_misbehaviour: true,
+        },
+        frozen_height: None,
+        verifier: Default::default(), // TODO: How to access this type?
+    };
+
+    let consensus = RawConsensusState {
+        timestamp: todo!(),
+        root: todo!(),
+        next_validators_hash: todo!(),
+    };
+
     let cmd = CliCreateClient {
-        client_state: "".to_owned(),
+        client_state: serde_json::to_string(&state)?,
         consensus_state: "".to_owned(),
         signer: Signer::from("TODO"),
     };

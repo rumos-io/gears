@@ -1637,6 +1637,7 @@ dependencies = [
  "proto-messages",
  "proto-types",
  "serde",
+ "serde_json",
  "store",
  "strum",
  "tendermint 0.1.0",

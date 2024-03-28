@@ -15,6 +15,10 @@ pub mod core {
         }
     }
 
+    pub mod commitment_types {
+        pub use ibc::core::commitment_types::*;
+    }
+
     pub mod client {
         pub mod context {
             #[doc(inline)]
@@ -213,6 +217,7 @@ pub mod tendermint {
     pub mod informal {
         #[doc(inline)]
         pub use ::tendermint::informal::abci::*;
+        pub use ::tendermint::informal::Time;
     }
 
     pub mod context {
@@ -225,7 +230,9 @@ pub mod tendermint {
     }
 
     pub use ibc::clients::tendermint::client_state::ClientState as WrappedTendermintClientState;
+    pub use ibc::clients::tendermint::types::AllowUpdate;
     pub use ibc::clients::tendermint::types::ClientState as RawTendermintClientState;
+    pub use ibc::clients::tendermint::types::TrustThreshold;
     // use std::time::Duration;
     // use ibc::clients::tendermint::types::{AllowUpdate, TrustThreshold};
     // use ibc::core::commitment_types::specs::ProofSpecs;
