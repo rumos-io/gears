@@ -8,7 +8,7 @@ use gaia_rs::{
     genesis::GenesisState,
     query::GaiaQueryResponse,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
-    GaiaApplication, GaiaCore,
+    GaiaApplication, GaiaCore, GaiaCoreClient,
 };
 use gears::{
     application::{command::app::AppCommands, node::NodeApplication},
@@ -55,7 +55,7 @@ fn account_query() -> anyhow::Result<()> {
         }),
     };
 
-    let result = run_query(cmd, &GaiaCore)?;
+    let result = run_query(cmd, &GaiaCoreClient)?;
 
     let expected = GaiaQueryResponse::Auth(AuthQueryResponse::Account(QueryAccountResponse {
         account: Account::Base(BaseAccount {

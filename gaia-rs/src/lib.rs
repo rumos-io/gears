@@ -41,7 +41,9 @@ impl ApplicationInfo for GaiaApplication {
 
 pub struct GaiaCore;
 
-impl TxHandler for GaiaCore {
+pub struct GaiaCoreClient;
+
+impl TxHandler for GaiaCoreClient {
     type Message = message::Message;
     type TxCommands = client::GaiaTxCommands;
 
@@ -54,7 +56,7 @@ impl TxHandler for GaiaCore {
     }
 }
 
-impl QueryHandler for GaiaCore {
+impl QueryHandler for GaiaCoreClient {
     type QueryRequest = GaiaQuery;
 
     type QueryCommands = GaiaQueryCommands;
@@ -101,7 +103,7 @@ impl QueryHandler for GaiaCore {
     }
 }
 
-impl AuxHandler for GaiaCore {
+impl AuxHandler for GaiaCoreClient {
     type AuxCommands = NilAuxCommand;
     type Aux = NilAux;
 
@@ -111,7 +113,7 @@ impl AuxHandler for GaiaCore {
     }
 }
 
-impl Client for GaiaCore {}
+impl Client for GaiaCoreClient {}
 
 impl Node for GaiaCore {
     type Message = message::Message;
@@ -132,5 +134,15 @@ impl Node for GaiaCore {
         >,
     > {
         get_router()
+    }
+}
+
+impl AuxHandler for GaiaCore {
+    type AuxCommands = NilAuxCommand;
+    type Aux = NilAux;
+
+    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
+        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
+        Ok(NilAux)
     }
 }
