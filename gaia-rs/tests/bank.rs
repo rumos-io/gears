@@ -9,7 +9,7 @@ use gaia_rs::{
     genesis::GenesisState,
     query::GaiaQueryResponse,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
-    GaiaApplication, GaiaCore,
+    GaiaApplication, GaiaCore, GaiaCoreClient,
 };
 use gears::{
     application::{command::app::AppCommands, node::NodeApplication},
@@ -56,7 +56,7 @@ fn balances_query() -> anyhow::Result<()> {
                 command: BankQueryCommands::Balances(query),
             }),
         },
-        &GaiaCore,
+        &GaiaCoreClient,
     )?;
 
     let expected = GaiaQueryResponse::Bank(bank::cli::query::BankQueryResponse::Balances(
@@ -87,7 +87,7 @@ fn denom_query() -> anyhow::Result<()> {
                 command: BankQueryCommands::DenomMetadata,
             }),
         },
-        &GaiaCore,
+        &GaiaCoreClient,
     )?;
 
     let expected = GaiaQueryResponse::Bank(BankQueryResponse::DenomMetadata(
