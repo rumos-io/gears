@@ -37,9 +37,17 @@ pub struct QueryKVStore<'a, DB> {
 }
 
 impl<DB: Database> KVStoreTrait for QueryKVStore<'_, DB> {
-    fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         self.persistent_store.get(k.as_ref())
     }
+
+    // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
+    //     self.persistent_store
+    //         .range(..)
+    //         .map(|(key, _value)| key)
+    //         .filter(|key| key.starts_with(key_prefix.as_ref()))
+    //         .collect()
+    // }
 }
 
 impl<'a, DB: Database> QueryKVStore<'a, DB> {

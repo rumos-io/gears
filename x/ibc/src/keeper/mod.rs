@@ -31,7 +31,7 @@ pub mod tx;
 pub const KEY_CLIENT_STORE_PREFIX: &str = "clients";
 pub const KEY_CONSENSUS_STATE_PREFIX: &str = "consensusStates";
 
-pub(self) fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
+fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
     keeper: &AbciParamsKeeper<SK, PSK>,
     ctx: &impl ReadContext<SK, DB>,
 ) -> Result<Params, SearchError> {
@@ -44,12 +44,11 @@ pub(self) fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
         .into())
 }
 
-pub(self) fn client_state_get<DB: Database, SK: StoreKey>(
+pub fn client_state_get<DB: Database, SK: StoreKey>(
     store_key: &SK,
     ctx: &impl ReadContext<SK, DB>,
     client_id: &ClientId,
 ) -> Result<WrappedTendermintClientState, SearchError> {
-    // TODO: Unsure in this code https://github.com/cosmos/ibc-go/blob/41e7bf14f717d5cc2815688c8c590769ed164389/modules/core/02-client/keeper/keeper.go#L78
     let any_store = ctx.get_kv_store(store_key);
     let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> = any_store
         .get_immutable_prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
@@ -64,7 +63,7 @@ pub(self) fn client_state_get<DB: Database, SK: StoreKey>(
     Ok(state)
 }
 
-pub(self) fn client_consensus_state<DB: Database, SK: StoreKey>(
+pub fn client_consensus_state<DB: Database, SK: StoreKey>(
     store_key: &SK,
     ctx: &impl ReadContext<SK, DB>,
     client_id: &ClientId,

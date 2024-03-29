@@ -31,8 +31,6 @@ pub fn run_rest_server<
         let result = runtime().block_on(launch(app, listen_addr, router, tendermint_rpc_address));
         if let Err(err) = result {
             panic!("Failed to run rest server with err: {}", err)
-        } else {
-            return;
         }
     });
 }

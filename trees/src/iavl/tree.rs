@@ -623,7 +623,7 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+    pub fn remove(&mut self, key: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         // We use this struct to be 100% sure in output of `recursive_remove`
         struct NodeKey(pub Vec<u8>);
         struct NodeValue(pub Vec<u8>);
@@ -653,7 +653,7 @@ where
         fn recursive_remove<T: Database>(
             node: &mut Node,
             node_db: &NodeDB<T>,
-            key: &impl AsRef<[u8]>,
+            key: &(impl AsRef<[u8]> + ?Sized),
             orphaned: &mut Vec<Node>,
             version: u32,
         ) -> (Option<NodeValue>, Option<Sha256Hash>, bool, Option<NodeKey>) {

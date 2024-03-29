@@ -12,23 +12,21 @@ impl TryPrimitiveValueRenderer<&[u8]> for DefaultPrimitiveRenderer {
     fn try_format(value: &[u8]) -> Result<Content, Error> {
         if value.is_empty() {
             Err(Error::Rendering("cannot render empty bytes".to_string()))
+        } else if value.len() <= MAX_BYTE_LENGTH {
+            Ok(Content::new(format_bytes(value))
+                .expect("value is not empty so it's encoding will not be empty"))
         } else {
-            if value.len() <= MAX_BYTE_LENGTH {
-                Ok(Content::new(format_bytes(value))
-                    .expect("value is not empty so it's encoding will not be empty"))
-            } else {
-                let mut hasher = Sha256::new();
-                hasher.update(value);
-                let hashed = hasher.finalize();
-                let prefixed = format!("SHA-256={}", format_bytes(&hashed));
-                Ok(Content::new(prefixed).expect("prefixed is not empty"))
-            }
+            let mut hasher = Sha256::new();
+            hasher.update(value);
+            let hashed = hasher.finalize();
+            let prefixed = format!("SHA-256={}", format_bytes(&hashed));
+            Ok(Content::new(prefixed).expect("prefixed is not empty"))
         }
     }
 }
 
 fn format_bytes(value: &[u8]) -> String {
-    let hex = data_encoding::HEXUPPER.encode(&value);
+    let hex = data_encoding::HEXUPPER.encode(value);
 
     let mut result = String::new();
     let mut counter = 0;
