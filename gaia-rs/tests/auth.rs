@@ -1,5 +1,5 @@
 use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
-use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse, GaiaCore};
+use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse, GaiaCoreClient};
 use gears::{
     client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,

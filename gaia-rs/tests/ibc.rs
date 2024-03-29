@@ -1,6 +1,6 @@
 use std::{str::FromStr, time::Duration};
 
-use gaia_rs::{client::GaiaTxCommands, GaiaCore};
+use gaia_rs::{client::GaiaTxCommands, GaiaCoreClient};
 use gears::client::{
     keys::KeyringBackend,
     tx::{run_tx, TxCommand},
@@ -81,7 +81,7 @@ fn client_create_tx() -> anyhow::Result<()> {
         inner: GaiaTxCommands::IBC(args_cmd),
     };
 
-    let _result = run_tx(tx_cmd, &GaiaCore)?;
+    let _result = run_tx(tx_cmd, &GaiaCoreClient)?;
 
     Ok(())
 }
@@ -113,7 +113,7 @@ fn client_update_tx() -> anyhow::Result<()> {
         inner: GaiaTxCommands::IBC(args_cmd),
     };
 
-    let _result = run_tx(tx_cmd, &GaiaCore)?;
+    let _result = run_tx(tx_cmd, &GaiaCoreClient)?;
 
     Ok(())
 }
@@ -148,7 +148,7 @@ fn client_upgrade_tx() -> anyhow::Result<()> {
         inner: GaiaTxCommands::IBC(args_cmd),
     };
 
-    let _result = run_tx(tx_cmd, &GaiaCore)?;
+    let _result = run_tx(tx_cmd, &GaiaCoreClient)?;
 
     Ok(())
 }

@@ -3,14 +3,7 @@ use std::str::FromStr;
 use bank::cli::query::{
     BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse,
 };
-use gaia_rs::{
-    abci_handler::ABCIHandler,
-    config::AppConfig,
-    genesis::GenesisState,
-    query::GaiaQueryResponse,
-    store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
-    GaiaApplication, GaiaCore, GaiaCoreClient,
-};
+use gaia_rs::{query::GaiaQueryResponse, GaiaCoreClient};
 use gears::{
     client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
