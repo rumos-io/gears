@@ -6,7 +6,7 @@ version = "0.1.0"
 [dependencies]
 #local
 proto-types = { path = "../proto-types" }
-tendermint = { path = "../tendermint", features = ["informal"] }
+tendermint = { path = "../tendermint", features = ["informal", "proto", "abci", "config", "rpc"] }
 
 #newtypes
 bnum = { workspace = true, features = ["serde"] }

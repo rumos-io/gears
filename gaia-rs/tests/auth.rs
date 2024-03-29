@@ -32,7 +32,7 @@ fn account_query() -> anyhow::Result<()> {
         }),
     };
 
-    let result = run_query(cmd, &GaiaCore)?;
+    let result = run_query(cmd, &GaiaCoreClient)?;
 
     let expected = GaiaQueryResponse::Auth(AuthQueryResponse::Account(QueryAccountResponse {
         account: Account::Base(BaseAccount {

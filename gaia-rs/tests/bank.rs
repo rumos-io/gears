@@ -3,7 +3,14 @@ use std::str::FromStr;
 use bank::cli::query::{
     BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse,
 };
-use gaia_rs::{query::GaiaQueryResponse, GaiaCore};
+use gaia_rs::{
+    abci_handler::ABCIHandler,
+    config::AppConfig,
+    genesis::GenesisState,
+    query::GaiaQueryResponse,
+    store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
+    GaiaApplication, GaiaCore, GaiaCoreClient,
+};
 use gears::{
     client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
@@ -35,7 +42,7 @@ fn balances_query() -> anyhow::Result<()> {
                 command: BankQueryCommands::Balances(query),
             }),
         },
-        &GaiaCore,
+        &GaiaCoreClient,
     )?;
 
     let expected = GaiaQueryResponse::Bank(bank::cli::query::BankQueryResponse::Balances(
@@ -66,7 +73,7 @@ fn denom_query() -> anyhow::Result<()> {
                 command: BankQueryCommands::DenomMetadata,
             }),
         },
-        &GaiaCore,
+        &GaiaCoreClient,
     )?;
 
     let expected = GaiaQueryResponse::Bank(BankQueryResponse::DenomMetadata(
