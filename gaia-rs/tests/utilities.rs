@@ -19,6 +19,11 @@ use gears::{
 use utils::testing::{TempDir, TmpChild};
 
 pub const TENDERMINT_PATH: &str = "./tests/assets";
+pub const NODE_URL_STR: &str = "http://localhost:26657/";
+
+pub fn node_url() -> url::Url {
+    NODE_URL_STR.try_into().expect("Default should be valid")
+}
 
 /// Helper method to start gaia node and tendermint in tmp folder
 pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {

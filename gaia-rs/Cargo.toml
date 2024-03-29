@@ -38,3 +38,4 @@ axum = { workspace = true }
 utils = { path = "../utils"}
 url = { workspace = true }
 serde_json = { workspace = true }
+tendermint_tmp = { package = "tendermint", version = "0.34.0", default-features = false } # dont_ask
