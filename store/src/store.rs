@@ -9,7 +9,11 @@ use std::{collections::HashMap, hash::Hash};
 use strum::IntoEnumIterator;
 use trees::iavl::{Range, Tree};
 
-use crate::{error::Error, QueryKVStore};
+use crate::{
+    error::Error,
+    kv_store_key::{KeyBytes, KvStoreKey, SimpleKvStoreKey},
+    QueryKVStore,
+};
 
 use super::hash::{self, StoreInfo};
 
@@ -116,19 +120,21 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
 #[derive(Debug)]
 pub struct KVStore<DB> {
     pub(crate) persistent_store: Tree<DB>,
-    block_cache: BTreeMap<Vec<u8>, Vec<u8>>,
-    tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
+    block_cache: BTreeMap<KeyBytes, Vec<u8>>,
+    tx_cache: BTreeMap<KeyBytes, Vec<u8>>,
 }
 
 impl<DB: Database> KVStoreTrait for KVStore<DB> {
-    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
-        let tx_cache_val = self.tx_cache.get(k.as_ref());
+    fn get(&self, k: impl KvStoreKey) -> Option<Vec<u8>> {
+        let prefix = k.prefix();
+
+        let tx_cache_val = self.tx_cache.get(prefix.inner());
 
         if tx_cache_val.is_none() {
-            let block_cache_val = self.block_cache.get(k.as_ref());
+            let block_cache_val = self.block_cache.get(prefix.inner());
 
             if block_cache_val.is_none() {
-                return self.persistent_store.get(k.as_ref());
+                return self.persistent_store.get(prefix.inner());
             };
 
             return block_cache_val.cloned();
@@ -161,21 +167,21 @@ impl<DB: Database> KVStore<DB> {
 
     pub fn get_immutable_prefix_store(
         &self,
-        prefix: impl IntoIterator<Item = u8>,
+        prefix: impl KvStoreKey,
     ) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
-            prefix: prefix.into_iter().collect(),
+            prefix: prefix.prefix().into_inner(),
         }
     }
 
     pub fn get_mutable_prefix_store(
         &mut self,
-        prefix: impl IntoIterator<Item = u8>,
+        prefix: impl KvStoreKey,
     ) -> MutablePrefixStore<'_, DB> {
         MutablePrefixStore {
             store: self,
-            prefix: prefix.into_iter().collect(),
+            prefix: prefix.prefix().into_inner(),
         }
     }
 
@@ -196,15 +202,9 @@ impl<DB: Database> KVStore<DB> {
         self.persistent_store.range(range)
     }
 
-    pub fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>) {
-        let key: Vec<u8> = key.into_iter().collect();
-
-        if key.is_empty() {
-            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
-            panic!("key is empty")
-        }
-
-        self.tx_cache.insert(key, value.into_iter().collect());
+    pub fn set(&mut self, key: impl KvStoreKey, value: impl IntoIterator<Item = u8>) {
+        self.tx_cache
+            .insert(key.prefix(), value.into_iter().collect());
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
@@ -217,7 +217,7 @@ impl<DB: Database> KVStore<DB> {
 
     /// Writes tx cache into block cache then clears the tx cache
     pub fn write_then_clear_tx_cache(&mut self) {
-        let mut keys: Vec<&Vec<u8>> = self.tx_cache.keys().collect();
+        let mut keys: Vec<&KeyBytes> = self.tx_cache.keys().collect();
         keys.sort();
 
         for key in keys {
@@ -237,7 +237,7 @@ impl<DB: Database> KVStore<DB> {
 
     /// Writes block cache into the tree store then clears the block cache
     fn write_then_clear_block_cache(&mut self) {
-        let mut keys: Vec<&Vec<u8>> = self.block_cache.keys().collect();
+        let mut keys: Vec<&KeyBytes> = self.block_cache.keys().collect();
         keys.sort();
 
         for key in keys {
@@ -245,7 +245,8 @@ impl<DB: Database> KVStore<DB> {
                 .block_cache
                 .get(key)
                 .expect("key is definitely in the HashMap");
-            self.persistent_store.set(key.to_owned(), value.to_owned())
+            self.persistent_store
+                .set(key.inner().to_owned(), value.to_owned())
         }
         self.block_cache.clear();
     }
@@ -268,7 +269,7 @@ impl<DB: Database> KVStore<DB> {
 
 /// Equivalent to [`BasicKVStore`](https://docs.cosmos.network/v0.46/core/store.html#base-layer-kvstores) from cosmos
 pub trait KVStoreTrait {
-    fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>>;
+    fn get(&self, k: impl KvStoreKey) -> Option<Vec<u8>>;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
     // TODO: range after PR merge
 }
@@ -291,7 +292,7 @@ impl<'a, DB: Database> From<&'a QueryKVStore<'a, DB>> for AnyKVStore<'a, DB> {
 }
 
 impl<'a, DB: Database> AnyKVStore<'a, DB> {
-    pub fn get(&self, k: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+    pub fn get(&self, k: impl KvStoreKey) -> Option<Vec<u8>> {
         match self {
             AnyKVStore::KVStore(store) => store.get(k),
             AnyKVStore::QueryKVStore(store) => store.get(k),
@@ -308,7 +309,10 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         }
     }
 
-    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
+    pub fn get_immutable_prefix_store(
+        &self,
+        prefix: impl KvStoreKey,
+    ) -> ImmutablePrefixStore<'_, DB> {
         match self {
             AnyKVStore::KVStore(store) => store.get_immutable_prefix_store(prefix),
             AnyKVStore::QueryKVStore(store) => store.get_immutable_prefix_store(prefix),
@@ -323,9 +327,11 @@ pub struct ImmutablePrefixStore<'a, DB: Database> {
 }
 
 impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
-    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        let full_key = [&self.prefix, k].concat();
-        self.store.get(&full_key)
+    pub fn get(&self, k: impl KvStoreKey) -> Option<Vec<u8>> {
+        let full_key = [self.prefix.clone(), k.prefix().into_inner()].concat();
+        self.store.get(SimpleKvStoreKey(
+            KeyBytes::new(full_key).expect("Unreachable. We know that key is not empty"),
+        ))
     }
 
     pub fn range<R: RangeBounds<Vec<u8>>>(&'a self, range: R) -> PrefixRange<'a, DB> {
@@ -396,15 +402,22 @@ pub struct MutablePrefixStore<'a, DB: Database> {
 }
 
 impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
-    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        let full_key = [&self.prefix, k].concat();
-        self.store.get(&full_key)
+    pub fn get(&self, k: impl KvStoreKey) -> Option<Vec<u8>> {
+        let full_key = [self.prefix.clone(), k.prefix().into_inner()].concat();
+        self.store.get(SimpleKvStoreKey(
+            KeyBytes::new(full_key).expect("Unreachable. We know that key is not empty"),
+        ))
     }
 
-    pub fn set(&mut self, k: Vec<u8>, v: Vec<u8>) {
+    pub fn set(&mut self, k: impl KvStoreKey, v: Vec<u8>) {
         // TODO: do we need to check for zero length keys as with the KVStore::set?
-        let full_key = [self.prefix.clone(), k].concat();
-        self.store.set(full_key, v)
+        let full_key = [self.prefix.clone(), k.prefix().into_inner()].concat();
+        self.store.set(
+            SimpleKvStoreKey(
+                KeyBytes::new(full_key).expect("Unreachable. We receive valid key and extend it"),
+            ),
+            v,
+        )
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
@@ -425,26 +438,43 @@ mod tests {
 
     use super::*;
 
+    struct TestKey(pub Vec<u8>);
+
+    impl KvStoreKey for TestKey {
+        fn prefix(self) -> KeyBytes {
+            self.0.try_into().expect("test values should valid")
+        }
+    }
+
     #[test]
     fn prefix_store_range_works() {
         let db = MemDB::new();
         let mut store = KVStore::new(db, None).unwrap();
-        store.set(vec![0], vec![1]);
-        store.set(vec![0, 1], vec![2]);
-        store.set(vec![0, 2], vec![3]);
-        store.set(vec![1], vec![4]);
-        store.set(vec![1, 1], vec![5]);
-        store.set(vec![1, 2], vec![6]);
-        store.set(vec![1, 3], vec![7]);
-        store.set(vec![1, 4], vec![8]);
-        store.set(vec![1, 5], vec![9]);
-        store.set(vec![2], vec![10]);
-        store.set(vec![2, 1], vec![11]);
-        store.set(vec![2, 2], vec![12]);
-        store.set(vec![2, 3], vec![13]);
+        let values = [
+            (vec![0], vec![1]),
+            (vec![0, 1], vec![2]),
+            (vec![0, 2], vec![3]),
+            (vec![1], vec![4]),
+            (vec![1, 1], vec![5]),
+            (vec![1, 2], vec![6]),
+            (vec![1, 3], vec![7]),
+            (vec![1, 4], vec![8]),
+            (vec![1, 5], vec![9]),
+            (vec![2], vec![10]),
+            (vec![2, 1], vec![11]),
+            (vec![2, 2], vec![12]),
+            (vec![2, 3], vec![13]),
+        ];
+
+        for (key, value) in values {
+            store.set(TestKey(key), value);
+        }
+
         store.commit(); //TODO: this won't be needed once the KVStore iterator correctly incorporates cached values
 
-        let prefix_store = store.get_immutable_prefix_store(vec![1]);
+        let prefix_store = store.get_immutable_prefix_store(
+            SimpleKvStoreKey::try_from(vec![1]).expect("Default should be valid"),
+        );
 
         // unbounded
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store.range(..).collect();

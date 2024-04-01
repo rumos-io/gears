@@ -9,6 +9,7 @@ trees = { path = "../trees" }
 database = { path = "../database" }
 
 #newtypes
+# nutype = { workspace = true, features = ["serde"]} # doesnt work with vec<T>
 
 #utils
 thiserror = { workspace = true }

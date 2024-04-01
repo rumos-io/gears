@@ -1,7 +1,7 @@
 use crate::{
     keeper::{
-        client_consensus_state, client_state_get, KEY_CLIENT_STORE_PREFIX,
-        KEY_CONSENSUS_STATE_PREFIX,
+        client_consensus_state, client_state_get, ClientStoreKey, ConsensusOnRevisionHeightKey,
+        ConsensusStateKey, KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX,
     },
     params::CLIENT_STATE_KEY,
 };
@@ -41,7 +41,7 @@ use proto_messages::{
         },
     },
 };
-use store::{KVStoreTrait, StoreKey};
+use store::{kv_store_key::SimpleKvStoreKey, KVStoreTrait, StoreKey};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";
@@ -146,13 +146,9 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> CommonContext
         let bytes = self
             .ctx
             .get_kv_store(&self.store_key)
-            .get(
-                format!(
-                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
-                    client_cons_state_path.revision_height
-                )
-                .as_bytes(),
-            )
+            .get(ConsensusOnRevisionHeightKey(
+                client_cons_state_path.revision_height,
+            ))
             .ok_or(ClientError::MissingRawConsensusState)?;
 
         let state =
@@ -195,7 +191,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
         &self,
         client_id: &proto_messages::cosmos::ibc::types::core::host::identifiers::ClientId,
     ) -> Result<Self::AnyClientState, ContextError> {
-        let state = client_state_get(&self.store_key, self.ctx, client_id)
+        let state = client_state_get(&self.store_key, self.ctx, ClientStoreKey(client_id.clone()))
             .map_err(|_| ClientError::MissingRawClientState)?;
 
         Ok(state)
@@ -221,8 +217,8 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
         let state = client_consensus_state(
             &self.store_key,
             self.ctx,
-            client_id,
-            &Height::new(*revision_number, *revision_height).expect("msg"),
+            ClientStoreKey(client_id.clone()),
+            ConsensusStateKey(Height::new(*revision_number, *revision_height).expect("TODO")),
         )
         .map_err(|_| ClientError::MissingRawConsensusState)?;
 
@@ -246,7 +242,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
         let bytes = self
             .ctx
             .get_kv_store(&self.store_key)
-            .get(format!("{KEY_CONSENSUS_STATE_PREFIX}/{}", height.revision_height()).as_bytes())
+            .get(ConsensusOnRevisionHeightKey(height.revision_height()))
             .ok_or(ClientError::MissingRawConsensusState)?;
 
         let state =
@@ -469,10 +465,17 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
         self.ctx
             .get_mutable_kv_store(&self.store_key)
-            .get_mutable_prefix_store(
-                format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
-            )
-            .set(CLIENT_STATE_KEY.to_owned().into_bytes(), encoded_bytes);
+            .get_mutable_prefix_store(ClientStoreKey(client_state_path.0))
+            .set(
+                SimpleKvStoreKey::from(
+                    CLIENT_STATE_KEY
+                        .to_string()
+                        .into_bytes()
+                        .try_into()
+                        .expect("Unreachable. Const is not empty"),
+                ),
+                encoded_bytes,
+            );
 
         Ok(())
     }
@@ -487,19 +490,9 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
         self.ctx
             .get_mutable_kv_store(&self.store_key)
-            .get_mutable_prefix_store(
-                format!(
-                    "{KEY_CLIENT_STORE_PREFIX}/{}",
-                    consensus_state_path.client_id
-                )
-                .into_bytes(),
-            )
+            .get_mutable_prefix_store(ClientStoreKey(consensus_state_path.client_id))
             .set(
-                format!(
-                    "{KEY_CONSENSUS_STATE_PREFIX}/{}",
-                    consensus_state_path.revision_height
-                )
-                .into_bytes(),
+                ConsensusOnRevisionHeightKey(consensus_state_path.revision_height),
                 encoded_bytes,
             );
 
@@ -512,13 +505,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
     ) -> Result<(), ContextError> {
         self.ctx
             .get_mutable_kv_store(&self.store_key)
-            .get_mutable_prefix_store(
-                format!(
-                    "{KEY_CLIENT_STORE_PREFIX}/{}",
-                    consensus_state_path.client_id
-                )
-                .into_bytes(),
-            )
+            .get_mutable_prefix_store(ClientStoreKey(consensus_state_path.client_id))
             .delete(
                 format!(
                     "{KEY_CONSENSUS_STATE_PREFIX}/{}",
@@ -544,9 +531,14 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
             })?
             .into_bytes();
 
-        self.ctx
-            .get_mutable_kv_store(&self.store_key)
-            .set(path.into_bytes(), host_timestamp_bytes);
+        self.ctx.get_mutable_kv_store(&self.store_key).set(
+            SimpleKvStoreKey(
+                path.into_bytes()
+                    .try_into()
+                    .expect("Unreachable. Key is not empty"),
+            ),
+            host_timestamp_bytes,
+        );
 
         Ok(())
     }
@@ -565,9 +557,14 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
             })?
             .into_bytes();
 
-        self.ctx
-            .get_mutable_kv_store(&self.store_key)
-            .set(path.into_bytes(), host_height_bytes);
+        self.ctx.get_mutable_kv_store(&self.store_key).set(
+            SimpleKvStoreKey(
+                path.into_bytes()
+                    .try_into()
+                    .expect("Unreachable. Key is not empty"),
+            ),
+            host_height_bytes,
+        );
 
         Ok(())
     }

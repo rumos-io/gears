@@ -32,6 +32,7 @@ use proto_messages::{
         },
     },
 };
+use store::kv_store_key::SimpleKvStoreKey;
 use store::StoreKey;
 
 use crate::errors::query::client::{
@@ -41,7 +42,9 @@ use crate::errors::query::client::{
 use crate::keeper::{params_get, KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
 use crate::params::AbciParamsKeeper;
 
-use super::{client_consensus_state, client_state_get};
+use super::{
+    client_consensus_state, client_state_get, ClientStoreKey, ConsensusClientKey, ConsensusStateKey,
+};
 
 #[derive(Debug, Clone)]
 pub struct QueryKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -83,7 +86,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
     ) -> Result<QueryClientStateResponse, StateError> {
         let client_id = ClientId::from_str(&client_id)?;
 
-        let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
+        let client_state = client_state_get(&self.store_key, ctx, ClientStoreKey(client_id))?;
         let revision_number = ctx.chain_id().revision_number();
 
         let response = RawQueryClientStateResponse {
@@ -104,8 +107,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         QueryClientStatesRequest { pagination: _ }: QueryClientStatesRequest,
     ) -> Result<QueryClientStatesResponse, StatesError> {
         let any_store = ctx.get_kv_store(&self.store_key);
-        let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
-            any_store.get_immutable_prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
+        let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> = any_store
+            .get_immutable_prefix_store(
+                SimpleKvStoreKey::try_from(KEY_CLIENT_STORE_PREFIX.to_string().into_bytes())
+                    .expect("Unreachable. `KEY_CLIENT_STORE_PREFIX` is not empty"),
+            );
 
         let mut states = Vec::<IdentifiedClientState>::new();
         for (_key, value) in store.range(..) {
@@ -130,7 +136,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         QueryClientStatusRequest { client_id }: QueryClientStatusRequest,
     ) -> Result<QueryClientStatusResponse, StatusError> {
         let client_id = ClientId::from_str(&client_id)?;
-        let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
+        let client_state = client_state_get(&self.store_key, ctx, ClientStoreKey(client_id))?;
         let client_type = client_state.client_type();
 
         let params = params_get(&self.params_keeper, ctx)?;
@@ -161,10 +167,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let client_id = ClientId::from_str(&client_id)?;
         let store = ctx
             .get_kv_store(&self.store_key)
-            .get_immutable_prefix_store(
+            .get_immutable_prefix_store(SimpleKvStoreKey(
                 format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}")
-                    .into_bytes(),
-            );
+                    .into_bytes()
+                    .try_into()
+                    .expect("Unreachable. String is not empty"),
+            ));
 
         let mut heights = Vec::<Height>::new();
         for (_key, value) in store.range(..) {
@@ -197,13 +205,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let height = Height::new(revision_number, revision_height)?;
         let state = match latest_height {
             true => {
-                let latest_height = client_state_get(&self.store_key, ctx, &client_id)?
-                    .inner()
-                    .latest_height;
+                let latest_height =
+                    client_state_get(&self.store_key, ctx, ClientStoreKey(client_id.clone()))?
+                        .inner()
+                        .latest_height;
 
-                client_consensus_state(&self.store_key, ctx, &client_id, &latest_height)?
+                client_consensus_state(
+                    &self.store_key,
+                    ctx,
+                    ClientStoreKey(client_id),
+                    ConsensusStateKey(latest_height),
+                )?
             }
-            false => client_consensus_state(&self.store_key, ctx, &client_id, &height)?,
+            false => client_consensus_state(
+                &self.store_key,
+                ctx,
+                ClientStoreKey(client_id),
+                ConsensusStateKey(height),
+            )?,
         };
 
         let response = QueryConsensusStateResponse {
@@ -227,9 +246,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
 
         let states = {
             let any_store = ctx.get_kv_store(&self.store_key);
-            let store = any_store.get_immutable_prefix_store(
-                format!("{KEY_CONSENSUS_STATE_PREFIX}/{client_id}").into_bytes(),
-            );
+            let store = any_store.get_immutable_prefix_store(ConsensusClientKey(client_id));
 
             let mut states = Vec::<ConsensusStateWithHeight>::new();
             for (_key, value) in store.range(..) {

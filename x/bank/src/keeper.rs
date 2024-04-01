@@ -23,6 +23,7 @@ use proto_messages::cosmos::{
     base::v1beta1::{Coin, SendCoins},
 };
 use proto_types::{AccAddress, Denom, Uint256};
+use store::kv_store_key::{KeyBytes, KvStoreKey, SimpleKvStoreKey};
 use store::{KVStore, MutablePrefixStore, StoreKey};
 use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
@@ -66,10 +67,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
     ) -> Option<Metadata> {
         let bank_store = ctx.get_kv_store(&self.store_key);
         let denom_metadata_store =
-            bank_store.get_immutable_prefix_store(denom_metadata_key(base.to_string()));
+            bank_store.get_immutable_prefix_store(DenomMetadataStoreKey(base.to_string()));
 
         denom_metadata_store
-            .get(&base.to_string().into_bytes())
+            .get(SimpleDenomKey(base.clone()))
             .map(|metadata| {
                 Metadata::decode::<&[u8]>(&metadata)
                     .expect("invalid data in database - possible database corruption")
@@ -111,12 +112,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {
-            let prefix = create_denom_balance_prefix(balance.address);
+            let prefix = DenomBalanceKey(balance.address);
             let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
 
             for coin in balance.coins {
                 denom_balance_store.set(
-                    coin.denom.to_string().into_bytes(),
+                    SimpleDenomKey(coin.denom.clone()),
                     coin.clone().encode_vec(),
                 );
                 let zero = Uint256::zero();
@@ -147,10 +148,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         req: QueryBalanceRequest,
     ) -> QueryBalanceResponse {
         let bank_store = ctx.get_kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(req.address);
+        let prefix = DenomBalanceKey(req.address);
 
         let account_store = bank_store.get_immutable_prefix_store(prefix);
-        let bal = account_store.get(req.denom.to_string().as_bytes());
+        let bal = account_store.get(SimpleDenomKey(req.denom));
 
         match bal {
             Some(amount) => QueryBalanceResponse {
@@ -169,7 +170,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         req: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
         let bank_store = ctx.get_kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(req.address);
+        let prefix = DenomBalanceKey(req.address);
         let account_store = bank_store.get_immutable_prefix_store(prefix);
 
         let mut balances = vec![];
@@ -195,7 +196,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
     ) -> Vec<Coin> {
         let bank_store = ctx.get_kv_store(&self.store_key);
-        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY);
+        let supply_store = bank_store.get_immutable_prefix_store(
+            SimpleKvStoreKey::try_from(SUPPLY_KEY.to_vec()).expect("`SUPPLY_KEY` has one byte"),
+        );
 
         supply_store
             .range(..)
@@ -243,7 +246,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             let mut from_account_store =
                 Self::get_address_balances_store(bank_store, &from_address);
             let from_balance = from_account_store
-                .get(send_coin.denom.to_string().as_bytes())
+                .get(SimpleDenomKey(send_coin.denom.clone()))
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
 
             let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
@@ -256,14 +259,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             from_balance.amount -= send_coin.amount;
 
             from_account_store.set(
-                send_coin.denom.clone().to_string().into(),
+                SimpleDenomKey(send_coin.denom.clone()),
                 from_balance.encode_vec(),
             );
 
             //TODO: if balance == 0 then denom should be removed from store
 
             let mut to_account_store = Self::get_address_balances_store(bank_store, &to_address);
-            let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
+            let to_balance = to_account_store.get(SimpleDenomKey(send_coin.denom.clone()));
 
             let mut to_balance: Coin = match to_balance {
                 Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
@@ -276,7 +279,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             to_balance.amount += send_coin.amount;
 
-            to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
+            to_account_store.set(SimpleDenomKey(send_coin.denom), to_balance.encode_vec());
 
             events.push(Event::new(
                 "transfer",
@@ -297,19 +300,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
-        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY);
-
-        supply_store.set(
-            coin.denom.to_string().into(),
-            coin.amount.to_string().into(),
+        let mut supply_store = bank_store.get_mutable_prefix_store(
+            SimpleKvStoreKey::try_from(SUPPLY_KEY.to_vec())
+                .expect("Unreachable. `SUPPLY_KEY` has one byte"),
         );
+
+        supply_store.set(SimpleDenomKey(coin.denom), coin.amount.to_string().into());
     }
 
     fn get_address_balances_store<'a, DB: Database>(
         bank_store: &'a mut KVStore<DB>,
         address: &AccAddress,
     ) -> MutablePrefixStore<'a, DB> {
-        let prefix = create_denom_balance_prefix(address.to_owned());
+        let prefix = DenomBalanceKey(address.to_owned());
         bank_store.get_mutable_prefix_store(prefix)
     }
 
@@ -323,10 +326,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // This seems unnecessary, I'm not sure why they do this in the SDK.
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
         let mut denom_metadata_store =
-            bank_store.get_mutable_prefix_store(denom_metadata_key(denom_metadata.base.clone()));
+            bank_store.get_mutable_prefix_store(DenomMetadataStoreKey(denom_metadata.base.clone()));
 
         denom_metadata_store.set(
-            denom_metadata.base.clone().into_bytes(),
+            DenomMetadataStoreKey(denom_metadata.base.clone()),
             denom_metadata.encode_vec(),
         );
     }
@@ -339,7 +342,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut denoms_metadata = vec![];
 
         for (_, metadata) in bank_store
-            .get_immutable_prefix_store(DENOM_METADATA_PREFIX.into_iter())
+            .get_immutable_prefix_store(
+                SimpleKvStoreKey::try_from(DENOM_METADATA_PREFIX.to_vec())
+                    .expect("Unreachable. `DENOM_METADATA_PREFIX` has one byte"),
+            )
             .range(..)
         {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.to_owned().into())
@@ -354,23 +360,50 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 }
 
-fn denom_metadata_key(denom: String) -> Vec<u8> {
-    let mut key = Vec::new();
-    key.extend(DENOM_METADATA_PREFIX);
-    key.extend(denom.into_bytes());
-    key
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct DenomMetadataStoreKey(pub String);
+
+impl KvStoreKey for DenomMetadataStoreKey {
+    fn prefix(self) -> KeyBytes {
+        let mut key = Vec::new();
+        key.extend(DENOM_METADATA_PREFIX);
+        key.extend(self.0.into_bytes());
+
+        key.try_into()
+            .expect("Unreachable. `DENOM_METADATA_PREFIX` has single byte")
+    }
 }
 
-fn create_denom_balance_prefix(addr: AccAddress) -> Vec<u8> {
-    let addr_len = addr.len();
-    let mut addr: Vec<u8> = addr.into();
-    let mut prefix = Vec::new();
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct DenomBalanceKey(pub AccAddress);
 
-    prefix.extend(ADDRESS_BALANCES_STORE_PREFIX);
-    prefix.push(addr_len);
-    prefix.append(&mut addr);
+impl KvStoreKey for DenomBalanceKey {
+    fn prefix(self) -> KeyBytes {
+        let addr_len = self.0.len();
+        let mut addr: Vec<u8> = self.0.into();
+        let mut prefix = Vec::new();
 
-    prefix
+        prefix.extend(ADDRESS_BALANCES_STORE_PREFIX);
+        prefix.push(addr_len);
+        prefix.append(&mut addr);
+
+        prefix
+            .try_into()
+            .expect("Unreachable. `ADDRESS_BALANCES_STORE_PREFIX` has single byte")
+    }
+}
+
+#[derive(Debug, PartialEq, Hash, Clone)]
+pub struct SimpleDenomKey(pub Denom);
+
+impl KvStoreKey for SimpleDenomKey {
+    fn prefix(self) -> KeyBytes {
+        self.0
+            .to_string()
+            .as_bytes()
+            .try_into()
+            .expect("Denom string shouldn't be empty")
+    }
 }
 
 //TODO: copy tests across

@@ -17,7 +17,10 @@ use proto_messages::cosmos::{
     ibc::protobuf::Protobuf,
 };
 use proto_types::AccAddress;
-use store::{KVStoreTrait, StoreKey};
+use store::{
+    kv_store_key::{KeyBytes, KvStoreKey},
+    KVStoreTrait, StoreKey,
+};
 
 use crate::{ante::AuthKeeper, AuthParamsKeeper, GenesisState};
 
@@ -42,8 +45,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
 
     fn has_account<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>, addr: &AccAddress) -> bool {
         let auth_store = ctx.get_kv_store(&self.store_key);
-        let key = create_auth_store_key(addr.to_owned());
-        auth_store.get(&key).is_some()
+        auth_store.get(AuthStoreKey(addr.to_owned())).is_some()
     }
 
     fn get_account<DB: Database>(
@@ -52,8 +54,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         addr: &AccAddress,
     ) -> Option<Account> {
         let auth_store = ctx.get_kv_store(&self.store_key);
-        let key = create_auth_store_key(addr.to_owned());
-        let account = auth_store.get(&key);
+        let account = auth_store.get(AuthStoreKey(addr.to_owned()));
 
         if let Some(buf) = account {
             let account = Account::decode::<Bytes>(buf.to_owned().into())
@@ -67,9 +68,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
 
     fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(&self.store_key);
-        let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec());
+        auth_store.set(
+            AuthStoreKey(acct.get_address().to_owned()),
+            acct.encode_vec(),
+        );
     }
 }
 
@@ -113,8 +116,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
         let auth_store = ctx.get_kv_store(&self.store_key);
-        let key = create_auth_store_key(req.address);
-        let account = auth_store.get(&key);
+        let account = auth_store.get(AuthStoreKey(req.address));
 
         if let Some(buf) = account {
             let account = Account::decode::<Bytes>(buf.to_owned().into())
@@ -130,7 +132,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let auth_store = ctx.get_mutable_kv_store(&self.store_key);
 
         // NOTE: The next available account number is what's stored in the KV store
-        let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
+        let acct_num = auth_store.get(GlobalAccountNumberKey);
 
         let acct_num: u64 = match acct_num {
             None => 0, //initialize account numbers
@@ -139,16 +141,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         };
 
         let next_acct_num = acct_num + 1;
-        auth_store.set(GLOBAL_ACCOUNT_NUMBER_KEY, next_acct_num.encode_to_vec());
+        auth_store.set(GlobalAccountNumberKey, next_acct_num.encode_to_vec());
 
         acct_num
     }
 
     pub fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
         let auth_store = ctx.get_mutable_kv_store(&self.store_key);
-        let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec());
+        auth_store.set(
+            AuthStoreKey(acct.get_address().to_owned()),
+            acct.encode_vec(),
+        );
     }
 
     /// Overwrites existing account
@@ -193,13 +197,32 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 }
 
-fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
-    let mut auth_store_key: Vec<u8> = address.into();
-    let mut prefix = Vec::new();
-    prefix.extend(ACCOUNT_STORE_PREFIX);
-    prefix.append(&mut auth_store_key);
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct GlobalAccountNumberKey;
 
-    prefix
+impl KvStoreKey for GlobalAccountNumberKey {
+    fn prefix(self) -> KeyBytes {
+        GLOBAL_ACCOUNT_NUMBER_KEY
+            .as_ref()
+            .try_into()
+            .expect("Unreachable. We know that const is not empty")
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone)]
+pub struct AuthStoreKey(pub AccAddress);
+
+impl KvStoreKey for AuthStoreKey {
+    fn prefix(self) -> KeyBytes {
+        let mut auth_store_key: Vec<u8> = self.0.into();
+        let mut prefix = Vec::new();
+        prefix.extend(ACCOUNT_STORE_PREFIX);
+        prefix.append(&mut auth_store_key);
+
+        prefix
+            .try_into()
+            .expect("Unreachable. ACCOUNT_STORE_PREFIX has single byte")
+    }
 }
 
 // TODO: so we really need a Module type?

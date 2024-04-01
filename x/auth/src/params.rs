@@ -1,6 +1,7 @@
 use database::Database;
 use gears::types::context::context::Context;
 use gears::x::{auth::Params, params::ParamsSubspaceKey};
+use store::kv_store_key::{KvStoreKey, SimpleKvStoreKey};
 //use params_module::ParamsSubspaceKey;
 // use proto_messages::utils::serialize_number_to_string;
 // use serde::{Deserialize, Serialize};
@@ -69,7 +70,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .expect("should be valid u64")
     }
 
-    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<'_, DB>) -> Vec<u8> {
+    fn get_raw_param<DB: Database>(
+        key: impl KvStoreKey,
+        store: &ImmutablePrefixStore<'_, DB>,
+    ) -> Vec<u8> {
         store
             .get(key)
             .expect("key should be set in kv store")
@@ -81,19 +85,39 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .params_keeper
             .get_raw_subspace(ctx, &self.params_subspace_key);
 
-        let raw = Self::get_raw_param(&KEY_MAX_MEMO_CHARACTERS, &store);
+        let raw = Self::get_raw_param(
+            SimpleKvStoreKey::try_from(KEY_MAX_MEMO_CHARACTERS.as_ref())
+                .expect("Unreachable. Const value should be valid"),
+            &store,
+        );
         let max_memo_characters = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_TX_SIG_LIMIT, &store);
+        let raw = Self::get_raw_param(
+            SimpleKvStoreKey::try_from(KEY_TX_SIG_LIMIT.as_ref())
+                .expect("Unreachable. Const value should be valid"),
+            &store,
+        );
         let tx_sig_limit = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_TX_SIZE_COST_PER_BYTE, &store);
+        let raw = Self::get_raw_param(
+            SimpleKvStoreKey::try_from(KEY_TX_SIZE_COST_PER_BYTE.as_ref())
+                .expect("Unreachable. Const value should be valid"),
+            &store,
+        );
         let tx_size_cost_per_byte = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_SIG_VERIFY_COST_ED25519, &store);
+        let raw = Self::get_raw_param(
+            SimpleKvStoreKey::try_from(KEY_SIG_VERIFY_COST_ED25519.as_ref())
+                .expect("Unreachable. Const value should be valid"),
+            &store,
+        );
         let sig_verify_cost_ed25519 = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
+        let raw = Self::get_raw_param(
+            SimpleKvStoreKey::try_from(KEY_SIG_VERIFY_COST_SECP256K1.as_ref())
+                .expect("Unreachable. Const value should be valid"),
+            &store,
+        );
         let sig_verify_cost_secp256k1 = Self::parse_param(raw);
 
         Params {
@@ -111,27 +135,32 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
 
         store.set(
-            KEY_MAX_MEMO_CHARACTERS.into(),
+            SimpleKvStoreKey::try_from(KEY_MAX_MEMO_CHARACTERS.as_ref())
+                .expect("Unreachable. Const value should be valid"),
             format!("\"{}\"", params.max_memo_characters).into(),
         );
 
         store.set(
-            KEY_TX_SIG_LIMIT.into(),
+            SimpleKvStoreKey::try_from(KEY_TX_SIG_LIMIT.as_ref())
+                .expect("Unreachable. Const value should be valid"),
             format!("\"{}\"", params.tx_sig_limit).into(),
         );
 
         store.set(
-            KEY_TX_SIZE_COST_PER_BYTE.into(),
+            SimpleKvStoreKey::try_from(KEY_TX_SIZE_COST_PER_BYTE.as_ref())
+                .expect("Unreachable. Const value should be valid"),
             format!("\"{}\"", params.tx_size_cost_per_byte).into(),
         );
 
         store.set(
-            KEY_SIG_VERIFY_COST_ED25519.into(),
+            SimpleKvStoreKey::try_from(KEY_SIG_VERIFY_COST_ED25519.as_ref())
+                .expect("Unreachable. Const value should be valid"),
             format!("\"{}\"", params.sig_verify_cost_ed25519).into(),
         );
 
         store.set(
-            KEY_SIG_VERIFY_COST_SECP256K1.into(),
+            SimpleKvStoreKey::try_from(KEY_SIG_VERIFY_COST_SECP256K1.as_ref())
+                .expect("Unreachable. Const value should be valid"),
             format!("\"{}\"", params.sig_verify_cost_secp256k1).into(),
         );
     }

@@ -1,5 +1,6 @@
 use database::Database;
 use serde::{Deserialize, Serialize};
+use store_crate::kv_store_key::SimpleKvStoreKey;
 use store_crate::StoreKey;
 use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
 
@@ -102,19 +103,43 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_BLOCK_PARAMS.into(), block_params.into_bytes());
+            store.set(
+                SimpleKvStoreKey(
+                    KEY_BLOCK_PARAMS
+                        .as_ref()
+                        .try_into()
+                        .expect("Unrechable. Const is not empty"),
+                ),
+                block_params.into_bytes(),
+            );
         }
 
         if let Some(params) = params.evidence {
             let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_EVIDENCE_PARAMS.into(), evidence_params.into_bytes());
+            store.set(
+                SimpleKvStoreKey(
+                    KEY_EVIDENCE_PARAMS
+                        .as_ref()
+                        .try_into()
+                        .expect("Unrechable. Const is not empty"),
+                ),
+                evidence_params.into_bytes(),
+            );
         }
 
         if let Some(params) = params.validator {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_VALIDATOR_PARAMS.into(), params.into_bytes());
+            store.set(
+                SimpleKvStoreKey(
+                    KEY_VALIDATOR_PARAMS
+                        .as_ref()
+                        .try_into()
+                        .expect("Unrechable. Const is not empty"),
+                ),
+                params.into_bytes(),
+            );
         }
     }
 }

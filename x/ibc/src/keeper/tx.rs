@@ -24,7 +24,7 @@ use proto_messages::{
         },
     },
 };
-use store::StoreKey;
+use store::{kv_store_key::SimpleKvStoreKey, StoreKey};
 
 use crate::{
     errors::tx::client::{
@@ -34,7 +34,7 @@ use crate::{
     types::ContextShim,
 };
 
-use super::{client_state_get, params_get};
+use super::{client_state_get, params_get, ClientStoreKey};
 
 #[derive(Debug, Clone)]
 pub struct TxKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -64,10 +64,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         subject_client_id: &ClientId,
         substitute_client_id: &ClientId,
     ) -> Result<(), ClientRecoverError> {
-        let subj_client_state = client_state_get(&self.store_key, ctx, subject_client_id)?;
+        let subj_client_state = client_state_get(
+            &self.store_key,
+            ctx,
+            ClientStoreKey(subject_client_id.clone()),
+        )?;
         {
             let mut shim_ctx = ContextShim::new(ctx.into(), self.store_key.clone());
-            let subj_client_status = subj_client_state.status(&mut shim_ctx, subject_client_id)?;
+            let subj_client_status = subj_client_state.status(&mut shim_ctx, &subject_client_id)?;
             if subj_client_status == Status::Active {
                 return Err(ClientRecoverError::SubjectStatus {
                     client_id: subject_client_id.clone(),
@@ -76,7 +80,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
             }
         }
 
-        let subs_client_state = client_state_get(&self.store_key, ctx, substitute_client_id)?;
+        let subs_client_state = client_state_get(
+            &self.store_key,
+            ctx,
+            ClientStoreKey(substitute_client_id.clone()),
+        )?;
         if subj_client_state.latest_height() >= subs_client_state.latest_height() {
             return Err(ClientRecoverError::InvalidHeight {
                 subject: subj_client_state.latest_height(),
@@ -131,7 +139,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         proof_upgrade_client: CommitmentProofBytes,
         proof_upgrade_consensus_state: CommitmentProofBytes,
     ) -> Result<(), ClientUpgradeError> {
-        let client_state = client_state_get(&self.store_key, ctx, client_id)?;
+        let client_state =
+            client_state_get(&self.store_key, ctx, ClientStoreKey(client_id.clone()))?;
 
         let mut shim_ctx = ContextShim::new(ctx.into(), self.store_key.clone());
         let client_status = client_state.status(&mut shim_ctx, client_id)?;
@@ -197,7 +206,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         client_id: &ClientId,
         client_message: Any,
     ) -> Result<(), ClientUpdateError> {
-        let client_state = client_state_get(&self.store_key, ctx, client_id)?;
+        let client_state =
+            client_state_get(&self.store_key, ctx, ClientStoreKey(client_id.clone()))?;
         let client_type = client_state.client_type();
         let params = params_get(&self.params_keeper, ctx)?;
 
@@ -364,7 +374,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         let mut ctx = gears::types::context::context::Context::TxContext(ctx);
         self.params_keeper.set(
             &mut ctx,
-            params::NEXT_CLIENT_SEQUENCE.as_bytes().iter().cloned(),
+            SimpleKvStoreKey(
+                params::NEXT_CLIENT_SEQUENCE
+                    .as_bytes()
+                    .to_vec()
+                    .try_into()
+                    .expect("Unreachable. Const value should be valid"),
+            ),
             sequence.to_be_bytes(),
         )
     }
@@ -374,9 +390,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         ctx: &mut TxContext<'_, DB, SK>,
     ) -> Result<u64, ClientCreateError> {
         let ctx = gears::types::context::context::Context::TxContext(ctx);
-        let bytes = self
-            .params_keeper
-            .get(&ctx, &params::NEXT_CLIENT_SEQUENCE)?;
+        let bytes = self.params_keeper.get(
+            &ctx,
+            SimpleKvStoreKey(
+                params::NEXT_CLIENT_SEQUENCE
+                    .as_bytes()
+                    .to_vec()
+                    .try_into()
+                    .expect("Unreachable. Const value should be valid"),
+            ),
+        )?;
 
         if bytes.is_empty() {
             Err(ClientCreateError::CustomError(

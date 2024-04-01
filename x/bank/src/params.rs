@@ -2,7 +2,7 @@ use database::Database;
 use gears::types::context::context::Context;
 use gears::x::params::ParamsSubspaceKey;
 use serde::{Deserialize, Serialize};
-use store::StoreKey;
+use store::{kv_store_key::SimpleKvStoreKey, StoreKey};
 
 const KEY_SEND_ENABLED: [u8; 11] = [083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100]; // "SendEnabled"
 const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [
@@ -34,7 +34,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
 
         let default_send_enabled: bool = String::from_utf8(
             store
-                .get(&KEY_DEFAULT_SEND_ENABLED)
+                .get(
+                    SimpleKvStoreKey::try_from(KEY_DEFAULT_SEND_ENABLED.to_vec())
+                        .expect("Unreachable. `KEY_DEFAULT_SEND_ENABLED` is not empty"),
+                )
                 .expect("key should be set in kv store")
                 .clone(),
         )
@@ -56,11 +59,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
             .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
 
         store.set(
-            KEY_DEFAULT_SEND_ENABLED.into(),
+            SimpleKvStoreKey::try_from(KEY_DEFAULT_SEND_ENABLED.to_vec())
+                .expect("Unreachable. `KEY_DEFAULT_SEND_ENABLED` is not empty"),
             params.default_send_enabled.to_string().into(),
         );
 
         // The send_enabled field is hard coded to the empty list for now
-        store.set(KEY_SEND_ENABLED.into(), "[]".to_string().into());
+        store.set(
+            SimpleKvStoreKey::try_from(KEY_SEND_ENABLED.to_vec())
+                .expect("Unreachable. `KEY_SEND_ENABLED` is not empty"),
+            "[]".to_string().into(),
+        );
     }
 }
