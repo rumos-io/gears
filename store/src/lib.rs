@@ -37,7 +37,7 @@ pub trait WriteKVStore<DB>: ReadKVStore<DB> {
         &mut self,
         prefix: impl IntoIterator<Item = u8>,
     ) -> MutablePrefixStore<'_, DB>;
-    fn set<T: IntoIterator<Item = u8>>(&mut self, key: T, value: T);
+    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, key: KI, value: VI);
     fn commit(&mut self) -> [u8; 32];
 }
 

@@ -1,4 +1,4 @@
-use database::Database;
+use database::{Database, PrefixDB};
 use gears::{
     types::context::{Context, ContextMut},
     x::{auth::Params, params::ParamsSubspaceKey},
@@ -7,7 +7,7 @@ use gears::{
 // use proto_messages::utils::serialize_number_to_string;
 // use serde::{Deserialize, Serialize};
 // use serde_aux::prelude::deserialize_number_from_string;
-use store::{ImmutablePrefixStore, StoreKey};
+use store::{types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore};
 
 // #[derive(Debug, Clone, Deserialize, Serialize)]
 // pub struct Params {
@@ -81,21 +81,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
     pub fn get<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX) -> Params {
         let store = self
             .params_keeper
-            .get_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace(ctx, &self.params_subspace_key);
 
-        let raw = Self::get_raw_param(&KEY_MAX_MEMO_CHARACTERS, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_MAX_MEMO_CHARACTERS, &store);
         let max_memo_characters = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_TX_SIG_LIMIT, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_TX_SIG_LIMIT, &store);
         let tx_sig_limit = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_TX_SIZE_COST_PER_BYTE, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_TX_SIZE_COST_PER_BYTE, &store);
         let tx_size_cost_per_byte = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_SIG_VERIFY_COST_ED25519, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_SIG_VERIFY_COST_ED25519, &store);
         let sig_verify_cost_ed25519 = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
         let sig_verify_cost_secp256k1 = Self::parse_param(raw);
 
         Params {
@@ -110,31 +110,31 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
     pub fn set<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, params: Params) {
         let mut store = self
             .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace_mut(ctx, &self.params_subspace_key);
 
         store.set(
-            KEY_MAX_MEMO_CHARACTERS.into(),
-            format!("\"{}\"", params.max_memo_characters).into(),
+            KEY_MAX_MEMO_CHARACTERS,
+            format!("\"{}\"", params.max_memo_characters).into_bytes(),
         );
 
         store.set(
-            KEY_TX_SIG_LIMIT.into(),
-            format!("\"{}\"", params.tx_sig_limit).into(),
+            KEY_TX_SIG_LIMIT,
+            format!("\"{}\"", params.tx_sig_limit).into_bytes(),
         );
 
         store.set(
-            KEY_TX_SIZE_COST_PER_BYTE.into(),
-            format!("\"{}\"", params.tx_size_cost_per_byte).into(),
+            KEY_TX_SIZE_COST_PER_BYTE,
+            format!("\"{}\"", params.tx_size_cost_per_byte).into_bytes(),
         );
 
         store.set(
-            KEY_SIG_VERIFY_COST_ED25519.into(),
-            format!("\"{}\"", params.sig_verify_cost_ed25519).into(),
+            KEY_SIG_VERIFY_COST_ED25519,
+            format!("\"{}\"", params.sig_verify_cost_ed25519).into_bytes(),
         );
 
         store.set(
-            KEY_SIG_VERIFY_COST_SECP256K1.into(),
-            format!("\"{}\"", params.sig_verify_cost_secp256k1).into(),
+            KEY_SIG_VERIFY_COST_SECP256K1,
+            format!("\"{}\"", params.sig_verify_cost_secp256k1).into_bytes(),
         );
     }
 }

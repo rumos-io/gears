@@ -10,7 +10,7 @@ members = [
   # "gaia-rs",
   "store",
   # "x/bank",
-  # "x/auth",
+  "x/auth",
   "keyring", 
   # "x/ibc", 
   # "utils",
