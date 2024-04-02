@@ -102,19 +102,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_BLOCK_PARAMS.into(), block_params.into_bytes());
+            store.set(KEY_BLOCK_PARAMS, block_params.into_bytes());
         }
 
         if let Some(params) = params.evidence {
             let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_EVIDENCE_PARAMS.into(), evidence_params.into_bytes());
+            store.set(KEY_EVIDENCE_PARAMS, evidence_params.into_bytes());
         }
 
         if let Some(params) = params.validator {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_VALIDATOR_PARAMS.into(), params.into_bytes());
+            store.set(KEY_VALIDATOR_PARAMS, params.into_bytes());
         }
     }
 }

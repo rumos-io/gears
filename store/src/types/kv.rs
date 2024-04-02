@@ -37,7 +37,11 @@ impl<DB: Database> WriteKVStore<DB> for KVStore<DB> {
         hash
     }
 
-    fn set<T: IntoIterator<Item = u8>>(&mut self, key: T, value: T) {
+    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+        &mut self,
+        key: KI,
+        value: VI,
+    ) {
         let key: Vec<u8> = key.into_iter().collect();
 
         if key.is_empty() {
