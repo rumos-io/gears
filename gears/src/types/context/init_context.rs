@@ -22,16 +22,6 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
             chain_id,
         }
     }
-
-    ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
-        self.multi_store.get_kv_store(store_key)
-    }
-
-    /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
-        self.multi_store.get_mutable_kv_store(store_key)
-    }
 }
 
 impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
@@ -43,7 +33,7 @@ impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
         &self.chain_id
     }
 
-    fn metadata_get(&self) -> Metadata {
+    fn metadata(&self) -> Metadata {
         Metadata {
             description: String::new(),
             denom_units: vec![
@@ -80,7 +70,7 @@ impl<DB: Database, SK: StoreKey> WriteContext<SK, DB> for InitContext<'_, DB, SK
     type KVStoreMut = KVStore<PrefixDB<DB>>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
-        self.get_mutable_kv_store(store_key)
+        self.multi_store.get_mutable_kv_store(store_key)
     }
 }
 
@@ -88,6 +78,6 @@ impl<SK: StoreKey, DB: Database> ReadContext<SK, DB> for InitContext<'_, DB, SK>
     type KVStore = KVStore<PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
-        self.get_kv_store(store_key)
+        self.multi_store.get_kv_store(store_key)
     }
 }

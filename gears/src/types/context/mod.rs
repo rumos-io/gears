@@ -10,7 +10,7 @@ pub mod tx_context;
 pub trait Context<DB: Database, SK>: ReadContext<SK, DB> {
     fn height(&self) -> u64;
     fn chain_id(&self) -> &Id;
-    fn metadata_get(&self) -> Metadata;
+    fn metadata(&self) -> Metadata;
 }
 
 pub trait ContextMut<DB: Database, SK>: WriteContext<SK, DB> + Context<DB, SK> {

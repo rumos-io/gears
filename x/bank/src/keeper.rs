@@ -6,7 +6,7 @@ use database::Database;
 
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::{ContextMut, ReadContext};
+use gears::types::context::{ContextMut, ReadContext, WriteContext};
 use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
@@ -104,7 +104,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // 3. Need to set denom metadata
         self.bank_params_keeper.set(ctx, genesis.params);
 
-        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        let bank_store = ctx.kv_store_mut(&self.store_key);
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {
@@ -143,7 +143,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
         req: QueryBalanceRequest,
     ) -> QueryBalanceResponse {
-        let bank_store = ctx.get_kv_store(&self.store_key);
+        let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(req.address);
 
         let account_store = bank_store.get_immutable_prefix_store(prefix);
@@ -165,7 +165,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
         req: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
-        let bank_store = ctx.get_kv_store(&self.store_key);
+        let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(req.address);
         let account_store = bank_store.get_immutable_prefix_store(prefix);
 
@@ -191,7 +191,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &QueryContext<'_, DB, SK>,
     ) -> Vec<Coin> {
-        let bank_store = ctx.get_kv_store(&self.store_key);
+        let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY);
 
         supply_store
@@ -332,7 +332,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &QueryContext<'_, DB, SK>,
     ) -> QueryDenomsMetadataResponse {
-        let bank_store = ctx.get_kv_store(&self.store_key);
+        let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
         for (_, metadata) in bank_store

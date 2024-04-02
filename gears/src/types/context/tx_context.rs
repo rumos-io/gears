@@ -28,21 +28,6 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
             _tx_bytes: tx_bytes,
         }
     }
-
-    #[allow(dead_code)]
-    fn get_header(&self) -> &Header {
-        &self.header
-    }
-
-    ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
-        self.multi_store.get_kv_store(store_key)
-    }
-
-    /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
-        self.multi_store.get_mutable_kv_store(store_key)
-    }
 }
 
 impl<DB: Database, SK: StoreKey> Context<DB, SK> for TxContext<'_, DB, SK> {
@@ -50,7 +35,7 @@ impl<DB: Database, SK: StoreKey> Context<DB, SK> for TxContext<'_, DB, SK> {
         self.height
     }
 
-    fn metadata_get(&self) -> Metadata {
+    fn metadata(&self) -> Metadata {
         Metadata {
             description: String::new(),
             denom_units: vec![
@@ -91,7 +76,7 @@ impl<DB: Database, SK: StoreKey> WriteContext<SK, DB> for TxContext<'_, DB, SK> 
     type KVStoreMut = KVStore<PrefixDB<DB>>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
-        self.get_mutable_kv_store(store_key)
+        self.multi_store.get_mutable_kv_store(store_key)
     }
 }
 
@@ -99,6 +84,6 @@ impl<SK: StoreKey, DB: Database> ReadContext<SK, DB> for TxContext<'_, DB, SK> {
     type KVStore = KVStore<PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
-        self.get_kv_store(store_key)
+        self.multi_store.get_kv_store(store_key)
     }
 }

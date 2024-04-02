@@ -3,7 +3,7 @@ use database::Database;
 
 use gears::{
     error::AppError,
-    types::context::{Context, ContextMut},
+    types::context::{Context, ContextMut, ReadContext},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 //use params_module::ParamsSubspaceKey;
@@ -115,7 +115,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
-        let auth_store = ctx.get_kv_store(&self.store_key);
+        let auth_store = ctx.kv_store(&self.store_key);
         let key = create_auth_store_key(req.address);
         let account = auth_store.get(&key);
 

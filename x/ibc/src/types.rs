@@ -6,7 +6,9 @@ use crate::{
     params::CLIENT_STATE_KEY,
 };
 use database::Database;
-use gears::types::context::{query_context::QueryContext, tx_context::TxContext};
+use gears::types::context::{
+    query_context::QueryContext, tx_context::TxContext, ReadContext, WriteContext,
+};
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
@@ -145,7 +147,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> CommonContext
     ) -> Result<Self::AnyConsensusState, ContextError> {
         let bytes = self
             .ctx
-            .get_kv_store(&self.store_key)
+            .kv_store(&self.store_key)
             .get(
                 format!(
                     "{KEY_CONSENSUS_STATE_PREFIX}/{}",
@@ -245,7 +247,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey>
     ) -> Result<Self::AnyConsensusState, ContextError> {
         let bytes = self
             .ctx
-            .get_kv_store(&self.store_key)
+            .kv_store(&self.store_key)
             .get(format!("{KEY_CONSENSUS_STATE_PREFIX}/{}", height.revision_height()).as_bytes())
             .ok_or(ClientError::MissingRawConsensusState)?;
 
@@ -468,7 +470,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
             <Self::AnyClientState as Protobuf<PrimitiveAny>>::encode_vec(client_state);
 
         self.ctx
-            .get_mutable_kv_store(&self.store_key)
+            .kv_store_mut(&self.store_key)
             .get_mutable_prefix_store(
                 format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
             )
@@ -486,7 +488,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
             <Self::AnyConsensusState as Protobuf<PrimitiveAny>>::encode_vec(consensus_state);
 
         self.ctx
-            .get_mutable_kv_store(&self.store_key)
+            .kv_store_mut(&self.store_key)
             .get_mutable_prefix_store(
                 format!(
                     "{KEY_CLIENT_STORE_PREFIX}/{}",
@@ -511,7 +513,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
         consensus_state_path: ClientConsensusStatePath,
     ) -> Result<(), ContextError> {
         self.ctx
-            .get_mutable_kv_store(&self.store_key)
+            .kv_store_mut(&self.store_key)
             .get_mutable_prefix_store(
                 format!(
                     "{KEY_CLIENT_STORE_PREFIX}/{}",
@@ -545,7 +547,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
             .into_bytes();
 
         self.ctx
-            .get_mutable_kv_store(&self.store_key)
+            .kv_store_mut(&self.store_key)
             .set(path.into_bytes(), host_timestamp_bytes);
 
         Ok(())
@@ -566,7 +568,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
             .into_bytes();
 
         self.ctx
-            .get_mutable_kv_store(&self.store_key)
+            .kv_store_mut(&self.store_key)
             .set(path.into_bytes(), host_height_bytes);
 
         Ok(())
@@ -581,7 +583,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
         let _ = self
             .ctx
-            .get_mutable_kv_store(&self.store_key)
+            .kv_store_mut(&self.store_key)
             .delete(path.as_bytes());
 
         Ok(())
@@ -596,7 +598,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
         let _ = self
             .ctx
-            .get_mutable_kv_store(&self.store_key)
+            .kv_store_mut(&self.store_key)
             .delete(path.as_bytes());
 
         Ok(())

@@ -1,6 +1,6 @@
 use database::Database;
 use gears::{
-    types::context::{tx_context::TxContext, ContextMut},
+    types::context::{tx_context::TxContext, ContextMut, ReadContext},
     x::params::ParamsSubspaceKey,
 };
 use proto_messages::{
@@ -392,6 +392,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     fn root_hash<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>) -> [u8; 32] {
-        ctx.get_kv_store(&self.store_key).head_commit_hash()
+        ctx.kv_store(&self.store_key).head_commit_hash()
     }
 }

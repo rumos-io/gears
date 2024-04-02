@@ -3,6 +3,7 @@ use std::str::FromStr;
 use bytes::Bytes;
 use database::Database;
 use gears::types::context::query_context::QueryContext;
+use gears::types::context::{Context, ReadContext};
 use gears::x::params::ParamsSubspaceKey;
 use prost::Message;
 use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateCommon;
@@ -84,7 +85,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let client_id = ClientId::from_str(&client_id)?;
 
         let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
-        let revision_number = ctx.chain_id().revision_number();
+        // let revision_number = ctx.chain_id().revision_number();
+        let revision_number = 1; // TODO:NOW
 
         let response = RawQueryClientStateResponse {
             client_state: Some(client_state.into()),
@@ -103,7 +105,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
         QueryClientStatesRequest { pagination: _ }: QueryClientStatesRequest,
     ) -> Result<QueryClientStatesResponse, StatesError> {
-        let any_store = ctx.get_kv_store(&self.store_key);
+        let any_store = ctx.kv_store(&self.store_key);
         let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
             any_store.get_immutable_prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
 
@@ -159,12 +161,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         }: QueryConsensusStateHeightsRequest,
     ) -> Result<QueryConsensusStateHeightsResponse, ConsensusStateHeightError> {
         let client_id = ClientId::from_str(&client_id)?;
-        let store = ctx
-            .get_kv_store(&self.store_key)
-            .get_immutable_prefix_store(
-                format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}")
-                    .into_bytes(),
-            );
+        let store = ctx.kv_store(&self.store_key).get_immutable_prefix_store(
+            format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}")
+                .into_bytes(),
+        );
 
         let mut heights = Vec::<Height>::new();
         for (_key, value) in store.range(..) {
@@ -226,7 +226,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let client_id = ClientId::from_str(&client_id)?;
 
         let states = {
-            let any_store = ctx.get_kv_store(&self.store_key);
+            let any_store = ctx.kv_store(&self.store_key);
             let store = any_store.get_immutable_prefix_store(
                 format!("{KEY_CONSENSUS_STATE_PREFIX}/{client_id}").into_bytes(),
             );
