@@ -2,6 +2,7 @@ use std::{collections::HashMap, str::FromStr};
 
 use auth::ante::{AuthKeeper, BankKeeper};
 use bytes::Bytes;
+use database::ext::UnwrapCorrupt;
 use database::Database;
 
 use gears::types::context::init_context::InitContext;
@@ -74,7 +75,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
             .get(&base.to_string().into_bytes())
             .map(|metadata| {
                 Metadata::decode::<&[u8]>(&metadata)
-                    .expect("invalid data in database - possible database corruption")
+                    .ok()
+                    .unwrap_or_corrupt()
             })
     }
 }
@@ -157,7 +159,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             Some(amount) => QueryBalanceResponse {
                 balance: Some(
                     Coin::decode::<Bytes>(amount.to_owned().into())
-                        .expect("invalid data in database - possible database corruption"),
+                        .ok()
+                        .unwrap_or_corrupt(),
                 ),
             },
             None => QueryBalanceResponse { balance: None },
@@ -177,7 +180,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         for (_, coin) in account_store.range(..) {
             let coin: Coin = Coin::decode::<Bytes>(coin.to_owned().into())
-                .expect("invalid data in database - possible database corruption");
+                .ok()
+                .unwrap_or_corrupt();
             balances.push(coin);
         }
 
@@ -202,9 +206,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .range(..)
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
-                    .expect("invalid data in database - possible database corruption");
+                    .ok()
+                    .unwrap_or_corrupt();
                 let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
-                    .expect("invalid data in database - possible database corruption");
+                    .ok()
+                    .unwrap_or_corrupt();
                 Coin { denom, amount }
             })
             .collect()
@@ -251,7 +257,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
 
             let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
-                .expect("invalid data in database - possible database corruption");
+                .ok()
+                .unwrap_or_corrupt();
 
             if from_balance.amount < send_coin.amount {
                 return Err(AppError::Send("Insufficient funds".into()));
@@ -271,7 +278,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             let mut to_balance: Coin = match to_balance {
                 Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
-                    .expect("invalid data in database - possible database corruption"),
+                    .ok()
+                    .unwrap_or_corrupt(),
                 None => Coin {
                     denom: send_coin.denom.clone(),
                     amount: Uint256::zero(),
@@ -351,7 +359,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         for (_, metadata) in bank_store.prefix_store(DENOM_METADATA_PREFIX).range(..) {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.to_owned().into())
-                .expect("invalid data in database - possible database corruption");
+                .ok()
+                .unwrap_or_corrupt();
             denoms_metadata.push(metadata);
         }
 

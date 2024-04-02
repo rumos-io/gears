@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use database::Database;
+use database::{ext::UnwrapCorrupt, Database};
 
 use gears::{
     error::AppError,
@@ -61,7 +61,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
 
         if let Some(buf) = account {
             let account = Account::decode::<Bytes>(buf.to_owned().into())
-                .expect("invalid data in database - possible database corruption");
+                .ok()
+                .unwrap_or_corrupt();
 
             return Some(account);
         }
@@ -125,7 +126,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         if let Some(buf) = account {
             let account = Account::decode::<Bytes>(buf.to_owned().into())
-                .expect("invalid data in database - possible database corruption");
+                .ok()
+                .unwrap_or_corrupt();
 
             return Ok(QueryAccountResponse { account });
         }
@@ -145,7 +147,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let acct_num: u64 = match acct_num {
             None => 0, //initialize account numbers
             Some(num) => u64::decode::<Bytes>(num.to_owned().into())
-                .expect("invalid data in database - possible database corruption"),
+                .ok()
+                .unwrap_or_corrupt(),
         };
 
         let next_acct_num = acct_num + 1;

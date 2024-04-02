@@ -5,7 +5,7 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use database::Database;
+use database::{ext::UnwrapCorrupt, Database};
 use integer_encoding::VarInt;
 use nutype::nutype;
 use sha2::{Digest, Sha256};
@@ -497,7 +497,8 @@ where
                 Ok(Tree {
                     root: node_db
                         .get_root_node(*latest_version)
-                        .expect("invalid data in database - possible database corruption"),
+                        .ok()
+                        .unwrap_or_corrupt(),
                     loaded_version: *latest_version,
                     node_db,
                     versions,
@@ -522,10 +523,7 @@ where
             // If the version already exists, return an error as we're attempting to overwrite.
             // However, the same hash means idempotent (i.e. no-op).
             // TODO: do we really need to be doing this?
-            let saved_hash = self
-                .node_db
-                .get_root_hash(version)
-                .expect("invalid data in database - possible database corruption");
+            let saved_hash = self.node_db.get_root_hash(version).ok().unwrap_or_corrupt();
             let working_hash = self.root_hash();
 
             if saved_hash == working_hash {
