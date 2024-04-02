@@ -18,7 +18,7 @@ impl<'a, DB: Database> ReadKVStore<DB> for QueryKVStore<'a, DB> {
         self.persistent_store.get(k.as_ref())
     }
 
-    fn prefix_store<I : IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
             prefix: prefix.into_iter().collect(),

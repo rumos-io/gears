@@ -18,7 +18,7 @@ pub trait ContextMut<DB, SK>: Context<DB, SK> {
     fn append_events(&mut self, events: Vec<Event>);
 }
 
-pub trait ReadContext< DB: Database, SK> {
+pub trait ReadContext<DB: Database, SK> {
     type KVStore: ReadKVStore<PrefixDB<DB>>;
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.

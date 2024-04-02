@@ -44,7 +44,7 @@ impl<'a, SK: StoreKey, DB: Database> ReadContext<DB, SK> for QueryContext<'a, DB
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> Context<DB, SK> for QueryContext<'a, DB, SK> {
+impl<'a, DB, SK> Context<DB, SK> for QueryContext<'a, DB, SK> {
     fn height(&self) -> u64 {
         self.height
     }

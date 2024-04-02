@@ -33,7 +33,7 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> Context<DB, SK> for TxContext<'_, DB, SK> {
+impl<DB, SK> Context<DB, SK> for TxContext<'_, DB, SK> {
     fn height(&self) -> u64 {
         self.height
     }
@@ -65,7 +65,7 @@ impl<DB: Database, SK: StoreKey> Context<DB, SK> for TxContext<'_, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> ContextMut<DB, SK> for TxContext<'_, DB, SK> {
+impl<DB, SK> ContextMut<DB, SK> for TxContext<'_, DB, SK> {
     fn push_event(&mut self, event: Event) {
         self.events.push(event);
     }

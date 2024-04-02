@@ -16,7 +16,7 @@ pub struct InitContext<'a, DB, SK> {
     pub chain_id: Id,
 }
 
-impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
+impl<'a, DB, SK> InitContext<'a, DB, SK> {
     pub fn new(multi_store: &'a mut MultiStore<DB, SK>, height: u64, chain_id: Id) -> Self {
         InitContext {
             multi_store,
@@ -27,7 +27,7 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
+impl<DB, SK> Context<DB, SK> for InitContext<'_, DB, SK> {
     fn height(&self) -> u64 {
         self.height
     }
@@ -59,7 +59,7 @@ impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> ContextMut<DB, SK> for InitContext<'_, DB, SK> {
+impl<DB, SK> ContextMut<DB, SK> for InitContext<'_, DB, SK> {
     fn push_event(&mut self, event: Event) {
         self.events.push(event);
     }
