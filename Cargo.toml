@@ -2,18 +2,18 @@
 members = [
   "proto-types",
   "proto-messages",
-  "gears",
-  "gears-derive",
+  # "gears",
+  # "gears-derive",
   "trees",
   "database",
   "tendermint",
-  "gaia-rs",
+  # "gaia-rs",
   "store",
-  "x/bank",
-  "x/auth",
+  # "x/bank",
+  # "x/auth",
   "keyring", 
-  "x/ibc", 
-  "utils",
+  # "x/ibc", 
+  # "utils",
 ]
 resolver = "2"
 

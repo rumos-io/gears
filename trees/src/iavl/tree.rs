@@ -915,13 +915,10 @@ where
     }
 }
 
-pub struct Range<'a, R: RangeBounds<Vec<u8>>, T>
-where
-    T: Database,
-{
+pub struct Range<'a, R: RangeBounds<Vec<u8>>, DB> {
     pub(crate) range: R,
     pub(crate) delayed_nodes: Vec<Box<Node>>,
-    pub(crate) node_db: &'a NodeDB<T>,
+    pub(crate) node_db: &'a NodeDB<DB>,
 }
 
 impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
