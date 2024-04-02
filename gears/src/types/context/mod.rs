@@ -1,4 +1,4 @@
-use database::{Database, PrefixDB};
+use database::Database;
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use store_crate::{ReadKVStore, WriteKVStore};
 use tendermint::informal::{abci::Event, chain::Id};
@@ -19,14 +19,14 @@ pub trait ContextMut<DB: Database, SK>: WriteContext<SK, DB> + Context<DB, SK> {
 }
 
 pub trait ReadContext<SK, DB: Database> {
-    type KVStore: ReadKVStore<PrefixDB<DB>>;
+    type KVStore: ReadKVStore<DB>;
 
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore; //AnyKVStore<'_, PrefixDB<DB>>;
 }
 
 pub trait WriteContext<SK, DB: Database> {
-    type KVStoreMut: WriteKVStore<PrefixDB<DB>>;
+    type KVStoreMut: WriteKVStore<DB>;
 
     ///  Fetches an mutable ref to a KVStore from the MultiStore.
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut; //AnyKVStore<'_, PrefixDB<DB>>;

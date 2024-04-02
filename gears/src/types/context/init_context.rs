@@ -1,6 +1,9 @@
 use database::{Database, PrefixDB};
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
-use store_crate::{KVStore, MultiStore, StoreKey};
+use store_crate::{
+    types::{kv::KVStore, multi::MultiStore},
+    ReadMultiKVStore, StoreKey, WriteMultiKVStore,
+};
 use tendermint::informal::{abci::Event, chain::Id};
 
 use super::{Context, ContextMut, ReadContext, WriteContext};
@@ -24,7 +27,7 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
     fn height(&self) -> u64 {
         self.height
     }
@@ -56,7 +59,7 @@ impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> ContextMut<DB, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> ContextMut<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
     fn push_event(&mut self, event: Event) {
         self.events.push(event);
     }
@@ -66,18 +69,18 @@ impl<DB: Database, SK: StoreKey> ContextMut<DB, SK> for InitContext<'_, DB, SK> 
     }
 }
 
-impl<DB: Database, SK: StoreKey> WriteContext<SK, DB> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> WriteContext<SK, PrefixDB<DB>> for InitContext<'_, DB, SK> {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
-        self.multi_store.get_mutable_kv_store(store_key)
+        self.multi_store.kv_store_mut(store_key)
     }
 }
 
-impl<SK: StoreKey, DB: Database> ReadContext<SK, DB> for InitContext<'_, DB, SK> {
+impl<SK: StoreKey, DB: Database> ReadContext<SK, PrefixDB<DB>> for InitContext<'_, DB, SK> {
     type KVStore = KVStore<PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
-        self.multi_store.get_kv_store(store_key)
+        self.multi_store.kv_store(store_key)
     }
 }

@@ -1,6 +1,6 @@
-use database::Database;
+use database::{Database, PrefixDB};
 use serde::{Deserialize, Serialize};
-use store_crate::StoreKey;
+use store_crate::{StoreKey, WritePrefixStore};
 use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
 
 use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
@@ -87,7 +87,7 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database, CTX: WriteContext<SK, DB>>(
+    pub fn set_consensus_params<DB: Database, CTX: WriteContext<SK, PrefixDB<DB>>>(
         &self,
         ctx: &mut CTX,
         params: ConsensusParams,
@@ -97,7 +97,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
 
         let mut store = self
             .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace_mut(ctx, &self.params_subspace_key);
 
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))
