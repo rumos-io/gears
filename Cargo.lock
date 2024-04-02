@@ -347,6 +347,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "bank"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "auth",
+ "axum 0.7.5",
+ "bnum 0.11.0",
+ "bytes",
+ "clap",
+ "database",
+ "gears",
+ "hex",
+ "prost 0.12.3",
+ "proto-messages",
+ "proto-types",
+ "serde",
+ "serde_json",
+ "store",
+ "strum",
+ "tendermint 0.1.0",
+ "tokio",
+]
+
+[[package]]
 name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1534,6 +1558,15 @@ dependencies = [
  "tracing-subscriber",
  "trees",
  "url",
+]
+
+[[package]]
+name = "gears-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+ "syner",
 ]
 
 [[package]]
@@ -4301,6 +4334,28 @@ name = "sync_wrapper"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384595c11a4e2969895cad5a8c4029115f5ab956a9e5ef4de79d11a426e5f20c"
+
+[[package]]
+name = "syner"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c78fb1545c37943ac4266cb7be37079b45f518c7ea4dfb8286d7e053867a3a97"
+dependencies = [
+ "proc-macro2",
+ "syn 1.0.109",
+ "syner_derive",
+]
+
+[[package]]
+name = "syner_derive"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f68b18aaa926142df85fa458f5c165d1f1b0c5a0047ecda3957673cf549c6c3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
 
 [[package]]
 name = "tap"

@@ -70,7 +70,7 @@ impl<DB: Database> ReadKVStore<DB> for KVStore<DB> {
         tx_cache_val.cloned()
     }
 
-    fn prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
             prefix: prefix.into_iter().collect(),

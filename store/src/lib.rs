@@ -27,7 +27,7 @@ pub trait WritePrefixStore {
 
 pub trait ReadKVStore<DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>>;
-    fn prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB>;
+    fn prefix_store<I : IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB>;
     fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB>;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
 }

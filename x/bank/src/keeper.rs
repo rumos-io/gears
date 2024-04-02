@@ -22,7 +22,8 @@ use proto_messages::cosmos::{
     base::v1beta1::{Coin, SendCoins},
 };
 use proto_types::{AccAddress, Denom, Uint256};
-use store::{MutablePrefixStore, ReadKVStore, StoreKey, WriteKVStore};
+use store::types::prefix::mutable::MutablePrefixStore;
+use store::{ReadKVStore, ReadPrefixStore, StoreKey, WriteKVStore, WritePrefixStore};
 use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{BankParamsKeeper, GenesisState};
@@ -109,7 +110,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
-            let mut denom_balance_store = bank_store.get_mutable_prefix_store(prefix);
+            let mut denom_balance_store = bank_store.prefix_store_mut(prefix);
 
             for coin in balance.coins {
                 denom_balance_store.set(
@@ -146,7 +147,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(req.address);
 
-        let account_store = bank_store.get_immutable_prefix_store(prefix);
+        let account_store = bank_store.prefix_store(prefix);
         let bal = account_store.get(req.denom.to_string().as_bytes());
 
         match bal {
@@ -167,7 +168,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     ) -> QueryAllBalancesResponse {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(req.address);
-        let account_store = bank_store.get_immutable_prefix_store(prefix);
+        let account_store = bank_store.prefix_store(prefix);
 
         let mut balances = vec![];
 
@@ -192,7 +193,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
     ) -> Vec<Coin> {
         let bank_store = ctx.kv_store(&self.store_key);
-        let supply_store = bank_store.get_immutable_prefix_store(SUPPLY_KEY);
+        let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
         supply_store
             .range(..)
@@ -253,7 +254,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             from_balance.amount -= send_coin.amount;
 
             from_account_store.set(
-                send_coin.denom.clone().to_string().into(),
+                send_coin.denom.clone().to_string().into_bytes(),
                 from_balance.encode_vec(),
             );
 
@@ -273,7 +274,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             to_balance.amount += send_coin.amount;
 
-            to_account_store.set(send_coin.denom.to_string().into(), to_balance.encode_vec());
+            to_account_store.set(
+                send_coin.denom.to_string().into_bytes(),
+                to_balance.encode_vec(),
+            );
 
             events.push(Event::new(
                 "transfer",
@@ -297,8 +301,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
         supply_store.set(
-            coin.denom.to_string().into(),
-            coin.amount.to_string().into(),
+            coin.denom.to_string().into_bytes(),
+            coin.amount.to_string().into_bytes(),
         );
     }
 
@@ -335,10 +339,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
-        for (_, metadata) in bank_store
-            .get_immutable_prefix_store(DENOM_METADATA_PREFIX.into_iter())
-            .range(..)
-        {
+        for (_, metadata) in bank_store.prefix_store(DENOM_METADATA_PREFIX).range(..) {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.to_owned().into())
                 .expect("invalid data in database - possible database corruption");
             denoms_metadata.push(metadata);
