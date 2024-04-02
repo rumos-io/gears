@@ -5,7 +5,7 @@ use trees::iavl::Range;
 
 use crate::ReadKVStore;
 
-use super::{kv::KVStore, prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore};
+use super::{kv::KVStore, query::kv::QueryKVStore};
 
 pub enum AnyKVStore<'a, DB> {
     KVStore(&'a KVStore<DB>),
@@ -39,13 +39,6 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         match self {
             AnyKVStore::KVStore(store) => store.range(range),
             AnyKVStore::QueryKVStore(store) => store.range(range),
-        }
-    }
-
-    pub fn get_immutable_prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
-        match self {
-            AnyKVStore::KVStore(store) => store.prefix_store(prefix),
-            AnyKVStore::QueryKVStore(store) => store.prefix_store(prefix),
         }
     }
 }
