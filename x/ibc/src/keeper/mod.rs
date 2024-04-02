@@ -33,7 +33,7 @@ pub const KEY_CONSENSUS_STATE_PREFIX: &str = "consensusStates";
 
 fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
     keeper: &AbciParamsKeeper<SK, PSK>,
-    ctx: &impl ReadContext<SK, DB>,
+    ctx: &impl ReadContext<DB, SK>,
 ) -> Result<Params, SearchError> {
     let bytes = keeper
         .get(ctx, &params::CLIENT_PARAMS_KEY)
@@ -46,7 +46,7 @@ fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
 
 pub fn client_state_get<DB: Database, SK: StoreKey>(
     store_key: &SK,
-    ctx: &impl ReadContext<SK, DB>,
+    ctx: &impl ReadContext<DB, SK>,
     client_id: &ClientId,
 ) -> Result<WrappedTendermintClientState, SearchError> {
     let any_store = ctx.kv_store(store_key);
@@ -65,7 +65,7 @@ pub fn client_state_get<DB: Database, SK: StoreKey>(
 
 pub fn client_consensus_state<DB: Database, SK: StoreKey>(
     store_key: &SK,
-    ctx: &impl ReadContext<SK, DB>,
+    ctx: &impl ReadContext<DB, SK>,
     client_id: &ClientId,
     height: &Height,
 ) -> Result<ConsensusState, SearchError> {

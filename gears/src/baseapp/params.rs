@@ -87,7 +87,7 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database, CTX: WriteContext<SK, DB>>(
+    pub fn set_consensus_params<DB: Database, CTX: WriteContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConsensusParams,

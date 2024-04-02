@@ -1,13 +1,15 @@
 use database::{Database, PrefixDB};
 use gears::{
-    types::context::{Context, ContextMut},
+    types::context::{ReadContext, WriteContext},
     x::{auth::Params, params::ParamsSubspaceKey},
 };
 //use params_module::ParamsSubspaceKey;
 // use proto_messages::utils::serialize_number_to_string;
 // use serde::{Deserialize, Serialize};
 // use serde_aux::prelude::deserialize_number_from_string;
-use store::{types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore};
+use store::{
+    types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,
+};
 
 // #[derive(Debug, Clone, Deserialize, Serialize)]
 // pub struct Params {
@@ -78,7 +80,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .clone()
     }
 
-    pub fn get<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn get<DB: Database, CTX: ReadContext<DB, SK>>(&self, ctx: &CTX) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
@@ -107,7 +109,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, params: Params) {
+    pub fn set<DB: Database, CTX: WriteContext<DB, SK>>(&self, ctx: &mut CTX, params: Params) {
         let mut store = self
             .params_keeper
             .raw_subspace_mut(ctx, &self.params_subspace_key);

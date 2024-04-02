@@ -69,7 +69,7 @@ impl<DB: Database, SK: StoreKey> ContextMut<DB, SK> for InitContext<'_, DB, SK> 
     }
 }
 
-impl<DB: Database, SK: StoreKey> WriteContext<SK, DB> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> WriteContext<DB, SK> for InitContext<'_, DB, SK> {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
@@ -77,7 +77,7 @@ impl<DB: Database, SK: StoreKey> WriteContext<SK, DB> for InitContext<'_, DB, SK
     }
 }
 
-impl<SK: StoreKey, DB: Database> ReadContext<SK, DB> for InitContext<'_, DB, SK> {
+impl<SK: StoreKey, DB: Database> ReadContext<DB, SK> for InitContext<'_, DB, SK> {
     type KVStore = KVStore<PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {

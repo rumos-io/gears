@@ -25,7 +25,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn raw_subspace<'a, DB: Database, CTX: ReadContext<SK, DB>>(
+    pub fn raw_subspace<'a, DB: Database, CTX: ReadContext<DB, SK>>(
         &self,
         ctx: &'a CTX,
         params_subspace_key: &PSK,
@@ -35,7 +35,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         store.prefix_store(params_subspace_key.name().as_bytes().to_vec())
     }
 
-    pub fn raw_subspace_mut<'a, DB: Database, CTX: WriteContext<SK, DB>>(
+    pub fn raw_subspace_mut<'a, DB: Database, CTX: WriteContext<DB, SK>>(
         &self,
         ctx: &'a mut CTX,
         params_subspace_key: &PSK,
