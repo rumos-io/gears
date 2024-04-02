@@ -1,6 +1,5 @@
 #![warn(rust_2018_idioms)]
 
-use database::Database;
 use strum::IntoEnumIterator;
 use trees::iavl::Range;
 use types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
@@ -23,7 +22,7 @@ pub trait ReadPrefixStore {
 }
 
 pub trait WritePrefixStore {
-    fn set<T: IntoIterator<Item = u8>>(&mut self, k: T, v: T);
+    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI);
 }
 
 pub trait ReadKVStore<DB> {
@@ -50,10 +49,10 @@ pub trait ReadMultiKVStore<DB, SK> {
     fn head_commit_hash(&self) -> [u8; 32];
 }
 
-pub trait WriteMultiKVStore<DB: Database, SK> {
+pub trait WriteMultiKVStore<DB, SK> {
     type KvStoreMut: WriteKVStore<DB>;
 
-    fn kv_store_mut(&mut self, store_key: &SK) -> &Self::KvStoreMut;
+    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut;
     fn commit(&mut self) -> [u8; 32];
     /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
     fn tx_caches_write_then_clear(&mut self);

@@ -1,6 +1,6 @@
 use database::Database;
 use serde::{Deserialize, Serialize};
-use store_crate::StoreKey;
+use store_crate::{StoreKey, WritePrefixStore};
 use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
 
 use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
@@ -97,24 +97,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
 
         let mut store = self
             .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace_mut(ctx, &self.params_subspace_key);
 
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_BLOCK_PARAMS.into(), block_params.into_bytes());
+            store.set(KEY_BLOCK_PARAMS, block_params.into_bytes());
         }
 
         if let Some(params) = params.evidence {
             let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_EVIDENCE_PARAMS.into(), evidence_params.into_bytes());
+            store.set(KEY_EVIDENCE_PARAMS, evidence_params.into_bytes());
         }
 
         if let Some(params) = params.validator {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_VALIDATOR_PARAMS.into(), params.into_bytes());
+            store.set(KEY_VALIDATOR_PARAMS, params.into_bytes());
         }
     }
 }

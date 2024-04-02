@@ -4,7 +4,13 @@ use proto_messages::cosmos::{
     ibc::types::core::host::identifiers::ChainId,
     tx::v1beta1::tx_metadata::{DenomUnit, Metadata},
 };
-use store_crate::{MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
+use store_crate::{
+    types::{
+        multi::MultiStore,
+        query::{kv::QueryKVStore, multi::QueryMultiStore},
+    },
+    ReadMultiKVStore, StoreKey,
+};
 
 use super::{Context, ReadContext};
 
@@ -34,7 +40,7 @@ impl<'a, SK: StoreKey, DB: Database> ReadContext<SK, DB> for QueryContext<'a, DB
     type KVStore = QueryKVStore<'a, PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
-        self.multi_store.get_kv_store(store_key)
+        self.multi_store.kv_store(store_key)
     }
 }
 

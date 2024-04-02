@@ -20,7 +20,7 @@ impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
 }
 
 impl<DB: Database> WritePrefixStore for MutablePrefixStore<'_, DB> {
-    fn set<T: IntoIterator<Item = u8>>(&mut self, k: T, v: T) {
+    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI) {
         // TODO: do we need to check for zero length keys as with the KVStore::set?
         let full_key = [self.prefix.clone(), k.into_iter().collect()].concat();
         self.store.set(full_key, v.into_iter().collect())

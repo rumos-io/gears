@@ -10,7 +10,7 @@ use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
 };
-use store_crate::{MultiStore, StoreKey};
+use store_crate::{types::multi::MultiStore, ReadMultiKVStore, StoreKey, WriteMultiKVStore};
 use tendermint::abci::Application;
 use tendermint::informal::block::Header;
 use tendermint::proto::abci::{
@@ -144,7 +144,7 @@ impl<
 
         self.abci_handler.init_genesis(&mut ctx, genesis);
 
-        multi_store.write_then_clear_tx_caches();
+        multi_store.tx_caches_write_then_clear();
 
         ResponseInitChain {
             consensus_params: request.consensus_params,
@@ -307,7 +307,7 @@ impl<
         self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
-        multi_store.write_then_clear_tx_caches();
+        multi_store.tx_caches_write_then_clear();
 
         ResponseBeginBlock {
             events: events.into_iter().map(|e| e.into()).collect(),
@@ -333,7 +333,7 @@ impl<
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
         let events = ctx.events;
-        multi_store.write_then_clear_tx_caches();
+        multi_store.tx_caches_write_then_clear();
 
         ResponseEndBlock {
             events: events.into_iter().map(|e| e.into()).collect(),
@@ -399,7 +399,7 @@ impl<
             params_keeper,
             params_subspace_key,
         };
-        let height = multi_store.get_head_version().into();
+        let height = multi_store.head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
             abci_handler,
@@ -435,7 +435,7 @@ impl<
         self.multi_store
             .read()
             .expect("RwLock will not be poisoned")
-            .get_head_commit_hash()
+            .head_commit_hash()
     }
 
     fn increment_block_height(&self) -> u64 {
@@ -478,9 +478,9 @@ impl<
         );
 
         match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
-            Ok(_) => multi_store.write_then_clear_tx_caches(),
+            Ok(_) => multi_store.tx_caches_write_then_clear(),
             Err(e) => {
-                multi_store.clear_tx_caches();
+                multi_store.tx_caches_clear();
                 return Err(e);
             }
         };
@@ -496,11 +496,11 @@ impl<
         match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
             Ok(_) => {
                 let events = ctx.events;
-                multi_store.write_then_clear_tx_caches();
+                multi_store.tx_caches_write_then_clear();
                 Ok(events)
             }
             Err(e) => {
-                multi_store.clear_tx_caches();
+                multi_store.tx_caches_clear();
                 Err(e)
             }
         }
