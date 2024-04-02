@@ -1,19 +1,30 @@
 [workspace]
 members = [
-  "proto-types",
-  "proto-messages",
-  "gears",
-  "gears-derive",
-  "trees",
+  # no local deps
   "database",
   "tendermint",
-  # "gaia-rs",
+  "proto-types",
+
+  # 1 local dep
+  "trees",
+
+  # some local deps
+  "proto-messages",
   "store",
+  "keyring", 
+  "gears",
+  "gears-derive",
+  "utils",
+  
+  # GAIA
+  "gaia-rs",
+
+  # xmodules
+  "x/ibc", 
   "x/bank",
   "x/auth",
-  "keyring", 
-  "x/ibc", 
-  "utils",
+
+  # new unsorted
 ]
 resolver = "2"
 
