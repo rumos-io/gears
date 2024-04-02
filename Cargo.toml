@@ -12,8 +12,8 @@ members = [
   "x/bank",
   "x/auth",
   "keyring", 
-  # "x/ibc", 
-  # "utils",
+  "x/ibc", 
+  "utils",
 ]
 resolver = "2"
 

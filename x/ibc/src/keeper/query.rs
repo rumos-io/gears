@@ -33,7 +33,8 @@ use proto_messages::{
         },
     },
 };
-use store::StoreKey;
+use store::types::prefix::immutable::ImmutablePrefixStore;
+use store::{ReadKVStore, StoreKey};
 
 use crate::errors::query::client::{
     ConsensusStateError, ConsensusStateHeightError, ConsensusStatesError, ParamsError, StateError,
@@ -106,8 +107,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         QueryClientStatesRequest { pagination: _ }: QueryClientStatesRequest,
     ) -> Result<QueryClientStatesResponse, StatesError> {
         let any_store = ctx.kv_store(&self.store_key);
-        let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
-            any_store.get_immutable_prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
+        let store: ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
+            any_store.prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
 
         let mut states = Vec::<IdentifiedClientState>::new();
         for (_key, value) in store.range(..) {
@@ -161,7 +162,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         }: QueryConsensusStateHeightsRequest,
     ) -> Result<QueryConsensusStateHeightsResponse, ConsensusStateHeightError> {
         let client_id = ClientId::from_str(&client_id)?;
-        let store = ctx.kv_store(&self.store_key).get_immutable_prefix_store(
+        let store = ctx.kv_store(&self.store_key).prefix_store(
             format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}")
                 .into_bytes(),
         );
@@ -227,9 +228,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
 
         let states = {
             let any_store = ctx.kv_store(&self.store_key);
-            let store = any_store.get_immutable_prefix_store(
-                format!("{KEY_CONSENSUS_STATE_PREFIX}/{client_id}").into_bytes(),
-            );
+            let store = any_store
+                .prefix_store(format!("{KEY_CONSENSUS_STATE_PREFIX}/{client_id}").into_bytes());
 
             let mut states = Vec::<ConsensusStateWithHeight>::new();
             for (_key, value) in store.range(..) {

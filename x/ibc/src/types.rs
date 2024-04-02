@@ -43,7 +43,7 @@ use proto_messages::{
         },
     },
 };
-use store::{ReadKVStore, StoreKey, WriteKVStore};
+use store::{ReadKVStore, StoreKey, WriteKVStore, WritePrefixStore};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";
@@ -471,10 +471,10 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
         self.ctx
             .kv_store_mut(&self.store_key)
-            .get_mutable_prefix_store(
+            .prefix_store_mut(
                 format!("{KEY_CLIENT_STORE_PREFIX}/{}", client_state_path.0).into_bytes(),
             )
-            .set(CLIENT_STATE_KEY.to_owned().into_bytes(), encoded_bytes);
+            .set(CLIENT_STATE_KEY.bytes(), encoded_bytes);
 
         Ok(())
     }
@@ -489,7 +489,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
 
         self.ctx
             .kv_store_mut(&self.store_key)
-            .get_mutable_prefix_store(
+            .prefix_store_mut(
                 format!(
                     "{KEY_CLIENT_STORE_PREFIX}/{}",
                     consensus_state_path.client_id
@@ -514,7 +514,7 @@ impl<'a, 'b, DB: Database + Send + Sync, SK: StoreKey> ClientExecutionContext
     ) -> Result<(), ContextError> {
         self.ctx
             .kv_store_mut(&self.store_key)
-            .get_mutable_prefix_store(
+            .prefix_store_mut(
                 format!(
                     "{KEY_CLIENT_STORE_PREFIX}/{}",
                     consensus_state_path.client_id

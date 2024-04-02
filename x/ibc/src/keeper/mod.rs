@@ -16,7 +16,9 @@ use proto_messages::{
         },
     },
 };
-use store::{ReadKVStore, StoreKey};
+use store::{
+    types::prefix::immutable::ImmutablePrefixStore, ReadKVStore, ReadPrefixStore, StoreKey,
+};
 
 use crate::{
     params::{self, AbciParamsKeeper},
@@ -48,7 +50,7 @@ pub fn client_state_get<DB: Database, SK: StoreKey>(
     client_id: &ClientId,
 ) -> Result<WrappedTendermintClientState, SearchError> {
     let any_store = ctx.kv_store(store_key);
-    let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
+    let store: ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
         any_store.prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
 
     let bytes = store
