@@ -2,8 +2,8 @@
 members = [
   "proto-types",
   "proto-messages",
-  "gears",
-  "gears-derive",
+  # "gears",
+  # "gears-derive",
   "trees",
   "database",
   "tendermint",

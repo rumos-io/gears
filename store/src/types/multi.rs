@@ -66,7 +66,7 @@ impl<DB: Database, SK: StoreKey> ReadMultiKVStore<PrefixDB<DB>, SK> for MultiSto
 impl<DB: Database, SK: StoreKey> WriteMultiKVStore<PrefixDB<DB>, SK> for MultiStore<DB, SK> {
     type KvStoreMut = KVStore<PrefixDB<DB>>;
 
-    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut {
+    fn kv_store_mut(&mut self, store_key: &SK) -> &Self::KvStoreMut {
         self.stores.get_mut(store_key).expect(KEY_EXISTS_MSG)
     }
 

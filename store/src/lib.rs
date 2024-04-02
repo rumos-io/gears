@@ -53,7 +53,7 @@ pub trait ReadMultiKVStore<DB, SK> {
 pub trait WriteMultiKVStore<DB: Database, SK> {
     type KvStoreMut: WriteKVStore<DB>;
 
-    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut;
+    fn kv_store_mut(&mut self, store_key: &SK) -> &Self::KvStoreMut;
     fn commit(&mut self) -> [u8; 32];
     /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
     fn tx_caches_write_then_clear(&mut self);
