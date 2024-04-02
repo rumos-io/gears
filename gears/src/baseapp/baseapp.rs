@@ -23,8 +23,8 @@ use tendermint::proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::types::context::query_context::QueryContext;
-use crate::types::context::{context::Context, init_context::InitContext};
+use crate::types::context::init_context::InitContext;
+use crate::types::context::{query_context::QueryContext, ContextMut};
 use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
 use crate::{
     error::AppError,
@@ -36,9 +36,9 @@ use super::params::BaseAppParamsKeeper;
 pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn run_ante_checks<DB: Database>(
+    fn run_ante_checks<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 
@@ -128,7 +128,7 @@ impl<
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
-                .set_consensus_params(&mut ctx.as_any(), params);
+                .set_consensus_params(&mut ctx, params);
         }
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
@@ -477,10 +477,7 @@ impl<
             raw.clone().into(),
         );
 
-        match self
-            .abci_handler
-            .run_ante_checks(&mut ctx.as_any(), &tx_with_raw)
-        {
+        match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
             Ok(_) => multi_store.write_then_clear_tx_caches(),
             Err(e) => {
                 multi_store.clear_tx_caches();

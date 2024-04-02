@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::RangeBounds};
 use database::{Database, PrefixDB};
 use trees::iavl::{QueryTree, Range};
 
-use crate::{error::Error, ImmutablePrefixStore, KVStore, KVStoreTrait, MultiStore, StoreKey};
+use crate::{error::Error, ImmutablePrefixStore, KVStore, MultiStore, ReadKVStore, StoreKey};
 
 pub struct QueryMultiStore<'a, DB, SK> {
     //head_version: u32,
@@ -36,9 +36,13 @@ pub struct QueryKVStore<'a, DB> {
     persistent_store: QueryTree<'a, DB>,
 }
 
-impl<DB: Database> KVStoreTrait for QueryKVStore<'_, DB> {
+impl<DB: Database> ReadKVStore<DB> for QueryKVStore<'_, DB> {
     fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         self.persistent_store.get(k.as_ref())
+    }
+
+    fn prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
+        self.get_immutable_prefix_store(prefix)
     }
 
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {

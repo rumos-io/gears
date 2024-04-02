@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use store_crate::StoreKey;
 use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
 
-use crate::types::context::context::Context;
 use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
 use tendermint::proto::types::ValidatorParams as RawValidatorParams;
 
+use crate::types::context::WriteContext;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
@@ -87,9 +87,9 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database>(
+    pub fn set_consensus_params<DB: Database, CTX: WriteContext<SK, DB>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         params: ConsensusParams,
     ) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);

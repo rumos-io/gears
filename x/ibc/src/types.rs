@@ -41,7 +41,7 @@ use proto_messages::{
         },
     },
 };
-use store::{KVStoreTrait, StoreKey};
+use store::{ReadKVStore, StoreKey, WriteKVStore};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";

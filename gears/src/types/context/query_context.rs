@@ -3,6 +3,8 @@ use database::{Database, PrefixDB};
 use proto_messages::cosmos::ibc::types::core::host::identifiers::ChainId;
 use store_crate::{MultiStore, QueryKVStore, QueryMultiStore, StoreKey};
 
+use super::ReadContext;
+
 pub struct QueryContext<'a, DB, SK> {
     pub multi_store: QueryMultiStore<'a, DB, SK>,
     pub height: u64,
@@ -35,5 +37,13 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
 
     pub fn chain_id(&self) -> &ChainId {
         &self.chain_id
+    }
+}
+
+impl<'a, SK: StoreKey, DB: Database> ReadContext<SK, DB> for QueryContext<'a, DB, SK> {
+    type KVStore = QueryKVStore<'a, PrefixDB<DB>>;
+
+    fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
+        self.multi_store.get_kv_store(store_key)
     }
 }

@@ -4,10 +4,9 @@ use auth::ante::{AuthKeeper, BankKeeper};
 use bytes::Bytes;
 use database::Database;
 
-use gears::types::context::context::Context;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::read_context::ReadContext;
+use gears::types::context::{ContextMut, ReadContext};
 use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
@@ -23,7 +22,7 @@ use proto_messages::cosmos::{
     base::v1beta1::{Coin, SendCoins},
 };
 use proto_types::{AccAddress, Denom, Uint256};
-use store::{KVStore, MutablePrefixStore, StoreKey};
+use store::{MutablePrefixStore, ReadKVStore, StoreKey, WriteKVStore};
 use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{BankParamsKeeper, GenesisState};
@@ -40,15 +39,15 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
-    fn send_coins_from_account_to_module<DB: Database>(
+    fn send_coins_from_account_to_module<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         from_address: AccAddress,
         to_module: Module,
         amount: SendCoins,
     ) -> Result<(), AppError> {
         self.auth_keeper
-            .check_create_new_module_account::<DB>(ctx, &to_module);
+            .check_create_new_module_account(ctx, &to_module);
 
         let msg = MsgSend {
             from_address,
@@ -64,9 +63,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
         ctx: &CTX,
         base: &Denom,
     ) -> Option<Metadata> {
-        let bank_store = ctx.get_kv_store(&self.store_key);
-        let denom_metadata_store =
-            bank_store.get_immutable_prefix_store(denom_metadata_key(base.to_string()));
+        let bank_store = ctx.kv_store(&self.store_key);
+        let denom_metadata_store = bank_store.prefix_store(denom_metadata_key(base.to_string()));
 
         denom_metadata_store
             .get(&base.to_string().into_bytes())
@@ -104,8 +102,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
-        self.bank_params_keeper
-            .set(&mut ctx.as_any(), genesis.params);
+        self.bank_params_keeper.set(ctx, genesis.params);
 
         let bank_store = ctx.get_mutable_kv_store(&self.store_key);
 
@@ -128,7 +125,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         // TODO: does the SDK sort these?
         for coin in total_supply {
             self.set_supply(
-                &mut ctx.as_any(),
+                ctx,
                 Coin {
                     denom: coin.0,
                     amount: coin.1,
@@ -137,7 +134,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
 
         for denom_metadata in genesis.denom_metadata {
-            self.set_denom_metadata(&mut ctx.as_any(), denom_metadata);
+            self.set_denom_metadata(ctx, denom_metadata);
         }
     }
 
@@ -209,9 +206,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .collect()
     }
 
-    pub fn send_coins_from_account_to_account<DB: Database>(
+    pub fn send_coins_from_account_to_account<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         msg: &MsgSend,
     ) -> Result<(), AppError> {
         self.send_coins(ctx, msg.clone())?;
@@ -226,14 +223,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    fn send_coins<DB: Database>(
+    fn send_coins<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         msg: MsgSend,
     ) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
-        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut events = vec![];
 
         let from_address = msg.from_address;
@@ -293,11 +290,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    pub fn set_supply<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, coin: Coin) {
+    pub fn set_supply<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
-        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
-        let mut supply_store = bank_store.get_mutable_prefix_store(SUPPLY_KEY);
+        let bank_store = ctx.kv_store_mut(&self.store_key);
+        let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
         supply_store.set(
             coin.denom.to_string().into(),
@@ -306,24 +303,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     fn get_address_balances_store<'a, DB: Database>(
-        bank_store: &'a mut KVStore<DB>,
+        bank_store: &'a mut impl WriteKVStore<DB>,
         address: &AccAddress,
     ) -> MutablePrefixStore<'a, DB> {
         let prefix = create_denom_balance_prefix(address.to_owned());
-        bank_store.get_mutable_prefix_store(prefix)
+        bank_store.prefix_store_mut(prefix)
     }
 
     /// Sets the denominations metadata
-    pub fn set_denom_metadata<DB: Database>(
+    pub fn set_denom_metadata<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         denom_metadata: Metadata,
     ) {
         // NOTE: we use the denom twice, once for the prefix and once for the key.
         // This seems unnecessary, I'm not sure why they do this in the SDK.
-        let bank_store = ctx.get_mutable_kv_store(&self.store_key);
+        let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut denom_metadata_store =
-            bank_store.get_mutable_prefix_store(denom_metadata_key(denom_metadata.base.clone()));
+            bank_store.prefix_store_mut(denom_metadata_key(denom_metadata.base.clone()));
 
         denom_metadata_store.set(
             denom_metadata.base.clone().into_bytes(),

@@ -4,7 +4,7 @@ use database::Database;
 
 use gears::{
     error::AppError,
-    types::context::{context::Context, read_context::ReadContext},
+    types::context::{Context, ContextMut, ReadContext},
     x::auth::{Module, Params},
 };
 use prost::Message as ProstMessage;
@@ -28,9 +28,9 @@ use store::StoreKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn send_coins_from_account_to_module<DB: Database>(
+    fn send_coins_from_account_to_module<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         from_address: AccAddress,
         to_module: Module,
         amount: SendCoins,
@@ -44,23 +44,24 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 }
 
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn get_auth_params<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> Params;
+    fn get_auth_params<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX) -> Params;
 
-    fn has_account<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>, addr: &AccAddress) -> bool;
+    fn has_account<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX, addr: &AccAddress)
+        -> bool;
 
-    fn get_account<DB: Database>(
+    fn get_account<DB: Database, CTX: Context<DB, SK>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        ctx: &CTX,
         addr: &AccAddress,
     ) -> Option<Account>;
 
-    fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account);
+    fn set_account<DB: Database>(&self, ctx: &mut impl ContextMut<DB, SK>, acct: Account);
 }
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: Message + ValueRenderer>(
+    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 }
@@ -78,9 +79,9 @@ where
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
 {
-    fn run<DB: Database, M: Message + ValueRenderer>(
+    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
         BaseAnteHandler::run(self, ctx, tx)
@@ -95,9 +96,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, M: Message + ValueRenderer>(
+    pub fn run<DB: Database, CTX: ContextMut<DB, SK>, M: Message + ValueRenderer>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
         self.validate_basic_ante_handler(&tx.tx)?;
@@ -146,9 +147,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn tx_timeout_height_ante_handler<DB: Database, M: Message>(
+    fn tx_timeout_height_ante_handler<DB: Database, CTX: Context<DB, SK>, M: Message>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        ctx: &CTX,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let timeout_height = tx.get_timeout_height();
@@ -158,9 +159,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             return Ok(());
         }
 
-        let block_height = ctx.get_height();
+        let block_height = ctx.height();
 
-        if ctx.get_height() > timeout_height {
+        if ctx.height() > timeout_height {
             return Err(AppError::Timeout {
                 timeout: timeout_height,
                 current: block_height,
@@ -170,9 +171,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn validate_memo_ante_handler<DB: Database, M: Message>(
+    fn validate_memo_ante_handler<DB: Database, CTX: Context<DB, SK>, M: Message>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        ctx: &CTX,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let max_memo_chars = self.auth_keeper.get_auth_params(ctx).max_memo_characters;
@@ -188,9 +189,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn deduct_fee_ante_handler<DB: Database, M: Message>(
+    fn deduct_fee_ante_handler<'a, DB: Database, CTX: ContextMut<DB, SK>, M: Message>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let fee = tx.get_fee();
@@ -212,9 +213,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn set_pub_key_ante_handler<DB: Database, M: Message>(
+    fn set_pub_key_ante_handler<DB: Database, CTX: ContextMut<DB, SK>, M: Message>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let public_keys = tx.get_public_keys();
@@ -254,9 +255,13 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn sig_verification_handler<DB: Database, M: Message + ValueRenderer>(
+    fn sig_verification_handler<
+        DB: Database,
+        CTX: ContextMut<DB, SK>,
+        M: Message + ValueRenderer,
+    >(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
         let signers = tx.tx.get_signers();
@@ -297,7 +302,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                     SignMode::Direct => SignDoc {
                         body_bytes: tx.raw.body_bytes.clone(),
                         auth_info_bytes: tx.raw.auth_info_bytes.clone(),
-                        chain_id: ctx.get_chain_id().to_string(),
+                        chain_id: ctx.chain_id().to_string(),
                         account_number: acct.get_account_number(),
                     }
                     .encode_to_vec(),
@@ -306,7 +311,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
                         let signer_data = SignerData {
                             address: signer.to_owned(),
-                            chain_id: ctx.get_chain_id().to_owned(),
+                            chain_id: ctx.chain_id().to_owned(),
                             account_number: acct.get_account_number(),
                             sequence: account_seq,
                             pub_key: public_key.to_owned(),
@@ -345,9 +350,9 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn increment_sequence_ante_handler<DB: Database, M: Message>(
+    fn increment_sequence_ante_handler<DB: Database, CTX: ContextMut<DB, SK>, M: Message>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         for signer in tx.get_signers() {

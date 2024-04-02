@@ -1,12 +1,13 @@
-use crate::types::context::context::Context;
 use database::{Database, PrefixDB};
 use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{KVStore, MultiStore, StoreKey};
 use tendermint::informal::{abci::Event, chain::Id};
 
+use super::{Context, ContextMut, ReadContext, WriteContext};
+
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
-    pub multi_store: &'a mut MultiStore<DB, SK>,
+    multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
     pub events: Vec<Event>,
     pub chain_id: Id,
@@ -22,23 +23,27 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
         }
     }
 
-    pub fn as_any<'b>(&'b mut self) -> Context<'b, 'a, DB, SK> {
-        Context::InitContext(self)
+    ///  Fetches an immutable ref to a KVStore from the MultiStore.
+    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
+        self.multi_store.get_kv_store(store_key)
     }
 
-    pub fn get_height(&self) -> u64 {
+    /// Fetches a mutable ref to a KVStore from the MultiStore.
+    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
+        self.multi_store.get_mutable_kv_store(store_key)
+    }
+}
+
+impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
+    fn height(&self) -> u64 {
         self.height
     }
 
-    pub fn push_event(&mut self, event: Event) {
-        self.events.push(event);
+    fn chain_id(&self) -> &Id {
+        &self.chain_id
     }
 
-    pub fn append_events(&mut self, mut events: Vec<Event>) {
-        self.events.append(&mut events);
-    }
-
-    pub fn metadata_get(&self) -> Metadata {
+    fn metadata_get(&self) -> Metadata {
         Metadata {
             description: String::new(),
             denom_units: vec![
@@ -59,14 +64,30 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
             symbol: String::new(),
         }
     }
+}
 
-    ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    pub fn get_kv_store(&self, store_key: &SK) -> &KVStore<PrefixDB<DB>> {
-        self.multi_store.get_kv_store(store_key)
+impl<DB: Database, SK: StoreKey> ContextMut<DB, SK> for InitContext<'_, DB, SK> {
+    fn push_event(&mut self, event: Event) {
+        self.events.push(event);
     }
 
-    /// Fetches a mutable ref to a KVStore from the MultiStore.
-    pub fn get_mutable_kv_store(&mut self, store_key: &SK) -> &mut KVStore<PrefixDB<DB>> {
-        self.multi_store.get_mutable_kv_store(store_key)
+    fn append_events(&mut self, mut events: Vec<Event>) {
+        self.events.append(&mut events);
+    }
+}
+
+impl<DB: Database, SK: StoreKey> WriteContext<SK, DB> for InitContext<'_, DB, SK> {
+    type KVStoreMut = KVStore<PrefixDB<DB>>;
+
+    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
+        self.get_mutable_kv_store(store_key)
+    }
+}
+
+impl<SK: StoreKey, DB: Database> ReadContext<SK, DB> for InitContext<'_, DB, SK> {
+    type KVStore = KVStore<PrefixDB<DB>>;
+
+    fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
+        self.get_kv_store(store_key)
     }
 }

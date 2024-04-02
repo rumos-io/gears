@@ -1,5 +1,8 @@
 use database::Database;
-use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
+use gears::{
+    types::context::{tx_context::TxContext, ContextMut},
+    x::params::ParamsSubspaceKey,
+};
 use proto_messages::{
     any::{Any, PrimitiveAny},
     cosmos::ibc::types::{
@@ -361,9 +364,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         ctx: &mut TxContext<'_, DB, SK>,
         sequence: u64,
     ) {
-        let mut ctx = gears::types::context::context::Context::TxContext(ctx);
         self.params_keeper.set(
-            &mut ctx,
+            ctx,
             params::NEXT_CLIENT_SEQUENCE.as_bytes().iter().cloned(),
             sequence.to_be_bytes(),
         )
@@ -373,10 +375,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
     ) -> Result<u64, ClientCreateError> {
-        let ctx = gears::types::context::context::Context::TxContext(ctx);
-        let bytes = self
-            .params_keeper
-            .get(&ctx, &params::NEXT_CLIENT_SEQUENCE)?;
+        let bytes = self.params_keeper.get(ctx, &params::NEXT_CLIENT_SEQUENCE)?;
 
         if bytes.is_empty() {
             Err(ClientCreateError::CustomError(

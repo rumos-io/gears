@@ -120,7 +120,27 @@ pub struct KVStore<DB> {
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
-impl<DB: Database> KVStoreTrait for KVStore<DB> {
+impl<DB: Database> WriteKVStore<DB> for KVStore<DB> {
+    fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>) {
+        let key: Vec<u8> = key.into_iter().collect();
+
+        if key.is_empty() {
+            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
+            panic!("key is empty")
+        }
+
+        self.tx_cache.insert(key, value.into_iter().collect());
+    }
+
+    fn prefix_store_mut(
+        &mut self,
+        prefix: impl IntoIterator<Item = u8>,
+    ) -> MutablePrefixStore<'_, DB> {
+        self.get_mutable_prefix_store(prefix)
+    }
+}
+
+impl<DB: Database> ReadKVStore<DB> for KVStore<DB> {
     fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         let tx_cache_val = self.tx_cache.get(k.as_ref());
 
@@ -135,6 +155,10 @@ impl<DB: Database> KVStoreTrait for KVStore<DB> {
         }
 
         tx_cache_val.cloned()
+    }
+
+    fn prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB> {
+        self.get_immutable_prefix_store(prefix)
     }
 
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
@@ -194,17 +218,6 @@ impl<DB: Database> KVStore<DB> {
         // );
 
         self.persistent_store.range(range)
-    }
-
-    pub fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>) {
-        let key: Vec<u8> = key.into_iter().collect();
-
-        if key.is_empty() {
-            // TODO: copied from SDK, need to understand why this is needed and maybe create a type which captures the restriction
-            panic!("key is empty")
-        }
-
-        self.tx_cache.insert(key, value.into_iter().collect());
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
@@ -267,10 +280,19 @@ impl<DB: Database> KVStore<DB> {
 }
 
 /// Equivalent to [`BasicKVStore`](https://docs.cosmos.network/v0.46/core/store.html#base-layer-kvstores) from cosmos
-pub trait KVStoreTrait {
+pub trait ReadKVStore<DB: Database> {
     fn get(&self, k: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>>;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
     // TODO: range after PR merge
+    fn prefix_store(&self, prefix: Vec<u8>) -> ImmutablePrefixStore<'_, DB>;
+}
+
+pub trait WriteKVStore<DB: Database>: ReadKVStore<DB> {
+    fn prefix_store_mut(
+        &mut self,
+        prefix: impl IntoIterator<Item = u8>,
+    ) -> MutablePrefixStore<'_, DB>;
+    fn set(&mut self, key: impl IntoIterator<Item = u8>, value: impl IntoIterator<Item = u8>);
 }
 
 pub enum AnyKVStore<'a, DB: Database> {

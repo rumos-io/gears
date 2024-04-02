@@ -1,6 +1,6 @@
 use database::Database;
 use gears::{
-    types::context::{context::Context, read_context::ReadContext},
+    types::context::{ContextMut, ReadContext},
     x::params::{Keeper, ParamsSubspaceKey},
 };
 use store::StoreKey;
@@ -34,9 +34,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AbciParamsKeeper<SK, PSK> {
         Ok(value)
     }
 
-    pub fn set<DB: Database>(
+    pub fn set<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         key: impl IntoIterator<Item = u8>,
         value: impl IntoIterator<Item = u8>,
     ) {

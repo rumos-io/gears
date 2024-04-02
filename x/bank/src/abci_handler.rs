@@ -31,7 +31,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         match msg {
             Message::Send(msg_send) => self
                 .keeper
-                .send_coins_from_account_to_account(&mut ctx.as_any(), msg_send),
+                .send_coins_from_account_to_account(ctx, msg_send),
         }
     }
 

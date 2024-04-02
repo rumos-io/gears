@@ -1,7 +1,5 @@
 use database::Database;
-use gears::{
-    error::SearchError, types::context::read_context::ReadContext, x::params::ParamsSubspaceKey,
-};
+use gears::{error::SearchError, types::context::ReadContext, x::params::ParamsSubspaceKey};
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
@@ -18,7 +16,7 @@ use proto_messages::{
         },
     },
 };
-use store::StoreKey;
+use store::{ReadKVStore, StoreKey};
 
 use crate::{
     params::{self, AbciParamsKeeper},
@@ -49,9 +47,9 @@ pub fn client_state_get<DB: Database, SK: StoreKey>(
     ctx: &impl ReadContext<SK, DB>,
     client_id: &ClientId,
 ) -> Result<WrappedTendermintClientState, SearchError> {
-    let any_store = ctx.get_kv_store(store_key);
-    let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> = any_store
-        .get_immutable_prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
+    let any_store = ctx.kv_store(store_key);
+    let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
+        any_store.prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
 
     let bytes = store
         .get(params::CLIENT_STATE_KEY.as_bytes())
@@ -69,9 +67,9 @@ pub fn client_consensus_state<DB: Database, SK: StoreKey>(
     client_id: &ClientId,
     height: &Height,
 ) -> Result<ConsensusState, SearchError> {
-    let any_store = ctx.get_kv_store(store_key);
-    let store = any_store
-        .get_immutable_prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
+    let any_store = ctx.kv_store(store_key);
+    let store =
+        any_store.prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
 
     let bytes = store
         .get(format!("{KEY_CONSENSUS_STATE_PREFIX}/{height}").as_bytes())

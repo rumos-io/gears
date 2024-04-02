@@ -1,8 +1,7 @@
+use crate::types::context::{ReadContext, WriteContext};
 use database::{Database, PrefixDB};
-use store_crate::StoreKey;
-
-use crate::types::context::{context::Context, read_context::ReadContext};
 use std::{hash::Hash, marker::PhantomData};
+use store_crate::{ReadKVStore, StoreKey, WriteKVStore};
 use strum::IntoEnumIterator;
 
 pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
@@ -23,29 +22,22 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn get_raw_subspace<'a, DB: Database>(
-        &'a self,
-        ctx: &'a impl ReadContext<SK, DB>,
+    pub fn get_raw_subspace<'a, DB: Database, CTX: ReadContext<SK, DB>>(
+        &self,
+        ctx: &'a CTX,
         params_subspace_key: &PSK,
-    ) -> store_crate::ImmutablePrefixStore<'_, PrefixDB<DB>> {
-        let store = ctx.get_kv_store(&self.store_key);
-        match store {
-            store_crate::AnyKVStore::KVStore(store) => {
-                store.get_immutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())
-            }
-            store_crate::AnyKVStore::QueryKVStore(store) => {
-                store.get_immutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())
-            }
-        }
+    ) -> store_crate::ImmutablePrefixStore<'a, PrefixDB<DB>> {
+        let store = ctx.kv_store(&self.store_key);
+
+        store.prefix_store(params_subspace_key.name().as_bytes().to_vec())
     }
 
-    pub fn get_mutable_raw_subspace<'a, DB: Database>(
+    pub fn get_mutable_raw_subspace<'a, DB: Database, CTX: WriteContext<SK, DB>>(
         &self,
-        ctx: &'a mut Context<'_, '_, DB, SK>,
+        ctx: &'a mut CTX,
         params_subspace_key: &PSK,
     ) -> store_crate::MutablePrefixStore<'a, PrefixDB<DB>> {
-        let params_store = ctx.get_mutable_kv_store(&self.store_key);
-
-        params_store.get_mutable_prefix_store(params_subspace_key.name().as_bytes().to_vec())
+        let params_store = ctx.kv_store_mut(&self.store_key);
+        params_store.prefix_store_mut(params_subspace_key.name().as_bytes().to_vec())
     }
 }
