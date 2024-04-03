@@ -21,7 +21,7 @@ pub trait ReadPrefixStore {
     fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Option<Vec<u8>>;
 }
 
-pub trait WritePrefixStore {
+pub trait WritePrefixStore: ReadPrefixStore {
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI);
 }
 

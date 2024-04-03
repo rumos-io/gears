@@ -1,6 +1,6 @@
 use database::Database;
 
-use crate::{types::kv::KVStore, ReadKVStore, WriteKVStore, WritePrefixStore};
+use crate::{types::kv::KVStore, ReadKVStore, ReadPrefixStore, WriteKVStore, WritePrefixStore};
 
 /// Wraps an mutable reference to a KVStore with a prefix
 pub struct MutablePrefixStore<'a, DB> {
@@ -16,6 +16,13 @@ impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
 
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
         self.store.delete(k)
+    }
+}
+
+impl<DB: Database> ReadPrefixStore for MutablePrefixStore<'_, DB> {
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Option<Vec<u8>> {
+        let full_key = [&self.prefix, k.as_ref()].concat();
+        self.store.get(&full_key)
     }
 }
 
