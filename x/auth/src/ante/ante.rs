@@ -4,7 +4,7 @@ use database::{Database, PrefixDB};
 
 use gears::{
     error::AppError,
-    types::context::{Context, ContextMut},
+    types::context::{QueryableContext, TransactionalContext},
     x::auth::{Module, Params},
 };
 use prost::Message as ProstMessage;
@@ -28,7 +28,7 @@ use store::StoreKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn send_coins_from_account_to_module<DB: Database, CTX: ContextMut<DB, SK>>(
+    fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
@@ -36,7 +36,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn get_denom_metadata<DB: Database, CTX: Context<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
@@ -44,22 +44,32 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 }
 
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn get_auth_params<DB: Database, CTX: Context<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params;
+    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Params;
 
-    fn has_account<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX, addr: &AccAddress)
-        -> bool;
+    fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        addr: &AccAddress,
+    ) -> bool;
 
-    fn get_account<DB: Database, CTX: Context<DB, SK>>(
+    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
     ) -> Option<Account>;
 
-    fn set_account<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, acct: Account);
+    fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        acct: Account,
+    );
 }
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<PrefixDB<DB>, SK>>(
+    fn run<DB: Database, M: Message + ValueRenderer, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,
@@ -79,7 +89,11 @@ where
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
 {
-    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<PrefixDB<DB>, SK>>(
+    fn run<
+        DB: Database,
+        M: Message + ValueRenderer,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,
@@ -96,7 +110,11 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>, M: Message + ValueRenderer>(
+    pub fn run<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        M: Message + ValueRenderer,
+    >(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,
@@ -147,7 +165,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn tx_timeout_height_ante_handler<DB: Database, CTX: Context<DB, SK>, M: Message>(
+    fn tx_timeout_height_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: Message>(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,
@@ -171,7 +189,11 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn validate_memo_ante_handler<DB: Database, CTX: Context<PrefixDB<DB>, SK>, M: Message>(
+    fn validate_memo_ante_handler<
+        DB: Database,
+        CTX: QueryableContext<PrefixDB<DB>, SK>,
+        M: Message,
+    >(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,
@@ -189,7 +211,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn deduct_fee_ante_handler<'a, DB: Database, CTX: ContextMut<DB, SK>, M: Message>(
+    fn deduct_fee_ante_handler<'a, DB: Database, CTX: TransactionalContext<DB, SK>, M: Message>(
         &self,
         ctx: &mut CTX,
         tx: &Tx<M>,
@@ -213,7 +235,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn set_pub_key_ante_handler<DB: Database, CTX: ContextMut<DB, SK>, M: Message>(
+    fn set_pub_key_ante_handler<DB: Database, CTX: TransactionalContext<DB, SK>, M: Message>(
         &self,
         ctx: &mut CTX,
         tx: &Tx<M>,
@@ -257,7 +279,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
     fn sig_verification_handler<
         DB: Database,
-        CTX: ContextMut<DB, SK>,
+        CTX: TransactionalContext<DB, SK>,
         M: Message + ValueRenderer,
     >(
         &self,
@@ -350,7 +372,11 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn increment_sequence_ante_handler<DB: Database, CTX: ContextMut<DB, SK>, M: Message>(
+    fn increment_sequence_ante_handler<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+        M: Message,
+    >(
         &self,
         ctx: &mut CTX,
         tx: &Tx<M>,

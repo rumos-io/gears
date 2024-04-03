@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bytes::Bytes;
 use database::Database;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::Context;
+use gears::types::context::QueryableContext;
 use gears::x::params::ParamsSubspaceKey;
 use prost::Message;
 use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateCommon;
@@ -34,7 +34,7 @@ use proto_messages::{
     },
 };
 use store::types::prefix::immutable::ImmutablePrefixStore;
-use store::{ReadKVStore, StoreKey};
+use store::{QueryableKVStore, StoreKey};
 
 use crate::errors::query::client::{
     ConsensusStateError, ConsensusStateHeightError, ConsensusStatesError, ParamsError, StateError,

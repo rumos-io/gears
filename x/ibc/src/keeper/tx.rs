@@ -1,6 +1,6 @@
 use database::Database;
 use gears::{
-    types::context::{tx_context::TxContext, Context, ContextMut},
+    types::context::{tx_context::TxContext, QueryableContext, TransactionalContext},
     x::params::ParamsSubspaceKey,
 };
 use proto_messages::{

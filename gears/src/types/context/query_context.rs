@@ -12,7 +12,7 @@ use store_crate::{
     ReadMultiKVStore, StoreKey,
 };
 
-use super::Context;
+use super::QueryableContext;
 
 pub struct QueryContext<'a, DB, SK> {
     pub multi_store: QueryMultiStore<'a, DB, SK>,
@@ -36,7 +36,9 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for QueryContext<'a, DB, SK> {
+impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
+    for QueryContext<'a, DB, SK>
+{
     type KVStore = QueryKVStore<'a, PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {

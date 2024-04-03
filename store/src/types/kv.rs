@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, ops::RangeBounds};
 use database::Database;
 use trees::iavl::{Range, Tree};
 
-use crate::{error::Error, ReadKVStore, WriteKVStore, TREE_CACHE_SIZE};
+use crate::{error::Error, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE};
 
 use super::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
 
@@ -14,7 +14,7 @@ pub struct KVStore<DB> {
     tx_cache: BTreeMap<Vec<u8>, Vec<u8>>,
 }
 
-impl<DB: Database> WriteKVStore<DB> for KVStore<DB> {
+impl<DB: Database> TransactionalKVStore<DB> for KVStore<DB> {
     fn prefix_store_mut(
         &mut self,
         prefix: impl IntoIterator<Item = u8>,
@@ -53,7 +53,7 @@ impl<DB: Database> WriteKVStore<DB> for KVStore<DB> {
     }
 }
 
-impl<DB: Database> ReadKVStore<DB> for KVStore<DB> {
+impl<DB: Database> QueryableKVStore<DB> for KVStore<DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         let tx_cache_val = self.tx_cache.get(k.as_ref());
 

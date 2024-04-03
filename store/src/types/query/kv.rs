@@ -6,14 +6,14 @@ use trees::iavl::{QueryTree, Range};
 use crate::{
     error::Error,
     types::{kv::KVStore, prefix::immutable::ImmutablePrefixStore},
-    ReadKVStore,
+    QueryableKVStore,
 };
 
 pub struct QueryKVStore<'a, DB> {
     persistent_store: QueryTree<'a, DB>,
 }
 
-impl<'a, DB: Database> ReadKVStore<DB> for QueryKVStore<'a, DB> {
+impl<'a, DB: Database> QueryableKVStore<DB> for QueryKVStore<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         self.persistent_store.get(k.as_ref())
     }

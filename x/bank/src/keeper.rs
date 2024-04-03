@@ -7,7 +7,7 @@ use database::Database;
 
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::{Context, ContextMut};
+use gears::types::context::{QueryableContext, TransactionalContext};
 use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
@@ -24,7 +24,7 @@ use proto_messages::cosmos::{
 };
 use proto_types::{AccAddress, Denom, Uint256};
 use store::types::prefix::mutable::MutablePrefixStore;
-use store::{ReadKVStore, ReadPrefixStore, StoreKey, WriteKVStore, WritePrefixStore};
+use store::{QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore};
 use tendermint::informal::abci::{Event, EventAttributeIndexExt};
 
 use crate::{BankParamsKeeper, GenesisState};
@@ -41,7 +41,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
-    fn send_coins_from_account_to_module<DB: Database, CTX: ContextMut<DB, SK>>(
+    fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
@@ -60,7 +60,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
         self.send_coins(ctx, msg)
     }
 
-    fn get_denom_metadata<DB: Database, CTX: Context<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
@@ -213,7 +213,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .collect()
     }
 
-    pub fn send_coins_from_account_to_account<DB: Database, CTX: ContextMut<DB, SK>>(
+    pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: &MsgSend,
@@ -230,7 +230,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    fn send_coins<DB: Database, CTX: ContextMut<DB, SK>>(
+    fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: MsgSend,
@@ -302,7 +302,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    pub fn set_supply<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, coin: Coin) {
+    pub fn set_supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        coin: Coin,
+    ) {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
@@ -315,7 +319,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     fn get_address_balances_store<'a, DB: Database>(
-        bank_store: &'a mut impl WriteKVStore<DB>,
+        bank_store: &'a mut impl TransactionalKVStore<DB>,
         address: &AccAddress,
     ) -> MutablePrefixStore<'a, DB> {
         let prefix = create_denom_balance_prefix(address.to_owned());
@@ -323,7 +327,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     /// Sets the denominations metadata
-    pub fn set_denom_metadata<DB: Database, CTX: ContextMut<DB, SK>>(
+    pub fn set_denom_metadata<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         denom_metadata: Metadata,

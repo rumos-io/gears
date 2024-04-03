@@ -6,7 +6,7 @@ use store_crate::{
 };
 use tendermint::informal::{abci::Event, chain::Id};
 
-use super::{Context, ContextMut};
+use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
@@ -27,7 +27,7 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
     type KVStore = KVStore<PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
@@ -65,7 +65,9 @@ impl<DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for InitContext<'_, D
     }
 }
 
-impl<DB: Database, SK: StoreKey> ContextMut<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK>
+    for InitContext<'_, DB, SK>
+{
     type KVStoreMut = KVStore<PrefixDB<DB>>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {

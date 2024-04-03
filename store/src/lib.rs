@@ -25,14 +25,14 @@ pub trait WritePrefixStore: ReadPrefixStore {
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI);
 }
 
-pub trait ReadKVStore<DB> {
+pub trait QueryableKVStore<DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>>;
     fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB>;
     fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB>;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
 }
 
-pub trait WriteKVStore<DB>: ReadKVStore<DB> {
+pub trait TransactionalKVStore<DB>: QueryableKVStore<DB> {
     fn prefix_store_mut(
         &mut self,
         prefix: impl IntoIterator<Item = u8>,
@@ -42,7 +42,7 @@ pub trait WriteKVStore<DB>: ReadKVStore<DB> {
 }
 
 pub trait ReadMultiKVStore<DB, SK> {
-    type KvStore: ReadKVStore<DB>;
+    type KvStore: QueryableKVStore<DB>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KvStore;
     fn head_version(&self) -> u32;
@@ -50,7 +50,7 @@ pub trait ReadMultiKVStore<DB, SK> {
 }
 
 pub trait WriteMultiKVStore<DB, SK> {
-    type KvStoreMut: WriteKVStore<DB>;
+    type KvStoreMut: TransactionalKVStore<DB>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut;
     fn commit(&mut self) -> [u8; 32];

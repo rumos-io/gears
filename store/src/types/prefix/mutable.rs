@@ -1,6 +1,8 @@
 use database::Database;
 
-use crate::{types::kv::KVStore, ReadKVStore, ReadPrefixStore, WriteKVStore, WritePrefixStore};
+use crate::{
+    types::kv::KVStore, QueryableKVStore, ReadPrefixStore, TransactionalKVStore, WritePrefixStore,
+};
 
 /// Wraps an mutable reference to a KVStore with a prefix
 pub struct MutablePrefixStore<'a, DB> {

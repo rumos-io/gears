@@ -1,6 +1,6 @@
 use database::{Database, PrefixDB};
 use gears::{
-    types::context::{Context, ContextMut},
+    types::context::{QueryableContext, TransactionalContext},
     x::params::{Keeper, ParamsSubspaceKey},
 };
 use store::{ReadPrefixStore, StoreKey, WritePrefixStore};
@@ -20,7 +20,7 @@ pub struct AbciParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 pub struct ParamsError;
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AbciParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database, CTX: Context<PrefixDB<DB>, SK>>(
+    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &CTX,
         key: &impl AsRef<[u8]>,
@@ -34,7 +34,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AbciParamsKeeper<SK, PSK> {
         Ok(value)
     }
 
-    pub fn set<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         key: impl IntoIterator<Item = u8>,

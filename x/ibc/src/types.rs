@@ -7,7 +7,7 @@ use crate::{
 };
 use database::Database;
 use gears::types::context::{
-    query_context::QueryContext, tx_context::TxContext, Context, ContextMut,
+    query_context::QueryContext, tx_context::TxContext, QueryableContext, TransactionalContext,
 };
 use proto_messages::{
     any::PrimitiveAny,
@@ -43,7 +43,7 @@ use proto_messages::{
         },
     },
 };
-use store::{ReadKVStore, StoreKey, WriteKVStore, WritePrefixStore};
+use store::{QueryableKVStore, StoreKey, TransactionalKVStore, WritePrefixStore};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";

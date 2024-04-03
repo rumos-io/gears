@@ -1,6 +1,6 @@
 use database::{Database, PrefixDB};
 use gears::{
-    types::context::{Context, ContextMut},
+    types::context::{QueryableContext, TransactionalContext},
     x::{auth::Params, params::ParamsSubspaceKey},
 };
 //use params_module::ParamsSubspaceKey;
@@ -80,7 +80,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .clone()
     }
 
-    pub fn get<DB: Database, CTX: Context<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
@@ -109,7 +109,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         params: Params,

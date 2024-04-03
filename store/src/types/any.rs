@@ -3,7 +3,7 @@ use std::ops::RangeBounds;
 use database::Database;
 use trees::iavl::Range;
 
-use crate::ReadKVStore;
+use crate::QueryableKVStore;
 
 use super::{kv::KVStore, query::kv::QueryKVStore};
 

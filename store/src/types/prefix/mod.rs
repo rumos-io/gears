@@ -31,7 +31,7 @@ mod tests {
 
     use database::MemDB;
 
-    use crate::{types::kv::KVStore, ReadKVStore, WriteKVStore};
+    use crate::{types::kv::KVStore, QueryableKVStore, TransactionalKVStore};
 
     use super::*;
 
