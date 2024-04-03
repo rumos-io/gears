@@ -1,9 +1,10 @@
 use database::{Database, PrefixDB};
+use proto_messages::chain::id::Id;
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
     ReadMultiKVStore, StoreKey, WriteMultiKVStore,
 };
-use tendermint::informal::{abci::Event, chain::Id};
+use tendermint::informal::abci::Event;
 
 use super::{QueryableContext, TransactionalContext};
 

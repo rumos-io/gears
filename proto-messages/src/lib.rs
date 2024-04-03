@@ -1,6 +1,7 @@
 #![warn(rust_2018_idioms)]
 
 pub mod any;
+pub mod chain;
 pub mod cosmos;
 mod error;
 pub mod utils;

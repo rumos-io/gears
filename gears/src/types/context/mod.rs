@@ -1,6 +1,7 @@
 use database::Database;
+use proto_messages::chain::id::Id;
 use store_crate::{QueryableKVStore, TransactionalKVStore};
-use tendermint::informal::{abci::Event, chain::Id};
+use tendermint::informal::abci::Event;
 
 pub mod init_context;
 pub mod query_context;

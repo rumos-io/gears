@@ -86,8 +86,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let client_id = ClientId::from_str(&client_id)?;
 
         let client_state = client_state_get(&self.store_key, ctx, &client_id)?;
-        // let revision_number = ctx.chain_id().revision_number();
-        let revision_number = 1; // TODO:NOW
+        let revision_number = ctx.chain_id().revision_number();
 
         let response = RawQueryClientStateResponse {
             client_state: Some(client_state.into()),

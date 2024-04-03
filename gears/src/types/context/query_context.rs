@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use database::{Database, PrefixDB};
-use proto_messages::cosmos::ibc::types::core::host::identifiers::ChainId;
+use proto_messages::chain::id::Id;
 use store_crate::{
     types::{
         multi::MultiStore,
@@ -14,7 +14,7 @@ use super::QueryableContext;
 pub struct QueryContext<'a, DB, SK> {
     pub multi_store: QueryMultiStore<'a, DB, SK>,
     pub height: u64,
-    pub chain_id: ChainId,
+    pub chain_id: Id,
 }
 
 impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
@@ -28,7 +28,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
         Ok(QueryContext {
             multi_store,
             height: version as u64, // TODO:
-            chain_id: ChainId::new("todo-900").expect("default should be valid"), // TODO:
+            chain_id: Id::new("todo-900").expect("default should be valid"),
         })
     }
 }
@@ -46,8 +46,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
         self.height
     }
 
-    fn chain_id(&self) -> &tendermint::informal::chain::Id {
-        // &self.chain_id
-        unimplemented!() // TODO:NOW
+    fn chain_id(&self) -> &Id {
+        &self.chain_id
     }
 }
