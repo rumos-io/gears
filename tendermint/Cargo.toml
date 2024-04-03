@@ -24,19 +24,19 @@ serde_json = { workspace = true }
 handlebars = { workspace = true }
 
 #tendermint git
-tendermint-informal = { package = "tendermint", git = "https://github.com/joneskm/tendermint-rs", optional = true }
-tendermint-proto = { git = "https://github.com/joneskm/tendermint-rs", optional = true }
-tendermint-abci = { git = "https://github.com/joneskm/tendermint-rs", optional = true }
-tendermint-rpc = { git = "https://github.com/joneskm/tendermint-rs", features = [
+tendermint-informal = { package = "tendermint", version = "=0.29.1" }
+tendermint-proto = { version = "=0.29.1", optional = true }
+tendermint-abci = { version = "=0.29.1", optional = true }
+tendermint-rpc = { version = "=0.29.1", features = [
   "http-client",
 ], optional = true }
-tendermint-config = { git = "https://github.com/joneskm/tendermint-rs" }
+tendermint-config = { version = "=0.29.1" }
 
 
 [dev-dependencies]
 
 [features]
-informal = [ "dep:tendermint-informal"]
+informal = [  ]
 abci = [ "dep:tendermint-proto", "dep:tendermint-abci"]
 config = []
 proto = [ "dep:tendermint-proto"]

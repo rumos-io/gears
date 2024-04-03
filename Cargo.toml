@@ -9,20 +9,20 @@ members = [
   "trees",
 
   # some local deps
-  "proto-messages",
-  "store",
-  "keyring", 
-  "gears",
-  "gears-derive",
-  "utils",
+  # "proto-messages",
+  # "store",
+  # "keyring", 
+  # "gears",
+  # "gears-derive",
+  # "utils",
   
   # GAIA
-  "gaia-rs",
+  # "gaia-rs",
 
   # xmodules
-  "x/ibc", 
-  "x/bank",
-  "x/auth",
+  # "x/ibc", 
+  # "x/bank",
+  # "x/auth",
 
   # new unsorted
 ]
