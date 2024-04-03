@@ -36,7 +36,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> Context<DB, SK> for QueryContext<'a, DB, SK> {
+impl<'a, DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for QueryContext<'a, DB, SK> {
     type KVStore = QueryKVStore<'a, PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {

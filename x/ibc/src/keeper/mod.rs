@@ -1,4 +1,4 @@
-use database::Database;
+use database::{Database, PrefixDB};
 use gears::{error::SearchError, types::context::Context, x::params::ParamsSubspaceKey};
 use proto_messages::{
     any::PrimitiveAny,
@@ -33,7 +33,7 @@ pub const KEY_CONSENSUS_STATE_PREFIX: &str = "consensusStates";
 
 fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
     keeper: &AbciParamsKeeper<SK, PSK>,
-    ctx: &impl Context<DB, SK>,
+    ctx: &impl Context<PrefixDB<DB>, SK>,
 ) -> Result<Params, SearchError> {
     let bytes = keeper
         .get(ctx, &params::CLIENT_PARAMS_KEY)
@@ -46,7 +46,7 @@ fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
 
 pub fn client_state_get<DB: Database, SK: StoreKey>(
     store_key: &SK,
-    ctx: &impl Context<DB, SK>,
+    ctx: &impl Context<PrefixDB<DB>, SK>,
     client_id: &ClientId,
 ) -> Result<WrappedTendermintClientState, SearchError> {
     let any_store = ctx.kv_store(store_key);

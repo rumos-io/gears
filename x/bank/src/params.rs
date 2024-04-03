@@ -1,4 +1,4 @@
-use database::Database;
+use database::{Database, PrefixDB};
 use gears::{
     types::context::{Context, ContextMut},
     x::params::ParamsSubspaceKey,
@@ -29,7 +29,7 @@ pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn get<DB: Database, CTX: Context<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
@@ -49,7 +49,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, params: Params) {
+    pub fn set<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: Params,
+    ) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 

@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use database::Database;
+use database::{Database, PrefixDB};
 
 use gears::{
     error::AppError,
@@ -44,7 +44,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 }
 
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn get_auth_params<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX) -> Params;
+    fn get_auth_params<DB: Database, CTX: Context<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params;
 
     fn has_account<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX, addr: &AccAddress)
         -> bool;
@@ -59,7 +59,7 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 }
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<DB, SK>>(
+    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,
@@ -79,7 +79,7 @@ where
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
 {
-    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<DB, SK>>(
+    fn run<DB: Database, M: Message + ValueRenderer, CTX: ContextMut<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,
@@ -96,7 +96,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, CTX: ContextMut<DB, SK>, M: Message + ValueRenderer>(
+    pub fn run<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>, M: Message + ValueRenderer>(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,
@@ -171,7 +171,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn validate_memo_ante_handler<DB: Database, CTX: Context<DB, SK>, M: Message>(
+    fn validate_memo_ante_handler<DB: Database, CTX: Context<PrefixDB<DB>, SK>, M: Message>(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,

@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use database::{ext::UnwrapCorrupt, Database};
+use database::{ext::UnwrapCorrupt, Database, PrefixDB};
 
 use gears::{
     error::AppError,
@@ -33,7 +33,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
-    fn get_auth_params<DB: Database, CTX: Context<DB, SK>>(
+    fn get_auth_params<DB: Database, CTX: Context<PrefixDB<DB>, SK>>(
         &self,
         ctx: &CTX,
     ) -> gears::x::auth::Params {

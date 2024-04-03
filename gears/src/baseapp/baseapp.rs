@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use database::{Database, RocksDB};
+use database::{Database, PrefixDB, RocksDB};
 use proto_messages::cosmos::{
     base::v1beta1::SendCoins,
     tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
@@ -36,7 +36,7 @@ use super::params::BaseAppParamsKeeper;
 pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn run_ante_checks<DB: Database, CTX: ContextMut<DB, SK>>(
+    fn run_ante_checks<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,

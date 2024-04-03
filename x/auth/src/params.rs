@@ -80,7 +80,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .clone()
     }
 
-    pub fn get<DB: Database, CTX: Context<DB, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn get<DB: Database, CTX: Context<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
@@ -109,7 +109,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, params: Params) {
+    pub fn set<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: Params,
+    ) {
         let mut store = self
             .params_keeper
             .raw_subspace_mut(ctx, &self.params_subspace_key);

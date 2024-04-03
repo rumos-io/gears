@@ -1,4 +1,4 @@
-use database::Database;
+use database::{Database, PrefixDB};
 use serde::{Deserialize, Serialize};
 use store_crate::{StoreKey, WritePrefixStore};
 use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
@@ -87,7 +87,7 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database, CTX: ContextMut<DB, SK>>(
+    pub fn set_consensus_params<DB: Database, CTX: ContextMut<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConsensusParams,

@@ -3,7 +3,7 @@ use bank::Keeper as BankKeeper;
 use gears::{config::Config, types::context::ContextMut, x::params::Keeper as ParamsKeeper};
 use tendermint::proto::abci::RequestQuery;
 
-use database::Database;
+use database::{Database, PrefixDB};
 use gears::error::AppError;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
@@ -108,7 +108,7 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
         }
     }
 
-    fn run_ante_checks<DB: Database, CTX: ContextMut<DB, GaiaStoreKey>>(
+    fn run_ante_checks<DB: Database, CTX: ContextMut<PrefixDB<DB>, GaiaStoreKey>>(
         &self,
         ctx: &mut CTX,
         tx: &proto_messages::cosmos::tx::v1beta1::tx_raw::TxWithRaw<Message>,
