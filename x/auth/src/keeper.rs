@@ -3,7 +3,7 @@ use database::{ext::UnwrapCorrupt, Database};
 
 use gears::{
     error::AppError,
-    types::context::{Context, ContextMut, ReadContext, WriteContext},
+    types::context::{Context, ContextMut},
     x::{auth::Module, params::ParamsSubspaceKey},
 };
 //use params_module::ParamsSubspaceKey;
@@ -33,14 +33,14 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
-    fn get_auth_params<DB: Database, CTX: Context<DB, SK> + ReadContext<DB, SK>>(
+    fn get_auth_params<DB: Database, CTX: Context<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> gears::x::auth::Params {
         self.auth_params_keeper.get(ctx)
     }
 
-    fn has_account<DB: Database, CTX: ReadContext<DB, SK>>(
+    fn has_account<DB: Database, CTX: Context<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
@@ -50,7 +50,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         auth_store.get(&key).is_some()
     }
 
-    fn get_account<DB: Database, CTX: Context<DB, SK> + ReadContext<DB, SK>>(
+    fn get_account<DB: Database, CTX: Context<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
@@ -70,11 +70,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         None
     }
 
-    fn set_account<DB: Database, CTX: ContextMut<DB, SK> + WriteContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        acct: Account,
-    ) {
+    fn set_account<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, acct: Account) {
         let auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
@@ -135,10 +131,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Err(AppError::AccountNotFound)
     }
 
-    fn get_next_account_number<DB: Database, CTX: WriteContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-    ) -> u64 {
+    fn get_next_account_number<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX) -> u64 {
         let auth_store = ctx.kv_store_mut(&self.store_key);
 
         // NOTE: The next available account number is what's stored in the KV store
@@ -157,11 +150,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         acct_num
     }
 
-    pub fn set_account<DB: Database, CTX: WriteContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        acct: Account,
-    ) {
+    pub fn set_account<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, acct: Account) {
         let auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
@@ -169,7 +158,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     /// Overwrites existing account
-    pub fn create_new_base_account<DB: Database, CTX: WriteContext<DB, SK>>(
+    pub fn create_new_base_account<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
@@ -185,10 +174,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     /// Creates a new module account if it doesn't already exist
-    pub fn check_create_new_module_account<
-        DB: Database,
-        CTX: ContextMut<DB, SK> + WriteContext<DB, SK>,
-    >(
+    pub fn check_create_new_module_account<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         module: &Module,

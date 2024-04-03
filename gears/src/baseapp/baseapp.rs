@@ -23,7 +23,7 @@ use tendermint::proto::abci::{
 };
 use tracing::{error, info};
 
-use crate::types::context::{init_context::InitContext, WriteContext};
+use crate::types::context::init_context::InitContext;
 use crate::types::context::{query_context::QueryContext, ContextMut};
 use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
 use crate::{
@@ -36,7 +36,7 @@ use super::params::BaseAppParamsKeeper;
 pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
     Clone + Send + Sync + 'static
 {
-    fn run_ante_checks<DB: Database, CTX: ContextMut<DB, SK> + WriteContext<DB, SK>>(
+    fn run_ante_checks<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,

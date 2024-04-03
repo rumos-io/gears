@@ -3,7 +3,7 @@ use std::str::FromStr;
 use bytes::Bytes;
 use database::Database;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::{Context, ReadContext};
+use gears::types::context::Context;
 use gears::x::params::ParamsSubspaceKey;
 use prost::Message;
 use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateCommon;

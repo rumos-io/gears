@@ -6,7 +6,7 @@ use store_crate::{
 };
 use tendermint::informal::{abci::Event, chain::Id};
 
-use super::{Context, ContextMut, ReadContext, WriteContext};
+use super::{Context, ContextMut};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
@@ -27,7 +27,13 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
     }
 }
 
-impl<DB, SK> Context<DB, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> Context<DB, SK> for InitContext<'_, DB, SK> {
+    type KVStore = KVStore<PrefixDB<DB>>;
+
+    fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
+        self.multi_store.kv_store(store_key)
+    }
+
     fn height(&self) -> u64 {
         self.height
     }
@@ -59,28 +65,18 @@ impl<DB, SK> Context<DB, SK> for InitContext<'_, DB, SK> {
     }
 }
 
-impl<DB, SK> ContextMut<DB, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> ContextMut<DB, SK> for InitContext<'_, DB, SK> {
+    type KVStoreMut = KVStore<PrefixDB<DB>>;
+
+    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
+        self.multi_store.kv_store_mut(store_key)
+    }
+
     fn push_event(&mut self, event: Event) {
         self.events.push(event);
     }
 
     fn append_events(&mut self, mut events: Vec<Event>) {
         self.events.append(&mut events);
-    }
-}
-
-impl<DB: Database, SK: StoreKey> WriteContext<DB, SK> for InitContext<'_, DB, SK> {
-    type KVStoreMut = KVStore<PrefixDB<DB>>;
-
-    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
-        self.multi_store.kv_store_mut(store_key)
-    }
-}
-
-impl<SK: StoreKey, DB: Database> ReadContext<DB, SK> for InitContext<'_, DB, SK> {
-    type KVStore = KVStore<PrefixDB<DB>>;
-
-    fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
-        self.multi_store.kv_store(store_key)
     }
 }

@@ -1,4 +1,3 @@
-use crate::types::context::{ReadContext, WriteContext};
 use database::{Database, PrefixDB};
 use std::{hash::Hash, marker::PhantomData};
 use store_crate::{
@@ -6,6 +5,8 @@ use store_crate::{
     ReadKVStore, StoreKey, WriteKVStore,
 };
 use strum::IntoEnumIterator;
+
+use crate::types::context::{Context, ContextMut};
 
 pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
@@ -25,7 +26,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn raw_subspace<'a, DB: Database, CTX: ReadContext<DB, SK>>(
+    pub fn raw_subspace<'a, DB: Database, CTX: Context<DB, SK>>(
         &self,
         ctx: &'a CTX,
         params_subspace_key: &PSK,
@@ -35,7 +36,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         store.prefix_store(params_subspace_key.name().as_bytes().to_vec())
     }
 
-    pub fn raw_subspace_mut<'a, DB: Database, CTX: WriteContext<DB, SK>>(
+    pub fn raw_subspace_mut<'a, DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &'a mut CTX,
         params_subspace_key: &PSK,

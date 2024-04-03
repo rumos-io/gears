@@ -7,7 +7,7 @@ use crate::{
 };
 use database::Database;
 use gears::types::context::{
-    query_context::QueryContext, tx_context::TxContext, ReadContext, WriteContext,
+    query_context::QueryContext, tx_context::TxContext, Context, ContextMut,
 };
 use proto_messages::{
     any::PrimitiveAny,

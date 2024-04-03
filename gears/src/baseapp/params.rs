@@ -6,7 +6,7 @@ use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusPara
 use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
 use tendermint::proto::types::ValidatorParams as RawValidatorParams;
 
-use crate::types::context::WriteContext;
+use crate::types::context::ContextMut;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
@@ -87,7 +87,7 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database, CTX: WriteContext<DB, SK>>(
+    pub fn set_consensus_params<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConsensusParams,

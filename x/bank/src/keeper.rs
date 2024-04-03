@@ -7,7 +7,7 @@ use database::Database;
 
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::{ContextMut, ReadContext, WriteContext};
+use gears::types::context::{Context, ContextMut};
 use gears::{
     error::AppError,
     x::{auth::Module, params::ParamsSubspaceKey},
@@ -41,10 +41,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
-    fn send_coins_from_account_to_module<
-        DB: Database,
-        CTX: ContextMut<DB, SK> + WriteContext<DB, SK>,
-    >(
+    fn send_coins_from_account_to_module<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
@@ -63,7 +60,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
         self.send_coins(ctx, msg)
     }
 
-    fn get_denom_metadata<DB: Database, CTX: ReadContext<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: Context<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
@@ -216,10 +213,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .collect()
     }
 
-    pub fn send_coins_from_account_to_account<
-        DB: Database,
-        CTX: ContextMut<DB, SK> + WriteContext<DB, SK>,
-    >(
+    pub fn send_coins_from_account_to_account<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: &MsgSend,
@@ -236,7 +230,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    fn send_coins<DB: Database, CTX: ContextMut<DB, SK> + WriteContext<DB, SK>>(
+    fn send_coins<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: MsgSend,
@@ -308,11 +302,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(())
     }
 
-    pub fn set_supply<DB: Database, CTX: ContextMut<DB, SK> + WriteContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        coin: Coin,
-    ) {
+    pub fn set_supply<DB: Database, CTX: ContextMut<DB, SK>>(&self, ctx: &mut CTX, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
@@ -333,7 +323,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     /// Sets the denominations metadata
-    pub fn set_denom_metadata<DB: Database, CTX: ContextMut<DB, SK> + WriteContext<DB, SK>>(
+    pub fn set_denom_metadata<DB: Database, CTX: ContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         denom_metadata: Metadata,

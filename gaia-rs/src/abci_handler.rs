@@ -1,10 +1,6 @@
 use auth::{ante::BaseAnteHandler, Keeper as AuthKeeper};
 use bank::Keeper as BankKeeper;
-use gears::{
-    config::Config,
-    types::context::{ContextMut, WriteContext},
-    x::params::Keeper as ParamsKeeper,
-};
+use gears::{config::Config, types::context::ContextMut, x::params::Keeper as ParamsKeeper};
 use tendermint::proto::abci::RequestQuery;
 
 use database::Database;
@@ -112,10 +108,7 @@ impl gears::baseapp::ABCIHandler<Message, GaiaStoreKey, GenesisState> for ABCIHa
         }
     }
 
-    fn run_ante_checks<
-        DB: Database,
-        CTX: ContextMut<DB, GaiaStoreKey> + WriteContext<DB, GaiaStoreKey>,
-    >(
+    fn run_ante_checks<DB: Database, CTX: ContextMut<DB, GaiaStoreKey>>(
         &self,
         ctx: &mut CTX,
         tx: &proto_messages::cosmos::tx::v1beta1::tx_raw::TxWithRaw<Message>,
