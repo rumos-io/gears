@@ -1,5 +1,4 @@
 use database::{Database, PrefixDB};
-use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
     ReadMultiKVStore, StoreKey, WriteMultiKVStore,
@@ -42,28 +41,6 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContex
 
     fn height(&self) -> u64 {
         self.height
-    }
-
-    fn metadata(&self) -> Metadata {
-        Metadata {
-            description: String::new(),
-            denom_units: vec![
-                DenomUnit {
-                    denom: "ATOM".try_into().unwrap(),
-                    exponent: 6,
-                    aliases: Vec::new(),
-                },
-                DenomUnit {
-                    denom: "uatom".try_into().unwrap(),
-                    exponent: 0,
-                    aliases: Vec::new(),
-                },
-            ],
-            base: "uatom".into(),
-            display: "ATOM".into(),
-            name: String::new(),
-            symbol: String::new(),
-        }
     }
 
     fn chain_id(&self) -> &Id {

@@ -1,9 +1,6 @@
 use crate::error::AppError;
 use database::{Database, PrefixDB};
-use proto_messages::cosmos::{
-    ibc::types::core::host::identifiers::ChainId,
-    tx::v1beta1::tx_metadata::{DenomUnit, Metadata},
-};
+use proto_messages::cosmos::ibc::types::core::host::identifiers::ChainId;
 use store_crate::{
     types::{
         multi::MultiStore,
@@ -52,27 +49,5 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
     fn chain_id(&self) -> &tendermint::informal::chain::Id {
         // &self.chain_id
         unimplemented!() // TODO:NOW
-    }
-
-    fn metadata(&self) -> proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata {
-        Metadata {
-            description: String::new(),
-            denom_units: vec![
-                DenomUnit {
-                    denom: "ATOM".try_into().unwrap(),
-                    exponent: 6,
-                    aliases: Vec::new(),
-                },
-                DenomUnit {
-                    denom: "uatom".try_into().unwrap(),
-                    exponent: 0,
-                    aliases: Vec::new(),
-                },
-            ],
-            base: "uatom".into(),
-            display: "ATOM".into(),
-            name: String::new(),
-            symbol: String::new(),
-        }
     }
 }

@@ -1,5 +1,4 @@
 use database::Database;
-use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
 use store_crate::{QueryableKVStore, TransactionalKVStore};
 use tendermint::informal::{abci::Event, chain::Id};
 
@@ -15,7 +14,6 @@ pub trait QueryableContext<DB: Database, SK> {
 
     fn height(&self) -> u64;
     fn chain_id(&self) -> &Id;
-    fn metadata(&self) -> Metadata;
 }
 
 pub trait TransactionalContext<DB: Database, SK>: QueryableContext<DB, SK> {
