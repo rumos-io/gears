@@ -40,6 +40,7 @@ secp256k1 = { version = "0.28.1" }
 integer-encoding = { version = "4.0.0" }
 nutype = { version = "0.4.0" }
 url = { version = "2.5.0" }
+time = "0.3.34"
 
 # serialization
 serde = { version = "1.0", default-features = false }

@@ -24,6 +24,7 @@ use types::chain_id::ChainId;
 // #[cfg(feature = "rpc")]
 // pub use tendermint_rpc as rpc;
 
+pub mod application;
 pub mod error;
 pub mod types;
 
