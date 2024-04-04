@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use tendermint::rpc::Url;
+use tendermint::types::url::Url;
 
 pub const DEFAULT_REST_LISTEN_ADDR: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1317);
