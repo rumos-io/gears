@@ -5,14 +5,14 @@ pub mod v1beta1 {
         engine::general_purpose::{self},
         Engine,
     };
-    use ibc_proto::Protobuf;
     use proto_types::AccAddress;
     use ripemd::Ripemd160;
     use secp256k1::{ecdsa::Signature, hashes::sha256, Message, Secp256k1};
     use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
     use sha2::{Digest, Sha256};
+    use tendermint::types::proto::Protobuf;
 
-    use crate::{cosmos::tx::v1beta1::public_key::SigningError, Error};
+    use crate::{cosmos::tx::v1beta1::tx::public_key::SigningError, Error};
 
     pub use secp256k1::PublicKey as Secp256k1PubKey;
 

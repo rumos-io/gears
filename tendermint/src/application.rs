@@ -28,7 +28,6 @@ use crate::types::{
         ResponseCommit, ResponseFlush,
     },
 };
-
 /// An ABCI application.
 ///
 /// Applications are `Send` + `Clone` + `'static` because they are cloned for

@@ -9,7 +9,7 @@ use pkcs8::{
     DecodePrivateKey, EncodePrivateKey, EncryptedPrivateKeyInfo, LineEnding, PrivateKeyInfo,
 };
 use proto_messages::cosmos::crypto::secp256k1::v1beta1::PubKey;
-use proto_messages::cosmos::tx::v1beta1::public_key::PublicKey as GearsPublicKey;
+use proto_messages::cosmos::tx::v1beta1::tx::public_key::PublicKey as GearsPublicKey;
 use proto_types::AccAddress;
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};

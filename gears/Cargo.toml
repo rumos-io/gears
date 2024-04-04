@@ -8,7 +8,7 @@ workspace = true
 
 [dependencies]
 #local
-tendermint = {path = "../tendermint", features = [ "rpc", "abci", "proto" ]}
+tendermint = {path = "../tendermint"}
 proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
 keyring = {path = "../keyring"}

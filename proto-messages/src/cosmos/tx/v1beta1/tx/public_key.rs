@@ -1,7 +1,7 @@
-use ibc_proto::{google::protobuf::Any, Protobuf};
 use prost::bytes::Bytes;
 use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
+use tendermint::types::proto::{any::Any, Protobuf};
 
 use crate::{cosmos::crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey, error::Error};
 
@@ -58,7 +58,7 @@ impl From<PublicKey> for Any {
         match key {
             PublicKey::Secp256k1(key) => Any {
                 type_url: "/cosmos.crypto.secp256k1.PubKey".to_string(),
-                value: key.encode_vec(),
+                value: key.encode_vec().expect("TODO"), // TODO:NOW
             },
         }
     }
