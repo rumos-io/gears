@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use database::{Database, PrefixDB};
 
 use crate::{
-    error::{Error, KEY_EXISTS_MSG},
+    error::{StoreError, KEY_EXISTS_MSG},
     types::multi::MultiStore,
     ReadMultiKVStore, StoreKey,
 };
@@ -17,7 +17,7 @@ pub struct QueryMultiStore<'a, DB, SK> {
 }
 
 impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
-    pub fn new(multi_store: &'a MultiStore<DB, SK>, version: u32) -> Result<Self, Error> {
+    pub fn new(multi_store: &'a MultiStore<DB, SK>, version: u32) -> Result<Self, StoreError> {
         let mut stores = HashMap::new();
         for (store, kv_store) in &multi_store.stores {
             stores.insert(store, QueryKVStore::new(kv_store, version)?);

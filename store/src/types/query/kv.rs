@@ -4,7 +4,7 @@ use database::Database;
 use trees::iavl::{QueryTree, Range};
 
 use crate::{
-    error::Error,
+    error::StoreError,
     types::{kv::KVStore, prefix::immutable::ImmutablePrefixStore},
     QueryableKVStore,
 };
@@ -39,7 +39,7 @@ impl<'a, DB: Database> QueryableKVStore<DB> for QueryKVStore<'a, DB> {
 }
 
 impl<'a, DB: Database> QueryKVStore<'a, DB> {
-    pub fn new(kv_store: &'a KVStore<DB>, version: u32) -> Result<Self, Error> {
+    pub fn new(kv_store: &'a KVStore<DB>, version: u32) -> Result<Self, StoreError> {
         Ok(QueryKVStore {
             persistent_store: QueryTree::new(&kv_store.persistent_store, version)?,
         })

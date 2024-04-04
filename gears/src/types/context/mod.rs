@@ -1,7 +1,6 @@
 use database::Database;
-use proto_messages::chain::id::Id;
 use store_crate::{QueryableKVStore, TransactionalKVStore};
-use tendermint::informal::abci::Event;
+use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 pub mod init_context;
 pub mod query_context;
@@ -14,7 +13,7 @@ pub trait QueryableContext<DB: Database, SK> {
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore; //AnyKVStore<'_, PrefixDB<DB>>;
 
     fn height(&self) -> u64;
-    fn chain_id(&self) -> &Id;
+    fn chain_id(&self) -> &ChainId;
 }
 
 pub trait TransactionalContext<DB: Database, SK>: QueryableContext<DB, SK> {

@@ -1,20 +1,18 @@
-use crate::error::AppError;
 use database::{Database, PrefixDB};
-use proto_messages::chain::id::Id;
 use store_crate::{
-    types::{
+    error::StoreError, types::{
         multi::MultiStore,
         query::{kv::QueryKVStore, multi::QueryMultiStore},
-    },
-    ReadMultiKVStore, StoreKey,
+    }, ReadMultiKVStore, StoreKey
 };
+use tendermint::types::chain_id::ChainId;
 
 use super::QueryableContext;
 
 pub struct QueryContext<'a, DB, SK> {
     pub multi_store: QueryMultiStore<'a, DB, SK>,
     pub height: u64,
-    pub chain_id: Id,
+    pub chain_id: ChainId,
 }
 
 impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
@@ -22,13 +20,12 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
         multi_store: &'a MultiStore<DB, SK>,
         version: u32,
         // chain_id: ChainId,
-    ) -> Result<Self, AppError> {
-        let multi_store = QueryMultiStore::new(multi_store, version)
-            .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
+    ) -> Result<Self, StoreError> {
+        let multi_store = QueryMultiStore::new(multi_store, version)?;
         Ok(QueryContext {
             multi_store,
             height: version as u64, // TODO:
-            chain_id: Id::new("todo-900").expect("default should be valid"),
+            chain_id: ChainId::new("todo-900").expect("default should be valid"),
         })
     }
 }
@@ -46,7 +43,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
         self.height
     }
 
-    fn chain_id(&self) -> &Id {
+    fn chain_id(&self) -> &ChainId {
         &self.chain_id
     }
 }

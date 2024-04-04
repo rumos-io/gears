@@ -4,7 +4,7 @@ use strum::IntoEnumIterator;
 use trees::iavl::Range;
 use types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
 
-mod error;
+pub mod error;
 mod hash;
 pub mod types;
 mod utils;

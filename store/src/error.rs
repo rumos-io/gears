@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]
-pub enum Error {
+pub enum StoreError {
     #[error(transparent)]
     Database(#[from] trees::Error),
 }

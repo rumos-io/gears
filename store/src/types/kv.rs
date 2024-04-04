@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, ops::RangeBounds};
 use database::Database;
 use trees::iavl::{Range, Tree};
 
-use crate::{error::Error, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE};
+use crate::{error::StoreError, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE};
 
 use super::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
 
@@ -101,7 +101,7 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<DB> {
 }
 
 impl<DB: Database> KVStore<DB> {
-    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, Error> {
+    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, StoreError> {
         Ok(KVStore {
             persistent_store: Tree::new(
                 db,

@@ -1,10 +1,9 @@
 use database::{Database, PrefixDB};
-use proto_messages::chain::id::Id;
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
     ReadMultiKVStore, StoreKey, WriteMultiKVStore,
 };
-use tendermint::informal::{abci::Event, block::Header};
+use tendermint::types::{chain_id::ChainId, proto::{event::Event, header::Header}};
 
 use super::{QueryableContext, TransactionalContext};
 
@@ -44,7 +43,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContex
         self.height
     }
 
-    fn chain_id(&self) -> &Id {
+    fn chain_id(&self) -> &ChainId {
         todo!()
     }
 }

@@ -1,10 +1,9 @@
 use database::{Database, PrefixDB};
-use proto_messages::chain::id::Id;
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
     ReadMultiKVStore, StoreKey, WriteMultiKVStore,
 };
-use tendermint::informal::abci::Event;
+use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 use super::{QueryableContext, TransactionalContext};
 
@@ -13,11 +12,11 @@ pub struct InitContext<'a, DB, SK> {
     multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
     pub events: Vec<Event>,
-    pub chain_id: Id,
+    pub chain_id: ChainId,
 }
 
 impl<'a, DB, SK> InitContext<'a, DB, SK> {
-    pub fn new(multi_store: &'a mut MultiStore<DB, SK>, height: u64, chain_id: Id) -> Self {
+    pub fn new(multi_store: &'a mut MultiStore<DB, SK>, height: u64, chain_id: ChainId) -> Self {
         InitContext {
             multi_store,
             height,
@@ -38,7 +37,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for InitCont
         self.height
     }
 
-    fn chain_id(&self) -> &Id {
+    fn chain_id(&self) -> &ChainId {
         &self.chain_id
     }
 }

@@ -224,7 +224,7 @@ impl From<inner::Snapshot> for Snapshot {
     }
 }
 
-pub mod inner {
+pub(crate) mod inner {
     pub use tendermint_proto::abci::Evidence;
     pub use tendermint_proto::abci::EvidenceType;
     pub use tendermint_proto::abci::LastCommitInfo;

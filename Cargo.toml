@@ -12,7 +12,7 @@ members = [
   "proto-messages",
   "store",
   "keyring", 
-  # "gears",
+  "gears",
   # "gears-derive",
   # "utils",
   

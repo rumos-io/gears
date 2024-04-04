@@ -162,7 +162,7 @@ impl From<PartSetHeader> for inner::PartSetHeader {
     }
 }
 
-pub mod inner {
+pub(crate) mod inner {
     pub use tendermint_proto::types::Header;
     pub use tendermint_proto::types::PartSetHeader;
 }

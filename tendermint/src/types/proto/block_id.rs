@@ -39,6 +39,6 @@ impl From<inner::BlockId> for BlockId {
     }
 }
 
-pub mod inner {
+pub(crate) mod inner {
     pub use tendermint_proto::types::BlockId;
 }
