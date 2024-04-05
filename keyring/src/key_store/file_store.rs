@@ -6,13 +6,12 @@ use std::{
 
 use std::fs::File;
 
-use crate::error::Error;
+use crate::{error::Error, key::pair::KeyPair};
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
-use ibc_proto::key::pair::KeyPair;
 
 use std::os::unix::fs::PermissionsExt;
 

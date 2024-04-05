@@ -1523,15 +1523,14 @@ dependencies = [
  "argon2",
  "bip32",
  "data-encoding",
- "ibc-proto 0.1.0",
  "k256",
+ "pkcs8",
  "ripemd",
  "rpassword",
  "secp256k1",
  "serde",
  "serde_json",
  "sha2 0.10.8",
- "tendermint 0.1.0",
  "thiserror",
 ]
 

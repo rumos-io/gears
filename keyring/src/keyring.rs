@@ -1,8 +1,7 @@
 use std::path::Path;
 
-use crate::{error::Error, key_store::file_store};
+use crate::{error::Error, key::pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair}, key_store::file_store};
 use bip32::Mnemonic;
-use ibc_proto::key::pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair};
 use k256::elliptic_curve::rand_core;
 
 use rand_core::OsRng;
