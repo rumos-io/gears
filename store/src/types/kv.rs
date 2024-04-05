@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, ops::RangeBounds};
 
-use database::Database;
+use trees::Database;
 use trees::iavl::{Range, Tree};
 
 use crate::{error::StoreError, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE};

@@ -1,6 +1,6 @@
 use std::ops::RangeBounds;
 
-use database::Database;
+use trees::Database;
 use trees::iavl::Range;
 
 use crate::QueryableKVStore;

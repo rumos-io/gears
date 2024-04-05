@@ -1,4 +1,4 @@
-use database::Database;
+use trees::Database;
 
 use crate::{
     types::kv::KVStore, QueryableKVStore, ReadPrefixStore, TransactionalKVStore, WritePrefixStore,

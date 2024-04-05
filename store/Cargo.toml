@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 #local
 trees = { path = "../trees" }
-database = { path = "../database" }
+# database = { path = "../database" }
 
 #newtypes
 

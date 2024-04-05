@@ -1,7 +1,7 @@
 use std::ops::Bound;
 
-use database::Database;
 use trees::iavl::Range;
+use trees::Database;
 
 pub struct PrefixRange<'a, DB: Database> {
     pub(super) parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,

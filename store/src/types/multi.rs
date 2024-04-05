@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use database::{Database, PrefixDB};
+use trees::{Database, PrefixDB};
 
 use crate::{
     error::KEY_EXISTS_MSG, hash::StoreInfo, ReadMultiKVStore, StoreKey, TransactionalKVStore,

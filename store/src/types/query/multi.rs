@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use database::{Database, PrefixDB};
+use trees::{Database, PrefixDB};
 
 use crate::{
     error::{StoreError, KEY_EXISTS_MSG},
