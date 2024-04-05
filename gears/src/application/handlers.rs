@@ -1,6 +1,6 @@
-use keyring::key_pair::KeyPair;
+use keyring::pair::KeyPair;
 // use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
-use proto_types::{coin::send::SendCoins, AccAddress};
+use proto_types::{coin::send::SendCoins, tx::TxMessage, AccAddress};
 use serde::Serialize;
 use tendermint::{
     rpc::{client::HttpClient, response::tx::Response},
@@ -26,7 +26,7 @@ use crate::runtime::runtime;
 // };
 
 pub trait TxHandler {
-    type Message: Message;
+    type Message: TxMessage;
     type TxCommands;
 
     fn prepare_tx(

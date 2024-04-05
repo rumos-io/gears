@@ -1,21 +1,23 @@
-use keyring::key_pair::KeyPair;
-use prost::Message;
-use proto_messages::cosmos::{
-    ibc::{
-        protobuf::Protobuf,
-        tx::{SignDoc, TxRaw},
-    },
-    tx::v1beta1::{
-        auth_info::AuthInfo,
-        fee::Fee,
-        message::Message as SDKMessage,
-        mode_info::{ModeInfo, SignMode},
-        signer::SignerInfo,
-        tip::Tip,
-        tx_body::TxBody,
-    },
+use ibc_proto::{
+    auth::info::AuthInfo, fee::{Fee, Tip}, key::pair::KeyPair, mode_info::{ModeInfo, SignMode}, signing::{SignDoc, SignerInfo}, tx::TxMessage
 };
-use tendermint::informal::chain::Id;
+use prost::Message;
+use tendermint::types::chain_id::ChainId;
+// use proto_messages::cosmos::{
+//     ibc::{
+//         protobuf::Protobuf,
+//         tx::{SignDoc, TxRaw},
+//     },
+//     tx::v1beta1::{
+//         auth_info::AuthInfo,
+//         fee::Fee,
+//         message::Message as SDKMessage,
+//         mode_info::{ModeInfo, SignMode},
+//         signer::SignerInfo,
+//         tip::Tip,
+//         tx_body::TxBody,
+//     },
+// };
 
 /// Contains info required to sign a Tx
 pub struct SigningInfo {
@@ -24,12 +26,12 @@ pub struct SigningInfo {
     pub account_number: u64,
 }
 
-pub fn create_signed_transaction<M: SDKMessage>(
+pub fn create_signed_transaction<M: TxMessage>(
     signing_infos: Vec<SigningInfo>,
     tx_body: TxBody<M>,
     fee: Fee,
     tip: Option<Tip>,
-    chain_id: Id,
+    chain_id: ChainId,
 ) -> TxRaw {
     let signer_infos: Vec<SignerInfo> = signing_infos
         .iter()
@@ -46,7 +48,7 @@ pub fn create_signed_transaction<M: SDKMessage>(
 
     let auth_info = AuthInfo {
         signer_infos,
-        fee,
+        fee: Some(fee), // TODO:NOW
         tip,
     };
 

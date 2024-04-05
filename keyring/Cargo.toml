@@ -6,8 +6,9 @@ version = "0.1.0"
 [dependencies]
 #local
 # proto-messages = {path = "../proto-messages"}
-proto-types = {path = "../proto-types"}
+# proto-types = {path = "../proto-types"}
 tendermint = {path = "../tendermint"}
+ibc-proto = {path = "../ibc-proto"}
 
 #newtypes
 
@@ -21,17 +22,17 @@ secp256k1 = { workspace = true, features = ["hashes"] }
 argon2 = { workspace = true, features = ["std"] }
 ripemd = { workspace = true }
 rpassword = { workspace = true }
+k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }
+bip32 = { workspace = true }
 
 #serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-prost = { workspace = true }
+
 
 
 #other
-bip32 = { workspace = true }
-k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }
-pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"]}
+
 
 
 [dev-dependencies]

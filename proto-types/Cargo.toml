@@ -9,9 +9,9 @@ version = "0.1.0"
 #newtypes
 
 #utils
-data-encoding = { workspace = true }
+
 thiserror = { workspace = true }
-bech32 = { workspace = true }
+
 hex = { workspace = true }
 regex = { workspace = true }
 

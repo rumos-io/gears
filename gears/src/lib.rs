@@ -12,4 +12,4 @@ pub mod error;
 pub(crate) mod runtime;
 pub mod types;
 
-// pub mod crypto; // TODO: Somehow rework?
+pub mod crypto; // TODO: Somehow rework?
