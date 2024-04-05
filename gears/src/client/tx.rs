@@ -2,10 +2,11 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 use prost::Message;
-use proto_messages::cosmos::{base::v1beta1::SendCoins, ibc::tx::TxRaw};
-use tendermint::informal::chain::Id;
-use tendermint::rpc::endpoint::broadcast::tx_commit::Response;
-use tendermint::rpc::{Client, HttpClient};
+use proto_types::coin::send::SendCoins;
+// use proto_messages::cosmos::{base::v1beta1::SendCoins, ibc::tx::TxRaw};
+use tendermint::rpc::client::{Client, HttpClient};
+use tendermint::rpc::response::tx::Response;
+use tendermint::types::chain_id::ChainId;
 
 use crate::application::handlers::TxHandler;
 use crate::client::keys::KeyringBackend;
@@ -16,7 +17,7 @@ pub struct TxCommand<C> {
     pub home: PathBuf,
     pub node: url::Url,
     pub from_key: String,
-    pub chain_id: Id,
+    pub chain_id: ChainId,
     pub fee: Option<SendCoins>,
     pub keyring_backend: KeyringBackend,
 
@@ -45,8 +46,8 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     handler.handle_tx(message, key, node, chain_id, fee)
 }
 
-pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<Response> {
-    let res = runtime().block_on(client.broadcast_tx_commit(raw_tx.encode_to_vec()))?;
+// pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<Response> {
+//     let res = runtime().block_on(client.broadcast_tx_commit(raw_tx.encode_to_vec()))?;
 
-    Ok(res)
-}
+//     Ok(res)
+// }

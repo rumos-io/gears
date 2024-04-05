@@ -1,4 +1,4 @@
-use bip32::{DerivationPath, Mnemonic, PublicKey, XPrv};
+use bip32::{DerivationPath, Mnemonic, PublicKey as PublicKeyBid32, XPrv};
 use k256::ecdsa::signature::Signer;
 use k256::ecdsa::SigningKey;
 use k256::SecretKey;
@@ -8,11 +8,14 @@ use pkcs8::{
     rand_core::{OsRng, RngCore},
     DecodePrivateKey, EncodePrivateKey, EncryptedPrivateKeyInfo, LineEnding, PrivateKeyInfo,
 };
-use proto_messages::cosmos::crypto::secp256k1::v1beta1::PubKey;
-use proto_messages::cosmos::tx::v1beta1::tx::public_key::PublicKey as GearsPublicKey;
+// use proto_messages::cosmos::crypto::secp256k1::v1beta1::PubKey;
+// use proto_messages::cosmos::tx::v1beta1::tx::public_key::PublicKey as GearsPublicKey;
 use proto_types::AccAddress;
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
+
+use crate::crypto::secp256k1::Secp256k1PubKey;
+use crate::public_key::PublicKey;
 
 const HDPATH: &str = "m/44'/118'/0'/0/0";
 
@@ -109,13 +112,13 @@ impl Secp256k1KeyPair {
     }
 
     /// Returns a Gears public key.
-    pub fn get_gears_public_key(&self) -> GearsPublicKey {
+    pub fn get_gears_public_key(&self) -> PublicKey {
         let raw_public_key = self.0.public_key().to_bytes().to_vec();
-        let public_key: PubKey = raw_public_key
+        let public_key: Secp256k1PubKey = raw_public_key
             .try_into()
             .expect("raw public key is a valid secp256k1 public key so this will always succeed");
 
-        GearsPublicKey::Secp256k1(public_key)
+        PublicKey::Secp256k1(public_key)
     }
 
     /// Signs a message.

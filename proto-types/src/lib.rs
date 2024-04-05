@@ -1,9 +1,10 @@
-#![warn(rust_2018_idioms)]
-
 mod address;
+pub mod any;
+pub mod coin;
 mod decimal256;
 mod denom;
 mod error;
+pub mod tx;
 
 pub use address::{AccAddress, ValAddress};
 pub use cosmwasm_std::Uint256;

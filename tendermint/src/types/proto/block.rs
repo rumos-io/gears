@@ -39,6 +39,8 @@ impl From<inner::BlockId> for BlockId {
     }
 }
 
+pub use tendermint_informal::block::Height; // TODO
+
 pub(crate) mod inner {
     pub use tendermint_proto::types::BlockId;
 }

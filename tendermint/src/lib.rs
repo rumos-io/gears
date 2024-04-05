@@ -1,5 +1,3 @@
-#![warn(rust_2018_idioms)]
-
 use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 
 use ed25519_consensus::SigningKey;
@@ -24,6 +22,7 @@ use types::chain_id::ChainId;
 // #[cfg(feature = "rpc")]
 // pub use tendermint_rpc as rpc;
 
+pub mod rpc;
 pub mod application;
 pub mod error;
 pub mod types;

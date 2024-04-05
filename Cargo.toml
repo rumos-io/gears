@@ -9,10 +9,10 @@ members = [
   "trees",
 
   # some local deps
-  "proto-messages",
+  # "proto-messages",
   "store",
   "keyring", 
-  "gears",
+  # "gears",
   # "gears-derive",
   # "utils",
   

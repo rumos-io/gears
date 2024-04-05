@@ -2,10 +2,11 @@ use crate::application::handlers::QueryHandler;
 use crate::runtime::runtime;
 use anyhow::{anyhow, Result};
 use prost::Message;
-use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use tendermint::informal::block::Height;
-use tendermint::rpc::{Client, HttpClient};
-
+use tendermint::{
+    rpc::client::HttpClient,
+    types::proto::{block::Height, Protobuf},
+};
+// use tendermint::{informal::block::Height}
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct QueryCommand<C> {
     pub node: url::Url,

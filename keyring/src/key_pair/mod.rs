@@ -1,8 +1,7 @@
 pub mod secp256k1_key_pair;
-
-use proto_messages::cosmos::tx::v1beta1::tx::public_key::PublicKey;
-// use proto_messages::cosmos::tx::v1beta1::public_key::PublicKey;
 use proto_types::AccAddress;
+
+use crate::public_key::PublicKey;
 
 use self::secp256k1_key_pair::Secp256k1KeyPair;
 

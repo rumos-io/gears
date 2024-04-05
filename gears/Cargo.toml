@@ -9,7 +9,7 @@ workspace = true
 [dependencies]
 #local
 tendermint = {path = "../tendermint"}
-proto-messages = {path = "../proto-messages"}
+# proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
 keyring = {path = "../keyring"}
 database = {path = "../database"}

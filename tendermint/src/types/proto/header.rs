@@ -1,6 +1,6 @@
 use crate::types::time::Timestamp;
 
-use super::{block_id::BlockId, consensus::Consensus};
+use super::{block::BlockId, consensus::Consensus};
 
 /// Header defines the structure of a Tendermint block header.
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]

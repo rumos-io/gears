@@ -56,20 +56,6 @@ impl ChainId {
     ///
     /// If the chain identifier is in the {chain name}-{revision number} format,
     /// the revision number is parsed. Otherwise, revision number is set to 0.
-    ///
-    /// ```
-    /// use ibc_core_host_types::identifiers::ChainId;
-    ///
-    /// let chain_id = "chainA";
-    /// let id = ChainId::new(chain_id).unwrap();
-    /// assert_eq!(id.revision_number(), 0);
-    /// assert_eq!(id.as_str(), chain_id);
-    ///
-    /// let chain_id = "chainA-12";
-    /// let id = ChainId::new(chain_id).unwrap();
-    /// assert_eq!(id.revision_number(), 12);
-    /// assert_eq!(id.as_str(), chain_id);
-    /// ```
     pub fn new(chain_id: &str) -> Result<Self, ChainIdErrors> {
         Self::from_str(chain_id)
     }
@@ -92,18 +78,6 @@ impl ChainId {
     /// Fails if the chain identifier is not in
     /// `{chain_name}-{revision_number}` format or
     /// the revision number overflows.
-    ///
-    /// ```
-    /// use ibc_core_host_types::identifiers::ChainId;
-    ///
-    /// let mut chain_id = ChainId::new("chainA-1").unwrap();
-    /// assert!(chain_id.increment_revision_number().is_ok());
-    /// assert_eq!(chain_id.revision_number(), 2);
-    ///
-    /// let mut chain_id = ChainId::new(&format!("chainA-{}", u64::MAX)).unwrap();
-    /// assert!(chain_id.increment_revision_number().is_err());
-    /// assert_eq!(chain_id.revision_number(), u64::MAX);
-    /// ```
     pub fn increment_revision_number(&mut self) -> Result<(), ChainIdErrors> {
         let (chain_name, _) = self.split_chain_id()?;
         let inc_revision_number = self

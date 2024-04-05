@@ -1,15 +1,16 @@
 use axum::extract::{Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
-use proto_messages::cosmos::bank::v1beta1::PageResponse;
-use proto_messages::cosmos::base::abci::v1beta1::TxResponse;
-use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use proto_messages::cosmos::tx::v1beta1::response::tx_event::GetTxsEventResponse;
-use proto_messages::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message, tx::tx::Tx};
+// use proto_messages::cosmos::bank::v1beta1::PageResponse;
+// use proto_messages::cosmos::base::abci::v1beta1::TxResponse;
+// use proto_messages::cosmos::ibc::protobuf::Protobuf;
+// use proto_messages::cosmos::tx::v1beta1::response::tx_event::GetTxsEventResponse;
+// use proto_messages::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message, tx::tx::Tx};
 use serde::{Deserialize, Serialize};
-use tendermint::informal::node::Info;
-use tendermint::rpc::{endpoint::tx_search::Response, query::Query, Order};
-use tendermint::rpc::{Client, HttpClient, Url};
+use tendermint::rpc::client::HttpClient;
+// use tendermint::informal::node::Info;
+// use tendermint::rpc::{endpoint::tx_search::Response, query::Query, Order};
+// use tendermint::rpc::{Client, HttpClient, Url};
 
 use crate::client::rest::{error::Error, pagination::Pagination};
 
@@ -28,7 +29,7 @@ pub struct NodeInfoResponse {
 }
 
 pub async fn node_info(
-    State(tendermint_rpc_address): State<Url>,
+    State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,
 ) -> Result<Json<NodeInfoResponse>, Error> {
     let client = HttpClient::new(tendermint_rpc_address).expect("hard coded URL is valid");
 
@@ -51,7 +52,7 @@ pub struct RawEvents {
 pub async fn txs<M: Message>(
     events: AxumQuery<RawEvents>,
     pagination: AxumQuery<Pagination>,
-    State(tendermint_rpc_address): State<Url>,
+    State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,
 ) -> Result<Json<GetTxsEventResponse<M>>, Error> {
     let client = HttpClient::new(tendermint_rpc_address).expect("hard coded URL is valid");
 

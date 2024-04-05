@@ -1,23 +1,29 @@
 use keyring::key_pair::KeyPair;
-use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
-use proto_types::AccAddress;
+// use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
+use proto_types::{coin::send::SendCoins, AccAddress};
 use serde::Serialize;
 use tendermint::{
-    informal::block::Height,
-    rpc::{endpoint::broadcast::tx_commit::Response, Client, HttpClient},
+    rpc::{client::HttpClient, response::tx::Response},
+    types::{chain_id::ChainId, proto::block::Height},
 };
 
-use crate::{
-    client::{query::execute_query, tx::broadcast_tx_commit},
-    crypto::{create_signed_transaction, SigningInfo},
-    runtime::runtime,
-};
-use proto_messages::cosmos::{
-    auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
-    base::v1beta1::SendCoins,
-    ibc::{auth::RawQueryAccountResponse, protobuf::Protobuf},
-    tx::v1beta1::{fee::Fee, tx_body::TxBody},
-};
+use crate::runtime::runtime;
+// use tendermint::{
+//     informal::block::Height,
+//     rpc::{endpoint::broadcast::tx_commit::Response, Client, HttpClient},
+// };
+
+// use crate::{
+//     client::{query::execute_query, tx::broadcast_tx_commit},
+//     crypto::{create_signed_transaction, SigningInfo},
+//     runtime::runtime,
+// };
+// use proto_messages::cosmos::{
+//     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
+//     base::v1beta1::SendCoins,
+//     ibc::{auth::RawQueryAccountResponse, protobuf::Protobuf},
+//     tx::v1beta1::{fee::Fee, tx_body::TxBody},
+// };
 
 pub trait TxHandler {
     type Message: Message;
@@ -34,7 +40,7 @@ pub trait TxHandler {
         msg: Self::Message,
         key: KeyPair,
         node: url::Url,
-        chain_id: tendermint::informal::chain::Id,
+        chain_id: ChainId,
         fee: Option<SendCoins>,
     ) -> anyhow::Result<Response> {
         let fee = Fee {

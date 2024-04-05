@@ -1,15 +1,15 @@
 use std::path::PathBuf;
 
 use serde::Serialize;
-use tendermint::informal::chain::Id;
+use tendermint::types::chain_id::ChainId;
 
-use crate::config::ApplicationConfig;
+use crate::config::{ApplicationConfig, ConfigDirectory};
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct InitCommand {
     pub home: PathBuf,
     pub moniker: String,
-    pub chain_id: Id,
+    pub chain_id: ChainId,
 }
 
 pub fn init<G: Serialize, AC: ApplicationConfig>(
@@ -37,10 +37,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
 
     tendermint::write_tm_config(tm_config_file, &moniker).map_err(InitError::WriteConfigFile)?;
 
-    println!(
-        "Tendermint config written to {}",
-        tm_config_file_path.display()
-    );
+    println!("Tendermint config written to {tm_config_file_path}");
 
     // Create node key file
     let node_key_file_path = config_dir.join("node_key.json");
@@ -55,14 +52,12 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     let app_state = serde_json::to_value(app_genesis_state)?;
 
     // Create genesis file
-    let mut genesis_file_path = home.clone();
-    crate::utils::get_genesis_file_from_home_dir(&mut genesis_file_path);
+    let genesis_file_path = ConfigDirectory::GenesisFile.path_from_hone(&home);
     let genesis_file =
         std::fs::File::create(&genesis_file_path).map_err(InitError::CreateGenesisFile)?;
 
     // Create config file
-    let mut cfg_file_path = home.clone();
-    crate::utils::get_config_file_from_home_dir(&mut cfg_file_path);
+    let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
     let cfg_file = std::fs::File::create(&cfg_file_path).map_err(InitError::CreateConfigFile)?;
 
     crate::config::Config::<AC>::write_default(cfg_file)
