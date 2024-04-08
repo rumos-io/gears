@@ -39,6 +39,18 @@ pub struct Fee {
     pub granter: String,
 }
 
+impl Fee {
+    /// A constructor with some hardcoded values.
+    pub fn new_with_defaults(fee: Option<SendCoins>) -> Fee {
+        Fee {
+            amount: fee,
+            gas_limit: 100000000,
+            payer: None,
+            granter: "".into(),
+        }
+    }
+}
+
 impl TryFrom<RawFee> for Fee {
     type Error = Error;
 

@@ -38,6 +38,20 @@ pub struct TxBody<M: Message> {
     pub non_critical_extension_options: Vec<Any>, //TODO: use a domain type here
 }
 
+/// The implementation that is intended to create default tx body message from a single message.
+/// All fields except `messages` has default value.
+impl<M: Message> From<M> for TxBody<M> {
+    fn from(msg: M) -> Self {
+        TxBody {
+            messages: vec![msg],
+            memo: String::new(),
+            timeout_height: 0,
+            extension_options: vec![],
+            non_critical_extension_options: vec![],
+        }
+    }
+}
+
 impl<M: Message> TryFrom<RawTxBody> for TxBody<M> {
     type Error = Error;
 

@@ -1,5 +1,15 @@
 use keyring::key_pair::KeyPair;
-use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
+use proto_messages::cosmos::{
+    ibc::tx::TxRaw,
+    query::Query,
+    tx::v1beta1::{
+        auth_info::AuthInfo,
+        message::Message,
+        mode_info::{ModeInfo, SignMode},
+        signer::SignerInfo,
+        tip::Tip,
+    },
+};
 use proto_types::AccAddress;
 use serde::Serialize;
 use tendermint::{
@@ -37,15 +47,7 @@ pub trait TxHandler {
         chain_id: tendermint::informal::chain::Id,
         fee: Option<SendCoins>,
     ) -> anyhow::Result<Response> {
-        let fee = Fee {
-            amount: fee,
-            gas_limit: 100000000, //TODO: remove hard coded gas limit
-            payer: None,          //TODO: remove hard coded payer
-            granter: "".into(),   //TODO: remove hard coded granter
-        };
-
         let address = key.get_address();
-
         let account = get_account_latest(address, node.as_str())?;
 
         let signing_info = SigningInfo {
@@ -54,22 +56,28 @@ pub trait TxHandler {
             account_number: account.account.get_account_number(),
         };
 
-        let tx_body = TxBody {
-            messages: vec![msg],
-            memo: String::new(),                    // TODO: remove hard coded
-            timeout_height: 0,                      // TODO: remove hard coded
-            extension_options: vec![],              // TODO: remove hard coded
-            non_critical_extension_options: vec![], // TODO: remove hard coded
-        };
-
+        let fee = Fee::new_with_defaults(fee);
         let tip = None; //TODO: remove hard coded
 
-        let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id);
+        let signer_info: SignerInfo = SignerInfo {
+            public_key: Some(signing_info.key.get_gears_public_key()),
+            mode_info: ModeInfo::Single(SignMode::Direct),
+            sequence: signing_info.sequence,
+        };
 
-        let client = HttpClient::new(tendermint::rpc::Url::try_from(node)?)?;
+        let auth_info = AuthInfo::new(vec![signer_info], fee, tip);
+        let tx_body = TxBody::from(msg);
 
-        broadcast_tx_commit(client, raw_tx)
+        let raw_tx = create_signed_transaction(&[signing_info], auth_info, tx_body, chain_id);
+
+        commit_transaction(raw_tx, node)
     }
+}
+
+#[inline]
+pub fn commit_transaction(raw_tx: TxRaw, node: url::Url) -> anyhow::Result<Response> {
+    let client = HttpClient::new(tendermint::rpc::Url::try_from(node)?)?;
+    broadcast_tx_commit(client, raw_tx)
 }
 
 /// Handles query request, serialization and displaying it as `String`
@@ -141,7 +149,7 @@ pub trait AuxHandler {
 }
 
 // TODO: we're assuming here that the app has an auth module which handles this query
-fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
+pub fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
     execute_query::<QueryAccountResponse, RawQueryAccountResponse>(
