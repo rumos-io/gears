@@ -22,9 +22,9 @@ use types::chain_id::ChainId;
 // #[cfg(feature = "rpc")]
 // pub use tendermint_rpc as rpc;
 
-pub mod rpc;
 pub mod application;
 pub mod error;
+pub mod rpc;
 pub mod types;
 
 //TODO: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig

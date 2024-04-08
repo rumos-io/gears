@@ -1,15 +1,8 @@
-use crate::{address::AccAddress, any::Any};
+pub mod body;
+pub mod mode_info;
+pub mod raw;
+pub mod signature;
 
-use self::error::TxError;
-
-pub mod error;
-
-pub trait TxMessage:
-    serde::Serialize + Clone + Send + Sync + 'static + Into<Any> + TryFrom<Any, Error = TxError>
-{
-    fn get_signers(&self) -> Vec<&AccAddress>;
-
-    fn validate_basic(&self) -> Result<(), String>;
-
-    fn type_url(&self) -> &'static str; // TODO:NOW Cow<'static, str>?
+pub mod inner {
+    pub use ibc_proto::cosmos::tx::v1beta1::Tx;
 }

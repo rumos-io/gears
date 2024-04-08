@@ -14,6 +14,10 @@ ibc-proto ="=0.26.0"
 bech32 = { workspace = true }
 data-encoding = { workspace = true }
 sha2 = { workspace = true }
+serde_with = { workspace = true }
+base64-serde = { workspace = true }
+base64  = { workspace = true }
+serde-aux  = { workspace = true }
 
 # crypto
 k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }

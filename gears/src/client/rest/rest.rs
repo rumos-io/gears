@@ -7,7 +7,7 @@ use std::net::SocketAddr;
 use store_crate::StoreKey;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::runtime::runtime;
+use crate::{application::ApplicationInfo, runtime::runtime, types::tx::TxMessage};
 
 // use crate::{
 //     application::ApplicationInfo,
@@ -20,7 +20,7 @@ use crate::runtime::runtime;
 pub fn run_rest_server<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
@@ -42,7 +42,7 @@ pub fn run_rest_server<
 pub struct RestState<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
@@ -54,7 +54,7 @@ pub struct RestState<
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        M: Message,
+        M: TxMessage,
         H: ABCIHandler<M, SK, G>,
         G: Genesis,
         AI: ApplicationInfo,
@@ -68,7 +68,7 @@ impl<
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        M: Message,
+        M: TxMessage,
         H: ABCIHandler<M, SK, G>,
         G: Genesis,
         AI: ApplicationInfo,
@@ -86,7 +86,7 @@ impl<
 async fn launch<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,

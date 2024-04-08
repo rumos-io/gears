@@ -13,6 +13,7 @@ use tendermint::rpc::client::HttpClient;
 // use tendermint::rpc::{Client, HttpClient, Url};
 
 use crate::client::rest::{error::Error, pagination::Pagination};
+use crate::types::tx::TxMessage;
 
 use super::pagination::parse_pagination;
 
@@ -49,7 +50,7 @@ pub struct RawEvents {
     events: String,
 }
 
-pub async fn txs<M: Message>(
+pub async fn txs<M: TxMessage>(
     events: AxumQuery<RawEvents>,
     pagination: AxumQuery<Pagination>,
     State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,

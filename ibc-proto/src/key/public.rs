@@ -1,5 +1,5 @@
 use crate::{
-    address::AccAddress, any::Any, crypto::secp256k1::Secp256k1PubKey, tx::error::TxError,
+    address::AccAddress, any::google::Any, crypto::secp256k1::Secp256k1PubKey, errors::Error,
 };
 use ibc_proto::protobuf::Protobuf;
 use prost::bytes::Bytes;
@@ -38,16 +38,16 @@ impl PublicKey {
 }
 
 impl TryFrom<Any> for PublicKey {
-    type Error = TxError;
+    type Error = Error;
 
     fn try_from(any: Any) -> Result<Self, Self::Error> {
         match any.type_url.as_str() {
             "/cosmos.crypto.secp256k1.PubKey" => {
                 let key = Secp256k1PubKey::decode::<Bytes>(any.value.into())
-                    .map_err(|e| TxError::DecodeGeneral(e.to_string()))?;
+                    .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
                 Ok(PublicKey::Secp256k1(key))
             }
-            _ => Err(TxError::DecodeAny(format!(
+            _ => Err(Error::DecodeAny(format!(
                 "Key type not recognized: {}",
                 any.type_url
             ))),

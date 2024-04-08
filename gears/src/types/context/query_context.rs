@@ -1,9 +1,11 @@
 use database::{Database, PrefixDB};
 use store_crate::{
-    error::StoreError, types::{
+    error::StoreError,
+    types::{
         multi::MultiStore,
         query::{kv::QueryKVStore, multi::QueryMultiStore},
-    }, ReadMultiKVStore, StoreKey
+    },
+    ReadMultiKVStore, StoreKey,
 };
 use tendermint::types::chain_id::ChainId;
 

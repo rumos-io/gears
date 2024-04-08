@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 
 pub use secp256k1::PublicKey;
 
-use crate::{address::AccAddress, key::public::SigningError, tx::error::TxError};
+use crate::{address::AccAddress, errors::Error, key::public::SigningError};
 
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RawSecp256k1PubKey {
@@ -24,7 +24,7 @@ pub struct Secp256k1PubKey {
 }
 
 impl TryFrom<RawSecp256k1PubKey> for Secp256k1PubKey {
-    type Error = TxError;
+    type Error = Error;
 
     fn try_from(raw: RawSecp256k1PubKey) -> Result<Self, Self::Error> {
         Secp256k1PubKey::try_from(raw.key)
@@ -78,11 +78,11 @@ impl From<Secp256k1PubKey> for Vec<u8> {
 }
 
 impl TryFrom<Vec<u8>> for Secp256k1PubKey {
-    type Error = TxError;
+    type Error = Error;
 
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
         let key = PublicKey::from_slice(&value)
-            .map_err(|e| TxError::DecodeGeneral(format!("invalid key: {e}")))?;
+            .map_err(|e| Error::DecodeGeneral(format!("invalid key: {e}")))?;
 
         Ok(Secp256k1PubKey { key })
     }

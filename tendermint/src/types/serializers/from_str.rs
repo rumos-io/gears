@@ -8,7 +8,6 @@ use std::borrow::Cow;
 
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize, Serializer};
 
-
 /// Deserialize string into T
 pub fn deserialize<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where

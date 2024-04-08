@@ -3,7 +3,10 @@ use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
     ReadMultiKVStore, StoreKey, WriteMultiKVStore,
 };
-use tendermint::types::{chain_id::ChainId, proto::{event::Event, header::Header}};
+use tendermint::types::{
+    chain_id::ChainId,
+    proto::{event::Event, header::Header},
+};
 
 use super::{QueryableContext, TransactionalContext};
 

@@ -9,6 +9,7 @@ pub mod query;
 pub mod snapshot;
 
 pub(crate) mod inner {
+    pub use tendermint_proto::abci::ResponseApplySnapshotChunk;
     pub use tendermint_proto::abci::ResponseBeginBlock;
     pub use tendermint_proto::abci::ResponseCheckTx;
     pub use tendermint_proto::abci::ResponseCommit;
@@ -22,7 +23,6 @@ pub(crate) mod inner {
     pub use tendermint_proto::abci::ResponseLoadSnapshotChunk;
     pub use tendermint_proto::abci::ResponseOfferSnapshot;
     pub use tendermint_proto::abci::ResponseQuery;
-    pub use tendermint_proto::abci::ResponseApplySnapshotChunk;
 }
 
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]

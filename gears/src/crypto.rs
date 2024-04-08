@@ -1,8 +1,15 @@
 use ibc_proto::{
-    auth::info::AuthInfo, fee::{Fee, Tip}, key::pair::KeyPair, mode_info::{ModeInfo, SignMode}, signing::{SignDoc, SignerInfo}, tx::TxMessage
+    key::pair::KeyPair,
+    signing::{SignDoc, SignerInfo},
+    tx::mode_info::{ModeInfo, SignMode},
 };
 use prost::Message;
-use tendermint::types::chain_id::ChainId;
+use tendermint::types::{chain_id::ChainId, proto::Protobuf};
+
+use crate::types::{
+    auth::{fee::Fee, info::AuthInfo, tip::Tip},
+    tx::{body::TxBody, raw::TxRaw, TxMessage},
+};
 // use proto_messages::cosmos::{
 //     ibc::{
 //         protobuf::Protobuf,
@@ -48,12 +55,12 @@ pub fn create_signed_transaction<M: TxMessage>(
 
     let auth_info = AuthInfo {
         signer_infos,
-        fee: Some(fee), // TODO:NOW
+        fee,
         tip,
     };
 
-    let body_bytes = tx_body.encode_vec();
-    let auth_info_bytes = auth_info.encode_vec();
+    let body_bytes = tx_body.encode_vec().expect("msg"); // TODO:NOW
+    let auth_info_bytes = auth_info.encode_vec().expect("msg"); // TODO:NOW
 
     let mut sign_doc = SignDoc {
         body_bytes: body_bytes.clone(),
