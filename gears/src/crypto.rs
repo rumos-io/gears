@@ -5,15 +5,7 @@ use proto_messages::cosmos::{
         protobuf::Protobuf,
         tx::{SignDoc, TxRaw},
     },
-    tx::v1beta1::{
-        auth_info::AuthInfo,
-        fee::Fee,
-        message::Message as SDKMessage,
-        mode_info::{ModeInfo, SignMode},
-        signer::SignerInfo,
-        tip::Tip,
-        tx_body::TxBody,
-    },
+    tx::v1beta1::{auth_info::AuthInfo, message::Message as SDKMessage, tx_body::TxBody},
 };
 use tendermint::informal::chain::Id;
 
@@ -25,47 +17,27 @@ pub struct SigningInfo {
 }
 
 pub fn create_signed_transaction<M: SDKMessage>(
-    signing_infos: Vec<SigningInfo>,
+    signing_infos: &[SigningInfo],
+    auth_info: AuthInfo,
     tx_body: TxBody<M>,
-    fee: Fee,
-    tip: Option<Tip>,
     chain_id: Id,
 ) -> TxRaw {
-    let signer_infos: Vec<SignerInfo> = signing_infos
-        .iter()
-        .map(|s| {
-            let public_key = Some(s.key.get_gears_public_key());
-
-            SignerInfo {
-                public_key,
-                mode_info: ModeInfo::Single(SignMode::Direct),
-                sequence: s.sequence,
-            }
-        })
-        .collect();
-
-    let auth_info = AuthInfo {
-        signer_infos,
-        fee,
-        tip,
-    };
-
     let body_bytes = tx_body.encode_vec();
     let auth_info_bytes = auth_info.encode_vec();
 
-    let mut sign_doc = SignDoc {
-        body_bytes: body_bytes.clone(),
-        auth_info_bytes: auth_info_bytes.clone(),
-        chain_id: chain_id.into(),
-        account_number: 0, // This gets overwritten
-    };
+    let mut sign_doc = SignDoc::new_with_opt_acc_number(
+        body_bytes.clone(),
+        auth_info_bytes.clone(),
+        chain_id,
+        None,
+    );
 
     let signatures: Vec<Vec<u8>> = signing_infos
         .iter()
         .map(|s| {
             sign_doc.account_number = s.account_number;
 
-            s.key.sign(&sign_doc.encode_to_vec())
+            sign_bytes(&s.key, sign_doc.encode_to_vec())
         })
         .collect();
 
@@ -74,4 +46,11 @@ pub fn create_signed_transaction<M: SDKMessage>(
         auth_info_bytes,
         signatures,
     }
+}
+
+/// Create signature for random slice of bytes.
+// force inline because it is very simple code. It can be moved to KeyPair
+#[inline]
+pub fn sign_bytes<B: AsRef<[u8]>>(key: &KeyPair, bytes: B) -> Vec<u8> {
+    key.sign(bytes.as_ref())
 }

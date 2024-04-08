@@ -31,6 +31,16 @@ pub struct AuthInfo {
     pub tip: Option<Tip>,
 }
 
+impl AuthInfo {
+    pub fn new(signer_infos: Vec<SignerInfo>, fee: Fee, tip: Option<Tip>) -> AuthInfo {
+        AuthInfo {
+            signer_infos,
+            fee,
+            tip,
+        }
+    }
+}
+
 impl TryFrom<RawAuthInfo> for AuthInfo {
     type Error = Error;
 
