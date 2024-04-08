@@ -1,6 +1,6 @@
 use std::ops::{Bound, RangeBounds};
 
-use trees::Database;
+use trees::database::Database;
 
 use crate::{types::any::AnyKVStore, ReadPrefixStore};
 
