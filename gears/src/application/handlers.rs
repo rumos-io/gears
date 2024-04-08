@@ -7,7 +7,6 @@ use proto_messages::cosmos::{
         message::Message,
         mode_info::{ModeInfo, SignMode},
         signer::SignerInfo,
-        tip::Tip,
     },
 };
 use proto_types::AccAddress;
@@ -105,20 +104,7 @@ pub trait QueryHandler {
         node: url::Url,
         height: Option<Height>,
     ) -> anyhow::Result<Vec<u8>> {
-        let client = HttpClient::new(node.as_str())?;
-
-        let res = runtime().block_on(client.abci_query(
-            Some(query.query_url().into_owned()),
-            query.into_bytes(),
-            height,
-            false,
-        ))?;
-
-        if res.code.is_err() {
-            return Err(anyhow::anyhow!("node returned an error: {}", res.log));
-        }
-
-        Ok(res.value)
+        execute_query_request(query, node, height)
     }
 
     /// Handle serialization of query bytes into concrete type. \
@@ -130,6 +116,29 @@ pub trait QueryHandler {
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse>;
+}
+
+/// Default query executor. Accepts generic query and returns response bytes.
+#[inline]
+pub fn execute_query_request<Q: Query>(
+    query: Q,
+    node: url::Url,
+    height: Option<Height>,
+) -> anyhow::Result<Vec<u8>> {
+    let client = HttpClient::new(node.as_str())?;
+
+    let res = runtime().block_on(client.abci_query(
+        Some(query.query_url().into_owned()),
+        query.into_bytes(),
+        height,
+        false,
+    ))?;
+
+    if res.code.is_err() {
+        return Err(anyhow::anyhow!("node returned an error: {}", res.log));
+    }
+
+    Ok(res.value)
 }
 
 /// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.
