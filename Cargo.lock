@@ -1344,7 +1344,6 @@ dependencies = [
  "bytes",
  "clap",
  "clap_complete",
- "database",
  "derive_builder",
  "dirs",
  "handlebars",
@@ -1371,7 +1370,6 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "trees",
  "url",
 ]
 

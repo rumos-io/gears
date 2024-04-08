@@ -1,4 +1,4 @@
-use database::{Database, PrefixDB};
+use store_crate::database::{Database, PrefixDB};
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
     ReadMultiKVStore, StoreKey, WriteMultiKVStore,

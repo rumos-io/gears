@@ -9,6 +9,10 @@ mod hash;
 pub mod types;
 mod utils;
 
+pub mod database {
+    pub use trees::database::*;
+}
+
 use std::{hash::Hash, ops::RangeBounds};
 
 pub(crate) const TREE_CACHE_SIZE: usize = 100_000;

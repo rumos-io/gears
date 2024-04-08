@@ -13,9 +13,9 @@ ibc-proto = {path = "../ibc-proto"}
 # proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
 keyring = {path = "../keyring"}
-database = {path = "../database"}
+# database = {path = "../database"}
 store_crate = {path = "../store", package = "store"}
-trees = {path = "../trees"}
+# trees = {path = "../trees"}
 
 #newtypes
 secp256k1 = { workspace = true, features = ["hashes"]}
