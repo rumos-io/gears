@@ -17,6 +17,18 @@ pub struct Secp256k1PubKey {
     key: PublicKey,
 }
 
+impl From<PublicKey> for Secp256k1PubKey {
+    fn from(key: PublicKey) -> Self {
+        Secp256k1PubKey { key }
+    }
+}
+
+impl From<Secp256k1PubKey> for PublicKey {
+    fn from(value: Secp256k1PubKey) -> Self {
+        value.key
+    }
+}
+
 impl Secp256k1PubKey {
     pub fn verify_signature(
         &self,
@@ -76,22 +88,6 @@ impl<'de> de::Visitor<'de> for Secp256k1Visitor {
 mod tests {
 
     use super::*;
-
-    // #[test]
-    // fn get_address_works() {
-    //     let key = data_encoding::HEXLOWER
-    //         .decode("02950e1cdfcb133d6024109fd489f734eeb4502418e538c28481f22bce276f248c".as_bytes())
-    //         .unwrap();
-    //     let raw = RawSecp256k1PubKey { key };
-    //     let key: Secp256k1PubKey = raw.try_into().unwrap();
-    //     let address = key.get_address();
-    //     let address: Vec<u8> = address.into();
-
-    //     assert_eq!(
-    //         data_encoding::HEXLOWER.encode(&address),
-    //         "7c2bb42a8be69791ec763e51f5a49bcd41e82237"
-    //     )
-    // }
 
     #[test]
     fn deserialize_works() {

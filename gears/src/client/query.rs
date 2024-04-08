@@ -3,7 +3,7 @@ use crate::runtime::runtime;
 use anyhow::{anyhow, Result};
 use prost::Message;
 use tendermint::{
-    rpc::client::HttpClient,
+    rpc::client::{Client, HttpClient},
     types::proto::{block::Height, Protobuf},
 };
 // use tendermint::{informal::block::Height}

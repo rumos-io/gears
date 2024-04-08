@@ -1,47 +1,86 @@
-use ibc_proto::{
-    address::AccAddress,
-    fee::Fee,
-    query::{
-        request::account::QueryAccountRequest,
-        response::account::inner::QueryAccountResponse as RawQueryAccountResponse,
-        response::account::QueryAccountResponse,
-    },
+use ibc_proto::{address::AccAddress, query::request::account::QueryAccountRequest};
+use serde::{de::DeserializeOwned, Serialize};
+use store_crate::{
+    database::{Database, PrefixDB},
+    StoreKey,
 };
-use keyring::key::pair::KeyPair;
-use proto_types::coin::send::SendCoins;
-// use keyring::pair::KeyPair;
-// use proto_messages::cosmos::{query::Query, tx::v1beta1::message::Message};
-// use proto_types::{coin::send::SendCoins, tx::TxMessage, AccAddress};
-use serde::Serialize;
 use tendermint::{
-    rpc::{client::HttpClient, response::tx::Response},
-    types::{chain_id::ChainId, proto::block::Height},
+    rpc::{
+        client::{Client, HttpClient},
+        response::tx::broadcast::Response,
+    },
+    types::{
+        chain_id::ChainId,
+        proto::{block::Height, validator::ValidatorUpdate},
+        request::{
+            begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
+        },
+    },
 };
 
 use crate::{
-    crypto::{create_signed_transaction, SigningInfo},
+    client::{query::execute_query, tx::broadcast_tx_commit},
+    crypto::{
+        info::{create_signed_transaction, SigningInfo},
+        key::pair::KeyPair,
+    },
+    error::AppError,
     runtime::runtime,
     types::{
-        query::Query,
-        tx::{body::TxBody, TxMessage},
+        auth::fee::Fee,
+        base::send::SendCoins,
+        context::{
+            init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
+            TransactionalContext,
+        },
+        query::{account::QueryAccountResponse, Query},
+        tx::{body::TxBody, raw::TxWithRaw, TxMessage},
     },
 };
-// use tendermint::{
-//     informal::block::Height,
-//     rpc::{endpoint::broadcast::tx_commit::Response, Client, HttpClient},
-// };
 
-// use crate::{
-//     client::{query::execute_query, tx::broadcast_tx_commit},
-//     crypto::{create_signed_transaction, SigningInfo},
-//     runtime::runtime,
-// };
-// use proto_messages::cosmos::{
-//     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
-//     base::v1beta1::SendCoins,
-//     ibc::{auth::RawQueryAccountResponse, protobuf::Protobuf},
-//     tx::v1beta1::{fee::Fee, tx_body::TxBody},
-// };
+pub trait ABCIHandler<
+    M: TxMessage,
+    SK: StoreKey,
+    G: DeserializeOwned + Clone + Send + Sync + 'static,
+>: Clone + Send + Sync + 'static
+{
+    fn run_ante_checks<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        tx: &TxWithRaw<M>,
+    ) -> Result<(), AppError>;
+
+    fn tx<DB: Database + Sync + Send>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &M,
+    ) -> Result<(), AppError>;
+
+    #[allow(unused_variables)]
+    fn begin_block<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        request: RequestBeginBlock,
+    ) {
+    }
+
+    #[allow(unused_variables)]
+    fn end_block<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        request: RequestEndBlock,
+    ) -> Vec<ValidatorUpdate> {
+        vec![]
+    }
+
+    fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
+
+    fn query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<'_, DB, SK>,
+        query: RequestQuery,
+    ) -> Result<bytes::Bytes, AppError>;
+}
 
 pub trait TxHandler {
     type Message: TxMessage;
@@ -164,13 +203,19 @@ pub trait AuxHandler {
     }
 }
 
+mod inner {
+    pub use ibc_proto::query::response::account::QueryAccountResponse;
+}
+
+use ibc_proto::Protobuf;
+
 // TODO: we're assuming here that the app has an auth module which handles this query
 fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
-    execute_query::<QueryAccountResponse, RawQueryAccountResponse>(
+    execute_query::<QueryAccountResponse, inner::QueryAccountResponse>(
         "/cosmos.auth.v1beta1.Query/Account".into(),
-        query.encode_vec(),
+        query.encode_vec()?,
         node,
         None,
     )

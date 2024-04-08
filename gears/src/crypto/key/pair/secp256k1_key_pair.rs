@@ -12,15 +12,31 @@ use ripemd::Ripemd160;
 
 use sha2::{Digest, Sha256};
 
-use crate::address::AccAddress;
+use crate::crypto::key::public::PublicKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
-use crate::key::public::PublicKey;
+use ibc_proto::address::AccAddress;
 
 const HDPATH: &str = "m/44'/118'/0'/0/0";
+
+pub mod inner {
+    pub use keyring::key::pair::secp256k1_key_pair::Secp256k1KeyPair;
+}
 
 /// A secp256k1 key pair.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Secp256k1KeyPair(SecretKey);
+
+impl From<Secp256k1KeyPair> for inner::Secp256k1KeyPair {
+    fn from(Secp256k1KeyPair(secret): Secp256k1KeyPair) -> Self {
+        Self::from(secret)
+    }
+}
+
+impl From<inner::Secp256k1KeyPair> for Secp256k1KeyPair {
+    fn from(secret: inner::Secp256k1KeyPair) -> Self {
+        Self(SecretKey::from(secret))
+    }
+}
 
 impl Secp256k1KeyPair {
     /// Returns PKCS8 PEM encoded private key.

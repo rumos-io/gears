@@ -1,13 +1,16 @@
-use database::{Database, PrefixDB};
 use serde::{Deserialize, Serialize};
+use store_crate::database::{Database, PrefixDB};
 use store_crate::{StoreKey, WritePrefixStore};
-use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
-
-use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
-use tendermint::proto::types::ValidatorParams as RawValidatorParams;
+use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::types::context::TransactionalContext;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
+
+mod inner {
+    pub use tendermint::types::proto::params::BlockParams;
+    pub use tendermint::types::proto::params::EvidenceParams;
+    pub use tendermint::types::proto::params::ValidatorParams;
+}
 
 const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
 const KEY_EVIDENCE_PARAMS: [u8; 14] = [
@@ -36,8 +39,8 @@ pub struct BlockParams {
     pub max_gas: String,
 }
 
-impl From<RawBlockParams> for BlockParams {
-    fn from(params: RawBlockParams) -> BlockParams {
+impl From<inner::BlockParams> for BlockParams {
+    fn from(params: inner::BlockParams) -> BlockParams {
         BlockParams {
             max_bytes: params.max_bytes.to_string(),
             max_gas: params.max_gas.to_string(),
@@ -50,8 +53,8 @@ pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
 
-impl From<RawValidatorParams> for ValidatorParams {
-    fn from(params: RawValidatorParams) -> ValidatorParams {
+impl From<inner::ValidatorParams> for ValidatorParams {
+    fn from(params: inner::ValidatorParams) -> ValidatorParams {
         ValidatorParams {
             pub_key_types: params.pub_key_types,
         }
@@ -65,8 +68,8 @@ pub struct EvidenceParams {
     max_bytes: String,
 }
 
-impl From<RawEvidenceParams> for EvidenceParams {
-    fn from(params: RawEvidenceParams) -> EvidenceParams {
+impl From<inner::EvidenceParams> for EvidenceParams {
+    fn from(params: inner::EvidenceParams) -> EvidenceParams {
         let duration = params
             .max_age_duration
             .map(|dur| dur.seconds * SEC_TO_NANO + i64::from(dur.nanos));
@@ -121,11 +124,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
 
 #[cfg(test)]
 mod tests {
-
-    use tendermint::proto::google::protobuf::Duration;
-    use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
-
-    use super::*;
+    use super::EvidenceParams;
+    use tendermint::types::{proto::params::EvidenceParams as RawEvidenceParams, time::Duration};
 
     #[test]
     fn evidence_params_serialize_works() {

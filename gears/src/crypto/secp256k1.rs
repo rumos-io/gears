@@ -1,6 +1,5 @@
 use std::fmt;
 
-use ibc_proto::protobuf::Protobuf;
 use ripemd::Ripemd160;
 use secp256k1::{ecdsa::Signature, hashes::sha256, Message, Secp256k1};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -8,7 +7,10 @@ use sha2::{Digest, Sha256};
 
 pub use secp256k1::PublicKey;
 
-use crate::{address::AccAddress, errors::Error, key::public::SigningError};
+use ibc_proto::{address::AccAddress, errors::Error};
+use tendermint::types::proto::Protobuf;
+
+use super::errors::VerifyError;
 
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RawSecp256k1PubKey {
@@ -41,6 +43,16 @@ impl From<Secp256k1PubKey> for RawSecp256k1PubKey {
 
 impl Protobuf<RawSecp256k1PubKey> for Secp256k1PubKey {}
 
+mod inner {
+    pub use keyring::key::secp256k1::Secp256k1PubKey;
+}
+
+impl From<inner::Secp256k1PubKey> for Secp256k1PubKey {
+    fn from(value: inner::Secp256k1PubKey) -> Self {
+        Secp256k1PubKey { key: value.into() }
+    }
+}
+
 impl Secp256k1PubKey {
     /// Returns a Bitcoin style addresses: RIPEMD160(SHA256(pubkey))
     pub fn get_address(&self) -> AccAddress {
@@ -63,11 +75,13 @@ impl Secp256k1PubKey {
         &self,
         message: impl AsRef<[u8]>,
         signature: impl AsRef<[u8]>,
-    ) -> Result<(), SigningError> {
+    ) -> Result<(), VerifyError> {
         //TODO: secp256k1 lib cannot be used for bitcoin sig verification
         let signature = Signature::from_compact(signature.as_ref())?;
         let message = Message::from_hashed_data::<sha256::Hash>(message.as_ref());
-        Secp256k1::verification_only().verify_ecdsa(&message, &signature, &self.key)
+        Secp256k1::verification_only().verify_ecdsa(&message, &signature, &self.key)?;
+
+        Ok(())
     }
 }
 

@@ -1,6 +1,8 @@
-use ibc_proto::{errors::Error, signing::SignerInfo};
+use ibc_proto::errors::Error;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
+
+use crate::types::signing::SignerInfo;
 
 use super::{
     fee::{Fee, FeeError},

@@ -1,92 +1,80 @@
 use bytes::Bytes;
-use database::{Database, PrefixDB, RocksDB};
-use proto_messages::cosmos::{
-    base::v1beta1::SendCoins,
-    tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
-};
-use proto_types::AccAddress;
-use serde::{de::DeserializeOwned, Serialize};
+use store_crate::database::{Database, RocksDB};
+// use proto_messages::cosmos::{
+//     base::v1beta1::SendCoins,
+//     tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
+// };
+// use proto_types::AccAddress;
+// use serde::{de::DeserializeOwned, Serialize};
 use std::{
     marker::PhantomData,
+    str::FromStr,
     sync::{Arc, RwLock},
 };
 use store_crate::{types::multi::MultiStore, ReadMultiKVStore, StoreKey, WriteMultiKVStore};
-use tendermint::abci::Application;
-use tendermint::informal::block::Header;
-use tendermint::proto::abci::{
-    RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
-    RequestEndBlock, RequestInfo, RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot,
-    RequestQuery, ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
-    ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
-    ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
-    ResponseQuery, ValidatorUpdate,
+use tendermint::{
+    application::ABCIApplication,
+    types::{
+        chain_id::ChainId,
+        proto::{event::Event, header::Header},
+        request::{
+            begin_block::RequestBeginBlock,
+            check_tx::RequestCheckTx,
+            deliver_tx::RequestDeliverTx,
+            echo::RequestEcho,
+            end_block::RequestEndBlock,
+            info::RequestInfo,
+            init_chain::RequestInitChain,
+            query::RequestQuery,
+            snapshot::{RequestApplySnapshotChunk, RequestLoadSnapshotChunk, RequestOfferSnapshot},
+        },
+        response::{
+            begin_block::ResponseBeginBlock,
+            check_tx::ResponseCheckTx,
+            deliver_tx::ResponseDeliverTx,
+            echo::ResponseEcho,
+            end_block::ResponseEndBlock,
+            info::ResponseInfo,
+            init_chain::ResponseInitChain,
+            query::ResponseQuery,
+            snapshot::{
+                ResponseApplySnapshotChunk, ResponseListSnapshots, ResponseLoadSnapshotChunk,
+                ResponseOfferSnapshot,
+            },
+            ResponseCommit, ResponseFlush,
+        },
+    },
 };
+// use tendermint::abci::Application;
+// use tendermint::informal::block::Header;
+// use tendermint::proto::abci::{
+//     RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
+//     RequestEndBlock, RequestInfo, RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot,
+//     RequestQuery, ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
+//     ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
+//     ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
+//     ResponseQuery, ValidatorUpdate,
+// };
 use tracing::{error, info};
 
-use crate::types::context::init_context::InitContext;
-use crate::types::context::{query_context::QueryContext, TransactionalContext};
+use crate::types::{
+    context::query_context::QueryContext,
+    tx::{raw::TxWithRaw, TxMessage},
+};
+use crate::{application::handlers::ABCIHandler, types::context::init_context::InitContext};
 use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
 use crate::{
     error::AppError,
     x::params::{Keeper, ParamsSubspaceKey},
 };
 
-use super::params::BaseAppParamsKeeper;
-
-pub trait ABCIHandler<M: Message, SK: StoreKey, G: DeserializeOwned + Clone + Send + Sync + 'static>:
-    Clone + Send + Sync + 'static
-{
-    fn run_ante_checks<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
-        &self,
-        ctx: &mut CTX,
-        tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError>;
-
-    fn tx<DB: Database + Sync + Send>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        msg: &M,
-    ) -> Result<(), AppError>;
-
-    #[allow(unused_variables)]
-    fn begin_block<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        request: RequestBeginBlock,
-    ) {
-    }
-
-    #[allow(unused_variables)]
-    fn end_block<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        request: RequestEndBlock,
-    ) -> Vec<ValidatorUpdate> {
-        vec![]
-    }
-
-    fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
-
-    fn query<DB: Database + Send + Sync>(
-        &self,
-        ctx: &QueryContext<'_, DB, SK>,
-        query: RequestQuery,
-    ) -> Result<Bytes, AppError>;
-}
-
-pub trait Genesis: Default + DeserializeOwned + Serialize + Clone + Send + Sync + 'static {
-    fn add_genesis_account(
-        &mut self,
-        address: AccAddress,
-        coins: SendCoins,
-    ) -> Result<(), AppError>;
-}
+use super::{params::BaseAppParamsKeeper, Genesis};
 
 #[derive(Debug, Clone)]
 pub struct BaseApp<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
@@ -102,13 +90,13 @@ pub struct BaseApp<
 }
 
 impl<
-        M: Message,
+        M: TxMessage,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         H: ABCIHandler<M, SK, G>,
         G: Genesis,
         AI: ApplicationInfo,
-    > Application for BaseApp<SK, PSK, M, H, G, AI>
+    > ABCIApplication for BaseApp<SK, PSK, M, H, G, AI>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
@@ -119,7 +107,7 @@ impl<
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let chain_id = request.chain_id.try_into().unwrap_or_else(|_| {
+        let chain_id = ChainId::from_str(&request.chain_id).unwrap_or_else(|_| {
             error!("Invalid chain id provided by Tendermint.\nTerminating process\n");
             std::process::exit(1)
         });
@@ -380,7 +368,7 @@ impl<
 }
 
 impl<
-        M: Message,
+        M: TxMessage,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         H: ABCIHandler<M, SK, G>,
@@ -458,7 +446,7 @@ impl<
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<tendermint::informal::abci::Event>, AppError> {
+    fn run_tx(&self, raw: Bytes) -> Result<Vec<Event>, AppError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e| AppError::TxParseError(e.to_string()))?;
 

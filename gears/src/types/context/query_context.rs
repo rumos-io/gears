@@ -1,3 +1,4 @@
+use store_crate::database::{Database, PrefixDB};
 use store_crate::{
     error::StoreError,
     types::{
@@ -7,7 +8,6 @@ use store_crate::{
     ReadMultiKVStore, StoreKey,
 };
 use tendermint::types::chain_id::ChainId;
-use store_crate::database::{Database, PrefixDB};
 
 use super::QueryableContext;
 

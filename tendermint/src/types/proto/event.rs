@@ -17,6 +17,15 @@ impl From<inner::Event> for Event {
     }
 }
 
+impl From<inner::InformalEvent> for Event {
+    fn from(inner::InformalEvent { kind, attributes }: inner::InformalEvent) -> Self {
+        Self {
+            r#type: kind,
+            attributes: attributes.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
 impl From<Event> for inner::Event {
     fn from(Event { r#type, attributes }: Event) -> Self {
         Self {
@@ -49,7 +58,21 @@ impl From<EventAttribute> for inner::EventAttribute {
     }
 }
 
+impl From<inner::InformalEventAttribute> for EventAttribute {
+    fn from(
+        inner::InformalEventAttribute { key, value, index }: inner::InformalEventAttribute,
+    ) -> Self {
+        Self {
+            key: key.into_bytes().into(),
+            value: value.into_bytes().into(),
+            index,
+        }
+    }
+}
+
 pub(crate) mod inner {
+    pub use tendermint_informal::abci::Event as InformalEvent;
+    pub use tendermint_informal::abci::EventAttribute as InformalEventAttribute;
     pub use tendermint_proto::abci::Event;
     pub use tendermint_proto::abci::EventAttribute;
 }

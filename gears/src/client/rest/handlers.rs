@@ -7,13 +7,22 @@ use bytes::Bytes;
 // use proto_messages::cosmos::tx::v1beta1::response::tx_event::GetTxsEventResponse;
 // use proto_messages::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message, tx::tx::Tx};
 use serde::{Deserialize, Serialize};
-use tendermint::rpc::client::HttpClient;
+use tendermint::informal::node::Info;
+use tendermint::rpc::client::{Client, HttpClient};
+use tendermint::rpc::query::Query;
+use tendermint::rpc::response::tx::search::Response;
+use tendermint::rpc::Order;
 // use tendermint::informal::node::Info;
 // use tendermint::rpc::{endpoint::tx_search::Response, query::Query, Order};
 // use tendermint::rpc::{Client, HttpClient, Url};
 
 use crate::client::rest::{error::Error, pagination::Pagination};
-use crate::types::tx::TxMessage;
+use crate::types::response::any::AnyTx;
+use crate::types::response::tx::TxResponse;
+use crate::types::response::tx_event::GetTxsEventResponse;
+use crate::types::response::PageResponse;
+use crate::types::tx::{Tx, TxMessage};
+use tendermint::types::proto::Protobuf;
 
 use super::pagination::parse_pagination;
 
@@ -78,7 +87,7 @@ pub async fn txs<M: TxMessage>(
 }
 
 // Maps a tendermint tx_search response to a Cosmos get txs by event response
-fn map_responses<M: Message>(res_tx: Response) -> Result<GetTxsEventResponse<M>, Error> {
+fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M>, Error> {
     let mut tx_responses = Vec::with_capacity(res_tx.txs.len());
     let mut txs = Vec::with_capacity(res_tx.txs.len());
 
@@ -101,7 +110,7 @@ fn map_responses<M: Message>(res_tx: Response) -> Result<GetTxsEventResponse<M>,
             gas_used: tx.tx_result.gas_used,
             tx: any_tx,
             timestamp: "".into(), // TODO: need to get the blocks for this
-            events: tx.tx_result.events.into_iter().collect(),
+            events: tx.tx_result.events.into_iter().map(Into::into).collect(),
         });
     }
 

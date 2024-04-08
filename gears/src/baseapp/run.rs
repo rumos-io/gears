@@ -1,21 +1,25 @@
 use axum::Router;
-use database::RocksDB;
-use proto_messages::cosmos::tx::v1beta1::message::Message;
 use std::net::SocketAddr;
 use std::path::PathBuf;
+use store_crate::database::RocksDB;
 use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
+use tendermint::application::ABCI;
 use tracing::{error, info};
 
+use crate::application::handlers::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::BaseApp;
 use crate::client::rest::{run_rest_server, RestState};
-use crate::config::{ApplicationConfig, Config};
-use crate::utils::get_config_file_from_home_dir;
+use crate::config::{ApplicationConfig, Config, ConfigDirectory};
+use crate::types::tx::TxMessage;
+// use crate::utils::get_config_file_from_home_dir;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 use tracing::metadata::LevelFilter;
 
-use super::{ABCIHandler, Genesis};
+use super::Genesis;
+
+// use super::{ABCIHandler, Genesis};
 
 #[derive(Debug, Clone)]
 pub struct RunCommand {
@@ -31,9 +35,9 @@ pub enum RunError {
     #[error("{0}")]
     HomeDirectory(String),
     #[error("{0}")]
-    Database(#[from] database::error::Error),
+    Database(#[from] store_crate::database::error::Error),
     #[error("{0}")]
-    TendermintServer(#[from] tendermint::abci::Error),
+    TendermintServer(#[from] tendermint::abci::errors::Error),
     #[error("{0}")]
     Custom(String),
 }
@@ -69,7 +73,7 @@ impl From<LogLevel> for LevelFilter {
 pub fn run<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AC: ApplicationConfig,
@@ -101,8 +105,7 @@ pub fn run<
     db_dir.push("application.db");
     let db = RocksDB::new(db_dir)?;
 
-    let mut cfg_file_path = home.clone();
-    get_config_file_from_home_dir(&mut cfg_file_path);
+    let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
 
     let config: Config<AC> = Config::from_file(cfg_file_path)
         .map_err(|e| RunError::Custom(format!("Error reading config file: {:?}", e)))?;
@@ -119,7 +122,7 @@ pub fn run<
         config.tendermint_rpc_address,
     );
 
-    let server = ServerBuilder::new(read_buf_size).bind(address, app)?;
+    let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
 
     server.listen().map_err(|e| e.into())
 }

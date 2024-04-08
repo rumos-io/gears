@@ -1,14 +1,35 @@
 pub mod secp256k1_key_pair;
-use crate::address::AccAddress;
+
+use ibc_proto::address::AccAddress;
 
 use self::secp256k1_key_pair::Secp256k1KeyPair;
 
 use super::public::PublicKey;
 
+pub mod inner {
+    pub use keyring::key::pair::KeyPair;
+}
+
 /// A key pair.
 #[derive(Clone, Debug)]
 pub enum KeyPair {
     Secp256k1(Secp256k1KeyPair),
+}
+
+impl From<inner::KeyPair> for KeyPair {
+    fn from(value: inner::KeyPair) -> Self {
+        match value {
+            keyring::key::pair::KeyPair::Secp256k1(key) => Self::Secp256k1(key.into()),
+        }
+    }
+}
+
+impl From<KeyPair> for inner::KeyPair {
+    fn from(value: KeyPair) -> Self {
+        match value {
+            KeyPair::Secp256k1(key) => Self::Secp256k1(key.into()),
+        }
+    }
 }
 
 impl KeyPair {

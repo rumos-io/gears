@@ -1,9 +1,9 @@
-use crate::{
-    address::AccAddress, any::google::Any, crypto::secp256k1::Secp256k1PubKey, errors::Error,
-};
-use ibc_proto::protobuf::Protobuf;
+use ibc_proto::{address::AccAddress, any::google::Any, errors::Error};
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
+use tendermint::types::proto::Protobuf;
+
+use crate::crypto::{errors::VerifyError, secp256k1::Secp256k1PubKey};
 
 // cosmos::crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
 
@@ -19,6 +19,12 @@ pub enum PublicKey {
     //Multisig(Vec<u8>),
 }
 
+impl From<Secp256k1PubKey> for PublicKey {
+    fn from(value: Secp256k1PubKey) -> Self {
+        Self::Secp256k1(value)
+    }
+}
+
 impl PublicKey {
     pub fn get_address(&self) -> AccAddress {
         match self {
@@ -30,7 +36,7 @@ impl PublicKey {
         &self,
         message: impl AsRef<[u8]>,
         signature: impl AsRef<[u8]>,
-    ) -> Result<(), SigningError> {
+    ) -> Result<(), VerifyError> {
         match self {
             PublicKey::Secp256k1(key) => key.verify_signature(message, signature),
         }

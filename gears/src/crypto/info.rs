@@ -1,6 +1,5 @@
 use ibc_proto::{
-    key::pair::KeyPair,
-    signing::{SignDoc, SignerInfo},
+    signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
 use prost::Message;
@@ -8,23 +7,11 @@ use tendermint::types::{chain_id::ChainId, proto::Protobuf};
 
 use crate::types::{
     auth::{fee::Fee, info::AuthInfo, tip::Tip},
+    signing::SignerInfo,
     tx::{body::TxBody, raw::TxRaw, TxMessage},
 };
-// use proto_messages::cosmos::{
-//     ibc::{
-//         protobuf::Protobuf,
-//         tx::{SignDoc, TxRaw},
-//     },
-//     tx::v1beta1::{
-//         auth_info::AuthInfo,
-//         fee::Fee,
-//         message::Message as SDKMessage,
-//         mode_info::{ModeInfo, SignMode},
-//         signer::SignerInfo,
-//         tip::Tip,
-//         tx_body::TxBody,
-//     },
-// };
+
+use super::key::pair::KeyPair;
 
 /// Contains info required to sign a Tx
 pub struct SigningInfo {

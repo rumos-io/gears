@@ -37,7 +37,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
 
     tendermint::write_tm_config(tm_config_file, &moniker).map_err(InitError::WriteConfigFile)?;
 
-    println!("Tendermint config written to {tm_config_file_path}");
+    println!("Tendermint config written to {tm_config_file_path:?}");
 
     // Create node key file
     let node_key_file_path = config_dir.join("node_key.json");

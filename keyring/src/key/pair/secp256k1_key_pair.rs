@@ -1,6 +1,4 @@
 use bip32::{DerivationPath, Mnemonic, XPrv};
-use k256::ecdsa::signature::Signer;
-use k256::ecdsa::SigningKey;
 use k256::SecretKey;
 use pkcs8::der::pem::PemLabel;
 use pkcs8::{
@@ -13,6 +11,18 @@ const HDPATH: &str = "m/44'/118'/0'/0/0";
 /// A secp256k1 key pair.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Secp256k1KeyPair(SecretKey);
+
+impl From<SecretKey> for Secp256k1KeyPair {
+    fn from(value: SecretKey) -> Self {
+        Self(value)
+    }
+}
+
+impl From<Secp256k1KeyPair> for SecretKey {
+    fn from(value: Secp256k1KeyPair) -> Self {
+        value.0
+    }
+}
 
 impl Secp256k1KeyPair {
     /// Returns PKCS8 PEM encoded private key.
@@ -81,13 +91,6 @@ impl Secp256k1KeyPair {
         let signing_key = child_xprv.private_key();
 
         Secp256k1KeyPair(signing_key.into())
-    }
-
-    /// Signs a message.
-    pub fn sign(&self, message: &[u8]) -> Vec<u8> {
-        let signing_key: SigningKey = SigningKey::from(&self.0);
-        let signature: k256::ecdsa::Signature = signing_key.sign(message);
-        signature.to_vec()
     }
 }
 

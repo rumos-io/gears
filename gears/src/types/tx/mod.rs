@@ -1,11 +1,12 @@
 pub mod errors;
 use ibc_proto::{
-    address::AccAddress, any::google::Any, errors::Error, key::public::PublicKey,
-    tx::signature::SignatureData,
+    address::AccAddress, any::google::Any, errors::Error, tx::signature::SignatureData,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tendermint::types::proto::Protobuf;
+
+use crate::crypto::key::public::PublicKey;
 
 use self::{body::TxBody, errors::TxError};
 

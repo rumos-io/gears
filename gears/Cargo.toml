@@ -58,6 +58,12 @@ tower-http = { workspace = true, features = ["cors"] }
 clap = { workspace = true , optional = true }
 clap_complete = { workspace = true, optional = true }
 
+# crypto
+k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }
+pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"]}
+ripemd = { workspace = true }
+data-encoding = { workspace = true }
+
 [dev-dependencies]
 
 [features]

@@ -1,11 +1,10 @@
-#![warn(rust_2018_idioms)]
-
 pub mod application;
-// pub mod baseapp;
+pub mod baseapp;
+pub mod x;
 // #[cfg(feature = "cli")]
 // pub mod cli;
 
-// pub mod client;
+pub mod client;
 pub mod config;
 pub mod defaults;
 pub mod error;
@@ -13,4 +12,4 @@ pub mod error;
 pub(crate) mod runtime;
 pub mod types;
 
-pub mod crypto; // TODO: Somehow rework?
+pub mod crypto;
