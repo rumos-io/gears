@@ -26,8 +26,8 @@ use tendermint::types::{
 
 use self::{genesis::Genesis, params::BaseAppParamsKeeper};
 
-pub mod genesis;
 mod abci;
+pub mod genesis;
 mod params;
 
 #[derive(Debug, Clone)]

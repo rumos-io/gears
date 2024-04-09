@@ -30,6 +30,9 @@ resolver = "2"
 
 [workspace.dependencies]
 
+# important
+ibc-proto ="=0.26.0"
+
 # nutype
 bytes = { version = "1.2.1" }
 bnum = { version = "0.11.0" }

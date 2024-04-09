@@ -1,11 +1,11 @@
-pub mod msg;
-pub mod rendering;
 pub mod account;
 pub mod auth;
 pub mod base;
 pub mod context;
 pub mod gas;
+pub mod msg;
 pub mod query;
+pub mod rendering;
 pub mod response;
 pub mod signing;
 pub mod tx;

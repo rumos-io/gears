@@ -63,22 +63,36 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                 supply: self.keeper.get_paginated_total_supply(ctx),
                 pagination: None,
             }
-            .encode_vec().expect("msg")
+            .encode_vec()
+            .expect("msg")
             .into()), // TODO:NOW
             "/cosmos.bank.v1beta1.Query/Balance" => {
                 let req = QueryBalanceRequest::decode(query.data)
-                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?; 
+                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_balance(ctx, req).encode_vec().expect("msg").into()) // TODO:NOW
+                Ok(self
+                    .keeper
+                    .query_balance(ctx, req)
+                    .encode_vec()
+                    .expect("msg")
+                    .into()) // TODO:NOW
             }
             "/cosmos.bank.v1beta1.Query/DenomsMetadata" => {
-                Ok(self.keeper.query_denoms_metadata(ctx).encode_vec().expect("msg").into()) // TODO:NOW
+                Ok(self
+                    .keeper
+                    .query_denoms_metadata(ctx)
+                    .encode_vec()
+                    .expect("msg")
+                    .into()) // TODO:NOW
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)
                     .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?; // TODO:NOW
                 let metadata = self.keeper.get_denom_metadata(ctx, &req.denom);
-                Ok(QueryDenomMetadataResponse { metadata }.encode_vec().expect("msg").into()) // TODO:NOW
+                Ok(QueryDenomMetadataResponse { metadata }
+                    .encode_vec()
+                    .expect("msg")
+                    .into()) // TODO:NOW
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

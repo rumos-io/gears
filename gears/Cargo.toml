@@ -10,12 +10,9 @@ workspace = true
 #local
 tendermint = {path = "../tendermint"}
 ibc-types = {path = "../ibc-types"}
-# proto-messages = {path = "../proto-messages"}
 proto-types = {path = "../proto-types"}
 keyring = {path = "../keyring"}
-# database = {path = "../database"}
 store_crate = {path = "../store", package = "store"}
-# trees = {path = "../trees"}
 
 #newtypes
 secp256k1 = { workspace = true, features = ["hashes"]}

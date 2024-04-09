@@ -1,7 +1,12 @@
 use std::{path::Path, process::Child, str::FromStr};
 
 use crate::{
-    baseapp::genesis::Genesis, commands::node::{genesis::{genesis_account_add, GenesisCommand}, init::{init, InitCommand, InitCommandBuilder}}, types::base::{coin::Coin, send::SendCoins}
+    baseapp::genesis::Genesis,
+    commands::node::{
+        genesis::{genesis_account_add, GenesisCommand},
+        init::{init, InitCommand, InitCommandBuilder},
+    },
+    types::base::{coin::Coin, send::SendCoins},
 };
 use anyhow::anyhow;
 pub use assert_fs::TempDir;

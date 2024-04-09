@@ -1,12 +1,15 @@
 use std::marker::PhantomData;
 
-use gears::{ibc::{
-    address::AccAddress,
-    signing::SignDoc,
-    tx::mode_info::{ModeInfo, SignMode},
-}, x::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer}};
 use gears::proto_types::Denom;
 use gears::store::database::{Database, PrefixDB};
+use gears::{
+    ibc::{
+        address::AccAddress,
+        signing::SignDoc,
+        tx::mode_info::{ModeInfo, SignMode},
+    },
+    x::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
+};
 
 use gears::{
     error::AppError,

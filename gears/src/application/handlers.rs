@@ -1,8 +1,12 @@
 use crate::{
-    commands::client::{query::execute_query, tx::broadcast_tx_commit}, crypto::{
+    commands::client::{query::execute_query, tx::broadcast_tx_commit},
+    crypto::{
         info::{create_signed_transaction, SigningInfo},
         key::pair::KeyPair,
-    }, error::AppError, runtime::runtime, types::{
+    },
+    error::AppError,
+    runtime::runtime,
+    types::{
         auth::fee::Fee,
         base::send::SendCoins,
         context::{
@@ -11,7 +15,7 @@ use crate::{
         },
         query::{account::QueryAccountResponse, Query},
         tx::{body::TxBody, raw::TxWithRaw, TxMessage},
-    }
+    },
 };
 use ibc_types::{address::AccAddress, query::request::account::QueryAccountRequest};
 use serde::{de::DeserializeOwned, Serialize};
