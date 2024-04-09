@@ -14,7 +14,6 @@ gears = { path = "../../gears" }
 auth = { path = "../auth" }
 
 #newtypes
-bnum = { workspace = true, features = ["serde"] }
 bytes = { workspace = true }
 
 #utils
