@@ -12,16 +12,13 @@ use gears::application::handlers::AuxHandler;
 use gears::application::handlers::{QueryHandler, TxHandler};
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
-
 use gears::ibc::address::AccAddress;
 use genesis::GenesisState;
 // use ibc::client::cli::query_handler::IbcQueryHandler;
-// use proto_types::AccAddress;
-use rest::get_router;
-use serde::Serialize;
-
 use crate::abci_handler::GaiaABCIHandler;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
+use rest::get_router;
+use serde::Serialize;
 
 pub mod abci_handler;
 pub mod client;

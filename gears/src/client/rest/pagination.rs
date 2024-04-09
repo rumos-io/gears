@@ -1,5 +1,3 @@
-//use rocket::FromForm;
-
 use serde::Deserialize;
 
 const QUERY_DEFAULT_LIMIT: u8 = 100;

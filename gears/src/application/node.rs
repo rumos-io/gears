@@ -1,12 +1,18 @@
+use super::{
+    command::app::AppCommands,
+    handlers::{ABCIHandler, AuxHandler},
+    ApplicationInfo,
+};
+use crate::x::params::Keeper as ParamsKeeper;
+use crate::{
+    baseapp::{run, Genesis},
+    client::{genesis_account, init, rest::RestState},
+    config::{ApplicationConfig, Config},
+    types::tx::TxMessage,
+    x::params::ParamsSubspaceKey,
+};
 use axum::Router;
 use store_crate::StoreKey;
-
-use crate::{
-    baseapp::{run, Genesis}, client::{genesis_account, init, rest::RestState}, config::{ApplicationConfig, Config}, types::tx::TxMessage, x::params::ParamsSubspaceKey
-};
-
-use super::{command::app::AppCommands, handlers::{ABCIHandler, AuxHandler}, ApplicationInfo};
-use crate::x::params::Keeper as ParamsKeeper;
 
 /// A Gears application.
 pub trait Node: AuxHandler {

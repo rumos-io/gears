@@ -1,6 +1,3 @@
-// #![doc(test(no_crate_inject))]
-// #![warn(rust_2018_idioms)]
-
 pub mod account;
 pub mod address;
 pub mod any;

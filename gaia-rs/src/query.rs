@@ -1,8 +1,6 @@
 use auth::cli::query::{AuthQuery, AuthQueryResponse};
 use bank::cli::query::{BankQuery, BankQueryResponse};
 use gears::types::query::Query;
-// use ibc::client::cli::query::{IbcQuery, IbcQueryResponse};
-// use proto_messages::cosmos::query::Query;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq)]

@@ -1,30 +1,20 @@
-use axum::extract::{Query as AxumQuery, State};
-use axum::Json;
-use bytes::Bytes;
-// use proto_messages::cosmos::bank::v1beta1::PageResponse;
-// use proto_messages::cosmos::base::abci::v1beta1::TxResponse;
-// use proto_messages::cosmos::ibc::protobuf::Protobuf;
-// use proto_messages::cosmos::tx::v1beta1::response::tx_event::GetTxsEventResponse;
-// use proto_messages::cosmos::tx::v1beta1::{any_tx::AnyTx, message::Message, tx::tx::Tx};
-use serde::{Deserialize, Serialize};
-use tendermint::informal::node::Info;
-use tendermint::rpc::client::{Client, HttpClient};
-use tendermint::rpc::query::Query;
-use tendermint::rpc::response::tx::search::Response;
-use tendermint::rpc::Order;
-// use tendermint::informal::node::Info;
-// use tendermint::rpc::{endpoint::tx_search::Response, query::Query, Order};
-// use tendermint::rpc::{Client, HttpClient, Url};
-
+use super::pagination::parse_pagination;
 use crate::client::rest::{error::Error, pagination::Pagination};
 use crate::types::response::any::AnyTx;
 use crate::types::response::tx::TxResponse;
 use crate::types::response::tx_event::GetTxsEventResponse;
 use crate::types::response::PageResponse;
 use crate::types::tx::{Tx, TxMessage};
+use axum::extract::{Query as AxumQuery, State};
+use axum::Json;
+use bytes::Bytes;
+use serde::{Deserialize, Serialize};
+use tendermint::informal::node::Info;
+use tendermint::rpc::client::{Client, HttpClient};
+use tendermint::rpc::query::Query;
+use tendermint::rpc::response::tx::search::Response;
+use tendermint::rpc::Order;
 use tendermint::types::proto::Protobuf;
-
-use super::pagination::parse_pagination;
 
 // TODO:
 // 1. handle multiple events in /cosmos/tx/v1beta1/txs request

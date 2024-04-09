@@ -5,7 +5,6 @@ use ibc_proto::cosmos::crypto::multisig::v1beta1::CompactBitArray as RawCompactB
 use crate::errors::Error;
 
 mod inner {
-    // pub use ibc_proto::cosmos::tx::signing::v1beta1::SignMode;
     pub use ibc_proto::cosmos::tx::v1beta1::mode_info::Sum;
     pub use ibc_proto::cosmos::tx::v1beta1::mode_info::{Multi, Single};
     pub use ibc_proto::cosmos::tx::v1beta1::ModeInfo;

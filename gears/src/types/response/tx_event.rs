@@ -1,10 +1,4 @@
 use serde::{Deserialize, Serialize};
-
-// use crate::cosmos::{
-//     bank::v1beta1::PageResponse,
-//     base::abci::v1beta1::TxResponse,
-//     tx::v1beta1::{message::Message, tx::tx::Tx},
-// };
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 

@@ -1,24 +1,21 @@
-use auth::{ante::BaseAnteHandler, Keeper as AuthKeeper};
-use bank::Keeper as BankKeeper;
-use gears::application::handlers::ABCIHandler;
-use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::tx::raw::TxWithRaw;
-use gears::{
-    config::Config, types::context::TransactionalContext, x::params::Keeper as ParamsKeeper,
-};
-// use tendermint::proto::abci::RequestQuery;
-
-use gears::error::AppError;
-use gears::store::database::{Database, PrefixDB};
-use gears::types::context::init_context::InitContext;
-use gears::types::context::query_context::QueryContext;
-use gears::types::context::tx_context::TxContext;
-
 use crate::{
     config::AppConfig,
     genesis::GenesisState,
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
+};
+use auth::{ante::BaseAnteHandler, Keeper as AuthKeeper};
+use bank::Keeper as BankKeeper;
+use gears::application::handlers::ABCIHandler;
+use gears::error::AppError;
+use gears::store::database::{Database, PrefixDB};
+use gears::tendermint::types::request::query::RequestQuery;
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
+use gears::types::context::tx_context::TxContext;
+use gears::types::tx::raw::TxWithRaw;
+use gears::{
+    config::Config, types::context::TransactionalContext, x::params::Keeper as ParamsKeeper,
 };
 
 #[derive(Debug, Clone)]

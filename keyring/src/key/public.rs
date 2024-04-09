@@ -2,8 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use super::secp256k1::Secp256k1PubKey;
 
-// cosmos::crypto::secp256k1::v1beta1::PubKey as Secp256k1PubKey,
-
 pub type SigningError = secp256k1::Error;
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]

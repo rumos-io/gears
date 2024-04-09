@@ -10,7 +10,6 @@ use gears::ibc::address::AccAddress;
 //     query::IbcQueryCli,
 //     tx::{run_ibc_tx_command, IbcTxCli},
 // };
-// use proto_types::AccAddress;
 
 use crate::message::Message;
 

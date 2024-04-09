@@ -1,3 +1,11 @@
+use super::Genesis;
+use crate::application::handlers::ABCIHandler;
+use crate::application::ApplicationInfo;
+use crate::baseapp::BaseApp;
+use crate::client::rest::{run_rest_server, RestState};
+use crate::config::{ApplicationConfig, Config, ConfigDirectory};
+use crate::types::tx::TxMessage;
+use crate::x::params::{Keeper, ParamsSubspaceKey};
 use axum::Router;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -5,21 +13,8 @@ use store_crate::database::RocksDB;
 use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
 use tendermint::application::ABCI;
-use tracing::{error, info};
-
-use crate::application::handlers::ABCIHandler;
-use crate::application::ApplicationInfo;
-use crate::baseapp::BaseApp;
-use crate::client::rest::{run_rest_server, RestState};
-use crate::config::{ApplicationConfig, Config, ConfigDirectory};
-use crate::types::tx::TxMessage;
-// use crate::utils::get_config_file_from_home_dir;
-use crate::x::params::{Keeper, ParamsSubspaceKey};
 use tracing::metadata::LevelFilter;
-
-use super::Genesis;
-
-// use super::{ABCIHandler, Genesis};
+use tracing::{error, info};
 
 #[derive(Debug, Clone)]
 pub struct RunCommand {

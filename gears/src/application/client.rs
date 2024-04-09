@@ -1,9 +1,8 @@
-use crate::client::{keys, query::run_query, tx::run_tx};
-
 use super::{
     command::client::ClientCommands,
     handlers::{AuxHandler, QueryHandler, TxHandler},
 };
+use crate::client::{keys, query::run_query, tx::run_tx};
 
 /// A Gears client application.
 pub trait Client: TxHandler + QueryHandler + AuxHandler {}

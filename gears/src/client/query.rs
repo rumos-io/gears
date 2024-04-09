@@ -6,7 +6,7 @@ use tendermint::{
     rpc::client::{Client, HttpClient},
     types::proto::{block::Height, Protobuf},
 };
-// use tendermint::{informal::block::Height}
+
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct QueryCommand<C> {
     pub node: url::Url,

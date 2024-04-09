@@ -1,12 +1,3 @@
-use axum::{extract::FromRef, http::Method, routing::get, Router};
-use tendermint::rpc::url::Url;
-// use proto_messages::cosmos::tx::v1beta1::message::Message;
-// use tendermint::rpc::Url;
-
-use std::net::SocketAddr;
-use store_crate::StoreKey;
-use tower_http::cors::{Any, CorsLayer};
-
 use crate::{
     application::{handlers::ABCIHandler, ApplicationInfo},
     baseapp::{BaseApp, Genesis},
@@ -15,14 +6,11 @@ use crate::{
     types::tx::TxMessage,
     x::params::ParamsSubspaceKey,
 };
-
-// use crate::{
-//     application::ApplicationInfo,
-//     baseapp::{ABCIHandler, BaseApp, Genesis},
-//     client::rest::handlers::{node_info, staking_params, txs},
-//     runtime::runtime,
-//     x::params::ParamsSubspaceKey,
-// };
+use axum::{extract::FromRef, http::Method, routing::get, Router};
+use std::net::SocketAddr;
+use store_crate::StoreKey;
+use tendermint::rpc::url::Url;
+use tower_http::cors::{Any, CorsLayer};
 
 pub fn run_rest_server<
     SK: StoreKey,

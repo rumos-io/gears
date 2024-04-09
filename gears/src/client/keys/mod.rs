@@ -1,10 +1,9 @@
+use crate::crypto::key::pair::KeyPair;
 use anyhow::Result;
 use bip32::Mnemonic;
 use std::path::PathBuf;
 use strum::Display;
 use text_io::read;
-
-use crate::crypto::key::pair::KeyPair;
 
 const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
 const KEYRING_SUB_DIR_TEST: &str = "keyring-test";

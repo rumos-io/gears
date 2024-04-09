@@ -4,8 +4,6 @@ use gears::{
     x::signing::renderer::value_renderer::{RenderError, ValueRenderer},
 };
 use gears_derive::RoutingMessage;
-// use proto_messages::cosmos::tx::v1beta1::{screen::Screen, tx_metadata::Metadata};
-// use proto_types::{AccAddress, Denom};
 use serde::Serialize;
 
 #[derive(Debug, Clone, RoutingMessage, Serialize)]

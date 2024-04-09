@@ -1,16 +1,21 @@
+use super::{params::BaseAppParamsKeeper, Genesis};
+use crate::types::{
+    context::query_context::QueryContext,
+    tx::{raw::TxWithRaw, TxMessage},
+};
+use crate::{application::handlers::ABCIHandler, types::context::init_context::InitContext};
+use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
+use crate::{
+    error::AppError,
+    x::params::{Keeper, ParamsSubspaceKey},
+};
 use bytes::Bytes;
-use store_crate::database::{Database, RocksDB};
-// use proto_messages::cosmos::{
-//     base::v1beta1::SendCoins,
-//     tx::v1beta1::{message::Message, tx_raw::TxWithRaw},
-// };
-// use proto_types::AccAddress;
-// use serde::{de::DeserializeOwned, Serialize};
 use std::{
     marker::PhantomData,
     str::FromStr,
     sync::{Arc, RwLock},
 };
+use store_crate::database::{Database, RocksDB};
 use store_crate::{types::multi::MultiStore, ReadMultiKVStore, StoreKey, WriteMultiKVStore};
 use tendermint::{
     application::ABCIApplication,
@@ -45,30 +50,7 @@ use tendermint::{
         },
     },
 };
-// use tendermint::abci::Application;
-// use tendermint::informal::block::Header;
-// use tendermint::proto::abci::{
-//     RequestApplySnapshotChunk, RequestBeginBlock, RequestCheckTx, RequestDeliverTx, RequestEcho,
-//     RequestEndBlock, RequestInfo, RequestInitChain, RequestLoadSnapshotChunk, RequestOfferSnapshot,
-//     RequestQuery, ResponseApplySnapshotChunk, ResponseBeginBlock, ResponseCheckTx, ResponseCommit,
-//     ResponseDeliverTx, ResponseEcho, ResponseEndBlock, ResponseFlush, ResponseInfo,
-//     ResponseInitChain, ResponseListSnapshots, ResponseLoadSnapshotChunk, ResponseOfferSnapshot,
-//     ResponseQuery, ValidatorUpdate,
-// };
 use tracing::{error, info};
-
-use crate::types::{
-    context::query_context::QueryContext,
-    tx::{raw::TxWithRaw, TxMessage},
-};
-use crate::{application::handlers::ABCIHandler, types::context::init_context::InitContext};
-use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
-use crate::{
-    error::AppError,
-    x::params::{Keeper, ParamsSubspaceKey},
-};
-
-use super::{params::BaseAppParamsKeeper, Genesis};
 
 #[derive(Debug, Clone)]
 pub struct BaseApp<

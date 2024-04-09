@@ -1,10 +1,7 @@
-use gears::{error::AppError, ibc::address::AccAddress, types::base::send::SendCoins};
-// use proto_messages::cosmos::base::v1beta1::SendCoins;
-// use proto_types::AccAddress;
-use serde::{Deserialize, Serialize};
-
 use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
+use gears::{error::AppError, ibc::address::AccAddress, types::base::send::SendCoins};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
 #[serde(deny_unknown_fields)]
