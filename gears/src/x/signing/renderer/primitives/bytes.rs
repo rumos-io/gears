@@ -1,18 +1,19 @@
 //! Default formatting implementation for bytes - `&[u8]`
-use gears::types::rendering::screen::Content;
-// use proto_messages::cosmos::tx::v1beta1::screen::Content;
+use crate::types::rendering::screen::Content;
 use sha2::{Digest, Sha256};
 
-use crate::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, Error, TryPrimitiveValueRenderer,
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRenderer,
 };
 
 const MAX_BYTE_LENGTH: usize = 35; // Maximum byte length to be displayed as is. Longer than this, we hash.
 
 impl TryPrimitiveValueRenderer<&[u8]> for DefaultPrimitiveRenderer {
-    fn try_format(value: &[u8]) -> Result<Content, Error> {
+    fn try_format(value: &[u8]) -> Result<Content, RenderError> {
         if value.is_empty() {
-            Err(Error::Rendering("cannot render empty bytes".to_string()))
+            Err(RenderError::Rendering(
+                "cannot render empty bytes".to_string(),
+            ))
         } else if value.len() <= MAX_BYTE_LENGTH {
             Ok(Content::new(format_bytes(value))
                 .expect("value is not empty so it's encoding will not be empty"))
@@ -52,7 +53,7 @@ mod tests {
         let test_cases = vec![
             (
                 vec![0u8; 0],
-                Err(Error::Rendering("cannot render empty bytes".to_string())),
+                Err(RenderError::Rendering("cannot render empty bytes".to_string())),
             ),
             (
                 vec![0],

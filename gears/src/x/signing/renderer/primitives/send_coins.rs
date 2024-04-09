@@ -1,18 +1,14 @@
-use crate::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, Error, TryPrimitiveValueRendererWithMetadata,
+use crate::proto_types::Denom;
+use crate::types::{base::send::SendCoins, rendering::screen::Content, tx::metadata::Metadata};
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRendererWithMetadata,
 };
-use gears::types::{base::send::SendCoins, rendering::screen::Content, tx::metadata::Metadata};
-// use proto_messages::cosmos::{
-//     base::v1beta1::SendCoins,
-//     tx::v1beta1::{screen::Content, tx_metadata::Metadata},
-// };
-use gears::proto_types::Denom;
 
 impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
         coins: SendCoins,
         get_metadata: &F,
-    ) -> Result<Content, Error> {
+    ) -> Result<Content, RenderError> {
         let inner_coins = coins.clone().into_inner();
 
         let mut formatted_coins = Vec::with_capacity(inner_coins.len());
@@ -39,17 +35,12 @@ impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRender
 
 #[cfg(test)]
 mod tests {
-    use gears::types::{
+    use crate::proto_types::Uint256;
+    use crate::types::{
         base::{coin::Coin, send::SendCoins},
         rendering::screen::Content,
     };
-    // use proto_messages::cosmos::{
-    //     base::v1beta1::{Coin, SendCoins},
-    //     tx::v1beta1::screen::Content,
-    // };
-    use gears::proto_types::Uint256;
-
-    use crate::signing::renderer::{
+    use crate::x::signing::renderer::{
         test_functions::get_metadata,
         value_renderer::{DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata},
     };

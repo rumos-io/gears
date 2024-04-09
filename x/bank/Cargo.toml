@@ -11,7 +11,7 @@ gears = { path = "../../gears" }
 # database = { path = "../../database" }
 # proto-types = { path = "../../proto-types" }
 # proto-messages = { path = "../../proto-messages" }
-auth = { path = "../auth" } # TODO:NOW REMOVE
+auth = { path = "../auth" }
 
 #newtypes
 bnum = { workspace = true, features = ["serde"] }

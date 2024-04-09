@@ -1,7 +1,8 @@
-use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
-use gears::types::rendering::screen::Content;
-// use proto_messages::cosmos::tx::v1beta1::screen::Content;
-use gears::proto_types::Decimal256;
+use crate::proto_types::Decimal256;
+use crate::types::rendering::screen::Content;
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, PrimitiveValueRenderer,
+};
 
 impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
     fn format(value: Decimal256) -> Content {
@@ -23,15 +24,12 @@ impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use gears::types::rendering::screen::Content;
-    // use proto_messages::cosmos::tx::v1beta1::screen::Content;
-    use gears::proto_types::Decimal256;
-
-    use crate::signing::renderer::value_renderer::{
+    use crate::proto_types::Decimal256;
+    use crate::types::rendering::screen::Content;
+    use crate::x::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
+    use std::str::FromStr;
 
     #[test]
     fn format_decimal256_works() {

@@ -1,4 +1,3 @@
-use auth::signing::renderer::value_renderer::{Error, ValueRenderer};
 // use auth::signing::renderer::value_renderer::{Error, ValueRenderer};
 use bytes::Bytes;
 use gears::{
@@ -10,6 +9,7 @@ use gears::{
         rendering::screen::Screen,
         tx::{metadata::Metadata, TxMessage},
     },
+    x::signing::renderer::value_renderer::{RenderError, ValueRenderer},
 };
 // use proto_messages::cosmos::bank::v1beta1::MsgSend;
 // use proto_messages::cosmos::tx::v1beta1::screen::Screen;
@@ -30,7 +30,7 @@ impl ValueRenderer for Message {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Error> {
+    ) -> Result<Vec<Screen>, RenderError> {
         match self {
             Message::Send(msg) => msg.format(get_metadata),
         }

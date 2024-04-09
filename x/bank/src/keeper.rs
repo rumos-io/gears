@@ -1,13 +1,20 @@
-use std::{collections::HashMap, str::FromStr};
-
+use crate::types::query::{
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
+    QueryDenomsMetadataResponse,
+};
+use crate::{BankParamsKeeper, GenesisState};
 use auth::ante::{AuthKeeper, BankKeeper};
 use auth::module::Module;
 use bytes::Bytes;
 use gears::error::AppError;
 use gears::ibc::address::AccAddress;
+use gears::proto_types::{Denom, Uint256};
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::Database;
-
+use gears::store::types::prefix::mutable::MutablePrefixStore;
+use gears::store::{
+    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
+};
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
 use gears::types::base::coin::Coin;
@@ -15,34 +22,10 @@ use gears::types::base::send::SendCoins;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::{QueryableContext, TransactionalContext};
-// use gears::{
-//     error::AppError,
-//     x::{auth::Module, params::ParamsSubspaceKey},
-// };
-// use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
-// use proto_messages::cosmos::ibc::protobuf::Protobuf;
-// use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
-// use proto_messages::cosmos::{
-//     bank::v1beta1::{
-//         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
-//         QueryBalanceResponse,
-//     },
-//     base::v1beta1::{Coin, SendCoins},
-// };
-use gears::proto_types::{Denom, Uint256};
-use gears::store::types::prefix::mutable::MutablePrefixStore;
-use gears::store::{
-    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
-};
 use gears::types::msg::send::MsgSend;
 use gears::types::tx::metadata::Metadata;
 use gears::x::params::ParamsSubspaceKey;
-
-use crate::types::query::{
-    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
-    QueryDenomsMetadataResponse,
-};
-use crate::{BankParamsKeeper, GenesisState};
+use std::{collections::HashMap, str::FromStr};
 
 const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];

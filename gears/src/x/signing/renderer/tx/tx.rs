@@ -1,25 +1,7 @@
-// use proto_messages::cosmos::{
-//     base::v1beta1::SendCoins,
-//     tx::v1beta1::{
-//         message::Message,
-//         public_key::PublicKey,
-//         screen::{Indent, Screen},
-//         signer_data::SignerData,
-//         tip::Tip,
-//         tx_data::TxData,
-//         tx_metadata::Metadata,
-//     },
-// };
-// use proto_types::{AccAddress, Denom};
-
-// use proto_messages::cosmos::ibc::protob
-// use tendermint::types::chain_id::ChainId; /uf::Protobuf;
-// use tendermint::informal::chain::Id;
-
-use gears::ibc::address::AccAddress;
-use gears::proto_types::Denom;
-use gears::tendermint::types::chain_id::ChainId;
-use gears::{
+use crate::ibc::address::AccAddress;
+use crate::proto_types::Denom;
+use crate::tendermint::types::chain_id::ChainId;
+use crate::{
     crypto::key::public::PublicKey,
     types::{
         auth::tip::Tip,
@@ -29,14 +11,14 @@ use gears::{
     },
 };
 
-use crate::signing::{
+use crate::tendermint::types::proto::Protobuf;
+use crate::x::signing::{
     hasher::hash_get,
     renderer::value_renderer::{
-        DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, TryPrimitiveValueRenderer,
+        DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError, TryPrimitiveValueRenderer,
         TryPrimitiveValueRendererWithMetadata, ValueRenderer,
     },
 };
-use gears::tendermint::types::proto::Protobuf;
 
 /// Envelope is an internal data structure used to generate the tx envelope
 /// screens. Used in the same way as the Cosmos SDK Envelope type:
@@ -98,7 +80,7 @@ impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Error> {
+    ) -> Result<Vec<Screen>, RenderError> {
         let mut screens = vec![];
 
         screens.push(Screen {
@@ -255,38 +237,22 @@ impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
 mod tests {
     use std::str::FromStr;
 
-    use gears::ibc::address::AccAddress;
-    use gears::ibc::tx::mode_info::{ModeInfo, SignMode};
-    use gears::types::auth::fee::Fee;
-    use gears::types::auth::info::AuthInfo;
-    use gears::types::base::coin::Coin;
-    use gears::types::base::send::SendCoins;
-    use gears::types::msg::send::MsgSend;
-    use gears::types::rendering::screen::{Content, Indent, Screen};
-    use gears::types::signing::SignerInfo;
-    use gears::types::tx::body::TxBody;
-    use gears::types::tx::data::TxData;
-    use gears::types::tx::signer::SignerData;
-    // use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
-    // use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
-    // use proto_messages::cosmos::tx::v1beta1::signer_data::SignerData;
-    // use proto_messages::cosmos::{
-    //     bank::v1beta1::MsgSend,
-    //     base::v1beta1::{Coin, SendCoins},
-    //     tx::v1beta1::{
-    //         auth_info::AuthInfo,
-    //         fee::Fee,
-    //         screen::{Content, Indent, Screen},
-    //         tx_body::TxBody,
-    //         tx_data::TxData,
-    //     },
-    // };
-    use gears::proto_types::{Denom, Uint256};
-    use gears::tendermint::types::chain_id::ChainId;
-    // use tendermint::informal::chain::Id;
-
-    use crate::signing::renderer::test_functions::get_metadata;
-    use crate::signing::renderer::value_renderer::ValueRenderer;
+    use crate::ibc::address::AccAddress;
+    use crate::ibc::tx::mode_info::{ModeInfo, SignMode};
+    use crate::proto_types::{Denom, Uint256};
+    use crate::tendermint::types::chain_id::ChainId;
+    use crate::types::auth::fee::Fee;
+    use crate::types::auth::info::AuthInfo;
+    use crate::types::base::coin::Coin;
+    use crate::types::base::send::SendCoins;
+    use crate::types::msg::send::MsgSend;
+    use crate::types::rendering::screen::{Content, Indent, Screen};
+    use crate::types::signing::SignerInfo;
+    use crate::types::tx::body::TxBody;
+    use crate::types::tx::data::TxData;
+    use crate::types::tx::signer::SignerData;
+    use crate::x::signing::renderer::test_functions::get_metadata;
+    use crate::x::signing::renderer::value_renderer::ValueRenderer;
 
     use super::Envelope;
 

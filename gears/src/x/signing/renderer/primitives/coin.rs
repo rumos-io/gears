@@ -1,21 +1,18 @@
-use crate::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, TryPrimitiveValueRendererWithMetadata,
+use crate::proto_types::Uint256;
+use crate::proto_types::{Decimal256, Denom};
+use crate::types::base::coin::Coin;
+use crate::types::rendering::screen::Content;
+use crate::types::tx::metadata::Metadata;
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,
+    TryPrimitiveValueRendererWithMetadata,
 };
-use gears::types::base::coin::Coin;
-use gears::types::rendering::screen::Content;
-use gears::types::tx::metadata::Metadata;
-// use proto_messages::cosmos::{
-//     base::v1beta1::Coin,
-//     tx::v1beta1::{screen::Content, tx_metadata::Metadata},
-// };
-use gears::proto_types::Uint256;
-use gears::proto_types::{Decimal256, Denom};
 
 impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
         coin: Coin,
         get_metadata: &F,
-    ) -> Result<Content, Error> {
+    ) -> Result<Content, RenderError> {
         let Some(metadata) = get_metadata(&coin.denom) else {
             let display = coin.denom.to_string();
             return Ok(Content::new(format!(
@@ -52,13 +49,13 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
                         let power = denom_exp.exponent - coin_exp.exponent;
 
                         let amount = Decimal256::from_atomics(coin.amount, 0).map_err(|_| {
-                            Error::Rendering(format!(
+                            RenderError::Rendering(format!(
                                 "coin amounts greater than {} are not supported for this signing mode",
                                 Decimal256::MAX
                             ))
                         })?; //TODO: this is a deficiency of the Decimal256 type, it should be able to hold any Uint256 value
                         let scaling = Uint256::from(10u32).checked_pow(power).map_err(|_| {
-                            Error::Rendering(format!(
+                            RenderError::Rendering(format!(
                                 "{display} denom is not supported for this signing mode"
                             ))
                         })?;
@@ -77,13 +74,13 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
                         let power = coin_exp.exponent - denom_exp.exponent;
 
                         let scaling = Uint256::from(10u32).checked_pow(power).map_err(|_| {
-                            Error::Rendering(format!(
+                            RenderError::Rendering(format!(
                                 "{display} denom is not supported for this signing mode"
                             ))
                         })?;
 
                         let disp_amount = coin.amount.checked_mul(scaling).map_err(|_| {
-                            Error::Rendering(format!(
+                            RenderError::Rendering(format!(
                                 "coin amounts greater than {} are not supported for this signing mode and denom {}",
                                 Uint256::MAX / scaling,
                                 display
@@ -111,14 +108,13 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::signing::renderer::{
+    use crate::proto_types::Uint256;
+    use crate::types::{base::coin::Coin, rendering::screen::Content};
+    use crate::x::signing::renderer::{
         test_functions::get_metadata,
         value_renderer::{DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata},
     };
     use anyhow::Ok;
-    use gears::types::{base::coin::Coin, rendering::screen::Content};
-    // use proto_messages::cosmos::{base::v1beta1::Coin, tx::v1beta1::screen::Content};
-    use gears::proto_types::Uint256;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {

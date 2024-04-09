@@ -1527,6 +1527,8 @@ dependencies = [
  "integer-encoding",
  "k256",
  "keyring",
+ "num-bigint",
+ "num-format",
  "nutype",
  "pkcs8",
  "prost",

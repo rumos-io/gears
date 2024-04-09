@@ -1,7 +1,7 @@
-use auth::signing::renderer::value_renderer::{Error, ValueRenderer};
 use gears::{
     proto_types::Denom,
     types::{rendering::screen::Screen, tx::metadata::Metadata},
+    x::signing::renderer::value_renderer::{RenderError, ValueRenderer},
 };
 use gears_derive::RoutingMessage;
 // use proto_messages::cosmos::tx::v1beta1::{screen::Screen, tx_metadata::Metadata};
@@ -21,7 +21,7 @@ impl ValueRenderer for Message {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Error> {
+    ) -> Result<Vec<Screen>, RenderError> {
         match self {
             Message::Bank(msg) => msg.format(get_metadata),
             // Message::Ibc(_) => Err(Error::NotImplemented),

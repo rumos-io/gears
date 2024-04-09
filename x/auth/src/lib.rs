@@ -6,7 +6,6 @@ mod keeper;
 mod message;
 pub mod module;
 mod params;
-pub mod signing;
 
 pub use abci_handler::*;
 pub use client::*;

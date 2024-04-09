@@ -1,10 +1,10 @@
 //! Default formatting implementation for `u64`
 
-use gears::types::rendering::screen::Content;
+use crate::types::rendering::screen::Content;
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, PrimitiveValueRenderer,
+};
 use num_format::Buffer;
-// use proto_messages::cosmos::tx::v1beta1::screen::Content;
-
-use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
 use super::i64::format_get;
 
@@ -19,7 +19,7 @@ impl PrimitiveValueRenderer<u64> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::signing::renderer::value_renderer::{
+    use crate::x::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
 

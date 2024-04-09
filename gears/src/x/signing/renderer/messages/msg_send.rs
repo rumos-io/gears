@@ -1,20 +1,13 @@
-use gears::types::{
+use crate::proto_types::Denom;
+use crate::types::{
     msg::send::MsgSend,
     rendering::screen::{Indent, Screen},
     tx::metadata::Metadata,
 };
-// use proto_messages::cosmos::{
-//     bank::v1beta1::MsgSend,
-//     tx::v1beta1::{
-//         screen::{Indent, Screen},
-//         tx_metadata::Metadata,
-//     },
-// };
-use gears::proto_types::Denom;
 
-use crate::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, TryPrimitiveValueRendererWithMetadata,
-    ValueRenderer,
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,
+    TryPrimitiveValueRendererWithMetadata, ValueRenderer,
 };
 
 impl ValueRenderer for MsgSend {
@@ -23,7 +16,7 @@ impl ValueRenderer for MsgSend {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Error> {
+    ) -> Result<Vec<Screen>, RenderError> {
         let mut screens_vec = Vec::new();
 
         screens_vec.push(Screen {
@@ -58,9 +51,11 @@ impl ValueRenderer for MsgSend {
 mod tests {
     // use proto_messages::cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::screen::Screen};
 
-    use gears::types::{msg::send::MsgSend, rendering::screen::Screen};
+    use crate::types::{msg::send::MsgSend, rendering::screen::Screen};
 
-    use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
+    use crate::x::signing::renderer::{
+        test_functions::get_metadata, value_renderer::ValueRenderer,
+    };
 
     #[test]
     fn msg_send_multiple_coins() -> anyhow::Result<()> {

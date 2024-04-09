@@ -22,6 +22,8 @@ secp256k1 = { workspace = true, features = ["hashes"]}
 bytes = { workspace = true }
 url = { workspace = true }
 nutype = { workspace = true, features = ["serde"]}
+num-format = { workspace = true, features = ["with-num-bigint"] }
+num-bigint = { workspace = true }
 
 #utils
 anyhow = { workspace = true }

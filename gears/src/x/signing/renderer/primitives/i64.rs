@@ -2,11 +2,11 @@
 
 use std::sync::OnceLock;
 
-use gears::types::rendering::screen::Content;
+use crate::types::rendering::screen::Content;
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, PrimitiveValueRenderer,
+};
 use num_format::{Buffer, CustomFormat, Grouping};
-// use proto_messages::cosmos::tx::v1beta1::screen::Content;
-
-use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
 const THOUSAND_SEPARATOR: &str = "'";
 
@@ -36,7 +36,7 @@ impl PrimitiveValueRenderer<i64> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::signing::renderer::value_renderer::{
+    use crate::x::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
 

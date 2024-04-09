@@ -1,19 +1,16 @@
-use gears::{
+use crate::proto_types::Denom;
+use crate::{
     crypto::key::public::PublicKey,
     types::{rendering::screen::Screen, tx::metadata::Metadata},
 };
-// use proto_messages::cosmos::tx::v1beta1::{
-//     public_key::PublicKey, screen::Screen, tx_metadata::Metadata,
-// };
-use gears::proto_types::Denom;
 
-use crate::signing::renderer::value_renderer::{Error, ValueRenderer};
+use crate::x::signing::renderer::value_renderer::{RenderError, ValueRenderer};
 
 impl ValueRenderer for PublicKey {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Error> {
+    ) -> Result<Vec<Screen>, RenderError> {
         match self {
             PublicKey::Secp256k1(key) => ValueRenderer::format(key, get_metadata),
         }
@@ -22,12 +19,10 @@ impl ValueRenderer for PublicKey {
 
 #[cfg(test)]
 mod tests {
-    // use proto_messages::cosmos::{
-    //     crypto::secp256k1::v1beta1::PubKey,
-    //     tx::v1beta1::screen::{Content, Indent, Screen},
-    // };
-    use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
-    use gears::{
+    use crate::x::signing::renderer::{
+        test_functions::get_metadata, value_renderer::ValueRenderer,
+    };
+    use crate::{
         crypto::secp256k1::Secp256k1PubKey,
         types::rendering::screen::{Content, Indent, Screen},
     };

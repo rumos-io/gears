@@ -2,9 +2,11 @@
 
 // use proto_messages::cosmos::tx::v1beta1::screen::Content;
 
-use gears::types::rendering::screen::Content;
+use crate::types::rendering::screen::Content;
 
-use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, PrimitiveValueRenderer,
+};
 
 impl PrimitiveValueRenderer<bool> for DefaultPrimitiveRenderer {
     fn format(value: bool) -> Content {

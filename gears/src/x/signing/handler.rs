@@ -1,16 +1,16 @@
 use std::collections::BTreeMap;
 
-use crate::signing::renderer::tx::Envelope;
-use ciborium::{value::CanonicalValue, Value};
-use gears::types::{
+use crate::types::{
     rendering::screen::Screen,
     tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
+use crate::x::signing::renderer::tx::Envelope;
+use ciborium::{value::CanonicalValue, Value};
 // use proto_messages::cosmos::tx::v1beta1::{
 //     message::Message, screen::Screen, signer_data::SignerData, tx_data::TxData,
 //     tx_metadata::Metadata,
 // };
-use gears::proto_types::Denom;
+use crate::proto_types::Denom;
 
 use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 
@@ -49,14 +49,13 @@ impl SignModeHandler {
 mod tests {
     use std::{collections::BTreeMap, str::FromStr};
 
-    use ciborium::Value;
-    use gears::ibc::{
+    use crate::ibc::{
         address::AccAddress,
         tx::mode_info::{ModeInfo, SignMode},
     };
-    use gears::proto_types::{Denom, Uint256};
-    use gears::tendermint::types::chain_id::ChainId;
-    use gears::types::{
+    use crate::proto_types::{Denom, Uint256};
+    use crate::tendermint::types::chain_id::ChainId;
+    use crate::types::{
         auth::{fee::Fee, info::AuthInfo},
         base::{coin::Coin, send::SendCoins},
         msg::send::MsgSend,
@@ -67,26 +66,8 @@ mod tests {
         signing::SignerInfo,
         tx::{body::TxBody, data::TxData, signer::SignerData},
     };
-
-    // use proto_messages::cosmos::{
-    //     bank::v1beta1::MsgSend,
-    //     base::v1beta1::{Coin, SendCoins},
-    //     tx::v1beta1::{
-    //         auth_info::AuthInfo,
-    //         cbor::Cbor,
-    //         fee::Fee,
-    //         mode_info::{ModeInfo, SignMode},
-    //         screen::{Content, Indent, Screen},
-    //         signer::SignerInfo,
-    //         signer_data::SignerData,
-    //         tx_body::TxBody,
-    //         tx_data::TxData,
-    //     },
-    // };
-    // use proto_types::{AccAddress, Denom, Uint256};
-    // use tendermint::informal::chain::Id;
-
-    use crate::signing::{handler::SignModeHandler, renderer::test_functions::get_metadata};
+    use crate::x::signing::{handler::SignModeHandler, renderer::test_functions::get_metadata};
+    use ciborium::Value;
 
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {

@@ -1,10 +1,10 @@
 use std::marker::PhantomData;
 
-use gears::ibc::{
+use gears::{ibc::{
     address::AccAddress,
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
-};
+}, x::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer}};
 use gears::proto_types::Denom;
 use gears::store::database::{Database, PrefixDB};
 
@@ -36,11 +36,7 @@ use prost::Message as ProstMessage;
 // use proto_types::{AccAddress, Denom};
 use gears::store::StoreKey;
 
-use crate::{
-    module::Module,
-    signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
-    Params,
-};
+use crate::{module::Module, Params};
 
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(

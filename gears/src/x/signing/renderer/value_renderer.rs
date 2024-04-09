@@ -1,14 +1,10 @@
 //! Trait for formatting all kind of values into `Screen`
 
-use gears::types::{
+use crate::proto_types::Denom;
+use crate::types::{
     rendering::screen::{Content, Screen},
     tx::metadata::Metadata,
 };
-// use proto_messages::cosmos::tx::v1beta1::{
-//     screen::{Content, Screen},
-//     tx_metadata::Metadata,
-// };
-use gears::proto_types::Denom;
 
 /// Render primitive type into content for `Screen`.
 pub trait PrimitiveValueRenderer<V> {
@@ -18,7 +14,7 @@ pub trait PrimitiveValueRenderer<V> {
 
 pub trait TryPrimitiveValueRenderer<V> {
     /// Try to get a string representation of some `V` wrapped in a Content
-    fn try_format(value: V) -> Result<Content, Error>;
+    fn try_format(value: V) -> Result<Content, RenderError>;
 }
 
 pub trait TryPrimitiveValueRendererWithMetadata<V> {
@@ -27,12 +23,12 @@ pub trait TryPrimitiveValueRendererWithMetadata<V> {
     fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
         value: V,
         get_metadata: &F,
-    ) -> Result<Content, Error>;
+    ) -> Result<Content, RenderError>;
 }
 
 #[cfg_attr(test, derive(PartialEq, Eq))]
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum RenderError {
     #[error("not implemented")]
     NotImplemented,
     #[error("`{0}`")]
@@ -44,7 +40,7 @@ pub trait ValueRenderer {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
-    ) -> Result<Vec<Screen>, Error>;
+    ) -> Result<Vec<Screen>, RenderError>;
 }
 
 /// Default implementation of `PrimitiveValueRenderer` for `Screen`. This is an attempt

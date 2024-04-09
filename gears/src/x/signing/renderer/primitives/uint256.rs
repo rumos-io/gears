@@ -1,14 +1,13 @@
 //! Default formatting implementation for `Uint256` - 256 bit unsigned integer
 
-use std::str::FromStr;
-
-use gears::types::rendering::screen::Content;
+use crate::proto_types::Uint256;
+use crate::types::rendering::screen::Content;
+use crate::x::signing::renderer::value_renderer::{
+    DefaultPrimitiveRenderer, PrimitiveValueRenderer,
+};
 use num_bigint::BigUint;
 use num_format::WriteFormatted;
-// use proto_messages::cosmos::tx::v1beta1::screen::Content;
-use gears::proto_types::Uint256;
-
-use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
+use std::str::FromStr;
 
 use super::i64::format_get;
 
@@ -26,11 +25,9 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use gears::types::rendering::screen::Content;
-    // use proto_messages::cosmos::tx::v1beta1::screen::Content;
-    use gears::proto_types::Uint256;
-
-    use crate::signing::renderer::value_renderer::{
+    use crate::proto_types::Uint256;
+    use crate::types::rendering::screen::Content;
+    use crate::x::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
 
