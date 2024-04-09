@@ -1,6 +1,8 @@
 use std::{path::Path, process::Child, str::FromStr};
 
-use crate::{baseapp::Genesis, client::genesis_account::{genesis_account_add, GenesisCommand}, types::base::{coin::Coin, send::SendCoins}};
+use crate::{
+    baseapp::genesis::Genesis, commands::node::{genesis::{genesis_account_add, GenesisCommand}, init::{init, InitCommand, InitCommandBuilder}}, types::base::{coin::Coin, send::SendCoins}
+};
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
 use ibc_types::address::AccAddress;
@@ -42,14 +44,13 @@ impl TmpChild {
             env_vars: None,
         };
 
-        let opt: crate::client::init::InitCommand =
-            crate::client::init::InitCommandBuilder::default()
-                .home(tmp_dir.to_path_buf())
-                .chain_id(ChainId::from_str("test-chain")?)
-                .moniker("test".to_owned())
-                .build()?;
+        let opt: InitCommand = InitCommandBuilder::default()
+            .home(tmp_dir.to_path_buf())
+            .chain_id(ChainId::from_str("test-chain")?)
+            .moniker("test".to_owned())
+            .build()?;
 
-        crate::client::init::init::<_, AC>(opt, genesis)?;
+        init::<_, AC>(opt, genesis)?;
 
         let genesis_account_cmd = GenesisCommand {
             home: tmp_dir.to_path_buf(),

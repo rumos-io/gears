@@ -11,9 +11,15 @@ use gaia_rs::{
     GaiaApplication, GaiaCore,
 };
 use gears::{
-    application::{command::app::AppCommands, node::NodeApplication},
-    baseapp::{run::RunCommand, Genesis},
-    client::keys::{keys, AddKeyCommand, KeyCommand},
+    application::node::NodeApplication,
+    baseapp::genesis::Genesis,
+    commands::{
+        client::keys::{keys, AddKeyCommand, KeyCommand, KeyringBackend},
+        node::{
+            run::{LogLevel, RunCommand},
+            AppCommands,
+        },
+    },
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
 };
 use gears::{
@@ -55,7 +61,7 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
             address: DEFAULT_ADDRESS,
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             read_buf_size: 1048576,
-            log_level: gears::baseapp::run::LogLevel::Off,
+            log_level: LogLevel::Off,
         };
 
         let _ = node.execute(AppCommands::Run(cmd));
@@ -86,7 +92,7 @@ pub fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
         name: KEY_NAME.to_owned(),
         recover: Default::default(),
         home: home.into(),
-        keyring_backend: gears::client::keys::KeyringBackend::Test,
+        keyring_backend: KeyringBackend::Test,
     };
 
     keys(KeyCommand::Add(cmd))?;

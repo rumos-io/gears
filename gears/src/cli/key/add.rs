@@ -2,10 +2,7 @@ use std::{marker::PhantomData, path::PathBuf};
 
 use clap::{ArgAction, ValueHint};
 
-use crate::{
-    application::ApplicationInfo,
-    client::keys::{AddKeyCommand, KeyringBackend},
-};
+use crate::{application::ApplicationInfo, commands::client::keys::{AddKeyCommand, KeyringBackend}};
 
 #[derive(Debug, Clone, ::clap::Args)]
 #[command(

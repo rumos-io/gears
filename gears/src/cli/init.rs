@@ -3,7 +3,7 @@ use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 use clap::{ArgAction, ValueHint};
 use tendermint::types::chain_id::ChainId;
 
-use crate::{application::ApplicationInfo, client::init::InitCommand};
+use crate::{application::ApplicationInfo, commands::node::init::InitCommand};
 
 /// Initialize configuration files
 #[derive(Debug, Clone, ::clap::Args)]

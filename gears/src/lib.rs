@@ -2,10 +2,11 @@ pub mod application;
 pub mod baseapp;
 #[cfg(feature = "cli")]
 pub mod cli;
-pub mod client;
+pub mod commands;
 pub mod config;
 pub mod defaults;
 pub mod error;
+pub mod rest;
 pub(crate) mod runtime;
 pub mod types;
 #[cfg(feature = "utils")]

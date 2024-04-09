@@ -1,7 +1,7 @@
 use crate::{
     application::{handlers::ABCIHandler, ApplicationInfo},
-    baseapp::{BaseApp, Genesis},
-    client::rest::handlers::{node_info, staking_params, txs},
+    baseapp::{genesis::Genesis, BaseApp},
+    rest::handlers::{node_info, staking_params, txs},
     runtime::runtime,
     types::tx::TxMessage,
     x::params::ParamsSubspaceKey,

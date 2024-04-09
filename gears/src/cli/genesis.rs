@@ -3,10 +3,7 @@ use std::{marker::PhantomData, path::PathBuf};
 use clap::{ArgAction, ValueHint};
 use ibc_types::address::AccAddress;
 
-use crate::{
-    application::ApplicationInfo, client::genesis_account::GenesisCommand,
-    types::base::send::SendCoins,
-};
+use crate::{application::ApplicationInfo, commands::node::genesis::GenesisCommand, types::base::send::SendCoins};
 
 /// Add a genesis account to genesis.json. The provided account must specify the
 /// account address and a list of initial coins. The list of initial tokens must contain valid denominations.

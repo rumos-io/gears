@@ -5,25 +5,17 @@ use axum::{
     routing::get,
     Json, Router,
 };
+use gears::store::StoreKey;
+use gears::tendermint::application::ABCIApplication;
 use gears::{
     application::{handlers::ABCIHandler, ApplicationInfo},
-    baseapp::{BaseApp, Genesis},
-    client::rest::{error::Error, Pagination, RestState},
+    baseapp::{genesis::Genesis, BaseApp},
     ibc::address::AccAddress,
+    rest::{error::Error, Pagination, RestState},
     tendermint::types::{proto::Protobuf, request::query::RequestQuery},
     types::tx::TxMessage,
     x::params::ParamsSubspaceKey,
 };
-// use proto_messages::cosmos::{
-//     bank::v1beta1::{
-//         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
-//         QueryBalanceResponse, QueryTotalSupplyResponse,
-//     },
-//     ibc::protobuf::Protobuf,
-//     tx::v1beta1::message::Message,
-// };
-use gears::store::StoreKey;
-use gears::tendermint::application::ABCIApplication;
 use serde::Deserialize;
 
 use crate::types::query::{

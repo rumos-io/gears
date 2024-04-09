@@ -5,7 +5,7 @@ use ibc_types::address::AccAddress;
 use tendermint::informal::genesis::Genesis;
 
 use crate::{
-    baseapp::Genesis as SDKGenesis, config::ConfigDirectory, error::AppError,
+    baseapp::genesis::Genesis as SDKGenesis, config::ConfigDirectory, error::AppError,
     types::base::send::SendCoins,
 };
 

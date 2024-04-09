@@ -1,9 +1,9 @@
-use super::Genesis;
 use crate::application::handlers::ABCIHandler;
 use crate::application::ApplicationInfo;
+use crate::baseapp::genesis::Genesis;
 use crate::baseapp::BaseApp;
-use crate::client::rest::{run_rest_server, RestState};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
+use crate::rest::{run_rest_server, RestState};
 use crate::types::tx::TxMessage;
 use crate::x::params::{Keeper, ParamsSubspaceKey};
 use axum::Router;

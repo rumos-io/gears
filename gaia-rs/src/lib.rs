@@ -6,12 +6,12 @@ use bank::cli::query::BankQueryHandler;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use gears::application::client::Client;
-use gears::application::command::NilAux;
-use gears::application::command::NilAuxCommand;
 use gears::application::handlers::AuxHandler;
 use gears::application::handlers::{QueryHandler, TxHandler};
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
+use gears::commands::NilAux;
+use gears::commands::NilAuxCommand;
 use gears::ibc::address::AccAddress;
 use genesis::GenesisState;
 // use ibc::client::cli::query_handler::IbcQueryHandler;
@@ -121,7 +121,7 @@ impl Node for GaiaCore {
     type ApplicationConfig = config::AppConfig;
 
     fn router<AI: ApplicationInfo>() -> axum::Router<
-        gears::client::rest::RestState<
+        gears::rest::RestState<
             Self::StoreKey,
             Self::ParamsSubspaceKey,
             Self::Message,

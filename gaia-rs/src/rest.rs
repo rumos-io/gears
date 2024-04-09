@@ -3,7 +3,7 @@ use gears::application::handlers::ABCIHandler;
 use gears::store::StoreKey;
 use gears::types::tx::TxMessage;
 use gears::{
-    application::ApplicationInfo, baseapp::Genesis, client::rest::RestState,
+    application::ApplicationInfo, baseapp::genesis::Genesis, rest::RestState,
     x::params::ParamsSubspaceKey,
 };
 

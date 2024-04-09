@@ -1,7 +1,7 @@
 use clap::{ArgAction, Subcommand, ValueHint};
 use tendermint::types::proto::block::Height;
 
-use crate::{client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
+use crate::{commands::client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
 
 /// Querying subcommands
 #[derive(Debug, Clone, ::clap::Args)]

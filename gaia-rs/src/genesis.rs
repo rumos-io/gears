@@ -10,7 +10,7 @@ pub struct GenesisState {
     pub auth: AuthGenesis,
 }
 
-impl gears::baseapp::Genesis for GenesisState {
+impl gears::baseapp::genesis::Genesis for GenesisState {
     fn add_genesis_account(
         &mut self,
         address: AccAddress,

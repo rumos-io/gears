@@ -1,5 +1,5 @@
 use super::pagination::parse_pagination;
-use crate::client::rest::{error::Error, pagination::Pagination};
+use crate::rest::{error::Error, pagination::Pagination};
 use crate::types::response::any::AnyTx;
 use crate::types::response::tx::TxResponse;
 use crate::types::response::tx_event::GetTxsEventResponse;

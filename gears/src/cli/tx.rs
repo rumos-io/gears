@@ -5,7 +5,7 @@ use tendermint::types::chain_id::ChainId;
 
 use crate::{
     application::ApplicationInfo,
-    client::{keys::KeyringBackend, tx::TxCommand},
+    commands::client::{keys::KeyringBackend, tx::TxCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     types::base::send::SendCoins,
 };

@@ -8,11 +8,12 @@ use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
 
 use crate::application::handlers::TxHandler;
-use crate::client::keys::KeyringBackend;
 use crate::crypto::key::pair::KeyPair;
 use crate::runtime::runtime;
 use crate::types::base::send::SendCoins;
 use crate::types::tx::raw::TxRaw;
+
+use super::keys::KeyringBackend;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct TxCommand<C> {

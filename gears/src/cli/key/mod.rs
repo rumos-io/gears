@@ -1,4 +1,4 @@
-use crate::{application::ApplicationInfo, client::keys::KeyCommand};
+use crate::{application::ApplicationInfo, commands::client::keys::KeyCommand};
 
 use self::add::CliAddKeyCommand;
 

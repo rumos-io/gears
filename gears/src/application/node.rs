@@ -1,13 +1,15 @@
 use super::{
-    command::app::AppCommands,
     handlers::{ABCIHandler, AuxHandler},
     ApplicationInfo,
 };
-use crate::x::params::Keeper as ParamsKeeper;
 use crate::{
-    baseapp::{run, Genesis},
-    client::{genesis_account, init, rest::RestState},
+    baseapp::genesis::Genesis,
+    commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
+    x::params::Keeper as ParamsKeeper,
+};
+use crate::{
     config::{ApplicationConfig, Config},
+    rest::RestState,
     types::tx::TxMessage,
     x::params::ParamsSubspaceKey,
 };
@@ -74,18 +76,16 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     pub fn execute(self, command: AppCommands<Core::AuxCommands>) -> anyhow::Result<()> {
         match command {
             AppCommands::Init(cmd) => {
-                init::init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
+                init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
             }
-            AppCommands::Run(cmd) => run::run(
+            AppCommands::Run(cmd) => run(
                 cmd,
                 ParamsKeeper::new(self.params_store_key),
                 self.params_subspace_key,
                 self.abci_handler_builder,
                 self.router,
             )?,
-            AppCommands::GenesisAdd(cmd) => {
-                genesis_account::genesis_account_add::<Core::Genesis>(cmd)?
-            }
+            AppCommands::GenesisAdd(cmd) => genesis_account_add::<Core::Genesis>(cmd)?,
             AppCommands::Aux(cmd) => {
                 let cmd = self.core.prepare_aux(cmd)?;
                 self.core.handle_aux(cmd)?;

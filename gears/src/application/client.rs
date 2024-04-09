@@ -1,8 +1,5 @@
-use super::{
-    command::client::ClientCommands,
-    handlers::{AuxHandler, QueryHandler, TxHandler},
-};
-use crate::client::{keys, query::run_query, tx::run_tx};
+use super::handlers::{AuxHandler, QueryHandler, TxHandler};
+use crate::commands::client::{keys::keys, query::run_query, tx::run_tx, ClientCommands};
 
 /// A Gears client application.
 pub trait Client: TxHandler + QueryHandler + AuxHandler {}
@@ -36,7 +33,7 @@ impl<'a, Core: Client> ClientApplication<Core> {
 
                 println!("{}", serde_json::to_string_pretty(&query)?);
             }
-            ClientCommands::Keys(cmd) => keys::keys(cmd)?,
+            ClientCommands::Keys(cmd) => keys(cmd)?,
         };
 
         Ok(())
