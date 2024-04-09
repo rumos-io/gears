@@ -6,7 +6,7 @@ use gears::types::{base::send::SendCoins, rendering::screen::Content, tx::metada
 //     base::v1beta1::SendCoins,
 //     tx::v1beta1::{screen::Content, tx_metadata::Metadata},
 // };
-use proto_types::Denom;
+use gears::proto_types::Denom;
 
 impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
@@ -47,7 +47,7 @@ mod tests {
     //     base::v1beta1::{Coin, SendCoins},
     //     tx::v1beta1::screen::Content,
     // };
-    use proto_types::Uint256;
+    use gears::proto_types::Uint256;
 
     use crate::signing::renderer::{
         test_functions::get_metadata,

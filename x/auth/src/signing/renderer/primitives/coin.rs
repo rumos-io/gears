@@ -8,8 +8,8 @@ use gears::types::tx::metadata::Metadata;
 //     base::v1beta1::Coin,
 //     tx::v1beta1::{screen::Content, tx_metadata::Metadata},
 // };
-use proto_types::Uint256;
-use proto_types::{Decimal256, Denom};
+use gears::proto_types::Uint256;
+use gears::proto_types::{Decimal256, Denom};
 
 impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
@@ -118,7 +118,7 @@ mod tests {
     use anyhow::Ok;
     use gears::types::{base::coin::Coin, rendering::screen::Content};
     // use proto_messages::cosmos::{base::v1beta1::Coin, tx::v1beta1::screen::Content};
-    use proto_types::Uint256;
+    use gears::proto_types::Uint256;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {

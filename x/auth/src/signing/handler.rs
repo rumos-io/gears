@@ -10,7 +10,7 @@ use gears::types::{
 //     message::Message, screen::Screen, signer_data::SignerData, tx_data::TxData,
 //     tx_metadata::Metadata,
 // };
-use proto_types::Denom;
+use gears::proto_types::Denom;
 
 use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 
@@ -50,6 +50,12 @@ mod tests {
     use std::{collections::BTreeMap, str::FromStr};
 
     use ciborium::Value;
+    use gears::ibc::{
+        address::AccAddress,
+        tx::mode_info::{ModeInfo, SignMode},
+    };
+    use gears::proto_types::{Denom, Uint256};
+    use gears::tendermint::types::chain_id::ChainId;
     use gears::types::{
         auth::{fee::Fee, info::AuthInfo},
         base::{coin::Coin, send::SendCoins},
@@ -61,12 +67,6 @@ mod tests {
         signing::SignerInfo,
         tx::{body::TxBody, data::TxData, signer::SignerData},
     };
-    use ibc_proto::{
-        address::AccAddress,
-        tx::mode_info::{ModeInfo, SignMode},
-    };
-    use proto_types::{Denom, Uint256};
-    use tendermint::types::chain_id::ChainId;
 
     // use proto_messages::cosmos::{
     //     bank::v1beta1::MsgSend,

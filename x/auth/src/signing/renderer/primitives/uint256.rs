@@ -6,7 +6,7 @@ use gears::types::rendering::screen::Content;
 use num_bigint::BigUint;
 use num_format::WriteFormatted;
 // use proto_messages::cosmos::tx::v1beta1::screen::Content;
-use proto_types::Uint256;
+use gears::proto_types::Uint256;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 
@@ -28,7 +28,7 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
 mod tests {
     use gears::types::rendering::screen::Content;
     // use proto_messages::cosmos::tx::v1beta1::screen::Content;
-    use proto_types::Uint256;
+    use gears::proto_types::Uint256;
 
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,

@@ -5,7 +5,7 @@ use gears::{
 // use proto_messages::cosmos::tx::v1beta1::{
 //     public_key::PublicKey, screen::Screen, tx_metadata::Metadata,
 // };
-use proto_types::Denom;
+use gears::proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{Error, ValueRenderer};
 
@@ -27,7 +27,10 @@ mod tests {
     //     tx::v1beta1::screen::{Content, Indent, Screen},
     // };
     use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
-    use gears::{crypto::secp256k1::Secp256k1PubKey, types::rendering::screen::{Content, Indent, Screen}};
+    use gears::{
+        crypto::secp256k1::Secp256k1PubKey,
+        types::rendering::screen::{Content, Indent, Screen},
+    };
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {

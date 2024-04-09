@@ -1,14 +1,14 @@
+use gears::ibc::query::request::account::QueryAccountRequest;
+use gears::ibc::Protobuf as _;
+use gears::store::database::Database;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
-use ibc_proto::query::request::account::QueryAccountRequest;
-use ibc_proto::Protobuf as _;
-use store::database::Database;
 // use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
 // use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use store::StoreKey;
-use tendermint::types::proto::Protobuf;
-use tendermint::types::request::query::RequestQuery;
+use gears::store::StoreKey;
+use gears::tendermint::types::proto::Protobuf;
+use gears::tendermint::types::request::query::RequestQuery;
 
 use crate::{GenesisState, Keeper};
 

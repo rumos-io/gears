@@ -12,7 +12,7 @@ use gears::{
 //         tx_metadata::Metadata,
 //     },
 // };
-use proto_types::Denom;
+use gears::proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, Error, TryPrimitiveValueRenderer, ValueRenderer,

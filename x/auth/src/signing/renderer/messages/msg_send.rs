@@ -1,4 +1,8 @@
-use gears::types::{msg::send::MsgSend, rendering::screen::{Indent, Screen}, tx::metadata::Metadata};
+use gears::types::{
+    msg::send::MsgSend,
+    rendering::screen::{Indent, Screen},
+    tx::metadata::Metadata,
+};
 // use proto_messages::cosmos::{
 //     bank::v1beta1::MsgSend,
 //     tx::v1beta1::{
@@ -6,7 +10,7 @@ use gears::types::{msg::send::MsgSend, rendering::screen::{Indent, Screen}, tx::
 //         tx_metadata::Metadata,
 //     },
 // };
-use proto_types::Denom;
+use gears::proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, Error, PrimitiveValueRenderer, TryPrimitiveValueRendererWithMetadata,

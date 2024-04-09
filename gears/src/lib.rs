@@ -13,3 +13,23 @@ pub mod utils;
 pub mod x;
 
 pub mod crypto;
+
+#[cfg(feature = "export")]
+pub mod ibc {
+    pub use ibc_proto::*;
+}
+
+#[cfg(feature = "export")]
+pub mod tendermint {
+    pub use tendermint::*;
+}
+
+#[cfg(feature = "export")]
+pub mod proto_types {
+    pub use proto_types::*;
+}
+
+#[cfg(feature = "export")]
+pub mod store {
+    pub use store_crate::*;
+}

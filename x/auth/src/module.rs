@@ -1,4 +1,4 @@
-use ibc_proto::address::AccAddress;
+use gears::ibc::address::AccAddress;
 
 pub enum Module {
     FeeCollector,

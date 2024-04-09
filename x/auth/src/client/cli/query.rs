@@ -3,14 +3,14 @@ use std::borrow::Cow;
 use bytes::Bytes;
 use clap::{Args, Subcommand};
 
+use gears::ibc::Protobuf;
+use gears::ibc::{address::AccAddress, query::request::account::QueryAccountRequest};
+use gears::tendermint::types::proto::Protobuf as _;
 use gears::{
     application::handlers::QueryHandler,
     types::query::{account::QueryAccountResponse, Query},
 };
-use ibc_proto::Protobuf;
-use ibc_proto::{address::AccAddress, query::request::account::QueryAccountRequest};
 use serde::{Deserialize, Serialize};
-use tendermint::types::proto::Protobuf as _;
 
 // use proto_messages::cosmos::{
 //     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},

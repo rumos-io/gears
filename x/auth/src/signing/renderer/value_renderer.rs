@@ -8,7 +8,7 @@ use gears::types::{
 //     screen::{Content, Screen},
 //     tx_metadata::Metadata,
 // };
-use proto_types::Denom;
+use gears::proto_types::Denom;
 
 /// Render primitive type into content for `Screen`.
 pub trait PrimitiveValueRenderer<V> {

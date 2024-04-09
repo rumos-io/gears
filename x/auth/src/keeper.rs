@@ -1,6 +1,6 @@
 use bytes::Bytes;
-use ibc_proto::{address::AccAddress, query::request::account::QueryAccountRequest};
-use store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
+use gears::ibc::{address::AccAddress, query::request::account::QueryAccountRequest};
+use gears::store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
 
 use gears::{
     error::AppError,
@@ -21,8 +21,8 @@ use prost::Message;
 //     },
 //     ibc::protobuf::Protobuf,
 // };
-use store::{QueryableKVStore, StoreKey, TransactionalKVStore};
-use tendermint::types::proto::Protobuf as _;
+use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
+use gears::tendermint::types::proto::Protobuf as _;
 
 use crate::{ante::AuthKeeper, module::Module, AuthParamsKeeper, GenesisState, Params};
 

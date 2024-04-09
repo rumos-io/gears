@@ -16,6 +16,9 @@
 // use tendermint::types::chain_id::ChainId; /uf::Protobuf;
 // use tendermint::informal::chain::Id;
 
+use gears::ibc::address::AccAddress;
+use gears::proto_types::Denom;
+use gears::tendermint::types::chain_id::ChainId;
 use gears::{
     crypto::key::public::PublicKey,
     types::{
@@ -25,9 +28,6 @@ use gears::{
         tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
     },
 };
-use ibc_proto::address::AccAddress;
-use proto_types::Denom;
-use tendermint::types::chain_id::ChainId;
 
 use crate::signing::{
     hasher::hash_get,
@@ -36,7 +36,7 @@ use crate::signing::{
         TryPrimitiveValueRendererWithMetadata, ValueRenderer,
     },
 };
-use tendermint::types::proto::Protobuf;
+use gears::tendermint::types::proto::Protobuf;
 
 /// Envelope is an internal data structure used to generate the tx envelope
 /// screens. Used in the same way as the Cosmos SDK Envelope type:
@@ -255,6 +255,8 @@ impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
 mod tests {
     use std::str::FromStr;
 
+    use gears::ibc::address::AccAddress;
+    use gears::ibc::tx::mode_info::{ModeInfo, SignMode};
     use gears::types::auth::fee::Fee;
     use gears::types::auth::info::AuthInfo;
     use gears::types::base::coin::Coin;
@@ -265,8 +267,6 @@ mod tests {
     use gears::types::tx::body::TxBody;
     use gears::types::tx::data::TxData;
     use gears::types::tx::signer::SignerData;
-    use ibc_proto::address::AccAddress;
-    use ibc_proto::tx::mode_info::{ModeInfo, SignMode};
     // use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
     // use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
     // use proto_messages::cosmos::tx::v1beta1::signer_data::SignerData;
@@ -281,8 +281,8 @@ mod tests {
     //         tx_data::TxData,
     //     },
     // };
-    use proto_types::{Denom, Uint256};
-    use tendermint::types::chain_id::ChainId;
+    use gears::proto_types::{Denom, Uint256};
+    use gears::tendermint::types::chain_id::ChainId;
     // use tendermint::informal::chain::Id;
 
     use crate::signing::renderer::test_functions::get_metadata;

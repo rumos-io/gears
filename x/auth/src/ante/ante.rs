@@ -1,12 +1,12 @@
 use std::marker::PhantomData;
 
-use ibc_proto::{
+use gears::ibc::{
     address::AccAddress,
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
-use proto_types::Denom;
-use store::database::{Database, PrefixDB};
+use gears::proto_types::Denom;
+use gears::store::database::{Database, PrefixDB};
 
 use gears::{
     error::AppError,
@@ -34,7 +34,7 @@ use prost::Message as ProstMessage;
 //     },
 // };
 // use proto_types::{AccAddress, Denom};
-use store::StoreKey;
+use gears::store::StoreKey;
 
 use crate::{
     module::Module,

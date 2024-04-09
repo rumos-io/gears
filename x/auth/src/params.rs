@@ -1,17 +1,17 @@
+use gears::ibc::serializers::serialize_number_to_string;
+use gears::store::database::{Database, PrefixDB};
 use gears::{
     types::context::{QueryableContext, TransactionalContext},
     x::params::ParamsSubspaceKey,
 };
-use ibc_proto::serializers::serialize_number_to_string;
 use serde::{Deserialize, Serialize};
-use store::database::{Database, PrefixDB};
 //use params_module::ParamsSubspaceKey;
 // use proto_messages::utils::serialize_number_to_string;
 // use serde::{Deserialize, Serialize};
-use serde_aux::prelude::deserialize_number_from_string;
-use store::{
+use gears::store::{
     types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,
 };
+use serde_aux::prelude::deserialize_number_from_string;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Params {
