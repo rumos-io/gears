@@ -1,10 +1,10 @@
-use database::{Database, PrefixDB};
+use gears::store::database::{Database, PrefixDB};
+use gears::store::{ReadPrefixStore, StoreKey, WritePrefixStore};
 use gears::{
     types::context::{QueryableContext, TransactionalContext},
     x::params::ParamsSubspaceKey,
 };
 use serde::{Deserialize, Serialize};
-use store::{ReadPrefixStore, StoreKey, WritePrefixStore};
 
 const KEY_SEND_ENABLED: [u8; 11] = [083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100]; // "SendEnabled"
 const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [

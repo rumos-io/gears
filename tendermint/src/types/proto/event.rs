@@ -1,4 +1,5 @@
 use bytes::Bytes;
+pub use tendermint_informal::abci::EventAttributeIndexExt;
 
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
 pub struct Event {
@@ -6,6 +7,15 @@ pub struct Event {
     pub r#type: String,
     #[prost(message, repeated, tag = "2")]
     pub attributes: Vec<EventAttribute>,
+}
+
+impl Event {
+    pub fn new(kind: &str, attr: impl IntoIterator<Item = EventAttribute>) -> Self {
+        Self {
+            r#type: kind.to_owned(),
+            attributes: attr.into_iter().collect(),
+        }
+    }
 }
 
 impl From<inner::Event> for Event {
@@ -44,6 +54,12 @@ pub struct EventAttribute {
     /// nondeterministic
     #[prost(bool, tag = "3")]
     pub index: bool,
+}
+
+impl EventAttribute {
+    pub fn new(key: Bytes, value: Bytes, index: bool) -> Self {
+        Self { key, value, index }
+    }
 }
 
 impl From<inner::EventAttribute> for EventAttribute {

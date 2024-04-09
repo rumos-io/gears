@@ -4,18 +4,27 @@ use std::fmt::Debug;
 use bytes::Bytes;
 use clap::{Args, Subcommand};
 
-use gears::application::handlers::QueryHandler;
-use prost::Message;
-use proto_messages::cosmos::{
-    bank::v1beta1::{
-        QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
-        QueryDenomsMetadataResponse,
-    },
-    ibc::protobuf::Protobuf,
-    query::Query,
+use gears::{
+    application::handlers::QueryHandler,
+    ibc::{address::AccAddress, query::request::bank::QueryDenomsMetadataRequest},
+    tendermint::types::proto::Protobuf,
+    types::query::Query,
 };
-use proto_types::AccAddress;
+use prost::Message;
+// use proto_messages::cosmos::{
+//     bank::v1beta1::{
+//         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
+//         QueryDenomsMetadataResponse,
+//     },
+//     ibc::protobuf::Protobuf,
+//     query::Query,
+// };
+// use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
+
+use crate::types::query::{
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataResponse,
+};
 
 #[derive(Args, Debug)]
 pub struct BankQueryCli {
@@ -101,7 +110,7 @@ impl Query for BankQuery {
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            BankQuery::Balances(var) => var.encode_vec(),
+            BankQuery::Balances(var) => var.encode_vec().expect("msg"), // TODO:NOW
             BankQuery::DenomMetadata(var) => var.encode_to_vec(),
         }
     }

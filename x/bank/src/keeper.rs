@@ -1,32 +1,47 @@
 use std::{collections::HashMap, str::FromStr};
 
 use auth::ante::{AuthKeeper, BankKeeper};
+use auth::module::Module;
 use bytes::Bytes;
-use database::ext::UnwrapCorrupt;
-use database::Database;
+use gears::error::AppError;
+use gears::ibc::address::AccAddress;
+use gears::store::database::ext::UnwrapCorrupt;
+use gears::store::database::Database;
 
+use gears::tendermint::types::proto::event::{Event, EventAttribute};
+use gears::tendermint::types::proto::Protobuf;
+use gears::types::base::coin::Coin;
+use gears::types::base::send::SendCoins;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::{QueryableContext, TransactionalContext};
-use gears::{
-    error::AppError,
-    x::{auth::Module, params::ParamsSubspaceKey},
+// use gears::{
+//     error::AppError,
+//     x::{auth::Module, params::ParamsSubspaceKey},
+// };
+// use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
+// use proto_messages::cosmos::ibc::protobuf::Protobuf;
+// use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
+// use proto_messages::cosmos::{
+//     bank::v1beta1::{
+//         MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
+//         QueryBalanceResponse,
+//     },
+//     base::v1beta1::{Coin, SendCoins},
+// };
+use gears::proto_types::{Denom, Uint256};
+use gears::store::types::prefix::mutable::MutablePrefixStore;
+use gears::store::{
+    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
 };
-use proto_messages::cosmos::bank::v1beta1::QueryDenomsMetadataResponse;
-use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
-use proto_messages::cosmos::{
-    bank::v1beta1::{
-        MsgSend, QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
-        QueryBalanceResponse,
-    },
-    base::v1beta1::{Coin, SendCoins},
-};
-use proto_types::{AccAddress, Denom, Uint256};
-use store::types::prefix::mutable::MutablePrefixStore;
-use store::{QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore};
-use tendermint::informal::abci::{Event, EventAttributeIndexExt};
+use gears::types::msg::send::MsgSend;
+use gears::types::tx::metadata::Metadata;
+use gears::x::params::ParamsSubspaceKey;
 
+use crate::types::query::{
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
+    QueryDenomsMetadataResponse,
+};
 use crate::{BankParamsKeeper, GenesisState};
 
 const SUPPLY_KEY: [u8; 1] = [0];
@@ -117,7 +132,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             for coin in balance.coins {
                 denom_balance_store.set(
                     coin.denom.to_string().into_bytes(),
-                    coin.clone().encode_vec(),
+                    coin.clone().encode_vec().expect("msg"), // TODO:NOW
                 );
                 let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
@@ -262,7 +277,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into_bytes(),
-                from_balance.encode_vec(),
+                from_balance.encode_vec().expect("msg"), // TODO:NOW
             );
 
             //TODO: if balance == 0 then denom should be removed from store
@@ -284,15 +299,23 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             to_account_store.set(
                 send_coin.denom.to_string().into_bytes(),
-                to_balance.encode_vec(),
+                to_balance.encode_vec().expect("msg"), // TODO:NOW
             );
 
             events.push(Event::new(
                 "transfer",
-                vec![
-                    ("recipient", String::from(to_address.clone())).index(),
-                    ("sender", String::from(from_address.clone())).index(),
-                    ("amount", send_coin.amount.to_string()).index(),
+                [
+                    EventAttribute::new(
+                        "recipient".into(),
+                        String::from(to_address.clone()).into(),
+                        true,
+                    ),
+                    EventAttribute::new(
+                        "sender".into(),
+                        String::from(from_address.clone()).into(),
+                        true,
+                    ),
+                    EventAttribute::new("amount".into(), send_coin.amount.to_string().into(), true),
                 ],
             ));
         }
@@ -340,7 +363,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         denom_metadata_store.set(
             denom_metadata.base.clone().into_bytes(),
-            denom_metadata.encode_vec(),
+            denom_metadata.encode_vec().expect("msg"), // TODO:NOW
         );
     }
 

@@ -69,6 +69,12 @@ impl From<StoreError> for AppError {
     }
 }
 
+impl From<ibc_proto::errors::Error> for AppError {
+    fn from(value: ibc_proto::errors::Error) -> Self {
+        Self::IBC(value.to_string())
+    }
+}
+
 // impl From<proto_messages::Error> for AppError {
 //     fn from(err: proto_messages::Error) -> AppError {
 //         AppError::InvalidRequest(err.to_string())

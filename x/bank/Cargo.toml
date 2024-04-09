@@ -5,13 +5,13 @@ edition = "2021"
 
 [dependencies]
 #local
-tendermint = {path = "../../tendermint"}
+# tendermint = {path = "../../tendermint"}
 gears = { path = "../../gears" }
-store = { path = "../../store" }
-database = { path = "../../database" }
-proto-types = { path = "../../proto-types" }
-proto-messages = { path = "../../proto-messages" }
-auth = { path = "../auth" }
+# store = { path = "../../store" }
+# database = { path = "../../database" }
+# proto-types = { path = "../../proto-types" }
+# proto-messages = { path = "../../proto-messages" }
+auth = { path = "../auth" } # TODO:NOW REMOVE
 
 #newtypes
 bnum = { workspace = true, features = ["serde"] }

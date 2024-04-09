@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
 mod inner {
+    pub use ibc_proto::bank::Metadata;
     pub use ibc_proto::tx::denom::DenomUnit;
 }
 
@@ -157,6 +158,65 @@ impl From<Metadata> for RawMetadata {
             display,
             name,
             symbol,
+        }
+    }
+}
+
+impl TryFrom<inner::Metadata> for Metadata {
+    type Error = MetadataParseError;
+
+    fn try_from(
+        inner::Metadata {
+            description,
+            denom_units,
+            base,
+            display,
+            name,
+            symbol,
+            uri: _,
+            uri_hash: _,
+        }: inner::Metadata,
+    ) -> Result<Self, Self::Error> {
+        let mut mapped_denom: Vec<DenomUnit> = Vec::with_capacity(denom_units.len());
+        for unit in denom_units {
+            mapped_denom
+                .push(DenomUnit::try_from(unit).map_err(|e| MetadataParseError(e.to_string()))?);
+        }
+
+        Ok(Self {
+            description,
+            denom_units: mapped_denom,
+            base,
+            display,
+            name,
+            symbol,
+        })
+    }
+}
+
+impl From<Metadata> for inner::Metadata {
+    fn from(value: Metadata) -> Self {
+        let Metadata {
+            description,
+            denom_units,
+            base,
+            display,
+            name,
+            symbol,
+        } = value;
+
+        Self {
+            description,
+            denom_units: denom_units
+                .into_iter()
+                .map(inner::DenomUnit::from)
+                .collect(),
+            base,
+            display,
+            name,
+            symbol,
+            uri: String::new(),
+            uri_hash: String::new(),
         }
     }
 }

@@ -1,3 +1,4 @@
+pub mod bank;
 pub mod msg;
 pub mod account;
 pub mod address;
