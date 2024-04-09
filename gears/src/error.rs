@@ -69,8 +69,8 @@ impl From<StoreError> for AppError {
     }
 }
 
-impl From<ibc_proto::errors::Error> for AppError {
-    fn from(value: ibc_proto::errors::Error) -> Self {
+impl From<ibc_types::errors::Error> for AppError {
+    fn from(value: ibc_types::errors::Error) -> Self {
         Self::IBC(value.to_string())
     }
 }

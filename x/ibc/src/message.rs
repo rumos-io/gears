@@ -1,8 +1,13 @@
-use proto_messages::{
-    any::Any,
-    cosmos::ibc::tx::{MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient},
+// use proto_messages::{
+//     any::Any,
+//     cosmos::ibc::tx::{MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient},
+// };
+// use proto_types::AccAddress;
+
+use gears::{
+    ibc::{address::AccAddress, any::google::Any},
+    types::tx::TxMessage,
 };
-use proto_types::AccAddress;
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub enum Message {
@@ -12,7 +17,7 @@ pub enum Message {
     RecoverClient(MsgRecoverClient),
 }
 
-impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {
+impl TxMessage for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
         unimplemented!()
     }
@@ -33,7 +38,7 @@ impl From<Message> for Any {
 }
 
 impl TryFrom<Any> for Message {
-    type Error = proto_messages::Error;
+    type Error = gears::ibc::errors::Error;
 
     fn try_from(_value: Any) -> Result<Self, Self::Error> {
         unimplemented!()

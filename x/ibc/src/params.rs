@@ -1,9 +1,9 @@
-use database::{Database, PrefixDB};
+use gears::store::database::{Database, PrefixDB};
+use gears::store::{ReadPrefixStore, StoreKey, WritePrefixStore};
 use gears::{
     types::context::{QueryableContext, TransactionalContext},
     x::params::{Keeper, ParamsSubspaceKey},
 };
-use store::{ReadPrefixStore, StoreKey, WritePrefixStore};
 
 pub const CLIENT_STATE_KEY: &str = "clientState";
 pub const CLIENT_PARAMS_KEY: &str = "clientParams";

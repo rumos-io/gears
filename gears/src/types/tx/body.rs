@@ -1,13 +1,13 @@
 use super::TxMessage;
-use ibc_proto::any::google::Any;
-use ibc_proto::errors::Error;
+use ibc_types::any::google::Any;
+use ibc_types::errors::Error;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use tendermint::types::proto::Protobuf;
 
 mod inner {
-    pub use ibc_proto::tx::body::TxBody;
+    pub use ibc_types::tx::body::TxBody;
 }
 
 // TxBody is the body of a transaction that all signers sign over.

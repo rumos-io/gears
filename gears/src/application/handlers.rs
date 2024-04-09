@@ -1,4 +1,4 @@
-use ibc_proto::{address::AccAddress, query::request::account::QueryAccountRequest};
+use ibc_types::{address::AccAddress, query::request::account::QueryAccountRequest};
 use serde::{de::DeserializeOwned, Serialize};
 use store_crate::{
     database::{Database, PrefixDB},
@@ -204,10 +204,10 @@ pub trait AuxHandler {
 }
 
 mod inner {
-    pub use ibc_proto::query::response::account::QueryAccountResponse;
+    pub use ibc_types::query::response::account::QueryAccountResponse;
 }
 
-use ibc_proto::Protobuf;
+use ibc_types::Protobuf;
 
 // TODO: we're assuming here that the app has an auth module which handles this query
 fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {

@@ -11,14 +11,14 @@ workspace = true
 #local
 auth = {path = "../x/auth"}
 bank = {path = "../x/bank"}
-ibc = {path = "../x/ibc"}
-database = {path = "../database"}
+# ibc = {path = "../x/ibc"}
+# database = {path = "../database"}
 gears = {path = "../gears", features = [ "cli"]}
 gears-derive = {path = "../gears-derive"}
-proto-messages = {path = "../proto-messages"}
-proto-types = {path = "../proto-types"}
-store = {path = "../store"}
-tendermint = {path = "../tendermint"}
+# proto-messages = {path = "../proto-messages"}
+# proto-types = {path = "../proto-types"}
+# store = {path = "../store"}
+# tendermint = {path = "../tendermint"}
 
 #newtypes
 bytes = { workspace = true }
@@ -35,7 +35,8 @@ serde = { workspace = true }
 axum = { workspace = true }
 
 [dev-dependencies]
-utils = { path = "../utils"}
+# utils = { path = "../utils"}
 url = { workspace = true }
 serde_json = { workspace = true }
-tendermint_tmp = { package = "tendermint", version = "0.34.0", default-features = false } # dont_ask
+gears = {path = "../gears", features = [ "cli", "utils"]}
+# tendermint_tmp = { package = "tendermint", version = "0.34.0", default-features = false } # dont_ask

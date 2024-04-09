@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use ibc_proto::address::AccAddress;
+use ibc_types::address::AccAddress;
 use tendermint::informal::genesis::Genesis;
 
 use crate::{

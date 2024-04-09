@@ -1,6 +1,6 @@
-use gears::error::AppError;
-use proto_messages::cosmos::base::v1beta1::SendCoins;
-use proto_types::AccAddress;
+use gears::{error::AppError, ibc::address::AccAddress, types::base::send::SendCoins};
+// use proto_messages::cosmos::base::v1beta1::SendCoins;
+// use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use auth::GenesisState as AuthGenesis;

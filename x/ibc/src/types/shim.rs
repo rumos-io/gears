@@ -5,7 +5,7 @@ use crate::{
     },
     params::CLIENT_STATE_KEY,
 };
-use database::Database;
+use gears::store::database::Database;
 use gears::types::context::{
     query_context::QueryContext, tx_context::TxContext, QueryableContext, TransactionalContext,
 };

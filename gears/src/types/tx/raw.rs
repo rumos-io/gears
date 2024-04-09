@@ -1,4 +1,4 @@
-use ibc_proto::errors::Error;
+use ibc_types::errors::Error;
 use prost::{bytes::Bytes, Message as ProstMessage};
 
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use tendermint::types::proto::Protobuf;
 use super::{Tx, TxMessage};
 
 mod inner {
-    pub use ibc_proto::tx::raw::TxRaw;
+    pub use ibc_types::tx::raw::TxRaw;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

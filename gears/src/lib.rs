@@ -16,7 +16,7 @@ pub mod crypto;
 
 #[cfg(feature = "export")]
 pub mod ibc {
-    pub use ibc_proto::*;
+    pub use ibc_types::*;
 }
 
 #[cfg(feature = "export")]

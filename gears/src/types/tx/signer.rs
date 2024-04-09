@@ -1,4 +1,4 @@
-use ibc_proto::address::AccAddress;
+use ibc_types::address::AccAddress;
 use serde::Deserialize;
 use tendermint::types::chain_id::ChainId;
 

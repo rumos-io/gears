@@ -3,9 +3,14 @@ use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse, GaiaCoreClien
 use gears::{
     client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+    ibc::address::AccAddress,
+    types::{
+        account::{Account, BaseAccount},
+        query::account::QueryAccountResponse,
+    },
 };
-use proto_messages::cosmos::auth::v1beta1::{Account, BaseAccount, QueryAccountResponse};
-use proto_types::AccAddress;
+// use proto_messages::cosmos::auth::v1beta1::{Account, BaseAccount, QueryAccountResponse};
+// use proto_types::AccAddress;
 
 use utilities::run_gaia_and_tendermint;
 

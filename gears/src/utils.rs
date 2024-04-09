@@ -3,7 +3,7 @@ use std::{path::Path, process::Child, str::FromStr};
 use crate::{baseapp::Genesis, client::genesis_account::{genesis_account_add, GenesisCommand}, types::base::{coin::Coin, send::SendCoins}};
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
-use ibc_proto::address::AccAddress;
+use ibc_types::address::AccAddress;
 use proto_types::Denom;
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;

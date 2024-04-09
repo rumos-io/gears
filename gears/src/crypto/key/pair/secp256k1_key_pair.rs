@@ -14,7 +14,7 @@ use sha2::{Digest, Sha256};
 
 use crate::crypto::key::public::PublicKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
-use ibc_proto::address::AccAddress;
+use ibc_types::address::AccAddress;
 
 const HDPATH: &str = "m/44'/118'/0'/0/0";
 
@@ -200,17 +200,5 @@ mod tests {
             .expect("key pair should be created from pem");
 
         assert_eq!(key_pair, key_pair_from_pem);
-    }
-
-    #[test]
-    fn sandpit() {
-        let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
-        let mnemonic = Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
-        let key_pair = Secp256k1KeyPair::from_mnemonic(&mnemonic);
-
-        let pem = key_pair.to_pkcs8_encrypted_pem("password");
-
-        // write pem string to file
-        std::fs::write("./tmp/pem.pem", pem.as_bytes()).unwrap();
     }
 }

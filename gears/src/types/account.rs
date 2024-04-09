@@ -1,4 +1,4 @@
-use ibc_proto::{address::AccAddress, any::google::Any, serializers::serialize_number_to_string};
+use ibc_types::{address::AccAddress, any::google::Any, serializers::serialize_number_to_string};
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
 
@@ -8,8 +8,8 @@ use tendermint::types::proto::Protobuf;
 use crate::crypto::key::public::PublicKey;
 
 pub mod inner {
-    pub use ibc_proto::account::BaseAccount;
-    pub use ibc_proto::account::ModuleAccount;
+    pub use ibc_types::account::BaseAccount;
+    pub use ibc_types::account::ModuleAccount;
 }
 
 /// BaseAccount defines a base account type. It contains all the necessary fields
@@ -28,11 +28,11 @@ pub struct BaseAccount {
 }
 
 impl TryFrom<inner::BaseAccount> for BaseAccount {
-    type Error = ibc_proto::errors::Error;
+    type Error = ibc_types::errors::Error;
 
     fn try_from(raw: inner::BaseAccount) -> Result<Self, Self::Error> {
         let address = AccAddress::from_bech32(&raw.address)
-            .map_err(|e| ibc_proto::errors::Error::DecodeAddress(e.to_string()))?;
+            .map_err(|e| ibc_types::errors::Error::DecodeAddress(e.to_string()))?;
 
         let pub_key = match raw.pub_key {
             Some(key) => {
@@ -80,13 +80,13 @@ pub struct ModuleAccount {
 }
 
 impl TryFrom<inner::ModuleAccount> for ModuleAccount {
-    type Error = ibc_proto::errors::Error;
+    type Error = ibc_types::errors::Error;
 
     fn try_from(raw: inner::ModuleAccount) -> Result<Self, Self::Error> {
         let base_account = match raw.base_account {
             Some(base) => base.try_into()?,
             None => {
-                return Err(ibc_proto::errors::Error::DecodeGeneral(
+                return Err(ibc_types::errors::Error::DecodeGeneral(
                     "missing base account field".into(),
                 ))
             }
@@ -163,21 +163,21 @@ impl Account {
 }
 
 impl TryFrom<Any> for Account {
-    type Error = ibc_proto::errors::Error;
+    type Error = ibc_types::errors::Error;
 
     fn try_from(any: Any) -> Result<Self, Self::Error> {
         match any.type_url.as_str() {
             "/cosmos.auth.v1beta1.BaseAccount" => {
                 let base = BaseAccount::decode::<Bytes>(any.value.into())
-                    .map_err(|e| ibc_proto::errors::Error::DecodeGeneral(e.to_string()))?;
+                    .map_err(|e| ibc_types::errors::Error::DecodeGeneral(e.to_string()))?;
                 Ok(Account::Base(base))
             }
             "/cosmos.auth.v1beta1.ModuleAccount" => {
                 let module = ModuleAccount::decode::<Bytes>(any.value.into())
-                    .map_err(|e| ibc_proto::errors::Error::DecodeGeneral(e.to_string()))?;
+                    .map_err(|e| ibc_types::errors::Error::DecodeGeneral(e.to_string()))?;
                 Ok(Account::Module(module))
             }
-            _ => Err(ibc_proto::errors::Error::DecodeAny(format!(
+            _ => Err(ibc_types::errors::Error::DecodeAny(format!(
                 "account type not recognized: {}",
                 any.type_url
             ))),
@@ -204,7 +204,7 @@ impl Protobuf<Any> for Account {}
 
 #[cfg(test)]
 mod tests {
-    use ibc_proto::address::AccAddress;
+    use ibc_types::address::AccAddress;
     use tendermint::types::proto::Protobuf;
 
     use crate::types::account::BaseAccount;

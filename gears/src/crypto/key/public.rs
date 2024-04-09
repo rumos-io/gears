@@ -1,4 +1,4 @@
-use ibc_proto::{address::AccAddress, any::google::Any, errors::Error};
+use ibc_types::{address::AccAddress, any::google::Any, errors::Error};
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;

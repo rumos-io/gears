@@ -1,14 +1,15 @@
 use auth::cli::query::{AuthQuery, AuthQueryResponse};
 use bank::cli::query::{BankQuery, BankQueryResponse};
-use ibc::client::cli::query::{IbcQuery, IbcQueryResponse};
-use proto_messages::cosmos::query::Query;
+use gears::types::query::Query;
+// use ibc::client::cli::query::{IbcQuery, IbcQueryResponse};
+// use proto_messages::cosmos::query::Query;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq)]
 pub enum GaiaQuery {
     Auth(AuthQuery),
     Bank(BankQuery),
-    Ibc(IbcQuery),
+    // Ibc(IbcQuery),
 }
 
 impl Query for GaiaQuery {
@@ -16,7 +17,7 @@ impl Query for GaiaQuery {
         match self {
             GaiaQuery::Auth(var) => var.query_url(),
             GaiaQuery::Bank(var) => var.query_url(),
-            GaiaQuery::Ibc(var) => var.query_url(),
+            // GaiaQuery::Ibc(var) => var.query_url(),
         }
     }
 
@@ -24,7 +25,7 @@ impl Query for GaiaQuery {
         match self {
             GaiaQuery::Auth(var) => var.into_bytes(),
             GaiaQuery::Bank(var) => var.into_bytes(),
-            GaiaQuery::Ibc(var) => var.into_bytes(),
+            // GaiaQuery::Ibc(var) => var.into_bytes(),
         }
     }
 }
@@ -34,5 +35,5 @@ impl Query for GaiaQuery {
 pub enum GaiaQueryResponse {
     Auth(AuthQueryResponse),
     Bank(BankQueryResponse),
-    Ibc(IbcQueryResponse),
+    // Ibc(IbcQueryResponse),
 }

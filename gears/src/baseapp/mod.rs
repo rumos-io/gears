@@ -4,7 +4,7 @@ pub mod run;
 
 pub use baseapp::*;
 
-use ibc_proto::address::AccAddress;
+use ibc_types::address::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{error::AppError, types::base::send::SendCoins};

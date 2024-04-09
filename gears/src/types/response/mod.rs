@@ -5,7 +5,7 @@ pub mod tx;
 pub mod tx_event;
 
 mod inner {
-    pub use ibc_proto::query::response::PageResponse;
+    pub use ibc_types::query::response::PageResponse;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

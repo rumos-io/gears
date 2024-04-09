@@ -1486,6 +1486,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "gaia-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "auth",
+ "axum 0.7.5",
+ "bank",
+ "bytes",
+ "clap",
+ "gears",
+ "gears-derive",
+ "serde",
+ "serde_json",
+ "strum",
+ "url",
+]
+
+[[package]]
 name = "gears"
 version = "0.1.0"
 dependencies = [
@@ -1505,7 +1523,7 @@ dependencies = [
  "handlebars",
  "hex",
  "human-panic",
- "ibc-proto 0.1.0",
+ "ibc-types",
  "integer-encoding",
  "k256",
  "keyring",
@@ -1952,21 +1970,6 @@ dependencies = [
 
 [[package]]
 name = "ibc-proto"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.0",
- "base64-serde",
- "bech32",
- "data-encoding",
- "ibc-proto 0.26.0",
- "prost",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "ibc-proto"
 version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c9303a1308c886aea769ef0667c5caa422a78b01e9f8177fea8b91b08a4ff50c"
@@ -1979,6 +1982,21 @@ dependencies = [
  "subtle-encoding",
  "tendermint-proto",
  "tonic",
+]
+
+[[package]]
+name = "ibc-types"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.0",
+ "base64-serde",
+ "bech32",
+ "data-encoding",
+ "ibc-proto",
+ "prost",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

@@ -1,18 +1,24 @@
 use std::str::FromStr;
 
-use bank::cli::query::{
-    BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse,
+use bank::{
+    cli::query::{
+        BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse,
+    },
+    types::query::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
 };
 use gaia_rs::{query::GaiaQueryResponse, GaiaCoreClient};
 use gears::{
     client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+    ibc::address::AccAddress,
+    proto_types::Denom,
+    types::base::coin::Coin,
 };
-use proto_messages::cosmos::{
-    bank::v1beta1::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
-    base::v1beta1::Coin,
-};
-use proto_types::{AccAddress, Denom};
+// use proto_messages::cosmos::{
+//     bank::v1beta1::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
+//     base::v1beta1::Coin,
+// };
+// use proto_types::{AccAddress, Denom};
 use utilities::run_gaia_and_tendermint;
 
 #[path = "./utilities.rs"]

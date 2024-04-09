@@ -1,5 +1,5 @@
-use ibc_proto::any::google::Any;
-use ibc_proto::tx::mode_info::ModeInfo;
+use ibc_types::any::google::Any;
+use ibc_types::tx::mode_info::ModeInfo;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
@@ -8,7 +8,7 @@ use tendermint::types::proto::Protobuf;
 use crate::crypto::key::public::PublicKey;
 
 pub mod inner {
-    pub use ibc_proto::signing::SignerInfo;
+    pub use ibc_types::signing::SignerInfo;
 }
 
 /// SignerInfo describes the public key and signing mode of a single top-level
@@ -31,7 +31,7 @@ pub struct SignerInfo {
 }
 
 impl TryFrom<inner::SignerInfo> for SignerInfo {
-    type Error = ibc_proto::errors::Error;
+    type Error = ibc_types::errors::Error;
 
     fn try_from(raw: inner::SignerInfo) -> Result<Self, Self::Error> {
         let key: Option<PublicKey> = match raw.public_key {
@@ -42,7 +42,7 @@ impl TryFrom<inner::SignerInfo> for SignerInfo {
             public_key: key,
             mode_info: raw
                 .mode_info
-                .ok_or(ibc_proto::errors::Error::MissingField(String::from(
+                .ok_or(ibc_types::errors::Error::MissingField(String::from(
                     "mode_info",
                 )))?
                 .try_into()?,

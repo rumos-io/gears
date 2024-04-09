@@ -1,6 +1,6 @@
 pub mod secp256k1_key_pair;
 
-use ibc_proto::address::AccAddress;
+use ibc_types::address::AccAddress;
 
 use self::secp256k1_key_pair::Secp256k1KeyPair;
 

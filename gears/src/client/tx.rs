@@ -50,7 +50,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
 
 pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<Response> {
     let res = runtime().block_on(
-        client.broadcast_tx_commit(ibc_proto::tx::raw::TxRaw::from(raw_tx).encode_to_vec()),
+        client.broadcast_tx_commit(ibc_types::tx::raw::TxRaw::from(raw_tx).encode_to_vec()),
     )?;
 
     Ok(res)

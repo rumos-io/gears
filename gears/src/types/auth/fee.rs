@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use ibc_proto::address::AccAddress;
-use ibc_proto::errors::AddressError;
+use ibc_types::address::AccAddress;
+use ibc_types::errors::AddressError;
 use proto_types::Uint256;
 use serde::Deserialize;
 use serde::Serialize;
@@ -15,8 +15,8 @@ use crate::types::base::errors::SendCoinsError;
 use crate::types::base::send::SendCoins;
 
 pub mod inner {
-    pub use ibc_proto::auth::fee::Fee;
-    pub use ibc_proto::base::coin::Coin;
+    pub use ibc_types::auth::fee::Fee;
+    pub use ibc_types::base::coin::Coin;
 }
 
 pub const MAX_GAS_WANTED: u64 = 9223372036854775807; // = (1 << 63) -1 as specified in the cosmos SDK

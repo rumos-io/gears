@@ -27,7 +27,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
         syn::Data::Enum(enum_data) => {
             let get_signers = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                 quote! {
-                    Self::#i(msg) => proto_messages::cosmos::tx::v1beta1::message::Message::get_signers(msg)
+                    Self::#i(msg) => ::gears::types::tx::TxMessage::get_signers(msg)
                 }
             });
 
@@ -39,7 +39,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
             let type_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                 quote! {
-                    Self::#i(msg) => proto_messages::cosmos::tx::v1beta1::message::Message::type_url(msg)
+                    Self::#i(msg) => ::gears::types::tx::TxMessage::type_url(msg)
                 }
             });
 
@@ -58,23 +58,23 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
                 quote! {
                     if value.type_url.starts_with(#url) {
-                        Ok(Self::#ident(::proto_messages::any::Any::try_into(value)?))
+                        Ok(Self::#ident(::gears::ibc::any::google::Any::try_into(value)?))
                     }
                 }
             });
 
             let gen = quote! {
-                impl proto_messages::cosmos::tx::v1beta1::message::Message for #name {
+                impl  ::gears::types::tx::TxMessage for #name {
 
 
-                    fn get_signers(&self) -> Vec<&AccAddress> {
+                    fn get_signers(&self) -> Vec<&::gears::ibc::address::AccAddress> {
 
                         match self {
                             #(#get_signers),*
                         }
                     }
 
-                    fn validate_basic(&self) -> std::result::Result<(), String> {
+                    fn validate_basic(&self) -> ::std::result::Result<(), String> {
                         match self {
                             #(#validate_basic),*
                         }
@@ -89,7 +89,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
                 }
 
-                impl From<#name> for ::proto_messages::any::Any {
+                impl From<#name> for ::gears::ibc::any::google::Any {
                     fn from(msg: #name) -> Self {
                         match msg {
                             #(#into_any),*
@@ -97,15 +97,15 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     }
                 }
 
-                impl TryFrom<::proto_messages::any::Any> for #name {
-                    type Error = proto_messages::Error;
+                impl TryFrom<::gears::ibc::any::google::Any> for #name {
+                    type Error = ::gears::ibc::errors::Error;
 
-                    fn try_from(value: ::proto_messages::any::Any) -> Result<Self, Self::Error> {
+                    fn try_from(value: ::gears::ibc::any::google::Any) -> Result<Self, Self::Error> {
 
                         #(#from_any) else*
 
                          else {
-                            Err(proto_messages::Error::DecodeGeneral(
+                            Err(::gears::ibc::errors::Error::DecodeGeneral(
                                 "message type not recognized".into(),
                             ))
                         }

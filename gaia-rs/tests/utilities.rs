@@ -4,7 +4,7 @@
 use std::{path::PathBuf, time::Duration};
 
 use gaia_rs::{
-    abci_handler::ABCIHandler,
+    abci_handler::GaiaABCIHandler,
     config::AppConfig,
     genesis::GenesisState,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
@@ -16,7 +16,11 @@ use gears::{
     client::keys::{keys, AddKeyCommand, KeyCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
 };
-use utils::testing::{TempDir, TmpChild};
+use gears::{
+    ibc::address::AccAddress,
+    types::base::send::SendCoins,
+    utils::{TempDir, TmpChild},
+};
 
 pub const TENDERMINT_PATH: &str = "./tests/assets";
 pub const NODE_URL_STR: &str = "http://localhost:26657/";
@@ -41,7 +45,7 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
     let server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
             GaiaCore,
-            &ABCIHandler::new,
+            &GaiaABCIHandler::new,
             GaiaStoreKey::Params,
             GaiaParamsStoreKey::BaseApp,
         );
@@ -68,8 +72,8 @@ pub struct MockGenesis(pub GenesisState);
 impl Genesis for MockGenesis {
     fn add_genesis_account(
         &mut self,
-        address: proto_types::AccAddress,
-        coins: proto_messages::cosmos::base::v1beta1::SendCoins,
+        address: AccAddress,
+        coins: SendCoins,
     ) -> Result<(), gears::error::AppError> {
         self.0.add_genesis_account(address, coins)
     }

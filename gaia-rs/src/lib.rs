@@ -13,13 +13,14 @@ use gears::application::handlers::{QueryHandler, TxHandler};
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
 
+use gears::ibc::address::AccAddress;
 use genesis::GenesisState;
-use ibc::client::cli::query_handler::IbcQueryHandler;
-use proto_types::AccAddress;
+// use ibc::client::cli::query_handler::IbcQueryHandler;
+// use proto_types::AccAddress;
 use rest::get_router;
 use serde::Serialize;
 
-use crate::abci_handler::ABCIHandler;
+use crate::abci_handler::GaiaABCIHandler;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 
 pub mod abci_handler;
@@ -73,10 +74,9 @@ impl QueryHandler for GaiaCoreClient {
             }
             GaiaQueryCommands::Auth(command) => {
                 Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
-            }
-            GaiaQueryCommands::Ibc(command) => {
-                Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
-            }
+            } // GaiaQueryCommands::Ibc(command) => {
+              //     Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
+              // }
         };
 
         Ok(res)
@@ -94,9 +94,9 @@ impl QueryHandler for GaiaCoreClient {
             GaiaQueryCommands::Auth(command) => Self::QueryResponse::Auth(
                 AuthQueryHandler.handle_raw_response(query_bytes, command)?,
             ),
-            GaiaQueryCommands::Ibc(command) => {
-                Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
-            }
+            // GaiaQueryCommands::Ibc(command) => {
+            //     Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
+            // }
         };
 
         Ok(res)
@@ -120,7 +120,7 @@ impl Node for GaiaCore {
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
-    type ABCIHandler = ABCIHandler;
+    type ABCIHandler = GaiaABCIHandler;
     type ApplicationConfig = config::AppConfig;
 
     fn router<AI: ApplicationInfo>() -> axum::Router<

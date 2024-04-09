@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
 mod inner {
-    pub use ibc_proto::bank::Metadata;
-    pub use ibc_proto::tx::denom::DenomUnit;
+    pub use ibc_types::bank::Metadata;
+    pub use ibc_types::tx::denom::DenomUnit;
 }
 
 /// We use our own version of the Metadata struct because the one in ibc_proto

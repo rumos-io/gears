@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 
 pub use secp256k1::PublicKey;
 
-use ibc_proto::{address::AccAddress, errors::Error};
+use ibc_types::{address::AccAddress, errors::Error};
 use tendermint::types::proto::Protobuf;
 
 use super::errors::VerifyError;

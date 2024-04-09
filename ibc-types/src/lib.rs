@@ -1,11 +1,14 @@
-pub mod bank;
-pub mod msg;
+// #![doc(test(no_crate_inject))]
+// #![warn(rust_2018_idioms)]
+
 pub mod account;
 pub mod address;
 pub mod any;
 pub mod auth;
+pub mod bank;
 pub mod base;
 pub mod errors;
+pub mod msg;
 pub mod query;
 pub mod serializers;
 pub mod signing;

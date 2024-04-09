@@ -1,4 +1,4 @@
-use ibc_proto::errors::Error;
+use ibc_types::errors::Error;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
@@ -10,7 +10,7 @@ use super::{
 };
 
 pub mod inner {
-    pub use ibc_proto::auth::info::AuthInfo;
+    pub use ibc_types::auth::info::AuthInfo;
 }
 
 /// AuthInfo describes the fee and signer modes that are used to sign a

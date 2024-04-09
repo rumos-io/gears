@@ -7,7 +7,7 @@ use tendermint::types::proto::Protobuf;
 use super::errors::CoinsError;
 
 mod inner {
-    pub use ibc_proto::base::coin::Coin;
+    pub use ibc_types::base::coin::Coin;
 }
 
 /// Coin defines a token with a denomination and an amount.

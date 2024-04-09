@@ -1,4 +1,4 @@
-use ibc_proto::{
+use ibc_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
