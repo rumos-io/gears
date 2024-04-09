@@ -119,7 +119,7 @@ impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
         screens.push(Screen {
             title: String::new(),
             content: DefaultPrimitiveRenderer::try_format(match messages_count {
-                1 => format!("This transaction has 1 Message"),
+                1 => "This transaction has 1 Message".to_string(),
                 _ => format!("This transaction has {} Messages", messages_count),
             })
             .expect("hard coded Strings are not empty"),
@@ -338,7 +338,7 @@ mod tests {
 
         let tx_data = TxData::<MsgSend> {
             body: tx_body,
-            auth_info: auth_info,
+            auth_info,
         };
 
         let data = Envelope::new(signer_data, tx_data);

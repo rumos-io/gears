@@ -169,7 +169,7 @@ impl<
                 info: "".to_string(),
                 gas_wanted: 0,
                 gas_used: 0,
-                events: events.into_iter().map(|e| e.into()).collect(),
+                events: events.into_iter().collect(),
                 codespace: "".to_string(),
             },
             Err(e) => {
@@ -249,7 +249,7 @@ impl<
         multi_store.tx_caches_write_then_clear();
 
         ResponseBeginBlock {
-            events: events.into_iter().map(|e| e.into()).collect(),
+            events: events.into_iter().collect(),
         }
     }
 
@@ -275,7 +275,7 @@ impl<
         multi_store.tx_caches_write_then_clear();
 
         ResponseEndBlock {
-            events: events.into_iter().map(|e| e.into()).collect(),
+            events: events.into_iter().collect(),
             validator_updates,
             consensus_param_updates: None,
             // TODO: there is only one call to BaseAppParamsKeeper::set_consensus_params,

@@ -75,7 +75,7 @@ mod tests {
 
         // [,]
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store.range(vec![1]..=vec![3]).collect();
-        let expected_pairs = vec![(vec![1], vec![5]), (vec![2], vec![6]), (vec![3], vec![7])];
+        let expected_pairs = [(vec![1], vec![5]), (vec![2], vec![6]), (vec![3], vec![7])];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {
@@ -89,7 +89,7 @@ mod tests {
         let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store
             .range((Bound::Excluded(start), Bound::Excluded(stop)))
             .collect();
-        let expected_pairs = vec![(vec![2], vec![6])];
+        let expected_pairs = [(vec![2], vec![6])];
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {

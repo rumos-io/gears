@@ -356,7 +356,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
 
                         let signer_data = SignerData {
                             address: signer.to_owned(),
-                            chain_id: ctx.chain_id().to_owned().into(),
+                            chain_id: ctx.chain_id().to_owned(),
                             account_number: acct.get_account_number(),
                             sequence: account_seq,
                             pub_key: public_key.to_owned(),

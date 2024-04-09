@@ -32,7 +32,7 @@ impl TryFrom<inner::QueryAccountResponse> for QueryAccountResponse {
 impl From<QueryAccountResponse> for inner::QueryAccountResponse {
     fn from(query: QueryAccountResponse) -> inner::QueryAccountResponse {
         Self {
-            account: Some(Any::from(query.account).into()),
+            account: Some(Any::from(query.account)),
         }
     }
 }

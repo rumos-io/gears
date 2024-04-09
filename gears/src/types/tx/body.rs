@@ -47,7 +47,7 @@ impl<M: TxMessage> TryFrom<inner::TxBody> for TxBody<M> {
         let mut messages: Vec<M> = vec![];
 
         for msg in raw.messages {
-            messages.push(Any::from(msg).try_into()?);
+            messages.push(msg.try_into()?);
         }
 
         Ok(TxBody {
@@ -70,7 +70,7 @@ impl<M: TxMessage> From<TxBody<M>> for inner::TxBody {
             messages: tx_body
                 .messages
                 .into_iter()
-                .map(|this| this.into().into())
+                .map(|this| this.into())
                 .collect(),
             memo: tx_body.memo,
             timeout_height: tx_body.timeout_height,

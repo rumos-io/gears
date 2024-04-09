@@ -315,7 +315,7 @@ mod tests {
                 )?,
                 amount: SendCoins::new(vec![Coin {
                     denom: Denom::try_from("uatom".to_string())?,
-                    amount: Uint256::from(1u8).into(),
+                    amount: Uint256::from(1u8),
                 }])
                 .unwrap(),
             }],
@@ -421,7 +421,7 @@ mod tests {
                 )?,
                 amount: SendCoins::new(vec![Coin {
                     denom: Denom::try_from("uatom".to_string())?,
-                    amount: Uint256::from(1u8).into(),
+                    amount: Uint256::from(1u8),
                 }])
                 .unwrap(),
             }],

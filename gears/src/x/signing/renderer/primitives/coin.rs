@@ -120,7 +120,7 @@ mod tests {
     fn coin_formatting() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: Uint256::from(10000000_u64).into(),
+            amount: Uint256::from(10000000_u64),
         };
 
         let expected_content = Content::new("10 ATOM".to_string()).unwrap();
@@ -137,7 +137,7 @@ mod tests {
     fn coin_formatting_small_amounts_works() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: Uint256::from(1u8).into(),
+            amount: Uint256::from(1u8),
         };
 
         let expected_content = Content::new("0.000001 ATOM".to_string()).unwrap();
@@ -154,7 +154,7 @@ mod tests {
     fn coin_formatting_zero_amount_works() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "uatom".try_into()?,
-            amount: Uint256::from(0u8).into(),
+            amount: Uint256::from(0u8),
         };
 
         let expected_content = Content::new("0 ATOM".to_string()).unwrap();
@@ -171,7 +171,7 @@ mod tests {
     fn coin_formatting_large_amount_works() -> anyhow::Result<()> {
         let coin = Coin {
             denom: "ATOM".try_into()?,
-            amount: Uint256::from(10_000u16).into(),
+            amount: Uint256::from(10_000u16),
         };
 
         let expected_content = Content::new("10'000 ATOM".to_string()).unwrap();

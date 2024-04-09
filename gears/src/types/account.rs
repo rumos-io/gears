@@ -36,7 +36,7 @@ impl TryFrom<inner::BaseAccount> for BaseAccount {
 
         let pub_key = match raw.pub_key {
             Some(key) => {
-                let key = Any::from(key).try_into()?;
+                let key = key.try_into()?;
                 Some(key)
             }
             None => None,
@@ -62,7 +62,7 @@ impl From<BaseAccount> for inner::BaseAccount {
     ) -> inner::BaseAccount {
         Self {
             address: address.into(),
-            pub_key: pub_key.map(|e| Any::from(e).into()),
+            pub_key: pub_key.map(Any::from),
             account_number,
             sequence,
         }

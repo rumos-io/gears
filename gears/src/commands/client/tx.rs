@@ -46,7 +46,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     let key = KeyPair::from(key);
     let message = handler.prepare_tx(inner, key.get_address())?;
 
-    handler.handle_tx(message, KeyPair::from(key), node, chain_id, fee)
+    handler.handle_tx(message, key, node, chain_id, fee)
 }
 
 pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<Response> {

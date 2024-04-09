@@ -76,7 +76,7 @@ impl TryFrom<inner::QueryAllBalancesRequest> for QueryAllBalancesRequest {
 
         Ok(Self {
             address,
-            pagination: raw.pagination.map(|this| this.into()),
+            pagination: raw.pagination,
         })
     }
 }
@@ -85,7 +85,7 @@ impl From<QueryAllBalancesRequest> for inner::QueryAllBalancesRequest {
     fn from(query: QueryAllBalancesRequest) -> inner::QueryAllBalancesRequest {
         Self {
             address: query.address.to_string(),
-            pagination: query.pagination.map(|this| this.into()),
+            pagination: query.pagination,
         }
     }
 }
@@ -114,7 +114,7 @@ impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
             .map_err(|e| Error::Coin(e.to_string()))?;
 
         Ok(QueryAllBalancesResponse {
-            balances: balances,
+            balances,
             pagination: raw.pagination.map(|this| this.into()),
         })
     }
