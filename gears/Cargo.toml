@@ -64,8 +64,14 @@ pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"]}
 ripemd = { workspace = true }
 data-encoding = { workspace = true }
 
+# test utils
+run_script = { workspace = true, optional = true }
+assert_fs = { workspace = true, optional = true }
+dircpy = { workspace = true, optional = true }
+
 [dev-dependencies]
 
 [features]
 default = [ "cli" ]
+utils = [ "dep:run_script", "dep:assert_fs", "dep:dircpy" ]
 cli = [ "dep:clap", "dep:clap_complete", ]

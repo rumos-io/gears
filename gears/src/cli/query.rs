@@ -1,5 +1,5 @@
 use clap::{ArgAction, Subcommand, ValueHint};
-use tendermint::informal::block::Height;
+use tendermint::types::proto::block::Height;
 
 use crate::{client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
 

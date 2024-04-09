@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use ibc_proto::address::AccAddress;
+use tendermint::informal::genesis::Genesis;
 
-use proto_messages::cosmos::base::v1beta1::SendCoins;
-use proto_types::AccAddress;
-use tendermint::informal::Genesis;
-
-use crate::{baseapp::Genesis as SDKGenesis, error::AppError};
+use crate::{
+    baseapp::Genesis as SDKGenesis, config::ConfigDirectory, error::AppError,
+    types::base::send::SendCoins,
+};
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct GenesisCommand {
@@ -32,8 +33,7 @@ pub fn genesis_account_add<G: SDKGenesis>(cmd: GenesisCommand) -> Result<(), Gen
         coins,
     } = cmd;
 
-    let mut genesis_file_path = home.clone();
-    crate::utils::get_genesis_file_from_home_dir(&mut genesis_file_path);
+    let genesis_file_path = ConfigDirectory::GenesisFile.path_from_hone(&home);
 
     let raw_genesis = std::fs::read_to_string(genesis_file_path.clone())?;
     let mut genesis: Genesis<G> = serde_json::from_str(&raw_genesis)?;

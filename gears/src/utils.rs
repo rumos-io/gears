@@ -1,11 +1,12 @@
 use std::{path::Path, process::Child, str::FromStr};
 
+use crate::{baseapp::Genesis, client::genesis_account::{genesis_account_add, GenesisCommand}, types::base::{coin::Coin, send::SendCoins}};
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
-use gears::{baseapp::Genesis, client::genesis_account::GenesisCommand};
-use proto_messages::cosmos::base::v1beta1::{Coin, SendCoins};
-use proto_types::{AccAddress, Denom};
+use ibc_proto::address::AccAddress;
+use proto_types::Denom;
 use run_script::{IoOptions, ScriptOptions};
+use tendermint::types::chain_id::ChainId;
 
 /// Struct for process which lauched from tmp dir
 #[derive(Debug)]
@@ -21,7 +22,7 @@ impl Drop for TmpChild {
 }
 
 impl TmpChild {
-    pub fn run_tendermint<G: Genesis, AC: gears::config::ApplicationConfig>(
+    pub fn run_tendermint<G: Genesis, AC: crate::config::ApplicationConfig>(
         tmp_dir: TempDir,
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
         genesis: &G,
@@ -41,14 +42,14 @@ impl TmpChild {
             env_vars: None,
         };
 
-        let opt: gears::client::init::InitCommand =
-            gears::client::init::InitCommandBuilder::default()
+        let opt: crate::client::init::InitCommand =
+            crate::client::init::InitCommandBuilder::default()
                 .home(tmp_dir.to_path_buf())
-                .chain_id(tendermint::informal::chain::Id::from_str("test-chain")?)
+                .chain_id(ChainId::from_str("test-chain")?)
                 .moniker("test".to_owned())
                 .build()?;
 
-        gears::client::init::init::<_, AC>(opt, genesis)?;
+        crate::client::init::init::<_, AC>(opt, genesis)?;
 
         let genesis_account_cmd = GenesisCommand {
             home: tmp_dir.to_path_buf(),
@@ -61,7 +62,7 @@ impl TmpChild {
             .expect("not empty"),
         };
 
-        gears::client::genesis_account::genesis_account_add::<G>(genesis_account_cmd)?;
+        genesis_account_add::<G>(genesis_account_cmd)?;
 
         let (_code, _output, _error) = run_script::run(
             r#"

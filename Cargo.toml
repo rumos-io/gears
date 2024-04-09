@@ -14,8 +14,7 @@ members = [
   "store",
   "keyring", 
   "gears",
-  # "gears-derive",
-  # "utils",
+  "gears-derive",
   
   # GAIA
   # "gaia-rs",

@@ -1,14 +1,13 @@
-use std::{marker::PhantomData, path::PathBuf};
+use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 
 use clap::{ArgAction, Subcommand, ValueHint};
-use proto_messages::cosmos::base::v1beta1::SendCoins;
-
-use tendermint::informal::chain::Id;
+use tendermint::types::chain_id::ChainId;
 
 use crate::{
     application::ApplicationInfo,
     client::{keys::KeyringBackend, tx::TxCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+    types::base::send::SendCoins,
 };
 
 /// Transaction subcommands
@@ -23,8 +22,8 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     #[arg(required = true)]
     pub from_key: String,
     /// file chain-id
-    #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = Id::try_from( "test-chain" ).expect("unrechable: default should be valid"))]
-    pub chain_id: Id,
+    #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = ChainId::from_str( "test-chain" ).expect("unrechable: default should be valid"))]
+    pub chain_id: ChainId,
     /// TODO
     #[arg(long, global = true, action = ArgAction::Set)]
     pub fee: Option<SendCoins>,

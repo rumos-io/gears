@@ -1,20 +1,16 @@
 use axum::Router;
-use proto_messages::cosmos::tx::v1beta1::message::Message;
 use store_crate::StoreKey;
 
 use crate::{
-    baseapp::{run, ABCIHandler, Genesis},
-    client::{genesis_account, init, rest::RestState},
-    config::{ApplicationConfig, Config},
-    x::params::ParamsSubspaceKey,
+    baseapp::{run, Genesis}, client::{genesis_account, init, rest::RestState}, config::{ApplicationConfig, Config}, types::tx::TxMessage, x::params::ParamsSubspaceKey
 };
 
-use super::{command::app::AppCommands, handlers::AuxHandler, ApplicationInfo};
+use super::{command::app::AppCommands, handlers::{ABCIHandler, AuxHandler}, ApplicationInfo};
 use crate::x::params::Keeper as ParamsKeeper;
 
 /// A Gears application.
 pub trait Node: AuxHandler {
-    type Message: Message;
+    type Message: TxMessage;
     type Genesis: Genesis;
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
