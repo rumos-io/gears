@@ -1,7 +1,8 @@
 //! Default formatting implementation for `u64`
 
+use gears::types::rendering::screen::Content;
 use num_format::Buffer;
-use proto_messages::cosmos::tx::v1beta1::screen::Content;
+// use proto_messages::cosmos::tx::v1beta1::screen::Content;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 

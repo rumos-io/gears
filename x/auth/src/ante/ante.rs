@@ -1,31 +1,46 @@
 use std::marker::PhantomData;
 
-use database::{Database, PrefixDB};
+use ibc_proto::{
+    address::AccAddress,
+    signing::SignDoc,
+    tx::mode_info::{ModeInfo, SignMode},
+};
+use proto_types::Denom;
+use store::database::{Database, PrefixDB};
 
 use gears::{
     error::AppError,
-    types::context::{QueryableContext, TransactionalContext},
-    x::auth::{Module, Params},
+    types::{
+        account::Account,
+        base::send::SendCoins,
+        context::{QueryableContext, TransactionalContext},
+        tx::{data::TxData, metadata::Metadata, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
+    },
+    // x::auth::{Module, Params},
 };
 use prost::Message as ProstMessage;
-use proto_messages::cosmos::{
-    auth::v1beta1::Account,
-    base::v1beta1::SendCoins,
-    ibc::tx::SignDoc,
-    tx::v1beta1::{
-        message::Message,
-        mode_info::{ModeInfo, SignMode},
-        signer_data::SignerData,
-        tx::tx::Tx,
-        tx_data::TxData,
-        tx_metadata::Metadata,
-        tx_raw::TxWithRaw,
-    },
-};
-use proto_types::{AccAddress, Denom};
+// use proto_messages::cosmos::{
+//     auth::v1beta1::Account,
+//     base::v1beta1::SendCoins,
+//     ibc::tx::SignDoc,
+//     tx::v1beta1::{
+//         message::Message,
+//         mode_info::{ModeInfo, SignMode},
+//         signer_data::SignerData,
+//         tx::tx::Tx,
+//         tx_data::TxData,
+//         tx_metadata::Metadata,
+//         tx_raw::TxWithRaw,
+//     },
+// };
+// use proto_types::{AccAddress, Denom};
 use store::StoreKey;
 
-use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
+use crate::{
+    module::Module,
+    signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
+    Params,
+};
 
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -69,7 +84,11 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 }
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: Message + ValueRenderer, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn run<
+        DB: Database,
+        M: TxMessage + ValueRenderer,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
         &self,
         ctx: &mut CTX,
         tx: &TxWithRaw<M>,
@@ -91,7 +110,7 @@ where
 {
     fn run<
         DB: Database,
-        M: Message + ValueRenderer,
+        M: TxMessage + ValueRenderer,
         CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &self,
@@ -113,7 +132,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
     pub fn run<
         DB: Database,
         CTX: TransactionalContext<PrefixDB<DB>, SK>,
-        M: Message + ValueRenderer,
+        M: TxMessage + ValueRenderer,
     >(
         &self,
         ctx: &mut CTX,
@@ -146,7 +165,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn validate_basic_ante_handler<M: Message>(&self, tx: &Tx<M>) -> Result<(), AppError> {
+    fn validate_basic_ante_handler<M: TxMessage>(&self, tx: &Tx<M>) -> Result<(), AppError> {
         // Not sure if we need to explicitly check this given the check which follows.
         // We'll leave it in for now since it's in the SDK.
         let sigs = tx.get_signatures();
@@ -165,7 +184,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn tx_timeout_height_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: Message>(
+    fn tx_timeout_height_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: TxMessage>(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,
@@ -192,7 +211,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
     fn validate_memo_ante_handler<
         DB: Database,
         CTX: QueryableContext<PrefixDB<DB>, SK>,
-        M: Message,
+        M: TxMessage,
     >(
         &self,
         ctx: &CTX,
@@ -211,7 +230,12 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn deduct_fee_ante_handler<'a, DB: Database, CTX: TransactionalContext<DB, SK>, M: Message>(
+    fn deduct_fee_ante_handler<
+        'a,
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+        M: TxMessage,
+    >(
         &self,
         ctx: &mut CTX,
         tx: &Tx<M>,
@@ -235,7 +259,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         Ok(())
     }
 
-    fn set_pub_key_ante_handler<DB: Database, CTX: TransactionalContext<DB, SK>, M: Message>(
+    fn set_pub_key_ante_handler<DB: Database, CTX: TransactionalContext<DB, SK>, M: TxMessage>(
         &self,
         ctx: &mut CTX,
         tx: &Tx<M>,
@@ -280,7 +304,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
     fn sig_verification_handler<
         DB: Database,
         CTX: TransactionalContext<DB, SK>,
-        M: Message + ValueRenderer,
+        M: TxMessage + ValueRenderer,
     >(
         &self,
         ctx: &mut CTX,
@@ -375,7 +399,7 @@ impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
     fn increment_sequence_ante_handler<
         DB: Database,
         CTX: TransactionalContext<DB, SK>,
-        M: Message,
+        M: TxMessage,
     >(
         &self,
         ctx: &mut CTX,

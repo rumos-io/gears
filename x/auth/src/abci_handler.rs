@@ -1,10 +1,14 @@
-use database::Database;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
-use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
-use proto_messages::cosmos::ibc::protobuf::Protobuf;
+use ibc_proto::query::request::account::QueryAccountRequest;
+use ibc_proto::Protobuf as _;
+use store::database::Database;
+// use proto_messages::cosmos::auth::v1beta1::QueryAccountRequest;
+// use proto_messages::cosmos::ibc::protobuf::Protobuf;
 use store::StoreKey;
+use tendermint::types::proto::Protobuf;
+use tendermint::types::request::query::RequestQuery;
 
 use crate::{GenesisState, Keeper};
 
@@ -21,7 +25,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     pub fn query<DB: Database>(
         &self,
         ctx: &QueryContext<'_, DB, SK>,
-        query: tendermint::proto::abci::RequestQuery,
+        query: RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
             "/cosmos.auth.v1beta1.Query/Account" => {
@@ -30,7 +34,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
                 self.keeper
                     .query_account(ctx, req)
-                    .map(|res| res.encode_vec().into())
+                    .map(|res| res.encode_vec().expect("msg").into()) // TODO:NOW
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

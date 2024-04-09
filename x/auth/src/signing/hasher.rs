@@ -1,5 +1,5 @@
-use sha2::Sha256;
-use tendermint::informal::crypto::Sha256 as Sha256Diggest;
+use sha2::{Digest, Sha256};
+// use Sha256 as Sha256Diggest;
 
 /// `hash_get` gets the hash of raw bytes to be signed over:
 /// HEX(sha256(len(body_bytes) ++ body_bytes ++ len(auth_info_bytes) ++ auth_info_bytes))

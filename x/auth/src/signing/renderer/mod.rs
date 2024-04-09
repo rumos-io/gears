@@ -5,7 +5,8 @@ pub mod value_renderer;
 
 #[cfg(test)]
 pub(super) mod test_functions {
-    use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
+    use gears::types::tx::metadata::{DenomUnit, Metadata};
+    // use proto_messages::cosmos::tx::v1beta1::tx_metadata::{DenomUnit, Metadata};
     use proto_types::Denom;
 
     pub fn get_metadata(denom: &Denom) -> Option<Metadata> {

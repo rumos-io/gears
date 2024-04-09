@@ -2,9 +2,10 @@
 
 use std::str::FromStr;
 
+use gears::types::rendering::screen::Content;
 use num_bigint::BigUint;
 use num_format::WriteFormatted;
-use proto_messages::cosmos::tx::v1beta1::screen::Content;
+// use proto_messages::cosmos::tx::v1beta1::screen::Content;
 use proto_types::Uint256;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
@@ -25,7 +26,8 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use proto_messages::cosmos::tx::v1beta1::screen::Content;
+    use gears::types::rendering::screen::Content;
+    // use proto_messages::cosmos::tx::v1beta1::screen::Content;
     use proto_types::Uint256;
 
     use crate::signing::renderer::value_renderer::{

@@ -1,19 +1,33 @@
-use proto_messages::cosmos::{
-    base::v1beta1::SendCoins,
-    tx::v1beta1::{
-        message::Message,
-        public_key::PublicKey,
-        screen::{Indent, Screen},
-        signer_data::SignerData,
-        tip::Tip,
-        tx_data::TxData,
-        tx_metadata::Metadata,
+// use proto_messages::cosmos::{
+//     base::v1beta1::SendCoins,
+//     tx::v1beta1::{
+//         message::Message,
+//         public_key::PublicKey,
+//         screen::{Indent, Screen},
+//         signer_data::SignerData,
+//         tip::Tip,
+//         tx_data::TxData,
+//         tx_metadata::Metadata,
+//     },
+// };
+// use proto_types::{AccAddress, Denom};
+
+// use proto_messages::cosmos::ibc::protob
+// use tendermint::types::chain_id::ChainId; /uf::Protobuf;
+// use tendermint::informal::chain::Id;
+
+use gears::{
+    crypto::key::public::PublicKey,
+    types::{
+        auth::tip::Tip,
+        base::send::SendCoins,
+        rendering::screen::{Indent, Screen},
+        tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
     },
 };
-use proto_types::{AccAddress, Denom};
-
-use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use tendermint::informal::chain::Id;
+use ibc_proto::address::AccAddress;
+use proto_types::Denom;
+use tendermint::types::chain_id::ChainId;
 
 use crate::signing::{
     hasher::hash_get,
@@ -22,12 +36,13 @@ use crate::signing::{
         TryPrimitiveValueRendererWithMetadata, ValueRenderer,
     },
 };
+use tendermint::types::proto::Protobuf;
 
 /// Envelope is an internal data structure used to generate the tx envelope
 /// screens. Used in the same way as the Cosmos SDK Envelope type:
 /// https://github.com/cosmos/cosmos-sdk/blob/main/x/tx/signing/textual/tx.go
 pub struct Envelope<M> {
-    chain_id: Id,
+    chain_id: ChainId,
     account_number: u64,
     sequence: u64,
     address: AccAddress,
@@ -48,10 +63,10 @@ pub struct Envelope<M> {
     hash_of_raw_bytes: String,
 }
 
-impl<M: Message> Envelope<M> {
+impl<M: TxMessage> Envelope<M> {
     pub fn new(signer_data: SignerData, tx_data: TxData<M>) -> Self {
-        let body_bytes = tx_data.body.to_owned().encode_vec();
-        let auth_info_bytes = tx_data.auth_info.to_owned().encode_vec();
+        let body_bytes = tx_data.body.to_owned().encode_vec().expect("msg"); // TODO:NOW
+        let auth_info_bytes = tx_data.auth_info.to_owned().encode_vec().expect("msg"); // TODO:NOW
 
         let (tip, tipper) = match tx_data.auth_info.tip {
             Some(Tip { amount, tipper }) => (amount, Some(tipper)),
@@ -79,7 +94,7 @@ impl<M: Message> Envelope<M> {
 }
 
 // NOTE: fields with protobuf default values are not rendered to screens
-impl<M: Message + ValueRenderer> ValueRenderer for Envelope<M> {
+impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
         &self,
         get_metadata: &F,
@@ -238,22 +253,37 @@ impl<M: Message + ValueRenderer> ValueRenderer for Envelope<M> {
 
 #[cfg(test)]
 mod tests {
-    use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
-    use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
-    use proto_messages::cosmos::tx::v1beta1::signer_data::SignerData;
-    use proto_messages::cosmos::{
-        bank::v1beta1::MsgSend,
-        base::v1beta1::{Coin, SendCoins},
-        tx::v1beta1::{
-            auth_info::AuthInfo,
-            fee::Fee,
-            screen::{Content, Indent, Screen},
-            tx_body::TxBody,
-            tx_data::TxData,
-        },
-    };
-    use proto_types::{AccAddress, Denom, Uint256};
-    use tendermint::informal::chain::Id;
+    use std::str::FromStr;
+
+    use gears::types::auth::fee::Fee;
+    use gears::types::auth::info::AuthInfo;
+    use gears::types::base::coin::Coin;
+    use gears::types::base::send::SendCoins;
+    use gears::types::msg::send::MsgSend;
+    use gears::types::rendering::screen::{Content, Indent, Screen};
+    use gears::types::signing::SignerInfo;
+    use gears::types::tx::body::TxBody;
+    use gears::types::tx::data::TxData;
+    use gears::types::tx::signer::SignerData;
+    use ibc_proto::address::AccAddress;
+    use ibc_proto::tx::mode_info::{ModeInfo, SignMode};
+    // use proto_messages::cosmos::tx::v1beta1::mode_info::{ModeInfo, SignMode};
+    // use proto_messages::cosmos::tx::v1beta1::signer::SignerInfo;
+    // use proto_messages::cosmos::tx::v1beta1::signer_data::SignerData;
+    // use proto_messages::cosmos::{
+    //     bank::v1beta1::MsgSend,
+    //     base::v1beta1::{Coin, SendCoins},
+    //     tx::v1beta1::{
+    //         auth_info::AuthInfo,
+    //         fee::Fee,
+    //         screen::{Content, Indent, Screen},
+    //         tx_body::TxBody,
+    //         tx_data::TxData,
+    //     },
+    // };
+    use proto_types::{Denom, Uint256};
+    use tendermint::types::chain_id::ChainId;
+    // use tendermint::informal::chain::Id;
 
     use crate::signing::renderer::test_functions::get_metadata;
     use crate::signing::renderer::value_renderer::ValueRenderer;
@@ -309,7 +339,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
-            chain_id: Id::try_from("my-chain".to_string()).expect("this is a valid chain id"),
+            chain_id: ChainId::from_str("my-chain").expect("this is a valid chain id"),
             account_number: 1,
             sequence: 2,
             pub_key: serde_json::from_str(

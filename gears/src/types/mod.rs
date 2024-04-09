@@ -1,3 +1,5 @@
+pub mod msg;
+pub mod rendering;
 pub mod account;
 pub mod auth;
 pub mod base;

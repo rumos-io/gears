@@ -1,10 +1,11 @@
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, Error, TryPrimitiveValueRendererWithMetadata,
 };
-use proto_messages::cosmos::{
-    base::v1beta1::SendCoins,
-    tx::v1beta1::{screen::Content, tx_metadata::Metadata},
-};
+use gears::types::{base::send::SendCoins, rendering::screen::Content, tx::metadata::Metadata};
+// use proto_messages::cosmos::{
+//     base::v1beta1::SendCoins,
+//     tx::v1beta1::{screen::Content, tx_metadata::Metadata},
+// };
 use proto_types::Denom;
 
 impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
@@ -38,10 +39,14 @@ impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRender
 
 #[cfg(test)]
 mod tests {
-    use proto_messages::cosmos::{
-        base::v1beta1::{Coin, SendCoins},
-        tx::v1beta1::screen::Content,
+    use gears::types::{
+        base::{coin::Coin, send::SendCoins},
+        rendering::screen::Content,
     };
+    // use proto_messages::cosmos::{
+    //     base::v1beta1::{Coin, SendCoins},
+    //     tx::v1beta1::screen::Content,
+    // };
     use proto_types::Uint256;
 
     use crate::signing::renderer::{

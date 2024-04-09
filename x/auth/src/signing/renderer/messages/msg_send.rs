@@ -1,10 +1,11 @@
-use proto_messages::cosmos::{
-    bank::v1beta1::MsgSend,
-    tx::v1beta1::{
-        screen::{Indent, Screen},
-        tx_metadata::Metadata,
-    },
-};
+use gears::types::{msg::send::MsgSend, rendering::screen::{Indent, Screen}, tx::metadata::Metadata};
+// use proto_messages::cosmos::{
+//     bank::v1beta1::MsgSend,
+//     tx::v1beta1::{
+//         screen::{Indent, Screen},
+//         tx_metadata::Metadata,
+//     },
+// };
 use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
@@ -51,7 +52,9 @@ impl ValueRenderer for MsgSend {
 
 #[cfg(test)]
 mod tests {
-    use proto_messages::cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::screen::Screen};
+    // use proto_messages::cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::screen::Screen};
+
+    use gears::types::{msg::send::MsgSend, rendering::screen::Screen};
 
     use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
 

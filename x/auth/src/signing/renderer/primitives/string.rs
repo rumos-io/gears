@@ -1,4 +1,6 @@
-use proto_messages::cosmos::tx::v1beta1::screen::Content;
+// use proto_messages::cosmos::tx::v1beta1::screen::Content;
+
+use gears::types::rendering::screen::Content;
 
 use crate::signing::renderer::value_renderer::Error;
 #[doc(inline)]

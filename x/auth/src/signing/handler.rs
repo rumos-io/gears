@@ -2,10 +2,14 @@ use std::collections::BTreeMap;
 
 use crate::signing::renderer::tx::Envelope;
 use ciborium::{value::CanonicalValue, Value};
-use proto_messages::cosmos::tx::v1beta1::{
-    message::Message, screen::Screen, signer_data::SignerData, tx_data::TxData,
-    tx_metadata::Metadata,
+use gears::types::{
+    rendering::screen::Screen,
+    tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
+// use proto_messages::cosmos::tx::v1beta1::{
+//     message::Message, screen::Screen, signer_data::SignerData, tx_data::TxData,
+//     tx_metadata::Metadata,
+// };
 use proto_types::Denom;
 
 use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
@@ -18,7 +22,7 @@ impl SignModeHandler {
         &self,
         get_metadata: &F,
         signer_data: SignerData,
-        tx_data: TxData<impl Message + ValueRenderer>,
+        tx_data: TxData<impl TxMessage + ValueRenderer>,
     ) -> Result<Vec<u8>, SigningErrors> {
         let data = Envelope::new(signer_data, tx_data);
 
@@ -43,27 +47,44 @@ impl SignModeHandler {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::{collections::BTreeMap, str::FromStr};
 
     use ciborium::Value;
-
-    use proto_messages::cosmos::{
-        bank::v1beta1::MsgSend,
-        base::v1beta1::{Coin, SendCoins},
-        tx::v1beta1::{
-            auth_info::AuthInfo,
+    use gears::types::{
+        auth::{fee::Fee, info::AuthInfo},
+        base::{coin::Coin, send::SendCoins},
+        msg::send::MsgSend,
+        rendering::{
             cbor::Cbor,
-            fee::Fee,
-            mode_info::{ModeInfo, SignMode},
             screen::{Content, Indent, Screen},
-            signer::SignerInfo,
-            signer_data::SignerData,
-            tx_body::TxBody,
-            tx_data::TxData,
         },
+        signing::SignerInfo,
+        tx::{body::TxBody, data::TxData, signer::SignerData},
     };
-    use proto_types::{AccAddress, Denom, Uint256};
-    use tendermint::informal::chain::Id;
+    use ibc_proto::{
+        address::AccAddress,
+        tx::mode_info::{ModeInfo, SignMode},
+    };
+    use proto_types::{Denom, Uint256};
+    use tendermint::types::chain_id::ChainId;
+
+    // use proto_messages::cosmos::{
+    //     bank::v1beta1::MsgSend,
+    //     base::v1beta1::{Coin, SendCoins},
+    //     tx::v1beta1::{
+    //         auth_info::AuthInfo,
+    //         cbor::Cbor,
+    //         fee::Fee,
+    //         mode_info::{ModeInfo, SignMode},
+    //         screen::{Content, Indent, Screen},
+    //         signer::SignerInfo,
+    //         signer_data::SignerData,
+    //         tx_body::TxBody,
+    //         tx_data::TxData,
+    //     },
+    // };
+    // use proto_types::{AccAddress, Denom, Uint256};
+    // use tendermint::informal::chain::Id;
 
     use crate::signing::{handler::SignModeHandler, renderer::test_functions::get_metadata};
 
@@ -99,7 +120,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
-            chain_id: Id::try_from("my-chain".to_string()).expect("this is a valid chain id"),
+            chain_id: ChainId::from_str("my-chain").expect("this is a valid chain id"),
             account_number: 1,
             sequence: 2,
             pub_key: serde_json::from_str(
@@ -292,7 +313,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z")?,
-            chain_id: Id::try_from("test-chain".to_string()).expect("this is a valid chain id"),
+            chain_id: ChainId::from_str("test-chain").expect("this is a valid chain id"),
             account_number: 8,
             sequence: 6,
             pub_key: serde_json::from_str(
@@ -398,7 +419,7 @@ mod tests {
 
         let signer_data = SignerData {
             address: AccAddress::from_bech32("cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z")?,
-            chain_id: Id::try_from("test-chain".to_string()).expect("this is a valid chain id"),
+            chain_id: ChainId::from_str("test-chain").expect("this is a valid chain id"),
             account_number: 8,
             sequence: 13,
             pub_key: serde_json::from_str(

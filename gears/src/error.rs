@@ -19,6 +19,7 @@ pub enum AppError {
     IBC(String),
     Genesis(String),
     Query(String),
+    Custom(String),
 }
 
 impl Display for AppError {
@@ -43,6 +44,7 @@ impl Display for AppError {
             AppError::Genesis(msg) => write!(f, "{}", msg),
             AppError::Query(msg) => write!(f, "Error executing query: {msg}"),
             AppError::Store(msg) => write!(f, "Store error: {msg}"),
+            AppError::Custom(msg) => write!(f, "{msg}"),
         }
     }
 }

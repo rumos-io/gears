@@ -1,6 +1,10 @@
-use proto_messages::cosmos::tx::v1beta1::{
-    public_key::PublicKey, screen::Screen, tx_metadata::Metadata,
+use gears::{
+    crypto::key::public::PublicKey,
+    types::{rendering::screen::Screen, tx::metadata::Metadata},
 };
+// use proto_messages::cosmos::tx::v1beta1::{
+//     public_key::PublicKey, screen::Screen, tx_metadata::Metadata,
+// };
 use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{Error, ValueRenderer};
@@ -18,16 +22,16 @@ impl ValueRenderer for PublicKey {
 
 #[cfg(test)]
 mod tests {
-    use proto_messages::cosmos::{
-        crypto::secp256k1::v1beta1::PubKey,
-        tx::v1beta1::screen::{Content, Indent, Screen},
-    };
-
+    // use proto_messages::cosmos::{
+    //     crypto::secp256k1::v1beta1::PubKey,
+    //     tx::v1beta1::screen::{Content, Indent, Screen},
+    // };
     use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
+    use gears::{crypto::secp256k1::Secp256k1PubKey, types::rendering::screen::{Content, Indent, Screen}};
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {
-        let key: PubKey = serde_json::from_str(
+        let key: Secp256k1PubKey = serde_json::from_str(
             r#"{
             "@type": "/cosmos.crypto.secp256k1.PubKey",
             "key": "Auvdf+T963bciiBe9l15DNMOijdaXCUo6zqSOvH7TXlN"

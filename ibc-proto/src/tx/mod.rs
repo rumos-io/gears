@@ -1,4 +1,5 @@
 pub mod body;
+pub mod denom;
 pub mod mode_info;
 pub mod raw;
 pub mod signature;

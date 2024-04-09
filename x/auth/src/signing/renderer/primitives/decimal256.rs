@@ -1,5 +1,6 @@
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
-use proto_messages::cosmos::tx::v1beta1::screen::Content;
+use gears::types::rendering::screen::Content;
+// use proto_messages::cosmos::tx::v1beta1::screen::Content;
 use proto_types::Decimal256;
 
 impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
@@ -24,7 +25,8 @@ impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
 mod tests {
     use std::str::FromStr;
 
-    use proto_messages::cosmos::tx::v1beta1::screen::Content;
+    use gears::types::rendering::screen::Content;
+    // use proto_messages::cosmos::tx::v1beta1::screen::Content;
     use proto_types::Decimal256;
 
     use crate::signing::renderer::value_renderer::{

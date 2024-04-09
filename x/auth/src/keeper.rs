@@ -1,25 +1,30 @@
 use bytes::Bytes;
-use database::{ext::UnwrapCorrupt, Database, PrefixDB};
+use ibc_proto::{address::AccAddress, query::request::account::QueryAccountRequest};
+use store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
 
 use gears::{
     error::AppError,
-    types::context::{QueryableContext, TransactionalContext},
-    x::{auth::Module, params::ParamsSubspaceKey},
+    types::{
+        account::{Account, BaseAccount, ModuleAccount},
+        context::{QueryableContext, TransactionalContext},
+        query::account::QueryAccountResponse,
+    },
+    x::params::ParamsSubspaceKey,
 };
 //use params_module::ParamsSubspaceKey;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use prost::Message;
-use proto_messages::cosmos::{
-    auth::v1beta1::{
-        Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
-    },
-    ibc::protobuf::Protobuf,
-};
-use proto_types::AccAddress;
+// use proto_messages::cosmos::{
+//     auth::v1beta1::{
+//         Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
+//     },
+//     ibc::protobuf::Protobuf,
+// };
 use store::{QueryableKVStore, StoreKey, TransactionalKVStore};
+use tendermint::types::proto::Protobuf as _;
 
-use crate::{ante::AuthKeeper, AuthParamsKeeper, GenesisState};
+use crate::{ante::AuthKeeper, module::Module, AuthParamsKeeper, GenesisState, Params};
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
@@ -36,7 +41,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &CTX,
-    ) -> gears::x::auth::Params {
+    ) -> Params {
         self.auth_params_keeper.get(ctx)
     }
 
@@ -78,7 +83,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         let auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec());
+        auth_store.set(key, acct.encode_vec().expect("msg")); // TODO:NOW
     }
 }
 
@@ -165,7 +170,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec());
+        auth_store.set(key, acct.encode_vec().expect("msg")); // TODO:NOW
     }
 
     /// Overwrites existing account

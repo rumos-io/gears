@@ -1,5 +1,6 @@
 //! Default formatting implementation for bytes - `&[u8]`
-use proto_messages::cosmos::tx::v1beta1::screen::Content;
+use gears::types::rendering::screen::Content;
+// use proto_messages::cosmos::tx::v1beta1::screen::Content;
 use sha2::{Digest, Sha256};
 
 use crate::signing::renderer::value_renderer::{

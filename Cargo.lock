@@ -203,6 +203,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "auth"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bnum 0.11.0",
+ "bytes",
+ "ciborium",
+ "clap",
+ "data-encoding",
+ "gears",
+ "hex",
+ "ibc-proto 0.1.0",
+ "num-bigint",
+ "num-format",
+ "num-traits",
+ "prost",
+ "proto-types",
+ "rand",
+ "regex",
+ "secp256k1",
+ "serde",
+ "serde-aux",
+ "serde_json",
+ "sha2 0.10.8",
+ "store",
+ "strum",
+ "tendermint 0.1.0",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -490,6 +522,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56953345e39537a3e18bdaeba4cb0c58a78c1f61f361dc0fa7c5c7340ae87c5f"
 
 [[package]]
+name = "bnum"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e31ea183f6ee62ac8b8a8cf7feddd766317adfb13ff469de57ce033efd6a790"
+dependencies = [
+ "serde",
+ "serde-big-array",
+]
+
+[[package]]
 name = "bs58"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -774,7 +816,7 @@ checksum = "464f484b3f289935a41e374560c66c59a8f881aefc74742558e42008f1b0b7f3"
 dependencies = [
  "base64 0.21.7",
  "bech32",
- "bnum",
+ "bnum 0.10.0",
  "cosmwasm-crypto",
  "cosmwasm-derive",
  "derivative",
@@ -1438,6 +1480,7 @@ dependencies = [
  "bech32",
  "bip32",
  "bytes",
+ "ciborium",
  "clap",
  "clap_complete",
  "data-encoding",
@@ -1451,6 +1494,7 @@ dependencies = [
  "integer-encoding",
  "k256",
  "keyring",
+ "nutype",
  "pkcs8",
  "prost",
  "proto-types",
@@ -2314,6 +2358,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-bigint"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "608e7659b5c3d7cba262d894801b9ec9d00de989e8a82bd4bef91d08da45cdc0"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2338,6 +2393,16 @@ checksum = "a652d9771a63711fd3c3deb670acfbe5c30a4072e664d7a3bf5a9e1056ac72c3"
 dependencies = [
  "arrayvec",
  "itoa",
+ "num-bigint",
+]
+
+[[package]]
+name = "num-integer"
+version = "0.1.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -3208,6 +3273,15 @@ dependencies = [
  "chrono",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

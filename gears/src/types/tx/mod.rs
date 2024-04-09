@@ -1,3 +1,6 @@
+pub mod data;
+pub mod signer;
+pub mod metadata;
 pub mod errors;
 use ibc_proto::{
     address::AccAddress, any::google::Any, errors::Error, tx::signature::SignatureData,

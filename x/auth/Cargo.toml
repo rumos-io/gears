@@ -35,6 +35,7 @@ ciborium = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
+serde-aux = { workspace = true }
 
 #other
 tokio = { workspace = true }

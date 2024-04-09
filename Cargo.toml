@@ -22,7 +22,7 @@ members = [
   # xmodules
   # "x/ibc", 
   # "x/bank",
-  # "x/auth",
+  "x/auth",
 
   # new unsorted
 ]

@@ -1,9 +1,13 @@
 //! Trait for formatting all kind of values into `Screen`
 
-use proto_messages::cosmos::tx::v1beta1::{
-    screen::{Content, Screen},
-    tx_metadata::Metadata,
+use gears::types::{
+    rendering::screen::{Content, Screen},
+    tx::metadata::Metadata,
 };
+// use proto_messages::cosmos::tx::v1beta1::{
+//     screen::{Content, Screen},
+//     tx_metadata::Metadata,
+// };
 use proto_types::Denom;
 
 /// Render primitive type into content for `Screen`.
