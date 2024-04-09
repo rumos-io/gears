@@ -20,7 +20,7 @@ serde = { workspace = true, default-features = false, features = [
   "derive",
   "alloc",
 ]}
-prost = { workspace = true  }
+# prost = { workspace = true  }
 
 #other
 cosmwasm-std = "2.0.0"

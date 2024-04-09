@@ -24,8 +24,8 @@ pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"]}
 
 #serialization
 serde = { workspace = true }
-serde_json = { workspace = true }
 
 #other
 
 [dev-dependencies]
+serde_json = { workspace = true }

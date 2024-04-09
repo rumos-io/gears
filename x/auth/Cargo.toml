@@ -5,12 +5,13 @@ version = "0.1.0"
 
 [dependencies]
 #local
-database = {path = "../../database"}
+# database = {path = "../../database"}
 gears = {path = "../../gears"}
-proto-messages = {path = "../../proto-messages"}
+# proto-messages = {path = "../../proto-messages"}
 proto-types = {path = "../../proto-types"}
 store = {path = "../../store"}
 tendermint = {path = "../../tendermint"}
+ibc-proto = { path ="../../ibc-proto"}
 
 #newtypes
 bnum = { workspace = true, features = ["serde"] }

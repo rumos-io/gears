@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use bech32::{self, FromBase32, ToBase32, Variant};
+use bech32::{FromBase32, ToBase32, Variant};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::errors::AddressError;
