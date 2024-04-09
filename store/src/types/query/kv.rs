@@ -1,9 +1,7 @@
 use std::ops::RangeBounds;
 
-use trees::{
-    database::Database,
-    iavl::{QueryTree, Range},
-};
+use database::Database;
+use trees::iavl::{QueryTree, Range};
 
 use crate::{
     error::StoreError,

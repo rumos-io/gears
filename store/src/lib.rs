@@ -10,7 +10,7 @@ pub mod types;
 mod utils;
 
 pub mod database {
-    pub use trees::database::*;
+    pub use database::*;
 }
 
 use std::{hash::Hash, ops::RangeBounds};

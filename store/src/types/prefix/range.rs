@@ -1,6 +1,6 @@
 use std::ops::Bound;
 
-use trees::database::Database;
+use database::Database;
 use trees::iavl::Range;
 
 pub struct PrefixRange<'a, DB: Database> {

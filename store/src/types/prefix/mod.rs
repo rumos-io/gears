@@ -29,7 +29,7 @@ fn prefix_end_bound(mut prefix: Vec<u8>) -> Bound<Vec<u8>> {
 #[cfg(test)]
 mod tests {
 
-    use trees::database::MemDB;
+    use database::MemDB;
 
     use crate::{types::kv::KVStore, QueryableKVStore, TransactionalKVStore};
 
