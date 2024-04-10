@@ -1,4 +1,3 @@
-use auth::ante::BankKeeper;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::errors::Error as IbcError;
 use gears::store::database::Database;
@@ -8,6 +7,8 @@ use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
+use gears::x::keepers::auth::AuthKeeper;
+use gears::x::keepers::bank::BankKeeper;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
 
 use crate::types::query::{
@@ -17,12 +18,12 @@ use crate::types::query::{
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
-pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    keeper: Keeper<SK, PSK>,
+pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> {
+    keeper: Keeper<SK, PSK, AK>,
 }
 
-impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
-    pub fn new(keeper: Keeper<SK, PSK>) -> Self {
+impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<SK, PSK, AK> {
+    pub fn new(keeper: Keeper<SK, PSK, AK>) -> Self {
         ABCIHandler { keeper }
     }
 

@@ -1,3 +1,4 @@
+use crate::{AuthParamsKeeper, GenesisState, Params};
 use bytes::Bytes;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::{address::AccAddress, query::request::account::QueryAccountRequest};
@@ -6,6 +7,8 @@ use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
+use gears::x::keepers::auth::AuthKeeper;
+use gears::x::module::Module;
 use gears::{
     error::AppError,
     types::{
@@ -16,8 +19,6 @@ use gears::{
     x::params::ParamsSubspaceKey,
 };
 use prost::Message;
-
-use crate::{ante::AuthKeeper, module::Module, AuthParamsKeeper, GenesisState, Params};
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
@@ -31,10 +32,12 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
+    type Params = Params;
+
     fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Params {
+    ) -> Self::Params {
         self.auth_params_keeper.get(ctx)
     }
 
@@ -77,6 +80,45 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
+    }
+
+    fn create_new_base_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        addr: &AccAddress,
+    ) {
+        let acct = BaseAccount {
+            address: addr.clone(),
+            pub_key: None,
+            account_number: self.get_next_account_number(ctx),
+            sequence: 0,
+        };
+
+        self.set_account(ctx, Account::Base(acct))
+    }
+
+    fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        module: &Module,
+    ) {
+        let addr = module.get_address();
+
+        if self.has_account(ctx, &addr) {
+        } else {
+            let account = ModuleAccount {
+                base_account: BaseAccount {
+                    address: addr.clone(),
+                    pub_key: None,
+                    account_number: self.get_next_account_number(ctx),
+                    sequence: 0,
+                },
+                name: module.get_name(),
+                permissions: module.get_permissions(),
+            };
+
+            self.set_account(ctx, Account::Module(account))
+        }
     }
 }
 
@@ -164,47 +206,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
-    }
-
-    /// Overwrites existing account
-    pub fn create_new_base_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        addr: &AccAddress,
-    ) {
-        let acct = BaseAccount {
-            address: addr.clone(),
-            pub_key: None,
-            account_number: self.get_next_account_number(ctx),
-            sequence: 0,
-        };
-
-        self.set_account(ctx, Account::Base(acct))
-    }
-
-    /// Creates a new module account if it doesn't already exist
-    pub fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        module: &Module,
-    ) {
-        let addr = module.get_address();
-
-        if self.has_account(ctx, &addr) {
-        } else {
-            let account = ModuleAccount {
-                base_account: BaseAccount {
-                    address: addr.clone(),
-                    pub_key: None,
-                    account_number: self.get_next_account_number(ctx),
-                    sequence: 0,
-                },
-                name: module.get_name(),
-                permissions: module.get_permissions(),
-            };
-
-            self.set_account(ctx, Account::Module(account))
-        }
     }
 }
 

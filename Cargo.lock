@@ -355,7 +355,6 @@ name = "bank"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "auth",
  "axum 0.7.5",
  "bytes",
  "clap",
@@ -1485,6 +1484,7 @@ dependencies = [
  "clap",
  "gears",
  "gears-derive",
+ "prost",
  "serde",
  "serde_json",
  "strum",

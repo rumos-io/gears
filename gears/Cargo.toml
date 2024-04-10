@@ -73,7 +73,8 @@ dircpy = { workspace = true, optional = true }
 [dev-dependencies]
 
 [features]
-default = [ "cli", "export" ]
+default = [ "cli", "export", "xmods" ]
 export = []
+xmods = []
 utils = [ "dep:run_script", "dep:assert_fs", "dep:dircpy" ]
 cli = [ "dep:clap", "dep:clap_complete", ]

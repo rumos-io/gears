@@ -3,8 +3,11 @@ use crate::types::query::{
     QueryDenomsMetadataResponse,
 };
 use crate::{BankParamsKeeper, GenesisState};
-use auth::ante::{AuthKeeper, BankKeeper};
-use auth::module::Module;
+use gears::x::keepers::auth::AuthKeeper;
+use gears::x::keepers::bank::BankKeeper;
+use gears::x::module::Module;
+// use auth::ante::{AuthKeeper, BankKeeper};
+// use auth::module::Module;
 use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::ibc::address::AccAddress;
@@ -32,13 +35,15 @@ const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 const DENOM_METADATA_PREFIX: [u8; 1] = [1];
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> {
     store_key: SK,
     bank_params_keeper: BankParamsKeeper<SK, PSK>,
-    auth_keeper: auth::Keeper<SK, PSK>,
+    auth_keeper: AK,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
+    for Keeper<SK, PSK, AK>
+{
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -76,12 +81,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankKeeper<SK> for Keeper<SK, PSK> {
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, AK> {
     pub fn new(
         store_key: SK,
         params_keeper: gears::x::params::Keeper<SK, PSK>,
         params_subspace_key: PSK,
-        auth_keeper: auth::Keeper<SK, PSK>,
+        auth_keeper: AK,
     ) -> Self {
         let bank_params_keeper = BankParamsKeeper {
             params_keeper,

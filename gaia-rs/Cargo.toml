@@ -24,6 +24,7 @@ strum = { workspace = true }
 
 #serialization
 serde = { workspace = true }
+prost = { workspace = true }
 
 #other
 axum = { workspace = true }

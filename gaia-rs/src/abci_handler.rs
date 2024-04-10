@@ -1,11 +1,10 @@
 use crate::{
+    ante::ante::BaseAnteHandler,
     config::AppConfig,
     genesis::GenesisState,
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
 };
-use auth::{ante::BaseAnteHandler, Keeper as AuthKeeper};
-use bank::Keeper as BankKeeper;
 use gears::application::handlers::ABCIHandler;
 use gears::error::AppError;
 use gears::store::database::{Database, PrefixDB};
@@ -20,12 +19,20 @@ use gears::{
 
 #[derive(Debug, Clone)]
 pub struct GaiaABCIHandler {
-    bank_abci_handler: bank::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
+    bank_abci_handler: bank::ABCIHandler<
+        GaiaStoreKey,
+        GaiaParamsStoreKey,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
+    >,
     auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     // ibc_handler: ibc::handler::Handler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
-        BankKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
-        AuthKeeper<GaiaStoreKey, GaiaParamsStoreKey>,
+        bank::Keeper<
+            GaiaStoreKey,
+            GaiaParamsStoreKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
+        >,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
         GaiaStoreKey,
     >,
 }
@@ -63,7 +70,7 @@ impl GaiaABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
             // ibc_handler: ibc::handler::Handler::new(ibc_tx_keeper, ibc_query_keeper),
-            ante_handler: BaseAnteHandler::new(bank_keeper, auth_keeper),
+            ante_handler: BaseAnteHandler::new(auth_keeper, bank_keeper),
         }
     }
 }

@@ -1,71 +1,27 @@
-use std::marker::PhantomData;
-
 use gears::crypto::keys::ReadAccAddress;
 use gears::proto_types::Denom;
 use gears::store::database::{Database, PrefixDB};
+use gears::x::keepers::auth::AuthKeeper;
+use gears::x::keepers::bank::BankKeeper;
+use gears::x::module::Module;
 use gears::{
     ibc::{
-        address::AccAddress,
         signing::SignDoc,
         tx::mode_info::{ModeInfo, SignMode},
     },
     x::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
 };
+use std::marker::PhantomData;
 
 use gears::store::StoreKey;
 use gears::{
     error::AppError,
     types::{
-        account::Account,
-        base::send::SendCoins,
         context::{QueryableContext, TransactionalContext},
         tx::{data::TxData, metadata::Metadata, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
 use prost::Message as ProstMessage;
-
-use crate::{module::Module, Params};
-
-pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        from_address: AccAddress,
-        to_module: Module,
-        amount: SendCoins,
-    ) -> Result<(), AppError>;
-
-    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        base: &Denom,
-    ) -> Option<Metadata>;
-}
-
-pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Params;
-
-    fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: &AccAddress,
-    ) -> bool;
-
-    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        addr: &AccAddress,
-    ) -> Option<Account>;
-
-    fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        acct: Account,
-    );
-}
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn run<
@@ -90,7 +46,7 @@ impl<SK, BK, AK> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK>
 where
     SK: StoreKey,
     BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
+    AK: AuthKeeper<SK, Params = auth::Params>,
 {
     fn run<
         DB: Database,
@@ -105,8 +61,10 @@ where
     }
 }
 
-impl<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, AK, SK> {
-    pub fn new(bank_keeper: BK, auth_keeper: AK) -> BaseAnteHandler<BK, AK, SK> {
+impl<AK: AuthKeeper<SK, Params = auth::Params>, BK: BankKeeper<SK>, SK: StoreKey>
+    BaseAnteHandler<BK, AK, SK>
+{
+    pub fn new(auth_keeper: AK, bank_keeper: BK) -> BaseAnteHandler<BK, AK, SK> {
         BaseAnteHandler {
             bank_keeper,
             auth_keeper,
