@@ -5,11 +5,10 @@ pub mod signer;
 use ibc_types::{
     address::AccAddress, any::google::Any, errors::Error, tx::signature::SignatureData,
 };
+use keyring::key::public::PublicKey;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tendermint::types::proto::Protobuf;
-
-use crate::crypto::key::public::PublicKey;
 
 use self::{body::TxBody, errors::TxError};
 

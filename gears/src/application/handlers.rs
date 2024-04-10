@@ -2,7 +2,7 @@ use crate::{
     commands::client::{query::execute_query, tx::broadcast_tx_commit},
     crypto::{
         info::{create_signed_transaction, SigningInfo},
-        key::pair::KeyPair,
+        keys::ReadAccAddress,
     },
     error::AppError,
     runtime::runtime,
@@ -18,6 +18,7 @@ use crate::{
     },
 };
 use ibc_types::{address::AccAddress, query::request::account::QueryAccountRequest};
+use keyring::key::pair::KeyPair;
 use serde::{de::DeserializeOwned, Serialize};
 use store_crate::{
     database::{Database, PrefixDB},

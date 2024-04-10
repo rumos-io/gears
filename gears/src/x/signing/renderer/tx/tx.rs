@@ -1,14 +1,13 @@
+use keyring::key::public::PublicKey;
+
 use crate::ibc::address::AccAddress;
 use crate::proto_types::Denom;
 use crate::tendermint::types::chain_id::ChainId;
-use crate::{
-    crypto::key::public::PublicKey,
-    types::{
-        auth::tip::Tip,
-        base::send::SendCoins,
-        rendering::screen::{Indent, Screen},
-        tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
-    },
+use crate::types::{
+    auth::tip::Tip,
+    base::send::SendCoins,
+    rendering::screen::{Indent, Screen},
+    tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
 
 use crate::tendermint::types::proto::Protobuf;

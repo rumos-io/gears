@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use gears::crypto::keys::ReadAccAddress;
 use gears::proto_types::Denom;
 use gears::store::database::{Database, PrefixDB};
 use gears::{

@@ -25,3 +25,9 @@ impl PublicKey {
         }
     }
 }
+
+impl From<Secp256k1PubKey> for PublicKey {
+    fn from(value: Secp256k1PubKey) -> Self {
+        Self::Secp256k1(value)
+    }
+}

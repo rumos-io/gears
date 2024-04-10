@@ -8,7 +8,7 @@ use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
 
 use crate::application::handlers::TxHandler;
-use crate::crypto::key::pair::KeyPair;
+use crate::crypto::keys::ReadAccAddress;
 use crate::runtime::runtime;
 use crate::types::base::send::SendCoins;
 use crate::types::tx::raw::TxRaw;
@@ -43,7 +43,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
 
     let key = get_key_by_name(&from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
 
-    let key = KeyPair::from(key);
+    // let key = KeyPair::from(key);
     let message = handler.prepare_tx(inner, key.get_address())?;
 
     handler.handle_tx(message, key, node, chain_id, fee)

@@ -2,6 +2,7 @@ use ibc_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
+use keyring::key::pair::KeyPair;
 use prost::Message;
 use tendermint::types::{chain_id::ChainId, proto::Protobuf};
 
@@ -11,7 +12,7 @@ use crate::types::{
     tx::{body::TxBody, raw::TxRaw, TxMessage},
 };
 
-use super::key::pair::KeyPair;
+use super::keys::GearsPublicKey;
 
 /// Contains info required to sign a Tx
 pub struct SigningInfo {

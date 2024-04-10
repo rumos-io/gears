@@ -3,12 +3,9 @@ use secp256k1::{ecdsa::Signature, hashes::sha256, Message, Secp256k1};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
 
-use super::public::SigningError;
+use crate::error::DecodeError;
 
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct RawSecp256k1PubKey {
-    pub key: Vec<u8>,
-}
+use super::public::SigningError;
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Secp256k1PubKey {
@@ -81,6 +78,17 @@ impl<'de> de::Visitor<'de> for Secp256k1Visitor {
 
         PublicKey::from_slice(&key)
             .map_err(|e| E::custom(format!("Error parsing public key '{}': {}", v, e)))
+    }
+}
+
+impl TryFrom<Vec<u8>> for Secp256k1PubKey {
+    type Error = DecodeError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        let key =
+            PublicKey::from_slice(&value).map_err(|e| DecodeError(format!("invalid key: {e}")))?;
+
+        Ok(Secp256k1PubKey { key })
     }
 }
 

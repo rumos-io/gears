@@ -1,9 +1,10 @@
-use crate::crypto::key::pair::KeyPair;
 use anyhow::Result;
 use bip32::Mnemonic;
 use std::path::PathBuf;
 use strum::Display;
 use text_io::read;
+
+use crate::crypto::keys::ReadAccAddress;
 
 const KEYRING_SUB_DIR_FILE: &str = "keyring-file";
 const KEYRING_SUB_DIR_TEST: &str = "keyring-test";
@@ -73,11 +74,7 @@ pub fn keys(command: KeyCommand) -> Result<()> {
                 let (mnemonic, key_pair) =
                     keyring::create_key(&name, keyring::KeyType::Secp256k1, backend)?;
 
-                println!(
-                    "Created key {}\nAddress: {}",
-                    name,
-                    KeyPair::from(key_pair).get_address()
-                );
+                println!("Created key {}\nAddress: {}", name, key_pair.get_address());
 
                 println!("\n**Important** write this mnemonic phrase in a safe place.\nIt is the only way to recover your account.\n");
                 println!("{}", mnemonic.phrase());

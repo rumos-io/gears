@@ -1,11 +1,14 @@
+use ibc_types::errors::Error as IbcError;
 use ibc_types::{address::AccAddress, any::google::Any, serializers::serialize_number_to_string};
+use keyring::error::DecodeError;
+use keyring::key::public::PublicKey;
+use keyring::key::secp256k1::Secp256k1PubKey;
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
-
 use serde_aux::prelude::deserialize_number_from_string;
 use tendermint::types::proto::Protobuf;
 
-use crate::crypto::key::public::PublicKey;
+use crate::crypto::secp256k1::RawSecp256k1PubKey;
 
 pub mod inner {
     pub use ibc_types::account::BaseAccount;
@@ -28,23 +31,28 @@ pub struct BaseAccount {
 }
 
 impl TryFrom<inner::BaseAccount> for BaseAccount {
-    type Error = ibc_types::errors::Error;
+    type Error = IbcError;
 
     fn try_from(raw: inner::BaseAccount) -> Result<Self, Self::Error> {
         let address = AccAddress::from_bech32(&raw.address)
             .map_err(|e| ibc_types::errors::Error::DecodeAddress(e.to_string()))?;
 
-        let pub_key = match raw.pub_key {
+        let pub_key: Option<Secp256k1PubKey> = match raw.pub_key {
             Some(key) => {
-                let key = key.try_into()?;
-                Some(key)
+                let key: RawSecp256k1PubKey = key
+                    .try_into()
+                    .map_err(|e: DecodeError| IbcError::DecodeAny(e.to_string()))?;
+                Some(
+                    key.try_into()
+                        .map_err(|e: DecodeError| IbcError::DecodeAny(e.to_string()))?,
+                )
             }
             None => None,
         };
 
         Ok(BaseAccount {
             address,
-            pub_key,
+            pub_key: pub_key.map(Into::into),
             account_number: raw.account_number,
             sequence: raw.sequence,
         })
@@ -62,7 +70,9 @@ impl From<BaseAccount> for inner::BaseAccount {
     ) -> inner::BaseAccount {
         Self {
             address: address.into(),
-            pub_key: pub_key.map(Any::from),
+            pub_key: pub_key.map(|key| match key {
+                PublicKey::Secp256k1(key) => RawSecp256k1PubKey::from(key).into(),
+            }),
             account_number,
             sequence,
         }
