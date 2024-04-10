@@ -1,7 +1,5 @@
 use gears::ibc::{address::AccAddress, any::google::Any};
 use gears::types::tx::TxMessage;
-// use proto_messages::any::Any;
-// use proto_types::AccAddress;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]

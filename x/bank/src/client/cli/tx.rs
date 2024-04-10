@@ -8,12 +8,6 @@ use gears::{
     },
 };
 
-// use proto_messages::cosmos::{
-//     bank::v1beta1::MsgSend,
-//     base::v1beta1::{Coin, SendCoins},
-// };
-// use proto_types::AccAddress;
-
 use crate::Message as BankMessage;
 
 #[derive(Args, Debug, Clone)]

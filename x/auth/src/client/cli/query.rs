@@ -13,13 +13,6 @@ use gears::{
 };
 use serde::{Deserialize, Serialize};
 
-// use proto_messages::cosmos::{
-//     auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
-//     ibc::protobuf::Protobuf,
-//     query::Query,
-// };
-// use proto_types::AccAddress;
-
 #[derive(Args, Debug)]
 pub struct AuthQueryCli {
     #[command(subcommand)]

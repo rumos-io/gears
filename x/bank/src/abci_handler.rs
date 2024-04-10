@@ -2,18 +2,13 @@ use auth::ante::BankKeeper;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::errors::Error as IbcError;
 use gears::store::database::Database;
+use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
 use gears::{error::AppError, x::params::ParamsSubspaceKey};
-// use proto_messages::cosmos::bank::v1beta1::{
-//     QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,
-//     QueryDenomMetadataResponse, QueryTotalSupplyResponse,
-// };
-// use proto_messages::cosmos::ibc::protobuf::Protobuf;
-use gears::store::StoreKey;
 
 use crate::types::query::{
     QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,

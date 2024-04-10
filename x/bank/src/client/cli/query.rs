@@ -12,15 +12,6 @@ use gears::{
     types::query::Query,
 };
 use prost::Message;
-// use proto_messages::cosmos::{
-//     bank::v1beta1::{
-//         QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
-//         QueryDenomsMetadataResponse,
-//     },
-//     ibc::protobuf::Protobuf,
-//     query::Query,
-// };
-// use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::types::query::{

@@ -12,6 +12,7 @@ use gears::{
     x::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
 };
 
+use gears::store::StoreKey;
 use gears::{
     error::AppError,
     types::{
@@ -20,25 +21,8 @@ use gears::{
         context::{QueryableContext, TransactionalContext},
         tx::{data::TxData, metadata::Metadata, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
-    // x::auth::{Module, Params},
 };
 use prost::Message as ProstMessage;
-// use proto_messages::cosmos::{
-//     auth::v1beta1::Account,
-//     base::v1beta1::SendCoins,
-//     ibc::tx::SignDoc,
-//     tx::v1beta1::{
-//         message::Message,
-//         mode_info::{ModeInfo, SignMode},
-//         signer_data::SignerData,
-//         tx::tx::Tx,
-//         tx_data::TxData,
-//         tx_metadata::Metadata,
-//         tx_raw::TxWithRaw,
-//     },
-// };
-// use proto_types::{AccAddress, Denom};
-use gears::store::StoreKey;
 
 use crate::{module::Module, Params};
 

@@ -1,4 +1,3 @@
-// use auth::signing::renderer::value_renderer::{Error, ValueRenderer};
 use bytes::Bytes;
 use gears::{
     error::IBC_ENCODE_UNWRAP,
@@ -12,12 +11,6 @@ use gears::{
     },
     x::signing::renderer::value_renderer::{RenderError, ValueRenderer},
 };
-// use proto_messages::cosmos::bank::v1beta1::MsgSend;
-// use proto_messages::cosmos::tx::v1beta1::screen::Screen;
-// use proto_messages::cosmos::tx::v1beta1::tx_metadata::Metadata;
-// use proto_messages::{any::Any, cosmos::ibc::protobuf::Protobuf};
-// use proto_types::AccAddress;
-// use proto_types::Denom;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]

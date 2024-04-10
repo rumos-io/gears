@@ -1,5 +1,3 @@
-// use :tendermint::abci::Application;
-
 use axum::{
     extract::{Path, Query, State},
     routing::get,
@@ -22,7 +20,6 @@ use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryTotalSupplyResponse,
 };
-// use tendermint::proto::abci::RequestQuery;
 
 /// Gets the total supply of every denom
 pub async fn supply<

@@ -1,8 +1,5 @@
 use gears::ibc::address::AccAddress;
 use gears::{error::AppError, types::account::BaseAccount};
-// x::auth::Params
-// use proto_messages::cosmos::auth::v1beta1::BaseAccount;
-// use proto_types::AccAddress;
 use serde::{Deserialize, Serialize};
 
 use crate::Params;

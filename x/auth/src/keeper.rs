@@ -2,7 +2,10 @@ use bytes::Bytes;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::{address::AccAddress, query::request::account::QueryAccountRequest};
 use gears::store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
-
+use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
+use gears::tendermint::types::proto::Protobuf as _;
+use gears::types::context::init_context::InitContext;
+use gears::types::context::query_context::QueryContext;
 use gears::{
     error::AppError,
     types::{
@@ -12,18 +15,7 @@ use gears::{
     },
     x::params::ParamsSubspaceKey,
 };
-//use params_module::ParamsSubspaceKey;
-use gears::types::context::init_context::InitContext;
-use gears::types::context::query_context::QueryContext;
 use prost::Message;
-// use proto_messages::cosmos::{
-//     auth::v1beta1::{
-//         Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
-//     },
-//     ibc::protobuf::Protobuf,
-// };
-use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
-use gears::tendermint::types::proto::Protobuf as _;
 
 use crate::{ante::AuthKeeper, module::Module, AuthParamsKeeper, GenesisState, Params};
 
