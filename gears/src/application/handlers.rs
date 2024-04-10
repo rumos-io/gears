@@ -158,7 +158,7 @@ pub trait AuxHandler {
 }
 
 // TODO: we're assuming here that the app has an auth module which handles this query
-pub fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
+fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
     execute_query::<QueryAccountResponse, RawQueryAccountResponse>(

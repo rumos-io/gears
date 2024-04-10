@@ -25,12 +25,12 @@ pub fn create_signed_transaction<M: SDKMessage>(
     let body_bytes = tx_body.encode_vec();
     let auth_info_bytes = auth_info.encode_vec();
 
-    let mut sign_doc = SignDoc::new_with_opt_acc_number(
-        body_bytes.clone(),
-        auth_info_bytes.clone(),
-        chain_id,
-        None,
-    );
+    let mut sign_doc = SignDoc {
+        body_bytes: body_bytes.clone(),
+        auth_info_bytes: auth_info_bytes.clone(),
+        chain_id: chain_id.into(),
+        account_number: 0, // This gets overwritten
+    };
 
     let signatures: Vec<Vec<u8>> = signing_infos
         .iter()
