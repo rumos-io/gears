@@ -1,6 +1,7 @@
 // use auth::signing::renderer::value_renderer::{Error, ValueRenderer};
 use bytes::Bytes;
 use gears::{
+    error::IBC_ENCODE_UNWRAP,
     ibc::{address::AccAddress, any::google::Any},
     proto_types::Denom,
     tendermint::types::proto::Protobuf,
@@ -62,7 +63,7 @@ impl From<Message> for Any {
         match msg {
             Message::Send(msg) => Any {
                 type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-                value: msg.encode_vec().expect("msg"), // TODO:NOW
+                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
             },
         }
     }

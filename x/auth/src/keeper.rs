@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::{address::AccAddress, query::request::account::QueryAccountRequest};
 use gears::store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
 
@@ -83,7 +84,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         let auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec().expect("msg")); // TODO:NOW
+        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
     }
 }
 
@@ -170,7 +171,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec().expect("msg")); // TODO:NOW
+        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
     }
 
     /// Overwrites existing account

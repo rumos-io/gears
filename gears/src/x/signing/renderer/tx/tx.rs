@@ -1,5 +1,6 @@
 use keyring::key::public::PublicKey;
 
+use crate::error::IBC_ENCODE_UNWRAP;
 use crate::ibc::address::AccAddress;
 use crate::proto_types::Denom;
 use crate::tendermint::types::chain_id::ChainId;
@@ -46,8 +47,16 @@ pub struct Envelope<M> {
 
 impl<M: TxMessage> Envelope<M> {
     pub fn new(signer_data: SignerData, tx_data: TxData<M>) -> Self {
-        let body_bytes = tx_data.body.to_owned().encode_vec().expect("msg"); // TODO:NOW
-        let auth_info_bytes = tx_data.auth_info.to_owned().encode_vec().expect("msg"); // TODO:NOW
+        let body_bytes = tx_data
+            .body
+            .to_owned()
+            .encode_vec()
+            .expect(IBC_ENCODE_UNWRAP); // TODO:IBC
+        let auth_info_bytes = tx_data
+            .auth_info
+            .to_owned()
+            .encode_vec()
+            .expect(IBC_ENCODE_UNWRAP); // TODO:IBC
 
         let (tip, tipper) = match tx_data.auth_info.tip {
             Some(Tip { amount, tipper }) => (amount, Some(tipper)),

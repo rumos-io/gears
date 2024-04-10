@@ -3,6 +3,7 @@ use std::borrow::Cow;
 use bytes::Bytes;
 use clap::{Args, Subcommand};
 
+use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::Protobuf;
 use gears::ibc::{address::AccAddress, query::request::account::QueryAccountRequest};
 use gears::tendermint::types::proto::Protobuf as _;
@@ -51,7 +52,7 @@ impl Query for AuthQuery {
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            AuthQuery::Account(cmd) => cmd.encode_vec().expect("msg"), //TODO:NOW
+            AuthQuery::Account(cmd) => cmd.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
         }
     }
 }

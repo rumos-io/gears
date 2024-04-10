@@ -6,6 +6,7 @@ use clap::{Args, Subcommand};
 
 use gears::{
     application::handlers::QueryHandler,
+    error::IBC_ENCODE_UNWRAP,
     ibc::{address::AccAddress, query::request::bank::QueryDenomsMetadataRequest},
     tendermint::types::proto::Protobuf,
     types::query::Query,
@@ -110,7 +111,7 @@ impl Query for BankQuery {
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            BankQuery::Balances(var) => var.encode_vec().expect("msg"), // TODO:NOW
+            BankQuery::Balances(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
             BankQuery::DenomMetadata(var) => var.encode_to_vec(),
         }
     }

@@ -6,10 +6,13 @@ use keyring::key::pair::KeyPair;
 use prost::Message;
 use tendermint::types::{chain_id::ChainId, proto::Protobuf};
 
-use crate::types::{
-    auth::{fee::Fee, info::AuthInfo, tip::Tip},
-    signing::SignerInfo,
-    tx::{body::TxBody, raw::TxRaw, TxMessage},
+use crate::{
+    error::IBC_ENCODE_UNWRAP,
+    types::{
+        auth::{fee::Fee, info::AuthInfo, tip::Tip},
+        signing::SignerInfo,
+        tx::{body::TxBody, raw::TxRaw, TxMessage},
+    },
 };
 
 use super::keys::GearsPublicKey;
@@ -47,8 +50,8 @@ pub fn create_signed_transaction<M: TxMessage>(
         tip,
     };
 
-    let body_bytes = tx_body.encode_vec().expect("msg"); // TODO:NOW
-    let auth_info_bytes = auth_info.encode_vec().expect("msg"); // TODO:NOW
+    let body_bytes = tx_body.encode_vec().expect(IBC_ENCODE_UNWRAP); // TODO:IBC
+    let auth_info_bytes = auth_info.encode_vec().expect(IBC_ENCODE_UNWRAP); // TODO:IBC
 
     let mut sign_doc = SignDoc {
         body_bytes: body_bytes.clone(),

@@ -1,3 +1,4 @@
+use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::query::request::account::QueryAccountRequest;
 use gears::ibc::Protobuf as _;
 use gears::store::database::Database;
@@ -34,7 +35,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
                 self.keeper
                     .query_account(ctx, req)
-                    .map(|res| res.encode_vec().expect("msg").into()) // TODO:NOW
+                    .map(|res| res.encode_vec().expect(IBC_ENCODE_UNWRAP).into())
+                // TODO:IBC
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

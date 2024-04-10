@@ -1,4 +1,5 @@
 use auth::ante::BankKeeper;
+use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ibc::errors::Error as IbcError;
 use gears::store::database::Database;
 use gears::tendermint::types::proto::Protobuf;
@@ -56,16 +57,16 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                     .keeper
                     .query_all_balances(ctx, req)
                     .encode_vec()
-                    .expect("msg")
-                    .into()) // TODO:NOW
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into()) // TODO:IBC
             }
             "/cosmos.bank.v1beta1.Query/TotalSupply" => Ok(QueryTotalSupplyResponse {
                 supply: self.keeper.get_paginated_total_supply(ctx),
                 pagination: None,
             }
             .encode_vec()
-            .expect("msg")
-            .into()), // TODO:NOW
+            .expect(IBC_ENCODE_UNWRAP)
+            .into()), // TODO:IBC
             "/cosmos.bank.v1beta1.Query/Balance" => {
                 let req = QueryBalanceRequest::decode(query.data)
                     .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
@@ -74,25 +75,25 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                     .keeper
                     .query_balance(ctx, req)
                     .encode_vec()
-                    .expect("msg")
-                    .into()) // TODO:NOW
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into()) // TODO:IBC
             }
             "/cosmos.bank.v1beta1.Query/DenomsMetadata" => {
                 Ok(self
                     .keeper
                     .query_denoms_metadata(ctx)
                     .encode_vec()
-                    .expect("msg")
-                    .into()) // TODO:NOW
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into()) // TODO:IBC
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)
-                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?; // TODO:NOW
+                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
                 let metadata = self.keeper.get_denom_metadata(ctx, &req.denom);
                 Ok(QueryDenomMetadataResponse { metadata }
                     .encode_vec()
-                    .expect("msg")
-                    .into()) // TODO:NOW
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into()) // TODO:IBC
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

@@ -6,7 +6,7 @@ use crate::{BankParamsKeeper, GenesisState};
 use auth::ante::{AuthKeeper, BankKeeper};
 use auth::module::Module;
 use bytes::Bytes;
-use gears::error::AppError;
+use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::ibc::address::AccAddress;
 use gears::proto_types::{Denom, Uint256};
 use gears::store::database::ext::UnwrapCorrupt;
@@ -115,7 +115,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             for coin in balance.coins {
                 denom_balance_store.set(
                     coin.denom.to_string().into_bytes(),
-                    coin.clone().encode_vec().expect("msg"), // TODO:NOW
+                    coin.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
                 );
                 let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
@@ -260,7 +260,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into_bytes(),
-                from_balance.encode_vec().expect("msg"), // TODO:NOW
+                from_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
             );
 
             //TODO: if balance == 0 then denom should be removed from store
@@ -282,7 +282,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             to_account_store.set(
                 send_coin.denom.to_string().into_bytes(),
-                to_balance.encode_vec().expect("msg"), // TODO:NOW
+                to_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
             );
 
             events.push(Event::new(
@@ -346,7 +346,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         denom_metadata_store.set(
             denom_metadata.base.clone().into_bytes(),
-            denom_metadata.encode_vec().expect("msg"), // TODO:NOW
+            denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
         );
     }
 

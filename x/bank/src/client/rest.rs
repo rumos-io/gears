@@ -5,7 +5,6 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use gears::store::StoreKey;
 use gears::tendermint::application::ABCIApplication;
 use gears::{
     application::{handlers::ABCIHandler, ApplicationInfo},
@@ -16,6 +15,7 @@ use gears::{
     types::tx::TxMessage,
     x::params::ParamsSubspaceKey,
 };
+use gears::{error::IBC_ENCODE_UNWRAP, store::StoreKey};
 use serde::Deserialize;
 
 use crate::types::query::{
@@ -69,7 +69,7 @@ pub async fn get_balances<
     };
 
     let request = RequestQuery {
-        data: req.encode_vec().expect("msg").into(), // TODO:NOW
+        data: req.encode_vec().expect(IBC_ENCODE_UNWRAP).into(), // TODO:IBC
         path: "/cosmos.bank.v1beta1.Query/AllBalances".into(),
         height: 0,
         prove: false,
@@ -113,7 +113,7 @@ pub async fn get_balances_by_denom<
     };
 
     let request: RequestQuery = RequestQuery {
-        data: req.encode_vec().expect("msg").into(), // TODO:NOW
+        data: req.encode_vec().expect(IBC_ENCODE_UNWRAP).into(), // TODO:IBC
         path: "/cosmos.bank.v1beta1.Query/Balance".into(),
         height: 0,
         prove: false,

@@ -9,6 +9,7 @@ use serde_aux::prelude::deserialize_number_from_string;
 use tendermint::types::proto::Protobuf;
 
 use crate::crypto::secp256k1::RawSecp256k1PubKey;
+use crate::error::IBC_ENCODE_UNWRAP;
 
 pub mod inner {
     pub use ibc_types::account::BaseAccount;
@@ -200,11 +201,11 @@ impl From<Account> for Any {
         match account {
             Account::Base(base) => Any {
                 type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                value: base.encode_vec().expect("msg"), //TODO:NOW
+                value: base.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
             },
             Account::Module(module) => Any {
                 type_url: "/cosmos.auth.v1beta1.ModuleAccount".to_string(),
-                value: module.encode_vec().expect("msg"), //TODO:NOW
+                value: module.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
             },
         }
     }

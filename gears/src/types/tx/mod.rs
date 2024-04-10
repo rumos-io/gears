@@ -24,7 +24,7 @@ pub trait TxMessage:
 
     fn validate_basic(&self) -> Result<(), String>;
 
-    fn type_url(&self) -> &'static str; // TODO:NOW Cow<'static, str>?
+    fn type_url(&self) -> &'static str;
 }
 
 mod inner {

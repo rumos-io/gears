@@ -2,6 +2,8 @@ use std::fmt::{Display, Formatter, Result};
 
 use store_crate::error::StoreError;
 
+pub const IBC_ENCODE_UNWRAP: &str = "Should be okay. In future versions of IBC they removed Result";
+
 #[derive(Debug, PartialEq)]
 pub enum AppError {
     Bech32(bech32::Error),
