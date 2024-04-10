@@ -6,11 +6,8 @@ members = [
   "proto-types",
   "ibc-types", 
 
-  # 1 local dep
+  # with local deps
   "trees",
-
-  # some local deps
-  # "proto-messages",
   "store",
   "keyring", 
   "gears",

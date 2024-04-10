@@ -1,16 +1,12 @@
 use std::collections::BTreeMap;
 
+use crate::proto_types::Denom;
 use crate::types::{
     rendering::screen::Screen,
     tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
 use crate::x::signing::renderer::tx::Envelope;
 use ciborium::{value::CanonicalValue, Value};
-// use proto_messages::cosmos::tx::v1beta1::{
-//     message::Message, screen::Screen, signer_data::SignerData, tx_data::TxData,
-//     tx_metadata::Metadata,
-// };
-use crate::proto_types::Denom;
 
 use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 

@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use keyring::get_key_by_name;
+use keyring::key_by_name;
 use prost::Message;
 use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
@@ -41,9 +41,8 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
 ) -> anyhow::Result<Response> {
     let keyring_home = home.join(keyring_backend.get_sub_dir());
 
-    let key = get_key_by_name(&from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
+    let key = key_by_name(&from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
 
-    // let key = KeyPair::from(key);
     let message = handler.prepare_tx(inner, key.get_address())?;
 
     handler.handle_tx(message, key, node, chain_id, fee)

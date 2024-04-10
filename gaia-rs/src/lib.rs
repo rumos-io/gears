@@ -1,5 +1,7 @@
+use crate::abci_handler::GaiaABCIHandler;
 use crate::query::GaiaQuery;
 use crate::query::GaiaQueryResponse;
+use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
 use bank::cli::query::BankQueryHandler;
@@ -14,9 +16,6 @@ use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
 use gears::ibc::address::AccAddress;
 use genesis::GenesisState;
-// use ibc::client::cli::query_handler::IbcQueryHandler;
-use crate::abci_handler::GaiaABCIHandler;
-use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 use rest::get_router;
 use serde::Serialize;
 

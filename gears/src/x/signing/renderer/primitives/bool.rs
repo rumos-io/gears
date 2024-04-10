@@ -1,7 +1,5 @@
 //! Default formatting implementation for bool
 
-// use proto_messages::cosmos::tx::v1beta1::screen::Content;
-
 use crate::types::rendering::screen::Content;
 
 use crate::x::signing::renderer::value_renderer::{

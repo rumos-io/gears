@@ -49,8 +49,6 @@ impl ValueRenderer for MsgSend {
 
 #[cfg(test)]
 mod tests {
-    // use proto_messages::cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::screen::Screen};
-
     use crate::types::{msg::send::MsgSend, rendering::screen::Screen};
 
     use crate::x::signing::renderer::{

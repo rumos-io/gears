@@ -17,7 +17,6 @@ pub enum AppError {
     Memo(u64),
     InvalidPublicKey,
     Store(StoreError),
-    // Tree(trees::Error),
     IBC(String),
     Genesis(String),
     Query(String),

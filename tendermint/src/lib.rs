@@ -1,5 +1,3 @@
-pub mod abci;
-pub mod informal;
 use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 
 use ed25519_consensus::SigningKey;
@@ -13,17 +11,8 @@ use tendermint_config::{
 };
 use types::chain_id::ChainId;
 
-// #[cfg(feature = "abci")]
-// pub use tendermint_abci as abci;
-// #[cfg(feature = "config")]
-// pub use tendermint_config as config;
-// #[cfg(feature = "informal")]
-// pub use tendermint_informal as informal;
-// #[cfg(feature = "proto")]
-// pub use tendermint_proto as proto;
-// #[cfg(feature = "rpc")]
-// pub use tendermint_rpc as rpc;
-
+pub mod abci;
+pub mod informal;
 pub mod application;
 pub mod error;
 pub mod rpc;

@@ -3,11 +3,6 @@ use crate::types::query::{
     QueryDenomsMetadataResponse,
 };
 use crate::{BankParamsKeeper, GenesisState};
-use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::BankKeeper;
-use gears::x::module::Module;
-// use auth::ante::{AuthKeeper, BankKeeper};
-// use auth::module::Module;
 use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::ibc::address::AccAddress;
@@ -27,6 +22,9 @@ use gears::types::context::query_context::QueryContext;
 use gears::types::context::{QueryableContext, TransactionalContext};
 use gears::types::msg::send::MsgSend;
 use gears::types::tx::metadata::Metadata;
+use gears::x::keepers::auth::AuthKeeper;
+use gears::x::keepers::bank::BankKeeper;
+use gears::x::module::Module;
 use gears::x::params::ParamsSubspaceKey;
 use std::{collections::HashMap, str::FromStr};
 

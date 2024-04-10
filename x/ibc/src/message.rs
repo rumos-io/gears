@@ -1,9 +1,3 @@
-// use proto_messages::{
-//     any::Any,
-//     cosmos::ibc::tx::{MsgCreateClient, MsgRecoverClient, MsgUpdateClient, MsgUpgradeClient},
-// };
-// use proto_types::AccAddress;
-
 use gears::{
     ibc::{address::AccAddress, any::google::Any},
     types::tx::TxMessage,
