@@ -37,6 +37,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
 
     tendermint::write_tm_config(tm_config_file, &moniker).map_err(InitError::WriteConfigFile)?;
 
+    #[cfg(not(feature = "utils"))]
     println!("Tendermint config written to {tm_config_file_path:?}");
 
     // Create node key file
@@ -63,6 +64,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     crate::config::Config::<AC>::write_default(cfg_file)
         .map_err(|e| InitError::WriteDefaultConfigFile(e.to_string()))?;
 
+    #[cfg(not(feature = "utils"))]
     println!("Config file written to {}", cfg_file_path.display());
 
     // Write key and genesis
@@ -75,11 +77,13 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     )
     .map_err(InitError::WriteKeysAndGenesis)?;
 
+    #[cfg(not(feature = "utils"))]
     println!(
         "Key files written to {} and {}",
         node_key_file_path.display(),
         priv_validator_key_file_path.display()
     );
+    #[cfg(not(feature = "utils"))]
     println!("Genesis file written to {}", genesis_file_path.display());
 
     // Write private validator state file
@@ -89,6 +93,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
 
     tendermint::write_priv_validator_state(state_file).map_err(InitError::WritePrivValidatorKey)?;
 
+    #[cfg(not(feature = "utils"))]
     println!(
         "Private validator state written to {}",
         state_file_path.display()
