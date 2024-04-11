@@ -1,4 +1,4 @@
-use crate::application::handlers::QueryHandler;
+use crate::application::handlers::client::QueryHandler;
 use crate::runtime::runtime;
 use anyhow::{anyhow, Result};
 use prost::Message;

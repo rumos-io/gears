@@ -5,7 +5,7 @@ use bytes::Bytes;
 use clap::{Args, Subcommand};
 
 use gears::{
-    application::handlers::QueryHandler,
+    application::handlers::client::QueryHandler,
     error::IBC_ENCODE_UNWRAP,
     ibc::{address::AccAddress, query::request::bank::QueryDenomsMetadataRequest},
     tendermint::types::proto::Protobuf,

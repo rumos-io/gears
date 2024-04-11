@@ -1,5 +1,5 @@
 use axum::Router;
-use gears::application::handlers::ABCIHandler;
+use gears::application::handlers::node::ABCIHandler;
 use gears::store::StoreKey;
 use gears::types::tx::TxMessage;
 use gears::{

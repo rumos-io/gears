@@ -1,5 +1,5 @@
 use super::{
-    handlers::{ABCIHandler, AuxHandler},
+    handlers::{node::ABCIHandler, AuxHandler},
     ApplicationInfo,
 };
 use crate::{

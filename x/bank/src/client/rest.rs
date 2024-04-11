@@ -5,7 +5,7 @@ use axum::{
 };
 use gears::tendermint::application::ABCIApplication;
 use gears::{
-    application::{handlers::ABCIHandler, ApplicationInfo},
+    application::{handlers::node::ABCIHandler, ApplicationInfo},
     baseapp::{genesis::Genesis, BaseApp},
     ibc::address::AccAddress,
     rest::{error::Error, Pagination, RestState},

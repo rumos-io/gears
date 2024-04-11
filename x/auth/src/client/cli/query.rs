@@ -8,7 +8,7 @@ use gears::ibc::Protobuf;
 use gears::ibc::{address::AccAddress, query::request::account::QueryAccountRequest};
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::{
-    application::handlers::QueryHandler,
+    application::handlers::client::QueryHandler,
     types::query::{account::QueryAccountResponse, Query},
 };
 use serde::{Deserialize, Serialize};

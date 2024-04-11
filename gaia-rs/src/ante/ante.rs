@@ -1,3 +1,4 @@
+use gears::application::handlers::node::AnteHandlerTrait;
 use gears::crypto::keys::ReadAccAddress;
 use gears::proto_types::Denom;
 use gears::store::database::{Database, PrefixDB};
@@ -22,18 +23,6 @@ use gears::{
     },
 };
 use prost::Message as ProstMessage;
-
-pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<
-        DB: Database,
-        M: TxMessage + ValueRenderer,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
-        &self,
-        ctx: &mut CTX,
-        tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError>;
-}
 
 #[derive(Debug, Clone)]
 pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> {

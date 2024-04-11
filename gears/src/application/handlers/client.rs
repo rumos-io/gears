@@ -4,83 +4,25 @@ use crate::{
         info::{create_signed_transaction, SigningInfo},
         keys::ReadAccAddress,
     },
-    error::AppError,
     runtime::runtime,
     types::{
         auth::fee::Fee,
         base::send::SendCoins,
-        context::{
-            init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
-            TransactionalContext,
-        },
         query::{account::QueryAccountResponse, Query},
-        tx::{body::TxBody, raw::TxWithRaw, TxMessage},
+        tx::{body::TxBody, TxMessage},
     },
 };
 use ibc_types::{address::AccAddress, query::request::account::QueryAccountRequest};
 use keyring::key::pair::KeyPair;
-use serde::{de::DeserializeOwned, Serialize};
-use store_crate::{
-    database::{Database, PrefixDB},
-    StoreKey,
-};
+use serde::Serialize;
+
 use tendermint::{
     rpc::{
         client::{Client, HttpClient},
         response::tx::broadcast::Response,
     },
-    types::{
-        chain_id::ChainId,
-        proto::{block::Height, validator::ValidatorUpdate},
-        request::{
-            begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
-        },
-    },
+    types::{chain_id::ChainId, proto::block::Height},
 };
-
-pub trait ABCIHandler<
-    M: TxMessage,
-    SK: StoreKey,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
->: Clone + Send + Sync + 'static
-{
-    fn run_ante_checks<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
-        &self,
-        ctx: &mut CTX,
-        tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError>;
-
-    fn tx<DB: Database + Sync + Send>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        msg: &M,
-    ) -> Result<(), AppError>;
-
-    #[allow(unused_variables)]
-    fn begin_block<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        request: RequestBeginBlock,
-    ) {
-    }
-
-    #[allow(unused_variables)]
-    fn end_block<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        request: RequestEndBlock,
-    ) -> Vec<ValidatorUpdate> {
-        vec![]
-    }
-
-    fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
-
-    fn query<DB: Database + Send + Sync>(
-        &self,
-        ctx: &QueryContext<'_, DB, SK>,
-        query: RequestQuery,
-    ) -> Result<bytes::Bytes, AppError>;
-}
 
 pub trait TxHandler {
     type Message: TxMessage;
@@ -185,22 +127,6 @@ pub trait QueryHandler {
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse>;
-}
-
-/// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.
-/// It's reason exists to add user specific commands which doesn't supports usually.
-#[allow(unused_variables)]
-pub trait AuxHandler {
-    type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
-    type Aux;
-
-    fn prepare_aux(&self, command: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
-        Err(anyhow::anyhow!("unimplemented"))
-    }
-
-    fn handle_aux(&self, aux: Self::Aux) -> anyhow::Result<()> {
-        Ok(())
-    }
 }
 
 mod inner {

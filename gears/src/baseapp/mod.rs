@@ -5,7 +5,7 @@ use std::{
 
 use crate::store::WriteMultiKVStore;
 use crate::{
-    application::{handlers::ABCIHandler, ApplicationInfo},
+    application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::AppError,
     types::{
         context::{query_context::QueryContext, tx_context::TxContext},

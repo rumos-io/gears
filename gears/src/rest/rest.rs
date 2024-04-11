@@ -1,5 +1,5 @@
 use crate::{
-    application::{handlers::ABCIHandler, ApplicationInfo},
+    application::{handlers::node::ABCIHandler, ApplicationInfo},
     baseapp::{genesis::Genesis, BaseApp},
     rest::handlers::{node_info, staking_params, txs},
     runtime::runtime,

@@ -7,7 +7,7 @@ use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
 
-use crate::application::handlers::TxHandler;
+use crate::application::handlers::client::TxHandler;
 use crate::crypto::keys::ReadAccAddress;
 use crate::runtime::runtime;
 use crate::types::base::send::SendCoins;

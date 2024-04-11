@@ -1,4 +1,4 @@
-use crate::application::handlers::ABCIHandler;
+use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::genesis::Genesis;
 use crate::baseapp::BaseApp;

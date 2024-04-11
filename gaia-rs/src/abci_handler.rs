@@ -5,7 +5,7 @@ use crate::{
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
 };
-use gears::application::handlers::ABCIHandler;
+use gears::application::handlers::node::ABCIHandler;
 use gears::error::AppError;
 use gears::store::database::{Database, PrefixDB};
 use gears::tendermint::types::request::query::RequestQuery;
