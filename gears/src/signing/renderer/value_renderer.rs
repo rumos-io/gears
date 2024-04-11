@@ -1,10 +1,10 @@
 //! Trait for formatting all kind of values into `Screen`
 
-use crate::proto_types::Denom;
 use crate::types::{
     rendering::screen::{Content, Screen},
     tx::metadata::Metadata,
 };
+use proto_types::Denom;
 
 /// Render primitive type into content for `Screen`.
 pub trait PrimitiveValueRenderer<V> {

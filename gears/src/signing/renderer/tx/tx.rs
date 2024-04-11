@@ -1,16 +1,6 @@
 use keyring::key::public::PublicKey;
 
 use crate::error::IBC_ENCODE_UNWRAP;
-use crate::ibc::address::AccAddress;
-use crate::proto_types::Denom;
-use crate::tendermint::types::chain_id::ChainId;
-use crate::types::{
-    auth::tip::Tip,
-    base::send::SendCoins,
-    rendering::screen::{Indent, Screen},
-    tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
-};
-
 use crate::signing::{
     hasher::hash_get,
     renderer::value_renderer::{
@@ -18,7 +8,16 @@ use crate::signing::{
         TryPrimitiveValueRendererWithMetadata, ValueRenderer,
     },
 };
-use crate::tendermint::types::proto::Protobuf;
+use crate::types::{
+    auth::tip::Tip,
+    base::send::SendCoins,
+    rendering::screen::{Indent, Screen},
+    tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
+};
+use ibc_types::address::AccAddress;
+use proto_types::Denom;
+use tendermint::types::chain_id::ChainId;
+use tendermint::types::proto::Protobuf;
 
 /// Envelope is an internal data structure used to generate the tx envelope
 /// screens. Used in the same way as the Cosmos SDK Envelope type:
@@ -245,12 +244,8 @@ impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
 mod tests {
     use std::str::FromStr;
 
-    use crate::ibc::address::AccAddress;
-    use crate::ibc::tx::mode_info::{ModeInfo, SignMode};
-    use crate::proto_types::{Denom, Uint256};
     use crate::signing::renderer::test_functions::get_metadata;
     use crate::signing::renderer::value_renderer::ValueRenderer;
-    use crate::tendermint::types::chain_id::ChainId;
     use crate::types::auth::fee::Fee;
     use crate::types::auth::info::AuthInfo;
     use crate::types::base::coin::Coin;
@@ -261,6 +256,10 @@ mod tests {
     use crate::types::tx::body::TxBody;
     use crate::types::tx::data::TxData;
     use crate::types::tx::signer::SignerData;
+    use ibc_types::address::AccAddress;
+    use ibc_types::tx::mode_info::{ModeInfo, SignMode};
+    use proto_types::{Denom, Uint256};
+    use tendermint::types::chain_id::ChainId;
 
     use super::Envelope;
 

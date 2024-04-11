@@ -1,9 +1,9 @@
-use crate::proto_types::Denom;
 use crate::types::{
     msg::send::MsgSend,
     rendering::screen::{Indent, Screen},
     tx::metadata::Metadata,
 };
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,

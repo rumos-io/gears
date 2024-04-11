@@ -5,8 +5,8 @@ pub mod value_renderer;
 
 #[cfg(test)]
 pub(super) mod test_functions {
-    use crate::proto_types::Denom;
     use crate::types::tx::metadata::{DenomUnit, Metadata};
+    use proto_types::Denom;
 
     pub fn get_metadata(denom: &Denom) -> Option<Metadata> {
         match denom.to_string().as_str() {

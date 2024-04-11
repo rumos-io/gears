@@ -1,6 +1,6 @@
-use crate::proto_types::Decimal256;
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 use crate::types::rendering::screen::Content;
+use proto_types::Decimal256;
 
 impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
     fn format(value: Decimal256) -> Content {
@@ -22,11 +22,11 @@ impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::proto_types::Decimal256;
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
     use crate::types::rendering::screen::Content;
+    use proto_types::Decimal256;
     use std::str::FromStr;
 
     #[test]

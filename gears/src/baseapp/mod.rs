@@ -3,7 +3,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::store::WriteMultiKVStore;
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::AppError,
@@ -14,6 +13,7 @@ use crate::{
     },
 };
 use bytes::Bytes;
+use store_crate::WriteMultiKVStore;
 use store_crate::{
     database::{Database, RocksDB},
     types::multi::MultiStore,

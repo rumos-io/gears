@@ -1,7 +1,7 @@
 use keyring::key::public::PublicKey;
 
-use crate::proto_types::Denom;
 use crate::types::{rendering::screen::Screen, tx::metadata::Metadata};
+use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{RenderError, ValueRenderer};
 

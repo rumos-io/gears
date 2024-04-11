@@ -1,4 +1,4 @@
-use crate::ibc::address::AccAddress;
+use ibc_types::address::AccAddress;
 
 pub enum Module {
     FeeCollector,

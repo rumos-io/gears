@@ -1,12 +1,12 @@
 use std::collections::BTreeMap;
 
-use crate::proto_types::Denom;
 use crate::signing::renderer::tx::Envelope;
 use crate::types::{
     rendering::screen::Screen,
     tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
 use ciborium::{value::CanonicalValue, Value};
+use proto_types::Denom;
 
 use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 
@@ -43,15 +43,7 @@ impl SignModeHandler {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::BTreeMap, str::FromStr};
-
-    use crate::ibc::{
-        address::AccAddress,
-        tx::mode_info::{ModeInfo, SignMode},
-    };
-    use crate::proto_types::{Denom, Uint256};
     use crate::signing::{handler::SignModeHandler, renderer::test_functions::get_metadata};
-    use crate::tendermint::types::chain_id::ChainId;
     use crate::types::{
         auth::{fee::Fee, info::AuthInfo},
         base::{coin::Coin, send::SendCoins},
@@ -64,6 +56,13 @@ mod tests {
         tx::{body::TxBody, data::TxData, signer::SignerData},
     };
     use ciborium::Value;
+    use ibc_types::{
+        address::AccAddress,
+        tx::mode_info::{ModeInfo, SignMode},
+    };
+    use proto_types::{Denom, Uint256};
+    use std::{collections::BTreeMap, str::FromStr};
+    use tendermint::types::chain_id::ChainId;
 
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {

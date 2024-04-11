@@ -1,8 +1,8 @@
-use crate::proto_types::Denom;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRendererWithMetadata,
 };
 use crate::types::{base::send::SendCoins, rendering::screen::Content, tx::metadata::Metadata};
+use proto_types::Denom;
 
 impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
@@ -35,7 +35,6 @@ impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRender
 
 #[cfg(test)]
 mod tests {
-    use crate::proto_types::Uint256;
     use crate::signing::renderer::{
         test_functions::get_metadata,
         value_renderer::{DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata},
@@ -44,6 +43,7 @@ mod tests {
         base::{coin::Coin, send::SendCoins},
         rendering::screen::Content,
     };
+    use proto_types::Uint256;
 
     #[test]
     fn send_coins_check_format() -> anyhow::Result<()> {
