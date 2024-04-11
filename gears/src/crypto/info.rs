@@ -1,4 +1,4 @@
-use ibc_types::{
+use core_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };

@@ -3,7 +3,7 @@ use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse, GaiaCoreClien
 use gears::{
     commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    ibc::address::AccAddress,
+    core::address::AccAddress,
     types::{
         account::{Account, BaseAccount},
         query::account::QueryAccountResponse,

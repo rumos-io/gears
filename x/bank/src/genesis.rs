@@ -1,5 +1,5 @@
 use gears::{
-    ibc::address::AccAddress,
+    core::address::AccAddress,
     types::{base::send::SendCoins, tx::metadata::Metadata},
 };
 use serde::{Deserialize, Serialize};

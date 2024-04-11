@@ -14,7 +14,7 @@ use gears::application::node::Node;
 use gears::application::ApplicationInfo;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
-use gears::ibc::address::AccAddress;
+use gears::core::address::AccAddress;
 use genesis::GenesisState;
 use rest::get_router;
 use serde::Serialize;

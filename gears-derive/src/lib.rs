@@ -58,7 +58,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
                 quote! {
                     if value.type_url.starts_with(#url) {
-                        Ok(Self::#ident(::gears::ibc::any::google::Any::try_into(value)?))
+                        Ok(Self::#ident(::gears::core::any::google::Any::try_into(value)?))
                     }
                 }
             });
@@ -67,7 +67,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                 impl  ::gears::types::tx::TxMessage for #name {
 
 
-                    fn get_signers(&self) -> Vec<&::gears::ibc::address::AccAddress> {
+                    fn get_signers(&self) -> Vec<&::gears::core::address::AccAddress> {
 
                         match self {
                             #(#get_signers),*
@@ -89,7 +89,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
 
                 }
 
-                impl From<#name> for ::gears::ibc::any::google::Any {
+                impl From<#name> for ::gears::core::any::google::Any {
                     fn from(msg: #name) -> Self {
                         match msg {
                             #(#into_any),*
@@ -97,15 +97,15 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     }
                 }
 
-                impl TryFrom<::gears::ibc::any::google::Any> for #name {
-                    type Error = ::gears::ibc::errors::Error;
+                impl TryFrom<::gears::core::any::google::Any> for #name {
+                    type Error = ::gears::core::errors::Error;
 
-                    fn try_from(value: ::gears::ibc::any::google::Any) -> Result<Self, Self::Error> {
+                    fn try_from(value: ::gears::core::any::google::Any) -> Result<Self, Self::Error> {
 
                         #(#from_any) else*
 
                          else {
-                            Err(::gears::ibc::errors::Error::DecodeGeneral(
+                            Err(::gears::core::errors::Error::DecodeGeneral(
                                 "message type not recognized".into(),
                             ))
                         }

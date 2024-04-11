@@ -13,7 +13,7 @@ use crate::{
 };
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
-use ibc_types::address::AccAddress;
+use core_types::address::AccAddress;
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;
 

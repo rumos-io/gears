@@ -1,5 +1,5 @@
 use gears::{
-    ibc::{address::AccAddress, errors::Error, query::request::PageRequest},
+    core::{address::AccAddress, errors::Error, query::request::PageRequest},
     tendermint::types::proto::Protobuf,
     types::{
         base::{coin::Coin, errors::CoinsError},
@@ -11,15 +11,15 @@ use gears::{
 use serde::{Deserialize, Serialize};
 
 mod inner {
-    pub use gears::ibc::bank::Metadata;
-    pub use gears::ibc::base::coin::Coin;
-    pub use gears::ibc::query::request::bank::QueryAllBalancesRequest;
-    pub use gears::ibc::query::request::bank::QueryBalanceRequest;
-    pub use gears::ibc::query::request::bank::QueryDenomMetadataRequest;
-    pub use gears::ibc::query::response::bank::QueryAllBalancesResponse;
-    pub use gears::ibc::query::response::bank::QueryBalanceResponse;
-    pub use gears::ibc::query::response::bank::QueryTotalSupplyResponse;
-    pub use gears::ibc::query::response::PageResponse;
+    pub use gears::core::bank::Metadata;
+    pub use gears::core::base::coin::Coin;
+    pub use gears::core::query::request::bank::QueryAllBalancesRequest;
+    pub use gears::core::query::request::bank::QueryBalanceRequest;
+    pub use gears::core::query::request::bank::QueryDenomMetadataRequest;
+    pub use gears::core::query::response::bank::QueryAllBalancesResponse;
+    pub use gears::core::query::response::bank::QueryBalanceResponse;
+    pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
+    pub use gears::core::query::response::PageResponse;
 }
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.

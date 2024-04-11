@@ -1,4 +1,4 @@
-use gears::ibc::address::AccAddress;
+use gears::core::address::AccAddress;
 use gears::{error::AppError, types::account::BaseAccount};
 use serde::{Deserialize, Serialize};
 

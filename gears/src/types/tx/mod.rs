@@ -2,7 +2,7 @@ pub mod data;
 pub mod errors;
 pub mod metadata;
 pub mod signer;
-use ibc_types::{
+use core_types::{
     address::AccAddress, any::google::Any, errors::Error, tx::signature::SignatureData,
 };
 use keyring::key::public::PublicKey;
@@ -28,7 +28,7 @@ pub trait TxMessage:
 }
 
 mod inner {
-    pub use ibc_types::tx::inner::Tx;
+    pub use core_types::tx::inner::Tx;
 }
 
 /// Tx is the standard type used for broadcasting transactions.
@@ -42,7 +42,7 @@ pub struct Tx<M> {
     /// signatures is a list of signatures that matches the length and order of
     /// AuthInfo's signer_infos to allow connecting signature meta information like
     /// public key and signing mode by position.
-    #[serde(serialize_with = "ibc_types::serializers::serialize_vec_of_vec_to_vec_of_base64")]
+    #[serde(serialize_with = "core_types::serializers::serialize_vec_of_vec_to_vec_of_base64")]
     pub signatures: Vec<Vec<u8>>,
     #[serde(skip_serializing)]
     pub signatures_data: Vec<SignatureData>,

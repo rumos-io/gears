@@ -70,23 +70,11 @@ impl From<StoreError> for AppError {
     }
 }
 
-impl From<ibc_types::errors::Error> for AppError {
-    fn from(value: ibc_types::errors::Error) -> Self {
+impl From<core_types::errors::Error> for AppError {
+    fn from(value: core_types::errors::Error) -> Self {
         Self::IBC(value.to_string())
     }
 }
-
-// impl From<proto_messages::Error> for AppError {
-//     fn from(err: proto_messages::Error) -> AppError {
-//         AppError::InvalidRequest(err.to_string())
-//     }
-// }
-
-// impl From<tendermint::proto::Error> for AppError {
-//     fn from(value: tendermint::proto::Error) -> Self {
-//         AppError::InvalidRequest(value.to_string())
-//     }
-// }
 
 #[derive(Debug, thiserror::Error)]
 pub enum SearchError {

@@ -23,7 +23,7 @@ use gears::{
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
 };
 use gears::{
-    ibc::address::AccAddress,
+    core::address::AccAddress,
     types::base::send::SendCoins,
     utils::{TempDir, TmpChild},
 };

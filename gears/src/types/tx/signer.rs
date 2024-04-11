@@ -1,4 +1,4 @@
-use ibc_types::address::AccAddress;
+use core_types::address::AccAddress;
 use keyring::key::public::PublicKey;
 use serde::Deserialize;
 use tendermint::types::chain_id::ChainId;

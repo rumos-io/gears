@@ -57,11 +57,11 @@ mod tests {
         tx::{body::TxBody, data::TxData, signer::SignerData},
     };
     use ciborium::Value;
-    use cosmwasm_std::Uint256;
-    use ibc_types::{
+    use core_types::{
         address::AccAddress,
         tx::mode_info::{ModeInfo, SignMode},
     };
+    use cosmwasm_std::Uint256;
     use std::{collections::BTreeMap, str::FromStr};
     use tendermint::types::chain_id::ChainId;
 

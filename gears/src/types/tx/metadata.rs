@@ -7,8 +7,8 @@ use tendermint::types::proto::Protobuf;
 use crate::types::denom::Denom;
 
 mod inner {
-    pub use ibc_types::bank::Metadata;
-    pub use ibc_types::tx::denom::DenomUnit;
+    pub use core_types::bank::Metadata;
+    pub use core_types::tx::denom::DenomUnit;
 }
 
 /// We use our own version of the Metadata struct because the one in ibc_proto

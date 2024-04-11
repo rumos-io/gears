@@ -1,7 +1,7 @@
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
 use gears::{
-    ibc::address::AccAddress,
+    core::address::AccAddress,
     types::{
         base::{coin::Coin, send::SendCoins},
         msg::send::MsgSend,

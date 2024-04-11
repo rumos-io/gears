@@ -789,6 +789,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "06ea2b9bc92be3c2baa9334a323ebca2d6f074ff852cd1d7b11064035cd3868f"
 
 [[package]]
+name = "core-types"
+version = "0.1.0"
+dependencies = [
+ "base64 0.22.0",
+ "base64-serde",
+ "bech32",
+ "data-encoding",
+ "ibc-proto",
+ "prost",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "cosmwasm-crypto"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1504,6 +1519,7 @@ dependencies = [
  "ciborium",
  "clap",
  "clap_complete",
+ "core-types",
  "cosmwasm-std",
  "data-encoding",
  "derive_builder",
@@ -1512,7 +1528,6 @@ dependencies = [
  "handlebars",
  "hex",
  "human-panic",
- "ibc-types",
  "integer-encoding",
  "k256",
  "keyring",
@@ -1973,21 +1988,6 @@ dependencies = [
  "subtle-encoding",
  "tendermint-proto",
  "tonic",
-]
-
-[[package]]
-name = "ibc-types"
-version = "0.1.0"
-dependencies = [
- "base64 0.22.0",
- "base64-serde",
- "bech32",
- "data-encoding",
- "ibc-proto",
- "prost",
- "serde",
- "serde_json",
- "thiserror",
 ]
 
 [[package]]

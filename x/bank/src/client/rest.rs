@@ -7,7 +7,7 @@ use gears::tendermint::application::ABCIApplication;
 use gears::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     baseapp::{genesis::Genesis, BaseApp},
-    ibc::address::AccAddress,
+    core::address::AccAddress,
     params::ParamsSubspaceKey,
     rest::{error::Error, Pagination, RestState},
     tendermint::types::{proto::Protobuf, request::query::RequestQuery},

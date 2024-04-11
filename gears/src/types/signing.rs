@@ -1,6 +1,6 @@
-use ibc_types::any::google::Any;
-use ibc_types::errors::Error as IbcError;
-use ibc_types::tx::mode_info::ModeInfo;
+use core_types::any::google::Any;
+use core_types::errors::Error as IbcError;
+use core_types::tx::mode_info::ModeInfo;
 use keyring::error::DecodeError;
 use keyring::key::public::PublicKey;
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use tendermint::types::proto::Protobuf;
 use crate::crypto::secp256k1::RawSecp256k1PubKey;
 
 pub mod inner {
-    pub use ibc_types::signing::SignerInfo;
+    pub use core_types::signing::SignerInfo;
 }
 
 /// SignerInfo describes the public key and signing mode of a single top-level
@@ -53,7 +53,7 @@ impl TryFrom<inner::SignerInfo> for SignerInfo {
             public_key: key,
             mode_info: raw
                 .mode_info
-                .ok_or(ibc_types::errors::Error::MissingField(String::from(
+                .ok_or(core_types::errors::Error::MissingField(String::from(
                     "mode_info",
                 )))?
                 .try_into()?,

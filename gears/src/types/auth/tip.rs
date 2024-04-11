@@ -1,4 +1,4 @@
-use ibc_types::{address::AccAddress, errors::AddressError};
+use core_types::{address::AccAddress, errors::AddressError};
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
@@ -9,8 +9,8 @@ use crate::types::base::{
 };
 
 mod inner {
-    pub use ibc_types::auth::tip::Tip;
-    pub use ibc_types::base::coin::Coin;
+    pub use core_types::auth::tip::Tip;
+    pub use core_types::base::coin::Coin;
 }
 
 // Tip is the tip used for meta-transactions.

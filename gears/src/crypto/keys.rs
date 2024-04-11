@@ -1,5 +1,5 @@
 use bip32::PublicKey as PublicKeyTrait;
-use ibc_types::address::AccAddress;
+use core_types::address::AccAddress;
 use keyring::key::{
     pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair},
     public::PublicKey,

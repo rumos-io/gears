@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use ibc_types::{address::AccAddress, any::google::Any};
+use core_types::{address::AccAddress, any::google::Any};
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
@@ -9,8 +9,8 @@ use crate::types::{
 };
 
 mod inner {
-    pub use ibc_types::base::coin::Coin;
-    pub use ibc_types::msg::MsgSend;
+    pub use core_types::base::coin::Coin;
+    pub use core_types::msg::MsgSend;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
@@ -90,10 +90,10 @@ impl TxMessage for MsgSend {
 }
 
 impl TryFrom<Any> for MsgSend {
-    type Error = ibc_types::errors::Error;
+    type Error = core_types::errors::Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         MsgSend::decode::<Bytes>(value.value.clone().into())
-            .map_err(|e| ibc_types::errors::Error::DecodeAny(e.to_string()))
+            .map_err(|e| core_types::errors::Error::DecodeAny(e.to_string()))
     }
 }

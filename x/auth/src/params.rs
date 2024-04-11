@@ -1,4 +1,4 @@
-use gears::ibc::serializers::serialize_number_to_string;
+use gears::core::serializers::serialize_number_to_string;
 use gears::store::database::{Database, PrefixDB};
 use gears::store::{
     types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,

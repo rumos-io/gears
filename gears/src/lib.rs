@@ -18,8 +18,8 @@ pub mod utils;
 pub mod x;
 
 #[cfg(feature = "export")]
-pub mod ibc {
-    pub use ibc_types::*;
+pub mod core {
+    pub use core_types::*;
 }
 
 #[cfg(feature = "export")]

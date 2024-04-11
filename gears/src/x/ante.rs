@@ -13,7 +13,7 @@ use crate::{
         tx::{data::TxData, metadata::Metadata, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
-use ibc_types::{
+use core_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };

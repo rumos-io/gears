@@ -1,5 +1,5 @@
+use gears::core::errors::Error as IbcError;
 use gears::error::IBC_ENCODE_UNWRAP;
-use gears::ibc::errors::Error as IbcError;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;

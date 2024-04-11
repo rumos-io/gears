@@ -5,11 +5,7 @@ use bank::cli::{
     tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
-use gears::ibc::address::AccAddress;
-// use ibc::client::cli::{
-//     query::IbcQueryCli,
-//     tx::{run_ibc_tx_command, IbcTxCli},
-// };
+use gears::core::address::AccAddress;
 
 use crate::message::Message;
 

@@ -10,7 +10,7 @@ use gaia_rs::{query::GaiaQueryResponse, GaiaCoreClient};
 use gears::{
     commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    ibc::address::AccAddress,
+    core::address::AccAddress,
     types::{base::coin::Coin, denom::Denom},
 };
 use utilities::run_gaia_and_tendermint;

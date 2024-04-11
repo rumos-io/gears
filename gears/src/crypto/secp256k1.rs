@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use ibc_types::any::google::Any;
+use core_types::any::google::Any;
 use keyring::{error::DecodeError, key::secp256k1::Secp256k1PubKey};
 use prost::Message;
 use tendermint::types::proto::Protobuf;

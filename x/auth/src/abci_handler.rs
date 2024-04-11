@@ -1,6 +1,6 @@
+use gears::core::query::request::account::QueryAccountRequest;
+use gears::core::Protobuf as _;
 use gears::error::IBC_ENCODE_UNWRAP;
-use gears::ibc::query::request::account::QueryAccountRequest;
-use gears::ibc::Protobuf as _;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;

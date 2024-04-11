@@ -4,7 +4,7 @@ members = [
   "database",
   "tendermint",
   # "proto-types",
-  "ibc-types", 
+  "core-types", 
 
   # with local deps
   "trees",

@@ -12,7 +12,7 @@ use crate::{
         tx::{body::TxBody, TxMessage},
     },
 };
-use ibc_types::{address::AccAddress, query::request::account::QueryAccountRequest};
+use core_types::{address::AccAddress, query::request::account::QueryAccountRequest};
 use keyring::key::pair::KeyPair;
 use serde::Serialize;
 
@@ -130,10 +130,10 @@ pub trait QueryHandler {
 }
 
 mod inner {
-    pub use ibc_types::query::response::account::QueryAccountResponse;
+    pub use core_types::query::response::account::QueryAccountResponse;
 }
 
-use ibc_types::Protobuf;
+use core_types::Protobuf;
 
 // TODO: we're assuming here that the app has an auth module which handles this query
 fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {

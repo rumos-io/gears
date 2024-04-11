@@ -1,4 +1,4 @@
-use ibc_types::address::AccAddress;
+use core_types::address::AccAddress;
 use store_crate::{
     database::{Database, PrefixDB},
     StoreKey,

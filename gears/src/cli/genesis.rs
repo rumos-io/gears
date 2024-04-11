@@ -1,7 +1,7 @@
 use std::{marker::PhantomData, path::PathBuf};
 
 use clap::{ArgAction, ValueHint};
-use ibc_types::address::AccAddress;
+use core_types::address::AccAddress;
 
 use crate::{
     application::ApplicationInfo, commands::node::genesis::GenesisCommand,

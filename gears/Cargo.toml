@@ -9,7 +9,7 @@ workspace = true
 [dependencies]
 #local
 tendermint = {path = "../tendermint"}
-ibc-types = {path = "../ibc-types"}
+core-types = {path = "../core-types"}
 keyring = {path = "../keyring"}
 store_crate = {path = "../store", package = "store"}
 

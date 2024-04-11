@@ -1,5 +1,5 @@
 use crate::{error::AppError, types::base::send::SendCoins};
-use ibc_types::address::AccAddress;
+use core_types::address::AccAddress;
 use serde::{de::DeserializeOwned, Serialize};
 
 pub trait Genesis: Default + DeserializeOwned + Serialize + Clone + Send + Sync + 'static {

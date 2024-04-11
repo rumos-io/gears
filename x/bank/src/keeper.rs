@@ -4,8 +4,8 @@ use crate::types::query::{
 };
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
+use gears::core::address::AccAddress;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::ibc::address::AccAddress;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::Database;

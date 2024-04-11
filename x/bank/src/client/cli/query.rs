@@ -6,8 +6,8 @@ use clap::{Args, Subcommand};
 
 use gears::{
     application::handlers::client::QueryHandler,
+    core::{address::AccAddress, query::request::bank::QueryDenomsMetadataRequest},
     error::IBC_ENCODE_UNWRAP,
-    ibc::{address::AccAddress, query::request::bank::QueryDenomsMetadataRequest},
     tendermint::types::proto::Protobuf,
     types::query::Query,
 };

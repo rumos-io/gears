@@ -8,7 +8,7 @@ use crate::types::{denom::Denom, errors::Error};
 use super::errors::CoinsError;
 
 mod inner {
-    pub use ibc_types::base::coin::Coin;
+    pub use core_types::base::coin::Coin;
 }
 
 /// Coin defines a token with a denomination and an amount.

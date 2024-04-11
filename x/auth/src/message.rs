@@ -1,4 +1,4 @@
-use gears::ibc::{address::AccAddress, any::google::Any};
+use gears::core::{address::AccAddress, any::google::Any};
 use gears::types::tx::TxMessage;
 use serde::Serialize;
 
@@ -30,10 +30,10 @@ impl From<Message> for Any {
 }
 
 impl TryFrom<Any> for Message {
-    type Error = gears::ibc::errors::Error;
+    type Error = gears::core::errors::Error;
 
     fn try_from(_value: Any) -> Result<Self, Self::Error> {
-        Err(gears::ibc::errors::Error::DecodeGeneral(
+        Err(gears::core::errors::Error::DecodeGeneral(
             "message type not recognized".into(),
         ))
     }

@@ -15,7 +15,7 @@ use crate::types::{
     rendering::screen::{Indent, Screen},
     tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
-use ibc_types::address::AccAddress;
+use core_types::address::AccAddress;
 use tendermint::types::chain_id::ChainId;
 use tendermint::types::proto::Protobuf;
 
@@ -257,9 +257,9 @@ mod tests {
     use crate::types::tx::body::TxBody;
     use crate::types::tx::data::TxData;
     use crate::types::tx::signer::SignerData;
+    use core_types::address::AccAddress;
+    use core_types::tx::mode_info::{ModeInfo, SignMode};
     use cosmwasm_std::Uint256;
-    use ibc_types::address::AccAddress;
-    use ibc_types::tx::mode_info::{ModeInfo, SignMode};
     use tendermint::types::chain_id::ChainId;
 
     use super::Envelope;

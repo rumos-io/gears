@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use gears::{
+    core::{address::AccAddress, any::google::Any},
     error::IBC_ENCODE_UNWRAP,
-    ibc::{address::AccAddress, any::google::Any},
     signing::renderer::value_renderer::{RenderError, ValueRenderer},
     tendermint::types::proto::Protobuf,
     types::{
@@ -63,16 +63,16 @@ impl From<Message> for Any {
 }
 
 impl TryFrom<Any> for Message {
-    type Error = gears::ibc::errors::Error;
+    type Error = gears::core::errors::Error;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
             "/cosmos.bank.v1beta1.MsgSend" => {
                 let msg = MsgSend::decode::<Bytes>(value.value.clone().into())
-                    .map_err(|e| gears::ibc::errors::Error::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| gears::core::errors::Error::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Send(msg))
             }
-            _ => Err(gears::ibc::errors::Error::DecodeGeneral(
+            _ => Err(gears::core::errors::Error::DecodeGeneral(
                 "message type not recognized".into(),
             )),
         }
