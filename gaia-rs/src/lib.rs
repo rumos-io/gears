@@ -20,7 +20,6 @@ use rest::get_router;
 use serde::Serialize;
 
 pub mod abci_handler;
-pub mod ante;
 pub mod client;
 pub mod config;
 pub mod genesis;

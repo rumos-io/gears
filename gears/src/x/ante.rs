@@ -1,28 +1,28 @@
-use gears::application::handlers::node::AnteHandlerTrait;
-use gears::crypto::keys::ReadAccAddress;
-use gears::proto_types::Denom;
-use gears::store::database::{Database, PrefixDB};
-use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::BankKeeper;
-use gears::x::module::Module;
-use gears::{
-    ibc::{
-        signing::SignDoc,
-        tx::mode_info::{ModeInfo, SignMode},
-    },
-    x::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
-};
-use std::marker::PhantomData;
-
-use gears::store::StoreKey;
-use gears::{
+use crate::application::handlers::node::AnteHandlerTrait;
+use crate::crypto::keys::ReadAccAddress;
+use crate::proto_types::Denom;
+use crate::store::database::{Database, PrefixDB};
+use crate::store::StoreKey;
+use crate::x::keepers::auth::AuthKeeper;
+use crate::x::keepers::auth::AuthParams;
+use crate::x::keepers::bank::BankKeeper;
+use crate::x::module::Module;
+use crate::{
     error::AppError,
     types::{
         context::{QueryableContext, TransactionalContext},
         tx::{data::TxData, metadata::Metadata, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
+use crate::{
+    ibc::{
+        signing::SignDoc,
+        tx::mode_info::{ModeInfo, SignMode},
+    },
+    signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
+};
 use prost::Message as ProstMessage;
+use std::marker::PhantomData;
 
 #[derive(Debug, Clone)]
 pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> {
@@ -35,7 +35,7 @@ impl<SK, BK, AK> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK>
 where
     SK: StoreKey,
     BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK, Params = auth::Params>,
+    AK: AuthKeeper<SK>,
 {
     fn run<
         DB: Database,
@@ -50,9 +50,7 @@ where
     }
 }
 
-impl<AK: AuthKeeper<SK, Params = auth::Params>, BK: BankKeeper<SK>, SK: StoreKey>
-    BaseAnteHandler<BK, AK, SK>
-{
+impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, AK, SK> {
     pub fn new(auth_keeper: AK, bank_keeper: BK) -> BaseAnteHandler<BK, AK, SK> {
         BaseAnteHandler {
             bank_keeper,
@@ -148,7 +146,7 @@ impl<AK: AuthKeeper<SK, Params = auth::Params>, BK: BankKeeper<SK>, SK: StoreKey
         ctx: &CTX,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
-        let max_memo_chars = self.auth_keeper.get_auth_params(ctx).max_memo_characters;
+        let max_memo_chars = self.auth_keeper.get_auth_params(ctx).max_memo_characters();
         let memo_length: u64 = tx
             .get_memo()
             .len()

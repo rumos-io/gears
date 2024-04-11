@@ -5,7 +5,7 @@ use crate::types::{
     tx::metadata::Metadata,
 };
 
-use crate::x::signing::renderer::value_renderer::{
+use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,
     TryPrimitiveValueRendererWithMetadata, ValueRenderer,
 };

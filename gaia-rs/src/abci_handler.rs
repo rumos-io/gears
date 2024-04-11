@@ -1,11 +1,9 @@
 use crate::{
-    ante::ante::BaseAnteHandler,
     config::AppConfig,
     genesis::GenesisState,
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
 };
-use gears::application::handlers::node::ABCIHandler;
 use gears::error::AppError;
 use gears::store::database::{Database, PrefixDB};
 use gears::tendermint::types::request::query::RequestQuery;
@@ -13,6 +11,7 @@ use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
 use gears::types::tx::raw::TxWithRaw;
+use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
 use gears::{
     config::Config, types::context::TransactionalContext, x::params::Keeper as ParamsKeeper,
 };

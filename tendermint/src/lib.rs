@@ -12,9 +12,9 @@ use tendermint_config::{
 use types::chain_id::ChainId;
 
 pub mod abci;
-pub mod informal;
 pub mod application;
 pub mod error;
+pub mod informal;
 pub mod rpc;
 pub mod types;
 

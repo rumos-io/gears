@@ -3,6 +3,7 @@ use gears::store::database::{Database, PrefixDB};
 use gears::store::{
     types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,
 };
+use gears::x::keepers::auth::AuthParams;
 use gears::{
     types::context::{QueryableContext, TransactionalContext},
     x::params::ParamsSubspaceKey,
@@ -27,6 +28,12 @@ pub struct Params {
     #[serde(serialize_with = "serialize_number_to_string")]
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub sig_verify_cost_secp256k1: u64,
+}
+
+impl AuthParams for Params {
+    fn max_memo_characters(&self) -> u64 {
+        self.max_memo_characters
+    }
 }
 
 const KEY_MAX_MEMO_CHARACTERS: [u8; 17] = [

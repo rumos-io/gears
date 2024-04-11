@@ -2,7 +2,7 @@
 use crate::types::rendering::screen::Content;
 use sha2::{Digest, Sha256};
 
-use crate::x::signing::renderer::value_renderer::{
+use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRenderer,
 };
 

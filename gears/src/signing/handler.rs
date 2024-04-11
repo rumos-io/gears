@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 
 use crate::proto_types::Denom;
+use crate::signing::renderer::tx::Envelope;
 use crate::types::{
     rendering::screen::Screen,
     tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
-use crate::x::signing::renderer::tx::Envelope;
 use ciborium::{value::CanonicalValue, Value};
 
 use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
@@ -50,6 +50,7 @@ mod tests {
         tx::mode_info::{ModeInfo, SignMode},
     };
     use crate::proto_types::{Denom, Uint256};
+    use crate::signing::{handler::SignModeHandler, renderer::test_functions::get_metadata};
     use crate::tendermint::types::chain_id::ChainId;
     use crate::types::{
         auth::{fee::Fee, info::AuthInfo},
@@ -62,7 +63,6 @@ mod tests {
         signing::SignerInfo,
         tx::{body::TxBody, data::TxData, signer::SignerData},
     };
-    use crate::x::signing::{handler::SignModeHandler, renderer::test_functions::get_metadata};
     use ciborium::Value;
 
     #[test]

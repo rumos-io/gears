@@ -12,8 +12,12 @@ use crate::{
     x::module::Module,
 };
 
+pub trait AuthParams {
+    fn max_memo_characters(&self) -> u64;
+}
+
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    type Params;
+    type Params: AuthParams;
 
     fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,

@@ -11,14 +11,14 @@ use crate::types::{
     tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
 
-use crate::tendermint::types::proto::Protobuf;
-use crate::x::signing::{
+use crate::signing::{
     hasher::hash_get,
     renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError, TryPrimitiveValueRenderer,
         TryPrimitiveValueRendererWithMetadata, ValueRenderer,
     },
 };
+use crate::tendermint::types::proto::Protobuf;
 
 /// Envelope is an internal data structure used to generate the tx envelope
 /// screens. Used in the same way as the Cosmos SDK Envelope type:
@@ -248,6 +248,8 @@ mod tests {
     use crate::ibc::address::AccAddress;
     use crate::ibc::tx::mode_info::{ModeInfo, SignMode};
     use crate::proto_types::{Denom, Uint256};
+    use crate::signing::renderer::test_functions::get_metadata;
+    use crate::signing::renderer::value_renderer::ValueRenderer;
     use crate::tendermint::types::chain_id::ChainId;
     use crate::types::auth::fee::Fee;
     use crate::types::auth::info::AuthInfo;
@@ -259,8 +261,6 @@ mod tests {
     use crate::types::tx::body::TxBody;
     use crate::types::tx::data::TxData;
     use crate::types::tx::signer::SignerData;
-    use crate::x::signing::renderer::test_functions::get_metadata;
-    use crate::x::signing::renderer::value_renderer::ValueRenderer;
 
     use super::Envelope;
 

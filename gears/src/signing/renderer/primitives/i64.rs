@@ -2,10 +2,8 @@
 
 use std::sync::OnceLock;
 
+use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 use crate::types::rendering::screen::Content;
-use crate::x::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, PrimitiveValueRenderer,
-};
 use num_format::{Buffer, CustomFormat, Grouping};
 
 const THOUSAND_SEPARATOR: &str = "'";
@@ -36,7 +34,7 @@ impl PrimitiveValueRenderer<i64> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::x::signing::renderer::value_renderer::{
+    use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
 

@@ -8,9 +8,11 @@ pub mod defaults;
 pub mod error;
 pub mod rest;
 pub(crate) mod runtime;
+pub mod signing;
 pub mod types;
 #[cfg(feature = "utils")]
 pub mod utils;
+#[cfg(feature = "xmods")]
 pub mod x;
 
 pub mod crypto;

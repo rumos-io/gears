@@ -1,9 +1,9 @@
-use crate::types::rendering::screen::Content;
-use crate::x::signing::renderer::value_renderer::RenderError;
+use crate::signing::renderer::value_renderer::RenderError;
 #[doc(inline)]
-use crate::x::signing::renderer::value_renderer::{
+use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, TryPrimitiveValueRenderer,
 };
+use crate::types::rendering::screen::Content;
 
 impl TryPrimitiveValueRenderer<&str> for DefaultPrimitiveRenderer {
     fn try_format(value: &str) -> Result<Content, RenderError> {

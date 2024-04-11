@@ -3,13 +3,13 @@ use gears::{
     error::IBC_ENCODE_UNWRAP,
     ibc::{address::AccAddress, any::google::Any},
     proto_types::Denom,
+    signing::renderer::value_renderer::{RenderError, ValueRenderer},
     tendermint::types::proto::Protobuf,
     types::{
         msg::send::MsgSend,
         rendering::screen::Screen,
         tx::{metadata::Metadata, TxMessage},
     },
-    x::signing::renderer::value_renderer::{RenderError, ValueRenderer},
 };
 use serde::Serialize;
 

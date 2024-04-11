@@ -1,10 +1,8 @@
 //! Default formatting implementation for `Uint256` - 256 bit unsigned integer
 
 use crate::proto_types::Uint256;
+use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 use crate::types::rendering::screen::Content;
-use crate::x::signing::renderer::value_renderer::{
-    DefaultPrimitiveRenderer, PrimitiveValueRenderer,
-};
 use num_bigint::BigUint;
 use num_format::WriteFormatted;
 use std::str::FromStr;
@@ -26,10 +24,10 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
 #[cfg(test)]
 mod tests {
     use crate::proto_types::Uint256;
-    use crate::types::rendering::screen::Content;
-    use crate::x::signing::renderer::value_renderer::{
+    use crate::signingrenderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
+    use crate::types::rendering::screen::Content;
 
     #[test]
     fn test_positive() {
