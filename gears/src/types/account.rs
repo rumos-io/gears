@@ -1,14 +1,13 @@
 use core_types::errors::Error as IbcError;
 use core_types::{address::AccAddress, any::google::Any, serializers::serialize_number_to_string};
 use keyring::error::DecodeError;
-use keyring::key::public::PublicKey;
-use keyring::key::secp256k1::Secp256k1PubKey;
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 use tendermint::types::proto::Protobuf;
 
-use crate::crypto::secp256k1::RawSecp256k1PubKey;
+use crate::crypto::public::PublicKey;
+use crate::crypto::secp256k1::{RawSecp256k1PubKey, Secp256k1PubKey};
 use crate::error::IBC_ENCODE_UNWRAP;
 
 pub mod inner {

@@ -2,12 +2,12 @@ use core_types::any::google::Any;
 use core_types::errors::Error as IbcError;
 use core_types::tx::mode_info::ModeInfo;
 use keyring::error::DecodeError;
-use keyring::key::public::PublicKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use tendermint::types::proto::Protobuf;
 
+use crate::crypto::public::PublicKey;
 use crate::crypto::secp256k1::RawSecp256k1PubKey;
 
 pub mod inner {

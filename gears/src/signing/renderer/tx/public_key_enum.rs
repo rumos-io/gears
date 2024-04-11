@@ -1,7 +1,6 @@
-use crate::types::{denom::Denom, rendering::screen::Screen, tx::metadata::Metadata};
-use keyring::key::public::PublicKey;
-
+use crate::crypto::public::PublicKey;
 use crate::signing::renderer::value_renderer::{RenderError, ValueRenderer};
+use crate::types::{denom::Denom, rendering::screen::Screen, tx::metadata::Metadata};
 
 impl ValueRenderer for PublicKey {
     fn format<F: Fn(&Denom) -> Option<Metadata>>(
@@ -16,8 +15,7 @@ impl ValueRenderer for PublicKey {
 
 #[cfg(test)]
 mod tests {
-    use keyring::key::secp256k1::Secp256k1PubKey;
-
+    use crate::crypto::secp256k1::Secp256k1PubKey;
     use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
     use crate::types::rendering::screen::{Content, Indent, Screen};
 

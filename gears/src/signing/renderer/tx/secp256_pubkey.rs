@@ -1,9 +1,10 @@
-use keyring::key::secp256k1::Secp256k1PubKey;
-
-use crate::types::{
-    denom::Denom,
-    rendering::screen::{Indent, Screen},
-    tx::metadata::Metadata,
+use crate::{
+    crypto::secp256k1::Secp256k1PubKey,
+    types::{
+        denom::Denom,
+        rendering::screen::{Indent, Screen},
+        tx::metadata::Metadata,
+    },
 };
 
 use crate::signing::renderer::value_renderer::{
@@ -40,8 +41,7 @@ impl ValueRenderer for Secp256k1PubKey {
 
 #[cfg(test)]
 mod tests {
-    use keyring::key::secp256k1::Secp256k1PubKey;
-
+    use crate::crypto::secp256k1::Secp256k1PubKey;
     use crate::types::rendering::screen::{Content, Indent, Screen};
 
     use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};

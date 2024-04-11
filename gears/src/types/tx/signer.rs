@@ -1,7 +1,8 @@
 use core_types::address::AccAddress;
-use keyring::key::public::PublicKey;
 use serde::Deserialize;
 use tendermint::types::chain_id::ChainId;
+
+use crate::crypto::public::PublicKey;
 
 /// SignerData is the specific information needed to sign a transaction that generally
 /// isn't included in the transaction body itself

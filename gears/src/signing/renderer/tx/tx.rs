@@ -1,5 +1,4 @@
-use keyring::key::public::PublicKey;
-
+use crate::crypto::public::PublicKey;
 use crate::error::IBC_ENCODE_UNWRAP;
 use crate::signing::{
     hasher::hash_get,
