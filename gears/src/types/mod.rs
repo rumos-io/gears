@@ -3,6 +3,7 @@ pub mod auth;
 pub mod base;
 pub mod context;
 pub mod gas;
+pub mod header;
 pub mod msg;
 pub mod query;
 pub mod rendering;

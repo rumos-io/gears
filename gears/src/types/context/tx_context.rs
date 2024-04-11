@@ -3,10 +3,9 @@ use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
     ReadMultiKVStore, StoreKey, WriteMultiKVStore,
 };
-use tendermint::types::{
-    chain_id::ChainId,
-    proto::{event::Event, header::Header},
-};
+use tendermint::types::{chain_id::ChainId, proto::event::Event};
+
+use crate::types::header::Header;
 
 use super::{QueryableContext, TransactionalContext};
 
@@ -16,7 +15,6 @@ pub struct TxContext<'a, DB, SK> {
     pub events: Vec<Event>,
     pub header: Header,
     _tx_bytes: Vec<u8>,
-    pub chain_id: ChainId,
 }
 
 impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
@@ -32,7 +30,6 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
             events: vec![],
             header,
             _tx_bytes: tx_bytes,
-            chain_id: ChainId::new("todo-900").expect("Unrechable. Default should be valid"),
         }
     }
 }
@@ -49,7 +46,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContex
     }
 
     fn chain_id(&self) -> &ChainId {
-        &self.chain_id
+        &self.header.chain_id
     }
 }
 

@@ -20,7 +20,8 @@ use store_crate::{
     ReadMultiKVStore, StoreKey,
 };
 use tendermint::types::{
-    proto::{event::Event, header::Header},
+    chain_id::ChainIdErrors,
+    proto::{event::Event, header::RawHeader},
     request::query::RequestQuery,
 };
 
@@ -42,7 +43,7 @@ pub struct BaseApp<
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
     abci_handler: H,
-    block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
+    block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
     pub m: PhantomData<M>,
     pub g: PhantomData<G>,
@@ -86,14 +87,14 @@ impl<
         *self.height.read().expect("RwLock will not be poisoned")
     }
 
-    fn get_block_header(&self) -> Option<Header> {
+    fn get_block_header(&self) -> Option<RawHeader> {
         self.block_header
             .read()
             .expect("RwLock will not be poisoned")
             .clone()
     }
 
-    fn set_block_header(&self, header: Header) {
+    fn set_block_header(&self, header: RawHeader) {
         let mut current_header = self
             .block_header
             .write()
@@ -143,7 +144,9 @@ impl<
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
-                .expect("block header is set in begin block"),
+                .expect("block header is set in begin block")
+                .try_into()
+                .map_err(|e: ChainIdErrors| AppError::Custom(e.to_string()))?,
             raw.clone().into(),
         );
 
@@ -159,7 +162,9 @@ impl<
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
-                .expect("block header is set in begin block"),
+                .expect("block header is set in begin block")
+                .try_into()
+                .map_err(|e: ChainIdErrors| AppError::Custom(e.to_string()))?,
             raw.into(),
         );
 

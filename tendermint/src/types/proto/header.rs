@@ -4,7 +4,7 @@ use super::{block::BlockId, consensus::Consensus};
 
 /// Header defines the structure of a Tendermint block header.
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
-pub struct Header {
+pub struct RawHeader {
     /// basic block info
     #[prost(message, optional, tag = "1")]
     pub version: Option<Consensus>,
@@ -63,9 +63,9 @@ pub struct Header {
     pub proposer_address: Vec<u8>,
 }
 
-impl From<Header> for inner::Header {
+impl From<RawHeader> for inner::Header {
     fn from(
-        Header {
+        RawHeader {
             version,
             chain_id,
             height,
@@ -80,7 +80,7 @@ impl From<Header> for inner::Header {
             last_results_hash,
             evidence_hash,
             proposer_address,
-        }: Header,
+        }: RawHeader,
     ) -> Self {
         Self {
             version: version.map(Into::into),
@@ -101,7 +101,7 @@ impl From<Header> for inner::Header {
     }
 }
 
-impl From<inner::Header> for Header {
+impl From<inner::Header> for RawHeader {
     fn from(
         inner::Header {
             version,

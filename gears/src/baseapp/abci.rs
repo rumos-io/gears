@@ -240,7 +240,9 @@ impl<
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
-                .expect("block header is set in begin block"),
+                .expect("block header is set in begin block")
+                .try_into()
+                .expect("Invalid request"),
             vec![],
         );
 
@@ -266,7 +268,9 @@ impl<
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
-                .expect("block header is set in begin block"),
+                .expect("block header is set in begin block")
+                .try_into()
+                .expect("Invalid request"),
             vec![],
         );
 

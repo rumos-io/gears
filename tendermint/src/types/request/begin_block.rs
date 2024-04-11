@@ -1,5 +1,5 @@
 use crate::types::proto::{
-    header::Header,
+    header::RawHeader,
     info::{Evidence, LastCommitInfo},
 };
 
@@ -8,7 +8,7 @@ pub struct RequestBeginBlock {
     #[prost(bytes = "bytes", tag = "1")]
     pub hash: ::prost::bytes::Bytes,
     #[prost(message, optional, tag = "2")]
-    pub header: Option<Header>,
+    pub header: Option<RawHeader>,
     #[prost(message, optional, tag = "3")]
     pub last_commit_info: Option<LastCommitInfo>,
     #[prost(message, repeated, tag = "4")]
