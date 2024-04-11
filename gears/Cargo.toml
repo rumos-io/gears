@@ -8,16 +8,16 @@ workspace = true
 
 [dependencies]
 #local
-tendermint = {path = "../tendermint", features = [ "rpc", "abci", "proto" ]}
-proto-messages = {path = "../proto-messages"}
-proto-types = {path = "../proto-types"}
-keyring = {path = "../keyring"}
-database = {path = "../database"}
-store_crate = {path = "../store", package = "store"}
-trees = {path = "../trees"}
+tendermint = { path = "../tendermint", features = ["rpc", "abci", "proto"] }
+proto-messages = { path = "../proto-messages" }
+proto-types = { path = "../proto-types" }
+keyring = { path = "../keyring" }
+database = { path = "../database" }
+store_crate = { path = "../store", package = "store" }
+trees = { path = "../trees" }
 
 #newtypes
-secp256k1 = { workspace = true, features = ["hashes"]}
+secp256k1 = { workspace = true, features = ["hashes"] }
 bytes = { workspace = true }
 url = { workspace = true }
 
@@ -33,7 +33,7 @@ sha2 = { workspace = true }
 prost = { workspace = true }
 bech32 = { workspace = true }
 hex = { workspace = true }
-serde = { workspace = true, default-features = false}
+serde = { workspace = true, default-features = false }
 serde-aux = { workspace = true }
 serde_json = { workspace = true }
 toml = { workspace = true }
@@ -47,17 +47,18 @@ strum = { workspace = true }
 text_io = "0.1.12"
 tokio = { workspace = true }
 derive_builder = { workspace = true }
+ledger-cosmos = { git = "https://github.com/rumos-io/ledger-cosmos-rs" }
 
 # networking
 axum = { workspace = true }
 tower-http = { workspace = true, features = ["cors"] }
 
 #cli
-clap = { workspace = true , optional = true }
+clap = { workspace = true, optional = true }
 clap_complete = { workspace = true, optional = true }
 
 [dev-dependencies]
 
 [features]
-default = [ "cli" ]
-cli = [ "dep:clap", "dep:clap_complete", ]
+default = ["cli"]
+cli = ["dep:clap", "dep:clap_complete"]

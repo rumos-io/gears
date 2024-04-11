@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
+use ledger_cosmos::CosmosValidatorApp;
 use prost::Message;
 use proto_messages::cosmos::{base::v1beta1::SendCoins, ibc::tx::TxRaw};
 use tendermint::informal::chain::Id;
@@ -13,32 +14,52 @@ use crate::runtime::runtime;
 
 #[derive(Debug, Clone, derive_builder::Builder)]
 pub struct TxCommand<C> {
-    pub home: PathBuf,
     pub node: url::Url,
-    pub from_key: String,
     pub chain_id: Id,
     pub fee: Option<SendCoins>,
-    pub keyring_backend: KeyringBackend,
-
+    pub keyring: Keyring,
     pub inner: C,
+}
+
+#[derive(Debug, Clone)]
+pub enum Keyring {
+    Ledger,
+    Local(LocalInfo),
+}
+
+#[derive(Debug, Clone)]
+pub struct LocalInfo {
+    pub keyring_backend: KeyringBackend,
+    pub from_key: String,
+    pub home: PathBuf,
 }
 
 pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     TxCommand {
-        home,
         node,
-        from_key,
         chain_id,
         fee,
-        keyring_backend,
         inner,
+        keyring,
     }: TxCommand<C>,
     handler: &H,
 ) -> anyhow::Result<Response> {
-    let keyring_home = home.join(keyring_backend.get_sub_dir());
+    let key = match keyring {
+        Keyring::Ledger => {
+            let cva = CosmosValidatorApp::connect().unwrap();
+            let pub_key = cva.public_key_secp256k1().unwrap();
+            println!("pub_key: {:?}", pub_key);
 
-    let key =
-        keyring::get_key_by_name(&from_key, keyring_backend.to_keyring_backend(&keyring_home))?;
+            todo!()
+        }
+        Keyring::Local(info) => {
+            let keyring_home = info.home.join(info.keyring_backend.get_sub_dir());
+            keyring::get_key_by_name(
+                &info.from_key,
+                info.keyring_backend.to_keyring_backend(&keyring_home),
+            )?
+        }
+    };
 
     let message = handler.prepare_tx(inner, key.get_address())?;
 
