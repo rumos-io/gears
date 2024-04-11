@@ -5,9 +5,9 @@ pub use clap_complete::Shell;
 use clap_complete::{generate, Generator};
 use human_panic::setup_panic;
 
-use crate::application::{
-    command::{app::AppCommands, client::ClientCommands, ApplicationCommands},
-    ApplicationInfo,
+use crate::{
+    application::ApplicationInfo,
+    commands::{client::ClientCommands, node::AppCommands, ApplicationCommands},
 };
 
 use self::{

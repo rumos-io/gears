@@ -1,13 +1,16 @@
-use database::Database;
 use serde::{Deserialize, Serialize};
-use store_crate::StoreKey;
-use tendermint::proto::{abci::BlockParams as RawBlockParams, abci::ConsensusParams};
+use store_crate::database::{Database, PrefixDB};
+use store_crate::{StoreKey, WritePrefixStore};
+use tendermint::types::proto::consensus::ConsensusParams;
 
-use crate::types::context::context::Context;
-use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
-use tendermint::proto::types::ValidatorParams as RawValidatorParams;
+use crate::params::{Keeper, ParamsSubspaceKey};
+use crate::types::context::TransactionalContext;
 
-use crate::x::params::{Keeper, ParamsSubspaceKey};
+mod inner {
+    pub use tendermint::types::proto::params::BlockParams;
+    pub use tendermint::types::proto::params::EvidenceParams;
+    pub use tendermint::types::proto::params::ValidatorParams;
+}
 
 const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
 const KEY_EVIDENCE_PARAMS: [u8; 14] = [
@@ -36,8 +39,8 @@ pub struct BlockParams {
     pub max_gas: String,
 }
 
-impl From<RawBlockParams> for BlockParams {
-    fn from(params: RawBlockParams) -> BlockParams {
+impl From<inner::BlockParams> for BlockParams {
+    fn from(params: inner::BlockParams) -> BlockParams {
         BlockParams {
             max_bytes: params.max_bytes.to_string(),
             max_gas: params.max_gas.to_string(),
@@ -50,8 +53,8 @@ pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
 
-impl From<RawValidatorParams> for ValidatorParams {
-    fn from(params: RawValidatorParams) -> ValidatorParams {
+impl From<inner::ValidatorParams> for ValidatorParams {
+    fn from(params: inner::ValidatorParams) -> ValidatorParams {
         ValidatorParams {
             pub_key_types: params.pub_key_types,
         }
@@ -65,8 +68,8 @@ pub struct EvidenceParams {
     max_bytes: String,
 }
 
-impl From<RawEvidenceParams> for EvidenceParams {
-    fn from(params: RawEvidenceParams) -> EvidenceParams {
+impl From<inner::EvidenceParams> for EvidenceParams {
+    fn from(params: inner::EvidenceParams) -> EvidenceParams {
         let duration = params
             .max_age_duration
             .map(|dur| dur.seconds * SEC_TO_NANO + i64::from(dur.nanos));
@@ -87,9 +90,9 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database>(
+    pub fn set_consensus_params<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         params: ConsensusParams,
     ) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
@@ -97,35 +100,32 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
 
         let mut store = self
             .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace_mut(ctx, &self.params_subspace_key);
 
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_BLOCK_PARAMS.into(), block_params.into_bytes());
+            store.set(KEY_BLOCK_PARAMS, block_params.into_bytes());
         }
 
         if let Some(params) = params.evidence {
             let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_EVIDENCE_PARAMS.into(), evidence_params.into_bytes());
+            store.set(KEY_EVIDENCE_PARAMS, evidence_params.into_bytes());
         }
 
         if let Some(params) = params.validator {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
-            store.set(KEY_VALIDATOR_PARAMS.into(), params.into_bytes());
+            store.set(KEY_VALIDATOR_PARAMS, params.into_bytes());
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-
-    use tendermint::proto::google::protobuf::Duration;
-    use tendermint::proto::types::EvidenceParams as RawEvidenceParams;
-
-    use super::*;
+    use super::EvidenceParams;
+    use tendermint::types::{proto::params::EvidenceParams as RawEvidenceParams, time::Duration};
 
     #[test]
     fn evidence_params_serialize_works() {

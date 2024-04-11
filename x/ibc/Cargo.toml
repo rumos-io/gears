@@ -7,12 +7,7 @@ edition = "2021"
 
 [dependencies]
 #local
-proto-types = { path = "../../proto-types" }
-proto-messages = { path = "../../proto-messages" }
-store = { path = "../../store" }
 gears = { path = "../../gears" }
-database = { path = "../../database" }
-tendermint = {path = "../../tendermint", features = [ "abci"]}
 
 # nutype
 bytes = { workspace = true }

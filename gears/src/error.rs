@@ -1,5 +1,9 @@
 use std::fmt::{Display, Formatter, Result};
 
+use store_crate::error::StoreError;
+
+pub const IBC_ENCODE_UNWRAP: &str = "Should be okay. In future versions of IBC they removed Result";
+
 #[derive(Debug, PartialEq)]
 pub enum AppError {
     Bech32(bech32::Error),
@@ -12,10 +16,11 @@ pub enum AppError {
     Timeout { timeout: u64, current: u64 },
     Memo(u64),
     InvalidPublicKey,
-    Tree(trees::Error),
+    Store(StoreError),
     IBC(String),
     Genesis(String),
     Query(String),
+    Custom(String),
 }
 
 impl Display for AppError {
@@ -35,10 +40,12 @@ impl Display for AppError {
             ),
             AppError::Memo(length) => write!(f, "memo is too long, max length is {}", length),
             AppError::InvalidPublicKey => write!(f, "public key is invalid"),
-            AppError::Tree(err) => err.fmt(f),
+            // AppError::Tree(err) => err.fmt(f),
             AppError::IBC(msg) => write!(f, "ibc routing error: {}", msg),
             AppError::Genesis(msg) => write!(f, "{}", msg),
             AppError::Query(msg) => write!(f, "Error executing query: {msg}"),
+            AppError::Store(msg) => write!(f, "Store error: {msg}"),
+            AppError::Custom(msg) => write!(f, "{msg}"),
         }
     }
 }
@@ -57,21 +64,15 @@ impl From<bech32::Error> for AppError {
     }
 }
 
-impl From<trees::Error> for AppError {
-    fn from(err: trees::Error) -> AppError {
-        AppError::Tree(err)
+impl From<StoreError> for AppError {
+    fn from(err: StoreError) -> AppError {
+        AppError::Store(err)
     }
 }
 
-impl From<proto_messages::Error> for AppError {
-    fn from(err: proto_messages::Error) -> AppError {
-        AppError::InvalidRequest(err.to_string())
-    }
-}
-
-impl From<tendermint::proto::Error> for AppError {
-    fn from(value: tendermint::proto::Error) -> Self {
-        AppError::InvalidRequest(value.to_string())
+impl From<core_types::errors::Error> for AppError {
+    fn from(value: core_types::errors::Error) -> Self {
+        Self::IBC(value.to_string())
     }
 }
 

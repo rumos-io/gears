@@ -17,16 +17,19 @@ pub mod create;
 #[derive(Args, Debug, Clone)]
 pub struct IbcTxCli {
     #[command(subcommand)]
-    command: IbcCommands,
+    pub command: IbcCommands,
 }
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum IbcCommands {
+    #[command(name = "create")]
     ClientCreate(CliCreateClient),
+    #[command(name = "update")]
     ClientUpdate(CliUpdateClient),
+    #[command(name = "upgrade")]
     ClientUpgrade(CliUpgradeClient),
+    #[command(name = "recover")]
     RecoverClientProposal(CliRecoverClient),
-    // IBCUpgradeProposal,
 }
 
 pub fn run_ibc_tx_command(args: IbcTxCli, _from_address: AccAddress) -> Result<IbcMessage> {

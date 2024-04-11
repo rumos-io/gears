@@ -5,7 +5,7 @@ use std::{
     ops::{Bound, RangeBounds},
 };
 
-use database::Database;
+use database::{ext::UnwrapCorrupt, Database};
 use integer_encoding::VarInt;
 use nutype::nutype;
 use sha2::{Digest, Sha256};
@@ -497,7 +497,8 @@ where
                 Ok(Tree {
                     root: node_db
                         .get_root_node(*latest_version)
-                        .expect("invalid data in database - possible database corruption"),
+                        .ok()
+                        .unwrap_or_corrupt(),
                     loaded_version: *latest_version,
                     node_db,
                     versions,
@@ -522,10 +523,7 @@ where
             // If the version already exists, return an error as we're attempting to overwrite.
             // However, the same hash means idempotent (i.e. no-op).
             // TODO: do we really need to be doing this?
-            let saved_hash = self
-                .node_db
-                .get_root_hash(version)
-                .expect("invalid data in database - possible database corruption");
+            let saved_hash = self.node_db.get_root_hash(version).ok().unwrap_or_corrupt();
             let working_hash = self.root_hash();
 
             if saved_hash == working_hash {
@@ -623,7 +621,7 @@ where
         }
     }
 
-    pub fn remove(&mut self, key: &impl AsRef<[u8]>) -> Option<Vec<u8>> {
+    pub fn remove(&mut self, key: &(impl AsRef<[u8]> + ?Sized)) -> Option<Vec<u8>> {
         // We use this struct to be 100% sure in output of `recursive_remove`
         struct NodeKey(pub Vec<u8>);
         struct NodeValue(pub Vec<u8>);
@@ -653,7 +651,7 @@ where
         fn recursive_remove<T: Database>(
             node: &mut Node,
             node_db: &NodeDB<T>,
-            key: &impl AsRef<[u8]>,
+            key: &(impl AsRef<[u8]> + ?Sized),
             orphaned: &mut Vec<Node>,
             version: u32,
         ) -> (Option<NodeValue>, Option<Sha256Hash>, bool, Option<NodeKey>) {
@@ -915,13 +913,10 @@ where
     }
 }
 
-pub struct Range<'a, R: RangeBounds<Vec<u8>>, T>
-where
-    T: Database,
-{
+pub struct Range<'a, R: RangeBounds<Vec<u8>>, DB> {
     pub(crate) range: R,
     pub(crate) delayed_nodes: Vec<Box<Node>>,
-    pub(crate) node_db: &'a NodeDB<T>,
+    pub(crate) node_db: &'a NodeDB<DB>,
 }
 
 impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {

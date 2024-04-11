@@ -3,10 +3,10 @@ use std::str::FromStr;
 use bytes::Bytes;
 use database::Database;
 use gears::types::context::query_context::QueryContext;
+use gears::types::context::QueryableContext;
 use gears::x::params::ParamsSubspaceKey;
 use prost::Message;
 use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateCommon;
-use proto_messages::cosmos::ibc::types::core::client::context::client_state::ClientStateValidation;
 use proto_messages::cosmos::ibc::types::core::client::context::types::Status;
 use proto_messages::{
     any::PrimitiveAny,
@@ -33,7 +33,8 @@ use proto_messages::{
         },
     },
 };
-use store::StoreKey;
+use store::types::prefix::immutable::ImmutablePrefixStore;
+use store::{QueryableKVStore, StoreKey};
 
 use crate::errors::query::client::{
     ConsensusStateError, ConsensusStateHeightError, ConsensusStatesError, ParamsError, StateError,
@@ -41,7 +42,6 @@ use crate::errors::query::client::{
 };
 use crate::keeper::{params_get, KEY_CLIENT_STORE_PREFIX, KEY_CONSENSUS_STATE_PREFIX};
 use crate::params::AbciParamsKeeper;
-use crate::types::ContextShim;
 
 use super::{client_consensus_state, client_state_get};
 
@@ -105,9 +105,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
         QueryClientStatesRequest { pagination: _ }: QueryClientStatesRequest,
     ) -> Result<QueryClientStatesResponse, StatesError> {
-        let any_store = ctx.get_kv_store(&self.store_key);
-        let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
-            any_store.get_immutable_prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
+        let any_store = ctx.kv_store(&self.store_key);
+        let store: ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
+            any_store.prefix_store(KEY_CLIENT_STORE_PREFIX.to_owned().into_bytes());
 
         let mut states = Vec::<IdentifiedClientState>::new();
         for (_key, value) in store.range(..) {
@@ -140,7 +140,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let status = if !params.is_client_allowed(&client_type) {
             Status::Unauthorized
         } else {
-            client_state.status(&ContextShim::from(&*ctx), &client_id)?
+            // TODO
+            // client_state.status(&ContextShim::new(ctx.into(), self.store_key.clone()), &client_id)?
+            Status::Unauthorized
         };
 
         let response = QueryClientStatusResponse {
@@ -159,12 +161,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         }: QueryConsensusStateHeightsRequest,
     ) -> Result<QueryConsensusStateHeightsResponse, ConsensusStateHeightError> {
         let client_id = ClientId::from_str(&client_id)?;
-        let store = ctx
-            .get_kv_store(&self.store_key)
-            .get_immutable_prefix_store(
-                format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}")
-                    .into_bytes(),
-            );
+        let store = ctx.kv_store(&self.store_key).prefix_store(
+            format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}/{KEY_CONSENSUS_STATE_PREFIX}")
+                .into_bytes(),
+        );
 
         let mut heights = Vec::<Height>::new();
         for (_key, value) in store.range(..) {
@@ -226,10 +226,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> QueryKeeper<SK, PSK> {
         let client_id = ClientId::from_str(&client_id)?;
 
         let states = {
-            let any_store = ctx.get_kv_store(&self.store_key);
-            let store = any_store.get_immutable_prefix_store(
-                format!("{KEY_CONSENSUS_STATE_PREFIX}/{client_id}").into_bytes(),
-            );
+            let any_store = ctx.kv_store(&self.store_key);
+            let store = any_store
+                .prefix_store(format!("{KEY_CONSENSUS_STATE_PREFIX}/{client_id}").into_bytes());
 
             let mut states = Vec::<ConsensusStateWithHeight>::new();
             for (_key, value) in store.range(..) {

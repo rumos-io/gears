@@ -1,17 +1,16 @@
 use axum::Router;
+use gears::application::handlers::node::ABCIHandler;
+use gears::store::StoreKey;
+use gears::types::tx::TxMessage;
 use gears::{
-    application::ApplicationInfo,
-    baseapp::{ABCIHandler, Genesis},
-    client::rest::RestState,
-    x::params::ParamsSubspaceKey,
+    application::ApplicationInfo, baseapp::genesis::Genesis, params::ParamsSubspaceKey,
+    rest::RestState,
 };
-use proto_messages::cosmos::tx::v1beta1::message::Message;
-use store::StoreKey;
 
 pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,

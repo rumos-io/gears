@@ -1,39 +1,19 @@
-use std::time::Duration;
-
 use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
-use gaia_rs::{
-    abci_handler::ABCIHandler,
-    client::GaiaQueryCommands,
-    config::AppConfig,
-    genesis::GenesisState,
-    query::GaiaQueryResponse,
-    store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
-    GaiaApplication, GaiaCore,
-};
+use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse, GaiaCoreClient};
 use gears::{
-    application::{command::app::AppCommands, node::NodeApplication},
-    baseapp::{run::RunCommand, Genesis},
-    client::query::{run_query, QueryCommand},
-    config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR, DEFAULT_TENDERMINT_RPC_ADDRESS},
+    commands::client::query::{run_query, QueryCommand},
+    config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+    core::address::AccAddress,
+    types::{
+        account::{Account, BaseAccount},
+        query::account::QueryAccountResponse,
+    },
 };
-use proto_messages::cosmos::auth::v1beta1::{Account, BaseAccount, QueryAccountResponse};
-use proto_types::AccAddress;
-use utils::testing::{TempDir, TmpChild};
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
-struct MockGenesis(pub GenesisState);
+use utilities::run_gaia_and_tendermint;
 
-impl Genesis for MockGenesis {
-    fn add_genesis_account(
-        &mut self,
-        address: proto_types::AccAddress,
-        coins: proto_messages::cosmos::base::v1beta1::SendCoins,
-    ) -> Result<(), gears::error::AppError> {
-        self.0.add_genesis_account(address, coins)
-    }
-}
-
-const TENDERMINT_PATH: &str = "./tests/assets";
+#[path = "./utilities.rs"]
+mod utilities;
 
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
@@ -55,7 +35,7 @@ fn account_query() -> anyhow::Result<()> {
         }),
     };
 
-    let result = run_query(cmd, &GaiaCore)?;
+    let result = run_query(cmd, &GaiaCoreClient)?;
 
     let expected = GaiaQueryResponse::Auth(AuthQueryResponse::Account(QueryAccountResponse {
         account: Account::Base(BaseAccount {
@@ -69,41 +49,4 @@ fn account_query() -> anyhow::Result<()> {
     assert_eq!(result, expected);
 
     Ok(())
-}
-
-/// Helper method to start gaia node and tendermint in tmp folder
-fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
-    let tmp_dir = TempDir::new()?;
-    let tmp_path = tmp_dir.to_path_buf();
-
-    let tendermint = TmpChild::run_tendermint::<_, AppConfig>(
-        tmp_dir,
-        TENDERMINT_PATH,
-        &MockGenesis::default(),
-    )?;
-
-    std::thread::sleep(Duration::from_secs(10));
-
-    let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
-            GaiaCore,
-            &ABCIHandler::new,
-            GaiaStoreKey::Params,
-            GaiaParamsStoreKey::BaseApp,
-        );
-
-        let cmd = RunCommand {
-            home: tmp_path,
-            address: DEFAULT_ADDRESS,
-            rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
-            read_buf_size: 1048576,
-            log_level: gears::baseapp::run::LogLevel::Off,
-        };
-
-        let _ = node.execute(AppCommands::Run(cmd));
-    });
-
-    std::thread::sleep(Duration::from_secs(10));
-
-    Ok((tendermint, server_thread))
 }

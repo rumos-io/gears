@@ -80,3 +80,7 @@ pub enum Error {
         found: String,
     },
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
+#[error("invalid key: {0}")]
+pub struct DecodeError(pub String);

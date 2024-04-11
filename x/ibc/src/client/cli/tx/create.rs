@@ -8,6 +8,7 @@ use proto_messages::cosmos::ibc::{
 
 use crate::types::Signer;
 
+/// create new IBC client
 #[derive(Args, Debug, Clone)]
 pub struct CliCreateClient {
     pub client_state: String,
@@ -25,6 +26,7 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
     let mut buffer = Vec::<u8>::new();
 
     let client_state_result = serde_json::from_str::<WrappedTendermintClientState>(&client_state);
+    dbg!(&client_state_result);
     let client_state = if let Ok(client_state) = client_state_result {
         client_state
     } else {
@@ -33,6 +35,7 @@ pub(super) fn tx_command_handler(msg: CliCreateClient) -> anyhow::Result<crate::
     };
 
     let consensus_state_result = serde_json::from_str::<RawConsensusState>(&consensus_state);
+    dbg!(&consensus_state_result);
     let consensus_state = if let Ok(consensus_state) = consensus_state_result {
         consensus_state
     } else {

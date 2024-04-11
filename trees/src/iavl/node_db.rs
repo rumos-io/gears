@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, sync::Mutex};
 
 use caches::{Cache, DefaultHashBuilder, LRUCache};
-use database::Database;
+use database::{ext::UnwrapCorrupt, Database};
 use integer_encoding::VarInt;
 
 use crate::{merkle::EMPTY_HASH, Error};
@@ -35,21 +35,14 @@ where
     pub fn get_versions(&self) -> BTreeSet<u32> {
         self.db
             .prefix_iterator(ROOTS_PREFIX.into())
-            .map(|(k, _)| {
-                u32::decode_var(&k)
-                    .expect("invalid data in database - possible database corruption")
-                    .0
-            })
+            .map(|(k, _)| u32::decode_var(&k).unwrap_or_corrupt().0)
             .collect()
     }
 
     pub(crate) fn get_root_hash(&self, version: u32) -> Result<[u8; 32], Error> {
         self.db
             .get(&Self::get_root_key(version))
-            .map(|hash| {
-                hash.try_into()
-                    .expect("invalid data in database - possible database corruption")
-            })
+            .map(|hash| hash.try_into().ok().unwrap_or_corrupt())
             .ok_or(Error::VersionNotFound)
     }
 
@@ -61,8 +54,7 @@ where
         }
 
         Ok(Some(
-            self.get_node(&root_hash)
-                .expect("invalid data in database - possible database corruption"), // this node should be in the DB, if it isn't then better to panic
+            self.get_node(&root_hash).unwrap_or_corrupt(), // this node should be in the DB, if it isn't then better to panic
         ))
     }
 
@@ -83,8 +75,7 @@ where
         };
 
         let node_bytes = self.db.get(&Self::get_node_key(hash))?;
-        let node = Node::deserialize(node_bytes)
-            .expect("invalid data in database - possible database corruption");
+        let node = Node::deserialize(node_bytes).ok().unwrap_or_corrupt();
 
         cache.put(*hash, node.clone());
         Some(Box::new(node))

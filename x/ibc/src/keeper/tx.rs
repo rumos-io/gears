@@ -1,5 +1,8 @@
 use database::Database;
-use gears::{types::context::tx_context::TxContext, x::params::ParamsSubspaceKey};
+use gears::{
+    types::context::{tx_context::TxContext, QueryableContext, TransactionalContext},
+    x::params::ParamsSubspaceKey,
+};
 use proto_messages::{
     any::{Any, PrimitiveAny},
     cosmos::ibc::types::{
@@ -66,7 +69,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     ) -> Result<(), ClientRecoverError> {
         let subj_client_state = client_state_get(&self.store_key, ctx, subject_client_id)?;
         {
-            let mut shim_ctx = ContextShim::from(&*ctx);
+            let mut shim_ctx = ContextShim::new(ctx, self.store_key.clone());
             let subj_client_status = subj_client_state.status(&mut shim_ctx, subject_client_id)?;
             if subj_client_status == Status::Active {
                 return Err(ClientRecoverError::SubjectStatus {
@@ -85,7 +88,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         }
 
         {
-            let mut shim_ctx = ContextShim::from(&*ctx);
+            let mut shim_ctx = ContextShim::new(ctx, self.store_key.clone());
             let subs_client_status =
                 subj_client_state.status(&mut shim_ctx, substitute_client_id)?;
             if subs_client_status != Status::Active {
@@ -133,7 +136,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     ) -> Result<(), ClientUpgradeError> {
         let client_state = client_state_get(&self.store_key, ctx, client_id)?;
 
-        let mut shim_ctx = ContextShim::from(&*ctx);
+        let mut shim_ctx = ContextShim::new(ctx, self.store_key.clone());
         let client_status = client_state.status(&mut shim_ctx, client_id)?;
 
         if client_status != Status::Active {
@@ -203,7 +206,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
 
         let client_message = PrimitiveAny::from(client_message);
 
-        let mut shim_ctx = ContextShim::from(&*ctx);
+        let mut shim_ctx = ContextShim::new(ctx, self.store_key.clone());
 
         let client_status = if params.is_client_allowed(&client_type) {
             Status::Unauthorized
@@ -335,7 +338,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         ]);
 
         // FIXME: fix lifetimes so borrow checker would be happy with this code before events
-        let mut ctx = ContextShim::from(&*ctx);
+        let mut ctx = ContextShim::new(ctx, self.store_key.clone());
 
         client_state.initialise(&mut ctx, &client_id, consensus_state.into())?;
         client_state.status(&mut ctx, &client_id)?;
@@ -361,9 +364,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         ctx: &mut TxContext<'_, DB, SK>,
         sequence: u64,
     ) {
-        let mut ctx = gears::types::context::context::Context::TxContext(ctx);
         self.params_keeper.set(
-            &mut ctx,
+            ctx,
             params::NEXT_CLIENT_SEQUENCE.as_bytes().iter().cloned(),
             sequence.to_be_bytes(),
         )
@@ -373,10 +375,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
     ) -> Result<u64, ClientCreateError> {
-        let ctx = gears::types::context::context::Context::TxContext(ctx);
-        let bytes = self
-            .params_keeper
-            .get(&ctx, &params::NEXT_CLIENT_SEQUENCE)?;
+        let bytes = self.params_keeper.get(ctx, &params::NEXT_CLIENT_SEQUENCE)?;
 
         if bytes.is_empty() {
             Err(ClientCreateError::CustomError(
@@ -393,6 +392,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     }
 
     fn root_hash<DB: Database>(&self, ctx: &mut TxContext<'_, DB, SK>) -> [u8; 32] {
-        ctx.get_kv_store(&self.store_key).head_commit_hash()
+        ctx.kv_store(&self.store_key).head_commit_hash()
     }
 }

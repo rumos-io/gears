@@ -2,17 +2,36 @@ use std::error::Error;
 use std::fs::{self, File};
 use std::io::Write;
 use std::net::{Ipv4Addr, SocketAddr};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use tendermint::rpc::Url;
+use tendermint::rpc::url::Url;
+
+use crate::defaults::{CONFIG_DIR, CONFIG_FILE_NAME, GENESIS_FILE_NAME};
 
 pub const DEFAULT_REST_LISTEN_ADDR: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1317);
 pub const DEFAULT_ADDRESS: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 26658);
 pub const DEFAULT_TENDERMINT_RPC_ADDRESS: &str = "http://localhost:26657";
+
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub enum ConfigDirectory {
+    GenesisFile,
+    ConfigFile,
+    ConfigDir,
+}
+
+impl ConfigDirectory {
+    pub fn path_from_hone(&self, home: &(impl AsRef<Path> + ?Sized)) -> PathBuf {
+        match self {
+            ConfigDirectory::GenesisFile => home.as_ref().join(CONFIG_DIR).join(GENESIS_FILE_NAME),
+            ConfigDirectory::ConfigFile => home.as_ref().join(CONFIG_DIR).join(CONFIG_FILE_NAME),
+            ConfigDirectory::ConfigDir => home.as_ref().join(CONFIG_DIR),
+        }
+    }
+}
 
 pub trait ApplicationConfig: Serialize + DeserializeOwned + Default + Clone {}
 impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T {}

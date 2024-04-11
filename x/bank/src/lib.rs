@@ -1,11 +1,10 @@
-#![warn(rust_2018_idioms)]
-
 mod abci_handler;
 mod client;
 mod genesis;
 mod keeper;
 mod message;
 mod params;
+pub mod types;
 
 pub use abci_handler::*;
 pub use client::*;

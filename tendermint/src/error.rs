@@ -8,3 +8,7 @@ pub enum Error {
     #[error(transparent)]
     Genesis(#[from] serde_json::Error),
 }
+
+pub mod proto {
+    pub use tendermint_proto::Error;
+}
