@@ -4,8 +4,10 @@ pub mod baseapp;
 pub mod cli;
 pub mod commands;
 pub mod config;
+pub mod crypto;
 pub mod defaults;
 pub mod error;
+pub mod params;
 pub mod rest;
 pub(crate) mod runtime;
 pub mod signing;
@@ -14,8 +16,6 @@ pub mod types;
 pub mod utils;
 #[cfg(feature = "xmods")]
 pub mod x;
-
-pub mod crypto;
 
 #[cfg(feature = "export")]
 pub mod ibc {

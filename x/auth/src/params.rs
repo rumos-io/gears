@@ -5,8 +5,8 @@ use gears::store::{
 };
 use gears::x::keepers::auth::AuthParams;
 use gears::{
+    params::ParamsSubspaceKey,
     types::context::{QueryableContext, TransactionalContext},
-    x::params::ParamsSubspaceKey,
 };
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -62,7 +62,7 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 #[derive(Debug, Clone)]
 pub struct AuthParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: gears::x::params::Keeper<SK, PSK>,
+    pub params_keeper: gears::params::Keeper<SK, PSK>,
     pub params_subspace_key: PSK,
 }
 

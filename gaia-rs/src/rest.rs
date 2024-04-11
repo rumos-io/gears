@@ -3,8 +3,8 @@ use gears::application::handlers::node::ABCIHandler;
 use gears::store::StoreKey;
 use gears::types::tx::TxMessage;
 use gears::{
-    application::ApplicationInfo, baseapp::genesis::Genesis, rest::RestState,
-    x::params::ParamsSubspaceKey,
+    application::ApplicationInfo, baseapp::genesis::Genesis, params::ParamsSubspaceKey,
+    rest::RestState,
 };
 
 pub fn get_router<

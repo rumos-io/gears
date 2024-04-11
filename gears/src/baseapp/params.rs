@@ -3,8 +3,8 @@ use store_crate::database::{Database, PrefixDB};
 use store_crate::{StoreKey, WritePrefixStore};
 use tendermint::types::proto::consensus::ConsensusParams;
 
+use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::types::context::TransactionalContext;
-use crate::x::params::{Keeper, ParamsSubspaceKey};
 
 mod inner {
     pub use tendermint::types::proto::params::BlockParams;

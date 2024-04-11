@@ -8,10 +8,10 @@ use gears::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     baseapp::{genesis::Genesis, BaseApp},
     ibc::address::AccAddress,
+    params::ParamsSubspaceKey,
     rest::{error::Error, Pagination, RestState},
     tendermint::types::{proto::Protobuf, request::query::RequestQuery},
     types::tx::TxMessage,
-    x::params::ParamsSubspaceKey,
 };
 use gears::{error::IBC_ENCODE_UNWRAP, store::StoreKey};
 use serde::Deserialize;

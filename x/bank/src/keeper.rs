@@ -6,6 +6,7 @@ use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::ibc::address::AccAddress;
+use gears::params::ParamsSubspaceKey;
 use gears::proto_types::{Denom, Uint256};
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::Database;
@@ -25,7 +26,6 @@ use gears::types::tx::metadata::Metadata;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::x::module::Module;
-use gears::x::params::ParamsSubspaceKey;
 use std::{collections::HashMap, str::FromStr};
 
 const SUPPLY_KEY: [u8; 1] = [0];
@@ -82,7 +82,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, AK> {
     pub fn new(
         store_key: SK,
-        params_keeper: gears::x::params::Keeper<SK, PSK>,
+        params_keeper: gears::params::Keeper<SK, PSK>,
         params_subspace_key: PSK,
         auth_keeper: AK,
     ) -> Self {

@@ -51,9 +51,7 @@ impl ValueRenderer for MsgSend {
 mod tests {
     use crate::types::{msg::send::MsgSend, rendering::screen::Screen};
 
-    use crate::x::signing::renderer::{
-        test_functions::get_metadata, value_renderer::ValueRenderer,
-    };
+    use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
 
     #[test]
     fn msg_send_multiple_coins() -> anyhow::Result<()> {

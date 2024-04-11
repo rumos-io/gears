@@ -11,12 +11,12 @@ use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use gears::{
     error::AppError,
+    params::ParamsSubspaceKey,
     types::{
         account::{Account, BaseAccount, ModuleAccount},
         context::{QueryableContext, TransactionalContext},
         query::account::QueryAccountResponse,
     },
-    x::params::ParamsSubspaceKey,
 };
 use prost::Message;
 
@@ -125,7 +125,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     pub fn new(
         store_key: SK,
-        params_keeper: gears::x::params::Keeper<SK, PSK>,
+        params_keeper: gears::params::Keeper<SK, PSK>,
         params_subspace_key: PSK,
     ) -> Self {
         let auth_params_keeper = AuthParamsKeeper {

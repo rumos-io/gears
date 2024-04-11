@@ -1,5 +1,5 @@
+use gears::params::ParamsSubspaceKey;
 use gears::store::StoreKey;
-use gears::x::params::ParamsSubspaceKey;
 use strum::EnumIter;
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]

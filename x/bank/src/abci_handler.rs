@@ -9,7 +9,7 @@ use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
-use gears::{error::AppError, x::params::ParamsSubspaceKey};
+use gears::{error::AppError, params::ParamsSubspaceKey};
 
 use crate::types::query::{
     QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,

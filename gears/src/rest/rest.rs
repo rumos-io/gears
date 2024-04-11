@@ -1,10 +1,10 @@
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     baseapp::{genesis::Genesis, BaseApp},
+    params::ParamsSubspaceKey,
     rest::handlers::{node_info, staking_params, txs},
     runtime::runtime,
     types::tx::TxMessage,
-    x::params::ParamsSubspaceKey,
 };
 use axum::{extract::FromRef, http::Method, routing::get, Router};
 use std::net::SocketAddr;

@@ -7,7 +7,7 @@ use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use gears::{error::AppError, x::params::ParamsSubspaceKey};
+use gears::{error::AppError, params::ParamsSubspaceKey};
 
 use crate::{GenesisState, Keeper};
 

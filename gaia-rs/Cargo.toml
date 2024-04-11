@@ -11,7 +11,7 @@ workspace = true
 #local
 auth = {path = "../x/auth"}
 bank = {path = "../x/bank"}
-gears = {path = "../gears", features = [ "cli"]}
+gears = {path = "../gears", features = [ "cli", "xmods"] }
 gears-derive = {path = "../gears-derive"}
 
 #newtypes

@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 #local
-gears = { path = "../../gears" }
+gears = { path = "../../gears", features = ["xmods"] }
 
 #newtypes
 bytes = { workspace = true }

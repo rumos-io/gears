@@ -44,9 +44,7 @@ mod tests {
 
     use crate::types::rendering::screen::{Content, Indent, Screen};
 
-    use crate::x::signing::renderer::{
-        test_functions::get_metadata, value_renderer::ValueRenderer,
-    };
+    use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {

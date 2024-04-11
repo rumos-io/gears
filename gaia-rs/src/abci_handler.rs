@@ -12,9 +12,7 @@ use gears::types::context::query_context::QueryContext;
 use gears::types::context::tx_context::TxContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
-use gears::{
-    config::Config, types::context::TransactionalContext, x::params::Keeper as ParamsKeeper,
-};
+use gears::{config::Config, params::Keeper as ParamsKeeper, types::context::TransactionalContext};
 
 #[derive(Debug, Clone)]
 pub struct GaiaABCIHandler {

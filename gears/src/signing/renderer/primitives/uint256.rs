@@ -24,7 +24,7 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
 #[cfg(test)]
 mod tests {
     use crate::proto_types::Uint256;
-    use crate::signingrenderer::value_renderer::{
+    use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
     use crate::types::rendering::screen::Content;
