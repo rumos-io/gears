@@ -1,5 +1,7 @@
-use proto_messages::cosmos::{base::v1beta1::SendCoins, tx::v1beta1::tx_metadata::Metadata};
-use proto_types::AccAddress;
+use gears::{
+    core::address::AccAddress,
+    types::{base::send::SendCoins, tx::metadata::Metadata},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::Params;

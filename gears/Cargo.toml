@@ -8,18 +8,19 @@ workspace = true
 
 [dependencies]
 #local
-tendermint = {path = "../tendermint", features = [ "rpc", "abci", "proto" ]}
-proto-messages = {path = "../proto-messages"}
-proto-types = {path = "../proto-types"}
+tendermint = {path = "../tendermint"}
+core-types = {path = "../core-types"}
 keyring = {path = "../keyring"}
-database = {path = "../database"}
 store_crate = {path = "../store", package = "store"}
-trees = {path = "../trees"}
 
 #newtypes
 secp256k1 = { workspace = true, features = ["hashes"]}
 bytes = { workspace = true }
 url = { workspace = true }
+nutype = { workspace = true, features = ["serde"]}
+num-format = { workspace = true, features = ["with-num-bigint"] }
+num-bigint = { workspace = true }
+cosmwasm-std = "2.0.0"
 
 #utils
 anyhow = { workspace = true }
@@ -28,6 +29,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 integer-encoding = { workspace = true }
 sha2 = { workspace = true }
+regex = { workspace = true }
 
 #serialization
 prost = { workspace = true }
@@ -36,7 +38,9 @@ hex = { workspace = true }
 serde = { workspace = true, default-features = false}
 serde-aux = { workspace = true }
 serde_json = { workspace = true }
+serde_with = { workspace = true }
 toml = { workspace = true }
+ciborium = { workspace = true }
 
 #other
 dirs = { workspace = true }
@@ -45,7 +49,7 @@ handlebars = { workspace = true }
 human-panic = "1.1.4"
 strum = { workspace = true }
 text_io = "0.1.12"
-tokio = { workspace = true }
+tokio = { workspace = true, features = [ "rt", "rt-multi-thread"] }
 derive_builder = { workspace = true }
 
 # networking
@@ -56,8 +60,22 @@ tower-http = { workspace = true, features = ["cors"] }
 clap = { workspace = true , optional = true }
 clap_complete = { workspace = true, optional = true }
 
+# crypto
+k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }
+pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"]}
+ripemd = { workspace = true }
+data-encoding = { workspace = true }
+
+# test utils
+run_script = { workspace = true, optional = true }
+assert_fs = { workspace = true, optional = true }
+dircpy = { workspace = true, optional = true }
+
 [dev-dependencies]
 
 [features]
-default = [ "cli" ]
+default = [ "cli", "export", "xmods" ]
+export = []
+xmods = []
+utils = [ "dep:run_script", "dep:assert_fs", "dep:dircpy" ]
 cli = [ "dep:clap", "dep:clap_complete", ]

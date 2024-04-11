@@ -10,7 +10,6 @@ database = {path = "../database"}
 #newtypes
 
 #utils
-anyhow = { workspace = true }
 integer-encoding = { workspace = true }
 nutype = { workspace = true }
 sha2 = { workspace = true }
@@ -29,6 +28,7 @@ pprof = { version = "0.13.0", features = ["flamegraph", "criterion"] }
 rand = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+anyhow = { workspace = true }
 
 [[bench]]
 harness = false

@@ -1,26 +1,23 @@
+use crate::abci_handler::GaiaABCIHandler;
 use crate::query::GaiaQuery;
 use crate::query::GaiaQueryResponse;
+use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
 use bank::cli::query::BankQueryHandler;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use gears::application::client::Client;
-use gears::application::command::NilAux;
-use gears::application::command::NilAuxCommand;
+use gears::application::handlers::client::{QueryHandler, TxHandler};
 use gears::application::handlers::AuxHandler;
-use gears::application::handlers::{QueryHandler, TxHandler};
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
-
+use gears::commands::NilAux;
+use gears::commands::NilAuxCommand;
+use gears::core::address::AccAddress;
 use genesis::GenesisState;
-use ibc::client::cli::query_handler::IbcQueryHandler;
-use proto_types::AccAddress;
 use rest::get_router;
 use serde::Serialize;
-
-use crate::abci_handler::ABCIHandler;
-use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 
 pub mod abci_handler;
 pub mod client;
@@ -73,10 +70,9 @@ impl QueryHandler for GaiaCoreClient {
             }
             GaiaQueryCommands::Auth(command) => {
                 Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
-            }
-            GaiaQueryCommands::Ibc(command) => {
-                Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
-            }
+            } // GaiaQueryCommands::Ibc(command) => {
+              //     Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
+              // }
         };
 
         Ok(res)
@@ -94,9 +90,9 @@ impl QueryHandler for GaiaCoreClient {
             GaiaQueryCommands::Auth(command) => Self::QueryResponse::Auth(
                 AuthQueryHandler.handle_raw_response(query_bytes, command)?,
             ),
-            GaiaQueryCommands::Ibc(command) => {
-                Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
-            }
+            // GaiaQueryCommands::Ibc(command) => {
+            //     Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
+            // }
         };
 
         Ok(res)
@@ -120,11 +116,11 @@ impl Node for GaiaCore {
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
-    type ABCIHandler = ABCIHandler;
+    type ABCIHandler = GaiaABCIHandler;
     type ApplicationConfig = config::AppConfig;
 
     fn router<AI: ApplicationInfo>() -> axum::Router<
-        gears::client::rest::RestState<
+        gears::rest::RestState<
             Self::StoreKey,
             Self::ParamsSubspaceKey,
             Self::Message,

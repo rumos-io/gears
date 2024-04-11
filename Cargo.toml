@@ -1,23 +1,34 @@
 [workspace]
 members = [
-  "proto-types",
-  "proto-messages",
-  "gears",
-  "gears-derive",
-  "trees",
+  # no local deps
   "database",
   "tendermint",
-  "gaia-rs",
+  # "proto-types",
+  "core-types", 
+
+  # with local deps
+  "trees",
   "store",
+  "keyring", 
+  "gears",
+  "gears-derive",
+  
+  # GAIA
+  "gaia-rs",
+
+  # xmodules
+  # "x/ibc", 
   "x/bank",
   "x/auth",
-  "keyring", 
-  "x/ibc", 
-  "utils",
+
+  # new unsorted
 ]
 resolver = "2"
 
 [workspace.dependencies]
+
+# important
+ibc-proto ="=0.26.0"
 
 # nutype
 bytes = { version = "1.2.1" }
@@ -29,13 +40,14 @@ secp256k1 = { version = "0.28.1" }
 integer-encoding = { version = "4.0.0" }
 nutype = { version = "0.4.0" }
 url = { version = "2.5.0" }
+time = "0.3.34"
 
 # serialization
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0.93" }
 serde-aux = { version = "4.2.0" }
 serde_with = { version = "3.0.0" }
-prost = { version = "0.12.3" }
+prost = { version = "^0.11" }
 schemars = { version = "0.8.16" }
 hex = { version = "0.4.3" }
 data-encoding = { version = "2.4.0" } #replace hex with this crate

@@ -1,9 +1,9 @@
-use std::{marker::PhantomData, path::PathBuf};
+use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 
 use clap::{ArgAction, ValueHint};
-use tendermint::informal::chain::Id;
+use tendermint::types::chain_id::ChainId;
 
-use crate::{application::ApplicationInfo, client::init::InitCommand};
+use crate::{application::ApplicationInfo, commands::node::init::InitCommand};
 
 /// Initialize configuration files
 #[derive(Debug, Clone, ::clap::Args)]
@@ -12,8 +12,8 @@ pub struct CliInitCommand<T: ApplicationInfo> {
     pub home: PathBuf,
     #[arg(required = true)]
     pub moniker: String,
-    #[arg(long =  "chain-id",  action = ArgAction::Set, default_value_t = Id::try_from( "test-chain" ).expect("unrechable: default should be valid"), help = "genesis file chain-id",)]
-    pub chain_id: Id,
+    #[arg(long =  "chain-id",  action = ArgAction::Set, default_value_t = ChainId::from_str( "test-chain" ).expect("unrechable: default should be valid"), help = "genesis file chain-id",)]
+    pub chain_id: ChainId,
 
     #[arg(skip)]
     _marker: PhantomData<T>,

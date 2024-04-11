@@ -4,7 +4,7 @@ use clap::{ArgAction, ValueHint};
 
 use crate::{
     application::ApplicationInfo,
-    client::keys::{AddKeyCommand, KeyringBackend},
+    commands::client::keys::{AddKeyCommand, KeyringBackend},
 };
 
 #[derive(Debug, Clone, ::clap::Args)]

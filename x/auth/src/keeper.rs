@@ -1,25 +1,24 @@
+use crate::{AuthParamsKeeper, GenesisState, Params};
 use bytes::Bytes;
-use database::{ext::UnwrapCorrupt, Database};
-
-use gears::{
-    error::AppError,
-    x::{auth::Module, params::ParamsSubspaceKey},
-};
-//use params_module::ParamsSubspaceKey;
-use gears::types::context::context::Context;
+use gears::core::{address::AccAddress, query::request::account::QueryAccountRequest};
+use gears::error::IBC_ENCODE_UNWRAP;
+use gears::store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
+use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
+use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use prost::Message;
-use proto_messages::cosmos::{
-    auth::v1beta1::{
-        Account, BaseAccount, ModuleAccount, QueryAccountRequest, QueryAccountResponse,
+use gears::x::keepers::auth::AuthKeeper;
+use gears::x::module::Module;
+use gears::{
+    error::AppError,
+    params::ParamsSubspaceKey,
+    types::{
+        account::{Account, BaseAccount, ModuleAccount},
+        context::{QueryableContext, TransactionalContext},
+        query::account::QueryAccountResponse,
     },
-    ibc::protobuf::Protobuf,
 };
-use proto_types::AccAddress;
-use store::{KVStoreTrait, StoreKey};
-
-use crate::{ante::AuthKeeper, AuthParamsKeeper, GenesisState};
+use prost::Message;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
 const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
@@ -33,25 +32,31 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
-    fn get_auth_params<DB: Database>(
+    type Params = Params;
+
+    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
-    ) -> gears::x::auth::Params {
+        ctx: &CTX,
+    ) -> Self::Params {
         self.auth_params_keeper.get(ctx)
     }
 
-    fn has_account<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>, addr: &AccAddress) -> bool {
-        let auth_store = ctx.get_kv_store(&self.store_key);
+    fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        addr: &AccAddress,
+    ) -> bool {
+        let auth_store = ctx.kv_store(&self.store_key);
         let key = create_auth_store_key(addr.to_owned());
         auth_store.get(&key).is_some()
     }
 
-    fn get_account<DB: Database>(
+    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &Context<'_, '_, DB, SK>,
+        ctx: &CTX,
         addr: &AccAddress,
     ) -> Option<Account> {
-        let auth_store = ctx.get_kv_store(&self.store_key);
+        let auth_store = ctx.kv_store(&self.store_key);
         let key = create_auth_store_key(addr.to_owned());
         let account = auth_store.get(&key);
 
@@ -66,98 +71,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         None
     }
 
-    fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
-        let auth_store = ctx.get_mutable_kv_store(&self.store_key);
-        let key = create_auth_store_key(acct.get_address().to_owned());
-
-        auth_store.set(key, acct.encode_vec());
-    }
-}
-
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(
-        store_key: SK,
-        params_keeper: gears::x::params::Keeper<SK, PSK>,
-        params_subspace_key: PSK,
-    ) -> Self {
-        let auth_params_keeper = AuthParamsKeeper {
-            params_keeper,
-            params_subspace_key,
-        };
-        Keeper {
-            store_key,
-            auth_params_keeper,
-        }
-    }
-
-    pub fn init_genesis<DB: Database>(
+    fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
+        ctx: &mut CTX,
+        acct: Account,
     ) {
-        //TODO: sdk sanitizes accounts
-        self.auth_params_keeper
-            .set(&mut ctx.as_any(), genesis.params);
-
-        for mut acct in genesis.accounts {
-            acct.account_number = self.get_next_account_number(&mut ctx.as_any());
-            self.set_account(&mut ctx.as_any(), Account::Base(acct));
-        }
-
-        // Create the fee collector account
-        self.check_create_new_module_account(&mut ctx.as_any(), &Module::FeeCollector);
-    }
-
-    pub fn query_account<DB: Database>(
-        &self,
-        ctx: &QueryContext<'_, DB, SK>,
-        req: QueryAccountRequest,
-    ) -> Result<QueryAccountResponse, AppError> {
-        let auth_store = ctx.get_kv_store(&self.store_key);
-        let key = create_auth_store_key(req.address);
-        let account = auth_store.get(&key);
-
-        if let Some(buf) = account {
-            let account = Account::decode::<Bytes>(buf.to_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-
-            return Ok(QueryAccountResponse { account });
-        }
-
-        Err(AppError::AccountNotFound)
-    }
-
-    fn get_next_account_number<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>) -> u64 {
-        let auth_store = ctx.get_mutable_kv_store(&self.store_key);
-
-        // NOTE: The next available account number is what's stored in the KV store
-        let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
-
-        let acct_num: u64 = match acct_num {
-            None => 0, //initialize account numbers
-            Some(num) => u64::decode::<Bytes>(num.to_owned().into())
-                .ok()
-                .unwrap_or_corrupt(),
-        };
-
-        let next_acct_num = acct_num + 1;
-        auth_store.set(GLOBAL_ACCOUNT_NUMBER_KEY, next_acct_num.encode_to_vec());
-
-        acct_num
-    }
-
-    pub fn set_account<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, acct: Account) {
-        let auth_store = ctx.get_mutable_kv_store(&self.store_key);
+        let auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec());
+        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
     }
 
-    /// Overwrites existing account
-    pub fn create_new_base_account<DB: Database>(
+    fn create_new_base_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         addr: &AccAddress,
     ) {
         let acct = BaseAccount {
@@ -170,10 +97,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         self.set_account(ctx, Account::Base(acct))
     }
 
-    /// Creates a new module account if it doesn't already exist
-    pub fn check_create_new_module_account<DB: Database>(
+    fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         module: &Module,
     ) {
         let addr = module.get_address();
@@ -193,6 +119,93 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             self.set_account(ctx, Account::Module(account))
         }
+    }
+}
+
+impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
+    pub fn new(
+        store_key: SK,
+        params_keeper: gears::params::Keeper<SK, PSK>,
+        params_subspace_key: PSK,
+    ) -> Self {
+        let auth_params_keeper = AuthParamsKeeper {
+            params_keeper,
+            params_subspace_key,
+        };
+        Keeper {
+            store_key,
+            auth_params_keeper,
+        }
+    }
+
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
+        //TODO: sdk sanitizes accounts
+        self.auth_params_keeper.set(ctx, genesis.params);
+
+        for mut acct in genesis.accounts {
+            acct.account_number = self.get_next_account_number(ctx);
+            self.set_account(ctx, Account::Base(acct));
+        }
+
+        // Create the fee collector account
+        self.check_create_new_module_account(ctx, &Module::FeeCollector);
+    }
+
+    pub fn query_account<DB: Database>(
+        &self,
+        ctx: &QueryContext<'_, DB, SK>,
+        req: QueryAccountRequest,
+    ) -> Result<QueryAccountResponse, AppError> {
+        let auth_store = ctx.kv_store(&self.store_key);
+        let key = create_auth_store_key(req.address);
+        let account = auth_store.get(&key);
+
+        if let Some(buf) = account {
+            let account = Account::decode::<Bytes>(buf.to_owned().into())
+                .ok()
+                .unwrap_or_corrupt();
+
+            return Ok(QueryAccountResponse { account });
+        }
+
+        Err(AppError::AccountNotFound)
+    }
+
+    fn get_next_account_number<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+    ) -> u64 {
+        let auth_store = ctx.kv_store_mut(&self.store_key);
+
+        // NOTE: The next available account number is what's stored in the KV store
+        let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
+
+        let acct_num: u64 = match acct_num {
+            None => 0, //initialize account numbers
+            Some(num) => u64::decode::<Bytes>(num.to_owned().into())
+                .ok()
+                .unwrap_or_corrupt(),
+        };
+
+        let next_acct_num = acct_num + 1;
+        auth_store.set(GLOBAL_ACCOUNT_NUMBER_KEY, next_acct_num.encode_to_vec());
+
+        acct_num
+    }
+
+    pub fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        acct: Account,
+    ) {
+        let auth_store = ctx.kv_store_mut(&self.store_key);
+        let key = create_auth_store_key(acct.get_address().to_owned());
+
+        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
     }
 }
 

@@ -1,11 +1,14 @@
 use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
 use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse, GaiaCoreClient};
 use gears::{
-    client::query::{run_query, QueryCommand},
+    commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+    core::address::AccAddress,
+    types::{
+        account::{Account, BaseAccount},
+        query::account::QueryAccountResponse,
+    },
 };
-use proto_messages::cosmos::auth::v1beta1::{Account, BaseAccount, QueryAccountResponse};
-use proto_types::AccAddress;
 
 use utilities::run_gaia_and_tendermint;
 

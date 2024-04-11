@@ -6,7 +6,7 @@ use std::{
 
 use std::fs::File;
 
-use crate::{error::Error, key_pair::KeyPair};
+use crate::{error::Error, key::pair::KeyPair};
 
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},

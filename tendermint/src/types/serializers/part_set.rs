@@ -1,0 +1,54 @@
+use core::fmt::Formatter;
+
+use serde::{
+    de::{Error, Visitor},
+    Deserializer, Serialize, Serializer,
+};
+
+struct PartSetHeaderTotalStringOrU32;
+
+/// Deserialize (string or u32) into u32(part_set_header.total)
+pub fn deserialize<'de, D>(deserializer: D) -> Result<u32, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    deserializer.deserialize_any(PartSetHeaderTotalStringOrU32)
+}
+
+/// Serialize from u32(part_set_header.total) into u32
+pub fn serialize<S>(value: &u32, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    value.serialize(serializer)
+}
+
+impl<'de> Visitor<'de> for PartSetHeaderTotalStringOrU32 {
+    type Value = u32;
+
+    fn expecting(&self, formatter: &mut Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str("an integer or string between 0 and 2^32")
+    }
+
+    fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        u32::try_from(v).map_err(|e| E::custom(format!("part_set_header.total {e}")))
+    }
+
+    fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        u32::try_from(v).map_err(|e| E::custom(format!("part_set_header.total {e}")))
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: Error,
+    {
+        v.parse::<u32>()
+            .map_err(|e| E::custom(format!("part_set_header.total {e}")))
+    }
+}

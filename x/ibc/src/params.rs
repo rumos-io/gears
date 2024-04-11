@@ -1,9 +1,9 @@
-use database::Database;
+use gears::store::database::{Database, PrefixDB};
+use gears::store::{ReadPrefixStore, StoreKey, WritePrefixStore};
 use gears::{
-    types::context::{context::Context, read_context::ReadContext},
+    types::context::{QueryableContext, TransactionalContext},
     x::params::{Keeper, ParamsSubspaceKey},
 };
-use store::StoreKey;
 
 pub const CLIENT_STATE_KEY: &str = "clientState";
 pub const CLIENT_PARAMS_KEY: &str = "clientParams";
@@ -20,28 +20,28 @@ pub struct AbciParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 pub struct ParamsError;
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AbciParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database>(
+    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &impl ReadContext<SK, DB>,
+        ctx: &CTX,
         key: &impl AsRef<[u8]>,
     ) -> Result<Vec<u8>, ParamsError> {
         let value = self
             .params_keeper
-            .get_raw_subspace(ctx, &self.params_subspace_key)
+            .raw_subspace(ctx, &self.params_subspace_key)
             .get(key.as_ref())
             .ok_or(ParamsError)?;
 
         Ok(value)
     }
 
-    pub fn set<DB: Database>(
+    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut Context<'_, '_, DB, SK>,
+        ctx: &mut CTX,
         key: impl IntoIterator<Item = u8>,
         value: impl IntoIterator<Item = u8>,
     ) {
         self.params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key)
-            .set(key.into_iter().collect(), value.into_iter().collect());
+            .raw_subspace_mut(ctx, &self.params_subspace_key)
+            .set(key, value);
     }
 }

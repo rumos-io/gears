@@ -1,5 +1,4 @@
 pub mod client;
-pub mod command;
 pub mod handlers;
 pub mod node;
 

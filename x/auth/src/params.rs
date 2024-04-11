@@ -1,30 +1,40 @@
-use database::Database;
-use gears::types::context::context::Context;
-use gears::x::{auth::Params, params::ParamsSubspaceKey};
-//use params_module::ParamsSubspaceKey;
-// use proto_messages::utils::serialize_number_to_string;
-// use serde::{Deserialize, Serialize};
-// use serde_aux::prelude::deserialize_number_from_string;
-use store::{ImmutablePrefixStore, StoreKey};
+use gears::core::serializers::serialize_number_to_string;
+use gears::store::database::{Database, PrefixDB};
+use gears::store::{
+    types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,
+};
+use gears::x::keepers::auth::AuthParams;
+use gears::{
+    params::ParamsSubspaceKey,
+    types::context::{QueryableContext, TransactionalContext},
+};
+use serde::{Deserialize, Serialize};
+use serde_aux::prelude::deserialize_number_from_string;
 
-// #[derive(Debug, Clone, Deserialize, Serialize)]
-// pub struct Params {
-//     #[serde(serialize_with = "serialize_number_to_string")]
-//     #[serde(deserialize_with = "deserialize_number_from_string")]
-//     pub max_memo_characters: u64,
-//     #[serde(serialize_with = "serialize_number_to_string")]
-//     #[serde(deserialize_with = "deserialize_number_from_string")]
-//     pub tx_sig_limit: u64,
-//     #[serde(serialize_with = "serialize_number_to_string")]
-//     #[serde(deserialize_with = "deserialize_number_from_string")]
-//     pub tx_size_cost_per_byte: u64,
-//     #[serde(serialize_with = "serialize_number_to_string")]
-//     #[serde(deserialize_with = "deserialize_number_from_string")]
-//     pub sig_verify_cost_ed25519: u64,
-//     #[serde(serialize_with = "serialize_number_to_string")]
-//     #[serde(deserialize_with = "deserialize_number_from_string")]
-//     pub sig_verify_cost_secp256k1: u64,
-// }
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Params {
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub max_memo_characters: u64,
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub tx_sig_limit: u64,
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub tx_size_cost_per_byte: u64,
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub sig_verify_cost_ed25519: u64,
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub sig_verify_cost_secp256k1: u64,
+}
+
+impl AuthParams for Params {
+    fn max_memo_characters(&self) -> u64 {
+        self.max_memo_characters
+    }
+}
 
 const KEY_MAX_MEMO_CHARACTERS: [u8; 17] = [
     077, 097, 120, 077, 101, 109, 111, 067, 104, 097, 114, 097, 099, 116, 101, 114, 115,
@@ -52,7 +62,7 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 #[derive(Debug, Clone)]
 pub struct AuthParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: gears::x::params::Keeper<SK, PSK>,
+    pub params_keeper: gears::params::Keeper<SK, PSK>,
     pub params_subspace_key: PSK,
 }
 
@@ -76,24 +86,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .clone()
     }
 
-    pub fn get<T: Database>(&self, ctx: &Context<'_, '_, T, SK>) -> Params {
+    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
         let store = self
             .params_keeper
-            .get_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace(ctx, &self.params_subspace_key);
 
-        let raw = Self::get_raw_param(&KEY_MAX_MEMO_CHARACTERS, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_MAX_MEMO_CHARACTERS, &store);
         let max_memo_characters = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_TX_SIG_LIMIT, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_TX_SIG_LIMIT, &store);
         let tx_sig_limit = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_TX_SIZE_COST_PER_BYTE, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_TX_SIZE_COST_PER_BYTE, &store);
         let tx_size_cost_per_byte = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_SIG_VERIFY_COST_ED25519, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_SIG_VERIFY_COST_ED25519, &store);
         let sig_verify_cost_ed25519 = Self::parse_param(raw);
 
-        let raw = Self::get_raw_param(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
+        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
         let sig_verify_cost_secp256k1 = Self::parse_param(raw);
 
         Params {
@@ -105,34 +115,38 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, params: Params) {
+    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: Params,
+    ) {
         let mut store = self
             .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace_mut(ctx, &self.params_subspace_key);
 
         store.set(
-            KEY_MAX_MEMO_CHARACTERS.into(),
-            format!("\"{}\"", params.max_memo_characters).into(),
+            KEY_MAX_MEMO_CHARACTERS,
+            format!("\"{}\"", params.max_memo_characters).into_bytes(),
         );
 
         store.set(
-            KEY_TX_SIG_LIMIT.into(),
-            format!("\"{}\"", params.tx_sig_limit).into(),
+            KEY_TX_SIG_LIMIT,
+            format!("\"{}\"", params.tx_sig_limit).into_bytes(),
         );
 
         store.set(
-            KEY_TX_SIZE_COST_PER_BYTE.into(),
-            format!("\"{}\"", params.tx_size_cost_per_byte).into(),
+            KEY_TX_SIZE_COST_PER_BYTE,
+            format!("\"{}\"", params.tx_size_cost_per_byte).into_bytes(),
         );
 
         store.set(
-            KEY_SIG_VERIFY_COST_ED25519.into(),
-            format!("\"{}\"", params.sig_verify_cost_ed25519).into(),
+            KEY_SIG_VERIFY_COST_ED25519,
+            format!("\"{}\"", params.sig_verify_cost_ed25519).into_bytes(),
         );
 
         store.set(
-            KEY_SIG_VERIFY_COST_SECP256K1.into(),
-            format!("\"{}\"", params.sig_verify_cost_secp256k1).into(),
+            KEY_SIG_VERIFY_COST_SECP256K1,
+            format!("\"{}\"", params.sig_verify_cost_secp256k1).into_bytes(),
         );
     }
 }
