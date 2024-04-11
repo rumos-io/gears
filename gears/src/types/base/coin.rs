@@ -1,8 +1,9 @@
-use std::str::FromStr;
-
-use proto_types::{error::Error, Denom, Uint256};
+use cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use tendermint::types::proto::Protobuf;
+
+use crate::types::{denom::Denom, errors::Error};
 
 use super::errors::CoinsError;
 

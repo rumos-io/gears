@@ -2,10 +2,10 @@ use bytes::Bytes;
 use gears::{
     error::IBC_ENCODE_UNWRAP,
     ibc::{address::AccAddress, any::google::Any},
-    proto_types::Denom,
     signing::renderer::value_renderer::{RenderError, ValueRenderer},
     tendermint::types::proto::Protobuf,
     types::{
+        denom::Denom,
         msg::send::MsgSend,
         rendering::screen::Screen,
         tx::{metadata::Metadata, TxMessage},

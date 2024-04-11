@@ -1,6 +1,7 @@
 use crate::application::handlers::node::AnteHandlerTrait;
 use crate::crypto::keys::ReadAccAddress;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
+use crate::types::denom::Denom;
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -17,7 +18,6 @@ use ibc_types::{
     tx::mode_info::{ModeInfo, SignMode},
 };
 use prost::Message as ProstMessage;
-use proto_types::Denom;
 use std::marker::PhantomData;
 use store_crate::database::{Database, PrefixDB};
 use store_crate::StoreKey;

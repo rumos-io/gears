@@ -2,9 +2,9 @@
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 use crate::types::rendering::screen::Content;
+use cosmwasm_std::Uint256;
 use num_bigint::BigUint;
 use num_format::WriteFormatted;
-use proto_types::Uint256;
 use std::str::FromStr;
 
 use super::i64::format_get;
@@ -23,11 +23,12 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
+    use cosmwasm_std::Uint256;
+
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, PrimitiveValueRenderer,
     };
     use crate::types::rendering::screen::Content;
-    use proto_types::Uint256;
 
     #[test]
     fn test_positive() {

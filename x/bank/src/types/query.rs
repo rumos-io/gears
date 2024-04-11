@@ -1,9 +1,9 @@
 use gears::{
     ibc::{address::AccAddress, errors::Error, query::request::PageRequest},
-    proto_types::Denom,
     tendermint::types::proto::Protobuf,
     types::{
         base::{coin::Coin, errors::CoinsError},
+        denom::Denom,
         response::PageResponse,
         tx::metadata::{Metadata, MetadataParseError},
     },

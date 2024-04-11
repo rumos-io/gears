@@ -1,9 +1,10 @@
 use bytes::Bytes;
 use nutype::nutype;
 use prost::Message;
-use proto_types::Denom;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
+
+use crate::types::denom::Denom;
 
 mod inner {
     pub use ibc_types::bank::Metadata;
@@ -38,7 +39,7 @@ pub struct DenomUnit {
 }
 
 impl TryFrom<inner::DenomUnit> for DenomUnit {
-    type Error = proto_types::error::Error;
+    type Error = crate::types::errors::Error;
 
     fn try_from(
         inner::DenomUnit {
@@ -122,7 +123,7 @@ impl TryFrom<RawMetadata> for Metadata {
         for unit in denom_units {
             mapped_denom.push(
                 DenomUnit::try_from(unit)
-                    .map_err(|e: proto_types::error::Error| MetadataParseError(e.to_string()))?,
+                    .map_err(|e: crate::types::errors::Error| MetadataParseError(e.to_string()))?,
             );
         }
 

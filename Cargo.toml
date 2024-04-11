@@ -3,7 +3,7 @@ members = [
   # no local deps
   "database",
   "tendermint",
-  "proto-types",
+  # "proto-types",
   "ibc-types", 
 
   # with local deps

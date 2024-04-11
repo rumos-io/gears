@@ -1,10 +1,10 @@
 use keyring::key::secp256k1::Secp256k1PubKey;
 
 use crate::types::{
+    denom::Denom,
     rendering::screen::{Indent, Screen},
     tx::metadata::Metadata,
 };
-use proto_types::Denom;
 
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRenderer, ValueRenderer,

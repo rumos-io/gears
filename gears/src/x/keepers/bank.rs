@@ -1,5 +1,4 @@
 use ibc_types::address::AccAddress;
-use proto_types::Denom;
 use store_crate::{database::Database, StoreKey};
 
 use crate::{
@@ -7,6 +6,7 @@ use crate::{
     types::{
         base::send::SendCoins,
         context::{QueryableContext, TransactionalContext},
+        denom::Denom,
         tx::metadata::Metadata,
     },
     x::module::Module,

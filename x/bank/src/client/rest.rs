@@ -106,7 +106,7 @@ pub async fn get_balances_by_denom<
             .0
             .denom
             .try_into()
-            .map_err(|e: gears::proto_types::error::Error| Error::bad_request(e.to_string()))?,
+            .map_err(|e: gears::types::errors::Error| Error::bad_request(e.to_string()))?,
     };
 
     let request: RequestQuery = RequestQuery {

@@ -7,7 +7,7 @@ use std::{
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::error::Error;
+use super::errors::Error;
 
 // Denominations can be 3 ~ 128 characters long and support letters, followed by either
 // a letter, a number or a separator ('/').

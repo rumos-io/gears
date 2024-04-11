@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
+use cosmwasm_std::Uint256;
 use ibc_types::address::AccAddress;
 use ibc_types::errors::AddressError;
-use proto_types::Uint256;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::serde_as;

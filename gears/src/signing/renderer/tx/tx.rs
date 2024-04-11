@@ -8,6 +8,7 @@ use crate::signing::{
         TryPrimitiveValueRendererWithMetadata, ValueRenderer,
     },
 };
+use crate::types::denom::Denom;
 use crate::types::{
     auth::tip::Tip,
     base::send::SendCoins,
@@ -15,7 +16,6 @@ use crate::types::{
     tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
 };
 use ibc_types::address::AccAddress;
-use proto_types::Denom;
 use tendermint::types::chain_id::ChainId;
 use tendermint::types::proto::Protobuf;
 
@@ -250,15 +250,16 @@ mod tests {
     use crate::types::auth::info::AuthInfo;
     use crate::types::base::coin::Coin;
     use crate::types::base::send::SendCoins;
+    use crate::types::denom::Denom;
     use crate::types::msg::send::MsgSend;
     use crate::types::rendering::screen::{Content, Indent, Screen};
     use crate::types::signing::SignerInfo;
     use crate::types::tx::body::TxBody;
     use crate::types::tx::data::TxData;
     use crate::types::tx::signer::SignerData;
+    use cosmwasm_std::Uint256;
     use ibc_types::address::AccAddress;
     use ibc_types::tx::mode_info::{ModeInfo, SignMode};
-    use proto_types::{Denom, Uint256};
     use tendermint::types::chain_id::ChainId;
 
     use super::Envelope;

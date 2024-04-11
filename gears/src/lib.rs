@@ -28,11 +28,6 @@ pub mod tendermint {
 }
 
 #[cfg(feature = "export")]
-pub mod proto_types {
-    pub use proto_types::*;
-}
-
-#[cfg(feature = "export")]
 pub mod store {
     pub use store_crate::*;
 }

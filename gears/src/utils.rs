@@ -6,12 +6,14 @@ use crate::{
         genesis::{genesis_account_add, GenesisCommand},
         init::{init, InitCommand, InitCommandBuilder},
     },
-    types::base::{coin::Coin, send::SendCoins},
+    types::{
+        base::{coin::Coin, send::SendCoins},
+        denom::Denom,
+    },
 };
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
 use ibc_types::address::AccAddress;
-use proto_types::Denom;
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;
 

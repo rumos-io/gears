@@ -1,12 +1,13 @@
+use cosmwasm_std::{Decimal256, Uint256};
+
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,
     TryPrimitiveValueRendererWithMetadata,
 };
 use crate::types::base::coin::Coin;
+use crate::types::denom::Denom;
 use crate::types::rendering::screen::Content;
 use crate::types::tx::metadata::Metadata;
-use proto_types::Uint256;
-use proto_types::{Decimal256, Denom};
 
 impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
@@ -114,7 +115,7 @@ mod tests {
     };
     use crate::types::{base::coin::Coin, rendering::screen::Content};
     use anyhow::Ok;
-    use proto_types::Uint256;
+    use cosmwasm_std::Uint256;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {

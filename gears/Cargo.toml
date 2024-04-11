@@ -10,7 +10,6 @@ workspace = true
 #local
 tendermint = {path = "../tendermint"}
 ibc-types = {path = "../ibc-types"}
-proto-types = {path = "../proto-types"}
 keyring = {path = "../keyring"}
 store_crate = {path = "../store", package = "store"}
 
@@ -21,6 +20,7 @@ url = { workspace = true }
 nutype = { workspace = true, features = ["serde"]}
 num-format = { workspace = true, features = ["with-num-bigint"] }
 num-bigint = { workspace = true }
+cosmwasm-std = "2.0.0"
 
 #utils
 anyhow = { workspace = true }
@@ -29,6 +29,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 integer-encoding = { workspace = true }
 sha2 = { workspace = true }
+regex = { workspace = true }
 
 #serialization
 prost = { workspace = true }

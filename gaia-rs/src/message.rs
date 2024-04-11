@@ -1,7 +1,6 @@
 use gears::{
-    proto_types::Denom,
     signing::renderer::value_renderer::{RenderError, ValueRenderer},
-    types::{rendering::screen::Screen, tx::metadata::Metadata},
+    types::{denom::Denom, rendering::screen::Screen, tx::metadata::Metadata},
 };
 use gears_derive::RoutingMessage;
 use serde::Serialize;
