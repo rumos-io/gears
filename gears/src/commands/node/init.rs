@@ -33,7 +33,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     // Write tendermint config file
     let tm_config_file_path = config_dir.join("config.toml");
     let tm_config_file =
-        std::fs::File::create(&tm_config_file_path).map_err(InitError::CreateConfigDirectory)?;
+        std::fs::File::create(tm_config_file_path).map_err(InitError::CreateConfigDirectory)?;
 
     tendermint::write_tm_config(tm_config_file, &moniker).map_err(InitError::WriteConfigFile)?;
 
@@ -43,11 +43,11 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     // Create node key file
     let node_key_file_path = config_dir.join("node_key.json");
     let node_key_file =
-        std::fs::File::create(&node_key_file_path).map_err(InitError::CreateNodeKeyFile)?;
+        std::fs::File::create(node_key_file_path).map_err(InitError::CreateNodeKeyFile)?;
 
     // Create private validator key file
     let priv_validator_key_file_path = config_dir.join("priv_validator_key.json");
-    let priv_validator_key_file = std::fs::File::create(&priv_validator_key_file_path)
+    let priv_validator_key_file = std::fs::File::create(priv_validator_key_file_path)
         .map_err(InitError::PrivValidatorKey)?;
 
     let app_state = serde_json::to_value(app_genesis_state)?;
@@ -55,11 +55,11 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     // Create genesis file
     let genesis_file_path = ConfigDirectory::GenesisFile.path_from_hone(&home);
     let genesis_file =
-        std::fs::File::create(&genesis_file_path).map_err(InitError::CreateGenesisFile)?;
+        std::fs::File::create(genesis_file_path).map_err(InitError::CreateGenesisFile)?;
 
     // Create config file
     let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
-    let cfg_file = std::fs::File::create(&cfg_file_path).map_err(InitError::CreateConfigFile)?;
+    let cfg_file = std::fs::File::create(cfg_file_path).map_err(InitError::CreateConfigFile)?;
 
     crate::config::Config::<AC>::write_default(cfg_file)
         .map_err(|e| InitError::WriteDefaultConfigFile(e.to_string()))?;
@@ -89,7 +89,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
     // Write private validator state file
     let state_file_path = data_dir.join("priv_validator_state.json");
     let state_file =
-        std::fs::File::create(&state_file_path).map_err(InitError::PrivValidatorKey)?;
+        std::fs::File::create(state_file_path).map_err(InitError::PrivValidatorKey)?;
 
     tendermint::write_priv_validator_state(state_file).map_err(InitError::WritePrivValidatorKey)?;
 
