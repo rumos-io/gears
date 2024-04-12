@@ -1,6 +1,7 @@
 use super::{BaseApp, Genesis};
 use crate::error::AppError;
 use crate::params::ParamsSubspaceKey;
+use crate::types::context::ExecMode;
 use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init_context::InitContext};
 use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
@@ -143,26 +144,50 @@ impl<
         }
     }
 
-    fn check_tx(&self, _request: RequestCheckTx) -> ResponseCheckTx {
+    fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
         info!("Got check tx request");
-        ResponseCheckTx {
-            code: 0,
-            data: Default::default(),
-            log: "".to_string(),
-            info: "".to_string(),
-            gas_wanted: 1,
-            gas_used: 0,
-            events: vec![],
-            codespace: "".to_string(),
-            mempool_error: "".to_string(),
-            priority: 0,
-            sender: "".to_string(),
+
+        let exec_mode = match r#type {
+            0 => ExecMode::Check,
+            1 => ExecMode::ReCheck,
+            _ => panic!("unknown RequestCheckTx type: {}", r#type),
+        };
+
+        let result = self.run_tx(tx, exec_mode);
+
+        match result {
+            Ok(events) => ResponseCheckTx {
+                code: 0,
+                data: Default::default(),
+                log: "".to_string(),
+                info: "".to_string(),
+                gas_wanted: 1,
+                gas_used: 0,
+                events,
+                codespace: "".to_string(),
+                mempool_error: "".to_string(),
+                priority: 0,
+                sender: "".to_string(),
+            },
+            Err(e) => ResponseCheckTx {
+                code: 0,
+                data: Default::default(),
+                log: e.to_string(),
+                info: "".to_string(),
+                gas_wanted: 1,
+                gas_used: 0,
+                events: vec![],
+                codespace: "".to_string(),
+                mempool_error: "".to_string(),
+                priority: 0,
+                sender: "".to_string(),
+            },
         }
     }
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
-        match self.run_tx(request.tx) {
+        match self.run_tx(request.tx, ExecMode::Deliver) {
             Ok(events) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),

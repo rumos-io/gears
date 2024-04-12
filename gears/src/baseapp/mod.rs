@@ -8,7 +8,7 @@ use crate::{
     error::AppError,
     params::{Keeper, ParamsSubspaceKey},
     types::{
-        context::{query_context::QueryContext, tx_context::TxContext},
+        context::{query_context::QueryContext, tx_context::TxContext, ExecMode},
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -129,7 +129,7 @@ impl<
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<Event>, AppError> {
+    fn run_tx(&self, raw: Bytes, mode: ExecMode) -> Result<Vec<Event>, AppError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e| AppError::TxParseError(e.to_string()))?;
 
@@ -168,7 +168,7 @@ impl<
             raw.into(),
         );
 
-        match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
+        let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode) {
             Ok(_) => {
                 let events = ctx.events;
                 multi_store.tx_caches_write_then_clear();
@@ -178,15 +178,22 @@ impl<
                 multi_store.tx_caches_clear();
                 Err(e)
             }
-        }
+        }?;
+
+        Ok(msg_run)
     }
 
     fn run_msgs<T: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, T, SK>,
         msgs: &Vec<M>,
+        mode: ExecMode,
     ) -> Result<(), AppError> {
         for msg in msgs {
+            if mode == ExecMode::Check || mode == ExecMode::ReCheck {
+                break;
+            }
+
             self.abci_handler.tx(ctx, msg)?
         }
 
