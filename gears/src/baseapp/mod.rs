@@ -8,7 +8,7 @@ use crate::{
     error::AppError,
     params::{Keeper, ParamsSubspaceKey},
     types::{
-        context::{query_context::QueryContext, tx_context::TxContext},
+        context::{query_context::QueryContext, tx_context::TxContext, ExecMode},
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -129,9 +129,9 @@ impl<
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes) -> Result<Vec<Event>, AppError> {
+    fn run_tx(&self, raw: Bytes, mode: ExecMode) -> Result<Vec<Event>, AppError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e| AppError::TxParseError(e.to_string()))?;
+            .map_err(|e: core_types::errors::Error| AppError::TxParseError(e.to_string()))?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
 
@@ -151,7 +151,13 @@ impl<
         );
 
         match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
-            Ok(_) => multi_store.tx_caches_write_then_clear(),
+            Ok(_) => {
+                if mode != ExecMode::Deliver {
+                    multi_store.tx_caches_clear();
+                } else {
+                    multi_store.tx_caches_write_then_clear()
+                }
+            }
             Err(e) => {
                 multi_store.tx_caches_clear();
                 return Err(e);
@@ -168,25 +174,36 @@ impl<
             raw.into(),
         );
 
-        match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs()) {
+        let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode.clone()) {
             Ok(_) => {
                 let events = ctx.events;
-                multi_store.tx_caches_write_then_clear();
+                if mode != ExecMode::Deliver {
+                    multi_store.tx_caches_clear();
+                } else {
+                    multi_store.tx_caches_write_then_clear()
+                }
                 Ok(events)
             }
             Err(e) => {
                 multi_store.tx_caches_clear();
                 Err(e)
             }
-        }
+        }?;
+
+        Ok(msg_run)
     }
 
     fn run_msgs<T: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, T, SK>,
         msgs: &Vec<M>,
+        mode: ExecMode,
     ) -> Result<(), AppError> {
         for msg in msgs {
+            if mode == ExecMode::Check || mode == ExecMode::ReCheck {
+                break;
+            }
+
             self.abci_handler.tx(ctx, msg)?
         }
 

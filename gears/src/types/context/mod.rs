@@ -27,7 +27,7 @@ pub trait TransactionalContext<DB: Database, SK>: QueryableContext<DB, SK> {
 }
 
 /// Execution mode of transaction
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum ExecMode {
     /// Check a transaction
     Check,
