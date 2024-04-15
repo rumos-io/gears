@@ -40,7 +40,7 @@ use tendermint::{
         },
     },
 };
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 impl<
         M: TxMessage,
@@ -156,32 +156,38 @@ impl<
         let result = self.run_tx(tx, exec_mode);
 
         match result {
-            Ok(events) => ResponseCheckTx {
-                code: 0,
-                data: Default::default(),
-                log: "".to_string(),
-                info: "".to_string(),
-                gas_wanted: 1,
-                gas_used: 0,
-                events,
-                codespace: "".to_string(),
-                mempool_error: "".to_string(),
-                priority: 0,
-                sender: "".to_string(),
-            },
-            Err(e) => ResponseCheckTx {
-                code: 0,
-                data: Default::default(),
-                log: e.to_string(),
-                info: "".to_string(),
-                gas_wanted: 1,
-                gas_used: 0,
-                events: vec![],
-                codespace: "".to_string(),
-                mempool_error: "".to_string(),
-                priority: 0,
-                sender: "".to_string(),
-            },
+            Ok(events) => {
+                debug!("{:?}", events);
+                ResponseCheckTx {
+                    code: 0,
+                    data: Default::default(),
+                    log: "".to_string(),
+                    info: "".to_string(),
+                    gas_wanted: 1,
+                    gas_used: 0,
+                    events,
+                    codespace: "".to_string(),
+                    mempool_error: "".to_string(),
+                    priority: 0,
+                    sender: "".to_string(),
+                }
+            }
+            Err(e) => {
+                error!("check err: {e}");
+                ResponseCheckTx {
+                    code: 1,
+                    data: Default::default(),
+                    log: e.to_string(),
+                    info: "".to_string(),
+                    gas_wanted: 1,
+                    gas_used: 0,
+                    events: vec![],
+                    codespace: "".to_string(),
+                    mempool_error: "".to_string(),
+                    priority: 0,
+                    sender: "".to_string(),
+                }
+            }
         }
     }
 
