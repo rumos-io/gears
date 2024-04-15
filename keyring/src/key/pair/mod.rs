@@ -49,7 +49,7 @@ impl KeyPair {
     /// Signs a message.
     pub fn sign(&self, message: &[u8]) -> Vec<u8> {
         match self {
-            KeyPair::Secp256k1(key) => key.sign(message),
+            KeyPair::Secp256k1(key) => key.sign(message).into(),
         }
     }
 }

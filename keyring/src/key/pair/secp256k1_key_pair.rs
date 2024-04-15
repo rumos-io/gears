@@ -104,10 +104,11 @@ impl Secp256k1KeyPair {
     }
 
     /// Signs a message.
-    pub fn sign(&self, message: &[u8]) -> Vec<u8> {
+    pub fn sign(&self, message: &[u8]) -> [u8; 64] {
         let signing_key: SigningKey = SigningKey::from(&self.0);
         let signature: k256::ecdsa::Signature = signing_key.sign(message);
-        signature.to_vec()
+
+        signature.to_bytes().into()
     }
 }
 

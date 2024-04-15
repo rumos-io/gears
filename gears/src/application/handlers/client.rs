@@ -5,13 +5,25 @@ use crate::{
         keys::ReadAccAddress,
     },
     runtime::runtime,
+    signing::renderer::value_renderer::ValueRenderer,
     types::{
         auth::fee::Fee,
         base::send::SendCoins,
-        query::{account::QueryAccountResponse, Query},
+        denom::Denom,
+        query::{
+            account::QueryAccountResponse,
+            metadata::{
+                QueryDenomMetadataRequest, QueryDenomMetadataResponse,
+                RawQueryDenomMetadataResponse,
+            },
+            Query,
+        },
         tx::{body::TxBody, TxMessage},
     },
 };
+
+use tendermint::types::proto::Protobuf as TMProtobuf;
+
 use core_types::{address::AccAddress, query::request::account::QueryAccountRequest};
 use keyring::key::pair::KeyPair;
 use serde::Serialize;
@@ -25,7 +37,7 @@ use tendermint::{
 };
 
 pub trait TxHandler {
-    type Message: TxMessage;
+    type Message: TxMessage + ValueRenderer;
     type TxCommands;
 
     fn prepare_tx(
@@ -136,11 +148,29 @@ mod inner {
 use core_types::Protobuf;
 
 // TODO: we're assuming here that the app has an auth module which handles this query
-fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
+pub(crate) fn get_account_latest(
+    address: AccAddress,
+    node: &str,
+) -> anyhow::Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
     execute_query::<QueryAccountResponse, inner::QueryAccountResponse>(
         "/cosmos.auth.v1beta1.Query/Account".into(),
+        query.encode_vec()?,
+        node,
+        None,
+    )
+}
+
+// TODO: we're assuming here that the app has a bank module which handles this query
+pub(crate) fn get_denom_metadata(
+    base: Denom,
+    node: &str,
+) -> anyhow::Result<QueryDenomMetadataResponse> {
+    let query = QueryDenomMetadataRequest { denom: base };
+
+    execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
+        "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
         query.encode_vec()?,
         node,
         None,
