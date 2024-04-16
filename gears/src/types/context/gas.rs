@@ -5,14 +5,14 @@ use crate::types::context::ExecMode;
 use crate::types::gas::gas_meter::{GasErrors, GasMeter};
 
 #[derive(Debug, Clone)]
-pub struct CtxGasMeter<GM: GasMeter, S: MeterState> {
+pub struct CtxGasMeter<GM, ST> {
     meter: GM,
-    mode: ExecMode,
-    _state: PhantomData<S>,
+    pub mode: ExecMode,
+    _state: PhantomData<ST>,
 }
 
 impl<GM: GasMeter> CtxGasMeter<GM, UnConsumed> {
-    pub fn consume_to_limit(self) -> Result<CtxGasMeter<GM, Consumed>, GasErrors> {
+    pub fn consume_to_limit(self) -> Result<CtxGasMeter<GM, ConsumedToLimit>, GasErrors> {
         let CtxGasMeter {
             mut meter,
             mode,
@@ -37,9 +37,9 @@ pub trait MeterState: sealed::Sealed {
     fn is_consumed() -> bool;
 }
 
-pub struct Consumed;
+pub struct ConsumedToLimit;
 
-impl MeterState for Consumed {
+impl MeterState for ConsumedToLimit {
     fn is_consumed() -> bool {
         true
     }
@@ -66,11 +66,11 @@ impl MeterState for UnConsumed {
 // }
 
 mod sealed {
-    use super::{Consumed, UnConsumed};
+    use super::{ConsumedToLimit, UnConsumed};
 
     pub trait Sealed {}
 
-    impl Sealed for Consumed {}
+    impl Sealed for ConsumedToLimit {}
 
     impl Sealed for UnConsumed {}
 }
