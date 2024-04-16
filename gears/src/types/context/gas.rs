@@ -12,6 +12,16 @@ pub struct CtxGasMeter<GM, ST> {
 }
 
 impl<GM: GasMeter> CtxGasMeter<GM, UnConsumed> {
+    pub fn new(meter: GM, mode: ExecMode) -> Self {
+        Self {
+            meter,
+            mode,
+            _state: PhantomData,
+        }
+    }
+}
+
+impl<GM: GasMeter> CtxGasMeter<GM, UnConsumed> {
     pub fn consume_to_limit(self) -> Result<CtxGasMeter<GM, ConsumedToLimit>, GasErrors> {
         let CtxGasMeter {
             mut meter,

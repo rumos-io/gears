@@ -6,7 +6,7 @@ use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::tx_context::TxContext;
+use gears::types::context::TransactionalContext;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::{error::AppError, params::ParamsSubspaceKey};
@@ -27,9 +27,9 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<S
         ABCIHandler { keeper }
     }
 
-    pub fn tx<DB: Database>(
+    pub fn tx<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {

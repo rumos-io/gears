@@ -9,7 +9,6 @@ use gears::store::database::{Database, PrefixDB};
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init_context::InitContext;
 use gears::types::context::query_context::QueryContext;
-use gears::types::context::tx_context::TxContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
 use gears::{config::Config, params::Keeper as ParamsKeeper, types::context::TransactionalContext};
@@ -73,9 +72,9 @@ impl GaiaABCIHandler {
 }
 
 impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
-    fn tx<DB: Database + Sync + Send>(
+    fn tx<DB: Database + Sync + Send, CTX: TransactionalContext<DB, GaiaStoreKey>>(
         &self,
-        ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
+        ctx: &mut CTX,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {

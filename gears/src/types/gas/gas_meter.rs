@@ -3,9 +3,11 @@ use std::fmt::Debug;
 #[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Gas(pub u64);
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum GasErrors {
+    #[error("Out of gas: {0}")]
     ErrorOutOfGas(String),
+    #[error("Gas overflow: {0}")]
     ErrorGasOverflow(String),
 }
 

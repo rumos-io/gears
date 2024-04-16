@@ -95,13 +95,13 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxCo
 
 #[derive(Debug, former::Former)]
 pub struct TxContext2<'a, DB, SK, GM, ST> {
-    multi_store: &'a mut MultiStore<DB, SK>,
+    pub multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
     pub events: Vec<Event>,
     pub header: Header,
-    #[alias(tx)]
-    _tx_bytes: Vec<u8>,
-    block_gas_meter: CtxGasMeter<GM, ST>,
+    // #[alias(tx)]
+    // _tx_bytes: Vec<u8>,
+    pub block_gas_meter: CtxGasMeter<GM, ST>,
 }
 
 impl<'a, DB: Database, SK: StoreKey, GM: GasMeter> TxContext2<'a, DB, SK, GM, UnConsumed> {
@@ -113,7 +113,7 @@ impl<'a, DB: Database, SK: StoreKey, GM: GasMeter> TxContext2<'a, DB, SK, GM, Un
             height,
             events,
             header,
-            _tx_bytes,
+            // _tx_bytes,
             block_gas_meter: gas_meter,
         } = self;
 
@@ -124,7 +124,7 @@ impl<'a, DB: Database, SK: StoreKey, GM: GasMeter> TxContext2<'a, DB, SK, GM, Un
             height,
             events,
             header,
-            _tx_bytes,
+            // _tx_bytes,
             block_gas_meter: gas_meter,
         })
     }

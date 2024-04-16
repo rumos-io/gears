@@ -9,7 +9,11 @@ use crate::{
     error::AppError,
     params::{Keeper, ParamsSubspaceKey},
     types::{
-        context::{query_context::QueryContext, tx_context::TxContext, ExecMode},
+        context::{
+            gas::CtxGasMeter, query_context::QueryContext, tx_context::TxContext2, ExecMode,
+            TransactionalContext,
+        },
+        gas::infinite_meter::InfiniteGasMeter,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -142,46 +146,53 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            raw.clone().into(),
-        );
+        {
+            // TODO: Constructor
+            let mut ctx = TxContext2 {
+                multi_store: &mut multi_store,
+                height: self.get_block_height(),
+                events: Vec::new(),
+                header: self
+                    .get_block_header()
+                    .expect("block header is set in begin block")
+                    .try_into()
+                    .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+                block_gas_meter: CtxGasMeter::new(InfiniteGasMeter::default(), mode.clone()),
+            };
 
-        // if mode == ExecMode::Deliver && ctx.block_gas_meter().is_out_of_gas() {
-        //     return Err(RunTxError::OutOfGas);
-        // }
-
-        match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
-            Ok(_) => {
-                if mode != ExecMode::Deliver {
-                    multi_store.tx_caches_clear();
-                } else {
-                    multi_store.tx_caches_write_then_clear()
+            match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
+                Ok(_) => {
+                    if mode != ExecMode::Deliver {
+                        multi_store.tx_caches_clear();
+                    } else {
+                        multi_store.tx_caches_write_then_clear()
+                    }
                 }
-            }
-            Err(e) => {
-                multi_store.tx_caches_clear();
-                return Err(RunTxError::Custom(e.to_string()));
-            }
-        };
+                Err(e) => {
+                    multi_store.tx_caches_clear();
+                    return Err(RunTxError::Custom(e.to_string()));
+                }
+            };
+        }
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
+        let mut ctx = TxContext2 {
+            multi_store: &mut multi_store,
+            height: self.get_block_height(),
+            events: Vec::new(),
+            header: self
+                .get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            raw.into(),
-        );
+            block_gas_meter: CtxGasMeter::new(InfiniteGasMeter::default(), mode.clone()),
+        };
 
         let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode.clone()) {
             Ok(_) => {
+                let ctx = ctx
+                    .consume_to_limit()
+                    .map_err(|e| RunTxError::Custom(e.to_string()))?;
+
                 let events = ctx.events;
                 if mode != ExecMode::Deliver {
                     multi_store.tx_caches_clear();
@@ -202,7 +213,7 @@ impl<
 
     fn run_msgs<T: Database + Sync + Send>(
         &self,
-        ctx: &mut TxContext<'_, T, SK>,
+        ctx: &mut impl TransactionalContext<T, SK>,
         msgs: &Vec<M>,
         mode: ExecMode,
     ) -> Result<(), AppError> {
