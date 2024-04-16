@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use store_crate::database::{Database, PrefixDB};
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
@@ -5,15 +7,20 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
+use crate::types::gas::gas_meter::GasMeter;
 use crate::types::header::Header;
 
 use super::{QueryableContext, TransactionalContext};
 
+#[derive(Debug, former::Former)]
 pub struct TxContext<'a, DB, SK> {
     multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
     pub events: Vec<Event>,
     pub header: Header,
+    // gas_meter: Box<dyn GasMeter>,
+    // block_gas_meter: Box<dyn GasMeter>,
+    #[alias(tx)]
     _tx_bytes: Vec<u8>,
 }
 
@@ -30,7 +37,21 @@ impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
             events: vec![],
             header,
             _tx_bytes: tx_bytes,
+            // gas_meter: Box::new(InfiniteGasMeter::default()),
+            // block_gas_meter: Box::new(InfiniteGasMeter::default()),
         }
+    }
+}
+
+impl<'a, DB: Database, SK: StoreKey> TxContext<'a, DB, SK> {
+    pub fn gas_meter(&self) -> &dyn GasMeter {
+        // self.gas_meter.as_ref()
+        todo!()
+    }
+
+    pub fn block_gas_meter(&self) -> &dyn GasMeter {
+        // self.block_gas_meter.as_ref()
+        todo!()
     }
 }
 

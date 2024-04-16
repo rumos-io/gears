@@ -1,4 +1,6 @@
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd)]
+use std::fmt::Debug;
+
+#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Gas(pub u64);
 
 #[derive(Debug)]

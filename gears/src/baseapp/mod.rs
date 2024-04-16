@@ -1,3 +1,4 @@
+pub mod errors;
 use std::{
     marker::PhantomData,
     sync::{Arc, RwLock},
@@ -25,7 +26,7 @@ use tendermint::types::{
     request::query::RequestQuery,
 };
 
-use self::{genesis::Genesis, params::BaseAppParamsKeeper};
+use self::{errors::RunTxError, genesis::Genesis, params::BaseAppParamsKeeper};
 
 mod abci;
 pub mod genesis;
@@ -129,11 +130,12 @@ impl<
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes, mode: ExecMode) -> Result<Vec<Event>, AppError> {
+    fn run_tx(&self, raw: Bytes, mode: ExecMode) -> Result<Vec<Event>, RunTxError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e: core_types::errors::Error| AppError::TxParseError(e.to_string()))?;
+            .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
 
-        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
+        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
+            .map_err(|e| RunTxError::Validation(e.to_string()))?;
 
         let mut multi_store = self
             .multi_store
@@ -146,9 +148,13 @@ impl<
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
-                .map_err(|e: ChainIdErrors| AppError::Custom(e.to_string()))?,
+                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
             raw.clone().into(),
         );
+
+        // if mode == ExecMode::Deliver && ctx.block_gas_meter().is_out_of_gas() {
+        //     return Err(RunTxError::OutOfGas);
+        // }
 
         match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
             Ok(_) => {
@@ -160,7 +166,7 @@ impl<
             }
             Err(e) => {
                 multi_store.tx_caches_clear();
-                return Err(e);
+                return Err(RunTxError::Custom(e.to_string()));
             }
         };
 
@@ -170,7 +176,7 @@ impl<
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
-                .map_err(|e: ChainIdErrors| AppError::Custom(e.to_string()))?,
+                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
             raw.into(),
         );
 
@@ -188,7 +194,8 @@ impl<
                 multi_store.tx_caches_clear();
                 Err(e)
             }
-        }?;
+        }
+        .map_err(|e| RunTxError::Custom(e.to_string()))?;
 
         Ok(msg_run)
     }

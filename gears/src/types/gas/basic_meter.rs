@@ -3,6 +3,7 @@ use std::fmt::Display;
 use super::gas_meter::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter};
 
 /// Basic gas meter.
+#[derive(Debug, Clone)]
 pub struct BasicGasMeter {
     limit: Gas,
     consumed: Gas,

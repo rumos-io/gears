@@ -2,6 +2,7 @@ use store_crate::database::Database;
 use store_crate::{QueryableKVStore, TransactionalKVStore};
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
+pub mod gas;
 pub mod init_context;
 pub mod query_context;
 pub mod tx_context;
