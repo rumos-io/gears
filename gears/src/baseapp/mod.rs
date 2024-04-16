@@ -189,7 +189,7 @@ impl<
 
         let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode.clone()) {
             Ok(_) => {
-                let ctx = ctx
+                ctx.gas_meter_mut()
                     .consume_to_limit()
                     .map_err(|e| RunTxError::Custom(e.to_string()))?;
 

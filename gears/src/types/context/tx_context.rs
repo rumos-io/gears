@@ -7,10 +7,10 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-use crate::types::gas::gas_meter::{GasErrors, GasMeter};
+use crate::types::gas::gas_meter::GasMeter;
 use crate::types::header::Header;
 
-use super::gas::{ConsumedToLimit, CtxGasMeter, UnConsumed};
+use super::gas::CtxGasMeter;
 use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug, former::Former)]
@@ -94,44 +94,28 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxCo
 }
 
 #[derive(Debug, former::Former)]
-pub struct TxContext2<'a, DB, SK, GM, ST> {
+pub struct TxContext2<'a, DB, SK, GM> {
     pub multi_store: &'a mut MultiStore<DB, SK>,
     pub height: u64,
     pub events: Vec<Event>,
     pub header: Header,
     // #[alias(tx)]
     // _tx_bytes: Vec<u8>,
-    pub block_gas_meter: CtxGasMeter<GM, ST>,
+    pub block_gas_meter: CtxGasMeter<GM>,
 }
 
-impl<'a, DB: Database, SK: StoreKey, GM: GasMeter> TxContext2<'a, DB, SK, GM, UnConsumed> {
-    pub fn consume_to_limit(
-        self,
-    ) -> Result<TxContext2<'a, DB, SK, GM, ConsumedToLimit>, GasErrors> {
-        let TxContext2 {
-            multi_store,
-            height,
-            events,
-            header,
-            // _tx_bytes,
-            block_gas_meter: gas_meter,
-        } = self;
+impl<'a, DB: Database, SK: StoreKey, GM: GasMeter> TxContext2<'a, DB, SK, GM> {
+    pub fn gas_meter(&self) -> &CtxGasMeter<GM> {
+        &self.block_gas_meter
+    }
 
-        let gas_meter = gas_meter.consume_to_limit()?;
-
-        Ok(TxContext2 {
-            multi_store,
-            height,
-            events,
-            header,
-            // _tx_bytes,
-            block_gas_meter: gas_meter,
-        })
+    pub fn gas_meter_mut(&mut self) -> &mut CtxGasMeter<GM> {
+        &mut self.block_gas_meter
     }
 }
 
-impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
-    for TxContext2<'_, DB, SK, GM, ST>
+impl<DB: Database, SK: StoreKey, GM> QueryableContext<PrefixDB<DB>, SK>
+    for TxContext2<'_, DB, SK, GM>
 {
     type KVStore = KVStore<PrefixDB<DB>>;
 
@@ -148,8 +132,8 @@ impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
     }
 }
 
-impl<DB: Database, SK: StoreKey, GM, ST> TransactionalContext<PrefixDB<DB>, SK>
-    for TxContext2<'_, DB, SK, GM, ST>
+impl<DB: Database, SK: StoreKey, GM> TransactionalContext<PrefixDB<DB>, SK>
+    for TxContext2<'_, DB, SK, GM>
 {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
 
