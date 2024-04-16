@@ -51,7 +51,7 @@ human-panic = "1.1.4"
 strum = { workspace = true }
 text_io = "0.1.12"
 tokio = { workspace = true, features = [ "rt", "rt-multi-thread"] }
-derive_builder = { workspace = true }
+former = { workspace = true }
 
 # networking
 axum = { workspace = true }

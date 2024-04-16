@@ -4,7 +4,7 @@ use crate::{
     baseapp::genesis::Genesis,
     commands::node::{
         genesis::{genesis_account_add, GenesisCommand},
-        init::{init, InitCommand, InitCommandBuilder},
+        init::{init, InitCommand},
     },
     types::{
         base::{coin::Coin, send::SendCoins},
@@ -51,11 +51,11 @@ impl TmpChild {
             env_vars: None,
         };
 
-        let opt: InitCommand = InitCommandBuilder::default()
+        let opt: InitCommand = InitCommand::former()
             .home(tmp_dir.to_path_buf())
             .chain_id(ChainId::from_str("test-chain")?)
             .moniker("test".to_owned())
-            .build()?;
+            .form();
 
         init::<_, AC>(opt, genesis)?;
 
