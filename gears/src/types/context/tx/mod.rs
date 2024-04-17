@@ -12,7 +12,7 @@ use crate::types::header::Header;
 use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
-pub struct TxContext2<'a, DB, SK> {
+pub struct TxContext<'a, DB, SK> {
     pub events: Vec<Event>,
 
     multi_store: &'a mut MultiStore<DB, SK>,
@@ -20,7 +20,7 @@ pub struct TxContext2<'a, DB, SK> {
     header: Header,
 }
 
-impl<'a, DB, SK> TxContext2<'a, DB, SK> {
+impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(multi_store: &'a mut MultiStore<DB, SK>, height: u64, header: Header) -> Self {
         Self {
             events: Vec::new(),
@@ -31,7 +31,7 @@ impl<'a, DB, SK> TxContext2<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext2<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
     type KVStore = KVStore<PrefixDB<DB>>;
     type MultiStore = MultiStore<DB, SK>;
 
@@ -52,7 +52,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContex
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxContext2<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
     type MultiStoreMut = MultiStore<DB, SK>;
 

@@ -1,3 +1,4 @@
+pub mod re_check;
 pub mod check;
 pub mod deliver;
 
@@ -51,8 +52,6 @@ pub trait ExecutionMode: Sealed {
     ) -> Result<(), RunTxError>;
 }
 
-// #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-// pub struct ReCheckTxMode;
 
 mod sealed {
     use super::{check::CheckTxMode, deliver::DeliverTxMode};

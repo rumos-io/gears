@@ -8,7 +8,6 @@ pub mod gas;
 pub mod init_context;
 pub mod query_context;
 pub mod tx;
-pub mod tx_context;
 
 pub trait QueryableContext<DB: Database, SK> {
     type KVStore: QueryableKVStore<DB>;

@@ -12,7 +12,7 @@ use crate::{
     types::{
         context::{
             query_context::QueryContext,
-            tx::{mode::ExecutionMode, TxContext2},
+            tx::{mode::ExecutionMode, TxContext},
         },
         gas::{
             basic_meter::BasicGasMeter,
@@ -178,7 +178,7 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        let mut ctx: TxContext2<'_, _, _> = TxContext2::new(
+        let mut ctx: TxContext<'_, _, _> = TxContext::new(
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
@@ -189,7 +189,7 @@ impl<
 
         mode.run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
-        let mut ctx: TxContext2<'_, _, _> = TxContext2::new(
+        let mut ctx: TxContext<'_, _, _> = TxContext::new(
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()

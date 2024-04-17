@@ -5,7 +5,7 @@ use crate::params::ParamsSubspaceKey;
 use crate::types::context::gas::CtxGasMeter;
 use crate::types::context::tx::mode::check::CheckTxMode;
 use crate::types::context::tx::mode::deliver::DeliverTxMode;
-use crate::types::context::tx_context::TxContext;
+use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::gas_meter::Gas;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
@@ -295,11 +295,6 @@ impl<
                     Box::new(BasicGasMeter::new(Gas(max_gas))),
                 ),
             };
-
-            // *self.gas_meter.write().expect("Poisoned lock") = match max_gas > 0 {
-            //     true => InfiniteGasMeter::default(),
-            //     false => BasicGasMeter::new(Gas(max_gas)),
-            // };
         }
 
         let mut ctx = TxContext::new(
@@ -309,7 +304,6 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            vec![],
         );
 
         self.abci_handler.begin_block(&mut ctx, request);
@@ -337,7 +331,6 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            vec![],
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);

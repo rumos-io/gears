@@ -9,7 +9,7 @@ use crate::types::gas::gas_meter::{Gas, GasErrors, GasMeter};
 #[derive(Debug, Clone)]
 pub struct CtxGasMeter<DS> {
     meter: Arc<RwLock<Box<dyn GasMeter>>>,
-    _descriptor: std::marker::PhantomData<DS>,
+    _descriptor: PhantomData<DS>,
 }
 
 impl<DS> CtxGasMeter<DS> {
