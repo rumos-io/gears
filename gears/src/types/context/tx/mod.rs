@@ -1,3 +1,5 @@
+pub mod mode;
+pub mod mode_impl;
 mod unconsumed_impl;
 
 use store_crate::{
@@ -10,7 +12,7 @@ use tendermint::types::{chain_id::ChainId, proto::event::Event};
 use crate::types::header::Header;
 
 use super::{
-    gas::{BlockDescriptor, CtxGasMeter},
+    gas::{BlockDescriptor, CtxGasMeter, UnConsumed},
     QueryableContext, TransactionalContext,
 };
 
@@ -24,7 +26,7 @@ pub struct TxContext2<'a, DB, SK, GM, ST> {
     block_gas_meter: CtxGasMeter<GM, ST, BlockDescriptor>,
 }
 
-impl<'a, DB, SK, GM, ST> TxContext2<'a, DB, SK, GM, ST> {
+impl<'a, DB, SK, GM> TxContext2<'a, DB, SK, GM, UnConsumed> {
     pub fn new(
         multi_store: &'a mut MultiStore<DB, SK>,
         height: u64,
@@ -45,6 +47,7 @@ impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
     for TxContext2<'_, DB, SK, GM, ST>
 {
     type KVStore = KVStore<PrefixDB<DB>>;
+    type MultiStore = MultiStore<DB, SK>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
         self.multi_store.kv_store(store_key)
@@ -57,12 +60,17 @@ impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
     fn chain_id(&self) -> &ChainId {
         &self.header.chain_id
     }
+
+    fn multi_store(&self) -> &Self::MultiStore {
+        self.multi_store
+    }
 }
 
 impl<DB: Database, SK: StoreKey, GM, ST> TransactionalContext<PrefixDB<DB>, SK>
     for TxContext2<'_, DB, SK, GM, ST>
 {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
+    type MultiStoreMut = MultiStore<DB, SK>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
         self.multi_store.kv_store_mut(store_key)
@@ -74,5 +82,13 @@ impl<DB: Database, SK: StoreKey, GM, ST> TransactionalContext<PrefixDB<DB>, SK>
 
     fn append_events(&mut self, mut events: Vec<Event>) {
         self.events.append(&mut events);
+    }
+
+    fn events_drain(&mut self) -> Vec<Event> {
+        self.events.drain(..).collect()
+    }
+
+    fn multi_store_mut(&mut self) -> &mut Self::MultiStoreMut {
+        self.multi_store
     }
 }

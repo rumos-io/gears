@@ -10,19 +10,16 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::{
-            query_context::QueryContext, tx_context::TxContext, ContextOptions, ExecMode,
-            TransactionalContext,
+            query_context::QueryContext,
+            tx::{mode::ExecutionMode, TxContext2},
+            ContextOptions,
         },
+        gas::gas_meter::GasMeter,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
 use bytes::Bytes;
-use store_crate::TransactionalMultiKVStore;
-use store_crate::{
-    database::{Database, RocksDB},
-    types::multi::MultiStore,
-    QueryableMultiKVStore, StoreKey,
-};
+use store_crate::{database::RocksDB, types::multi::MultiStore, QueryableMultiKVStore, StoreKey};
 use tendermint::types::{
     chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},
@@ -135,93 +132,93 @@ impl<
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn run_tx(&self, raw: Bytes, mode: ExecMode) -> Result<Vec<Event>, RunTxError> {
-        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
+    // fn run_tx(&self, raw: Bytes, mode: ExecMode) -> Result<Vec<Event>, RunTxError> {
+    //     let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
+    //         .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
 
-        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
-            .map_err(|e| RunTxError::Validation(e.to_string()))?;
+    //     Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
+    //         .map_err(|e| RunTxError::Validation(e.to_string()))?;
 
-        let mut multi_store = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
+    //     let mut multi_store = self
+    //         .multi_store
+    //         .write()
+    //         .expect("RwLock will not be poisoned");
 
-        // TODO: Constructor
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            raw.clone().into(),
-        );
+    //     // TODO: Constructor
+    //     let mut ctx = TxContext::new(
+    //         &mut multi_store,
+    //         self.get_block_height(),
+    //         self.get_block_header()
+    //             .expect("block header is set in begin block")
+    //             .try_into()
+    //             .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+    //         raw.clone().into(),
+    //     );
 
-        match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
-            Ok(_) => {
-                if mode != ExecMode::Deliver {
-                    multi_store.tx_caches_clear();
-                } else {
-                    multi_store.tx_caches_write_then_clear()
-                }
-            }
-            Err(e) => {
-                multi_store.tx_caches_clear();
-                return Err(RunTxError::Custom(e.to_string()));
-            }
-        };
+    //     match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
+    //         Ok(_) => {
+    //             if mode != ExecMode::Deliver {
+    //                 multi_store.tx_caches_clear();
+    //             } else {
+    //                 multi_store.tx_caches_write_then_clear()
+    //             }
+    //         }
+    //         Err(e) => {
+    //             multi_store.tx_caches_clear();
+    //             return Err(RunTxError::Custom(e.to_string()));
+    //         }
+    //     };
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            raw.clone().into(),
-        );
+    //     let mut ctx = TxContext::new(
+    //         &mut multi_store,
+    //         self.get_block_height(),
+    //         self.get_block_header()
+    //             .expect("block header is set in begin block")
+    //             .try_into()
+    //             .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+    //         raw.clone().into(),
+    //     );
 
-        let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode.clone()) {
-            Ok(_) => {
-                // ctx.gas_meter_mut()
-                //     .consume_to_limit()
-                //     .map_err(|e| RunTxError::Custom(e.to_string()))?;
+    //     let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode.clone()) {
+    //         Ok(_) => {
+    //             // ctx.gas_meter_mut()
+    //             //     .consume_to_limit()
+    //             //     .map_err(|e| RunTxError::Custom(e.to_string()))?;
 
-                let events = ctx.events;
-                if mode != ExecMode::Deliver {
-                    multi_store.tx_caches_clear();
-                } else {
-                    multi_store.tx_caches_write_then_clear()
-                }
-                Ok(events)
-            }
-            Err(e) => {
-                multi_store.tx_caches_clear();
-                Err(e)
-            }
-        }
-        .map_err(|e| RunTxError::Custom(e.to_string()))?;
+    //             let events = ctx.events;
+    //             if mode != ExecMode::Deliver {
+    //                 multi_store.tx_caches_clear();
+    //             } else {
+    //                 multi_store.tx_caches_write_then_clear()
+    //             }
+    //             Ok(events)
+    //         }
+    //         Err(e) => {
+    //             multi_store.tx_caches_clear();
+    //             Err(e)
+    //         }
+    //     }
+    //     .map_err(|e| RunTxError::Custom(e.to_string()))?;
 
-        Ok(msg_run)
-    }
+    //     Ok(msg_run)
+    // }
 
-    fn run_msgs<T: Database + Sync + Send>(
-        &self,
-        ctx: &mut impl TransactionalContext<T, SK>,
-        msgs: &Vec<M>,
-        mode: ExecMode,
-    ) -> Result<(), AppError> {
-        for msg in msgs {
-            if mode == ExecMode::Check || mode == ExecMode::ReCheck {
-                break;
-            }
+    // fn run_msgs<T: Database + Sync + Send>(
+    //     &self,
+    //     ctx: &mut impl TransactionalContext<T, SK>,
+    //     msgs: &Vec<M>,
+    //     mode: ExecMode,
+    // ) -> Result<(), AppError> {
+    //     for msg in msgs {
+    //         if mode == ExecMode::Check || mode == ExecMode::ReCheck {
+    //             break;
+    //         }
 
-            self.abci_handler.tx(ctx, msg)?
-        }
+    //         self.abci_handler.tx(ctx, msg)?
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
     fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
         if msgs.is_empty() {
@@ -236,5 +233,53 @@ impl<
         }
 
         Ok(())
+    }
+
+    // TODO: Remove clone from GM
+    fn run_tx2<MD: ExecutionMode, GM: GasMeter + Clone>(
+        &self,
+        raw: Bytes,
+        gas_meter: GM,
+    ) -> Result<Vec<Event>, RunTxError> {
+        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
+            .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
+
+        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
+            .map_err(|e| RunTxError::Validation(e.to_string()))?;
+
+        let mut multi_store = self
+            .multi_store
+            .write()
+            .expect("RwLock will not be poisoned");
+
+        let mut ctx: TxContext2<'_, _, _, _, _> = TxContext2::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block")
+                .try_into()
+                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+            gas_meter.clone(),
+        );
+
+        MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
+
+        let mut ctx: TxContext2<'_, _, _, _, _> = TxContext2::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block")
+                .try_into()
+                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+            gas_meter,
+        );
+
+        let events = MD::run_msg(
+            &mut ctx,
+            &self.abci_handler,
+            tx_with_raw.tx.get_msgs().iter(),
+        )?;
+
+        Ok(events)
     }
 }

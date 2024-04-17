@@ -38,7 +38,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         &self,
         ctx: &CTX,
     ) -> Self::Params {
-        self.auth_params_keeper.get(ctx)
+        self.auth_params_keeper.get(ctx.multi_store())
     }
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -144,7 +144,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         genesis: GenesisState,
     ) {
         //TODO: sdk sanitizes accounts
-        self.auth_params_keeper.set(ctx, genesis.params);
+        self.auth_params_keeper
+            .set(ctx.multi_store_mut(), genesis.params);
 
         for mut acct in genesis.accounts {
             acct.account_number = self.get_next_account_number(ctx);

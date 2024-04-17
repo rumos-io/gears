@@ -107,7 +107,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
-        self.bank_params_keeper.set(ctx, genesis.params);
+        self.bank_params_keeper
+            .set(ctx.multi_store_mut(), genesis.params);
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
 
