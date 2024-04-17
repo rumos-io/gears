@@ -286,11 +286,11 @@ impl<
                 .unwrap_or_default();
 
             let _ = match max_gas > 0 {
-                true => std::mem::replace(
+                false => std::mem::replace(
                     &mut *self.gas_meter.write().expect("Poisoned lock"),
                     Box::new(InfiniteGasMeter::default()),
                 ),
-                false => std::mem::replace(
+                true => std::mem::replace(
                     &mut *self.gas_meter.write().expect("Poisoned lock"),
                     Box::new(BasicGasMeter::new(Gas(max_gas))),
                 ),
