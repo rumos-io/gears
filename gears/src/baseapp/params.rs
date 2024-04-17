@@ -133,7 +133,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
     pub fn block_params<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(
         &self,
         store: &KV,
-    ) -> BlockParams {
+    ) -> Option<BlockParams> {
         let sub_store = self
             .params_keeper
             .raw_subspace(store, &self.params_subspace_key);
@@ -144,9 +144,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
             let block_params: BlockParams =
                 serde_json::from_slice(&params).expect("conversion from json won't fail");
 
-            block_params
+            Some(block_params)
         } else {
-            panic!("Params is not set") // TODO: Should panic or create default?
+            None
         }
     }
 }

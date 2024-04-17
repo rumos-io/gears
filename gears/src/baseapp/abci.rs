@@ -1,11 +1,10 @@
 use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
-use crate::baseapp::params::BlockParams;
 use crate::error::AppError;
 use crate::params::ParamsSubspaceKey;
 use crate::types::context::tx::mode::{CheckTxMode, DeliverTxMode};
 use crate::types::context::tx_context::TxContext;
-use crate::types::context::ContextOptions;
+use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::gas_meter::Gas;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::tx::TxMessage;
@@ -152,25 +151,11 @@ impl<
     fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
         info!("Got check tx request");
 
-        let _gas = self
-            .ctx_options
-            .read()
-            .expect("Poisoned lock")
-            .max_gas
-            .clone();
-
-        // match gas.0 > 0 {
-        //     true => todo!(),
-        //     false => todo!(),
-        // }
-
         let result = match r#type {
-            0 => self.run_tx::<CheckTxMode, _>(tx.clone(), InfiniteGasMeter::default()),
-            1 => self.run_tx::<CheckTxMode, _>(tx.clone(), InfiniteGasMeter::default()), // TODO: ReCheckTxMode
+            0 => self.run_tx::<CheckTxMode>(tx.clone()),
+            1 => self.run_tx::<CheckTxMode>(tx.clone()), // TODO: ReCheckTxMode
             _ => panic!("unknown Request CheckTx type: {}", r#type),
         };
-
-        // let result = self.run_tx(tx, exec_mode);
 
         match result {
             Ok(events) => {
@@ -208,9 +193,12 @@ impl<
         }
     }
 
-    fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
+    fn deliver_tx(&self, RequestDeliverTx { tx }: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
-        match self.run_tx::<DeliverTxMode, _>(request.tx, InfiniteGasMeter::default()) {
+
+        let result = self.run_tx::<DeliverTxMode>(tx.clone());
+
+        match result {
             Ok(events) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
@@ -285,17 +273,27 @@ impl<
             .expect("RwLock will not be poisoned");
 
         {
-            let block_opt = self.baseapp_params_keeper.block_params(&*multi_store);
-            let BlockParams {
-                max_bytes: _,
-                max_gas,
-            } = block_opt;
+            let max_gas = self
+                .baseapp_params_keeper
+                .block_params(&*multi_store)
+                .map(|e| e.max_gas)
+                .unwrap_or_default();
 
-            let opt = ContextOptions {
-                max_gas: Gas(max_gas),
+            let _ = match max_gas > 0 {
+                true => std::mem::replace(
+                    &mut *self.gas_meter.write().expect("Poisoned lock"),
+                    Box::new(InfiniteGasMeter::default()),
+                ),
+                false => std::mem::replace(
+                    &mut *self.gas_meter.write().expect("Poisoned lock"),
+                    Box::new(BasicGasMeter::new(Gas(max_gas))),
+                ),
             };
 
-            *self.ctx_options.write().expect("poisoned lock") = opt;
+            // *self.gas_meter.write().expect("Poisoned lock") = match max_gas > 0 {
+            //     true => InfiniteGasMeter::default(),
+            //     false => BasicGasMeter::new(Gas(max_gas)),
+            // };
         }
 
         let mut ctx = TxContext::new(

@@ -1,17 +1,20 @@
-use std::{marker::PhantomData, ops::Deref};
+use std::{
+    marker::PhantomData,
+    sync::{Arc, RwLock},
+};
 
 use crate::types::gas::gas_meter::{Gas, GasErrors, GasMeter};
 
 /// Wrapper around any gas meter which prevents usage of gas over limit with type system
 #[derive(Debug, Clone)]
-pub struct CtxGasMeter<GM, ST, DS> {
-    meter: GM,
+pub struct CtxGasMeter<ST, DS> {
+    meter: Arc<RwLock<Box<dyn GasMeter>>>,
     _state: std::marker::PhantomData<ST>,
     _descriptor: std::marker::PhantomData<DS>,
 }
 
-impl<GM, ST, DS> CtxGasMeter<GM, ST, DS> {
-    pub fn new(meter: GM) -> Self {
+impl<ST, DS> CtxGasMeter<ST, DS> {
+    pub fn new(meter: Arc<RwLock<Box<dyn GasMeter>>>) -> Self {
         Self {
             meter,
             _state: PhantomData,
@@ -20,20 +23,14 @@ impl<GM, ST, DS> CtxGasMeter<GM, ST, DS> {
     }
 }
 
-impl<GM, ST, DS> Deref for CtxGasMeter<GM, ST, DS> {
-    type Target = GM;
+impl<DS: Descriptor> CtxGasMeter<UnConsumed, DS> {
+    pub fn consume_to_limit(self) -> Result<CtxGasMeter<ConsumedToLimit, DS>, (GasErrors, Self)> {
+        let result = {
+            let mut lock = self.meter.write().expect("poisoned lock");
 
-    fn deref(&self) -> &Self::Target {
-        &self.meter
-    }
-}
-
-impl<GM: GasMeter, DS: Descriptor> CtxGasMeter<GM, UnConsumed, DS> {
-    pub fn consume_to_limit(
-        mut self,
-    ) -> Result<CtxGasMeter<GM, ConsumedToLimit, DS>, (GasErrors, Self)> {
-        let gas = self.meter.gas_consumed_to_limit();
-        let result = self.meter.consume_gas(gas, DS::name().to_owned());
+            let gas = lock.gas_consumed_to_limit();
+            lock.consume_gas(gas, DS::name().to_owned())
+        };
 
         match result {
             Ok(_) => Ok(CtxGasMeter {
@@ -46,10 +43,14 @@ impl<GM: GasMeter, DS: Descriptor> CtxGasMeter<GM, UnConsumed, DS> {
     }
 
     pub fn consume_gas(
-        mut self,
+        self,
         amount: Gas,
-    ) -> Result<Self, (GasErrors, CtxGasMeter<GM, ConsumedToLimit, DS>)> {
-        let result = self.meter.consume_gas(amount, DS::name().to_owned());
+    ) -> Result<Self, (GasErrors, CtxGasMeter<ConsumedToLimit, DS>)> {
+        let result = self
+            .meter
+            .write()
+            .expect("poisoned lock")
+            .consume_gas(amount, DS::name().to_owned());
 
         match result {
             Ok(_) => Ok(self),

@@ -16,35 +16,35 @@ use super::{
     QueryableContext, TransactionalContext,
 };
 
-#[derive(Debug, former::Former)]
-pub struct TxContextWithGas<'a, DB, SK, GM, ST> {
+#[derive(Debug)]
+pub struct TxContextWithGas<'a, DB, SK, ST> {
     pub events: Vec<Event>,
 
     multi_store: &'a mut MultiStore<DB, SK>,
     height: u64,
     header: Header,
-    block_gas_meter: CtxGasMeter<GM, ST, BlockDescriptor>,
+    block_gas_meter: CtxGasMeter<ST, BlockDescriptor>,
 }
 
-impl<'a, DB, SK, GM> TxContextWithGas<'a, DB, SK, GM, UnConsumed> {
+impl<'a, DB, SK> TxContextWithGas<'a, DB, SK, UnConsumed> {
     pub fn new(
         multi_store: &'a mut MultiStore<DB, SK>,
         height: u64,
         header: Header,
-        block_gas_meter: GM,
+        block_gas_meter: CtxGasMeter<UnConsumed, BlockDescriptor>,
     ) -> Self {
         Self {
             events: Vec::new(),
             multi_store,
             height,
             header,
-            block_gas_meter: CtxGasMeter::new(block_gas_meter),
+            block_gas_meter,
         }
     }
 }
 
-impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
-    for TxContextWithGas<'_, DB, SK, GM, ST>
+impl<DB: Database, SK: StoreKey, ST> QueryableContext<PrefixDB<DB>, SK>
+    for TxContextWithGas<'_, DB, SK, ST>
 {
     type KVStore = KVStore<PrefixDB<DB>>;
     type MultiStore = MultiStore<DB, SK>;
@@ -66,8 +66,8 @@ impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
     }
 }
 
-impl<DB: Database, SK: StoreKey, GM, ST> TransactionalContext<PrefixDB<DB>, SK>
-    for TxContextWithGas<'_, DB, SK, GM, ST>
+impl<DB: Database, SK: StoreKey, ST> TransactionalContext<PrefixDB<DB>, SK>
+    for TxContextWithGas<'_, DB, SK, ST>
 {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
     type MultiStoreMut = MultiStore<DB, SK>;

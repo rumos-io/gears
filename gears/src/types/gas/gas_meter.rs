@@ -14,7 +14,7 @@ pub enum GasErrors {
 #[derive(Debug)]
 pub struct ErrorNegativeGasConsumed(pub String);
 
-pub trait GasMeter {
+pub trait GasMeter: Send + Sync + Debug {
     /// Returns the amount of gas that was consumed by the gas meter instance.
     fn gas_consumed(&self) -> Gas;
     /// Returns the amount of gas that was consumed by gas meter instance, or the limit if it is reached.

@@ -1,17 +1,17 @@
 use crate::types::{
     context::gas::{ConsumedToLimit, UnConsumed},
-    gas::gas_meter::{Gas, GasErrors, GasMeter},
+    gas::gas_meter::{Gas, GasErrors},
 };
 
 use super::TxContextWithGas;
 
 // TODO: Gas refund?
 
-impl<'a, DB, SK, GM: GasMeter> TxContextWithGas<'a, DB, SK, GM, UnConsumed> {
+impl<'a, DB, SK> TxContextWithGas<'a, DB, SK, UnConsumed> {
     pub fn gas_block_consume(
         self,
         amount: Gas,
-    ) -> Result<Self, (GasErrors, TxContextWithGas<'a, DB, SK, GM, ConsumedToLimit>)> {
+    ) -> Result<Self, (GasErrors, TxContextWithGas<'a, DB, SK, ConsumedToLimit>)> {
         let Self {
             events,
             multi_store,
@@ -45,7 +45,7 @@ impl<'a, DB, SK, GM: GasMeter> TxContextWithGas<'a, DB, SK, GM, UnConsumed> {
 
     pub fn gas_block_consume_to_limit(
         self,
-    ) -> Result<TxContextWithGas<'a, DB, SK, GM, ConsumedToLimit>, (GasErrors, Self)> {
+    ) -> Result<TxContextWithGas<'a, DB, SK, ConsumedToLimit>, (GasErrors, Self)> {
         let Self {
             events,
             multi_store,

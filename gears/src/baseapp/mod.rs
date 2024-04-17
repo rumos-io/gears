@@ -1,5 +1,6 @@
 pub mod errors;
 use std::{
+    fmt::Debug,
     marker::PhantomData,
     sync::{Arc, RwLock},
 };
@@ -10,11 +11,15 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::{
+            gas::CtxGasMeter,
             query_context::QueryContext,
             tx::{mode::ExecutionMode, TxContextWithGas},
-            ContextOptions,
         },
-        gas::gas_meter::GasMeter,
+        gas::{
+            basic_meter::BasicGasMeter,
+            gas_meter::{Gas, GasMeter},
+            infinite_meter::InfiniteGasMeter,
+        },
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -42,8 +47,8 @@ pub struct BaseApp<
     AI: ApplicationInfo,
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
-    ctx_options: Arc<RwLock<ContextOptions>>,
     height: Arc<RwLock<u64>>,
+    gas_meter: Arc<RwLock<Box<dyn GasMeter>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -72,6 +77,12 @@ impl<
             params_keeper,
             params_subspace_key,
         };
+
+        let max_gas = baseapp_params_keeper
+            .block_params(&multi_store)
+            .map(|e| e.max_gas)
+            .unwrap_or_default();
+
         let height = multi_store.head_version().into();
         Self {
             multi_store: Arc::new(RwLock::new(multi_store)),
@@ -82,7 +93,10 @@ impl<
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
-            ctx_options: Default::default(),
+            gas_meter: match max_gas > 0 {
+                true => Arc::new(RwLock::new(Box::new(InfiniteGasMeter::default()))),
+                false => Arc::new(RwLock::new(Box::new(BasicGasMeter::new(Gas(max_gas))))),
+            },
         }
     }
 
@@ -147,12 +161,7 @@ impl<
         Ok(())
     }
 
-    // TODO: Remove clone from GM
-    fn run_tx<MD: ExecutionMode, GM: GasMeter + Clone>(
-        &self,
-        raw: Bytes,
-        gas_meter: GM,
-    ) -> Result<Vec<Event>, RunTxError> {
+    fn run_tx<MD: ExecutionMode>(&self, raw: Bytes) -> Result<Vec<Event>, RunTxError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
 
@@ -164,26 +173,26 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        let mut ctx: TxContextWithGas<'_, _, _, _, _> = TxContextWithGas::new(
+        let mut ctx: TxContextWithGas<'_, _, _, _> = TxContextWithGas::new(
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            gas_meter.clone(),
+            CtxGasMeter::new(Arc::clone(&self.gas_meter)),
         );
 
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
-        let mut ctx: TxContextWithGas<'_, _, _, _, _> = TxContextWithGas::new(
+        let mut ctx: TxContextWithGas<'_, _, _, _> = TxContextWithGas::new(
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            gas_meter,
+            CtxGasMeter::new(Arc::clone(&self.gas_meter)),
         );
 
         let events = MD::run_msg(

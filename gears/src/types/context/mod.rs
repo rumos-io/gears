@@ -4,8 +4,6 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-use super::gas::gas_meter::Gas;
-
 pub mod gas;
 pub mod init_context;
 pub mod query_context;
@@ -35,30 +33,4 @@ pub trait TransactionalContext<DB: Database, SK>: QueryableContext<DB, SK> {
     fn append_events(&mut self, events: Vec<Event>);
     fn events_drain(&mut self) -> Vec<Event>;
     fn multi_store_mut(&mut self) -> &mut Self::MultiStoreMut;
-}
-
-/// Execution mode of transaction
-#[derive(Debug, PartialEq, Clone)]
-pub enum ExecMode {
-    /// Check a transaction
-    Check,
-    /// Recheck a (pending) transaction after a commit
-    ReCheck,
-    /// Simulate a transaction
-    Simulate,
-    /// Prepare a block proposal
-    PrepareProposal,
-    /// Process a block proposal
-    ProcessProposal,
-    /// Extend or verify a pre-commit vote
-    VoteExtension,
-    /// Finalize a block proposal
-    Finalize,
-    /// Deliver a transaction
-    Deliver,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ContextOptions {
-    pub max_gas: Gas,
 }
