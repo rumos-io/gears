@@ -2,10 +2,7 @@ use crate::{
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::{
-        context::{
-            init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
-            TransactionalContext,
-        },
+        context::{init_context::InitContext, query_context::QueryContext, TransactionalContext},
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -50,17 +47,17 @@ pub trait ABCIHandler<
     ) -> Result<(), AppError>;
 
     #[allow(unused_variables)]
-    fn begin_block<DB: Database>(
+    fn begin_block<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         request: RequestBeginBlock,
     ) {
     }
 
     #[allow(unused_variables)]
-    fn end_block<DB: Database>(
+    fn end_block<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
         vec![]

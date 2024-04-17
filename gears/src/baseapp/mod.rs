@@ -10,10 +10,8 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::{
-            gas::CtxGasMeter, query_context::QueryContext, tx_context::TxContext2, ExecMode,
-            TransactionalContext,
+            query_context::QueryContext, tx_context::TxContext, ExecMode, TransactionalContext,
         },
-        gas::infinite_meter::InfiniteGasMeter,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -146,52 +144,46 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        {
-            // TODO: Constructor
-            let mut ctx = TxContext2 {
-                multi_store: &mut multi_store,
-                height: self.get_block_height(),
-                events: Vec::new(),
-                header: self
-                    .get_block_header()
-                    .expect("block header is set in begin block")
-                    .try_into()
-                    .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-                block_gas_meter: CtxGasMeter::new(InfiniteGasMeter::default(), mode.clone()),
-            };
-
-            match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
-                Ok(_) => {
-                    if mode != ExecMode::Deliver {
-                        multi_store.tx_caches_clear();
-                    } else {
-                        multi_store.tx_caches_write_then_clear()
-                    }
-                }
-                Err(e) => {
-                    multi_store.tx_caches_clear();
-                    return Err(RunTxError::Custom(e.to_string()));
-                }
-            };
-        }
-
-        let mut ctx = TxContext2 {
-            multi_store: &mut multi_store,
-            height: self.get_block_height(),
-            events: Vec::new(),
-            header: self
-                .get_block_header()
+        // TODO: Constructor
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            block_gas_meter: CtxGasMeter::new(InfiniteGasMeter::default(), mode.clone()),
+            raw.clone().into(),
+        );
+
+        match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
+            Ok(_) => {
+                if mode != ExecMode::Deliver {
+                    multi_store.tx_caches_clear();
+                } else {
+                    multi_store.tx_caches_write_then_clear()
+                }
+            }
+            Err(e) => {
+                multi_store.tx_caches_clear();
+                return Err(RunTxError::Custom(e.to_string()));
+            }
         };
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            self.get_block_height(),
+            self.get_block_header()
+                .expect("block header is set in begin block")
+                .try_into()
+                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+            raw.clone().into(),
+        );
 
         let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode.clone()) {
             Ok(_) => {
-                ctx.gas_meter_mut()
-                    .consume_to_limit()
-                    .map_err(|e| RunTxError::Custom(e.to_string()))?;
+                // ctx.gas_meter_mut()
+                //     .consume_to_limit()
+                //     .map_err(|e| RunTxError::Custom(e.to_string()))?;
 
                 let events = ctx.events;
                 if mode != ExecMode::Deliver {
