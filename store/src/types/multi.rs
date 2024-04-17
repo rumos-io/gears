@@ -3,8 +3,8 @@ use std::{collections::HashMap, sync::Arc};
 use database::{Database, PrefixDB};
 
 use crate::{
-    error::KEY_EXISTS_MSG, hash::StoreInfo, ReadMultiKVStore, StoreKey, TransactionalKVStore,
-    WriteMultiKVStore,
+    error::KEY_EXISTS_MSG, hash::StoreInfo, QueryableMultiKVStore, StoreKey, TransactionalKVStore,
+    TransactionalMultiKVStore,
 };
 
 use super::kv::KVStore;
@@ -47,7 +47,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> ReadMultiKVStore<PrefixDB<DB>, SK> for MultiStore<DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK> for MultiStore<DB, SK> {
     type KvStore = KVStore<PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KvStore {
@@ -63,7 +63,9 @@ impl<DB: Database, SK: StoreKey> ReadMultiKVStore<PrefixDB<DB>, SK> for MultiSto
     }
 }
 
-impl<DB: Database, SK: StoreKey> WriteMultiKVStore<PrefixDB<DB>, SK> for MultiStore<DB, SK> {
+impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
+    for MultiStore<DB, SK>
+{
     type KvStoreMut = KVStore<PrefixDB<DB>>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut {

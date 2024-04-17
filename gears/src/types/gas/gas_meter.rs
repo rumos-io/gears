@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
 pub struct Gas(pub u64);
 
 #[derive(Debug, thiserror::Error)]

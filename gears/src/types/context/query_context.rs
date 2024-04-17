@@ -5,7 +5,7 @@ use store_crate::{
         multi::MultiStore,
         query::{kv::QueryKVStore, multi::QueryMultiStore},
     },
-    ReadMultiKVStore, StoreKey,
+    QueryableMultiKVStore, StoreKey,
 };
 use tendermint::types::chain_id::ChainId;
 

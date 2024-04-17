@@ -1,13 +1,15 @@
 use super::{BaseApp, Genesis};
+use crate::baseapp::params::BlockParams;
 use crate::error::AppError;
 use crate::params::ParamsSubspaceKey;
-use crate::types::context::ExecMode;
+use crate::types::context::{ContextOptions, ExecMode};
+use crate::types::gas::gas_meter::Gas;
 use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init_context::InitContext};
 use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
 use bytes::Bytes;
 use std::str::FromStr;
-use store_crate::{StoreKey, WriteMultiKVStore};
+use store_crate::{StoreKey, TransactionalMultiKVStore};
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -58,6 +60,11 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
+        if let Some(params) = request.consensus_params.clone() {
+            self.baseapp_params_keeper
+                .set_consensus_params(&mut *multi_store, params);
+        }
+
         //TODO: handle request height > 1 as is done in SDK
 
         let chain_id = ChainId::from_str(&request.chain_id).unwrap_or_else(|_| {
@@ -66,11 +73,6 @@ impl<
         });
 
         let mut ctx = InitContext::new(&mut multi_store, self.get_block_height(), chain_id);
-
-        if let Some(params) = request.consensus_params.clone() {
-            self.baseapp_params_keeper
-                .set_consensus_params(&mut ctx, params);
-        }
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
             .map_err(|e| AppError::Genesis(e.to_string()))
@@ -266,6 +268,20 @@ impl<
             .multi_store
             .write()
             .expect("RwLock will not be poisoned");
+
+        {
+            let block_opt = self.baseapp_params_keeper.block_params(&*multi_store);
+            let BlockParams {
+                max_bytes: _,
+                max_gas,
+            } = block_opt;
+
+            let opt = ContextOptions {
+                max_gas: Gas(max_gas),
+            };
+
+            *self.ctx_options.write().expect("poisoned lock") = opt;
+        }
 
         let mut ctx = TxContext::new(
             &mut multi_store,

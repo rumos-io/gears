@@ -1,7 +1,7 @@
 use store_crate::database::{Database, PrefixDB};
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
-    ReadMultiKVStore, StoreKey, WriteMultiKVStore,
+    QueryableMultiKVStore, StoreKey, TransactionalMultiKVStore,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 

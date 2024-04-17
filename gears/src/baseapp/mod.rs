@@ -10,17 +10,18 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::{
-            query_context::QueryContext, tx_context::TxContext, ExecMode, TransactionalContext,
+            query_context::QueryContext, tx_context::TxContext, ContextOptions, ExecMode,
+            TransactionalContext,
         },
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
 use bytes::Bytes;
-use store_crate::WriteMultiKVStore;
+use store_crate::TransactionalMultiKVStore;
 use store_crate::{
     database::{Database, RocksDB},
     types::multi::MultiStore,
-    ReadMultiKVStore, StoreKey,
+    QueryableMultiKVStore, StoreKey,
 };
 use tendermint::types::{
     chain_id::ChainIdErrors,
@@ -44,6 +45,7 @@ pub struct BaseApp<
     AI: ApplicationInfo,
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
+    ctx_options: Arc<RwLock<ContextOptions>>,
     height: Arc<RwLock<u64>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
@@ -83,6 +85,7 @@ impl<
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
+            ctx_options: Default::default(),
         }
     }
 

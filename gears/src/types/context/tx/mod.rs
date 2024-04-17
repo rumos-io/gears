@@ -3,7 +3,7 @@ mod unconsumed_impl;
 use store_crate::{
     database::{Database, PrefixDB},
     types::{kv::KVStore, multi::MultiStore},
-    ReadMultiKVStore, StoreKey, WriteMultiKVStore,
+    QueryableMultiKVStore, StoreKey, TransactionalMultiKVStore,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 

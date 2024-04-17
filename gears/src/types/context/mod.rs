@@ -3,6 +3,8 @@ use store_crate::database::Database;
 use store_crate::{QueryableKVStore, TransactionalKVStore};
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
+use super::gas::gas_meter::Gas;
+
 pub mod gas;
 pub mod init_context;
 pub mod query_context;
@@ -47,4 +49,9 @@ pub enum ExecMode {
     Finalize,
     /// Deliver a transaction
     Deliver,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ContextOptions {
+    pub max_gas: Gas,
 }

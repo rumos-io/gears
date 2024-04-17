@@ -5,7 +5,7 @@ use database::{Database, PrefixDB};
 use crate::{
     error::{StoreError, KEY_EXISTS_MSG},
     types::multi::MultiStore,
-    ReadMultiKVStore, StoreKey,
+    QueryableMultiKVStore, StoreKey,
 };
 
 use super::kv::QueryKVStore;
@@ -31,7 +31,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> ReadMultiKVStore<PrefixDB<DB>, SK>
+impl<'a, DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
     for QueryMultiStore<'a, DB, SK>
 {
     type KvStore = QueryKVStore<'a, PrefixDB<DB>>;
