@@ -1,14 +1,15 @@
 use super::{BaseApp, Genesis};
+use crate::application::ApplicationInfo;
 use crate::baseapp::params::BlockParams;
 use crate::error::AppError;
 use crate::params::ParamsSubspaceKey;
 use crate::types::context::tx::mode::{CheckTxMode, DeliverTxMode};
+use crate::types::context::tx_context::TxContext;
 use crate::types::context::ContextOptions;
 use crate::types::gas::gas_meter::Gas;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init_context::InitContext};
-use crate::{application::ApplicationInfo, types::context::tx_context::TxContext};
 use bytes::Bytes;
 use std::str::FromStr;
 use store_crate::{StoreKey, TransactionalMultiKVStore};
@@ -164,8 +165,8 @@ impl<
         // }
 
         let result = match r#type {
-            0 => self.run_tx2::<CheckTxMode, _>(tx.clone(), InfiniteGasMeter::default()),
-            1 => self.run_tx2::<CheckTxMode, _>(tx.clone(), InfiniteGasMeter::default()), // TODO: ReCheckTxMode
+            0 => self.run_tx::<CheckTxMode, _>(tx.clone(), InfiniteGasMeter::default()),
+            1 => self.run_tx::<CheckTxMode, _>(tx.clone(), InfiniteGasMeter::default()), // TODO: ReCheckTxMode
             _ => panic!("unknown Request CheckTx type: {}", r#type),
         };
 
@@ -209,7 +210,7 @@ impl<
 
     fn deliver_tx(&self, request: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
-        match self.run_tx2::<DeliverTxMode, _>(request.tx, InfiniteGasMeter::default()) {
+        match self.run_tx::<DeliverTxMode, _>(request.tx, InfiniteGasMeter::default()) {
             Ok(events) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),

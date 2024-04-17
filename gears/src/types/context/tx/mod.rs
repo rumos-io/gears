@@ -17,7 +17,7 @@ use super::{
 };
 
 #[derive(Debug, former::Former)]
-pub struct TxContext2<'a, DB, SK, GM, ST> {
+pub struct TxContextWithGas<'a, DB, SK, GM, ST> {
     pub events: Vec<Event>,
 
     multi_store: &'a mut MultiStore<DB, SK>,
@@ -26,7 +26,7 @@ pub struct TxContext2<'a, DB, SK, GM, ST> {
     block_gas_meter: CtxGasMeter<GM, ST, BlockDescriptor>,
 }
 
-impl<'a, DB, SK, GM> TxContext2<'a, DB, SK, GM, UnConsumed> {
+impl<'a, DB, SK, GM> TxContextWithGas<'a, DB, SK, GM, UnConsumed> {
     pub fn new(
         multi_store: &'a mut MultiStore<DB, SK>,
         height: u64,
@@ -44,7 +44,7 @@ impl<'a, DB, SK, GM> TxContext2<'a, DB, SK, GM, UnConsumed> {
 }
 
 impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
-    for TxContext2<'_, DB, SK, GM, ST>
+    for TxContextWithGas<'_, DB, SK, GM, ST>
 {
     type KVStore = KVStore<PrefixDB<DB>>;
     type MultiStore = MultiStore<DB, SK>;
@@ -67,7 +67,7 @@ impl<DB: Database, SK: StoreKey, GM, ST> QueryableContext<PrefixDB<DB>, SK>
 }
 
 impl<DB: Database, SK: StoreKey, GM, ST> TransactionalContext<PrefixDB<DB>, SK>
-    for TxContext2<'_, DB, SK, GM, ST>
+    for TxContextWithGas<'_, DB, SK, GM, ST>
 {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
     type MultiStoreMut = MultiStore<DB, SK>;

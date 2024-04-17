@@ -3,15 +3,15 @@ use crate::types::{
     gas::gas_meter::{Gas, GasErrors, GasMeter},
 };
 
-use super::TxContext2;
+use super::TxContextWithGas;
 
 // TODO: Gas refund?
 
-impl<'a, DB, SK, GM: GasMeter> TxContext2<'a, DB, SK, GM, UnConsumed> {
+impl<'a, DB, SK, GM: GasMeter> TxContextWithGas<'a, DB, SK, GM, UnConsumed> {
     pub fn gas_block_consume(
         self,
         amount: Gas,
-    ) -> Result<Self, (GasErrors, TxContext2<'a, DB, SK, GM, ConsumedToLimit>)> {
+    ) -> Result<Self, (GasErrors, TxContextWithGas<'a, DB, SK, GM, ConsumedToLimit>)> {
         let Self {
             events,
             multi_store,
@@ -32,7 +32,7 @@ impl<'a, DB, SK, GM: GasMeter> TxContext2<'a, DB, SK, GM, UnConsumed> {
             }),
             Err((e, block_gas_meter)) => Err((
                 e,
-                TxContext2 {
+                TxContextWithGas {
                     events,
                     multi_store,
                     height,
@@ -45,7 +45,7 @@ impl<'a, DB, SK, GM: GasMeter> TxContext2<'a, DB, SK, GM, UnConsumed> {
 
     pub fn gas_block_consume_to_limit(
         self,
-    ) -> Result<TxContext2<'a, DB, SK, GM, ConsumedToLimit>, (GasErrors, Self)> {
+    ) -> Result<TxContextWithGas<'a, DB, SK, GM, ConsumedToLimit>, (GasErrors, Self)> {
         let Self {
             events,
             multi_store,
@@ -57,7 +57,7 @@ impl<'a, DB, SK, GM: GasMeter> TxContext2<'a, DB, SK, GM, UnConsumed> {
         let result = block_gas_meter.consume_to_limit();
 
         match result {
-            Ok(block_gas_meter) => Ok(TxContext2 {
+            Ok(block_gas_meter) => Ok(TxContextWithGas {
                 events,
                 multi_store,
                 height,
