@@ -1,5 +1,6 @@
 use crate::crypto::public::PublicKey;
 use crate::error::IBC_ENCODE_UNWRAP;
+use crate::signing::handler::MetadataGetter;
 use crate::signing::{
     hasher::hash_get,
     renderer::value_renderer::{
@@ -7,12 +8,11 @@ use crate::signing::{
         TryPrimitiveValueRendererWithMetadata, ValueRenderer,
     },
 };
-use crate::types::denom::Denom;
 use crate::types::{
     auth::tip::Tip,
     base::send::SendCoins,
     rendering::screen::{Indent, Screen},
-    tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
+    tx::{data::TxData, signer::SignerData, TxMessage},
 };
 use core_types::address::AccAddress;
 use tendermint::types::chain_id::ChainId;
@@ -83,10 +83,7 @@ impl<M: TxMessage> Envelope<M> {
 
 // NOTE: fields with protobuf default values are not rendered to screens
 impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
-    fn format<F: Fn(&Denom) -> Option<Metadata>>(
-        &self,
-        get_metadata: &F,
-    ) -> Result<Vec<Screen>, RenderError> {
+    fn format<MG: MetadataGetter>(&self, get_metadata: &MG) -> Result<Vec<Screen>, RenderError> {
         let mut screens = vec![];
 
         screens.push(Screen {
@@ -241,9 +238,7 @@ impl<M: TxMessage + ValueRenderer> ValueRenderer for Envelope<M> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use crate::signing::renderer::test_functions::get_metadata;
+    use crate::signing::renderer::test_functions::TestMetadataGetter;
     use crate::signing::renderer::value_renderer::ValueRenderer;
     use crate::types::auth::fee::Fee;
     use crate::types::auth::info::AuthInfo;
@@ -259,6 +254,7 @@ mod tests {
     use core_types::address::AccAddress;
     use core_types::tx::mode_info::{ModeInfo, SignMode};
     use cosmwasm_std::Uint256;
+    use std::str::FromStr;
     use tendermint::types::chain_id::ChainId;
 
     use super::Envelope;
@@ -268,7 +264,7 @@ mod tests {
         let data = envelope_data_get()?;
         let expected_screens = expected_screens_get()?;
 
-        let actual_screens = ValueRenderer::format(&data, &get_metadata)
+        let actual_screens = ValueRenderer::format(&data, &TestMetadataGetter)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         if expected_screens != actual_screens {

@@ -1,20 +1,23 @@
 use cosmwasm_std::{Decimal256, Uint256};
 
+use crate::signing::handler::MetadataGetter;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,
     TryPrimitiveValueRendererWithMetadata,
 };
 use crate::types::base::coin::Coin;
-use crate::types::denom::Denom;
 use crate::types::rendering::screen::Content;
 use crate::types::tx::metadata::Metadata;
 
 impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
-    fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
+    fn try_format_with_metadata<MG: MetadataGetter>(
         coin: Coin,
-        get_metadata: &F,
+        get_metadata: &MG,
     ) -> Result<Content, RenderError> {
-        let Some(metadata) = get_metadata(&coin.denom) else {
+        let metadata = get_metadata.get_metadata(&coin.denom).map_err(|e| {
+            RenderError::Rendering(format!("error getting metadata for {}: {e}", coin.denom))
+        })?;
+        let Some(metadata) = metadata else {
             let display = coin.denom.to_string();
             return Ok(Content::new(format!(
                 "{} {display}",
@@ -109,9 +112,9 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
 
 #[cfg(test)]
 mod tests {
-    use crate::signing::renderer::{
-        test_functions::get_metadata,
-        value_renderer::{DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata},
+    use crate::signing::renderer::test_functions::TestMetadataGetter;
+    use crate::signing::renderer::value_renderer::{
+        DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
     use crate::types::{base::coin::Coin, rendering::screen::Content};
     use anyhow::Ok;
@@ -127,7 +130,7 @@ mod tests {
         let expected_content = Content::new("10 ATOM".to_string()).unwrap();
 
         let actual_content =
-            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &get_metadata);
+            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
         assert_eq!(expected_content, actual_content.unwrap());
 
@@ -144,7 +147,7 @@ mod tests {
         let expected_content = Content::new("0.000001 ATOM".to_string()).unwrap();
 
         let actual_content =
-            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &get_metadata);
+            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
         assert_eq!(expected_content, actual_content.unwrap());
 
@@ -161,7 +164,7 @@ mod tests {
         let expected_content = Content::new("0 ATOM".to_string()).unwrap();
 
         let actual_content =
-            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &get_metadata);
+            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
         assert_eq!(expected_content, actual_content.unwrap());
 
@@ -178,7 +181,7 @@ mod tests {
         let expected_content = Content::new("10'000 ATOM".to_string()).unwrap();
 
         let actual_content =
-            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &get_metadata);
+            DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
 
         assert_eq!(expected_content, actual_content.unwrap());
 

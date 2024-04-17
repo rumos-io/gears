@@ -4,8 +4,9 @@ use crate::{
         info::{create_signed_transaction, Mode, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
     },
+    error::IBC_ENCODE_UNWRAP,
     runtime::runtime,
-    signing::renderer::value_renderer::ValueRenderer,
+    signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
         auth::fee::Fee,
         base::send::SendCoins,
@@ -189,8 +190,24 @@ pub(crate) fn get_denom_metadata(
 
     execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
         "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
-        query.encode_vec()?,
+        query.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
         node,
         None,
     )
+}
+
+pub struct GetDenomMetadata {
+    pub node: url::Url,
+}
+
+impl MetadataGetter for GetDenomMetadata {
+    type Error = anyhow::Error;
+
+    fn get_metadata(
+        &self,
+        denom: &Denom,
+    ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {
+        let res = get_denom_metadata(denom.to_owned(), self.node.as_str())?;
+        Ok(res.metadata)
+    }
 }

@@ -7,17 +7,13 @@ use prost::Message;
 use tendermint::types::{chain_id::ChainId, proto::Protobuf};
 
 use crate::{
-    application::handlers::client::get_denom_metadata,
+    application::handlers::client::GetDenomMetadata,
     error::IBC_ENCODE_UNWRAP,
     signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
     types::{
         auth::{fee::Fee, info::AuthInfo, tip::Tip},
-        denom::Denom,
         signing::SignerInfo,
-        tx::{
-            body::TxBody, data::TxData, metadata::Metadata, raw::TxRaw, signer::SignerData,
-            TxMessage,
-        },
+        tx::{body::TxBody, data::TxData, raw::TxRaw, signer::SignerData, TxMessage},
     },
 };
 
@@ -101,11 +97,6 @@ pub fn create_signed_transaction<
         Mode::Textual => {
             let sign_mode_handler = SignModeHandler;
 
-            let f = |denom: &Denom| -> Option<Metadata> {
-                let res = get_denom_metadata(denom.to_owned(), node.as_str()).unwrap(); //TODO: unwrap
-                res.metadata
-            };
-
             signing_infos
                 .into_iter()
                 .map(|s| {
@@ -123,7 +114,11 @@ pub fn create_signed_transaction<
                     };
 
                     let sign_bytes = sign_mode_handler
-                        .sign_bytes_get(&f, signer_data, tx_data)
+                        .sign_bytes_get(
+                            &GetDenomMetadata { node: node.clone() },
+                            signer_data,
+                            tx_data,
+                        )
                         .map_err(|e| anyhow!(e.to_string()))?;
 
                     s.key.sign(&sign_bytes).map_err(|e| anyhow!(e.to_string()))

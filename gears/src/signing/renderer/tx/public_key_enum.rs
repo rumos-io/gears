@@ -1,12 +1,10 @@
 use crate::crypto::public::PublicKey;
+use crate::signing::handler::MetadataGetter;
 use crate::signing::renderer::value_renderer::{RenderError, ValueRenderer};
-use crate::types::{denom::Denom, rendering::screen::Screen, tx::metadata::Metadata};
+use crate::types::rendering::screen::Screen;
 
 impl ValueRenderer for PublicKey {
-    fn format<F: Fn(&Denom) -> Option<Metadata>>(
-        &self,
-        get_metadata: &F,
-    ) -> Result<Vec<Screen>, RenderError> {
+    fn format<MG: MetadataGetter>(&self, get_metadata: &MG) -> Result<Vec<Screen>, RenderError> {
         match self {
             PublicKey::Secp256k1(key) => ValueRenderer::format(key, get_metadata),
         }
@@ -16,7 +14,8 @@ impl ValueRenderer for PublicKey {
 #[cfg(test)]
 mod tests {
     use crate::crypto::secp256k1::Secp256k1PubKey;
-    use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
+    use crate::signing::renderer::test_functions::TestMetadataGetter;
+    use crate::signing::renderer::value_renderer::ValueRenderer;
     use crate::types::rendering::screen::{Content, Indent, Screen};
 
     #[test]
@@ -43,7 +42,7 @@ mod tests {
             },
         ];
 
-        let actual_screens = ValueRenderer::format(&key, &get_metadata)
+        let actual_screens = ValueRenderer::format(&key, &TestMetadataGetter)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actual_screens);
