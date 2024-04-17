@@ -1,6 +1,4 @@
 pub mod mode;
-pub mod mode_impl;
-mod unconsumed_impl;
 
 use store_crate::{
     database::{Database, PrefixDB},
@@ -11,41 +9,29 @@ use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 use crate::types::header::Header;
 
-use super::{
-    gas::{BlockDescriptor, CtxGasMeter, UnConsumed},
-    QueryableContext, TransactionalContext,
-};
+use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
-pub struct TxContextWithGas<'a, DB, SK, ST> {
+pub struct TxContext2<'a, DB, SK> {
     pub events: Vec<Event>,
 
     multi_store: &'a mut MultiStore<DB, SK>,
     height: u64,
     header: Header,
-    block_gas_meter: CtxGasMeter<ST, BlockDescriptor>,
 }
 
-impl<'a, DB, SK> TxContextWithGas<'a, DB, SK, UnConsumed> {
-    pub fn new(
-        multi_store: &'a mut MultiStore<DB, SK>,
-        height: u64,
-        header: Header,
-        block_gas_meter: CtxGasMeter<UnConsumed, BlockDescriptor>,
-    ) -> Self {
+impl<'a, DB, SK> TxContext2<'a, DB, SK> {
+    pub fn new(multi_store: &'a mut MultiStore<DB, SK>, height: u64, header: Header) -> Self {
         Self {
             events: Vec::new(),
             multi_store,
             height,
             header,
-            block_gas_meter,
         }
     }
 }
 
-impl<DB: Database, SK: StoreKey, ST> QueryableContext<PrefixDB<DB>, SK>
-    for TxContextWithGas<'_, DB, SK, ST>
-{
+impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext2<'_, DB, SK> {
     type KVStore = KVStore<PrefixDB<DB>>;
     type MultiStore = MultiStore<DB, SK>;
 
@@ -66,9 +52,7 @@ impl<DB: Database, SK: StoreKey, ST> QueryableContext<PrefixDB<DB>, SK>
     }
 }
 
-impl<DB: Database, SK: StoreKey, ST> TransactionalContext<PrefixDB<DB>, SK>
-    for TxContextWithGas<'_, DB, SK, ST>
-{
+impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxContext2<'_, DB, SK> {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
     type MultiStoreMut = MultiStore<DB, SK>;
 

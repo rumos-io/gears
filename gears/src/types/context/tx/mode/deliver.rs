@@ -1,55 +1,32 @@
+use store_crate::TransactionalMultiKVStore;
 use store_crate::{
     database::{Database, PrefixDB},
-    StoreKey, TransactionalMultiKVStore,
+    StoreKey,
 };
 use tendermint::types::proto::event::Event;
 
-use super::mode::{CheckTxMode, DeliverTxMode, ExecutionMode};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
     types::{
-        context::TransactionalContext,
+        context::{
+            gas::{BlockDescriptor, CtxGasMeter},
+            TransactionalContext,
+        },
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
 
-impl ExecutionMode for CheckTxMode {
-    fn run_msg<
-        'm,
-        SK: StoreKey,
-        DB: Database,
-        M: TxMessage,
-        G: Genesis,
-        AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
-        ctx: &mut CTX,
-        _handler: &AH,
-        _msgs: impl Iterator<Item = &'m M>,
-    ) -> Result<Vec<Event>, RunTxError> {
-        ctx.multi_store_mut().tx_caches_clear();
+use super::ExecutionMode;
 
-        Ok(ctx.events_drain())
-    }
+#[derive(Debug, Clone)]
+pub struct DeliverTxMode {
+    block_gas_meter: CtxGasMeter<BlockDescriptor>,
+}
 
-    fn run_ante_checks<
-        SK: StoreKey,
-        DB: Database,
-        M: TxMessage,
-        G: Genesis,
-        AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
-        ctx: &mut CTX,
-        handler: &AH,
-        tx_with_raw: &TxWithRaw<M>,
-    ) -> Result<(), RunTxError> {
-        let result = handler.run_ante_checks(ctx, tx_with_raw);
-
-        ctx.multi_store_mut().tx_caches_clear();
-
-        result.map_err(|e| RunTxError::Custom(e.to_string()))
+impl DeliverTxMode {
+    pub fn new(block_gas_meter: CtxGasMeter<BlockDescriptor>) -> Self {
+        Self { block_gas_meter }
     }
 }
 
@@ -63,6 +40,7 @@ impl ExecutionMode for DeliverTxMode {
         AH: ABCIHandler<M, SK, G>,
         CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
+        &mut self,
         ctx: &mut CTX,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
@@ -88,10 +66,12 @@ impl ExecutionMode for DeliverTxMode {
         AH: ABCIHandler<M, SK, G>,
         CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
+        &mut self,
         ctx: &mut CTX,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
-    ) -> Result<(), RunTxError> {
+    ) -> Result<(), RunTxError> // TODO: Return gasWanted
+    {
         match handler.run_ante_checks(ctx, tx_with_raw) {
             Ok(_) => {
                 ctx.multi_store_mut().tx_caches_write_then_clear();
@@ -103,5 +83,13 @@ impl ExecutionMode for DeliverTxMode {
         };
 
         Ok(())
+    }
+
+    fn runnable(&self) -> Result<(), RunTxError> {
+        if self.block_gas_meter.is_out_of_gas() {
+            Err(RunTxError::OutOfGas)
+        } else {
+            Ok(())
+        }
     }
 }

@@ -2,7 +2,9 @@ use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
 use crate::error::AppError;
 use crate::params::ParamsSubspaceKey;
-use crate::types::context::tx::mode::{CheckTxMode, DeliverTxMode};
+use crate::types::context::gas::CtxGasMeter;
+use crate::types::context::tx::mode::check::CheckTxMode;
+use crate::types::context::tx::mode::deliver::DeliverTxMode;
 use crate::types::context::tx_context::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::gas_meter::Gas;
@@ -11,6 +13,7 @@ use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init_context::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
+use std::sync::Arc;
 use store_crate::{StoreKey, TransactionalMultiKVStore};
 use tendermint::{
     application::ABCIApplication,
@@ -152,8 +155,8 @@ impl<
         info!("Got check tx request");
 
         let result = match r#type {
-            0 => self.run_tx::<CheckTxMode>(tx.clone()),
-            1 => self.run_tx::<CheckTxMode>(tx.clone()), // TODO: ReCheckTxMode
+            0 => self.run_tx(tx.clone(), CheckTxMode),
+            1 => self.run_tx(tx.clone(), CheckTxMode), // TODO: ReCheckTxMode
             _ => panic!("unknown Request CheckTx type: {}", r#type),
         };
 
@@ -196,7 +199,10 @@ impl<
     fn deliver_tx(&self, RequestDeliverTx { tx }: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
 
-        let result = self.run_tx::<DeliverTxMode>(tx.clone());
+        let result = self.run_tx(
+            tx.clone(),
+            DeliverTxMode::new(CtxGasMeter::new(Arc::clone(&self.gas_meter))),
+        );
 
         match result {
             Ok(events) => ResponseDeliverTx {

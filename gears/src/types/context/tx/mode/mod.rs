@@ -1,3 +1,6 @@
+pub mod check;
+pub mod deliver;
+
 use store_crate::{
     database::{Database, PrefixDB},
     StoreKey,
@@ -16,6 +19,8 @@ use crate::{
 use self::sealed::Sealed;
 
 pub trait ExecutionMode: Sealed {
+    fn runnable(&self) -> Result<(), RunTxError>;
+
     fn run_msg<
         'm,
         SK: StoreKey,
@@ -25,6 +30,7 @@ pub trait ExecutionMode: Sealed {
         AH: ABCIHandler<M, SK, G>,
         CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
+        &mut self,
         ctx: &mut CTX,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
@@ -38,27 +44,22 @@ pub trait ExecutionMode: Sealed {
         AH: ABCIHandler<M, SK, G>,
         CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
+        &mut self,
         ctx: &mut CTX,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
     ) -> Result<(), RunTxError>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct CheckTxMode;
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct ReCheckTxMode;
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-pub struct DeliverTxMode;
+// #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+// pub struct ReCheckTxMode;
 
 mod sealed {
-    use super::{CheckTxMode, DeliverTxMode, ReCheckTxMode};
+    use super::{check::CheckTxMode, deliver::DeliverTxMode};
 
     pub trait Sealed {}
 
     impl Sealed for CheckTxMode {}
-    impl Sealed for ReCheckTxMode {}
+    // impl Sealed for ReCheckTxMode {}
     impl Sealed for DeliverTxMode {}
 }

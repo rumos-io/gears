@@ -11,9 +11,8 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::{
-            gas::CtxGasMeter,
             query_context::QueryContext,
-            tx::{mode::ExecutionMode, TxContextWithGas},
+            tx::{mode::ExecutionMode, TxContext2},
         },
         gas::{
             basic_meter::BasicGasMeter,
@@ -161,7 +160,13 @@ impl<
         Ok(())
     }
 
-    fn run_tx<MD: ExecutionMode>(&self, raw: Bytes) -> Result<Vec<Event>, RunTxError> {
+    fn run_tx<MD: ExecutionMode>(
+        &self,
+        raw: Bytes,
+        mut mode: MD,
+    ) -> Result<Vec<Event>, RunTxError> {
+        mode.runnable()?;
+
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
 
@@ -173,29 +178,27 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        let mut ctx: TxContextWithGas<'_, _, _, _> = TxContextWithGas::new(
+        let mut ctx: TxContext2<'_, _, _> = TxContext2::new(
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            CtxGasMeter::new(Arc::clone(&self.gas_meter)),
         );
 
-        MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
+        mode.run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
-        let mut ctx: TxContextWithGas<'_, _, _, _> = TxContextWithGas::new(
+        let mut ctx: TxContext2<'_, _, _> = TxContext2::new(
             &mut multi_store,
             self.get_block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            CtxGasMeter::new(Arc::clone(&self.gas_meter)),
         );
 
-        let events = MD::run_msg(
+        let events = mode.run_msg(
             &mut ctx,
             &self.abci_handler,
             tx_with_raw.tx.get_msgs().iter(),
