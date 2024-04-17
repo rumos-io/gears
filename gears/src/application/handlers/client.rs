@@ -1,8 +1,8 @@
 use crate::{
     commands::client::{query::execute_query, tx::broadcast_tx_commit},
     crypto::{
-        info::{create_signed_transaction, SigningInfo},
-        keys::ReadAccAddress,
+        info::{create_signed_transaction, Mode, SigningInfo},
+        keys::{GearsPublicKey, ReadAccAddress, SigningKey},
     },
     runtime::runtime,
     signing::renderer::value_renderer::ValueRenderer,
@@ -24,8 +24,10 @@ use crate::{
 
 use tendermint::types::proto::Protobuf as TMProtobuf;
 
-use core_types::{address::AccAddress, query::request::account::QueryAccountRequest};
-use keyring::key::pair::KeyPair;
+use anyhow::anyhow;
+use core_types::{
+    address::AccAddress, query::request::account::QueryAccountRequest, tx::mode_info::SignMode,
+};
 use serde::Serialize;
 
 use tendermint::{
@@ -46,19 +48,20 @@ pub trait TxHandler {
         from_address: AccAddress,
     ) -> anyhow::Result<Self::Message>;
 
-    fn handle_tx(
+    fn handle_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
         msg: Self::Message,
-        key: KeyPair,
+        key: K,
         node: url::Url,
         chain_id: ChainId,
         fee: Option<SendCoins>,
+        mode: SignMode,
     ) -> anyhow::Result<Response> {
         let fee = Fee {
             amount: fee,
-            gas_limit: 100000000, //TODO: remove hard coded gas limit
-            payer: None,          //TODO: remove hard coded payer
-            granter: "".into(),   //TODO: remove hard coded granter
+            gas_limit: 200_000, //TODO: remove hard coded gas limit
+            payer: None,        //TODO: remove hard coded payer
+            granter: "".into(), //TODO: remove hard coded granter
         };
 
         let address = key.get_address();
@@ -81,7 +84,22 @@ pub trait TxHandler {
 
         let tip = None; //TODO: remove hard coded
 
-        let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id);
+        let mode = match mode {
+            SignMode::Direct => Mode::Direct,
+            SignMode::Textual => Mode::Textual,
+            _ => return Err(anyhow!("unsupported sign mode")),
+        };
+
+        let raw_tx = create_signed_transaction(
+            vec![signing_info],
+            tx_body,
+            fee,
+            tip,
+            chain_id,
+            mode,
+            node.clone(),
+        )
+        .map_err(|e| anyhow!(e))?;
 
         let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
 
