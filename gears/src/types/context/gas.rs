@@ -1,16 +1,26 @@
-use std::ops::Deref;
+use std::{marker::PhantomData, ops::Deref};
 
 use crate::types::gas::gas_meter::{Gas, GasErrors, GasMeter};
 
 /// Wrapper around any gas meter which prevents usage of gas over limit with type system
 #[derive(Debug, Clone)]
-pub struct CtxGasMeter2<GM, ST, DS> {
+pub struct CtxGasMeter<GM, ST, DS> {
     meter: GM,
     _state: std::marker::PhantomData<ST>,
     _descriptor: std::marker::PhantomData<DS>,
 }
 
-impl<GM, ST, DS> Deref for CtxGasMeter2<GM, ST, DS> {
+impl<GM, ST, DS> CtxGasMeter<GM, ST, DS> {
+    pub fn new(meter: GM) -> Self {
+        Self {
+            meter,
+            _state: PhantomData,
+            _descriptor: PhantomData,
+        }
+    }
+}
+
+impl<GM, ST, DS> Deref for CtxGasMeter<GM, ST, DS> {
     type Target = GM;
 
     fn deref(&self) -> &Self::Target {
@@ -18,36 +28,39 @@ impl<GM, ST, DS> Deref for CtxGasMeter2<GM, ST, DS> {
     }
 }
 
-impl<GM: GasMeter, DS: Descriptor> CtxGasMeter2<GM, UnConsumed, DS> {
+impl<GM: GasMeter, DS: Descriptor> CtxGasMeter<GM, UnConsumed, DS> {
     pub fn consume_to_limit(
         mut self,
-    ) -> Result<CtxGasMeter2<GM, ConsumedToLimit, DS>, (Self, GasErrors)> {
+    ) -> Result<CtxGasMeter<GM, ConsumedToLimit, DS>, (GasErrors, Self)> {
         let gas = self.meter.gas_consumed_to_limit();
         let result = self.meter.consume_gas(gas, DS::name().to_owned());
 
         match result {
-            Ok(_) => Ok(CtxGasMeter2 {
+            Ok(_) => Ok(CtxGasMeter {
                 meter: self.meter,
                 _state: std::marker::PhantomData,
                 _descriptor: std::marker::PhantomData,
             }),
-            Err(e) => Err((self, e)),
+            Err(e) => Err((e, self)),
         }
     }
 
     pub fn consume_gas(
         mut self,
         amount: Gas,
-    ) -> Result<Self, CtxGasMeter2<GM, ConsumedToLimit, DS>> {
+    ) -> Result<Self, (GasErrors, CtxGasMeter<GM, ConsumedToLimit, DS>)> {
         let result = self.meter.consume_gas(amount, DS::name().to_owned());
 
         match result {
             Ok(_) => Ok(self),
-            Err(_) => Err(CtxGasMeter2 {
-                meter: self.meter,
-                _state: std::marker::PhantomData,
-                _descriptor: std::marker::PhantomData,
-            }),
+            Err(e) => Err((
+                e,
+                CtxGasMeter {
+                    meter: self.meter,
+                    _state: std::marker::PhantomData,
+                    _descriptor: std::marker::PhantomData,
+                },
+            )),
         }
     }
 }

@@ -1,3 +1,4 @@
+pub mod tx;
 use store_crate::database::Database;
 use store_crate::{QueryableKVStore, TransactionalKVStore};
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
