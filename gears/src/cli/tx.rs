@@ -19,7 +19,6 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     /// <host>:<port> to Tendermint RPC interface for this chain
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
     pub node: url::Url,
-
     /// the network chain-id
     #[arg(long =  "chain-id", global = true, action = ArgAction::Set, default_value_t = ChainId::from_str( "test-chain" ).expect("unreachable: default should be valid"))]
     pub chain_id: ChainId,
@@ -34,32 +33,38 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     _marker: PhantomData<T>,
 }
 
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct Local<C: Subcommand, T: ApplicationInfo> {
+    #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
+    home: PathBuf,
+
+    /// from key
+    #[arg(required = true)]
+    from_key: String,
+
+    /// select keyring's backend
+    #[arg(long = "keyring-backend",  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
+    keyring_backend: KeyringBackend,
+
+    #[command(subcommand)]
+    command: C,
+
+    #[arg(skip)]
+    _marker: PhantomData<T>,
+}
+
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct Ledger<C: Subcommand> {
+    #[command(subcommand)]
+    command: C,
+}
+
 #[derive(Subcommand, Debug, Clone)]
 pub enum Keyring<C: Subcommand, T: ApplicationInfo> {
     /// Use a Ledger device to sign the transaction
-    Ledger {
-        #[command(subcommand)]
-        command: C,
-    },
+    Ledger(Ledger<C>),
     /// Use a local keyring to source the signing key
-    Local {
-        #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
-        home: PathBuf,
-
-        /// from key
-        #[arg(required = true)]
-        from_key: String,
-
-        /// select keyring's backend
-        #[arg(long = "keyring-backend",  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
-        keyring_backend: KeyringBackend,
-
-        #[command(subcommand)]
-        command: C,
-
-        #[arg(skip)]
-        _marker: PhantomData<T>,
-    },
+    Local(Local<C, T>),
 }
 
 impl<T, C, AC, ERR> TryFrom<CliTxCommand<T, C>> for TxCommand<AC>
@@ -80,14 +85,14 @@ where
         } = value;
 
         let (keyring, command) = match keyring {
-            Keyring::Ledger { command } => (TxKeyring::Ledger, command),
-            Keyring::Local {
+            Keyring::Ledger(Ledger { command }) => (TxKeyring::Ledger, command),
+            Keyring::Local(Local {
                 home,
                 from_key,
                 keyring_backend,
                 command,
                 _marker,
-            } => (
+            }) => (
                 TxKeyring::Local(LocalInfo {
                     keyring_backend,
                     from_key,
