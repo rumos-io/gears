@@ -7,7 +7,11 @@ pub mod infinite_meter;
 
 use std::fmt::Debug;
 
-#[derive(Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+use derive_more::{Add, Deref, Display, From};
+
+#[derive(
+    Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, Add, Display, Deref,
+)]
 pub struct Gas(pub u64);
 
 #[derive(Debug, thiserror::Error)]

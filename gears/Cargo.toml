@@ -31,6 +31,7 @@ tracing-subscriber = { workspace = true }
 integer-encoding = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
+derive_more = { workspace = true }
 
 #serialization
 prost = { workspace = true }
