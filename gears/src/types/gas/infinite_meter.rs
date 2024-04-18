@@ -30,6 +30,7 @@ impl GasMeter for InfiniteGasMeter {
         self.consumed
     }
 
+    // TODO: Rethink this one
     fn gas_remaining(&self) -> Gas {
         Gas(u64::MAX)
     }
