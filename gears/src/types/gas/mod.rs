@@ -7,6 +7,9 @@ pub mod infinite_meter;
 
 use std::fmt::Debug;
 
+#[no_link]
+extern crate derive_more;
+
 use derive_more::{Add, Deref, Display, From};
 
 #[derive(
