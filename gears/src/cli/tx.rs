@@ -4,7 +4,6 @@ use clap::{ArgAction, Subcommand, ValueHint};
 use tendermint::types::chain_id::ChainId;
 
 use crate::{
-    //application::client::tx::{Keyring as TxKeyring, LocalInfo, TxCommand},
     application::ApplicationInfo,
     commands::client::{
         keys::KeyringBackend,
