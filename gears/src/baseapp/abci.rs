@@ -201,7 +201,7 @@ impl<
 
         let result = self.run_tx(
             tx.clone(),
-            DeliverTxMode::new(CtxGasMeter::new(Arc::clone(&self.gas_meter))),
+            DeliverTxMode::new(CtxGasMeter::new(Arc::clone(&self.block_gas_meter))),
         );
 
         match result {
@@ -283,15 +283,15 @@ impl<
                 .baseapp_params_keeper
                 .block_params(&*multi_store)
                 .map(|e| e.max_gas)
-                .unwrap_or_default();
+                .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
             let _ = match max_gas > 0 {
                 false => std::mem::replace(
-                    &mut *self.gas_meter.write().expect("Poisoned lock"),
+                    &mut *self.block_gas_meter.write().expect("Poisoned lock"),
                     Box::new(InfiniteGasMeter::default()),
                 ),
                 true => std::mem::replace(
-                    &mut *self.gas_meter.write().expect("Poisoned lock"),
+                    &mut *self.block_gas_meter.write().expect("Poisoned lock"),
                     Box::new(BasicGasMeter::new(Gas::new(max_gas))),
                 ),
             };

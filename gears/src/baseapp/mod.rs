@@ -47,7 +47,7 @@ pub struct BaseApp<
 > {
     multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
-    gas_meter: Arc<RwLock<Box<dyn GasMeter>>>,
+    block_gas_meter: Arc<RwLock<Box<dyn GasMeter>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -92,7 +92,7 @@ impl<
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
-            gas_meter: match max_gas > 0 {
+            block_gas_meter: match max_gas > 0 {
                 true => Arc::new(RwLock::new(Box::new(InfiniteGasMeter::default()))),
                 false => Arc::new(RwLock::new(Box::new(BasicGasMeter::new(Gas::new(max_gas))))),
             },

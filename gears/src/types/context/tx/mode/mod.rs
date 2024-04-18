@@ -1,6 +1,6 @@
-pub mod re_check;
 pub mod check;
 pub mod deliver;
+pub mod re_check;
 
 use store_crate::{
     database::{Database, PrefixDB},
@@ -22,6 +22,20 @@ use self::sealed::Sealed;
 pub trait ExecutionMode: Sealed {
     fn runnable(&self) -> Result<(), RunTxError>;
 
+    fn run_ante_checks<
+        SK: StoreKey,
+        DB: Database + Send + Sync,
+        M: TxMessage,
+        G: Genesis,
+        AH: ABCIHandler<M, SK, G>,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &mut self,
+        ctx: &mut CTX,
+        handler: &AH,
+        tx_with_raw: &TxWithRaw<M>,
+    ) -> Result<(), RunTxError>;
+
     fn run_msg<
         'm,
         SK: StoreKey,
@@ -36,22 +50,7 @@ pub trait ExecutionMode: Sealed {
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
     ) -> Result<Vec<Event>, RunTxError>;
-
-    fn run_ante_checks<
-        SK: StoreKey,
-        DB: Database + Send + Sync,
-        M: TxMessage,
-        G: Genesis,
-        AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
-        &mut self,
-        ctx: &mut CTX,
-        handler: &AH,
-        tx_with_raw: &TxWithRaw<M>,
-    ) -> Result<(), RunTxError>;
 }
-
 
 mod sealed {
     use super::{check::CheckTxMode, deliver::DeliverTxMode};
