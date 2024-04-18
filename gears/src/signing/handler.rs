@@ -14,7 +14,7 @@ use super::{errors::SigningErrors, renderer::value_renderer::ValueRenderer};
 pub trait MetadataGetter {
     type Error: Display;
 
-    fn get_metadata(&self, denom: &Denom) -> Result<Option<Metadata>, Self::Error>;
+    fn metadata(&self, denom: &Denom) -> Result<Option<Metadata>, Self::Error>;
 }
 
 #[derive(Debug)]

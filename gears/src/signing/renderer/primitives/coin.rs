@@ -14,7 +14,7 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
         coin: Coin,
         get_metadata: &MG,
     ) -> Result<Content, RenderError> {
-        let metadata = get_metadata.get_metadata(&coin.denom).map_err(|e| {
+        let metadata = get_metadata.metadata(&coin.denom).map_err(|e| {
             RenderError::Rendering(format!("error getting metadata for {}: {e}", coin.denom))
         })?;
         let Some(metadata) = metadata else {

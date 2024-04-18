@@ -12,6 +12,8 @@ use pkcs8::{
 use std::error::Error;
 const HDPATH: &str = "m/44'/118'/0'/0/0";
 
+type SignatureBytes = [u8; 64];
+
 /// A secp256k1 key pair.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Secp256k1KeyPair(SecretKey);
@@ -104,7 +106,7 @@ impl Secp256k1KeyPair {
     }
 
     /// Signs a message.
-    pub fn sign(&self, message: &[u8]) -> [u8; 64] {
+    pub fn sign(&self, message: &[u8]) -> SignatureBytes {
         let signing_key: SigningKey = SigningKey::from(&self.0);
         let signature: k256::ecdsa::Signature = signing_key.sign(message);
 
