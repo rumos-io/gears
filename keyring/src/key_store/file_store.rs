@@ -12,10 +12,11 @@ use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
 };
+use eth_keystore::{decrypt_key_string, encrypt_key_string};
 
 use std::os::unix::fs::PermissionsExt;
 
-pub const PEM_EXTENSION: &str = "pem";
+const JSON_EXTENSION: &str = "json";
 const KEY_HASH_FILE: &str = "key_hash";
 
 fn verify_password(
@@ -201,7 +202,7 @@ where
 {
     let password = open(&path, false, backend)?;
     let mut path = path.as_ref().join(name.as_ref());
-    path.set_extension(PEM_EXTENSION);
+    path.set_extension(JSON_EXTENSION);
 
     fs::read(&path)
         .map_err(|e| {
@@ -225,16 +226,27 @@ where
                 path: path.display().to_string(),
             })?;
 
-            if let Some(password) = password {
-                KeyPair::from_pkcs8_encrypted_pem(&raw_key, password)
+            let json_key = if let Some(password) = password {
+                let raw_key =
+                    decrypt_key_string(raw_key, password).map_err(|e| Error::KEYSTORE {
+                        msg: e.to_string(),
+                        source: e,
+                        path: path.display().to_string(),
+                    })?;
+                String::from_utf8(raw_key).map_err(|e| Error::InvalidUTF8 {
+                    msg: e.to_string(),
+                    source: e,
+                    path: path.display().to_string(),
+                })?
             } else {
-                KeyPair::from_pkcs8_pem(&raw_key)
-            }
-            .map_err(|e| Error::PKCS8 {
+                raw_key
+            };
+
+            Ok(serde_json::from_str(&json_key).map_err(|e| Error::JSON {
+                msg: e.to_string(),
                 source: e,
                 path: path.display().to_string(),
-                msg: e.to_string(),
-            })
+            })?)
         })
 }
 
@@ -249,7 +261,7 @@ pub fn set_key_pair<S: AsRef<str>>(
     let password = open(&path, true, backend)?;
 
     let mut path = path.as_ref().join(key_name.as_ref());
-    path.set_extension(PEM_EXTENSION);
+    path.set_extension(JSON_EXTENSION);
 
     let mut file = OpenOptions::new()
         .create_new(true)
@@ -270,9 +282,10 @@ pub fn set_key_pair<S: AsRef<str>>(
             }
         })?;
 
+    let serialized_key_pair = serde_json::to_string(&key_pair).expect("serialization won't fail");
     let key = match password {
-        Some(password) => key_pair.to_pkcs8_encrypted_pem(password),
-        None => key_pair.to_pkcs8_pem(),
+        Some(password) => encrypt_key_string(&mut OsRng, serialized_key_pair, password).0,
+        None => serde_json::to_string_pretty(&key_pair).expect("key pair will always serialize"),
     };
 
     file.write_all(key.as_bytes()).map_err(|e| Error::FileIO {
@@ -293,7 +306,7 @@ where
     open(&path, false, backend)?;
 
     let mut path = path.as_ref().join(name.as_ref());
-    path.set_extension(PEM_EXTENSION);
+    path.set_extension(JSON_EXTENSION);
 
     remove_file(&path).map_err(|e| {
         if e.kind() == ErrorKind::NotFound {

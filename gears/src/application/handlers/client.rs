@@ -1,19 +1,34 @@
 use crate::{
     commands::client::{query::execute_query, tx::broadcast_tx_commit},
     crypto::{
-        info::{create_signed_transaction, SigningInfo},
-        keys::ReadAccAddress,
+        info::{create_signed_transaction, Mode, SigningInfo},
+        keys::{GearsPublicKey, ReadAccAddress, SigningKey},
     },
+    error::IBC_ENCODE_UNWRAP,
     runtime::runtime,
+    signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
         auth::fee::Fee,
         base::send::SendCoins,
-        query::{account::QueryAccountResponse, Query},
+        denom::Denom,
+        query::{
+            account::QueryAccountResponse,
+            metadata::{
+                QueryDenomMetadataRequest, QueryDenomMetadataResponse,
+                RawQueryDenomMetadataResponse,
+            },
+            Query,
+        },
         tx::{body::TxBody, TxMessage},
     },
 };
-use core_types::{address::AccAddress, query::request::account::QueryAccountRequest};
-use keyring::key::pair::KeyPair;
+
+use tendermint::types::proto::Protobuf as TMProtobuf;
+
+use anyhow::anyhow;
+use core_types::{
+    address::AccAddress, query::request::account::QueryAccountRequest, tx::mode_info::SignMode,
+};
 use serde::Serialize;
 
 use tendermint::{
@@ -25,7 +40,7 @@ use tendermint::{
 };
 
 pub trait TxHandler {
-    type Message: TxMessage;
+    type Message: TxMessage + ValueRenderer;
     type TxCommands;
 
     fn prepare_tx(
@@ -34,19 +49,20 @@ pub trait TxHandler {
         from_address: AccAddress,
     ) -> anyhow::Result<Self::Message>;
 
-    fn handle_tx(
+    fn handle_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
         msg: Self::Message,
-        key: KeyPair,
+        key: K,
         node: url::Url,
         chain_id: ChainId,
         fee: Option<SendCoins>,
+        mode: SignMode,
     ) -> anyhow::Result<Response> {
         let fee = Fee {
             amount: fee,
-            gas_limit: 100000000, //TODO: remove hard coded gas limit
-            payer: None,          //TODO: remove hard coded payer
-            granter: "".into(),   //TODO: remove hard coded granter
+            gas_limit: 200_000, //TODO: remove hard coded gas limit
+            payer: None,        //TODO: remove hard coded payer
+            granter: "".into(), //TODO: remove hard coded granter
         };
 
         let address = key.get_address();
@@ -69,7 +85,22 @@ pub trait TxHandler {
 
         let tip = None; //TODO: remove hard coded
 
-        let raw_tx = create_signed_transaction(vec![signing_info], tx_body, fee, tip, chain_id);
+        let mode = match mode {
+            SignMode::Direct => Mode::Direct,
+            SignMode::Textual => Mode::Textual,
+            _ => return Err(anyhow!("unsupported sign mode")),
+        };
+
+        let raw_tx = create_signed_transaction(
+            vec![signing_info],
+            tx_body,
+            fee,
+            tip,
+            chain_id,
+            mode,
+            node.clone(),
+        )
+        .map_err(|e| anyhow!(e))?;
 
         let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
 
@@ -136,7 +167,10 @@ mod inner {
 use core_types::Protobuf;
 
 // TODO: we're assuming here that the app has an auth module which handles this query
-fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAccountResponse> {
+pub(crate) fn get_account_latest(
+    address: AccAddress,
+    node: &str,
+) -> anyhow::Result<QueryAccountResponse> {
     let query = QueryAccountRequest { address };
 
     execute_query::<QueryAccountResponse, inner::QueryAccountResponse>(
@@ -145,4 +179,35 @@ fn get_account_latest(address: AccAddress, node: &str) -> anyhow::Result<QueryAc
         node,
         None,
     )
+}
+
+// TODO: we're assuming here that the app has a bank module which handles this query
+pub(crate) fn get_denom_metadata(
+    base: Denom,
+    node: &str,
+) -> anyhow::Result<QueryDenomMetadataResponse> {
+    let query = QueryDenomMetadataRequest { denom: base };
+
+    execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
+        "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
+        query.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+        node,
+        None,
+    )
+}
+
+pub struct MetadataViaRPC {
+    pub node: url::Url,
+}
+
+impl MetadataGetter for MetadataViaRPC {
+    type Error = anyhow::Error;
+
+    fn metadata(
+        &self,
+        denom: &Denom,
+    ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {
+        let res = get_denom_metadata(denom.to_owned(), self.node.as_str())?;
+        Ok(res.metadata)
+    }
 }

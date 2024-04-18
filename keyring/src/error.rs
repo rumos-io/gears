@@ -36,6 +36,20 @@ pub enum Error {
         msg: String,
     },
 
+    #[error("the key file at {path} is corrupted: {msg}")]
+    KEYSTORE {
+        source: eth_keystore::KeystoreError,
+        path: String,
+        msg: String,
+    },
+
+    #[error("the key file at {path} is corrupted: {msg}")]
+    JSON {
+        source: serde_json::Error,
+        path: String,
+        msg: String,
+    },
+
     #[error("the key hash file at {path} is corrupted: {msg}")]
     KeyHash {
         source: argon2::password_hash::Error,

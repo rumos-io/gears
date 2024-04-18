@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use bip32::PublicKey as PublicKeyTrait;
 use core_types::address::AccAddress;
 use keyring::key::pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair};
@@ -17,6 +19,20 @@ pub trait GearsPublicKey {
 pub trait ReadAccAddress {
     /// Returns a Bitcoin style addresses: RIPEMD160(SHA256(pubkey)).
     fn get_address(&self) -> AccAddress;
+}
+
+pub trait SigningKey {
+    type Error: Error;
+    /// Signs the given message.
+    fn sign(&self, message: &[u8]) -> Result<Vec<u8>, Self::Error>;
+}
+
+impl SigningKey for KeyPair {
+    type Error = keyring::error::Error;
+
+    fn sign(&self, message: &[u8]) -> Result<Vec<u8>, Self::Error> {
+        Ok(self.sign(message))
+    }
 }
 
 impl GearsPublicKey for Secp256k1KeyPair {

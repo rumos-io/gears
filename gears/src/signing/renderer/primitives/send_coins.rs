@@ -1,13 +1,13 @@
+use crate::signing::handler::MetadataGetter;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRendererWithMetadata,
 };
-use crate::types::denom::Denom;
-use crate::types::{base::send::SendCoins, rendering::screen::Content, tx::metadata::Metadata};
+use crate::types::{base::send::SendCoins, rendering::screen::Content};
 
 impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
-    fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
+    fn try_format_with_metadata<MG: MetadataGetter>(
         coins: SendCoins,
-        get_metadata: &F,
+        get_metadata: &MG,
     ) -> Result<Content, RenderError> {
         let inner_coins = coins.clone().into_inner();
 
@@ -37,9 +37,9 @@ impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRender
 mod tests {
     use cosmwasm_std::Uint256;
 
-    use crate::signing::renderer::{
-        test_functions::get_metadata,
-        value_renderer::{DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata},
+    use crate::signing::renderer::test_functions::TestMetadataGetter;
+    use crate::signing::renderer::value_renderer::{
+        DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
     use crate::types::{
         base::{coin::Coin, send::SendCoins},
@@ -57,7 +57,7 @@ mod tests {
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin]).unwrap(),
-            &get_metadata,
+            &TestMetadataGetter,
         );
 
         assert_eq!(expected_content, actual_content.unwrap());
@@ -81,7 +81,7 @@ mod tests {
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin1, coin2]).unwrap(),
-            &get_metadata,
+            &TestMetadataGetter,
         );
 
         assert_eq!(expected_content, actual_content.unwrap());
@@ -100,7 +100,7 @@ mod tests {
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin]).unwrap(),
-            &get_metadata,
+            &TestMetadataGetter,
         );
 
         assert_eq!(expected_content, actual_content.unwrap());
@@ -119,7 +119,7 @@ mod tests {
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin]).unwrap(),
-            &get_metadata,
+            &TestMetadataGetter,
         );
 
         assert_eq!(expected_content, actual_content.unwrap());
