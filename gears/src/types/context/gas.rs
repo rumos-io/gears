@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::types::gas::gas_meter::{Gas, GasErrors, GasMeter};
+use crate::types::gas::{Gas, GasErrors, GasMeter};
 
 /// Wrapper around any gas meter which prevents usage of gas over limit with type system
 #[derive(Debug, Clone)]

@@ -1,6 +1,6 @@
 #![allow(dead_code)] // TODO: Remove
 
-use super::gas_meter::Gas;
+use super::Gas;
 
 pub struct GasConfig {
     has_cost: Gas,

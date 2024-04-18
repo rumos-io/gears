@@ -16,8 +16,8 @@ use crate::{
         },
         gas::{
             basic_meter::BasicGasMeter,
-            gas_meter::{Gas, GasMeter},
             infinite_meter::InfiniteGasMeter,
+            {Gas, GasMeter},
         },
         tx::{raw::TxWithRaw, TxMessage},
     },

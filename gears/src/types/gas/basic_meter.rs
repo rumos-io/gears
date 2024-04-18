@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::gas_meter::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter};
+use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter};
 
 /// Basic gas meter.
 #[derive(Debug, Clone)]
