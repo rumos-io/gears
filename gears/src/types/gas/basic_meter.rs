@@ -40,8 +40,8 @@ impl GasMeter for BasicGasMeter {
         }
     }
 
-    fn limit(&self) -> Gas {
-        self.limit
+    fn limit(&self) -> Option<Gas> {
+        Some(self.limit)
     }
 
     fn consume_gas(&mut self, amount: Gas, descriptor: String) -> Result<(), GasErrors> {

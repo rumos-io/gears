@@ -292,7 +292,7 @@ impl<
                 ),
                 true => std::mem::replace(
                     &mut *self.gas_meter.write().expect("Poisoned lock"),
-                    Box::new(BasicGasMeter::new(Gas(max_gas))),
+                    Box::new(BasicGasMeter::new(Gas::new(max_gas))),
                 ),
             };
         }

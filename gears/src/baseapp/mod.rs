@@ -94,7 +94,7 @@ impl<
             _info_marker: PhantomData,
             gas_meter: match max_gas > 0 {
                 true => Arc::new(RwLock::new(Box::new(InfiniteGasMeter::default()))),
-                false => Arc::new(RwLock::new(Box::new(BasicGasMeter::new(Gas(max_gas))))),
+                false => Arc::new(RwLock::new(Box::new(BasicGasMeter::new(Gas::new(max_gas))))),
             },
         }
     }

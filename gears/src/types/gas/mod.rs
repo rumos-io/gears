@@ -12,7 +12,15 @@ use derive_more::{Add, Deref, Display, From};
 #[derive(
     Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, Add, Display, Deref,
 )]
-pub struct Gas(pub u64);
+pub struct Gas(u64);
+
+impl Gas {
+    pub const fn new(val: u64) -> Self {
+        Self(val)
+    }
+
+    pub const MAX_GAS: Gas = Gas::new(u64::MAX);
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum GasErrors {
@@ -32,8 +40,8 @@ pub trait GasMeter: Send + Sync + Debug {
     fn gas_consumed_to_limit(&self) -> Gas;
     /// Returns the gas left in the GasMeter.
     fn gas_remaining(&self) -> Gas;
-    /// Returns the limit of the gas meter instance. 0 if the gas meter is infinite.
-    fn limit(&self) -> Gas;
+    /// Returns the limit of the gas meter instance. `None` if the gas meter is infinite.
+    fn limit(&self) -> Option<Gas>;
     /// Consumes the amount of gas provided.
     /// If the gas overflows, it returns error with the descriptor message.
     /// If the gas meter is not infinite, it returns error  if gas consumed goes above the limit.

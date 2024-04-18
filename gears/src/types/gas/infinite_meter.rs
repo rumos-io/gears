@@ -34,8 +34,8 @@ impl GasMeter for InfiniteGasMeter {
         Gas(u64::MAX)
     }
 
-    fn limit(&self) -> Gas {
-        Gas(u64::MAX)
+    fn limit(&self) -> Option<Gas> {
+        None
     }
 
     fn consume_gas(&mut self, amount: Gas, descriptor: String) -> Result<(), GasErrors> {
