@@ -58,7 +58,7 @@ pub struct Local<T: ApplicationInfo> {
     home: PathBuf,
 
     /// from key
-    #[arg(long, required = true)]
+    #[arg(long, global = true, required = false)]
     #[arg(help_heading = "Local signing options")]
     from_key: String,
 
