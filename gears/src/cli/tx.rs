@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 
 use clap::{ArgAction, Subcommand, ValueEnum, ValueHint};
+use strum::Display;
 use tendermint::types::chain_id::ChainId;
 
 use crate::{
@@ -26,7 +27,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     #[arg(long, global = true, action = ArgAction::Set)]
     pub fee: Option<SendCoins>,
 
-    #[arg(long, short)]
+    #[arg(long, short, default_value_t = Keyring::Local)]
     pub keyring: Keyring,
 
     #[command(flatten)]
@@ -40,11 +41,13 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     _marker: PhantomData<T>,
 }
 
-#[derive(ValueEnum, Debug, Clone)]
+#[derive(ValueEnum, Debug, Clone, Display)]
 pub enum Keyring {
     /// Use a Ledger device to sign the transaction
+    #[strum(to_string = "ledger")]
     Ledger,
     /// Use a local keyring to source the signing key
+    #[strum(to_string = "local")]
     Local,
 }
 
