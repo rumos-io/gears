@@ -109,7 +109,7 @@ where
                     keyring_backend,
                     _marker,
                 } = local.ok_or(MissingCliOptions(
-                    "local signing options: from_key".to_owned(),
+                    "local signing options: from-key".to_owned(),
                 ))?;
 
                 TxKeyring::Local(LocalInfo {
