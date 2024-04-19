@@ -7,7 +7,7 @@ use prost::Message;
 use tendermint::types::{chain_id::ChainId, proto::Protobuf};
 
 use crate::{
-    application::handlers::client::GetDenomMetadata,
+    application::handlers::client::MetadataViaRPC,
     error::IBC_ENCODE_UNWRAP,
     signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer},
     types::{
@@ -115,7 +115,7 @@ pub fn create_signed_transaction<
 
                     let sign_bytes = sign_mode_handler
                         .sign_bytes_get(
-                            &GetDenomMetadata { node: node.clone() },
+                            &MetadataViaRPC { node: node.clone() },
                             signer_data,
                             tx_data,
                         )

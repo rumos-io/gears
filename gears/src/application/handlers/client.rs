@@ -196,14 +196,14 @@ pub(crate) fn get_denom_metadata(
     )
 }
 
-pub struct GetDenomMetadata {
+pub struct MetadataViaRPC {
     pub node: url::Url,
 }
 
-impl MetadataGetter for GetDenomMetadata {
+impl MetadataGetter for MetadataViaRPC {
     type Error = anyhow::Error;
 
-    fn get_metadata(
+    fn metadata(
         &self,
         denom: &Denom,
     ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {

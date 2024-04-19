@@ -296,7 +296,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
                             auth_info: tx.tx.auth_info.clone(),
                         };
 
-                        let f = GetDenomMetadata {
+                        let f = MetadataFromState {
                             bank_keeper: &self.bank_keeper,
                             ctx,
                             _phantom: PhantomData,
@@ -348,18 +348,18 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
     }
 }
 
-pub struct GetDenomMetadata<'a, DB, SK, BK, CTX> {
+pub struct MetadataFromState<'a, DB, SK, BK, CTX> {
     pub bank_keeper: &'a BK,
     pub ctx: &'a CTX,
     pub _phantom: PhantomData<(DB, SK)>,
 }
 
 impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: TransactionalContext<DB, SK>>
-    MetadataGetter for GetDenomMetadata<'a, DB, SK, BK, CTX>
+    MetadataGetter for MetadataFromState<'a, DB, SK, BK, CTX>
 {
     type Error = std::io::Error; // this is not used here
 
-    fn get_metadata(
+    fn metadata(
         &self,
         denom: &Denom,
     ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {

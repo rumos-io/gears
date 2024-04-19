@@ -18,7 +18,7 @@ pub(super) mod test_functions {
     impl MetadataGetter for TestNoneMetadataGetter {
         type Error = std::io::Error; // this is not used here
 
-        fn get_metadata(&self, _denom: &Denom) -> Result<Option<Metadata>, Self::Error> {
+        fn metadata(&self, _denom: &Denom) -> Result<Option<Metadata>, Self::Error> {
             Ok(None)
         }
     }
@@ -28,7 +28,7 @@ pub(super) mod test_functions {
     impl MetadataGetter for TestMetadataGetter {
         type Error = std::io::Error; // this is not used here
 
-        fn get_metadata(&self, denom: &Denom) -> Result<Option<Metadata>, Self::Error> {
+        fn metadata(&self, denom: &Denom) -> Result<Option<Metadata>, Self::Error> {
             match denom.to_string().as_str() {
                 "uatom" => Ok(Some(Metadata {
                     description: String::new(),
