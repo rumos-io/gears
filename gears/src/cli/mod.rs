@@ -79,30 +79,20 @@ where
     }
 }
 
-impl<
-        T: ApplicationInfo,
-        CliClientAUX,
-        ClientAUX,
-        CliAppAUX,
-        AppAUX,
-        CliTX,
-        TX,
-        CliQue,
-        QUE,
-        ERR,
-    > TryFrom<CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>>
+impl<T: ApplicationInfo, CliClientAUX, ClientAUX, CliAppAUX, AppAUX, CliTX, TX, CliQue, QUE>
+    TryFrom<CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>>
     for ApplicationCommands<ClientAUX, AppAUX, TX, QUE>
 where
     CliClientAUX: Subcommand,
-    ClientAUX: TryFrom<CliClientAUX, Error = ERR>,
+    ClientAUX: TryFrom<CliClientAUX, Error = anyhow::Error>,
     CliAppAUX: Subcommand,
-    AppAUX: TryFrom<CliAppAUX, Error = ERR>,
+    AppAUX: TryFrom<CliAppAUX, Error = anyhow::Error>,
     CliTX: Subcommand,
-    TX: TryFrom<CliTX, Error = ERR>,
+    TX: TryFrom<CliTX, Error = anyhow::Error>,
     CliQue: Subcommand,
-    QUE: TryFrom<CliQue, Error = ERR>,
+    QUE: TryFrom<CliQue, Error = anyhow::Error>,
 {
-    type Error = ERR;
+    type Error = anyhow::Error;
 
     fn try_from(
         value: CliApplicationCommands<T, CliClientAUX, CliAppAUX, CliTX, CliQue>,
@@ -168,17 +158,17 @@ where
     Keys(CliKeyCommand<T>),
 }
 
-impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE, ERR>
+impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE>
     TryFrom<CliClientCommands<T, CliAUX, CliTX, CliQue>> for ClientCommands<AUX, TX, QUE>
 where
     CliAUX: Subcommand,
-    AUX: TryFrom<CliAUX, Error = ERR>,
+    AUX: TryFrom<CliAUX, Error = anyhow::Error>,
     CliTX: Subcommand,
-    TX: TryFrom<CliTX, Error = ERR>,
+    TX: TryFrom<CliTX, Error = anyhow::Error>,
     CliQue: Subcommand,
-    QUE: TryFrom<CliQue, Error = ERR>,
+    QUE: TryFrom<CliQue, Error = anyhow::Error>,
 {
-    type Error = ERR;
+    type Error = anyhow::Error;
 
     fn try_from(value: CliClientCommands<T, CliAUX, CliTX, CliQue>) -> Result<Self, Self::Error> {
         let res = match value {

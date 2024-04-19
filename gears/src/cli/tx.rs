@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 
-use clap::{ArgAction, Subcommand, ValueHint};
+use clap::{ArgAction, Subcommand, ValueEnum, ValueHint};
 use tendermint::types::chain_id::ChainId;
 
 use crate::{
@@ -26,28 +26,43 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     #[arg(long, global = true, action = ArgAction::Set)]
     pub fee: Option<SendCoins>,
 
+    #[arg(long, short)]
+    pub keyring: Keyring,
+
+    #[command(flatten)]
+    #[group(id = "local", conflicts_with = Keyring::Ledger, global = true)]
+    pub local: Option<Local<T>>,
+
     #[command(subcommand)]
-    pub keyring: Keyring<C, T>,
+    pub command: C,
 
     #[arg(skip)]
     _marker: PhantomData<T>,
 }
 
+#[derive(ValueEnum, Debug, Clone)]
+pub enum Keyring {
+    /// Use a Ledger device to sign the transaction
+    Ledger,
+    /// Use a local keyring to source the signing key
+    Local,
+}
+
 #[derive(Debug, Clone, ::clap::Args)]
-pub struct Local<C: Subcommand, T: ApplicationInfo> {
+pub struct Local<T: ApplicationInfo> {
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
+    #[arg(help_heading = "Local signing options")]
     home: PathBuf,
 
     /// from key
-    #[arg(required = true)]
+    #[arg(long, required = true)]
+    #[arg(help_heading = "Local signing options")]
     from_key: String,
 
     /// select keyring's backend
     #[arg(long = "keyring-backend",  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
+    #[arg(help_heading = "Local signing options")]
     keyring_backend: KeyringBackend,
-
-    #[command(subcommand)]
-    command: C,
 
     #[arg(skip)]
     _marker: PhantomData<T>,
@@ -59,21 +74,17 @@ pub struct Ledger<C: Subcommand> {
     command: C,
 }
 
-#[derive(Subcommand, Debug, Clone)]
-pub enum Keyring<C: Subcommand, T: ApplicationInfo> {
-    /// Use a Ledger device to sign the transaction
-    Ledger(Ledger<C>),
-    /// Use a local keyring to source the signing key
-    Local(Local<C, T>),
-}
+#[derive(Debug, Clone, thiserror::Error)]
+#[error("Missing options for: {0}")]
+pub struct MissingCliOptions(pub String);
 
-impl<T, C, AC, ERR> TryFrom<CliTxCommand<T, C>> for TxCommand<AC>
+impl<T, C, AC> TryFrom<CliTxCommand<T, C>> for TxCommand<AC>
 where
     T: ApplicationInfo,
     C: Subcommand,
-    AC: TryFrom<C, Error = ERR>,
+    AC: TryFrom<C, Error = anyhow::Error>,
 {
-    type Error = ERR;
+    type Error = anyhow::Error;
 
     fn try_from(value: CliTxCommand<T, C>) -> Result<Self, Self::Error> {
         let CliTxCommand {
@@ -82,24 +93,26 @@ where
             fee,
             _marker,
             keyring,
+            local,
+            command,
         } = value;
 
-        let (keyring, command) = match keyring {
-            Keyring::Ledger(Ledger { command }) => (TxKeyring::Ledger, command),
-            Keyring::Local(Local {
-                home,
-                from_key,
-                keyring_backend,
-                command,
-                _marker,
-            }) => (
+        let keyring = match keyring {
+            Keyring::Ledger => TxKeyring::Ledger,
+            Keyring::Local => {
+                let Local {
+                    home,
+                    from_key,
+                    keyring_backend,
+                    _marker,
+                } = local.ok_or(MissingCliOptions("Local signing options".to_owned()))?;
+
                 TxKeyring::Local(LocalInfo {
                     keyring_backend,
                     from_key,
                     home,
-                }),
-                command,
-            ),
+                })
+            }
         };
 
         Ok(Self {

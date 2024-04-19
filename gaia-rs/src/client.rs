@@ -32,3 +32,25 @@ pub enum GaiaQueryCommands {
     Auth(AuthQueryCli),
     // Ibc(IbcQueryCli),
 }
+
+#[derive(Debug, Clone)]
+pub struct WrappedGaiaTxCommands(pub GaiaTxCommands);
+
+impl TryFrom<GaiaTxCommands> for WrappedGaiaTxCommands {
+    type Error = anyhow::Error;
+
+    fn try_from(command: GaiaTxCommands) -> Result<Self, Self::Error> {
+        Ok(Self(command))
+    }
+}
+
+#[derive(Debug)]
+pub struct WrappedGaiaQueryCommands(pub GaiaQueryCommands);
+
+impl TryFrom<GaiaQueryCommands> for WrappedGaiaQueryCommands {
+    type Error = anyhow::Error;
+
+    fn try_from(command: GaiaQueryCommands) -> Result<Self, Self::Error> {
+        Ok(Self(command))
+    }
+}
