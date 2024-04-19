@@ -5,7 +5,7 @@
 2. Send funds to ledger address - for now you'll need to use a cosmos based chain's CLI to get the address!
 
 ```shell
-gaia-rs tx local alice bank send cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z 30uatom
+gaia-rs tx --keyring local --from-key alice bank send cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z 30uatom
 ```
 
 3. Check balance of ledger address
