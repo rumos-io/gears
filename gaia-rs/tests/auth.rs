@@ -1,5 +1,9 @@
 use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
-use gaia_rs::{client::GaiaQueryCommands, query::GaiaQueryResponse, GaiaCoreClient};
+use gaia_rs::{
+    client::{GaiaQueryCommands, WrappedGaiaQueryCommands},
+    query::GaiaQueryResponse,
+    GaiaCoreClient,
+};
 use gears::{
     commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
@@ -30,9 +34,9 @@ fn account_query() -> anyhow::Result<()> {
     let cmd = QueryCommand {
         node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
         height: None,
-        inner: GaiaQueryCommands::Auth(AuthQueryCli {
+        inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Auth(AuthQueryCli {
             command: AuthCommands::Account(query),
-        }),
+        })),
     };
 
     let result = run_query(cmd, &GaiaCoreClient)?;

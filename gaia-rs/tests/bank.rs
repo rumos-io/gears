@@ -6,7 +6,11 @@ use bank::{
     },
     types::query::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
 };
-use gaia_rs::{query::GaiaQueryResponse, GaiaCoreClient};
+use gaia_rs::{
+    client::{GaiaQueryCommands, WrappedGaiaQueryCommands},
+    query::GaiaQueryResponse,
+    GaiaCoreClient,
+};
 use gears::{
     commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
@@ -31,9 +35,9 @@ fn balances_query() -> anyhow::Result<()> {
         QueryCommand {
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             height: None,
-            inner: gaia_rs::client::GaiaQueryCommands::Bank(BankQueryCli {
+            inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
                 command: BankQueryCommands::Balances(query),
-            }),
+            })),
         },
         &GaiaCoreClient,
     )?;
@@ -62,9 +66,9 @@ fn denom_query() -> anyhow::Result<()> {
         QueryCommand {
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             height: None,
-            inner: gaia_rs::client::GaiaQueryCommands::Bank(BankQueryCli {
+            inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
                 command: BankQueryCommands::DenomMetadata,
-            }),
+            })),
         },
         &GaiaCoreClient,
     )?;
