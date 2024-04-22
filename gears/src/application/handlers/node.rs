@@ -2,7 +2,7 @@ use crate::{
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::{
-        context::{init_context::InitContext, query_context::QueryContext, TransactionalContext},
+        context::{init_context::InitContext, query_context::QueryContext, tx::TxContext, TransactionalContext},
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -20,10 +20,9 @@ pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn run<
         DB: Database,
         M: TxMessage + ValueRenderer,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 }

@@ -1,6 +1,7 @@
 use crate::application::handlers::node::AnteHandlerTrait;
 use crate::crypto::keys::ReadAccAddress;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
+use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
@@ -35,13 +36,9 @@ where
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
 {
-    fn run<
-        DB: Database,
-        M: TxMessage + ValueRenderer,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    fn run<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
         BaseAnteHandler::run(self, ctx, tx)
