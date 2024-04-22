@@ -4,19 +4,29 @@
 use std::{path::PathBuf, time::Duration};
 
 use gaia_rs::{
-    abci_handler::ABCIHandler,
+    abci_handler::GaiaABCIHandler,
     config::AppConfig,
     genesis::GenesisState,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaApplication, GaiaCore,
 };
 use gears::{
-    application::{command::app::AppCommands, node::NodeApplication},
-    baseapp::{run::RunCommand, Genesis},
-    client::keys::{keys, AddKeyCommand, KeyCommand},
+    application::node::NodeApplication,
+    baseapp::genesis::Genesis,
+    commands::{
+        client::keys::{keys, AddKeyCommand, KeyCommand, KeyringBackend},
+        node::{
+            run::{LogLevel, RunCommand},
+            AppCommands,
+        },
+    },
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
 };
-use utils::testing::{TempDir, TmpChild};
+use gears::{
+    core::address::AccAddress,
+    types::base::send::SendCoins,
+    utils::{TempDir, TmpChild},
+};
 
 pub const TENDERMINT_PATH: &str = "./tests/assets";
 pub const NODE_URL_STR: &str = "http://localhost:26657/";
@@ -41,7 +51,7 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
     let server_thread = std::thread::spawn(move || {
         let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
             GaiaCore,
-            &ABCIHandler::new,
+            &GaiaABCIHandler::new,
             GaiaStoreKey::Params,
             GaiaParamsStoreKey::BaseApp,
         );
@@ -51,7 +61,7 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
             address: DEFAULT_ADDRESS,
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             read_buf_size: 1048576,
-            log_level: gears::baseapp::run::LogLevel::Off,
+            log_level: LogLevel::Off,
         };
 
         let _ = node.execute(AppCommands::Run(cmd));
@@ -68,8 +78,8 @@ pub struct MockGenesis(pub GenesisState);
 impl Genesis for MockGenesis {
     fn add_genesis_account(
         &mut self,
-        address: proto_types::AccAddress,
-        coins: proto_messages::cosmos::base::v1beta1::SendCoins,
+        address: AccAddress,
+        coins: SendCoins,
     ) -> Result<(), gears::error::AppError> {
         self.0.add_genesis_account(address, coins)
     }
@@ -82,7 +92,7 @@ pub fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
         name: KEY_NAME.to_owned(),
         recover: Default::default(),
         home: home.into(),
-        keyring_backend: gears::client::keys::KeyringBackend::Test,
+        keyring_backend: KeyringBackend::Test,
     };
 
     keys(KeyCommand::Add(cmd))?;

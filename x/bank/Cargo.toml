@@ -5,16 +5,9 @@ edition = "2021"
 
 [dependencies]
 #local
-tendermint = {path = "../../tendermint"}
-gears = { path = "../../gears" }
-store = { path = "../../store" }
-database = { path = "../../database" }
-proto-types = { path = "../../proto-types" }
-proto-messages = { path = "../../proto-messages" }
-auth = { path = "../auth" }
+gears = { path = "../../gears", features = [ "cli", "export", "xmods"] }
 
 #newtypes
-bnum = { workspace = true, features = ["serde"] }
 bytes = { workspace = true }
 
 #utils

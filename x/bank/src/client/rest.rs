@@ -1,34 +1,31 @@
-use proto_types::AccAddress;
-use tendermint::abci::Application;
-
 use axum::{
     extract::{Path, Query, State},
     routing::get,
     Json, Router,
 };
+use gears::tendermint::application::ABCIApplication;
 use gears::{
-    application::ApplicationInfo,
-    baseapp::{ABCIHandler, BaseApp, Genesis},
-    client::rest::{error::Error, Pagination, RestState},
-    x::params::ParamsSubspaceKey,
+    application::{handlers::node::ABCIHandler, ApplicationInfo},
+    baseapp::{genesis::Genesis, BaseApp},
+    core::address::AccAddress,
+    params::ParamsSubspaceKey,
+    rest::{error::Error, Pagination, RestState},
+    tendermint::types::{proto::Protobuf, request::query::RequestQuery},
+    types::tx::TxMessage,
 };
-use proto_messages::cosmos::{
-    bank::v1beta1::{
-        QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
-        QueryBalanceResponse, QueryTotalSupplyResponse,
-    },
-    ibc::protobuf::Protobuf,
-    tx::v1beta1::message::Message,
-};
+use gears::{error::IBC_ENCODE_UNWRAP, store::StoreKey};
 use serde::Deserialize;
-use store::StoreKey;
-use tendermint::proto::abci::RequestQuery;
+
+use crate::types::query::{
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
+    QueryTotalSupplyResponse,
+};
 
 /// Gets the total supply of every denom
 pub async fn supply<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
@@ -54,7 +51,7 @@ pub async fn supply<
 pub async fn get_balances<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
@@ -69,7 +66,7 @@ pub async fn get_balances<
     };
 
     let request = RequestQuery {
-        data: req.encode_vec().into(),
+        data: req.encode_vec().expect(IBC_ENCODE_UNWRAP).into(), // TODO:IBC
         path: "/cosmos.bank.v1beta1.Query/AllBalances".into(),
         height: 0,
         prove: false,
@@ -94,7 +91,7 @@ pub struct RawDenom {
 pub async fn get_balances_by_denom<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,
@@ -109,11 +106,11 @@ pub async fn get_balances_by_denom<
             .0
             .denom
             .try_into()
-            .map_err(|e: proto_types::Error| Error::bad_request(e.to_string()))?,
+            .map_err(|e: gears::types::errors::Error| Error::bad_request(e.to_string()))?,
     };
 
     let request: RequestQuery = RequestQuery {
-        data: req.encode_vec().into(),
+        data: req.encode_vec().expect(IBC_ENCODE_UNWRAP).into(), // TODO:IBC
         path: "/cosmos.bank.v1beta1.Query/Balance".into(),
         height: 0,
         prove: false,
@@ -130,7 +127,7 @@ pub async fn get_balances_by_denom<
 pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: Message,
+    M: TxMessage,
     H: ABCIHandler<M, SK, G>,
     G: Genesis,
     AI: ApplicationInfo,

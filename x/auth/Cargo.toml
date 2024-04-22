@@ -5,15 +5,9 @@ version = "0.1.0"
 
 [dependencies]
 #local
-database = {path = "../../database"}
-gears = {path = "../../gears"}
-proto-messages = {path = "../../proto-messages"}
-proto-types = {path = "../../proto-types"}
-store = {path = "../../store"}
-tendermint = {path = "../../tendermint"}
+gears = {path = "../../gears", features = [ "cli", "export", "xmods"]}
 
 #newtypes
-bnum = { workspace = true, features = ["serde"] }
 bytes = { workspace = true }
 num-bigint = { workspace = true }
 num-format = { workspace = true, features = ["with-num-bigint"] }
@@ -34,6 +28,7 @@ ciborium = { workspace = true }
 prost = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
+serde-aux = { workspace = true }
 
 #other
 tokio = { workspace = true }

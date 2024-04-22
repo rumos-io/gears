@@ -1,26 +1,24 @@
+use crate::abci_handler::GaiaABCIHandler;
 use crate::query::GaiaQuery;
 use crate::query::GaiaQueryResponse;
+use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
 use bank::cli::query::BankQueryHandler;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
+use client::WrappedGaiaQueryCommands;
 use gears::application::client::Client;
-use gears::application::command::NilAux;
-use gears::application::command::NilAuxCommand;
+use gears::application::handlers::client::{QueryHandler, TxHandler};
 use gears::application::handlers::AuxHandler;
-use gears::application::handlers::{QueryHandler, TxHandler};
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
-
+use gears::commands::NilAux;
+use gears::commands::NilAuxCommand;
+use gears::core::address::AccAddress;
 use genesis::GenesisState;
-use ibc::client::cli::query_handler::IbcQueryHandler;
-use proto_types::AccAddress;
 use rest::get_router;
 use serde::Serialize;
-
-use crate::abci_handler::ABCIHandler;
-use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 
 pub mod abci_handler;
 pub mod client;
@@ -45,21 +43,21 @@ pub struct GaiaCoreClient;
 
 impl TxHandler for GaiaCoreClient {
     type Message = message::Message;
-    type TxCommands = client::GaiaTxCommands;
+    type TxCommands = client::WrappedGaiaTxCommands;
 
     fn prepare_tx(
         &self,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> Result<Self::Message> {
-        tx_command_handler(command, from_address)
+        tx_command_handler(command.0, from_address)
     }
 }
 
 impl QueryHandler for GaiaCoreClient {
     type QueryRequest = GaiaQuery;
 
-    type QueryCommands = GaiaQueryCommands;
+    type QueryCommands = WrappedGaiaQueryCommands;
 
     type QueryResponse = GaiaQueryResponse;
 
@@ -67,16 +65,15 @@ impl QueryHandler for GaiaCoreClient {
         &self,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryRequest> {
-        let res = match command {
+        let res = match &command.0 {
             GaiaQueryCommands::Bank(command) => {
                 Self::QueryRequest::Bank(BankQueryHandler.prepare_query_request(command)?)
             }
             GaiaQueryCommands::Auth(command) => {
                 Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
-            }
-            GaiaQueryCommands::Ibc(command) => {
-                Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
-            }
+            } // GaiaQueryCommands::Ibc(command) => {
+              //     Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
+              // }
         };
 
         Ok(res)
@@ -87,16 +84,16 @@ impl QueryHandler for GaiaCoreClient {
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
-        let res = match command {
+        let res = match &command.0 {
             GaiaQueryCommands::Bank(command) => Self::QueryResponse::Bank(
                 BankQueryHandler.handle_raw_response(query_bytes, command)?,
             ),
             GaiaQueryCommands::Auth(command) => Self::QueryResponse::Auth(
                 AuthQueryHandler.handle_raw_response(query_bytes, command)?,
             ),
-            GaiaQueryCommands::Ibc(command) => {
-                Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
-            }
+            // GaiaQueryCommands::Ibc(command) => {
+            //     Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
+            // }
         };
 
         Ok(res)
@@ -120,11 +117,11 @@ impl Node for GaiaCore {
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
-    type ABCIHandler = ABCIHandler;
+    type ABCIHandler = GaiaABCIHandler;
     type ApplicationConfig = config::AppConfig;
 
     fn router<AI: ApplicationInfo>() -> axum::Router<
-        gears::client::rest::RestState<
+        gears::rest::RestState<
             Self::StoreKey,
             Self::ParamsSubspaceKey,
             Self::Message,

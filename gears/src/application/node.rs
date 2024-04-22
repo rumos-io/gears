@@ -1,20 +1,24 @@
-use axum::Router;
-use proto_messages::cosmos::tx::v1beta1::message::Message;
-use store_crate::StoreKey;
-
-use crate::{
-    baseapp::{run, ABCIHandler, Genesis},
-    client::{genesis_account, init, rest::RestState},
-    config::{ApplicationConfig, Config},
-    x::params::ParamsSubspaceKey,
+use super::{
+    handlers::{node::ABCIHandler, AuxHandler},
+    ApplicationInfo,
 };
-
-use super::{command::app::AppCommands, handlers::AuxHandler, ApplicationInfo};
-use crate::x::params::Keeper as ParamsKeeper;
+use crate::{
+    baseapp::genesis::Genesis,
+    commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
+    params::Keeper as ParamsKeeper,
+};
+use crate::{
+    config::{ApplicationConfig, Config},
+    params::ParamsSubspaceKey,
+    rest::RestState,
+    types::tx::TxMessage,
+};
+use axum::Router;
+use store_crate::StoreKey;
 
 /// A Gears application.
 pub trait Node: AuxHandler {
-    type Message: Message;
+    type Message: TxMessage;
     type Genesis: Genesis;
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
@@ -72,18 +76,16 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     pub fn execute(self, command: AppCommands<Core::AuxCommands>) -> anyhow::Result<()> {
         match command {
             AppCommands::Init(cmd) => {
-                init::init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
+                init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
             }
-            AppCommands::Run(cmd) => run::run(
+            AppCommands::Run(cmd) => run(
                 cmd,
                 ParamsKeeper::new(self.params_store_key),
                 self.params_subspace_key,
                 self.abci_handler_builder,
                 self.router,
             )?,
-            AppCommands::GenesisAdd(cmd) => {
-                genesis_account::genesis_account_add::<Core::Genesis>(cmd)?
-            }
+            AppCommands::GenesisAdd(cmd) => genesis_account_add::<Core::Genesis>(cmd)?,
             AppCommands::Aux(cmd) => {
                 let cmd = self.core.prepare_aux(cmd)?;
                 self.core.handle_aux(cmd)?;

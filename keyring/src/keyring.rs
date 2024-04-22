@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{
     error::Error,
-    key_pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair},
+    key::pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair},
     key_store::file_store,
 };
 use bip32::Mnemonic;
@@ -62,7 +62,7 @@ where
 }
 
 /// Get a key by name.
-pub fn get_key_by_name<S>(name: &S, backend: Backend) -> Result<KeyPair, Error>
+pub fn key_by_name<S>(name: &S, backend: Backend) -> Result<KeyPair, Error>
 where
     S: AsRef<str> + ?Sized,
 {
@@ -114,14 +114,14 @@ mod tests {
         assert!(matches!(error, Error::AlreadyExists { .. }));
 
         // get key should succeed
-        get_key_by_name("bob", Backend::Test(&path)).expect("key should be retrieved");
+        key_by_name("bob", Backend::Test(&path)).expect("key should be retrieved");
 
         // delete key should succeed
         delete_key_by_name("bob", Backend::Test(&path)).expect("key should be deleted");
 
         // get key should fail
         let error =
-            get_key_by_name("bob", Backend::Test(&path)).expect_err("key should not be retrieved");
+            key_by_name("bob", Backend::Test(&path)).expect_err("key should not be retrieved");
         assert!(matches!(error, Error::DoesNotExist { .. }));
 
         // delete key should fail
@@ -133,13 +133,13 @@ mod tests {
         create_key("bob", KeyType::Secp256k1, Backend::Test(&path)).expect("key should be created");
 
         // get key should succeed
-        get_key_by_name("bob", Backend::Test(&path)).expect("key should be retrieved");
+        key_by_name("bob", Backend::Test(&path)).expect("key should be retrieved");
 
         std::fs::remove_dir_all(path.clone()).expect("tmp directory should be deleted");
 
         // get should fail
         let error =
-            get_key_by_name("bob", Backend::Test(&path)).expect_err("keyring should fail to open");
+            key_by_name("bob", Backend::Test(&path)).expect_err("keyring should fail to open");
         assert!(matches!(error, Error::KeyringDoesNotExist(_)));
     }
 }

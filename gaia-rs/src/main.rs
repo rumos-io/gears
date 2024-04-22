@@ -1,7 +1,7 @@
 #![warn(rust_2018_idioms)]
 
 use clap::Parser;
-use gaia_rs::abci_handler::ABCIHandler;
+use gaia_rs::abci_handler::GaiaABCIHandler;
 use gaia_rs::client::{GaiaQueryCommands, GaiaTxCommands};
 use gaia_rs::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 use gaia_rs::{GaiaApplication, GaiaCore, GaiaCoreClient};
@@ -26,7 +26,7 @@ fn main() -> anyhow::Result<()> {
         |command| {
             NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
                 GaiaCore,
-                &ABCIHandler::new,
+                &GaiaABCIHandler::new,
                 GaiaStoreKey::Params,
                 GaiaParamsStoreKey::BaseApp,
             )

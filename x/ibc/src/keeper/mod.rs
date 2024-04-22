@@ -1,7 +1,5 @@
-use database::Database;
-use gears::{
-    error::SearchError, types::context::read_context::ReadContext, x::params::ParamsSubspaceKey,
-};
+use database::{Database, PrefixDB};
+use gears::{error::SearchError, types::context::QueryableContext, x::params::ParamsSubspaceKey};
 use proto_messages::{
     any::PrimitiveAny,
     cosmos::ibc::{
@@ -18,7 +16,9 @@ use proto_messages::{
         },
     },
 };
-use store::StoreKey;
+use store::{
+    types::prefix::immutable::ImmutablePrefixStore, QueryableKVStore, ReadPrefixStore, StoreKey,
+};
 
 use crate::{
     params::{self, AbciParamsKeeper},
@@ -33,7 +33,7 @@ pub const KEY_CONSENSUS_STATE_PREFIX: &str = "consensusStates";
 
 fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
     keeper: &AbciParamsKeeper<SK, PSK>,
-    ctx: &impl ReadContext<SK, DB>,
+    ctx: &impl QueryableContext<PrefixDB<DB>, SK>,
 ) -> Result<Params, SearchError> {
     let bytes = keeper
         .get(ctx, &params::CLIENT_PARAMS_KEY)
@@ -46,12 +46,12 @@ fn params_get<DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey>(
 
 pub fn client_state_get<DB: Database, SK: StoreKey>(
     store_key: &SK,
-    ctx: &impl ReadContext<SK, DB>,
+    ctx: &impl QueryableContext<PrefixDB<DB>, SK>,
     client_id: &ClientId,
 ) -> Result<WrappedTendermintClientState, SearchError> {
-    let any_store = ctx.get_kv_store(store_key);
-    let store: store::ImmutablePrefixStore<'_, database::PrefixDB<DB>> = any_store
-        .get_immutable_prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
+    let any_store = ctx.kv_store(store_key);
+    let store: ImmutablePrefixStore<'_, database::PrefixDB<DB>> =
+        any_store.prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
 
     let bytes = store
         .get(params::CLIENT_STATE_KEY.as_bytes())
@@ -65,13 +65,13 @@ pub fn client_state_get<DB: Database, SK: StoreKey>(
 
 pub fn client_consensus_state<DB: Database, SK: StoreKey>(
     store_key: &SK,
-    ctx: &impl ReadContext<SK, DB>,
+    ctx: &impl QueryableContext<DB, SK>,
     client_id: &ClientId,
     height: &Height,
 ) -> Result<ConsensusState, SearchError> {
-    let any_store = ctx.get_kv_store(store_key);
-    let store = any_store
-        .get_immutable_prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
+    let any_store = ctx.kv_store(store_key);
+    let store =
+        any_store.prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}/{client_id}").into_bytes());
 
     let bytes = store
         .get(format!("{KEY_CONSENSUS_STATE_PREFIX}/{height}").as_bytes())

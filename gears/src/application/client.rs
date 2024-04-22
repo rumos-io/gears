@@ -1,8 +1,8 @@
-use crate::client::{keys, query::run_query, tx::run_tx};
+use crate::commands::client::{keys::keys, query::run_query, tx::run_tx, ClientCommands};
 
-use super::{
-    command::client::ClientCommands,
-    handlers::{AuxHandler, QueryHandler, TxHandler},
+use super::handlers::{
+    client::{QueryHandler, TxHandler},
+    AuxHandler,
 };
 
 /// A Gears client application.
@@ -37,7 +37,7 @@ impl<'a, Core: Client> ClientApplication<Core> {
 
                 println!("{}", serde_json::to_string_pretty(&query)?);
             }
-            ClientCommands::Keys(cmd) => keys::keys(cmd)?,
+            ClientCommands::Keys(cmd) => keys(cmd)?,
         };
 
         Ok(())

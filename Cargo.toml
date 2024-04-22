@@ -1,23 +1,35 @@
 [workspace]
 members = [
-  "proto-types",
-  "proto-messages",
-  "gears",
-  "gears-derive",
-  "trees",
+  # no local deps
   "database",
   "tendermint",
-  "gaia-rs",
+  # "proto-types",
+  "core-types",
+
+  # with local deps
+  "trees",
   "store",
+  "keyring",
+  "gears",
+  "gears-derive",
+
+  # GAIA
+  "gaia-rs",
+
+  # xmodules
+  # "x/ibc", 
   "x/bank",
   "x/auth",
-  "keyring", 
-  "x/ibc", 
-  "utils",
+  "keyring",
+
+  # new unsorted
 ]
 resolver = "2"
 
 [workspace.dependencies]
+
+# important
+ibc-proto = "=0.26.0"
 
 # nutype
 bytes = { version = "1.2.1" }
@@ -29,62 +41,63 @@ secp256k1 = { version = "0.28.1" }
 integer-encoding = { version = "4.0.0" }
 nutype = { version = "0.4.0" }
 url = { version = "2.5.0" }
+time = "0.3.34"
 
 # serialization
 serde = { version = "1.0", default-features = false }
 serde_json = { version = "1.0.93" }
 serde-aux = { version = "4.2.0" }
 serde_with = { version = "3.0.0" }
-prost = { version = "0.12.3" }
+prost = { version = "^0.11" }
 schemars = { version = "0.8.16" }
 hex = { version = "0.4.3" }
-data-encoding = { version = "2.4.0" } #replace hex with this crate
+data-encoding = { version = "2.4.0" }                 #replace hex with this crate
 ciborium = { version = "0.2.1" }
 base64-serde = { version = "0.7.0" }
 toml = { version = "0.8.8" }
 
 # hashing/encryption
-ripemd = { version = "0.1.3" }
+argon2 = { version = "0.5.2" }
+base64 = { version = "0.22.0" }
 bech32 = { version = "0.9.1" }
-sha2 = { version = "0.10.6" }
 bip32 = { version = "0.5.1" }
 k256 = { version = "0.13.1" }
 pkcs8 = { version = "0.10.2" }
-base64 = { version = "0.22.0" }
-argon2 = { version = "0.5.2" }
+ripemd = { version = "0.1.3" }
+sha2 = { version = "0.10.6" }
 
 # utils
 anyhow = { version = "1.0.70" }
-thiserror = { version = "1.0.13" }
 clap = { version = "4.2.2", features = ["derive"] }
 clap_complete = { version = "4.2.1" }
-strum = { version = "0.26.2", features = ["derive"] }
-tokio = { version = "1.27.0" }
+constcat = { version = "0.5.0" }                      # upgraded std::concat! which accepts const
+derive_builder = { version = "0.20.0" }
+dircpy = { version = "0.3.15" }
+dirs = { version = "5.0.1" }
 rand = { version = "0.8.5" }
 regex = { version = "1.10.2" }
-derive_builder = { version = "0.20.0" }
-dirs = { version = "5.0.1" }
-dircpy = { version = "0.3.15" }
-constcat = { version = "0.5.0" } # upgraded std::concat! which accepts const
+strum = { version = "0.26.2", features = ["derive"] }
+thiserror = { version = "1.0.13" }
+tokio = { version = "1.27.0" }
 
 # log
 log = { version = "0.4.21" }
-tracing = {  version = "0.1", default-features = false}
+tracing = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3.18", default-features = true }
 
 # networking
 axum = { version = "0.7.4" }
-tower-http = { version = "0.5.2" }
-tonic = { version = "0.11.0" }
 http = { version = "1.0.0" }
+tonic = { version = "0.11.0" }
+tower-http = { version = "0.5.2" }
 
 # test utils
-run_script = { version = "0.10.1" }
 assert_fs = { version = "1.1.1" }
+run_script = { version = "0.10.1" }
 
 # other
-handlebars = { version = "5.1.0" }
 byteorder = { version = "1.5.0" }
+handlebars = { version = "5.1.0" }
 rpassword = { version = "7.2.0" }
 
 [workspace.lints.clippy]

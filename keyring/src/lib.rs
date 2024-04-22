@@ -1,6 +1,6 @@
-mod error;
-pub mod key_pair;
-mod key_store;
+pub mod error;
+pub mod key;
+pub mod key_store;
 mod keyring;
 
 pub use crate::keyring::*;

@@ -4,7 +4,7 @@ use clap::{ArgAction, ValueHint};
 
 use crate::{
     application::ApplicationInfo,
-    baseapp::run::{LogLevel, RunCommand},
+    commands::node::run::{LogLevel, RunCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
 };
 

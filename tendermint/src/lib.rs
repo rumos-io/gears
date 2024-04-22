@@ -1,5 +1,3 @@
-#![warn(rust_2018_idioms)]
-
 use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 
 use ed25519_consensus::SigningKey;
@@ -11,28 +9,14 @@ use tendermint_config::{
     RpcConfig, StatesyncConfig, StorageConfig, TendermintConfig, TransferRate, TxIndexConfig,
     TxIndexer,
 };
-use tendermint_informal::{
-    block::Size,
-    chain::Id,
-    consensus::{params::ValidatorParams, Params},
-    evidence::Duration as TmDuration,
-    public_key::Algorithm,
-    validator::Info,
-    Genesis, Time,
-};
+use types::chain_id::ChainId;
 
-#[cfg(feature = "abci")]
-pub use tendermint_abci as abci;
-#[cfg(feature = "config")]
-pub use tendermint_config as config;
-#[cfg(feature = "informal")]
-pub use tendermint_informal as informal;
-#[cfg(feature = "proto")]
-pub use tendermint_proto as proto;
-#[cfg(feature = "rpc")]
-pub use tendermint_rpc as rpc;
-
+pub mod abci;
+pub mod application;
 pub mod error;
+pub mod informal;
+pub mod rpc;
+pub mod types;
 
 //TODO: comma separated list fields; check all "serialize_comma_separated_list" in TendermintConfig
 //TODO: expose write_tm_config_file args
@@ -42,7 +26,7 @@ pub fn write_keys_and_genesis(
     mut priv_validator_key_file: File,
     mut genesis_file: File,
     app_state: serde_json::Value, //TODO: make this a generic
-    chain_id: Id,
+    chain_id: ChainId,
 ) -> Result<(), Error> {
     // write node key
     let csprng = OsRng {};
@@ -73,26 +57,26 @@ pub fn write_keys_and_genesis(
             .as_bytes(),
     )?;
 
-    let validator = Info::new(public_key, 10u32.into());
+    let validator = tendermint_informal::validator::Info::new(public_key, 10u32.into());
 
     // write genesis file
-    let genesis = Genesis {
-        genesis_time: Time::now(),
-        chain_id,
+    let genesis = tendermint_informal::Genesis {
+        genesis_time: tendermint_informal::Time::now(),
+        chain_id: chain_id.into(),
         initial_height: 1,
-        consensus_params: Params {
-            block: Size {
+        consensus_params: tendermint_informal::consensus::Params {
+            block: tendermint_informal::block::Size {
                 max_bytes: 22020096,
                 max_gas: -1,
                 time_iota_ms: 1000,
             },
             evidence: tendermint_informal::evidence::Params {
                 max_age_num_blocks: 100000,
-                max_age_duration: TmDuration(Duration::new(172800, 0)),
+                max_age_duration: tendermint_informal::evidence::Duration(Duration::new(172800, 0)),
                 max_bytes: 1048576,
             },
-            validator: ValidatorParams {
-                pub_key_types: vec![Algorithm::Ed25519],
+            validator: tendermint_informal::consensus::params::ValidatorParams {
+                pub_key_types: vec![tendermint_informal::public_key::Algorithm::Ed25519],
             },
             version: None,
         },

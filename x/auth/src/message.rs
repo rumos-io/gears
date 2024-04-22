@@ -1,12 +1,12 @@
-use proto_messages::any::Any;
-use proto_types::AccAddress;
+use gears::core::{address::AccAddress, any::google::Any};
+use gears::types::tx::TxMessage;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Message {}
 
 //TODO: the fact that this implements proto_messages::cosmos::tx::v1beta1::Message  is not used
-impl proto_messages::cosmos::tx::v1beta1::message::Message for Message {
+impl TxMessage for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
         vec![]
     }
@@ -30,10 +30,10 @@ impl From<Message> for Any {
 }
 
 impl TryFrom<Any> for Message {
-    type Error = proto_messages::Error;
+    type Error = gears::core::errors::Error;
 
     fn try_from(_value: Any) -> Result<Self, Self::Error> {
-        Err(proto_messages::Error::DecodeGeneral(
+        Err(gears::core::errors::Error::DecodeGeneral(
             "message type not recognized".into(),
         ))
     }

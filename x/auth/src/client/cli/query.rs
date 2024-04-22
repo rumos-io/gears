@@ -3,15 +3,15 @@ use std::borrow::Cow;
 use bytes::Bytes;
 use clap::{Args, Subcommand};
 
-use gears::application::handlers::QueryHandler;
-use serde::{Deserialize, Serialize};
-
-use proto_messages::cosmos::{
-    auth::v1beta1::{QueryAccountRequest, QueryAccountResponse},
-    ibc::protobuf::Protobuf,
-    query::Query,
+use gears::core::Protobuf;
+use gears::core::{address::AccAddress, query::request::account::QueryAccountRequest};
+use gears::error::IBC_ENCODE_UNWRAP;
+use gears::tendermint::types::proto::Protobuf as _;
+use gears::{
+    application::handlers::client::QueryHandler,
+    types::query::{account::QueryAccountResponse, Query},
 };
-use proto_types::AccAddress;
+use serde::{Deserialize, Serialize};
 
 #[derive(Args, Debug)]
 pub struct AuthQueryCli {
@@ -45,7 +45,7 @@ impl Query for AuthQuery {
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            AuthQuery::Account(cmd) => cmd.encode_vec(),
+            AuthQuery::Account(cmd) => cmd.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
         }
     }
 }

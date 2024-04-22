@@ -1,8 +1,10 @@
-use database::Database;
-use gears::types::context::context::Context;
-use gears::x::params::ParamsSubspaceKey;
+use gears::store::database::{Database, PrefixDB};
+use gears::store::{ReadPrefixStore, StoreKey, WritePrefixStore};
+use gears::{
+    params::ParamsSubspaceKey,
+    types::context::{QueryableContext, TransactionalContext},
+};
 use serde::{Deserialize, Serialize};
-use store::StoreKey;
 
 const KEY_SEND_ENABLED: [u8; 11] = [083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100]; // "SendEnabled"
 const KEY_DEFAULT_SEND_ENABLED: [u8; 18] = [
@@ -21,16 +23,16 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 #[derive(Debug, Clone)]
 pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: gears::x::params::Keeper<SK, PSK>,
+    pub params_keeper: gears::params::Keeper<SK, PSK>,
     pub params_subspace_key: PSK,
 }
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database>(&self, ctx: &Context<'_, '_, DB, SK>) -> Params {
+    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
         let store = self
             .params_keeper
-            .get_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace(ctx, &self.params_subspace_key);
 
         let default_send_enabled: bool = String::from_utf8(
             store
@@ -47,20 +49,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database>(&self, ctx: &mut Context<'_, '_, DB, SK>, params: Params) {
+    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: Params,
+    ) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
 
         let mut store = self
             .params_keeper
-            .get_mutable_raw_subspace(ctx, &self.params_subspace_key);
+            .raw_subspace_mut(ctx, &self.params_subspace_key);
 
         store.set(
-            KEY_DEFAULT_SEND_ENABLED.into(),
-            params.default_send_enabled.to_string().into(),
+            KEY_DEFAULT_SEND_ENABLED,
+            params.default_send_enabled.to_string().into_bytes(),
         );
 
         // The send_enabled field is hard coded to the empty list for now
-        store.set(KEY_SEND_ENABLED.into(), "[]".to_string().into());
+        store.set(KEY_SEND_ENABLED, "[]".bytes());
     }
 }

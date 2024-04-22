@@ -1,18 +1,22 @@
 use std::str::FromStr;
 
-use bank::cli::query::{
-    BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse,
+use bank::{
+    cli::query::{
+        BalancesCommand, BankCommands as BankQueryCommands, BankQueryCli, BankQueryResponse,
+    },
+    types::query::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
 };
-use gaia_rs::{query::GaiaQueryResponse, GaiaCoreClient};
+use gaia_rs::{
+    client::{GaiaQueryCommands, WrappedGaiaQueryCommands},
+    query::GaiaQueryResponse,
+    GaiaCoreClient,
+};
 use gears::{
-    client::query::{run_query, QueryCommand},
+    commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+    core::address::AccAddress,
+    types::{base::coin::Coin, denom::Denom},
 };
-use proto_messages::cosmos::{
-    bank::v1beta1::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
-    base::v1beta1::Coin,
-};
-use proto_types::{AccAddress, Denom};
 use utilities::run_gaia_and_tendermint;
 
 #[path = "./utilities.rs"]
@@ -31,9 +35,9 @@ fn balances_query() -> anyhow::Result<()> {
         QueryCommand {
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             height: None,
-            inner: gaia_rs::client::GaiaQueryCommands::Bank(BankQueryCli {
+            inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
                 command: BankQueryCommands::Balances(query),
-            }),
+            })),
         },
         &GaiaCoreClient,
     )?;
@@ -62,9 +66,9 @@ fn denom_query() -> anyhow::Result<()> {
         QueryCommand {
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             height: None,
-            inner: gaia_rs::client::GaiaQueryCommands::Bank(BankQueryCli {
+            inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
                 command: BankQueryCommands::DenomMetadata,
-            }),
+            })),
         },
         &GaiaCoreClient,
     )?;
