@@ -58,12 +58,12 @@ pub struct Local<T: ApplicationInfo> {
     home: PathBuf,
 
     /// from key
-    #[arg(long, global = true, required = false)]
+    #[arg(long, short = 'f', global = true, required = false)]
     #[arg(help_heading = "Local signing options")]
     from_key: String,
 
     /// select keyring's backend
-    #[arg(long = "keyring-backend",  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
+    #[arg(long = "keyring-backend", short = 'k',  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
     #[arg(help_heading = "Local signing options")]
     keyring_backend: KeyringBackend,
 
