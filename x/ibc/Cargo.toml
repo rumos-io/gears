@@ -16,6 +16,7 @@ bytes = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 prost = { workspace = true }
+prost_012 = { package = "prost", version = "0.12" }
 schemars = { workspace = true }
 
 #utils
@@ -28,3 +29,6 @@ constcat = { workspace = true }
 tonic = { workspace = true }
 http = { workspace = true }
 axum = { workspace = true }
+
+#other
+ibc = { version = "=0.51.0", features = ["serde"] }

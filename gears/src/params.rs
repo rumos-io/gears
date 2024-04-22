@@ -13,7 +13,7 @@ pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync 
 }
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct Keeper<SK, PSK> {
     store_key: SK,
     p: PhantomData<PSK>,
 }

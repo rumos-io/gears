@@ -1,14 +1,17 @@
 use gears::{
-    ibc::{address::AccAddress, any::google::Any},
+    core::{address::AccAddress, any::google::Any},
+    //    tendermint::types::proto::consensus::Consensus,
     types::tx::TxMessage,
 };
+
+use crate::ics02_client::message::MsgCreateClient;
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub enum Message {
     ClientCreate(MsgCreateClient),
-    ClientUpdate(MsgUpdateClient),
-    ClientUpgrade(MsgUpgradeClient),
-    RecoverClient(MsgRecoverClient),
+    // ClientUpdate(MsgUpdateClient),
+    // ClientUpgrade(MsgUpgradeClient),
+    // RecoverClient(MsgRecoverClient),
 }
 
 impl TxMessage for Message {
@@ -32,7 +35,7 @@ impl From<Message> for Any {
 }
 
 impl TryFrom<Any> for Message {
-    type Error = gears::ibc::errors::Error;
+    type Error = gears::core::errors::Error;
 
     fn try_from(_value: Any) -> Result<Self, Self::Error> {
         unimplemented!()

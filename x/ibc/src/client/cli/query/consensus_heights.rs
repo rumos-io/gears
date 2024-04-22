@@ -1,9 +1,12 @@
 use clap::Args;
-
-use proto_messages::cosmos::ibc::types::core::{
-    client::context::types::proto::v1::QueryConsensusStateHeightsRequest,
-    host::identifiers::ClientId,
+use ibc::core::{
+    client::types::proto::v1::QueryConsensusStateHeightsRequest, host::types::identifiers::ClientId,
 };
+
+// use proto_messages::cosmos::ibc::types::core::{
+//     client::context::types::proto::v1::QueryConsensusStateHeightsRequest,
+//     host::identifiers::ClientId,
+// };
 
 pub(crate) const CONSESUS_HEIGHTS_URL: &str = "/ibc.core.client.v1.Query/ConsensusStateHeights";
 

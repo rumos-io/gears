@@ -1,7 +1,10 @@
 use clap::Args;
-use proto_messages::cosmos::ibc::types::core::{
-    client::context::types::proto::v1::QueryConsensusStatesRequest, host::identifiers::ClientId,
+use ibc::core::{
+    client::types::proto::v1::QueryConsensusStatesRequest, host::types::identifiers::ClientId,
 };
+// use proto_messages::cosmos::ibc::types::core::{
+//     client::context::types::proto::v1::QueryConsensusStatesRequest, host::identifiers::ClientId,
+// };
 
 pub(crate) const CONSENSUS_STATES_URL: &str = "/ibc.core.client.v1.Query/ConsensusStates";
 

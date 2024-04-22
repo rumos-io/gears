@@ -76,16 +76,16 @@ impl From<core_types::errors::Error> for AppError {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum SearchError {
-    #[error("not found")]
-    NotFound,
-    #[error("Decode error: {0}")]
-    DecodeError(String),
-}
+// #[derive(Debug, thiserror::Error)]
+// pub enum SearchError {
+//     #[error("not found")]
+//     NotFound,
+//     #[error("Decode error: {0}")]
+//     DecodeError(String),
+// }
 
-impl From<prost::DecodeError> for SearchError {
-    fn from(value: prost::DecodeError) -> Self {
-        Self::DecodeError(value.to_string())
-    }
-}
+// impl From<prost::DecodeError> for SearchError {
+//     fn from(value: prost::DecodeError) -> Self {
+//         Self::DecodeError(value.to_string())
+//     }
+// }

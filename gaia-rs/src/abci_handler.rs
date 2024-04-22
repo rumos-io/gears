@@ -22,7 +22,7 @@ pub struct GaiaABCIHandler {
         auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
     >,
     auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
-    // ibc_handler: ibc::handler::Handler<GaiaStoreKey, GaiaParamsStoreKey>,
+    ibc_abci_handler: ibc::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
         bank::Keeper<
             GaiaStoreKey,
@@ -51,22 +51,16 @@ impl GaiaABCIHandler {
             auth_keeper.clone(),
         );
 
-        // let ibc_tx_keeper = ibc::keeper::tx::TxKeeper::new(
-        //     GaiaStoreKey::Bank,
-        //     params_keeper.clone(),
-        //     GaiaParamsStoreKey::Bank,
-        // );
-
-        // let ibc_query_keeper = ibc::keeper::query::QueryKeeper::new(
-        //     GaiaStoreKey::Bank,
-        //     params_keeper,
-        //     GaiaParamsStoreKey::Bank,
-        // );
+        let ibc_keeper = ibc::keeper::Keeper::new(
+            GaiaStoreKey::IBC,
+            params_keeper.clone(),
+            GaiaParamsStoreKey::IBC,
+        );
 
         GaiaABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
-            // ibc_handler: ibc::handler::Handler::new(ibc_tx_keeper, ibc_query_keeper),
+            ibc_abci_handler: ibc::ABCIHandler::new(ibc_keeper.clone()),
             ante_handler: BaseAnteHandler::new(auth_keeper, bank_keeper),
         }
     }
@@ -94,6 +88,7 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
     ) {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
         self.auth_abci_handler.genesis(ctx, genesis.auth);
+        self.ibc_abci_handler.genesis(ctx, genesis.ibc);
     }
 
     fn query<DB: Database + Send + Sync>(

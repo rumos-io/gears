@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use bytes::Bytes;
-use database::Database;
+use gears::store::database::Database;
 use gears::types::context::query_context::QueryContext;
 use gears::types::context::QueryableContext;
 use gears::x::params::ParamsSubspaceKey;

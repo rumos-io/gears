@@ -1,13 +1,20 @@
-use gears::application::handlers::QueryHandler;
-use prost::bytes::Bytes;
-use proto_messages::cosmos::ibc::{
-    protobuf::Protobuf,
-    query::response::{
-        QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
-        QueryClientStatusResponse, QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
-        QueryConsensusStatesResponse,
-    },
+use gears::application::handlers::client::QueryHandler;
+use ibc::core::client::types::proto::v1::{
+    QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
+    QueryClientStatusResponse, QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
+    QueryConsensusStatesResponse,
 };
+//use gears::application::handlers::QueryHandler;
+use prost::bytes::Bytes;
+use prost_012::Message;
+// use proto_messages::cosmos::ibc::{
+//     protobuf::Protobuf,
+//     query::response::{
+//         QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
+//         QueryClientStatusResponse, QueryConsensusStateHeightsResponse, QueryConsensusStateResponse,
+//         QueryConsensusStatesResponse,
+//     },
+// };
 
 use super::query::{
     client_params, client_state, client_states, client_status, consensus_heights, consensus_state,

@@ -1,22 +1,30 @@
 use std::borrow::Cow;
 
 use clap::{Args, Subcommand};
-use prost::Message;
-use proto_messages::cosmos::{
-    ibc::{
-        query::response::{
-            QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
-            QueryClientStatusResponse, QueryConsensusStateHeightsResponse,
-            QueryConsensusStateResponse, QueryConsensusStatesResponse,
-        },
-        types::core::client::context::types::proto::v1::{
-            QueryClientParamsRequest, QueryClientStateRequest, QueryClientStatesRequest,
-            QueryClientStatusRequest, QueryConsensusStateHeightsRequest,
-            QueryConsensusStateRequest, QueryConsensusStatesRequest,
-        },
-    },
-    query::Query,
+use gears::types::query::Query;
+use ibc::core::client::types::proto::v1::{
+    QueryClientParamsRequest, QueryClientParamsResponse, QueryClientStateRequest,
+    QueryClientStateResponse, QueryClientStatesRequest, QueryClientStatesResponse,
+    QueryClientStatusRequest, QueryClientStatusResponse, QueryConsensusStateHeightsRequest,
+    QueryConsensusStateHeightsResponse, QueryConsensusStateRequest, QueryConsensusStateResponse,
+    QueryConsensusStatesRequest, QueryConsensusStatesResponse,
 };
+use prost_012::Message;
+// use proto_messages::cosmos::{
+//     ibc::{
+//         query::response::{
+//             QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
+//             QueryClientStatusResponse, QueryConsensusStateHeightsResponse,
+//             QueryConsensusStateResponse, QueryConsensusStatesResponse,
+//         },
+//         types::core::client::context::types::proto::v1::{
+//             QueryClientParamsRequest, QueryClientStateRequest, QueryClientStatesRequest,
+//             QueryClientStatusRequest, QueryConsensusStateHeightsRequest,
+//             QueryConsensusStateRequest, QueryConsensusStatesRequest,
+//         },
+//     },
+//     query::Query,
+// };
 use serde::{Deserialize, Serialize};
 
 use self::{

@@ -1,13 +1,12 @@
 use std::{fs::File, io::Read};
 
 use clap::Args;
+use ibc::{core::host::types::identifiers::ClientId, primitives::Signer};
 use prost::Message;
-use proto_messages::{
-    any::Any,
-    cosmos::ibc::{tx::MsgUpdateClient, types::core::host::identifiers::ClientId},
-};
-
-use crate::types::Signer;
+// use proto_messages::{
+//     any::Any,
+//     cosmos::ibc::{tx::MsgUpdateClient, types::core::host::identifiers::ClientId},
+// };
 
 /// update existing client with a client message
 #[derive(Args, Debug, Clone)]

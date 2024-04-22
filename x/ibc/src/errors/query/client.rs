@@ -1,8 +1,23 @@
-use gears::error::SearchError;
+//use gears::error::SearchError;
+use ibc::core::{client::types::error::ClientError, host::types::error::IdentifierError};
 use prost::DecodeError;
-use proto_messages::cosmos::ibc::types::core::{
-    client::error::ClientError, host::error::IdentifierError,
-};
+// use proto_messages::cosmos::ibc::types::core::{
+//     client::error::ClientError, host::error::IdentifierError,
+// };
+
+#[derive(Debug, thiserror::Error)]
+pub enum SearchError {
+    #[error("not found")]
+    NotFound,
+    #[error("Decode error: {0}")]
+    DecodeError(String),
+}
+
+impl From<prost::DecodeError> for SearchError {
+    fn from(value: prost::DecodeError) -> Self {
+        Self::DecodeError(value.to_string())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClientErrors {
