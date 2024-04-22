@@ -11,14 +11,11 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::{
+            gas::CtxGasMeter,
             query_context::QueryContext,
             tx::{mode::ExecutionMode, TxContext},
         },
-        gas::{
-            basic_meter::BasicGasMeter,
-            infinite_meter::InfiniteGasMeter,
-            {Gas, GasMeter},
-        },
+        gas::{basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter},
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -165,8 +162,6 @@ impl<
         raw: Bytes,
         mut mode: MD,
     ) -> Result<Vec<Event>, RunTxError> {
-        mode.runnable()?;
-
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
 
@@ -185,7 +180,10 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+            CtxGasMeter::new(Arc::clone(&self.block_gas_meter)),
         );
+
+        mode.runnable(&mut ctx)?;
 
         mode.run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
@@ -196,6 +194,7 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+            CtxGasMeter::new(Arc::clone(&self.block_gas_meter)),
         );
 
         let events = mode.run_msg(

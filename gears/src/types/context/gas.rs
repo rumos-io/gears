@@ -48,16 +48,26 @@ pub trait Descriptor: sealed::Sealed {
 #[derive(Debug, Clone)]
 pub struct BlockDescriptor;
 
+#[derive(Debug, Clone)]
+pub struct AnteSecp256k1Descriptor;
+
 impl Descriptor for BlockDescriptor {
     fn name() -> &'static str {
         "block gas meter"
     }
 }
 
+impl Descriptor for AnteSecp256k1Descriptor {
+    fn name() -> &'static str {
+        "ante verify: secp256k1"
+    }
+}
+
 mod sealed {
-    use super::BlockDescriptor;
+    use super::*;
 
     pub trait Sealed {}
 
     impl Sealed for BlockDescriptor {}
+    impl Sealed for AnteSecp256k1Descriptor {}
 }

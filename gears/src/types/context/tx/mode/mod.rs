@@ -2,25 +2,24 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use store_crate::{
-    database::{Database, PrefixDB},
-    StoreKey,
-};
+use store_crate::{database::Database, StoreKey};
 use tendermint::types::proto::event::Event;
 
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
-    types::{
-        context::TransactionalContext,
-        tx::{raw::TxWithRaw, TxMessage},
-    },
+    types::tx::{raw::TxWithRaw, TxMessage},
 };
 
 use self::sealed::Sealed;
 
+use super::TxContext;
+
 pub trait ExecutionMode: Sealed {
-    fn runnable(&self) -> Result<(), RunTxError>;
+    fn runnable<SK: StoreKey, DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+    ) -> Result<(), RunTxError>;
 
     fn run_ante_checks<
         SK: StoreKey,
@@ -28,10 +27,9 @@ pub trait ExecutionMode: Sealed {
         M: TxMessage,
         G: Genesis,
         AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &mut self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
     ) -> Result<(), RunTxError>;
@@ -43,10 +41,9 @@ pub trait ExecutionMode: Sealed {
         M: TxMessage,
         G: Genesis,
         AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &mut self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
     ) -> Result<Vec<Event>, RunTxError>;

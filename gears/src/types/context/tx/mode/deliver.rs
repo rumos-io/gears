@@ -1,18 +1,13 @@
 use store_crate::TransactionalMultiKVStore;
-use store_crate::{
-    database::{Database, PrefixDB},
-    StoreKey,
-};
+use store_crate::{database::Database, StoreKey};
 use tendermint::types::proto::event::Event;
 
+use crate::types::context::tx::TxContext;
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
     types::{
-        context::{
-            gas::{BlockDescriptor, CtxGasMeter},
-            TransactionalContext,
-        },
+        context::TransactionalContext,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -20,15 +15,7 @@ use crate::{
 use super::ExecutionMode;
 
 #[derive(Debug, Clone)]
-pub struct DeliverTxMode {
-    block_gas_meter: CtxGasMeter<BlockDescriptor>,
-}
-
-impl DeliverTxMode {
-    pub fn new(block_gas_meter: CtxGasMeter<BlockDescriptor>) -> Self {
-        Self { block_gas_meter }
-    }
-}
+pub struct DeliverTxMode;
 
 impl ExecutionMode for DeliverTxMode {
     fn run_msg<
@@ -38,10 +25,9 @@ impl ExecutionMode for DeliverTxMode {
         M: TxMessage,
         G: Genesis,
         AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &mut self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
     ) -> Result<Vec<Event>, RunTxError> {
@@ -64,10 +50,9 @@ impl ExecutionMode for DeliverTxMode {
         M: TxMessage,
         G: Genesis,
         AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &mut self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
     ) -> Result<(), RunTxError> // TODO: Return gasWanted
@@ -85,8 +70,11 @@ impl ExecutionMode for DeliverTxMode {
         Ok(())
     }
 
-    fn runnable(&self) -> Result<(), RunTxError> {
-        if self.block_gas_meter.is_out_of_gas() {
+    fn runnable<SK: StoreKey, DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+    ) -> Result<(), RunTxError> {
+        if ctx.block_gas_meter.is_out_of_gas() {
             Err(RunTxError::OutOfGas)
         } else {
             Ok(())

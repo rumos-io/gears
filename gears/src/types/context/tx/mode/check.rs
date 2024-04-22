@@ -1,7 +1,4 @@
-use store_crate::{
-    database::{Database, PrefixDB},
-    StoreKey,
-};
+use store_crate::{database::Database, StoreKey};
 use tendermint::types::proto::event::Event;
 
 use super::ExecutionMode;
@@ -9,7 +6,7 @@ use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
     types::{
-        context::TransactionalContext,
+        context::{tx::TxContext, TransactionalContext},
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -27,10 +24,9 @@ impl ExecutionMode for CheckTxMode {
         M: TxMessage,
         G: Genesis,
         AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &mut self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         _handler: &AH,
         _msgs: impl Iterator<Item = &'m M>,
     ) -> Result<Vec<Event>, RunTxError> {
@@ -45,10 +41,9 @@ impl ExecutionMode for CheckTxMode {
         M: TxMessage,
         G: Genesis,
         AH: ABCIHandler<M, SK, G>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &mut self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
     ) -> Result<(), RunTxError> {
@@ -59,7 +54,10 @@ impl ExecutionMode for CheckTxMode {
         result.map_err(|e| RunTxError::Custom(e.to_string()))
     }
 
-    fn runnable(&self) -> Result<(), RunTxError> {
+    fn runnable<SK: StoreKey, DB: Database>(
+        &self,
+        _ctx: &mut TxContext<'_, DB, SK>,
+    ) -> Result<(), RunTxError> {
         Ok(())
     }
 }

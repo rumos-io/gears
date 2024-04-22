@@ -199,10 +199,7 @@ impl<
     fn deliver_tx(&self, RequestDeliverTx { tx }: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
 
-        let result = self.run_tx(
-            tx.clone(),
-            DeliverTxMode::new(CtxGasMeter::new(Arc::clone(&self.block_gas_meter))),
-        );
+        let result = self.run_tx(tx.clone(), DeliverTxMode);
 
         match result {
             Ok(events) => ResponseDeliverTx {
@@ -304,6 +301,7 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
+            CtxGasMeter::new(Arc::clone(&self.block_gas_meter)),
         );
 
         self.abci_handler.begin_block(&mut ctx, request);
@@ -331,6 +329,7 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
+            CtxGasMeter::new(Arc::clone(&self.block_gas_meter)),
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
