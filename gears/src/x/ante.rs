@@ -1,5 +1,7 @@
 use crate::application::handlers::node::AnteHandlerTrait;
 use crate::crypto::keys::ReadAccAddress;
+use crate::crypto::public::PublicKey;
+use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
@@ -14,27 +16,56 @@ use crate::{
         tx::{data::TxData, metadata::Metadata, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
+use core_types::tx::signature::SignatureData;
 use core_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
+use std::str::FromStr;
 use store_crate::database::{Database, PrefixDB};
 use store_crate::StoreKey;
 
+pub trait SignGasConsumer: Clone + Sync + Send + 'static {
+    fn consume<DB, SK, T>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        pub_key: PublicKey,
+        data: &SignatureData,
+        params: &T,
+    ) -> anyhow::Result<()>;
+}
+
 #[derive(Debug, Clone)]
-pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey> {
+pub struct DefaultSignGasConsumer;
+
+impl SignGasConsumer for DefaultSignGasConsumer {
+    fn consume<DB, SK, T>(
+        &self,
+        _ctx: &mut TxContext<'_, DB, SK>,
+        _pub_key: PublicKey,
+        _data: &SignatureData,
+        _params: &T,
+    ) -> anyhow::Result<()> {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey, GC> {
     bank_keeper: BK,
     auth_keeper: AK,
+    sign_gas_consumer: GC,
     sk: PhantomData<SK>,
 }
 
-impl<SK, BK, AK> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK>
+impl<SK, BK, AK, GC: SignGasConsumer> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK, GC>
 where
     SK: StoreKey,
     BK: BankKeeper<SK>,
     AK: AuthKeeper<SK>,
+    GC: SignGasConsumer,
 {
     fn run<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
@@ -45,30 +76,39 @@ where
     }
 }
 
-impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, AK, SK> {
-    pub fn new(auth_keeper: AK, bank_keeper: BK) -> BaseAnteHandler<BK, AK, SK> {
+impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
+    BaseAnteHandler<BK, AK, SK, GC>
+{
+    pub fn new(
+        auth_keeper: AK,
+        bank_keeper: BK,
+        sign_gas_consumer: GC,
+    ) -> BaseAnteHandler<BK, AK, SK, GC> {
         BaseAnteHandler {
             bank_keeper,
             auth_keeper,
+            sign_gas_consumer,
             sk: PhantomData,
         }
     }
-    pub fn run<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-        M: TxMessage + ValueRenderer,
-    >(
+    pub fn run<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
+        //  ** ante.NewSetUpContextDecorator(),
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
+        //  ** ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
         self.deduct_fee_ante_handler(ctx, &tx.tx)?;
         self.set_pub_key_ante_handler(ctx, &tx.tx)?;
+        //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
+        self.sign_gas_consume(ctx, &tx.tx, true)
+            .map_err(|e| AppError::Custom(e.to_string()))?;
         self.sig_verification_handler(ctx, tx)?;
         self.increment_sequence_ante_handler(ctx, &tx.tx)?;
+        //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
 
         //  ** ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
@@ -81,10 +121,46 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey> BaseAnteHandler<BK, A
         // // SetPubKeyDecorator must be called before all signature verification decorators
         //  - ante.NewSetPubKeyDecorator(opts.AccountKeeper),
         //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
-        //  ** ante.NewSigGasConsumeDecorator(opts.AccountKeeper, sigGasConsumer),
+        //  ante.NewSigGasConsumeDecorator(opts.AccountKeeper, sigGasConsumer),
         //  - ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
         //  - ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
+
+        Ok(())
+    }
+
+    fn sign_gas_consume<M: TxMessage, DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        tx: &Tx<M>,
+        simulate: bool,
+    ) -> anyhow::Result<()> {
+        let auth_params = self.auth_keeper.get_auth_params(ctx);
+
+        let signatures = tx.get_signatures_data();
+        let signers_addr = tx.get_signers();
+
+        for (i, signer_addr) in signers_addr.into_iter().enumerate() {
+            let acct = self
+                .auth_keeper
+                .get_account(ctx, signer_addr)
+                .ok_or(AppError::AccountNotFound)?;
+
+            let pub_key = acct.get_public_key();
+
+            let pub_key = if simulate && pub_key.is_none() {
+                PublicKey::Secp256k1(Secp256k1PubKey::from(secp256k1::PublicKey::from_str(
+                    "035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A",
+                )?)) // TODO:NOW
+            } else {
+                pub_key.to_owned().expect("TODO Clarify this") // TODO:NOW
+            };
+
+            let sig = signatures.get(i).expect("TODO");
+
+            self.sign_gas_consumer
+                .consume(ctx, pub_key, sig, &auth_params)?;
+        }
 
         Ok(())
     }
