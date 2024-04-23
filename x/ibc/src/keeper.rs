@@ -6,7 +6,7 @@ use gears::{
 
 use crate::{
     ics02_client::Keeper as ClientKeeper, ics03_connection::Keeper as ConnectionKeeper,
-    params::IBCParamsKeeper, types::genesis::GenesisState,
+    ics04_channel::Keeper as ChannelKeeper, params::IBCParamsKeeper, types::genesis::GenesisState,
 };
 
 #[derive(Debug, Clone)]
@@ -15,6 +15,7 @@ pub struct Keeper<SK, PSK> {
     _ibc_params_keeper: IBCParamsKeeper<SK, PSK>,
     client_keeper: ClientKeeper<SK, PSK>,
     connection_keeper: ConnectionKeeper<SK, PSK>,
+    channel_keeper: ChannelKeeper<SK>,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
@@ -35,7 +36,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 params_keeper.clone(),
                 params_subspace_key.clone(),
             ),
-            connection_keeper: ConnectionKeeper::new(store_key, params_keeper, params_subspace_key),
+            connection_keeper: ConnectionKeeper::new(
+                store_key.clone(),
+                params_keeper,
+                params_subspace_key,
+            ),
+            channel_keeper: ChannelKeeper::new(store_key),
         }
     }
 
@@ -47,5 +53,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         self.client_keeper.init_genesis(ctx, genesis.client_genesis);
         self.connection_keeper
             .init_genesis(ctx, genesis.connection_genesis);
+        self.channel_keeper
+            .init_genesis(ctx, genesis.channel_genesis);
     }
 }
