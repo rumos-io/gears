@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter};
+use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter, GasRemaining};
 
 /// Basic gas meter.
 #[derive(Debug, Clone)]
@@ -24,7 +24,7 @@ impl GasMeter for BasicGasMeter {
         self.consumed
     }
 
-    fn gas_consumed_to_limit(&self) -> Gas {
+    fn gas_consumed_or_limit(&self) -> Gas {
         if self.is_past_limit() {
             self.limit
         } else {
@@ -32,11 +32,11 @@ impl GasMeter for BasicGasMeter {
         }
     }
 
-    fn gas_remaining(&self) -> Gas {
+    fn gas_remaining(&self) -> GasRemaining {
         if self.is_past_limit() {
-            Gas(0)
+            GasRemaining::None
         } else {
-            Gas(self.limit.0 - self.consumed.0)
+            GasRemaining::Some(Gas(self.limit.0 - self.consumed.0))
         }
     }
 

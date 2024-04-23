@@ -36,13 +36,19 @@ pub enum GasErrors {
 #[derive(Debug)]
 pub struct ErrorNegativeGasConsumed(pub String);
 
+pub enum GasRemaining {
+    NoLimit,
+    None,
+    Some(Gas),
+}
+
 pub trait GasMeter: Send + Sync + Debug {
     /// Returns the amount of gas that was consumed by the gas meter instance.
     fn gas_consumed(&self) -> Gas;
     /// Returns the amount of gas that was consumed by gas meter instance, or the limit if it is reached.
-    fn gas_consumed_to_limit(&self) -> Gas;
-    /// Returns the gas left in the GasMeter.
-    fn gas_remaining(&self) -> Gas;
+    fn gas_consumed_or_limit(&self) -> Gas;
+    /// Returns the gas left in the GasMeter. Returns `None` if gas meter is infinite.
+    fn gas_remaining(&self) -> GasRemaining;
     /// Returns the limit of the gas meter instance. `None` if the gas meter is infinite.
     fn limit(&self) -> Option<Gas>;
     /// Consumes the amount of gas provided.
