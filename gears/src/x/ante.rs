@@ -3,8 +3,10 @@ use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
+use crate::types::context::gas::descriptor::AnteSecp256k1Descriptor;
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
+use crate::types::gas::Gas;
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -28,12 +30,12 @@ use store_crate::database::{Database, PrefixDB};
 use store_crate::StoreKey;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
-    fn consume<DB, SK, T>(
+    fn consume<DB, SK, AP: AuthParams>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         pub_key: PublicKey,
         data: &SignatureData,
-        params: &T,
+        params: &AP,
     ) -> anyhow::Result<()>;
 }
 
@@ -41,14 +43,24 @@ pub trait SignGasConsumer: Clone + Sync + Send + 'static {
 pub struct DefaultSignGasConsumer;
 
 impl SignGasConsumer for DefaultSignGasConsumer {
-    fn consume<DB, SK, T>(
+    fn consume<DB, SK, AP: AuthParams>(
         &self,
-        _ctx: &mut TxContext<'_, DB, SK>,
-        _pub_key: PublicKey,
+        ctx: &mut TxContext<'_, DB, SK>,
+        pub_key: PublicKey,
         _data: &SignatureData,
-        _params: &T,
+        params: &AP,
     ) -> anyhow::Result<()> {
-        todo!()
+        // TODO: I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
+        match pub_key {
+            PublicKey::Secp256k1(_key) => {
+                ctx.block_gas_meter
+                    .consume_gas::<AnteSecp256k1Descriptor>(Gas::new(
+                        params.sig_verify_cost_secp256k1(),
+                    ))?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -100,6 +112,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
+        // TODO: Requires global gas meter https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/basic.go#L95
         //  ** ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
         self.deduct_fee_ante_handler(ctx, &tx.tx)?;
         self.set_pub_key_ante_handler(ctx, &tx.tx)?;

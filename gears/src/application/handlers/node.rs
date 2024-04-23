@@ -2,7 +2,10 @@ use crate::{
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::{
-        context::{init_context::InitContext, query_context::QueryContext, tx::TxContext, TransactionalContext},
+        context::{
+            init_context::InitContext, query_context::QueryContext, tx::TxContext,
+            TransactionalContext,
+        },
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -17,10 +20,7 @@ use tendermint::types::{
 };
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<
-        DB: Database,
-        M: TxMessage + ValueRenderer,
-    >(
+    fn run<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -33,9 +33,9 @@ pub trait ABCIHandler<
     G: DeserializeOwned + Clone + Send + Sync + 'static,
 >: Clone + Send + Sync + 'static
 {
-    fn run_ante_checks<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn run_ante_checks<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 

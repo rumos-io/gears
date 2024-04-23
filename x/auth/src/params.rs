@@ -32,6 +32,10 @@ impl AuthParams for Params {
     fn max_memo_characters(&self) -> u64 {
         self.max_memo_characters
     }
+
+    fn sig_verify_cost_secp256k1(&self) -> u64 {
+        self.sig_verify_cost_secp256k1
+    }
 }
 
 const KEY_MAX_MEMO_CHARACTERS: [u8; 17] = [

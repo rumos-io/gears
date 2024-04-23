@@ -9,15 +9,12 @@ use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 use crate::types::header::Header;
 
-use super::{
-    gas::{BlockDescriptor, CtxGasMeter},
-    QueryableContext, TransactionalContext,
-};
+use super::{gas::{kind::BlockMeterKind, CtxGasMeter}, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
     pub events: Vec<Event>,
-    pub block_gas_meter: CtxGasMeter<BlockDescriptor>,
+    pub block_gas_meter: CtxGasMeter<BlockMeterKind>,
 
     multi_store: &'a mut MultiStore<DB, SK>,
     height: u64,
@@ -29,7 +26,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         multi_store: &'a mut MultiStore<DB, SK>,
         height: u64,
         header: Header,
-        block_gas_meter: CtxGasMeter<BlockDescriptor>,
+        block_gas_meter: CtxGasMeter<BlockMeterKind>,
     ) -> Self {
         Self {
             events: Vec::new(),
