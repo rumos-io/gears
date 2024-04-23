@@ -1,9 +1,11 @@
 //pub type GenesisState = ibc::core::client::types::proto::v1::GenesisState;
 
+use gears::core::serializers::serialize_number_to_string;
 use ibc::core::client::types::proto::v1::{
     ClientConsensusStates, IdentifiedClientState, IdentifiedGenesisMetadata,
 };
 use serde::{Deserialize, Serialize};
+use serde_aux::field_attributes::deserialize_number_from_string;
 
 use super::params::Params;
 
@@ -22,6 +24,8 @@ pub struct GenesisState {
     /// The localhost client is automatically created at genesis.
     pub create_localhost: bool,
     /// the sequence for the next generated client identifier
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    #[serde(serialize_with = "serialize_number_to_string")]
     pub next_client_sequence: u64,
 }
 

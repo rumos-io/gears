@@ -14,6 +14,7 @@ bytes = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }
+serde-aux = { workspace = true }
 serde_json = { workspace = true }
 prost = { workspace = true }
 prost_012 = { package = "prost", version = "0.12" }

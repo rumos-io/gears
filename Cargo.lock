@@ -2265,6 +2265,7 @@ dependencies = [
  "prost 0.12.4",
  "schemars",
  "serde",
+ "serde-aux",
  "serde_json",
  "thiserror",
  "tonic 0.11.0",

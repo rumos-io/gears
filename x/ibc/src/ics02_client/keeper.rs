@@ -83,10 +83,3 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ibc_store.set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes());
     }
 }
-
-// // SetNextClientSequence sets the next client sequence to the store.
-// func (k Keeper) SetNextClientSequence(ctx sdk.Context, sequence uint64) {
-// 	store := ctx.KVStore(k.storeKey)
-// 	bz := sdk.Uint64ToBigEndian(sequence)
-// 	store.Set([]byte(types.KeyNextClientSequence), bz)
-// }
