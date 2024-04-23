@@ -1,4 +1,3 @@
-pub mod errors;
 use std::{
     fmt::Debug,
     marker::PhantomData,
@@ -7,30 +6,32 @@ use std::{
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
-    error::AppError,
+    error::{AppError, POISONED_LOCK},
     params::{Keeper, ParamsSubspaceKey},
     types::{
-        context::{
-            gas::CtxGasMeter,
-            query_context::QueryContext,
-            tx::{mode::ExecutionMode, TxContext},
-        },
-        gas::{basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter},
+        context::query_context::QueryContext,
+        gas::Gas,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
 use bytes::Bytes;
 use store_crate::{database::RocksDB, types::multi::MultiStore, QueryableMultiKVStore, StoreKey};
 use tendermint::types::{
-    chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},
     request::query::RequestQuery,
 };
 
-use self::{errors::RunTxError, genesis::Genesis, params::BaseAppParamsKeeper};
+use self::{
+    errors::RunTxError,
+    genesis::Genesis,
+    mode::{check::CheckTxMode, deliver::DeliverTxMode, ExecutionMode},
+    params::BaseAppParamsKeeper,
+};
 
 mod abci;
+pub mod errors;
 pub mod genesis;
+pub mod mode;
 mod params;
 
 #[derive(Debug, Clone)]
@@ -42,9 +43,9 @@ pub struct BaseApp<
     G: Genesis,
     AI: ApplicationInfo,
 > {
-    multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
     height: Arc<RwLock<u64>>,
-    block_gas_meter: Arc<RwLock<Box<dyn GasMeter>>>,
+    check_mode: Arc<RwLock<CheckTxMode<RocksDB, SK>>>,
+    deliver_mode: Arc<RwLock<DeliverTxMode<RocksDB, SK>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -68,7 +69,9 @@ impl<
         params_subspace_key: PSK,
         abci_handler: H,
     ) -> Self {
-        let multi_store = MultiStore::new(db);
+        let db = Arc::new(db);
+
+        let multi_store = MultiStore::new(Arc::clone(&db));
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,
             params_subspace_key,
@@ -81,18 +84,21 @@ impl<
 
         let height = multi_store.head_version().into();
         Self {
-            multi_store: Arc::new(RwLock::new(multi_store)),
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
             height: Arc::new(RwLock::new(height)),
+            check_mode: Arc::new(RwLock::new(CheckTxMode::new(
+                MultiStore::new(db),
+                Gas::new(max_gas),
+            ))),
+            deliver_mode: Arc::new(RwLock::new(DeliverTxMode::new(
+                multi_store,
+                Gas::new(max_gas),
+            ))),
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
-            block_gas_meter: match max_gas > 0 {
-                true => Arc::new(RwLock::new(Box::new(InfiniteGasMeter::default()))),
-                false => Arc::new(RwLock::new(Box::new(BasicGasMeter::new(Gas::new(max_gas))))),
-            },
         }
     }
 
@@ -116,9 +122,10 @@ impl<
     }
 
     fn get_last_commit_hash(&self) -> [u8; 32] {
-        self.multi_store
+        self.deliver_mode // TODO:NOW Is this correct mode?
             .read()
-            .expect("RwLock will not be poisoned")
+            .expect(POISONED_LOCK)
+            .multi_store
             .head_commit_hash()
     }
 
@@ -133,11 +140,8 @@ impl<
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;
 
-        let multi_store = self
-            .multi_store
-            .read()
-            .expect("RwLock will not be poisoned");
-        let ctx = QueryContext::new(&multi_store, version)?;
+        let mode = self.deliver_mode.read().expect(POISONED_LOCK); // TODO:NOW Is this correct mode?
+        let ctx = QueryContext::new(&mode.multi_store, version)?;
 
         self.abci_handler.query(&ctx, request.clone())
     }
@@ -157,10 +161,10 @@ impl<
         Ok(())
     }
 
-    fn run_tx<MD: ExecutionMode>(
+    fn run_tx<MD: ExecutionMode<RocksDB, SK>>(
         &self,
         raw: Bytes,
-        mut mode: MD,
+        _mode: &mut MD,
     ) -> Result<Vec<Event>, RunTxError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
@@ -168,41 +172,34 @@ impl<
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
             .map_err(|e| RunTxError::Validation(e.to_string()))?;
 
-        let mut multi_store = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
+        // TODO:NOW
+        // let mut ctx = mode.build_ctx(
+        //     self.get_block_height(),
+        //     self.get_block_header()
+        //         .expect("block header is set in begin block")
+        //         .try_into()
+        //         .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+        // );
 
-        let mut ctx: TxContext<'_, _, _> = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            CtxGasMeter::new(Arc::clone(&self.block_gas_meter)),
-        );
+        // mode.runnable(&mut ctx)?;
 
-        mode.runnable(&mut ctx)?;
+        // mode.run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
-        mode.run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
+        // let mut ctx = mode.build_ctx(
+        //     self.get_block_height(),
+        //     self.get_block_header()
+        //         .expect("block header is set in begin block")
+        //         .try_into()
+        //         .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
+        // );
 
-        let mut ctx: TxContext<'_, _, _> = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-            CtxGasMeter::new(Arc::clone(&self.block_gas_meter)),
-        );
+        // let events = mode.run_msg(
+        //     &mut ctx,
+        //     &self.abci_handler,
+        //     tx_with_raw.tx.get_msgs().iter(),
+        // )?;
 
-        let events = mode.run_msg(
-            &mut ctx,
-            &self.abci_handler,
-            tx_with_raw.tx.get_msgs().iter(),
-        )?;
-
-        Ok(events)
+        // Ok(events)
+        Ok(Vec::new())
     }
 }

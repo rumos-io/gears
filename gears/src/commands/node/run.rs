@@ -95,10 +95,8 @@ pub fn run<
 
     info!("Using directory {} for config and data", home.display());
 
-    let mut db_dir = home.clone();
-    db_dir.push("data");
-    db_dir.push("application.db");
-    let db = RocksDB::new(db_dir)?;
+    let db_dir = home.join("data");
+    let db = RocksDB::new(db_dir.join("application.db"))?;
 
     let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
 

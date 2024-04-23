@@ -4,8 +4,20 @@ pub mod basic_meter;
 pub mod config;
 /// Module for infinite gas meter.
 pub mod infinite_meter;
+// Different descriptor for gas meter
+pub mod descriptor;
+// Kinds of gas meters
+pub mod kind;
 
 use std::fmt::Debug;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, RwLock},
+};
+
+use crate::error::POISONED_LOCK;
+
+use self::{descriptor::MeterDescriptor, kind::MeterKind};
 
 #[no_link]
 extern crate derive_more;
@@ -42,7 +54,7 @@ pub enum GasRemaining {
     Some(Gas),
 }
 
-pub trait GasMeter: Send + Sync + Debug {
+pub trait InnerGasMeter: Send + Sync + Debug {
     /// Returns the amount of gas that was consumed by the gas meter instance.
     fn gas_consumed(&self) -> Gas;
     /// Returns the amount of gas that was consumed by gas meter instance, or the limit if it is reached.
@@ -67,4 +79,48 @@ pub trait GasMeter: Send + Sync + Debug {
     fn is_past_limit(&self) -> bool;
     /// Returns true if the amount of gas consumed by the gas meter instance is above or equal to the limit, false otherwise.
     fn is_out_of_gas(&self) -> bool;
+}
+
+/// Wrapper around any gas meter which prevents usage of gas over limit with type system
+#[derive(Debug, Clone)]
+pub struct GasMeter<DS> {
+    pub(crate) meter: Arc<RwLock<Box<dyn InnerGasMeter>>>, // TODO: Smth other?
+    _descriptor: PhantomData<DS>,
+}
+
+impl<DS> GasMeter<DS> {
+    pub fn new(meter: Arc<RwLock<Box<dyn InnerGasMeter>>>) -> Self {
+        Self {
+            meter,
+            _descriptor: PhantomData,
+        }
+    }
+}
+
+impl<DS: MeterKind> GasMeter<DS> {
+    pub fn consume_to_limit<MD: MeterDescriptor>(&mut self) -> Result<(), GasErrors> {
+        let mut lock = self.meter.write().expect(POISONED_LOCK);
+
+        let gas = lock.gas_consumed_or_limit();
+        lock.consume_gas(gas, MD::name().to_owned())
+    }
+
+    pub fn consume_gas<MD: MeterDescriptor>(&mut self, amount: Gas) -> Result<(), GasErrors> {
+        self.meter
+            .write()
+            .expect(POISONED_LOCK)
+            .consume_gas(amount, MD::name().to_owned())
+    }
+
+    pub fn is_out_of_gas(&self) -> bool {
+        self.meter.read().expect(POISONED_LOCK).is_out_of_gas()
+    }
+
+    pub fn limit(&self) -> Option<Gas> {
+        self.meter.read().expect(POISONED_LOCK).limit()
+    }
+
+    pub fn gas_remaining(&self) -> GasRemaining {
+        self.meter.read().expect(POISONED_LOCK).gas_remaining()
+    }
 }

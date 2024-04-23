@@ -3,9 +3,9 @@ use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
 use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
-use crate::types::context::gas::descriptor::AnteSecp256k1Descriptor;
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
+use crate::types::gas::descriptor::AnteSecp256k1Descriptor;
 use crate::types::gas::Gas;
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
@@ -108,7 +108,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
-        //  ** ante.NewSetUpContextDecorator(),
+        // ante.NewSetUpContextDecorator(), // WE not going to implement this.
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
@@ -123,7 +123,6 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         self.increment_sequence_ante_handler(ctx, &tx.tx)?;
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
 
-        //  ** ante.NewSetUpContextDecorator(),
         //  - ante.NewRejectExtensionOptionsDecorator(), // Covered in tx parsing code
         //  - NewMempoolFeeDecorator(opts.BypassMinFeeMsgTypes), // NOT USED FOR DELIVER_TX
         //  - ante.NewValidateBasicDecorator(),

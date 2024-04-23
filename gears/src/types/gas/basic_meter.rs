@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter, GasRemaining};
+use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasRemaining, InnerGasMeter};
 
 /// Basic gas meter.
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ impl BasicGasMeter {
     }
 }
 
-impl GasMeter for BasicGasMeter {
+impl InnerGasMeter for BasicGasMeter {
     fn gas_consumed(&self) -> Gas {
         self.consumed
     }

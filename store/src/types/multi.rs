@@ -17,8 +17,8 @@ pub struct MultiStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
-    pub fn new(db: DB) -> Self {
-        let db = Arc::new(db);
+    pub fn new(db: Arc<DB>) -> Self {
+        // let db = Arc::new(db);
         let mut store_infos = vec![];
         let mut stores = HashMap::new();
         let mut head_version = 0;
