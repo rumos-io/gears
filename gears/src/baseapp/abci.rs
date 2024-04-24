@@ -7,7 +7,7 @@ use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::Gas;
 use crate::types::tx::TxMessage;
-use crate::{application::handlers::node::ABCIHandler, types::context::init_context::InitContext};
+use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
 use store_crate::{StoreKey, TransactionalMultiKVStore};

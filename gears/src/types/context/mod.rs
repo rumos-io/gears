@@ -4,8 +4,8 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-pub mod init_context;
-pub mod query_context;
+pub mod init;
+pub mod query;
 pub mod tx;
 
 pub trait QueryableContext<DB: Database, SK> {

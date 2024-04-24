@@ -6,8 +6,8 @@ use crate::{
 };
 use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::context::init_context::InitContext;
-use gears::types::context::query_context::QueryContext;
+use gears::types::context::init::InitContext;
+use gears::types::context::query::QueryContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
 use gears::{config::Config, params::Keeper as ParamsKeeper, types::context::TransactionalContext};

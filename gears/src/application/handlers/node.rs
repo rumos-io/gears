@@ -3,7 +3,7 @@ use crate::{
     signing::renderer::value_renderer::ValueRenderer,
     types::{
         context::{
-            init_context::InitContext, query_context::QueryContext, tx::TxContext,
+            init::InitContext, query::QueryContext, tx::TxContext,
             TransactionalContext,
         },
         tx::{raw::TxWithRaw, TxMessage},

@@ -9,7 +9,7 @@ use crate::{
     error::{AppError, POISONED_LOCK},
     params::{Keeper, ParamsSubspaceKey},
     types::{
-        context::query_context::QueryContext,
+        context::query::QueryContext,
         gas::{descriptor::BlockDescriptor, Gas},
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
