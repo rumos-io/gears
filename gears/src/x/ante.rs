@@ -6,7 +6,8 @@ use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRe
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::AnteSecp256k1Descriptor;
-use crate::types::gas::Gas;
+use crate::types::gas::kind::TxMeterKind;
+use crate::types::gas::{Gas, GasMeter};
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -30,9 +31,9 @@ use store_crate::database::{Database, PrefixDB};
 use store_crate::StoreKey;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
-    fn consume<DB, SK, AP: AuthParams>(
+    fn consume<AP: AuthParams>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        gas_meter: &mut GasMeter<TxMeterKind>,
         pub_key: PublicKey,
         data: &SignatureData,
         params: &AP,
@@ -43,9 +44,9 @@ pub trait SignGasConsumer: Clone + Sync + Send + 'static {
 pub struct DefaultSignGasConsumer;
 
 impl SignGasConsumer for DefaultSignGasConsumer {
-    fn consume<DB, SK, AP: AuthParams>(
+    fn consume<AP: AuthParams>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        gas_meter: &mut GasMeter<TxMeterKind>,
         pub_key: PublicKey,
         _data: &SignatureData,
         params: &AP,
@@ -53,10 +54,9 @@ impl SignGasConsumer for DefaultSignGasConsumer {
         // TODO: I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
         match pub_key {
             PublicKey::Secp256k1(_key) => {
-                ctx.block_gas_meter
-                    .consume_gas::<AnteSecp256k1Descriptor>(Gas::new(
-                        params.sig_verify_cost_secp256k1(),
-                    ))?;
+                gas_meter.consume_gas::<AnteSecp256k1Descriptor>(Gas::new(
+                    params.sig_verify_cost_secp256k1(),
+                ))?;
             }
         }
 
@@ -108,7 +108,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
-        // ante.NewSetUpContextDecorator(), // WE not going to implement this.
+        // ante.NewSetUpContextDecorator(), // WE not going to implement this in ante. Some logic should be in application
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
@@ -171,7 +171,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             let sig = signatures.get(i).expect("TODO");
 
             self.sign_gas_consumer
-                .consume(ctx, pub_key, sig, &auth_params)?;
+                .consume(&mut ctx.gas_meter, pub_key, sig, &auth_params)?;
         }
 
         Ok(())
