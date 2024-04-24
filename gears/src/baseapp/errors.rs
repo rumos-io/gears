@@ -1,3 +1,5 @@
+use crate::types::gas::GasErrors;
+
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RunTxError {
     #[error("no block gas left to run tx")]
@@ -6,6 +8,8 @@ pub enum RunTxError {
     TxParseError(String),
     #[error("Message validation error: {0}")]
     Validation(String),
+    #[error("Gas errors: {0}")]
+    GasErrors( #[from] GasErrors),
     #[error("Custom error: {0}")]
     Custom(String),
 }

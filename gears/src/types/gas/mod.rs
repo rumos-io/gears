@@ -50,7 +50,7 @@ impl Gas {
     pub const MAX_GAS: Gas = Gas::new(u64::MAX);
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum GasErrors {
     #[error("Out of gas: {0}")]
     ErrorOutOfGas(String),
@@ -116,11 +116,10 @@ impl<DS: MeterKind> GasMeter<DS> {
         let _ = std::mem::replace(&mut *self.meter.write().expect("Unreachable poison"), meter);
     }
 
-    pub fn consume_to_limit<MD: MeterDescriptor>(&mut self) -> Result<(), GasErrors> {
-        let mut lock = self.meter.write().expect(POISONED_LOCK);
+    pub fn consumed_or_limit(&mut self) -> Gas {
+        let lock = self.meter.write().expect(POISONED_LOCK);
 
-        let gas = lock.gas_consumed_or_limit();
-        lock.consume_gas(gas, MD::name().to_owned())
+        lock.gas_consumed_or_limit()
     }
 
     pub fn consume_gas<MD: MeterDescriptor>(&mut self, amount: Gas) -> Result<(), GasErrors> {

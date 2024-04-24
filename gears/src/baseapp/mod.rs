@@ -10,7 +10,7 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::query_context::QueryContext,
-        gas::Gas,
+        gas::{descriptor::BlockDescriptor, Gas},
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
     },
@@ -185,6 +185,7 @@ impl<
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
+        // let gas_wanted = ctx.gas_meter.limit(); // TODO:NOW What to do with that?
 
         let mut ctx = mode.build_ctx(height, &header, &tx_with_raw);
 
@@ -193,6 +194,9 @@ impl<
             &self.abci_handler,
             tx_with_raw.tx.get_msgs().iter(),
         )?;
+
+        ctx.block_gas_meter
+            .consume_gas::<BlockDescriptor>(ctx.gas_meter.consumed_or_limit())?;
 
         Ok(events)
     }
