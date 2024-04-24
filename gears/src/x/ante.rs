@@ -165,7 +165,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                     "035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A",
                 )?)) // TODO:NOW
             } else {
-                pub_key.to_owned().expect("TODO Clarify this") // TODO:NOW
+                pub_key.expect("TODO Clarify this").to_owned() // TODO:NOW
             };
 
             let sig = signatures.get(i).expect("TODO");
@@ -352,7 +352,6 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
 
             let public_key = acct
                 .get_public_key()
-                .as_ref()
                 .expect("account pub keys are set in set_pub_key_ante_handler"); //TODO: but can't they be set to None?
 
             let sign_bytes = match &signature_data.mode_info {

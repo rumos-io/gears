@@ -99,8 +99,8 @@ impl<M: TxMessage> Tx<M> {
         &self.body.memo
     }
 
-    pub fn get_fee(&self) -> &Option<SendCoins> {
-        &self.auth_info.fee.amount
+    pub fn get_fee(&self) -> Option<&SendCoins> {
+        self.auth_info.fee.amount.as_ref()
     }
 
     pub fn get_fee_payer(&self) -> &AccAddress {
@@ -112,11 +112,11 @@ impl<M: TxMessage> Tx<M> {
         }
     }
 
-    pub fn get_public_keys(&self) -> Vec<&Option<PublicKey>> {
+    pub fn get_public_keys(&self) -> Vec<Option<&PublicKey>> {
         self.auth_info
             .signer_infos
             .iter()
-            .map(|si| &si.public_key)
+            .map(|si| si.public_key.as_ref())
             .collect()
     }
 }

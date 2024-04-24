@@ -129,10 +129,10 @@ pub enum Account {
 }
 
 impl Account {
-    pub fn get_public_key(&self) -> &Option<PublicKey> {
+    pub fn get_public_key(&self) -> Option<&PublicKey> {
         match self {
-            Account::Base(acct) => &acct.pub_key,
-            Account::Module(acct) => &acct.base_account.pub_key,
+            Account::Base(acct) => acct.pub_key.as_ref(),
+            Account::Module(acct) => acct.base_account.pub_key.as_ref(),
         }
     }
 
