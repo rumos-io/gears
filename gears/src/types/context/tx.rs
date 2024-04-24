@@ -6,7 +6,10 @@ use store_crate::{
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 use crate::types::{
-    gas::{kind::BlockMeterKind, GasMeter},
+    gas::{
+        kind::{BlockMeterKind, TxMeterKind},
+        GasMeter,
+    },
     header::Header,
 };
 
@@ -16,7 +19,7 @@ use super::{QueryableContext, TransactionalContext};
 pub struct TxContext<'a, DB, SK> {
     pub events: Vec<Event>,
     pub block_gas_meter: GasMeter<BlockMeterKind>,
-    // pub gas_meter: GasMeter<GasMeterKind>,
+    // pub gas_meter: GasMeter<TxMeterKind>,
     multi_store: &'a mut MultiStore<DB, SK>,
     height: u64,
     header: Header,
@@ -28,7 +31,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         height: u64,
         header: Header,
         block_gas_meter: GasMeter<BlockMeterKind>,
-        // gas_meter: GasMeter<GasMeterKind>,
+        // gas_meter: GasMeter<TxMeterKind>,
     ) -> Self {
         Self {
             events: Vec::new(),

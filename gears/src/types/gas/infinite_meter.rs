@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasRemaining, InnerGasMeter};
+use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasRemaining, PlainGasMeter};
 
 /// Gas meter without consumption limit
 #[derive(Debug, Clone)]
@@ -21,7 +21,7 @@ impl InfiniteGasMeter {
     }
 }
 
-impl InnerGasMeter for InfiniteGasMeter {
+impl PlainGasMeter for InfiniteGasMeter {
     fn gas_consumed(&self) -> Gas {
         self.consumed
     }

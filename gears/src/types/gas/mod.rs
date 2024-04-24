@@ -54,7 +54,7 @@ pub enum GasRemaining {
     Some(Gas),
 }
 
-pub trait InnerGasMeter: Send + Sync + Debug {
+pub trait PlainGasMeter: Send + Sync + Debug {
     /// Returns the amount of gas that was consumed by the gas meter instance.
     fn gas_consumed(&self) -> Gas;
     /// Returns the amount of gas that was consumed by gas meter instance, or the limit if it is reached.
@@ -84,12 +84,12 @@ pub trait InnerGasMeter: Send + Sync + Debug {
 /// Wrapper around any gas meter which prevents usage of gas over limit with type system
 #[derive(Debug, Clone)]
 pub struct GasMeter<DS> {
-    pub(crate) meter: Arc<RwLock<Box<dyn InnerGasMeter>>>, // TODO: Smth other?
+    pub(crate) meter: Arc<RwLock<Box<dyn PlainGasMeter>>>, // TODO: Smth other?
     _descriptor: PhantomData<DS>,
 }
 
 impl<DS> GasMeter<DS> {
-    pub fn new(meter: Arc<RwLock<Box<dyn InnerGasMeter>>>) -> Self {
+    pub fn new(meter: Arc<RwLock<Box<dyn PlainGasMeter>>>) -> Self {
         Self {
             meter,
             _descriptor: PhantomData,
