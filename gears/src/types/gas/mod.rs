@@ -84,7 +84,7 @@ pub trait PlainGasMeter: Send + Sync + Debug {
 /// Wrapper around any gas meter which prevents usage of gas over limit with type system
 #[derive(Debug, Clone)]
 pub struct GasMeter<DS> {
-    pub(crate) meter: Arc<RwLock<Box<dyn PlainGasMeter>>>, // TODO: Smth other?
+    meter: Arc<RwLock<Box<dyn PlainGasMeter>>>, // TODO: Smth other?
     _descriptor: PhantomData<DS>,
 }
 
@@ -98,6 +98,11 @@ impl<DS> GasMeter<DS> {
 }
 
 impl<DS: MeterKind> GasMeter<DS> {
+    pub fn replace_meter(&mut self, meter: Box<dyn PlainGasMeter>) {
+        self.meter.clear_poison(); // We replace gas meter so we shouldn't worry about poison
+        let _ = std::mem::replace(&mut *self.meter.write().expect("Unreachable poison"), meter);
+    }
+
     pub fn consume_to_limit<MD: MeterDescriptor>(&mut self) -> Result<(), GasErrors> {
         let mut lock = self.meter.write().expect(POISONED_LOCK);
 

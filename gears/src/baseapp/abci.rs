@@ -283,10 +283,10 @@ impl<
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
             // TODO:NOW Move this logic to `new` method?
-            *mode.block_gas_meter.meter.write().expect(POISONED_LOCK) = match max_gas > 0 {
+            mode.block_gas_meter.replace_meter(match max_gas > 0 {
                 true => Box::new(BasicGasMeter::new(Gas::new(max_gas))),
                 false => Box::new(InfiniteGasMeter::default()),
-            };
+            });
         }
 
         let meter = mode.block_gas_meter.clone();
