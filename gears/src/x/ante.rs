@@ -51,7 +51,7 @@ impl SignGasConsumer for DefaultSignGasConsumer {
         _data: &SignatureData,
         params: &AP,
     ) -> anyhow::Result<()> {
-        // TODO: I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
+        // TODO:NOW I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
         match pub_key {
             PublicKey::Secp256k1(_key) => {
                 gas_meter.consume_gas::<AnteSecp256k1Descriptor>(Gas::new(
