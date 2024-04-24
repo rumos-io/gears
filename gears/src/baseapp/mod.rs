@@ -11,12 +11,14 @@ use crate::{
     types::{
         context::query_context::QueryContext,
         gas::Gas,
+        header::Header,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
 use bytes::Bytes;
 use store_crate::{database::RocksDB, types::multi::MultiStore, QueryableMultiKVStore, StoreKey};
 use tendermint::types::{
+    chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},
     request::query::RequestQuery,
 };
@@ -164,7 +166,7 @@ impl<
     fn run_tx<MD: ExecutionMode<RocksDB, SK>>(
         &self,
         raw: Bytes,
-        _mode: &mut MD,
+        mode: &mut MD,
     ) -> Result<Vec<Event>, RunTxError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
@@ -172,34 +174,24 @@ impl<
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
             .map_err(|e| RunTxError::Validation(e.to_string()))?;
 
-        // TODO:NOW
-        // let mut ctx = mode.build_ctx(
-        //     self.get_block_height(),
-        //     self.get_block_header()
-        //         .expect("block header is set in begin block")
-        //         .try_into()
-        //         .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-        // );
+        let height = self.get_block_height();
+        let header: Header = self
+            .get_block_header()
+            .expect("block header is set in begin block")
+            .try_into()
+            .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?;
 
-        // mode.runnable(&mut ctx)?;
+        mode.runnable(height, &header)?;
 
-        // mode.run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
+        mode.run_ante_checks(&self.abci_handler, &tx_with_raw, height, &header)?;
 
-        // let mut ctx = mode.build_ctx(
-        //     self.get_block_height(),
-        //     self.get_block_header()
-        //         .expect("block header is set in begin block")
-        //         .try_into()
-        //         .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?,
-        // );
+        let events = mode.run_msg(
+            &self.abci_handler,
+            tx_with_raw.tx.get_msgs().iter(),
+            height,
+            &header,
+        )?;
 
-        // let events = mode.run_msg(
-        //     &mut ctx,
-        //     &self.abci_handler,
-        //     tx_with_raw.tx.get_msgs().iter(),
-        // )?;
-
-        // Ok(events)
-        Ok(Vec::new())
+        Ok(events)
     }
 }

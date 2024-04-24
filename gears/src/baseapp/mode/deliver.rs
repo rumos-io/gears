@@ -43,13 +43,16 @@ impl<DB: Database, SK: StoreKey> DeliverTxMode<DB, SK> {
 impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for DeliverTxMode<DB, SK> {
     fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         &mut self,
-        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
+        height: u64,
+        header: &Header,
     ) -> Result<Vec<Event>, RunTxError> {
+        let mut ctx = self.build_ctx(height, header);
+
         for msg in msgs {
             handler
-                .tx(ctx, msg)
+                .tx(&mut ctx, msg)
                 .inspect_err(|_| ctx.multi_store_mut().tx_caches_clear())
                 .map_err(|e| RunTxError::Custom(e.to_string()))?;
         }
@@ -62,12 +65,14 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
 
     fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         &mut self,
-        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
-    ) -> Result<(), RunTxError> // TODO: Return gasWanted
-    {
-        match handler.run_ante_checks(ctx, tx_with_raw) {
+        height: u64,
+        header: &Header,
+    ) -> Result<(), RunTxError> {
+        let mut ctx = self.build_ctx(height, header);
+
+        match handler.run_ante_checks(&mut ctx, tx_with_raw) {
             Ok(_) => {
                 ctx.multi_store_mut().tx_caches_write_then_clear();
             }
@@ -80,7 +85,9 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         Ok(())
     }
 
-    fn runnable(&self, ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
+    fn runnable(&mut self, height: u64, header: &Header) -> Result<(), RunTxError> {
+        let ctx = self.build_ctx(height, header);
+
         if ctx.block_gas_meter.is_out_of_gas() {
             Err(RunTxError::OutOfGas)
         } else {
@@ -88,11 +95,11 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         }
     }
 
-    fn build_ctx(&mut self, height: u64, header: Header) -> TxContext<'_, DB, SK> {
+    fn build_ctx(&mut self, height: u64, header: &Header) -> TxContext<'_, DB, SK> {
         TxContext::new(
             &mut self.multi_store,
             height,
-            header,
+            header.clone(),
             self.block_gas_meter.clone(),
         )
     }

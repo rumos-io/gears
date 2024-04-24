@@ -41,10 +41,13 @@ impl<DB: Database, SK: StoreKey> CheckTxMode<DB, SK> {
 impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
     fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         &mut self,
-        ctx: &mut TxContext<'_, DB, SK>,
         _handler: &AH,
         _msgs: impl Iterator<Item = &'m M>,
+        height: u64,
+        header: &Header,
     ) -> Result<Vec<Event>, RunTxError> {
+        let mut ctx = self.build_ctx(height, header);
+
         ctx.multi_store_mut().tx_caches_clear();
 
         Ok(ctx.events_drain())
@@ -52,26 +55,29 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
 
     fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         &mut self,
-        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
+        height: u64,
+        header: &Header,
     ) -> Result<(), RunTxError> {
-        let result = handler.run_ante_checks(ctx, tx_with_raw);
+        let mut ctx = self.build_ctx(height, header);
+
+        let result = handler.run_ante_checks(&mut ctx, tx_with_raw);
 
         ctx.multi_store_mut().tx_caches_clear();
 
         result.map_err(|e| RunTxError::Custom(e.to_string()))
     }
 
-    fn runnable(&self, _ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
+    fn runnable(&mut self, _heigh: u64, _: &Header) -> Result<(), RunTxError> {
         Ok(())
     }
 
-    fn build_ctx(&mut self, height: u64, header: Header) -> TxContext<'_, DB, SK> {
+    fn build_ctx(&mut self, height: u64, header: &Header) -> TxContext<'_, DB, SK> {
         TxContext::new(
             &mut self.multi_store,
             height,
-            header,
+            header.clone(),
             self.block_gas_meter.clone(),
         )
     }

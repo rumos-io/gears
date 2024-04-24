@@ -18,22 +18,24 @@ use crate::{
 use self::sealed::Sealed;
 
 pub trait ExecutionMode<DB: Database, SK: StoreKey>: Sealed {
-    fn runnable(&self, ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;
+    fn runnable(&mut self, height: u64, header: &Header) -> Result<(), RunTxError>;
 
-    fn build_ctx(&mut self, height: u64, header: Header) -> TxContext<'_, DB, SK>;
+    fn build_ctx(&mut self, height: u64, header: &Header) -> TxContext<'_, DB, SK>;
 
     fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         &mut self,
-        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
+        height: u64,
+        header: &Header,
     ) -> Result<(), RunTxError>;
 
     fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         &mut self,
-        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
+        height: u64,
+        header: &Header,
     ) -> Result<Vec<Event>, RunTxError>;
 }
 
