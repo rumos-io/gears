@@ -54,16 +54,20 @@ impl From<TxRaw> for inner::TxRaw {
 pub struct TxWithRaw<M> {
     pub tx: Tx<M>,
     pub raw: TxRaw,
+    pub tx_len: usize,
 }
 
 impl<M: TxMessage> TxWithRaw<M> {
     pub fn from_bytes(raw: Bytes) -> Result<Self, Error> {
+        let tx_len = raw.len();
+
         let tx = Tx::decode(raw.clone()).map_err(|e| Error::DecodeGeneral(format!("{}", e)))?;
 
         let raw = inner::TxRaw::decode(raw).map_err(|e| Error::DecodeGeneral(format!("{}", e)))?;
         Ok(TxWithRaw {
             tx,
             raw: raw.into(),
+            tx_len,
         })
     }
 }

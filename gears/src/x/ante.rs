@@ -5,7 +5,7 @@ use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
-use crate::types::gas::descriptor::AnteSecp256k1Descriptor;
+use crate::types::gas::descriptor::{AnteSecp256k1Descriptor, TxSizeDescriptor};
 use crate::types::gas::kind::TxMeterKind;
 use crate::types::gas::{Gas, GasMeter};
 use crate::x::keepers::auth::AuthKeeper;
@@ -108,16 +108,17 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
+        // Note: we currently don't have simulate mode at all, so some methods receive hardcoded values for this mode
         // ante.NewSetUpContextDecorator(), // WE not going to implement this in ante. Some logic should be in application
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
-        // TODO: Requires global gas meter https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/basic.go#L95
-        //  ** ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
+        self.consume_gas_for_tx_size(ctx, tx, false)
+            .map_err(|e| AppError::Custom(e.to_string()))?;
         self.deduct_fee_ante_handler(ctx, &tx.tx)?;
         self.set_pub_key_ante_handler(ctx, &tx.tx)?;
         //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
-        self.sign_gas_consume(ctx, &tx.tx, true)
+        self.sign_gas_consume(ctx, &tx.tx, false)
             .map_err(|e| AppError::Custom(e.to_string()))?;
         self.sig_verification_handler(ctx, tx)?;
         self.increment_sequence_ante_handler(ctx, &tx.tx)?;
@@ -128,7 +129,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         //  - ante.NewValidateBasicDecorator(),
         //  - ante.NewTxTimeoutHeightDecorator(),
         //  - ante.NewValidateMemoDecorator(opts.AccountKeeper),
-        //  ** ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
+        //  - ante.NewConsumeGasForTxSizeDecorator(opts.AccountKeeper),
         //  - ante.NewDeductFeeDecorator(opts.AccountKeeper, opts.BankKeeper, opts.FeegrantKeeper),
         // // SetPubKeyDecorator must be called before all signature verification decorators
         //  - ante.NewSetPubKeyDecorator(opts.AccountKeeper),
@@ -137,6 +138,30 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         //  - ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
         //  - ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
+
+        Ok(())
+    }
+
+    fn consume_gas_for_tx_size<M: TxMessage, DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        TxWithRaw {
+            tx: _,
+            raw: _,
+            tx_len,
+        }: &TxWithRaw<M>,
+        _simulate: bool,
+    ) -> anyhow::Result<()> {
+        let params = self.auth_keeper.get_auth_params(ctx);
+
+        ctx.gas_meter.consume_gas::<TxSizeDescriptor>(
+            Gas::new(*tx_len as u64) * params.tx_cost_per_byte(),
+        )?;
+
+        // TODO:NOW https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/basic.go#L97-L140
+        // if simulate {
+
+        // }
 
         Ok(())
     }

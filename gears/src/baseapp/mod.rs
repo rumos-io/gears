@@ -181,15 +181,17 @@ impl<
             .try_into()
             .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?;
 
-        mode.runnable(height, &header)?;
+        let mut ctx = mode.build_ctx(height, &header, &tx_with_raw);
 
-        mode.run_ante_checks(&self.abci_handler, &tx_with_raw, height, &header)?;
+        MD::runnable(&mut ctx)?;
+        MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
-        let events = mode.run_msg(
+        let mut ctx = mode.build_ctx(height, &header, &tx_with_raw);
+
+        let events = MD::run_msg(
+            &mut ctx,
             &self.abci_handler,
             tx_with_raw.tx.get_msgs().iter(),
-            height,
-            &header,
         )?;
 
         Ok(events)

@@ -22,10 +22,23 @@ use self::{descriptor::MeterDescriptor, kind::MeterKind};
 #[no_link]
 extern crate derive_more;
 
-use derive_more::{Add, Deref, Display, From};
+use derive_more::{Add, Deref, Display, From, Mul};
 
 #[derive(
-    Copy, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, From, Add, Display, Deref,
+    Copy,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    From,
+    Add,
+    Mul,
+    Display,
+    Deref,
 )]
 pub struct Gas(u64);
 

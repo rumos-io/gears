@@ -5,11 +5,12 @@ use store_crate::TransactionalMultiKVStore;
 use store_crate::{database::Database, StoreKey};
 use tendermint::types::proto::event::Event;
 
+use crate::types::auth::fee::Fee;
 use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockMeterKind;
-use crate::types::gas::{Gas, GasMeter};
+use crate::types::gas::{Gas, GasMeter, PlainGasMeter};
 use crate::types::header::Header;
 use crate::{
     application::handlers::node::ABCIHandler,
@@ -38,21 +39,25 @@ impl<DB: Database, SK: StoreKey> DeliverTxMode<DB, SK> {
             multi_store,
         }
     }
+
+    pub(crate) fn build_tx_gas_meter(fee: &Fee, block_height: u64) -> Box<dyn PlainGasMeter> {
+        if block_height == 0 {
+            Box::new(InfiniteGasMeter::default())
+        } else {
+            Box::new(BasicGasMeter::new(Gas::new(fee.gas_limit)))
+        }
+    }
 }
 
 impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for DeliverTxMode<DB, SK> {
     fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        &mut self,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
-        height: u64,
-        header: &Header,
     ) -> Result<Vec<Event>, RunTxError> {
-        let mut ctx = self.build_ctx(height, header);
-
         for msg in msgs {
             handler
-                .tx(&mut ctx, msg)
+                .tx(ctx, msg)
                 .inspect_err(|_| ctx.multi_store_mut().tx_caches_clear())
                 .map_err(|e| RunTxError::Custom(e.to_string()))?;
         }
@@ -64,15 +69,11 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
     }
 
     fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        &mut self,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
-        height: u64,
-        header: &Header,
     ) -> Result<(), RunTxError> {
-        let mut ctx = self.build_ctx(height, header);
-
-        match handler.run_ante_checks(&mut ctx, tx_with_raw) {
+        match handler.run_ante_checks(ctx, tx_with_raw) {
             Ok(_) => {
                 ctx.multi_store_mut().tx_caches_write_then_clear();
             }
@@ -85,9 +86,7 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         Ok(())
     }
 
-    fn runnable(&mut self, height: u64, header: &Header) -> Result<(), RunTxError> {
-        let ctx = self.build_ctx(height, header);
-
+    fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
         if ctx.block_gas_meter.is_out_of_gas() {
             Err(RunTxError::OutOfGas)
         } else {
@@ -95,12 +94,21 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         }
     }
 
-    fn build_ctx(&mut self, height: u64, header: &Header) -> TxContext<'_, DB, SK> {
-        TxContext::new(
+    fn build_ctx<M: TxMessage>(
+        &mut self,
+        height: u64,
+        header: &Header,
+        tx: &TxWithRaw<M>,
+    ) -> TxContext<'_, DB, SK> {
+        let mut ctx = TxContext::new(
             &mut self.multi_store,
             height,
             header.clone(),
             self.block_gas_meter.clone(),
-        )
+        );
+        ctx.gas_meter
+            .replace_meter(Self::build_tx_gas_meter(&tx.tx.auth_info.fee, height));
+
+        ctx
     }
 }

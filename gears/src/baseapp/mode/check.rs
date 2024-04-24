@@ -8,10 +8,11 @@ use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
     types::{
+        auth::fee::Fee,
         context::{tx::TxContext, TransactionalContext},
         gas::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockMeterKind,
-            Gas, GasMeter,
+            Gas, GasMeter, PlainGasMeter,
         },
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
@@ -36,49 +37,58 @@ impl<DB: Database, SK: StoreKey> CheckTxMode<DB, SK> {
             multi_store,
         }
     }
+
+    pub(crate) fn build_tx_gas_meter(fee: &Fee, block_height: u64) -> Box<dyn PlainGasMeter> {
+        if block_height == 0 {
+            Box::new(InfiniteGasMeter::default())
+        } else {
+            Box::new(BasicGasMeter::new(Gas::new(fee.gas_limit)))
+        }
+    }
 }
 
 impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
     fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        &mut self,
+        ctx: &mut TxContext<'_, DB, SK>,
         _handler: &AH,
         _msgs: impl Iterator<Item = &'m M>,
-        height: u64,
-        header: &Header,
     ) -> Result<Vec<Event>, RunTxError> {
-        let mut ctx = self.build_ctx(height, header);
-
         ctx.multi_store_mut().tx_caches_clear();
 
         Ok(ctx.events_drain())
     }
 
     fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        &mut self,
+        ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
-        height: u64,
-        header: &Header,
     ) -> Result<(), RunTxError> {
-        let mut ctx = self.build_ctx(height, header);
-
-        let result = handler.run_ante_checks(&mut ctx, tx_with_raw);
+        let result = handler.run_ante_checks(ctx, tx_with_raw);
 
         ctx.multi_store_mut().tx_caches_clear();
 
         result.map_err(|e| RunTxError::Custom(e.to_string()))
     }
 
-    fn runnable(&mut self, _heigh: u64, _: &Header) -> Result<(), RunTxError> {
+    fn runnable(_: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
         Ok(())
     }
 
-    fn build_ctx(&mut self, height: u64, header: &Header) -> TxContext<'_, DB, SK> {
-        TxContext::new(
+    fn build_ctx<M: TxMessage>(
+        &mut self,
+        height: u64,
+        header: &Header,
+        tx: &TxWithRaw<M>,
+    ) -> TxContext<'_, DB, SK> {
+        let mut ctx = TxContext::new(
             &mut self.multi_store,
             height,
             header.clone(),
             self.block_gas_meter.clone(),
-        )
+        );
+        ctx.gas_meter
+            .replace_meter(Self::build_tx_gas_meter(&tx.tx.auth_info.fee, height));
+
+        ctx
     }
 }
