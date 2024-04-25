@@ -185,7 +185,8 @@ impl<
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
-        // let gas_wanted = ctx.gas_meter.limit(); // TODO:NOW What to do with that?
+        // let gas_wanted = ctx.gas_meter.limit(); // TODO its needed for gas recovery middleware
+        let gas_used = ctx.gas_meter.consumed_or_limit();
 
         let mut ctx = mode.build_ctx(height, &header, &tx_with_raw);
 
@@ -196,7 +197,7 @@ impl<
         )?;
 
         ctx.block_gas_meter
-            .consume_gas(ctx.gas_meter.consumed_or_limit(), BLOCK_GAS_DESCRIPTOR)?;
+            .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
         Ok(events)
     }
