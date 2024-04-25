@@ -83,11 +83,8 @@ pub trait PlainGasMeter: Send + Sync + Debug {
     /// Deducts the given amount from the gas consumed.
     /// This functionality enables refunding gas to the transaction
     /// or block gas pools so that EVM-compatible chains can fully support the go-ethereum StateDB interface.
-    fn refund_gas(
-        &mut self,
-        amount: Gas,
-        descriptor: &str,
-    ) -> Result<(), ErrorNegativeGasConsumed>;
+    fn refund_gas(&mut self, amount: Gas, descriptor: &str)
+        -> Result<(), ErrorNegativeGasConsumed>;
     /// Returns true if the amount of gas consumed by the gas meter instance is strictly above the limit, false otherwise.
     fn is_past_limit(&self) -> bool;
     /// Returns true if the amount of gas consumed by the gas meter instance is above or equal to the limit, false otherwise.
@@ -112,8 +109,13 @@ impl<DS> GasMeter<DS> {
 
 impl<DS: MeterKind> GasMeter<DS> {
     pub fn replace_meter(&mut self, meter: Box<dyn PlainGasMeter>) {
-        self.meter.clear_poison(); // We replace gas meter so we shouldn't worry about poison
-        let _ = std::mem::replace(&mut *self.meter.write().expect("Unreachable poison"), meter);
+        /*
+            rustc 1.77 is pretty new and let's omit this feature
+            I tried this crate https://github.com/dtolnay/rustversion?tab=readme-ov-file
+            but it doesn't support expressions
+        */
+        // self.meter.clear_poison(); // We replace gas meter so we shouldn't worry about poison
+        let _ = std::mem::replace(&mut *self.meter.write().expect(POISONED_LOCK), meter);
     }
 
     pub fn consumed_or_limit(&mut self) -> Gas {
@@ -122,7 +124,7 @@ impl<DS: MeterKind> GasMeter<DS> {
         lock.gas_consumed_or_limit()
     }
 
-    pub fn consume_gas(&mut self, amount: Gas, descriptor : &str) -> Result<(), GasErrors> {
+    pub fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors> {
         self.meter
             .write()
             .expect(POISONED_LOCK)
