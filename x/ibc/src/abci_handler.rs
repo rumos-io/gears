@@ -5,6 +5,7 @@ use crate::{
     types::genesis::GenesisState,
 };
 use gears::{
+    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     types::context::{
@@ -40,7 +41,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         &self,
         _ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
-    ) -> Result<(), errors::tx::client::ClientErrors> {
+    ) -> Result<(), AppError> {
         match msg {
             Message::ClientCreate(_msg) => {
                 // let MsgCreateClient {

@@ -6,6 +6,7 @@ use bank::cli::{
 };
 use clap::Subcommand;
 use gears::core::address::AccAddress;
+use ibc::client::cli::tx::{run_ibc_tx_command, IbcTxCli};
 
 use crate::message::Message;
 
@@ -13,14 +14,14 @@ use crate::message::Message;
 pub enum GaiaTxCommands {
     /// Bank transaction subcommands
     Bank(BankTxCli),
-    // /// IBC transaction subcommands
-    // IBC(IbcTxCli),
+    /// IBC transaction subcommands
+    IBC(IbcTxCli),
 }
 
 pub fn tx_command_handler(command: GaiaTxCommands, from_address: AccAddress) -> Result<Message> {
     match command {
         GaiaTxCommands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
-        // GaiaTxCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::Ibc),
+        GaiaTxCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::IBC),
     }
 }
 

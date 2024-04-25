@@ -2259,6 +2259,7 @@ dependencies = [
  "clap",
  "constcat",
  "gears",
+ "gears-derive",
  "http 1.1.0",
  "ibc 0.51.0",
  "prost 0.11.9",
@@ -2267,6 +2268,7 @@ dependencies = [
  "serde",
  "serde-aux",
  "serde_json",
+ "tendermint 0.34.1",
  "thiserror",
  "tonic 0.11.0",
 ]

@@ -74,10 +74,7 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
     ) -> Result<(), AppError> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
-            // Message::Ibc(msg) => self
-            //     .ibc_handler
-            //     .tx(ctx, msg.clone())
-            //     .map_err(|e| AppError::IBC(e.to_string())),
+            Message::IBC(msg) => self.ibc_abci_handler.tx(ctx, msg.clone()),
         }
     }
 

@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 #local
 gears = { path = "../../gears" }
+gears-derive = { path = "../../gears-derive" }
 
 # nutype
 bytes = { workspace = true }
@@ -33,3 +34,4 @@ axum = { workspace = true }
 
 #other
 ibc = { version = "=0.51.0", features = ["serde"] }
+tendermint = { version = "0.34" }                   # TODO: remove this dependency

@@ -1,0 +1,70 @@
+{
+    "chain_id": {
+        "id": "ibc-1",
+        "revision_number": "1"
+    },
+    "trust_level": {
+        "numerator": 1,
+        "denominator": 3
+    },
+    "trusting_period": {
+        "secs": 64000,
+        "nanos": 0
+    },
+    "unbonding_period": {
+        "secs": 128000,
+        "nanos": 0
+    },
+    "max_clock_drift": {
+        "secs": 3,
+        "nanos": 0
+    },
+    "latest_height": {
+        "revision_number": 1,
+        "revision_height": 10
+    },
+    "proof_specs": [
+        {
+            "leafSpec": {
+                "hash": "SHA256",
+                "prehashValue": "SHA256",
+                "length": "VAR_PROTO",
+                "prefix": "AA=="
+            },
+            "innerSpec": {
+                "childOrder": [
+                    0,
+                    1
+                ],
+                "childSize": 33,
+                "minPrefixLength": 4,
+                "maxPrefixLength": 12,
+                "hash": "SHA256"
+            }
+        },
+        {
+            "leafSpec": {
+                "hash": "SHA256",
+                "prehashValue": "SHA256",
+                "length": "VAR_PROTO",
+                "prefix": "AA=="
+            },
+            "innerSpec": {
+                "childOrder": [
+                    0,
+                    1
+                ],
+                "childSize": 32,
+                "minPrefixLength": 1,
+                "maxPrefixLength": 1,
+                "hash": "SHA256"
+            }
+        }
+    ],
+    "upgrade_path": [],
+    "allow_update": {
+        "after_expiry": false,
+        "after_misbehaviour": false
+    },
+    "frozen_height": null
+}

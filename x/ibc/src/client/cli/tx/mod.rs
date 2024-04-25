@@ -5,15 +5,12 @@ use anyhow::Result;
 use clap::{Args, Subcommand};
 use gears::core::address::AccAddress;
 
-use crate::message::Message as IbcMessage;
+use crate::{ics02_client::client::cli::tx::ClientTxCli, message::Message as IbcMessage};
 
-use self::create::CliCreateClient;
 // use self::{
 //     create::CliCreateClient, recover_client::CliRecoverClient, update::CliUpdateClient,
 //     upgrade::CliUpgradeClient,
 // };
-
-pub mod create;
 
 #[derive(Args, Debug, Clone)]
 pub struct IbcTxCli {
@@ -23,8 +20,8 @@ pub struct IbcTxCli {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum IbcCommands {
-    #[command(name = "create")]
-    ClientCreate(CliCreateClient),
+    /// IBC client transaction subcommands
+    Client(ClientTxCli),
     // #[command(name = "update")]
     // ClientUpdate(CliUpdateClient),
     // #[command(name = "upgrade")]
@@ -33,12 +30,13 @@ pub enum IbcCommands {
     // RecoverClientProposal(CliRecoverClient),
 }
 
-pub fn run_ibc_tx_command(args: IbcTxCli, _from_address: AccAddress) -> Result<IbcMessage> {
+pub fn run_ibc_tx_command(args: IbcTxCli, from_address: AccAddress) -> Result<IbcMessage> {
     match args.command {
-        IbcCommands::ClientCreate(msg) => create::tx_command_handler(msg),
-        // IbcCommands::ClientUpdate(msg) => update::tx_command_handler(msg),
-        // IbcCommands::ClientUpgrade(msg) => upgrade::tx_command_handler(msg),
-        // IbcCommands::RecoverClientProposal(msg) => recover_client::tx_command_handler(msg),
-        // IbcCommands::IBCUpgradeProposal => todo!(),
+        IbcCommands::Client(args) => {
+            crate::ics02_client::client::cli::tx::tx_command_handler(args, from_address)
+        } // IbcCommands::ClientUpdate(msg) => update::tx_command_handler(msg),
+          // IbcCommands::ClientUpgrade(msg) => upgrade::tx_command_handler(msg),
+          // IbcCommands::RecoverClientProposal(msg) => recover_client::tx_command_handler(msg),
+          // IbcCommands::IBCUpgradeProposal => todo!(),
     }
 }
