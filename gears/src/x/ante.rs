@@ -4,7 +4,7 @@ use crate::crypto::public::PublicKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
-use crate::types::gas::descriptor::{AnteSecp256k1Descriptor, TxSizeDescriptor};
+use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxMeterKind;
 use crate::types::gas::{Gas, GasMeter};
 use crate::x::keepers::auth::AuthKeeper;
@@ -52,9 +52,10 @@ impl SignGasConsumer for DefaultSignGasConsumer {
         // TODO:NOW I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
         match pub_key {
             PublicKey::Secp256k1(_key) => {
-                gas_meter.consume_gas::<AnteSecp256k1Descriptor>(Gas::new(
-                    params.sig_verify_cost_secp256k1(),
-                ))?;
+                gas_meter.consume_gas(
+                    Gas::new(params.sig_verify_cost_secp256k1()),
+                    ANTE_SECKP251K1_DESCRIPTOR,
+                )?;
             }
         }
 
@@ -151,8 +152,9 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
     ) -> anyhow::Result<()> {
         let params = self.auth_keeper.get_auth_params(ctx);
 
-        ctx.gas_meter.consume_gas::<TxSizeDescriptor>(
+        ctx.gas_meter.consume_gas(
             Gas::new(*tx_len as u64) * params.tx_cost_per_byte(),
+            TX_SIZE_DESCRIPTOR,
         )?;
 
         Ok(())

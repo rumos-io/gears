@@ -38,22 +38,22 @@ impl PlainGasMeter for InfiniteGasMeter {
         None
     }
 
-    fn consume_gas(&mut self, amount: Gas, descriptor: String) -> Result<(), GasErrors> {
+    fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors> {
         if let Some(sum) = self.consumed.0.checked_add(amount.0) {
             self.consumed = Gas(sum);
             Ok(())
         } else {
-            Err(GasErrors::ErrorGasOverflow(descriptor))
+            Err(GasErrors::ErrorGasOverflow(descriptor.to_owned()))
         }
     }
 
     fn refund_gas(
         &mut self,
         amount: Gas,
-        descriptor: String,
+        descriptor: &str,
     ) -> Result<(), ErrorNegativeGasConsumed> {
         if self.consumed < amount {
-            Err(ErrorNegativeGasConsumed(descriptor))
+            Err(ErrorNegativeGasConsumed(descriptor.to_owned()))
         } else {
             self.consumed.0 -= amount.0;
 

@@ -17,7 +17,7 @@ use std::{
 
 use crate::error::POISONED_LOCK;
 
-use self::{descriptor::MeterDescriptor, kind::MeterKind};
+use self::kind::MeterKind;
 
 #[no_link]
 extern crate derive_more;
@@ -79,14 +79,14 @@ pub trait PlainGasMeter: Send + Sync + Debug {
     /// Consumes the amount of gas provided.
     /// If the gas overflows, it returns error with the descriptor message.
     /// If the gas meter is not infinite, it returns error  if gas consumed goes above the limit.
-    fn consume_gas(&mut self, amount: Gas, descriptor: String) -> Result<(), GasErrors>;
+    fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors>;
     /// Deducts the given amount from the gas consumed.
     /// This functionality enables refunding gas to the transaction
     /// or block gas pools so that EVM-compatible chains can fully support the go-ethereum StateDB interface.
     fn refund_gas(
         &mut self,
         amount: Gas,
-        descriptor: String,
+        descriptor: &str,
     ) -> Result<(), ErrorNegativeGasConsumed>;
     /// Returns true if the amount of gas consumed by the gas meter instance is strictly above the limit, false otherwise.
     fn is_past_limit(&self) -> bool;
@@ -122,11 +122,11 @@ impl<DS: MeterKind> GasMeter<DS> {
         lock.gas_consumed_or_limit()
     }
 
-    pub fn consume_gas<MD: MeterDescriptor>(&mut self, amount: Gas) -> Result<(), GasErrors> {
+    pub fn consume_gas(&mut self, amount: Gas, descriptor : &str) -> Result<(), GasErrors> {
         self.meter
             .write()
             .expect(POISONED_LOCK)
-            .consume_gas(amount, MD::name().to_owned())
+            .consume_gas(amount, descriptor)
     }
 
     pub fn is_out_of_gas(&self) -> bool {

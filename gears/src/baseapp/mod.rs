@@ -10,7 +10,7 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::query::QueryContext,
-        gas::{descriptor::BlockDescriptor, Gas},
+        gas::{descriptor::BLOCK_GAS_DESCRIPTOR, Gas},
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
     },
@@ -196,7 +196,7 @@ impl<
         )?;
 
         ctx.block_gas_meter
-            .consume_gas::<BlockDescriptor>(ctx.gas_meter.consumed_or_limit())?;
+            .consume_gas(ctx.gas_meter.consumed_or_limit(), BLOCK_GAS_DESCRIPTOR)?;
 
         Ok(events)
     }
