@@ -1,7 +1,6 @@
 use crate::application::handlers::node::AnteHandlerTrait;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
-use crate::crypto::secp256k1::Secp256k1PubKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
@@ -26,7 +25,6 @@ use core_types::{
 };
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
-use std::str::FromStr;
 use store_crate::database::{Database, PrefixDB};
 use store_crate::StoreKey;
 
@@ -170,7 +168,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-        simulate: bool,
+        _simulate: bool,
     ) -> anyhow::Result<()> {
         let auth_params = self.auth_keeper.get_auth_params(ctx);
 
@@ -183,15 +181,18 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                 .get_account(ctx, signer_addr)
                 .ok_or(AppError::AccountNotFound)?;
 
-            let pub_key = acct.get_public_key();
+            let pub_key = acct
+                .get_public_key()
+                .expect("account pub keys are set in set_pub_key_ante_handler")
+                .to_owned();
 
-            let pub_key = if simulate && pub_key.is_none() {
-                PublicKey::Secp256k1(Secp256k1PubKey::from(secp256k1::PublicKey::from_str(
-                    "035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A",
-                )?)) // TODO:NOW
-            } else {
-                pub_key.expect("TODO Clarify this").to_owned() // TODO:NOW
-            };
+            // let pub_key = if simulate && pub_key.is_none() {
+            //     PublicKey::Secp256k1(Secp256k1PubKey::from(secp256k1::PublicKey::from_str(
+            //         "035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A",
+            //     )?))
+            // } else {
+            //     pub_key.expect("TODO Clarify this").to_owned()
+            // };
 
             let sig = signatures.get(i).expect("TODO");
 

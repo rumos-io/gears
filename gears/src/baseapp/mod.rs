@@ -124,7 +124,7 @@ impl<
     }
 
     fn get_last_commit_hash(&self) -> [u8; 32] {
-        self.deliver_mode // TODO:NOW Is this correct mode?
+        self.deliver_mode
             .read()
             .expect(POISONED_LOCK)
             .multi_store
