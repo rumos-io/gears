@@ -111,12 +111,12 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
-        self.consume_gas_for_tx_size(ctx, tx, false)
+        self.consume_gas_for_tx_size(ctx, tx)
             .map_err(|e| AppError::Custom(e.to_string()))?;
         self.deduct_fee_ante_handler(ctx, &tx.tx)?;
         self.set_pub_key_ante_handler(ctx, &tx.tx)?;
         //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
-        self.sign_gas_consume(ctx, &tx.tx, false)
+        self.sign_gas_consume(ctx, &tx.tx)
             .map_err(|e| AppError::Custom(e.to_string()))?;
         self.sig_verification_handler(ctx, tx)?;
         self.increment_sequence_ante_handler(ctx, &tx.tx)?;
@@ -148,18 +148,12 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             raw: _,
             tx_len,
         }: &TxWithRaw<M>,
-        _simulate: bool,
     ) -> anyhow::Result<()> {
         let params = self.auth_keeper.get_auth_params(ctx);
 
         ctx.gas_meter.consume_gas::<TxSizeDescriptor>(
             Gas::new(*tx_len as u64) * params.tx_cost_per_byte(),
         )?;
-
-        // TODO:NOW https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/basic.go#L97-L140
-        // if simulate {
-
-        // }
 
         Ok(())
     }
@@ -168,7 +162,6 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-        _simulate: bool,
     ) -> anyhow::Result<()> {
         let auth_params = self.auth_keeper.get_auth_params(ctx);
 
@@ -185,14 +178,6 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                 .get_public_key()
                 .expect("account pub keys are set in set_pub_key_ante_handler")
                 .to_owned();
-
-            // let pub_key = if simulate && pub_key.is_none() {
-            //     PublicKey::Secp256k1(Secp256k1PubKey::from(secp256k1::PublicKey::from_str(
-            //         "035AD6810A47F073553FF30D2FCC7E0D3B1C0B74B61A1AAA2582344037151E143A",
-            //     )?))
-            // } else {
-            //     pub_key.expect("TODO Clarify this").to_owned()
-            // };
 
             let sig = signatures.get(i).expect("TODO");
 
