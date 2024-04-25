@@ -97,7 +97,7 @@ pub trait PlainGasMeter: Send + Sync + Debug {
 /// Wrapper around any gas meter which prevents usage of gas over limit with type system
 #[derive(Debug, Clone)]
 pub struct GasMeter<DS> {
-    meter: Arc<RwLock<Box<dyn PlainGasMeter>>>, // TODO: Smth other?
+    meter: Arc<RwLock<Box<dyn PlainGasMeter>>>,
     _descriptor: PhantomData<DS>,
 }
 
