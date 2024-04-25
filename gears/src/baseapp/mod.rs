@@ -142,7 +142,7 @@ impl<
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;
 
-        let mode = self.deliver_mode.read().expect(POISONED_LOCK); // TODO:NOW Is this correct mode?
+        let mode = self.deliver_mode.read().expect(POISONED_LOCK);
         let ctx = QueryContext::new(&mode.multi_store, version)?;
 
         self.abci_handler.query(&ctx, request.clone())
