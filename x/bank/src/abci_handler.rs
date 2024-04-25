@@ -6,11 +6,11 @@ use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
-use gears::types::context::TransactionalContext;
 use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadataResponse};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::{error::AppError, params::ParamsSubspaceKey};
+use gears::types::context::tx::TxContext;
 
 use crate::types::query::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse};
 use crate::{GenesisState, Keeper, Message};

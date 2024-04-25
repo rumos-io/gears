@@ -10,7 +10,7 @@ use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
-use gears::{config::Config, params::Keeper as ParamsKeeper, types::context::TransactionalContext};
+use gears::{config::Config, params::Keeper as ParamsKeeper};
 use gears::{error::AppError, types::context::tx::TxContext, x::ante::DefaultSignGasConsumer};
 
 #[derive(Debug, Clone)]
@@ -73,9 +73,9 @@ impl GaiaABCIHandler {
 }
 
 impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
-    fn tx<DB: Database + Sync + Send, CTX: TransactionalContext<DB, GaiaStoreKey>>(
+    fn tx<DB: Database + Sync + Send>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
     ) -> Result<(), AppError> {
         match msg {

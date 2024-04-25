@@ -39,9 +39,9 @@ pub trait ABCIHandler<
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 
-    fn tx<DB: Database + Sync + Send, CTX: TransactionalContext<DB, SK>>(
+    fn tx<DB: Database + Sync + Send>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         msg: &M,
     ) -> Result<(), AppError>;
 
