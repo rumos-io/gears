@@ -23,6 +23,7 @@ use self::kind::MeterKind;
 extern crate derive_more;
 
 use derive_more::{Add, Deref, Display, From, Mul};
+use tracing::debug;
 
 #[derive(
     Copy,
@@ -68,6 +69,8 @@ pub enum GasRemaining {
 }
 
 pub trait PlainGasMeter: Send + Sync + Debug {
+    // Return name of this gas meter. Used mainly for debug and logging purposes
+    fn name(&self) -> &'static str;
     /// Returns the amount of gas that was consumed by the gas meter instance.
     fn gas_consumed(&self) -> Gas;
     /// Returns the amount of gas that was consumed by gas meter instance, or the limit if it is reached.
@@ -125,10 +128,14 @@ impl<DS: MeterKind> GasMeter<DS> {
     }
 
     pub fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors> {
-        self.meter
-            .write()
-            .expect(POISONED_LOCK)
-            .consume_gas(amount, descriptor)
+        let mut meter = self.meter.write().expect(POISONED_LOCK);
+        debug!(
+            "Consumed {} gas for {} with {}",
+            amount,
+            meter.name(),
+            descriptor
+        );
+        meter.consume_gas(amount, descriptor)
     }
 
     pub fn is_out_of_gas(&self) -> bool {

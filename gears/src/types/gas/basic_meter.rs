@@ -79,6 +79,10 @@ impl PlainGasMeter for BasicGasMeter {
     fn is_out_of_gas(&self) -> bool {
         self.consumed >= self.limit
     }
+
+    fn name(&self) -> &'static str {
+        "gears basic gas meter"
+    }
 }
 
 impl Display for BasicGasMeter {

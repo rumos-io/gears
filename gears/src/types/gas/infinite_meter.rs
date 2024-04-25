@@ -68,6 +68,10 @@ impl PlainGasMeter for InfiniteGasMeter {
     fn is_out_of_gas(&self) -> bool {
         false
     }
+    
+    fn name(&self) -> &'static str {
+        "gears infinite meter"
+    }
 }
 
 impl Display for InfiniteGasMeter {
