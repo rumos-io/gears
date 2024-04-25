@@ -63,8 +63,7 @@ pub enum GasErrors {
 pub struct ErrorNegativeGasConsumed(pub String);
 
 pub enum GasRemaining {
-    NoLimit,
-    None,
+    NoLimit, // What about returing used gas in this case?
     Some(Gas),
 }
 

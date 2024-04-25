@@ -34,7 +34,7 @@ impl PlainGasMeter for BasicGasMeter {
 
     fn gas_remaining(&self) -> GasRemaining {
         if self.is_past_limit() {
-            GasRemaining::None
+            GasRemaining::Some(Gas(0))
         } else {
             GasRemaining::Some(Gas(self.limit.0 - self.consumed.0))
         }
