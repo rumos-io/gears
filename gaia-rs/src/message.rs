@@ -1,6 +1,9 @@
 use gears::{
-    signing::renderer::value_renderer::{RenderError, ValueRenderer},
-    types::{denom::Denom, rendering::screen::Screen, tx::metadata::Metadata},
+    signing::{
+        handler::MetadataGetter,
+        renderer::value_renderer::{RenderError, ValueRenderer},
+    },
+    types::rendering::screen::Screen,
 };
 use gears_derive::RoutingMessage;
 use serde::Serialize;
@@ -15,10 +18,7 @@ pub enum Message {
 }
 
 impl ValueRenderer for Message {
-    fn format<F: Fn(&Denom) -> Option<Metadata>>(
-        &self,
-        get_metadata: &F,
-    ) -> Result<Vec<Screen>, RenderError> {
+    fn format<MG: MetadataGetter>(&self, get_metadata: &MG) -> Result<Vec<Screen>, RenderError> {
         match self {
             Message::Bank(msg) => msg.format(get_metadata),
             // Message::Ibc(_) => Err(Error::NotImplemented),

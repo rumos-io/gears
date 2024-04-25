@@ -1,9 +1,8 @@
 //! Trait for formatting all kind of values into `Screen`
 
-use crate::types::{
-    denom::Denom,
-    rendering::screen::{Content, Screen},
-    tx::metadata::Metadata,
+use crate::{
+    signing::handler::MetadataGetter,
+    types::rendering::screen::{Content, Screen},
 };
 
 /// Render primitive type into content for `Screen`.
@@ -20,9 +19,9 @@ pub trait TryPrimitiveValueRenderer<V> {
 pub trait TryPrimitiveValueRendererWithMetadata<V> {
     /// Try to get a string representation of some `V` wrapped in a Content. This method also
     /// takes a function to get metadata for the denom.
-    fn try_format_with_metadata<F: Fn(&Denom) -> Option<Metadata>>(
+    fn try_format_with_metadata<MG: MetadataGetter>(
         value: V,
-        get_metadata: &F,
+        get_metadata: &MG,
     ) -> Result<Content, RenderError>;
 }
 
@@ -37,10 +36,7 @@ pub enum RenderError {
 
 pub trait ValueRenderer {
     /// Format renders the Protobuf value to a list of Screens.
-    fn format<F: Fn(&Denom) -> Option<Metadata>>(
-        &self,
-        get_metadata: &F,
-    ) -> Result<Vec<Screen>, RenderError>;
+    fn format<MG: MetadataGetter>(&self, get_metadata: &MG) -> Result<Vec<Screen>, RenderError>;
 }
 
 /// Default implementation of `PrimitiveValueRenderer` for `Screen`. This is an attempt

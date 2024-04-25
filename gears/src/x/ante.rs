@@ -1,5 +1,6 @@
 use crate::application::handlers::node::AnteHandlerTrait;
 use crate::crypto::keys::ReadAccAddress;
+use crate::signing::handler::MetadataGetter;
 use crate::crypto::public::PublicKey;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::context::tx::TxContext;
@@ -15,7 +16,7 @@ use crate::{
     error::AppError,
     types::{
         context::{QueryableContext, TransactionalContext},
-        tx::{data::TxData, metadata::Metadata, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
+        tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
 use core_types::tx::signature::SignatureData;
@@ -392,8 +393,10 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                             auth_info: tx.tx.auth_info.clone(),
                         };
 
-                        let f = |denom: &Denom| -> Option<Metadata> {
-                            self.bank_keeper.get_denom_metadata(ctx, denom)
+                        let f = MetadataFromState {
+                            bank_keeper: &self.bank_keeper,
+                            ctx,
+                            _phantom: PhantomData,
                         };
 
                         handler.sign_bytes_get(&f, signer_data, tx_data).unwrap()
@@ -439,6 +442,25 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         }
 
         Ok(())
+    }
+}
+
+pub struct MetadataFromState<'a, DB, SK, BK, CTX> {
+    pub bank_keeper: &'a BK,
+    pub ctx: &'a CTX,
+    pub _phantom: PhantomData<(DB, SK)>,
+}
+
+impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: TransactionalContext<DB, SK>>
+    MetadataGetter for MetadataFromState<'a, DB, SK, BK, CTX>
+{
+    type Error = std::io::Error; // this is not used here
+
+    fn metadata(
+        &self,
+        denom: &Denom,
+    ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {
+        Ok(self.bank_keeper.get_denom_metadata(self.ctx, denom))
     }
 }
 

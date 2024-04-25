@@ -7,6 +7,7 @@ use auth::cli::query::AuthQueryHandler;
 use bank::cli::query::BankQueryHandler;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
+use client::WrappedGaiaQueryCommands;
 use gears::application::client::Client;
 use gears::application::handlers::client::{QueryHandler, TxHandler};
 use gears::application::handlers::AuxHandler;
@@ -42,21 +43,21 @@ pub struct GaiaCoreClient;
 
 impl TxHandler for GaiaCoreClient {
     type Message = message::Message;
-    type TxCommands = client::GaiaTxCommands;
+    type TxCommands = client::WrappedGaiaTxCommands;
 
     fn prepare_tx(
         &self,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> Result<Self::Message> {
-        tx_command_handler(command, from_address)
+        tx_command_handler(command.0, from_address)
     }
 }
 
 impl QueryHandler for GaiaCoreClient {
     type QueryRequest = GaiaQuery;
 
-    type QueryCommands = GaiaQueryCommands;
+    type QueryCommands = WrappedGaiaQueryCommands;
 
     type QueryResponse = GaiaQueryResponse;
 
@@ -64,7 +65,7 @@ impl QueryHandler for GaiaCoreClient {
         &self,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryRequest> {
-        let res = match command {
+        let res = match &command.0 {
             GaiaQueryCommands::Bank(command) => {
                 Self::QueryRequest::Bank(BankQueryHandler.prepare_query_request(command)?)
             }
@@ -83,7 +84,7 @@ impl QueryHandler for GaiaCoreClient {
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
-        let res = match command {
+        let res = match &command.0 {
             GaiaQueryCommands::Bank(command) => Self::QueryResponse::Bank(
                 BankQueryHandler.handle_raw_response(query_bytes, command)?,
             ),

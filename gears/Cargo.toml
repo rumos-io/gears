@@ -18,7 +18,7 @@ store_crate = {path = "../store", package = "store"}
 secp256k1 = { workspace = true, features = ["hashes"]}
 bytes = { workspace = true }
 url = { workspace = true }
-nutype = { workspace = true, features = ["serde"]}
+nutype = { workspace = true, features = ["serde"] }
 num-format = { workspace = true, features = ["with-num-bigint"] }
 num-bigint = { workspace = true }
 cosmwasm-std = "2.0.0"
@@ -37,7 +37,7 @@ derive_more = { workspace = true }
 prost = { workspace = true }
 bech32 = { workspace = true }
 hex = { workspace = true }
-serde = { workspace = true, default-features = false}
+serde = { workspace = true, default-features = false }
 serde-aux = { workspace = true }
 serde_json = { workspace = true }
 serde_with = { workspace = true }
@@ -51,7 +51,8 @@ handlebars = { workspace = true }
 human-panic = "1.1.4"
 strum = { workspace = true }
 text_io = "0.1.12"
-tokio = { workspace = true, features = [ "rt", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
+ledger-cosmos = { git = "https://github.com/rumos-io/ledger-cosmos-rs" }
 former = { workspace = true }
 
 # networking
@@ -59,12 +60,12 @@ axum = { workspace = true }
 tower-http = { workspace = true, features = ["cors"] }
 
 #cli
-clap = { workspace = true , optional = true }
+clap = { workspace = true, optional = true }
 clap_complete = { workspace = true, optional = true }
 
 # crypto
 k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }
-pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"]}
+pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"] }
 ripemd = { workspace = true }
 data-encoding = { workspace = true }
 
@@ -76,8 +77,8 @@ dircpy = { workspace = true, optional = true }
 [dev-dependencies]
 
 [features]
-default = [ "cli", "export", "xmods" ]
+default = ["cli", "export", "xmods"]
 export = []
 xmods = []
-utils = [ "dep:run_script", "dep:assert_fs", "dep:dircpy" ]
-cli = [ "dep:clap", "dep:clap_complete", ]
+utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy"]
+cli = ["dep:clap", "dep:clap_complete"]

@@ -2,14 +2,12 @@ use bytes::Bytes;
 use gears::{
     core::{address::AccAddress, any::google::Any},
     error::IBC_ENCODE_UNWRAP,
-    signing::renderer::value_renderer::{RenderError, ValueRenderer},
-    tendermint::types::proto::Protobuf,
-    types::{
-        denom::Denom,
-        msg::send::MsgSend,
-        rendering::screen::Screen,
-        tx::{metadata::Metadata, TxMessage},
+    signing::{
+        handler::MetadataGetter,
+        renderer::value_renderer::{RenderError, ValueRenderer},
     },
+    tendermint::types::proto::Protobuf,
+    types::{msg::send::MsgSend, rendering::screen::Screen, tx::TxMessage},
 };
 use serde::Serialize;
 
@@ -21,10 +19,7 @@ pub enum Message {
 }
 
 impl ValueRenderer for Message {
-    fn format<F: Fn(&Denom) -> Option<Metadata>>(
-        &self,
-        get_metadata: &F,
-    ) -> Result<Vec<Screen>, RenderError> {
+    fn format<MG: MetadataGetter>(&self, get_metadata: &MG) -> Result<Vec<Screen>, RenderError> {
         match self {
             Message::Send(msg) => msg.format(get_metadata),
         }

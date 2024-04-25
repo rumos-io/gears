@@ -1,10 +1,7 @@
 use crate::{
     crypto::secp256k1::Secp256k1PubKey,
-    types::{
-        denom::Denom,
-        rendering::screen::{Indent, Screen},
-        tx::metadata::Metadata,
-    },
+    signing::handler::MetadataGetter,
+    types::rendering::screen::{Indent, Screen},
 };
 
 use crate::signing::renderer::value_renderer::{
@@ -14,10 +11,7 @@ use crate::signing::renderer::value_renderer::{
 const TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
 impl ValueRenderer for Secp256k1PubKey {
-    fn format<F: Fn(&Denom) -> Option<Metadata>>(
-        &self,
-        _get_metadata: &F,
-    ) -> Result<Vec<Screen>, RenderError> {
+    fn format<MG: MetadataGetter>(&self, _get_metadata: &MG) -> Result<Vec<Screen>, RenderError> {
         Ok(vec![
             Screen {
                 title: "Public key".to_string(),
@@ -42,9 +36,10 @@ impl ValueRenderer for Secp256k1PubKey {
 #[cfg(test)]
 mod tests {
     use crate::crypto::secp256k1::Secp256k1PubKey;
+    use crate::signing::renderer::test_functions::TestMetadataGetter;
     use crate::types::rendering::screen::{Content, Indent, Screen};
 
-    use crate::signing::renderer::{test_functions::get_metadata, value_renderer::ValueRenderer};
+    use crate::signing::renderer::value_renderer::ValueRenderer;
 
     #[test]
     fn secp256_pubkey_formating() -> anyhow::Result<()> {
@@ -70,7 +65,7 @@ mod tests {
             },
         ];
 
-        let actual_screens = ValueRenderer::format(&key, &get_metadata)
+        let actual_screens = ValueRenderer::format(&key, &TestMetadataGetter)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         assert_eq!(expected_screens, actual_screens);
