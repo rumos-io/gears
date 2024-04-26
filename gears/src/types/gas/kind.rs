@@ -1,19 +1,19 @@
 pub trait MeterKind: sealed::Sealed {}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BlockMeterKind;
+pub struct BlockKind;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TxMeterKind;
+pub struct TxKind;
 
-impl MeterKind for BlockMeterKind {}
-impl MeterKind for TxMeterKind {}
+impl MeterKind for BlockKind {}
+impl MeterKind for TxKind {}
 
 mod sealed {
     use super::*;
 
     pub trait Sealed {}
 
-    impl Sealed for BlockMeterKind {}
-    impl Sealed for TxMeterKind {}
+    impl Sealed for BlockKind {}
+    impl Sealed for TxKind {}
 }

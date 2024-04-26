@@ -1,12 +1,12 @@
 use crate::application::handlers::node::AnteHandlerTrait;
 use crate::crypto::keys::ReadAccAddress;
-use crate::signing::handler::MetadataGetter;
 use crate::crypto::public::PublicKey;
+use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
-use crate::types::gas::kind::TxMeterKind;
+use crate::types::gas::kind::TxKind;
 use crate::types::gas::{Gas, GasMeter};
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
@@ -32,7 +32,7 @@ use store_crate::StoreKey;
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
     fn consume<AP: AuthParams>(
         &self,
-        gas_meter: &mut GasMeter<TxMeterKind>,
+        gas_meter: &mut GasMeter<TxKind>,
         pub_key: PublicKey,
         data: &SignatureData,
         params: &AP,
@@ -45,7 +45,7 @@ pub struct DefaultSignGasConsumer;
 impl SignGasConsumer for DefaultSignGasConsumer {
     fn consume<AP: AuthParams>(
         &self,
-        gas_meter: &mut GasMeter<TxMeterKind>,
+        gas_meter: &mut GasMeter<TxKind>,
         pub_key: PublicKey,
         _data: &SignatureData,
         params: &AP,

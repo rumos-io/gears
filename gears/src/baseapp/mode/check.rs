@@ -11,8 +11,8 @@ use crate::{
         auth::fee::Fee,
         context::{tx::TxContext, TransactionalContext},
         gas::{
-            basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockMeterKind,
-            Gas, GasMeter, PlainGasMeter,
+            basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas,
+            GasMeter, PlainGasMeter,
         },
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
@@ -23,7 +23,7 @@ use store_crate::TransactionalMultiKVStore;
 
 #[derive(Debug)]
 pub struct CheckTxMode<DB, SK> {
-    pub(crate) block_gas_meter: GasMeter<BlockMeterKind>,
+    pub(crate) block_gas_meter: GasMeter<BlockKind>,
     pub(crate) multi_store: MultiStore<DB, SK>,
 }
 

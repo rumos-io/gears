@@ -9,7 +9,7 @@ use crate::types::auth::fee::Fee;
 use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
-use crate::types::gas::kind::BlockMeterKind;
+use crate::types::gas::kind::BlockKind;
 use crate::types::gas::{Gas, GasMeter, PlainGasMeter};
 use crate::types::header::Header;
 use crate::{
@@ -25,7 +25,7 @@ use super::ExecutionMode;
 
 #[derive(Debug)]
 pub struct DeliverTxMode<DB, SK> {
-    pub(crate) block_gas_meter: GasMeter<BlockMeterKind>,
+    pub(crate) block_gas_meter: GasMeter<BlockKind>,
     pub(crate) multi_store: MultiStore<DB, SK>,
 }
 
