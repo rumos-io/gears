@@ -36,6 +36,9 @@ pub mod genesis;
 pub mod mode;
 mod params;
 
+// TODO: Why not use this for height? It save to mutate from 2 or more threads and don't get cloned
+// static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
+
 #[derive(Debug, Clone)]
 pub struct BaseApp<
     SK: StoreKey,
