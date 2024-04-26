@@ -86,7 +86,9 @@ impl<
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
-            state: ApplicationState::new_sync(Gas::new(max_gas)),
+            state: ApplicationState::new_sync(
+                Gas::try_from(max_gas).expect("Invalid max_gas params"),
+            ),
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,

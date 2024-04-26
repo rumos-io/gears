@@ -51,6 +51,26 @@ impl Gas {
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
+#[error("Error parsing gas: {0}")]
+pub struct GasParseError(pub String);
+
+impl TryFrom<i64> for Gas {
+    type Error = GasParseError;
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        if value < -1 {
+            Err(GasParseError(
+                "Invalid max block gas. Value can't be lower that -1".to_owned(),
+            ))
+        } else if value == -1 {
+            Ok(Gas(0))
+        } else {
+            Ok(Gas(value as u64))
+        }
+    }
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum GasErrors {
     #[error("Out of gas: {0}")]
     ErrorOutOfGas(String),

@@ -40,22 +40,14 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 pub struct BlockParams {
     pub max_bytes: String,
     #[serde_as(as = "serde_with::DisplayFromStr")]
-    pub max_gas: u64,
+    pub max_gas: i64,
 }
 
 impl From<inner::BlockParams> for BlockParams {
     fn from(params: inner::BlockParams) -> BlockParams {
         BlockParams {
             max_bytes: params.max_bytes.to_string(),
-            max_gas: {
-                if params.max_gas < -1 {
-                    panic!("Invalid max block gas")
-                } else if params.max_gas == -1 {
-                    0
-                } else {
-                    params.max_gas as u64
-                }
-            },
+            max_gas: params.max_gas,
         }
     }
 }

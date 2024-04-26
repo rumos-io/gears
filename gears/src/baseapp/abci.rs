@@ -289,7 +289,7 @@ impl<
                 .map(|e| e.max_gas)
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
-            state.replace_meter(Gas::new(max_gas))
+            state.replace_meter(Gas::try_from(max_gas).expect("Invalid max_gas params"))
         }
 
         let mut ctx = TxContext::new(
