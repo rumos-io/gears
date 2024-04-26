@@ -1,5 +1,6 @@
 use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
+use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
 use crate::types::context::tx::TxContext;
@@ -159,15 +160,21 @@ impl<
         };
 
         match result {
-            Ok(events) => {
+            Ok(RunTxInfo {
+                events,
+                gas_wanted,
+                gas_used,
+            }) => {
                 debug!("{:?}", events);
                 ResponseCheckTx {
                     code: 0,
                     data: Default::default(),
                     log: "".to_string(),
                     info: "".to_string(),
-                    gas_wanted: 1,
-                    gas_used: 0,
+                    gas_wanted: gas_wanted
+                        .map(|e| e.into_inner() as i64)
+                        .unwrap_or_default(),
+                    gas_used: gas_used.into_inner() as i64,
                     events,
                     codespace: "".to_string(),
                     mempool_error: "".to_string(),
@@ -202,13 +209,19 @@ impl<
         let result = self.run_tx(tx.clone(), &mut state.deliver_mode);
 
         match result {
-            Ok(events) => ResponseDeliverTx {
+            Ok(RunTxInfo {
+                events,
+                gas_wanted,
+                gas_used,
+            }) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
                 info: "".to_string(),
-                gas_wanted: 0,
-                gas_used: 0,
+                gas_wanted: gas_wanted
+                    .map(|e| e.into_inner() as i64)
+                    .unwrap_or_default(),
+                gas_used: gas_used.into_inner() as i64,
                 events: events.into_iter().collect(),
                 codespace: "".to_string(),
             },

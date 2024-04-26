@@ -155,7 +155,7 @@ impl<
         &self,
         raw: Bytes,
         mode: &mut MD,
-    ) -> Result<Vec<Event>, RunTxError> {
+    ) -> Result<RunTxInfo, RunTxError> {
         let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
 
@@ -180,7 +180,7 @@ impl<
 
         mode.runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
-        // let gas_wanted = ctx.gas_meter.limit(); // TODO its needed for gas recovery middleware
+        let gas_wanted = ctx.gas_meter.limit(); // TODO its needed for gas recovery middleware
         let gas_used = ctx.gas_meter.consumed_or_limit();
 
         let mut ctx = TxContext::new(
@@ -199,6 +199,17 @@ impl<
         mode.block_gas_meter_mut()
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
-        Ok(events)
+        Ok(RunTxInfo {
+            events,
+            gas_wanted,
+            gas_used,
+        })
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct RunTxInfo {
+    pub events: Vec<Event>,
+    pub gas_wanted: Option<Gas>,
+    pub gas_used: Gas,
 }

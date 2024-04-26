@@ -43,6 +43,10 @@ impl Gas {
         Self(val)
     }
 
+    pub const fn into_inner(self) -> u64 {
+        self.0
+    }
+
     pub const MAX_GAS: Gas = Gas::new(u64::MAX);
 }
 
