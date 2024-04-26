@@ -1,39 +1,39 @@
 #![allow(dead_code)] // TODO: Remove
 
-use super::Gas;
+use super::FiniteGas;
 
 pub struct GasConfig {
-    has_cost: Gas,
-    delete_cost: Gas,
-    read_cost_flat: Gas,
-    read_cost_per_byte: Gas,
-    write_cost_flat: Gas,
-    write_cost_per_byte: Gas,
-    iter_next_cost_flat: Gas,
+    has_cost: FiniteGas,
+    delete_cost: FiniteGas,
+    read_cost_flat: FiniteGas,
+    read_cost_per_byte: FiniteGas,
+    write_cost_flat: FiniteGas,
+    write_cost_per_byte: FiniteGas,
+    iter_next_cost_flat: FiniteGas,
 }
 
 impl GasConfig {
     pub fn default_kv() -> Self {
         Self {
-            has_cost: Gas(1000),
-            delete_cost: Gas(1000),
-            read_cost_flat: Gas(1000),
-            read_cost_per_byte: Gas(3),
-            write_cost_flat: Gas(2000),
-            write_cost_per_byte: Gas(30),
-            iter_next_cost_flat: Gas(30),
+            has_cost: FiniteGas(1000),
+            delete_cost: FiniteGas(1000),
+            read_cost_flat: FiniteGas(1000),
+            read_cost_per_byte: FiniteGas(3),
+            write_cost_flat: FiniteGas(2000),
+            write_cost_per_byte: FiniteGas(30),
+            iter_next_cost_flat: FiniteGas(30),
         }
     }
 
     pub fn default_transient() -> Self {
         Self {
-            has_cost: Gas(100),
-            delete_cost: Gas(100),
-            read_cost_flat: Gas(100),
-            read_cost_per_byte: Gas(0),
-            write_cost_flat: Gas(200),
-            write_cost_per_byte: Gas(3),
-            iter_next_cost_flat: Gas(3),
+            has_cost: FiniteGas(100),
+            delete_cost: FiniteGas(100),
+            read_cost_flat: FiniteGas(100),
+            read_cost_per_byte: FiniteGas(0),
+            write_cost_flat: FiniteGas(200),
+            write_cost_per_byte: FiniteGas(3),
+            iter_next_cost_flat: FiniteGas(3),
         }
     }
 }

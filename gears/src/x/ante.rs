@@ -7,7 +7,7 @@ use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
-use crate::types::gas::{Gas, GasMeter};
+use crate::types::gas::{FiniteGas, GasMeter};
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -54,7 +54,7 @@ impl SignGasConsumer for DefaultSignGasConsumer {
         match pub_key {
             PublicKey::Secp256k1(_key) => {
                 gas_meter.consume_gas(
-                    Gas::new(params.sig_verify_cost_secp256k1()),
+                    FiniteGas::new(params.sig_verify_cost_secp256k1()),
                     ANTE_SECKP251K1_DESCRIPTOR,
                 )?;
             }
@@ -154,7 +154,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         let params = self.auth_keeper.get_auth_params(ctx);
 
         ctx.gas_meter.consume_gas(
-            Gas::new(*tx_len as u64) * params.tx_cost_per_byte(),
+            FiniteGas::new(*tx_len as u64) * params.tx_cost_per_byte(),
             TX_SIZE_DESCRIPTOR,
         )?;
 

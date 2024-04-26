@@ -1,11 +1,11 @@
 use std::fmt::Display;
 
-use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasRemaining, PlainGasMeter};
+use super::{ErrorNegativeGasConsumed, FiniteGas, Gas, GasErrors, PlainGasMeter};
 
 /// Gas meter without consumption limit
 #[derive(Debug, Clone)]
 pub struct InfiniteGasMeter {
-    consumed: Gas,
+    consumed: FiniteGas,
 }
 
 impl Default for InfiniteGasMeter {
@@ -17,30 +17,32 @@ impl Default for InfiniteGasMeter {
 impl InfiniteGasMeter {
     /// Create new `InfiniteGasMeter` with zero consumed gas.
     pub fn new() -> Self {
-        Self { consumed: Gas(0) }
+        Self {
+            consumed: FiniteGas(0),
+        }
     }
 }
 
 impl PlainGasMeter for InfiniteGasMeter {
-    fn gas_consumed(&self) -> Gas {
+    fn gas_consumed(&self) -> FiniteGas {
         self.consumed
     }
 
-    fn gas_consumed_or_limit(&self) -> Gas {
+    fn gas_consumed_or_limit(&self) -> FiniteGas {
         self.consumed
     }
 
-    fn gas_remaining(&self) -> GasRemaining {
-        GasRemaining::NoLimit
+    fn gas_remaining(&self) -> Gas {
+        Gas::Infinite
     }
 
-    fn limit(&self) -> Option<Gas> {
-        None
+    fn limit(&self) -> Gas {
+        Gas::Infinite
     }
 
-    fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors> {
+    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
         if let Some(sum) = self.consumed.0.checked_add(amount.0) {
-            self.consumed = Gas(sum);
+            self.consumed = FiniteGas(sum);
             Ok(())
         } else {
             Err(GasErrors::ErrorGasOverflow(descriptor.to_owned()))
@@ -49,7 +51,7 @@ impl PlainGasMeter for InfiniteGasMeter {
 
     fn refund_gas(
         &mut self,
-        amount: Gas,
+        amount: FiniteGas,
         descriptor: &str,
     ) -> Result<(), ErrorNegativeGasConsumed> {
         if self.consumed < amount {
@@ -68,7 +70,7 @@ impl PlainGasMeter for InfiniteGasMeter {
     fn is_out_of_gas(&self) -> bool {
         false
     }
-    
+
     fn name(&self) -> &'static str {
         "gears infinite meter"
     }

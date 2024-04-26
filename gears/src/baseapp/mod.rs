@@ -10,7 +10,7 @@ use crate::{
     params::{Keeper, ParamsSubspaceKey},
     types::{
         context::{query::QueryContext, tx::TxContext},
-        gas::{descriptor::BLOCK_GAS_DESCRIPTOR, Gas},
+        gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
     },
@@ -86,9 +86,7 @@ impl<
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
-            state: ApplicationState::new_sync(
-                Gas::try_from(max_gas).expect("Invalid max_gas params"),
-            ),
+            state: ApplicationState::new_sync(Gas::from(max_gas)),
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
@@ -212,6 +210,6 @@ impl<
 #[derive(Debug, Clone)]
 pub struct RunTxInfo {
     pub events: Vec<Event>,
-    pub gas_wanted: Option<Gas>,
-    pub gas_used: Gas,
+    pub gas_wanted: Gas,
+    pub gas_used: FiniteGas,
 }

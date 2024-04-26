@@ -1,30 +1,30 @@
 use std::fmt::Display;
 
-use super::{ErrorNegativeGasConsumed, Gas, GasErrors, GasRemaining, PlainGasMeter};
+use super::{ErrorNegativeGasConsumed, FiniteGas, Gas, GasErrors, PlainGasMeter};
 
 /// Basic gas meter.
 #[derive(Debug, Clone)]
 pub struct BasicGasMeter {
-    limit: Gas,
-    consumed: Gas,
+    limit: FiniteGas,
+    consumed: FiniteGas,
 }
 
 impl BasicGasMeter {
     /// Create new `BasicGasMeter` with zero consumed gas.
-    pub fn new(limit: Gas) -> Self {
+    pub fn new(limit: FiniteGas) -> Self {
         Self {
             limit,
-            consumed: Gas(0),
+            consumed: FiniteGas(0),
         }
     }
 }
 
 impl PlainGasMeter for BasicGasMeter {
-    fn gas_consumed(&self) -> Gas {
+    fn gas_consumed(&self) -> FiniteGas {
         self.consumed
     }
 
-    fn gas_consumed_or_limit(&self) -> Gas {
+    fn gas_consumed_or_limit(&self) -> FiniteGas {
         if self.is_past_limit() {
             self.limit
         } else {
@@ -32,35 +32,35 @@ impl PlainGasMeter for BasicGasMeter {
         }
     }
 
-    fn gas_remaining(&self) -> GasRemaining {
+    fn gas_remaining(&self) -> Gas {
         if self.is_past_limit() {
-            GasRemaining::Some(Gas(0))
+            Gas::Finite(FiniteGas(0))
         } else {
-            GasRemaining::Some(Gas(self.limit.0 - self.consumed.0))
+            Gas::Finite(FiniteGas(self.limit.0 - self.consumed.0))
         }
     }
 
-    fn limit(&self) -> Option<Gas> {
-        Some(self.limit)
+    fn limit(&self) -> Gas {
+        Gas::Finite(self.limit)
     }
 
-    fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors> {
+    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
         if let Some(sum) = self.consumed.0.checked_add(amount.0) {
             if self.consumed > self.limit {
                 Err(GasErrors::ErrorOutOfGas(descriptor.to_owned()))
             } else {
-                self.consumed = Gas(sum);
+                self.consumed = FiniteGas(sum);
                 Ok(())
             }
         } else {
-            self.consumed = Gas(u64::MAX);
+            self.consumed = FiniteGas(u64::MAX);
             Err(GasErrors::ErrorGasOverflow(descriptor.to_owned()))
         }
     }
 
     fn refund_gas(
         &mut self,
-        amount: Gas,
+        amount: FiniteGas,
         descriptor: &str,
     ) -> Result<(), ErrorNegativeGasConsumed> {
         if self.consumed < amount {

@@ -25,18 +25,18 @@ impl ApplicationState {
     }
 
     pub fn replace_meter(&mut self, max_gas: Gas) {
-        match max_gas > Gas::new(0) {
-            true => {
+        match max_gas {
+            Gas::Infinite => {
                 self.check_mode.block_gas_meter =
-                    GasMeter::new(Box::new(BasicGasMeter::new(max_gas)));
+                    GasMeter::new(Box::new(InfiniteGasMeter::default()));
                 self.deliver_mode.block_gas_meter =
-                    GasMeter::new(Box::new(BasicGasMeter::new(max_gas)));
+                    GasMeter::new(Box::new(InfiniteGasMeter::default()));
             }
-            false => {
+            Gas::Finite(max_gas) => {
                 self.check_mode.block_gas_meter =
-                    GasMeter::new(Box::new(InfiniteGasMeter::default()));
+                    GasMeter::new(Box::new(BasicGasMeter::new(max_gas)));
                 self.deliver_mode.block_gas_meter =
-                    GasMeter::new(Box::new(InfiniteGasMeter::default()));
+                    GasMeter::new(Box::new(BasicGasMeter::new(max_gas)));
             }
         }
     }

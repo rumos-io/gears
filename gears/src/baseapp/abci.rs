@@ -171,10 +171,8 @@ impl<
                     data: Default::default(),
                     log: "".to_string(),
                     info: "".to_string(),
-                    gas_wanted: gas_wanted
-                        .map(|e| e.into_inner() as i64)
-                        .unwrap_or_default(),
-                    gas_used: gas_used.into_inner() as i64,
+                    gas_wanted: gas_wanted.into(),
+                    gas_used: gas_used.into_inner() as i64, //TODO: this can panic
                     events,
                     codespace: "".to_string(),
                     mempool_error: "".to_string(),
@@ -218,10 +216,8 @@ impl<
                 data: Default::default(),
                 log: "".to_string(),
                 info: "".to_string(),
-                gas_wanted: gas_wanted
-                    .map(|e| e.into_inner() as i64)
-                    .unwrap_or_default(),
-                gas_used: gas_used.into_inner() as i64,
+                gas_wanted: gas_wanted.into(),
+                gas_used: gas_used.into_inner() as i64, // TODO: this can panic
                 events: events.into_iter().collect(),
                 codespace: "".to_string(),
             },
@@ -289,7 +285,7 @@ impl<
                 .map(|e| e.max_gas)
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
-            state.replace_meter(Gas::try_from(max_gas).expect("Invalid max_gas params"))
+            state.replace_meter(Gas::from(max_gas))
         }
 
         let mut ctx = TxContext::new(

@@ -36,9 +36,9 @@ use tracing::debug;
     Display,
     Deref,
 )]
-pub struct Gas(u64);
+pub struct FiniteGas(u64);
 
-impl Gas {
+impl FiniteGas {
     pub const fn new(val: u64) -> Self {
         Self(val)
     }
@@ -47,27 +47,7 @@ impl Gas {
         self.0
     }
 
-    pub const MAX_GAS: Gas = Gas::new(u64::MAX);
-}
-
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("Error parsing gas: {0}")]
-pub struct GasParseError(pub String);
-
-impl TryFrom<i64> for Gas {
-    type Error = GasParseError;
-
-    fn try_from(value: i64) -> Result<Self, Self::Error> {
-        if value < -1 {
-            Err(GasParseError(
-                "Invalid max block gas. Value can't be lower that -1".to_owned(),
-            ))
-        } else if value == -1 {
-            Ok(Gas(0))
-        } else {
-            Ok(Gas(value as u64))
-        }
-    }
+    pub const MAX_GAS: FiniteGas = FiniteGas::new(u64::MAX);
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -81,31 +61,58 @@ pub enum GasErrors {
 #[derive(Debug)]
 pub struct ErrorNegativeGasConsumed(pub String);
 
-pub enum GasRemaining {
-    NoLimit, // What about returing used gas in this case?
-    Some(Gas),
+#[derive(Debug, Clone, Copy)]
+pub enum Gas {
+    Infinite,
+    Finite(FiniteGas),
+}
+
+/// This is needed to convert block gas limit from i64 to Gas
+impl From<i64> for Gas {
+    fn from(val: i64) -> Self {
+        // Consistent with Cosmos SDK https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/baseapp/abci.go#L155
+        // and https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/baseapp/baseapp.go#L505-L514
+        // except that we don't panic if the value < -1 (we just treat it as infinite gas)
+        if val > 0 {
+            Gas::Finite(FiniteGas(val as u64))
+        } else {
+            Gas::Infinite
+        }
+    }
+}
+
+impl From<Gas> for i64 {
+    fn from(val: Gas) -> i64 {
+        match val {
+            Gas::Infinite => -1,
+            Gas::Finite(val) => val.into_inner() as i64, // TODO: this could panic
+        }
+    }
 }
 
 pub trait PlainGasMeter: Send + Sync + Debug {
     // Return name of this gas meter. Used mainly for debug and logging purposes
     fn name(&self) -> &'static str;
     /// Returns the amount of gas that was consumed by the gas meter instance.
-    fn gas_consumed(&self) -> Gas;
+    fn gas_consumed(&self) -> FiniteGas;
     /// Returns the amount of gas that was consumed by gas meter instance, or the limit if it is reached.
-    fn gas_consumed_or_limit(&self) -> Gas;
-    /// Returns the gas left in the GasMeter. Returns `None` if gas meter is infinite.
-    fn gas_remaining(&self) -> GasRemaining;
-    /// Returns the limit of the gas meter instance. `None` if the gas meter is infinite.
-    fn limit(&self) -> Option<Gas>;
+    fn gas_consumed_or_limit(&self) -> FiniteGas;
+    /// Returns the gas left in the GasMeter.
+    fn gas_remaining(&self) -> Gas;
+    /// Returns the limit of the gas meter instance.
+    fn limit(&self) -> Gas;
     /// Consumes the amount of gas provided.
     /// If the gas overflows, it returns error with the descriptor message.
     /// If the gas meter is not infinite, it returns error  if gas consumed goes above the limit.
-    fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors>;
+    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors>;
     /// Deducts the given amount from the gas consumed.
     /// This functionality enables refunding gas to the transaction
     /// or block gas pools so that EVM-compatible chains can fully support the go-ethereum StateDB interface.
-    fn refund_gas(&mut self, amount: Gas, descriptor: &str)
-        -> Result<(), ErrorNegativeGasConsumed>;
+    fn refund_gas(
+        &mut self,
+        amount: FiniteGas,
+        descriptor: &str,
+    ) -> Result<(), ErrorNegativeGasConsumed>;
     /// Returns true if the amount of gas consumed by the gas meter instance is strictly above the limit, false otherwise.
     fn is_past_limit(&self) -> bool;
     /// Returns true if the amount of gas consumed by the gas meter instance is above or equal to the limit, false otherwise.
@@ -133,11 +140,11 @@ impl<DS: MeterKind> GasMeter<DS> {
         let _ = std::mem::replace(&mut self.meter, meter);
     }
 
-    pub fn consumed_or_limit(&mut self) -> Gas {
+    pub fn consumed_or_limit(&mut self) -> FiniteGas {
         self.meter.gas_consumed_or_limit()
     }
 
-    pub fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors> {
+    pub fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
         debug!(
             "Consumed {} gas for {} with {}",
             amount,
@@ -151,11 +158,11 @@ impl<DS: MeterKind> GasMeter<DS> {
         self.meter.is_out_of_gas()
     }
 
-    pub fn limit(&self) -> Option<Gas> {
+    pub fn limit(&self) -> Gas {
         self.meter.limit()
     }
 
-    pub fn gas_remaining(&self) -> GasRemaining {
+    pub fn gas_remaining(&self) -> Gas {
         self.meter.gas_remaining()
     }
 }
