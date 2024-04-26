@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 use store_crate::database::Database;
 use store_crate::{
     QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore, WritePrefixStore,
@@ -34,9 +35,11 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 //##################################################################################
 //##################################################################################
 
+#[serde_as]
 #[derive(Serialize, Deserialize)]
 pub struct BlockParams {
     pub max_bytes: String,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_gas: u64,
 }
 
