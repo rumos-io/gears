@@ -276,10 +276,10 @@ impl<
         let mut mode = self.deliver_mode.write().expect(POISONED_LOCK);
 
         {
-            let max_gas = self
+            let max_gas: u64 = self
                 .baseapp_params_keeper
                 .block_params(&mode.multi_store)
-                .map(|e| e.max_gas)
+                .map(|e| e.max_gas.parse().expect("block params should be valid"))
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
             // TODO:NOW Move this logic to `new` method?

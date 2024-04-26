@@ -79,9 +79,9 @@ impl<
             params_subspace_key,
         };
 
-        let max_gas = baseapp_params_keeper
+        let max_gas: u64 = baseapp_params_keeper
             .block_params(&multi_store)
-            .map(|e| e.max_gas)
+            .map(|e| e.max_gas.parse().expect("block params should be valid"))
             .unwrap_or_default();
 
         let height = multi_store.head_version().into();
