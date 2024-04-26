@@ -37,7 +37,7 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 #[derive(Serialize, Deserialize)]
 pub struct BlockParams {
     pub max_bytes: String,
-    pub max_gas: String,
+    pub max_gas: u64,
 }
 
 impl From<inner::BlockParams> for BlockParams {
@@ -48,9 +48,9 @@ impl From<inner::BlockParams> for BlockParams {
                 if params.max_gas < -1 {
                     panic!("Invalid max block gas")
                 } else if params.max_gas == -1 {
-                    0.to_string()
+                    0
                 } else {
-                    params.max_gas.to_string()
+                    params.max_gas as u64
                 }
             },
         }
