@@ -1,5 +1,3 @@
-use std::sync::{Arc, RwLock};
-
 use store_crate::{
     database::{Database, PrefixDB},
     types::{kv::KVStore, multi::MultiStore},
@@ -8,11 +6,7 @@ use store_crate::{
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 use crate::types::{
-    gas::{
-        infinite_meter::InfiniteGasMeter,
-        kind::{BlockKind, TxKind},
-        GasMeter,
-    },
+    gas::{kind::TxKind, GasMeter},
     header::Header,
 };
 
@@ -22,7 +16,6 @@ use super::{QueryableContext, TransactionalContext};
 pub struct TxContext<'a, DB, SK> {
     pub gas_meter: GasMeter<TxKind>,
     pub(crate) events: Vec<Event>,
-    pub(crate) block_gas_meter: GasMeter<BlockKind>,
     multi_store: &'a mut MultiStore<DB, SK>,
     height: u64,
     header: Header,
@@ -33,15 +26,14 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         multi_store: &'a mut MultiStore<DB, SK>,
         height: u64,
         header: Header,
-        block_gas_meter: GasMeter<BlockKind>,
+        gas_meter: GasMeter<TxKind>,
     ) -> Self {
         Self {
             events: Vec::new(),
             multi_store,
             height,
             header,
-            block_gas_meter,
-            gas_meter: GasMeter::new(Arc::new(RwLock::new(Box::new(InfiniteGasMeter::default())))),
+            gas_meter,
         }
     }
 }

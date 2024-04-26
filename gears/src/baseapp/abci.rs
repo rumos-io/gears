@@ -3,9 +3,8 @@ use crate::application::ApplicationInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
 use crate::types::context::tx::TxContext;
-use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
-use crate::types::gas::Gas;
+use crate::types::gas::{Gas, GasMeter};
 use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
@@ -57,14 +56,14 @@ impl<
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
 
-        let mut mode = self
-            .deliver_mode
+        let mut multi_store = self
+            .multi_store
             .write()
             .expect("RwLock will not be poisoned");
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
-                .set_consensus_params(&mut mode.multi_store, params);
+                .set_consensus_params(&mut *multi_store, params);
         }
 
         //TODO: handle request height > 1 as is done in SDK
@@ -74,7 +73,7 @@ impl<
             std::process::exit(1)
         });
 
-        let mut ctx = InitContext::new(&mut mode.multi_store, self.get_block_height(), chain_id);
+        let mut ctx = InitContext::new(&mut multi_store, self.block_height(), chain_id);
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
             .map_err(|e| AppError::Genesis(e.to_string()))
@@ -89,7 +88,7 @@ impl<
 
         self.abci_handler.init_genesis(&mut ctx, genesis);
 
-        mode.multi_store.tx_caches_write_then_clear();
+        multi_store.tx_caches_write_then_clear();
 
         ResponseInitChain {
             consensus_params: request.consensus_params,
@@ -109,7 +108,7 @@ impl<
             version: AI::APP_VERSION.to_owned(),
             app_version: 1,
             last_block_height: self
-                .get_block_height()
+                .block_height()
                 .try_into()
                 .expect("can't believe we made it this far"),
             last_block_app_hash: self.get_last_commit_hash().to_vec().into(),
@@ -129,7 +128,7 @@ impl<
                 value: res,
                 proof_ops: None,
                 height: self
-                    .get_block_height()
+                    .block_height()
                     .try_into()
                     .expect("can't believe we made it this far"),
                 codespace: "".to_string(),
@@ -151,15 +150,11 @@ impl<
     fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
         info!("Got check tx request");
 
+        let mut state = self.state.write().expect(POISONED_LOCK);
+
         let result = match r#type {
-            0 => self.run_tx(
-                tx.clone(),
-                &mut *self.check_mode.write().expect(POISONED_LOCK),
-            ),
-            1 => self.run_tx(
-                tx.clone(),
-                &mut *self.check_mode.write().expect(POISONED_LOCK),
-            ), // TODO: ReCheckTxMode
+            0 => self.run_tx(tx.clone(), &mut state.check_mode),
+            1 => self.run_tx(tx.clone(), &mut state.check_mode), // TODO: ReCheckTxMode
             _ => panic!("unknown Request CheckTx type: {}", r#type),
         };
 
@@ -202,10 +197,9 @@ impl<
     fn deliver_tx(&self, RequestDeliverTx { tx }: RequestDeliverTx) -> ResponseDeliverTx {
         info!("Got deliver tx request");
 
-        let result = self.run_tx(
-            tx.clone(),
-            &mut *self.deliver_mode.write().expect(POISONED_LOCK),
-        );
+        let mut state = self.state.write().expect(POISONED_LOCK);
+
+        let result = self.run_tx(tx.clone(), &mut state.deliver_mode);
 
         match result {
             Ok(events) => ResponseDeliverTx {
@@ -236,10 +230,9 @@ impl<
 
     fn commit(&self) -> ResponseCommit {
         info!("Got commit request");
-        let new_height = self.increment_block_height();
-        let mut mode = self.deliver_mode.write().expect(POISONED_LOCK);
+        let new_height = self.block_height_increment();
 
-        let hash = mode.multi_store.commit();
+        let hash = self.multi_store.write().expect(POISONED_LOCK).commit();
         info!(
             "Committed state, block height: {} app hash: {}",
             new_height,
@@ -273,37 +266,33 @@ impl<
                 .expect("tendermint will send a valid Header struct"),
         );
 
-        let mut mode = self.deliver_mode.write().expect(POISONED_LOCK);
+        let mut state = self.state.write().expect(POISONED_LOCK);
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         {
             let max_gas = self
                 .baseapp_params_keeper
-                .block_params(&mode.multi_store)
+                .block_params(&*multi_store)
                 .map(|e| e.max_gas)
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
-            // TODO:NOW Move this logic to `new` method?
-            mode.block_gas_meter.replace_meter(match max_gas > 0 {
-                true => Box::new(BasicGasMeter::new(Gas::new(max_gas))),
-                false => Box::new(InfiniteGasMeter::default()),
-            });
+            state.replace_meter(Gas::new(max_gas))
         }
 
-        let meter = mode.block_gas_meter.clone();
         let mut ctx = TxContext::new(
-            &mut mode.multi_store,
-            self.get_block_height(),
+            &mut multi_store,
+            self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            meter,
+            GasMeter::new(Box::new(InfiniteGasMeter::default())),
         );
 
         self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
-        mode.multi_store.tx_caches_write_then_clear();
+        multi_store.tx_caches_write_then_clear();
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -313,23 +302,22 @@ impl<
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         info!("Got end block request");
 
-        let mut mode = self.deliver_mode.write().expect(POISONED_LOCK);
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let meter = mode.block_gas_meter.clone();
         let mut ctx = TxContext::new(
-            &mut mode.multi_store,
-            self.get_block_height(),
+            &mut multi_store,
+            self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            meter,
+            GasMeter::new(Box::new(InfiniteGasMeter::default())),
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
         let events = ctx.events;
-        mode.multi_store.tx_caches_write_then_clear();
+        multi_store.tx_caches_write_then_clear();
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

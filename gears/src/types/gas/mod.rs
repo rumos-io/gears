@@ -10,12 +10,7 @@ pub mod descriptor;
 pub mod kind;
 
 use std::fmt::Debug;
-use std::{
-    marker::PhantomData,
-    sync::{Arc, RwLock},
-};
-
-use crate::error::POISONED_LOCK;
+use std::marker::PhantomData;
 
 use self::kind::MeterKind;
 
@@ -94,14 +89,14 @@ pub trait PlainGasMeter: Send + Sync + Debug {
 }
 
 /// Wrapper around any gas meter which prevents usage of gas over limit with type system
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct GasMeter<DS> {
-    meter: Arc<RwLock<Box<dyn PlainGasMeter>>>,
+    meter: Box<dyn PlainGasMeter>,
     _descriptor: PhantomData<DS>,
 }
 
 impl<DS> GasMeter<DS> {
-    pub fn new(meter: Arc<RwLock<Box<dyn PlainGasMeter>>>) -> Self {
+    pub fn new(meter: Box<dyn PlainGasMeter>) -> Self {
         Self {
             meter,
             _descriptor: PhantomData,
@@ -111,41 +106,32 @@ impl<DS> GasMeter<DS> {
 
 impl<DS: MeterKind> GasMeter<DS> {
     pub fn replace_meter(&mut self, meter: Box<dyn PlainGasMeter>) {
-        /*
-            rustc 1.77 is pretty new and let's omit this feature
-            I tried this crate https://github.com/dtolnay/rustversion?tab=readme-ov-file
-            but it doesn't support expressions
-        */
-        // self.meter.clear_poison(); // We replace gas meter so we shouldn't worry about poison
-        let _ = std::mem::replace(&mut *self.meter.write().expect(POISONED_LOCK), meter);
+        let _ = std::mem::replace(&mut self.meter, meter);
     }
 
     pub fn consumed_or_limit(&mut self) -> Gas {
-        let lock = self.meter.write().expect(POISONED_LOCK);
-
-        lock.gas_consumed_or_limit()
+        self.meter.gas_consumed_or_limit()
     }
 
     pub fn consume_gas(&mut self, amount: Gas, descriptor: &str) -> Result<(), GasErrors> {
-        let mut meter = self.meter.write().expect(POISONED_LOCK);
         debug!(
             "Consumed {} gas for {} with {}",
             amount,
-            meter.name(),
+            self.meter.name(),
             descriptor
         );
-        meter.consume_gas(amount, descriptor)
+        self.meter.consume_gas(amount, descriptor)
     }
 
     pub fn is_out_of_gas(&self) -> bool {
-        self.meter.read().expect(POISONED_LOCK).is_out_of_gas()
+        self.meter.is_out_of_gas()
     }
 
     pub fn limit(&self) -> Option<Gas> {
-        self.meter.read().expect(POISONED_LOCK).limit()
+        self.meter.limit()
     }
 
     pub fn gas_remaining(&self) -> GasRemaining {
-        self.meter.read().expect(POISONED_LOCK).gas_remaining()
+        self.meter.gas_remaining()
     }
 }

@@ -1,17 +1,12 @@
-use std::sync::{Arc, RwLock};
-
-use store_crate::types::multi::MultiStore;
 use store_crate::TransactionalMultiKVStore;
 use store_crate::{database::Database, StoreKey};
 use tendermint::types::proto::event::Event;
 
-use crate::types::auth::fee::Fee;
 use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
-use crate::types::gas::{Gas, GasMeter, PlainGasMeter};
-use crate::types::header::Header;
+use crate::types::gas::{Gas, GasMeter};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
@@ -24,32 +19,22 @@ use crate::{
 use super::ExecutionMode;
 
 #[derive(Debug)]
-pub struct DeliverTxMode<DB, SK> {
+pub struct DeliverTxMode {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiStore<DB, SK>,
 }
 
-impl<DB: Database, SK: StoreKey> DeliverTxMode<DB, SK> {
-    pub fn new(multi_store: MultiStore<DB, SK>, max_gas: Gas) -> Self {
+impl DeliverTxMode {
+    pub fn new(max_gas: Gas) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas > Gas::new(0) {
-                true => Arc::new(RwLock::new(Box::new(InfiniteGasMeter::default()))),
-                false => Arc::new(RwLock::new(Box::new(BasicGasMeter::new(max_gas)))),
+                true => Box::new(InfiniteGasMeter::default()),
+                false => Box::new(BasicGasMeter::new(max_gas)),
             }),
-            multi_store,
-        }
-    }
-
-    pub(crate) fn build_tx_gas_meter(fee: &Fee, block_height: u64) -> Box<dyn PlainGasMeter> {
-        if block_height == 0 {
-            Box::new(InfiniteGasMeter::default())
-        } else {
-            Box::new(BasicGasMeter::new(Gas::new(fee.gas_limit)))
         }
     }
 }
 
-impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for DeliverTxMode<DB, SK> {
+impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for DeliverTxMode {
     fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
@@ -86,29 +71,15 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         Ok(())
     }
 
-    fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
-        if ctx.block_gas_meter.is_out_of_gas() {
+    fn runnable(&self, _ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
+        if self.block_gas_meter.is_out_of_gas() {
             Err(RunTxError::OutOfGas)
         } else {
             Ok(())
         }
     }
 
-    fn build_ctx<M: TxMessage>(
-        &mut self,
-        height: u64,
-        header: &Header,
-        tx: &TxWithRaw<M>,
-    ) -> TxContext<'_, DB, SK> {
-        let mut ctx = TxContext::new(
-            &mut self.multi_store,
-            height,
-            header.clone(),
-            self.block_gas_meter.clone(),
-        );
-        ctx.gas_meter
-            .replace_meter(Self::build_tx_gas_meter(&tx.tx.auth_info.fee, height));
-
-        ctx
+    fn block_gas_meter_mut(&mut self) -> &mut GasMeter<BlockKind> {
+        &mut self.block_gas_meter
     }
 }

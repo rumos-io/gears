@@ -9,8 +9,14 @@ use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
     types::{
+        auth::fee::Fee,
         context::tx::TxContext,
-        header::Header,
+        gas::{
+            basic_meter::BasicGasMeter,
+            infinite_meter::InfiniteGasMeter,
+            kind::{BlockKind, TxKind},
+            Gas, GasMeter,
+        },
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -18,7 +24,17 @@ use crate::{
 use self::sealed::Sealed;
 
 pub trait ExecutionMode<DB: Database, SK: StoreKey>: Sealed {
-    fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;
+    fn block_gas_meter_mut(&mut self) -> &mut GasMeter<BlockKind>;
+
+    fn build_tx_gas_meter(fee: &Fee, block_height: u64) -> GasMeter<TxKind> {
+        if block_height == 0 {
+            GasMeter::new(Box::new(InfiniteGasMeter::default()))
+        } else {
+            GasMeter::new(Box::new(BasicGasMeter::new(Gas::new(fee.gas_limit))))
+        }
+    }
+
+    fn runnable(&self, ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;
 
     fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         ctx: &mut TxContext<'_, DB, SK>,
@@ -31,13 +47,6 @@ pub trait ExecutionMode<DB: Database, SK: StoreKey>: Sealed {
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
     ) -> Result<Vec<Event>, RunTxError>;
-
-    fn build_ctx<M: TxMessage>(
-        &mut self,
-        height: u64,
-        header: &Header,
-        tx: &TxWithRaw<M>,
-    ) -> TxContext<'_, DB, SK>;
 }
 
 mod sealed {
@@ -45,7 +54,7 @@ mod sealed {
 
     pub trait Sealed {}
 
-    impl<DB, SK> Sealed for CheckTxMode<DB, SK> {}
+    impl Sealed for CheckTxMode {}
     // impl Sealed for ReCheckTxMode {}
-    impl<DB, SK> Sealed for DeliverTxMode<DB, SK> {}
+    impl Sealed for DeliverTxMode {}
 }
