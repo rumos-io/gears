@@ -87,7 +87,8 @@ impl<
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
             state: ApplicationState::new_sync(
-                Gas::try_from(max_gas).expect("Invalid max_gas params"),
+                Gas::try_from(max_gas)
+                    .expect("Invalid params. `max_gas` value can't be lower that -1"),
             ),
             m: PhantomData,
             g: PhantomData,
