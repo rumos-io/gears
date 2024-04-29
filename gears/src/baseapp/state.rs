@@ -27,8 +27,7 @@ impl ApplicationState {
     pub fn replace_meter(&mut self, max_gas: Gas) {
         match max_gas {
             Gas::Infinite => {
-                self.check_mode.block_gas_meter =
-                    GasMeter::new(Box::<InfiniteGasMeter>::default());
+                self.check_mode.block_gas_meter = GasMeter::new(Box::<InfiniteGasMeter>::default());
                 self.deliver_mode.block_gas_meter =
                     GasMeter::new(Box::<InfiniteGasMeter>::default());
             }

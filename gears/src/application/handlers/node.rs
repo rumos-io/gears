@@ -2,10 +2,7 @@ use crate::{
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::{
-        context::{
-            init::InitContext, query::QueryContext, tx::TxContext,
-            TransactionalContext,
-        },
+        context::{init::InitContext, query::QueryContext, tx::TxContext, TransactionalContext},
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
