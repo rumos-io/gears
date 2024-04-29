@@ -1,8 +1,7 @@
-use gears::store::database::{Database, PrefixDB};
-use gears::store::{ReadPrefixStore, StoreKey, WritePrefixStore};
-use gears::{
-    params::ParamsSubspaceKey,
-    types::context::{QueryableContext, TransactionalContext},
+use gears::params::ParamsSubspaceKey;
+use gears::store::database::Database;
+use gears::store::{
+    QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore, WritePrefixStore,
 };
 use serde::{Deserialize, Serialize};
 
@@ -29,7 +28,7 @@ pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn get<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(&self, ctx: &KV) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
@@ -49,9 +48,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut KV,
         params: Params,
     ) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);

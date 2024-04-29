@@ -5,8 +5,8 @@ use gears::error::IBC_ENCODE_UNWRAP;
 use gears::store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
 use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;
-use gears::types::context::init_context::InitContext;
-use gears::types::context::query_context::QueryContext;
+use gears::types::context::init::InitContext;
+use gears::types::context::query::QueryContext;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use gears::{
@@ -38,7 +38,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         &self,
         ctx: &CTX,
     ) -> Self::Params {
-        self.auth_params_keeper.get(ctx)
+        self.auth_params_keeper.get(ctx.multi_store())
     }
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -144,7 +144,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         genesis: GenesisState,
     ) {
         //TODO: sdk sanitizes accounts
-        self.auth_params_keeper.set(ctx, genesis.params);
+        self.auth_params_keeper
+            .set(ctx.multi_store_mut(), genesis.params);
 
         for mut acct in genesis.accounts {
             acct.account_number = self.get_next_account_number(ctx);
@@ -217,35 +218,3 @@ fn create_auth_store_key(address: AccAddress) -> Vec<u8> {
 
     prefix
 }
-
-// TODO: so we really need a Module type?
-// pub enum Module {
-//     FeeCollector,
-// }
-
-// impl Module {
-//     pub fn get_address(&self) -> AccAddress {
-//         match self {
-//             Module::FeeCollector => {
-//                 //TODO: construct address from Vec<u8> + make address constant
-//                 //TODO: where do these addresses come from?
-//                 AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
-//                     .expect("hard coded address is valid")
-//             }
-//         }
-//     }
-
-//     pub fn get_name(&self) -> String {
-//         match self {
-//             Module::FeeCollector => "fee_collector".into(),
-//         }
-//     }
-
-//     pub fn get_permissions(&self) -> Vec<String> {
-//         match self {
-//             Module::FeeCollector => vec![],
-//         }
-//     }
-// }
-
-//TODO: copy tests across

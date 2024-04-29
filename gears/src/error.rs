@@ -3,6 +3,7 @@ use std::fmt::{Display, Formatter, Result};
 use store_crate::error::StoreError;
 
 pub const IBC_ENCODE_UNWRAP: &str = "Should be okay. In future versions of IBC they removed Result";
+pub const POISONED_LOCK: &str = "poisoned lock";
 
 #[derive(Debug, PartialEq)]
 pub enum AppError {

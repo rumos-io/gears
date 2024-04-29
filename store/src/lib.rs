@@ -45,7 +45,7 @@ pub trait TransactionalKVStore<DB>: QueryableKVStore<DB> {
     fn commit(&mut self) -> [u8; 32];
 }
 
-pub trait ReadMultiKVStore<DB, SK> {
+pub trait QueryableMultiKVStore<DB, SK> {
     type KvStore: QueryableKVStore<DB>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KvStore;
@@ -53,7 +53,7 @@ pub trait ReadMultiKVStore<DB, SK> {
     fn head_commit_hash(&self) -> [u8; 32];
 }
 
-pub trait WriteMultiKVStore<DB, SK> {
+pub trait TransactionalMultiKVStore<DB, SK> {
     type KvStoreMut: TransactionalKVStore<DB>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut;

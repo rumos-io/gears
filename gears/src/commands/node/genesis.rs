@@ -9,7 +9,7 @@ use crate::{
     types::base::send::SendCoins,
 };
 
-#[derive(Debug, Clone, derive_builder::Builder)]
+#[derive(Debug, Clone, former::Former)]
 pub struct GenesisCommand {
     pub home: PathBuf,
     pub address: AccAddress,

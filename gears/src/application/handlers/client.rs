@@ -60,7 +60,9 @@ pub trait TxHandler {
     ) -> anyhow::Result<Response> {
         let fee = Fee {
             amount: fee,
-            gas_limit: 200_000, //TODO: remove hard coded gas limit
+            gas_limit: 200_000_u64
+                .try_into()
+                .expect("hard coded gas limit is valid"), //TODO: remove hard coded gas limit
             payer: None,        //TODO: remove hard coded payer
             granter: "".into(), //TODO: remove hard coded granter
         };

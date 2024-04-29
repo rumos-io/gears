@@ -4,15 +4,14 @@ use crate::{
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
 };
-use gears::error::AppError;
-use gears::store::database::{Database, PrefixDB};
+use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::context::init_context::InitContext;
-use gears::types::context::query_context::QueryContext;
-use gears::types::context::tx_context::TxContext;
+use gears::types::context::init::InitContext;
+use gears::types::context::query::QueryContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
-use gears::{config::Config, params::Keeper as ParamsKeeper, types::context::TransactionalContext};
+use gears::{config::Config, params::Keeper as ParamsKeeper};
+use gears::{error::AppError, types::context::tx::TxContext, x::ante::DefaultSignGasConsumer};
 
 #[derive(Debug, Clone)]
 pub struct GaiaABCIHandler {
@@ -31,6 +30,7 @@ pub struct GaiaABCIHandler {
         >,
         auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
         GaiaStoreKey,
+        DefaultSignGasConsumer,
     >,
 }
 
@@ -67,7 +67,7 @@ impl GaiaABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
             // ibc_handler: ibc::handler::Handler::new(ibc_tx_keeper, ibc_query_keeper),
-            ante_handler: BaseAnteHandler::new(auth_keeper, bank_keeper),
+            ante_handler: BaseAnteHandler::new(auth_keeper, bank_keeper, DefaultSignGasConsumer),
         }
     }
 }
@@ -116,9 +116,9 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
         }
     }
 
-    fn run_ante_checks<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, GaiaStoreKey>>(
+    fn run_ante_checks<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         tx: &TxWithRaw<Message>,
     ) -> Result<(), AppError> {
         self.ante_handler.run(ctx, tx)

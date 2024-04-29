@@ -40,7 +40,7 @@ pub enum KeyCommand {
     Add(AddKeyCommand),
 }
 
-#[derive(Debug, Clone, derive_builder::Builder)]
+#[derive(Debug, Clone, former::Former)]
 pub struct AddKeyCommand {
     pub name: String,
     pub recover: bool,

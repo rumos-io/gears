@@ -1,13 +1,11 @@
 use gears::core::serializers::serialize_number_to_string;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::{Database, PrefixDB};
 use gears::store::{
     types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,
 };
+use gears::store::{QueryableMultiKVStore, TransactionalMultiKVStore};
 use gears::x::keepers::auth::AuthParams;
-use gears::{
-    params::ParamsSubspaceKey,
-    types::context::{QueryableContext, TransactionalContext},
-};
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 
@@ -33,6 +31,14 @@ pub struct Params {
 impl AuthParams for Params {
     fn max_memo_characters(&self) -> u64 {
         self.max_memo_characters
+    }
+
+    fn sig_verify_cost_secp256k1(&self) -> u64 {
+        self.sig_verify_cost_secp256k1
+    }
+
+    fn tx_cost_per_byte(&self) -> u64 {
+        self.tx_size_cost_per_byte
     }
 }
 
@@ -86,7 +92,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
             .clone()
     }
 
-    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn get<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
@@ -115,9 +124,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, KV: TransactionalMultiKVStore<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut KV,
         params: Params,
     ) {
         let mut store = self

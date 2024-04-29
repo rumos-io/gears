@@ -5,7 +5,7 @@ use store_crate::{
         multi::MultiStore,
         query::{kv::QueryKVStore, multi::QueryMultiStore},
     },
-    ReadMultiKVStore, StoreKey,
+    QueryableMultiKVStore, StoreKey,
 };
 use tendermint::types::chain_id::ChainId;
 
@@ -36,6 +36,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
     for QueryContext<'a, DB, SK>
 {
     type KVStore = QueryKVStore<'a, PrefixDB<DB>>;
+    type MultiStore = QueryMultiStore<'a, DB, SK>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
         self.multi_store.kv_store(store_key)
@@ -47,5 +48,9 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
 
     fn chain_id(&self) -> &ChainId {
         &self.chain_id
+    }
+
+    fn multi_store(&self) -> &Self::MultiStore {
+        &self.multi_store
     }
 }

@@ -3,7 +3,7 @@ use crate::{
     signing::renderer::value_renderer::ValueRenderer,
     types::{
         context::{
-            init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
+            init::InitContext, query::QueryContext, tx::TxContext,
             TransactionalContext,
         },
         tx::{raw::TxWithRaw, TxMessage},
@@ -20,13 +20,9 @@ use tendermint::types::{
 };
 
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<
-        DB: Database,
-        M: TxMessage + ValueRenderer,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    fn run<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 }
@@ -37,9 +33,9 @@ pub trait ABCIHandler<
     G: DeserializeOwned + Clone + Send + Sync + 'static,
 >: Clone + Send + Sync + 'static
 {
-    fn run_ante_checks<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn run_ante_checks<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError>;
 
@@ -50,17 +46,17 @@ pub trait ABCIHandler<
     ) -> Result<(), AppError>;
 
     #[allow(unused_variables)]
-    fn begin_block<DB: Database>(
+    fn begin_block<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         request: RequestBeginBlock,
     ) {
     }
 
     #[allow(unused_variables)]
-    fn end_block<DB: Database>(
+    fn end_block<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut CTX,
         request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
         vec![]

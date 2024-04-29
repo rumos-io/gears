@@ -1,7 +1,7 @@
 use store_crate::database::{Database, PrefixDB};
 use store_crate::{
     types::{kv::KVStore, multi::MultiStore},
-    ReadMultiKVStore, StoreKey, WriteMultiKVStore,
+    QueryableMultiKVStore, StoreKey, TransactionalMultiKVStore,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
@@ -28,6 +28,7 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
 
 impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
     type KVStore = KVStore<PrefixDB<DB>>;
+    type MultiStore = MultiStore<DB, SK>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
         self.multi_store.kv_store(store_key)
@@ -40,12 +41,17 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for InitCont
     fn chain_id(&self) -> &ChainId {
         &self.chain_id
     }
+
+    fn multi_store(&self) -> &Self::MultiStore {
+        self.multi_store
+    }
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK>
     for InitContext<'_, DB, SK>
 {
     type KVStoreMut = KVStore<PrefixDB<DB>>;
+    type MultiStoreMut = MultiStore<DB, SK>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
         self.multi_store.kv_store_mut(store_key)
@@ -57,5 +63,13 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK>
 
     fn append_events(&mut self, mut events: Vec<Event>) {
         self.events.append(&mut events);
+    }
+
+    fn events_drain(&mut self) -> Vec<Event> {
+        self.events.drain(..).collect()
+    }
+
+    fn multi_store_mut(&mut self) -> &mut Self::MultiStoreMut {
+        self.multi_store
     }
 }

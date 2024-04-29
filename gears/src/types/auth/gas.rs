@@ -1,0 +1,168 @@
+use derive_more::{Add, Deref, Display, From, Into, Mul, Sub};
+use std::{num::ParseIntError, str::FromStr};
+use ux::u63;
+
+pub mod inner {
+    pub use core_types::auth::fee::Fee;
+    pub use core_types::base::coin::Coin;
+}
+
+/// Gas represents gas amounts. It's a wrapper around u63. Gas amounts are represented as i64 in tendermint
+/// with only positive values representing valid gas amounts. Since u63::MAX == i64::MAX all valid tendermint
+/// gas amounts can be represented as Gas and conversely all Gas amounts can be represented as i64.
+/// This is inline with Cosmos SDK behaviour, there a u64 is used for gas amounts with an explicit check, see
+/// https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/types/tx/types.go#L13
+#[derive(
+    Copy,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Display,
+    Deref,
+    Into,
+    Add,
+    Sub,
+    From,
+    Mul,
+)]
+pub struct Gas(u63);
+
+impl Gas {
+    pub const MAX: Self = Self(u63::MAX);
+
+    pub const ZERO: Self = Self(u63::new(0));
+
+    // TODO: write a test for this
+    pub fn checked_add(self, rhs: Self) -> Option<Self> {
+        if (Self::MAX - self) >= rhs {
+            Some(self + rhs)
+        } else {
+            None
+        }
+    }
+
+    // TODO: write a test for this
+    pub fn checked_mul(self, rhs: Self) -> Option<Self> {
+        // Div and Mul are not implemented for u63 so we can't do this:
+        // if self != Self::ZERO && rhs > Self::MAX / self {
+        //     None
+        // } else {
+        //     Some(self * rhs)
+        // }
+
+        let a: u64 = self.0.into();
+        let b: u64 = rhs.0.into();
+        let max: u64 = u63::MAX.into();
+
+        if a != 0 && b > max / a {
+            None
+        } else {
+            Some(Self(u63::new(a * b))) //new is safe as we have already checked the limit
+        }
+    }
+}
+
+impl TryFrom<u64> for Gas {
+    type Error = Error;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        if value > u63::MAX.into() {
+            return Err(Error::Limit(value));
+        }
+
+        Ok(Self(u63::new(value))) //new is safe as we have already checked the limit
+    }
+}
+
+impl From<Gas> for u64 {
+    fn from(val: Gas) -> u64 {
+        val.0.into()
+    }
+}
+
+impl FromStr for Gas {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let u_64 = u64::from_str(s)?;
+        u_64.try_into().map_err(|_| Error::Limit(u_64))
+    }
+}
+
+impl From<Gas> for i64 {
+    fn from(val: Gas) -> i64 {
+        let u_64: u64 = val.0.into();
+        u_64 as i64 // safe cast as this u_64 is always ≤ i64::MAX
+    }
+}
+
+impl TryFrom<i64> for Gas {
+    type Error = Error;
+
+    fn try_from(value: i64) -> Result<Self, Self::Error> {
+        if value < 0 {
+            return Err(Error::Negative(value));
+        }
+
+        Ok(u63::new(value as u64).into()) // cast is safe as we have already checked for negative values
+    }
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum Error {
+    #[error("invalid gas amount {0} > max = {}", Gas::MAX)]
+    Limit(u64),
+    #[error("{0}")]
+    Parse(#[from] ParseIntError),
+    #[error("invalid gas amount {0} < 0")]
+    Negative(i64),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gas_try_from_into_u64() {
+        let gas = Gas::try_from(100_u64).unwrap();
+        assert_eq!(u64::from(gas), 100);
+    }
+
+    #[test]
+    fn test_gas_try_from_error() {
+        let mut raw_gas: u64 = u63::MAX.into();
+        raw_gas += 1;
+        let gas = Gas::try_from(raw_gas);
+        assert!(gas.is_err());
+    }
+
+    #[test]
+    fn test_gas_try_from_limit_ok() {
+        let raw_gas: u64 = u63::MAX.into();
+        let gas = Gas::try_from(raw_gas).expect("should not error");
+        assert_eq!(gas, Gas::MAX);
+    }
+
+    #[test]
+    fn test_gas_from_str() {
+        let gas = Gas::from_str("100").unwrap();
+        assert_eq!(gas, u63::new(100).into());
+    }
+
+    #[test]
+    fn test_gas_from_str_err() {
+        let gas = Gas::from_str("-100");
+        assert!(gas.is_err());
+    }
+
+    #[test]
+    fn test_gas_into_i64() {
+        let gas: Gas = u63::new(100).into();
+        assert_eq!(i64::from(gas), 100);
+    }
+}
