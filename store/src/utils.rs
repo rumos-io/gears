@@ -63,7 +63,7 @@ mod tests {
         .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
         let b = [
-            (vec![2 as u8], vec![13 as u8]),
+            (vec![2_u8], vec![13_u8]),
             (vec![4], vec![14]),
             (vec![5], vec![15]),
         ]

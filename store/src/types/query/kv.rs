@@ -31,7 +31,6 @@ impl<'a, DB: Database> QueryableKVStore<DB> for QueryKVStore<'a, DB> {
             vec![].into_iter(),
             self.persistent_store
                 .range(range)
-                .into_iter()
                 .map(|(second, first)| (Cow::Owned(first), Cow::Owned(second))),
         )
     }

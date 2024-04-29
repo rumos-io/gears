@@ -96,7 +96,6 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<DB> {
         let persisted_values = self
             .persistent_store
             .range(range)
-            .into_iter()
             .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
         MergedRange::merge(cached_values, persisted_values)
