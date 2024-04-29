@@ -8,20 +8,21 @@ workspace = true
 
 [dependencies]
 #local
-tendermint = {path = "../tendermint"}
-core-types = {path = "../core-types"}
-keyring = {path = "../keyring"}
-store_crate = {path = "../store", package = "store"}
+tendermint = { path = "../tendermint" }
+core-types = { path = "../core-types" }
+keyring = { path = "../keyring" }
+store_crate = { path = "../store", package = "store" }
 
 #newtypes
 # vec1 = "1.12.0"
-secp256k1 = { workspace = true, features = ["hashes"]}
+secp256k1 = { workspace = true, features = ["hashes"] }
 bytes = { workspace = true }
 url = { workspace = true }
 nutype = { workspace = true, features = ["serde"] }
 num-format = { workspace = true, features = ["with-num-bigint"] }
 num-bigint = { workspace = true }
 cosmwasm-std = "2.0.0"
+ux = { workspace = true }
 
 #utils
 anyhow = { workspace = true }

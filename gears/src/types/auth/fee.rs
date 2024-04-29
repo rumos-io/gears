@@ -14,12 +14,12 @@ use crate::types::base::errors::CoinsError;
 use crate::types::base::errors::SendCoinsError;
 use crate::types::base::send::SendCoins;
 
+use super::gas::{Error as GasError, Gas};
+
 pub mod inner {
     pub use core_types::auth::fee::Fee;
     pub use core_types::base::coin::Coin;
 }
-
-pub const MAX_GAS_WANTED: u64 = 9223372036854775807; // = (1 << 63) -1 as specified in the cosmos SDK
 
 /// Fee includes the amount of coins paid in fees and the maximum
 /// gas to be used by the transaction. The ratio yields an effective "gasprice",
@@ -32,7 +32,7 @@ pub struct Fee {
     /// gas_limit is the maximum gas that can be used in transaction processing
     /// before an out of gas error occurs
     #[serde_as(as = "DisplayFromStr")]
-    pub gas_limit: u64,
+    pub gas_limit: Gas,
     /// if unset, the first signer is responsible for paying the fees. If set, the specified account must pay the fees.
     /// the payer must be a tx signer (and thus have signed this field in AuthInfo).
     /// setting this field does *not* change the ordering of required signers for the transaction.
@@ -45,24 +45,22 @@ pub struct Fee {
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum FeeError {
-    #[error("invalid gas supplied {0} > {MAX_GAS_WANTED}")]
-    GasLimit(u64),
+    #[error("{0}")]
+    Gas(#[from] GasError),
     #[error("{0}")]
     Coins(#[from] CoinsError),
     #[error("{0}")]
     Address(#[from] AddressError),
     #[error("{0}")]
     SendCoins(#[from] SendCoinsError),
+    #[error("parse error {0}")]
+    Parse(String),
 }
 
 impl TryFrom<inner::Fee> for Fee {
     type Error = FeeError;
 
     fn try_from(raw: inner::Fee) -> Result<Self, Self::Error> {
-        if raw.gas_limit > MAX_GAS_WANTED {
-            return Err(FeeError::GasLimit(raw.gas_limit));
-        }
-
         // There's a special case in the cosmos-sdk which allows the list of coins to be "invalid" provided
         // they're all zero - we'll check for this case and represent such a list of coins as a None fee amount.
         let mut all_zero = true;
@@ -87,7 +85,7 @@ impl TryFrom<inner::Fee> for Fee {
         if all_zero {
             return Ok(Fee {
                 amount: None,
-                gas_limit: raw.gas_limit,
+                gas_limit: raw.gas_limit.try_into()?,
                 payer,
                 granter: raw.granter,
             });
@@ -98,7 +96,7 @@ impl TryFrom<inner::Fee> for Fee {
 
         Ok(Fee {
             amount: Some(SendCoins::new(coins?)?),
-            gas_limit: raw.gas_limit,
+            gas_limit: raw.gas_limit.try_into()?,
             payer,
             granter: raw.granter,
         })
@@ -118,14 +116,14 @@ impl From<Fee> for inner::Fee {
 
                 Self {
                     amount: coins,
-                    gas_limit: fee.gas_limit,
+                    gas_limit: fee.gas_limit.into(),
                     payer,
                     granter: fee.granter,
                 }
             }
             None => Self {
                 amount: vec![],
-                gas_limit: fee.gas_limit,
+                gas_limit: fee.gas_limit.into(),
                 payer,
                 granter: fee.granter,
             },

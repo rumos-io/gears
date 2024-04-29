@@ -15,7 +15,7 @@ use crate::{
             basic_meter::BasicGasMeter,
             infinite_meter::InfiniteGasMeter,
             kind::{BlockKind, TxKind},
-            FiniteGas, GasMeter,
+            GasMeter,
         },
         tx::{raw::TxWithRaw, TxMessage},
     },
@@ -30,7 +30,7 @@ pub trait ExecutionMode<DB: Database, SK: StoreKey>: Sealed {
         if block_height == 0 {
             GasMeter::new(Box::new(InfiniteGasMeter::default()))
         } else {
-            GasMeter::new(Box::new(BasicGasMeter::new(FiniteGas::new(fee.gas_limit))))
+            GasMeter::new(Box::new(BasicGasMeter::new(fee.gas_limit)))
         }
     }
 

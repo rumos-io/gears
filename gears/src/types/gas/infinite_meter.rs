@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{ErrorNegativeGasConsumed, FiniteGas, Gas, GasErrors, PlainGasMeter};
+use super::{FiniteGas, Gas, GasErrors, PlainGasMeter};
 
 /// Gas meter without consumption limit
 #[derive(Debug, Clone)]
@@ -18,7 +18,7 @@ impl InfiniteGasMeter {
     /// Create new `InfiniteGasMeter` with zero consumed gas.
     pub fn new() -> Self {
         Self {
-            consumed: FiniteGas(0),
+            consumed: FiniteGas::ZERO,
         }
     }
 }
@@ -41,27 +41,27 @@ impl PlainGasMeter for InfiniteGasMeter {
     }
 
     fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
-        if let Some(sum) = self.consumed.0.checked_add(amount.0) {
-            self.consumed = FiniteGas(sum);
+        if let Some(sum) = self.consumed.checked_add(amount) {
+            self.consumed = sum;
             Ok(())
         } else {
             Err(GasErrors::ErrorGasOverflow(descriptor.to_owned()))
         }
     }
 
-    fn refund_gas(
-        &mut self,
-        amount: FiniteGas,
-        descriptor: &str,
-    ) -> Result<(), ErrorNegativeGasConsumed> {
-        if self.consumed < amount {
-            Err(ErrorNegativeGasConsumed(descriptor.to_owned()))
-        } else {
-            self.consumed.0 -= amount.0;
+    // fn refund_gas(
+    //     &mut self,
+    //     amount: FiniteGas,
+    //     descriptor: &str,
+    // ) -> Result<(), ErrorNegativeGasConsumed> {
+    //     if self.consumed < amount {
+    //         Err(ErrorNegativeGasConsumed(descriptor.to_owned()))
+    //     } else {
+    //         self.consumed.0 -= amount.0;
 
-            Ok(())
-        }
-    }
+    //         Ok(())
+    //     }
+    // }
 
     fn is_past_limit(&self) -> bool {
         false
@@ -78,6 +78,6 @@ impl PlainGasMeter for InfiniteGasMeter {
 
 impl Display for InfiniteGasMeter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "InfiniteGasMeter: consumed {}", self.consumed.0)
+        write!(f, "InfiniteGasMeter: consumed {}", self.consumed)
     }
 }

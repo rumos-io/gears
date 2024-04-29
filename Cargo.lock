@@ -1685,6 +1685,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "ux",
 ]
 
 [[package]]
@@ -4628,6 +4629,12 @@ dependencies = [
  "getrandom",
  "serde",
 ]
+
+[[package]]
+name = "ux"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3b59fc5417e036e53226bbebd90196825d358624fd5577432c4e486c95b1b096"
 
 [[package]]
 name = "valuable"

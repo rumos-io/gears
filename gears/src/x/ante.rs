@@ -3,11 +3,12 @@ use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
+use crate::types::auth::gas::Gas;
 use crate::types::context::tx::TxContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
-use crate::types::gas::{FiniteGas, GasMeter};
+use crate::types::gas::{GasErrors, GasMeter};
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -53,10 +54,8 @@ impl SignGasConsumer for DefaultSignGasConsumer {
         // TODO:NOW I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
         match pub_key {
             PublicKey::Secp256k1(_key) => {
-                gas_meter.consume_gas(
-                    FiniteGas::new(params.sig_verify_cost_secp256k1()),
-                    ANTE_SECKP251K1_DESCRIPTOR,
-                )?;
+                let amount = params.sig_verify_cost_secp256k1().try_into()?;
+                gas_meter.consume_gas(amount, ANTE_SECKP251K1_DESCRIPTOR)?;
             }
         }
 
@@ -152,11 +151,14 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         }: &TxWithRaw<M>,
     ) -> anyhow::Result<()> {
         let params = self.auth_keeper.get_auth_params(ctx);
+        let tx_len: Gas = (*tx_len as u64).try_into()?;
+        let cost_per_byte: Gas = params.tx_cost_per_byte().try_into()?;
+        let gas_required = tx_len
+            .checked_mul(cost_per_byte)
+            .ok_or(GasErrors::ErrorGasOverflow("tx size".to_string()))?;
 
-        ctx.gas_meter.consume_gas(
-            FiniteGas::new(*tx_len as u64) * params.tx_cost_per_byte(),
-            TX_SIZE_DESCRIPTOR,
-        )?;
+        ctx.gas_meter
+            .consume_gas(gas_required, TX_SIZE_DESCRIPTOR)?;
 
         Ok(())
     }

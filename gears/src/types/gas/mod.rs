@@ -17,38 +17,9 @@ use self::kind::MeterKind;
 #[no_link]
 extern crate derive_more;
 
-use derive_more::{Add, Deref, Display, From, Mul};
 use tracing::debug;
 
-#[derive(
-    Copy,
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    From,
-    Add,
-    Mul,
-    Display,
-    Deref,
-)]
-pub struct FiniteGas(u64);
-
-impl FiniteGas {
-    pub const fn new(val: u64) -> Self {
-        Self(val)
-    }
-
-    pub const fn into_inner(self) -> u64 {
-        self.0
-    }
-
-    pub const MAX_GAS: FiniteGas = FiniteGas::new(u64::MAX);
-}
+pub type FiniteGas = super::auth::gas::Gas;
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum GasErrors {
@@ -74,7 +45,7 @@ impl From<i64> for Gas {
         // and https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/baseapp/baseapp.go#L505-L514
         // except that we don't panic if the value < -1 (we just treat it as infinite gas)
         if val > 0 {
-            Gas::Finite(FiniteGas(val as u64))
+            Gas::Finite(val.try_into().expect("val is positive so this won't fail"))
         } else {
             Gas::Infinite
         }
@@ -85,7 +56,7 @@ impl From<Gas> for i64 {
     fn from(val: Gas) -> i64 {
         match val {
             Gas::Infinite => -1,
-            Gas::Finite(val) => val.into_inner() as i64, // TODO: this could panic
+            Gas::Finite(val) => val.into(),
         }
     }
 }
@@ -105,14 +76,15 @@ pub trait PlainGasMeter: Send + Sync + Debug {
     /// If the gas overflows, it returns error with the descriptor message.
     /// If the gas meter is not infinite, it returns error  if gas consumed goes above the limit.
     fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors>;
+    // TODO: add refund_gas back in
     /// Deducts the given amount from the gas consumed.
     /// This functionality enables refunding gas to the transaction
     /// or block gas pools so that EVM-compatible chains can fully support the go-ethereum StateDB interface.
-    fn refund_gas(
-        &mut self,
-        amount: FiniteGas,
-        descriptor: &str,
-    ) -> Result<(), ErrorNegativeGasConsumed>;
+    // fn refund_gas(
+    //     &mut self,
+    //     amount: FiniteGas,
+    //     descriptor: &str,
+    // ) -> Result<(), ErrorNegativeGasConsumed>;
     /// Returns true if the amount of gas consumed by the gas meter instance is strictly above the limit, false otherwise.
     fn is_past_limit(&self) -> bool;
     /// Returns true if the amount of gas consumed by the gas meter instance is above or equal to the limit, false otherwise.

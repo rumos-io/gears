@@ -172,7 +172,7 @@ impl<
                     log: "".to_string(),
                     info: "".to_string(),
                     gas_wanted: gas_wanted.into(),
-                    gas_used: gas_used.into_inner() as i64, //TODO: this can panic
+                    gas_used: gas_used.into(),
                     events,
                     codespace: "".to_string(),
                     mempool_error: "".to_string(),
@@ -217,7 +217,7 @@ impl<
                 log: "".to_string(),
                 info: "".to_string(),
                 gas_wanted: gas_wanted.into(),
-                gas_used: gas_used.into_inner() as i64, // TODO: this can panic
+                gas_used: gas_used.into(),
                 events: events.into_iter().collect(),
                 codespace: "".to_string(),
             },

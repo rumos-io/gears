@@ -41,6 +41,7 @@ integer-encoding = { version = "4.0.0" }
 nutype = { version = "0.4.0" }
 url = { version = "2.5.0" }
 time = "0.3.34"
+ux = "0.1.6"
 
 # serialization
 serde = { version = "1.0", default-features = false }
@@ -76,7 +77,7 @@ rand = { version = "0.8.5" }
 regex = { version = "1.10.2" }
 dirs = { version = "5.0.1" }
 dircpy = { version = "0.3.15" }
-constcat = { version = "0.5.0" } # upgraded std::concat! which accepts const
+constcat = { version = "0.5.0" }                      # upgraded std::concat! which accepts const
 derive_more = "0.99.17"
 former = "0.16.0"
 
