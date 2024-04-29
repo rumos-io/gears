@@ -28,9 +28,9 @@ impl ApplicationState {
         match max_gas {
             Gas::Infinite => {
                 self.check_mode.block_gas_meter =
-                    GasMeter::new(Box::new(InfiniteGasMeter::default()));
+                    GasMeter::new(Box::<InfiniteGasMeter>::default());
                 self.deliver_mode.block_gas_meter =
-                    GasMeter::new(Box::new(InfiniteGasMeter::default()));
+                    GasMeter::new(Box::<InfiniteGasMeter>::default());
             }
             Gas::Finite(max_gas) => {
                 self.check_mode.block_gas_meter =

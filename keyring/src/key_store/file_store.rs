@@ -242,11 +242,11 @@ where
                 raw_key
             };
 
-            Ok(serde_json::from_str(&json_key).map_err(|e| Error::JSON {
+            serde_json::from_str(&json_key).map_err(|e| Error::JSON {
                 msg: e.to_string(),
                 source: e,
                 path: path.display().to_string(),
-            })?)
+            })
         })
 }
 
