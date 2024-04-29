@@ -1,6 +1,9 @@
 pub mod errors;
 pub use tendermint_abci::ServerBuilder;
 
+pub use tendermint_informal::abci::Event;
+pub use tendermint_informal::abci::EventAttribute;
+
 pub mod response {
     use bytes::Bytes;
     use serde::{Deserialize, Serialize};

@@ -1624,6 +1624,7 @@ dependencies = [
  "bank",
  "bytes",
  "clap",
+ "data-encoding",
  "gears",
  "gears-derive",
  "prost",

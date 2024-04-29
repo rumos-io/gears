@@ -33,3 +33,4 @@ axum = { workspace = true }
 url = { workspace = true }
 serde_json = { workspace = true }
 gears = {path = "../gears", features = [ "cli", "utils"]}
+data-encoding = { workspace = true }

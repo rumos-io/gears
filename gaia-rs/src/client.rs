@@ -33,6 +33,7 @@ pub enum GaiaQueryCommands {
     // Ibc(IbcQueryCli),
 }
 
+/// Wraps `GaiaTxCommands`. This structure exists to satisfy interface needs of TxHandler
 #[derive(Debug, Clone)]
 pub struct WrappedGaiaTxCommands(pub GaiaTxCommands);
 
@@ -44,6 +45,7 @@ impl TryFrom<GaiaTxCommands> for WrappedGaiaTxCommands {
     }
 }
 
+/// Wraps `GaiaQueryCommands`. This structure exists to satisfy interface needs of TxHandler
 #[derive(Debug)]
 pub struct WrappedGaiaQueryCommands(pub GaiaQueryCommands);
 

@@ -41,6 +41,7 @@ impl<T: ApplicationInfo> From<CliAddKeyCommand<T>> for AddKeyCommand {
             recover,
             home,
             keyring_backend,
+            bip39_mnemonic: None,
         }
     }
 }

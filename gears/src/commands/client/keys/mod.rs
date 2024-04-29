@@ -46,6 +46,7 @@ pub struct AddKeyCommand {
     pub recover: bool,
     pub home: PathBuf,
     pub keyring_backend: KeyringBackend,
+    pub bip39_mnemonic: Option<String>,
 }
 
 // TODO: remove this cli code
@@ -57,6 +58,7 @@ pub fn keys(command: KeyCommand) -> Result<()> {
                 recover,
                 home,
                 keyring_backend,
+                bip39_mnemonic,
             } = cmd;
 
             let keyring_home = home.join(keyring_backend.get_sub_dir());
@@ -64,8 +66,13 @@ pub fn keys(command: KeyCommand) -> Result<()> {
             let backend = keyring_backend.to_keyring_backend(&keyring_home);
 
             if recover {
-                println!("> Enter your bip39 mnemonic");
-                let phrase: String = read!("{}\n");
+                let phrase = if let Some(bip) = bip39_mnemonic {
+                    bip
+                } else {
+                    println!("> Enter your bip39 mnemonic");
+                    let phrase: String = read!("{}\n");
+                    phrase
+                };
 
                 let mnemonic = Mnemonic::new(phrase, bip32::Language::English)?;
 
