@@ -35,6 +35,12 @@ pub fn node_url() -> url::Url {
     NODE_URL_STR.try_into().expect("Default should be valid")
 }
 
+pub const ACC_ADDRESS: &str = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux";
+
+pub fn acc_address() -> AccAddress {
+    AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
+}
+
 /// Helper method to start gaia node and tendermint in tmp folder
 pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
     let tmp_dir = TempDir::new()?;
@@ -44,6 +50,7 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
         tmp_dir,
         TENDERMINT_PATH,
         &MockGenesis::default(),
+        acc_address(),
     )?;
 
     std::thread::sleep(Duration::from_secs(10));
