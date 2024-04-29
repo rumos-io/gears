@@ -48,6 +48,8 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.to_path_buf();
 
+    key_add(tmp_dir.to_path_buf())?;
+
     let tendermint = TmpChild::run_tendermint::<_, AppConfig>(
         tmp_dir,
         TENDERMINT_PATH,
@@ -96,7 +98,7 @@ impl Genesis for MockGenesis {
 
 pub const KEY_NAME: &str = "alice";
 
-pub fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
+fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
     let cmd = AddKeyCommand {
         name: KEY_NAME.to_owned(),
         recover: true,

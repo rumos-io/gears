@@ -31,7 +31,7 @@ use gears::{
 };
 use utilities::run_gaia_and_tendermint;
 
-use crate::utilities::{key_add, KEY_NAME};
+use crate::utilities::KEY_NAME;
 
 #[path = "./utilities.rs"]
 mod utilities;
@@ -107,8 +107,6 @@ fn send_tx() -> anyhow::Result<()> {
         to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
         amount: Coin::from_str("10uatom")?,
     };
-
-    key_add(tendermint.1.to_path_buf())?;
 
     let Response {
         check_tx: _,
