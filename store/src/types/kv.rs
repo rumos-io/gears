@@ -1,9 +1,11 @@
-use std::{collections::BTreeMap, ops::RangeBounds};
+use std::{borrow::Cow, collections::BTreeMap, ops::RangeBounds};
 
 use database::Database;
-use trees::iavl::{Range, Tree};
+use trees::iavl::Tree;
 
-use crate::{error::StoreError, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE};
+use crate::{
+    error::StoreError, utils::MergedRange, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE,
+};
 
 use super::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
 
@@ -77,18 +79,27 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<DB> {
         }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
-        //TODO: this doesn't iterate over cached values
-        // let tx_cached_values = self.tx_cache.range(range.clone());
-        // let block_cached_values = self.block_cache.range(range.clone());
-        // let persisted_values = self.persistent_store.range(range.clone());
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> MergedRange<'_> {
+        let cached_values = {
+            let tx_cached_values = self.tx_cache.range(range.clone());
+            let mut block_cached_values = self
+                .block_cache
+                .range(range.clone())
+                .collect::<BTreeMap<_, _>>();
 
-        // MergedRange::merge(
-        //     tx_cached_values,
-        //     MergedRange::merge(block_cached_values, persisted_values),
-        // );
+            block_cached_values.extend(tx_cached_values);
+            block_cached_values
+                .into_iter()
+                .map(|(first, second)| (Cow::Borrowed(first), Cow::Borrowed(second)))
+        };
 
-        self.persistent_store.range(range)
+        let persisted_values = self
+            .persistent_store
+            .range(range)
+            .into_iter()
+            .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
+
+        MergedRange::merge(cached_values, persisted_values)
     }
 
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {

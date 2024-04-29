@@ -179,7 +179,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         let mut balances = vec![];
 
         for (_, coin) in account_store.range(..) {
-            let coin: Coin = Coin::decode::<Bytes>(coin.to_owned().into())
+            let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             balances.push(coin);
@@ -363,7 +363,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         let mut denoms_metadata = vec![];
 
         for (_, metadata) in bank_store.prefix_store(DENOM_METADATA_PREFIX).range(..) {
-            let metadata: Metadata = Metadata::decode::<Bytes>(metadata.to_owned().into())
+            let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             denoms_metadata.push(metadata);

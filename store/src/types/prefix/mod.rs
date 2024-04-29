@@ -29,6 +29,8 @@ fn prefix_end_bound(mut prefix: Vec<u8>) -> Bound<Vec<u8>> {
 #[cfg(test)]
 mod tests {
 
+    use std::borrow::Cow;
+
     use database::MemDB;
 
     use crate::{types::kv::KVStore, QueryableKVStore, TransactionalKVStore};
@@ -57,15 +59,18 @@ mod tests {
         let prefix_store = store.prefix_store(vec![1]);
 
         // unbounded
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store.range(..).collect();
-        let expected_pairs = vec![
+        let got_pairs = prefix_store.range(..).collect::<Vec<_>>();
+        let expected_pairs = [
             (vec![], vec![4]),
             (vec![1], vec![5]),
             (vec![2], vec![6]),
             (vec![3], vec![7]),
             (vec![4], vec![8]),
             (vec![5], vec![9]),
-        ];
+        ]
+        .into_iter()
+        .map(|(first, second)| (Cow::<Vec<u8>>::Owned(first), Cow::<Vec<u8>>::Owned(second)))
+        .collect::<Vec<_>>();
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {
@@ -74,8 +79,11 @@ mod tests {
         }));
 
         // [,]
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store.range(vec![1]..=vec![3]).collect();
-        let expected_pairs = [(vec![1], vec![5]), (vec![2], vec![6]), (vec![3], vec![7])];
+        let got_pairs = prefix_store.range(vec![1]..=vec![3]).collect::<Vec<_>>();
+        let expected_pairs = [(vec![1], vec![5]), (vec![2], vec![6]), (vec![3], vec![7])]
+            .into_iter()
+            .map(|(first, second)| (Cow::<Vec<u8>>::Owned(first), Cow::<Vec<u8>>::Owned(second)))
+            .collect::<Vec<_>>();
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {
@@ -86,10 +94,13 @@ mod tests {
         // (,)
         let start = vec![1];
         let stop = vec![3];
-        let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = prefix_store
+        let got_pairs = prefix_store
             .range((Bound::Excluded(start), Bound::Excluded(stop)))
-            .collect();
-        let expected_pairs = [(vec![2], vec![6])];
+            .collect::<Vec<_>>();
+        let expected_pairs = [(vec![2], vec![6])]
+            .into_iter()
+            .map(|(first, second)| (Cow::<Vec<u8>>::Owned(first), Cow::<Vec<u8>>::Owned(second)))
+            .collect::<Vec<_>>();
 
         assert_eq!(expected_pairs.len(), got_pairs.len());
         assert!(expected_pairs.iter().all(|e| {
@@ -126,50 +137,52 @@ mod tests {
         assert!(matches!(prefix_end_bound(prefix), Bound::Unbounded));
     }
 
-    // TODO: uncomment this test once merged range works
-    // /// Tests whether kv range works with cached and persisted values
-    // #[test]
-    // fn kv_store_merged_range_works() {
-    //     let db = MemDB::new();
-    //     let mut store = KVStore::new(db, None).unwrap();
+    /// Tests whether kv range works with cached and persisted values
+    #[test]
+    fn kv_store_merged_range_works() {
+        let db = MemDB::new();
+        let mut store = KVStore::new(db, None).unwrap();
 
-    //     // values in this group will be in the persistent store
-    //     store.set(vec![1], vec![1]);
-    //     store.set(vec![7], vec![13]); // shadowed by value in tx cache
-    //     store.set(vec![10], vec![2]); // shadowed by value in block cache
-    //     store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
-    //     store.commit();
+        // values in this group will be in the persistent store
+        store.set(vec![1], vec![1]);
+        store.set(vec![7], vec![13]); // shadowed by value in tx cache
+        store.set(vec![10], vec![2]); // shadowed by value in block cache
+        store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
+        store.commit();
 
-    //     // values in this group will be in the block cache
-    //     store.set(vec![2], vec![3]);
-    //     store.set(vec![9], vec![4]); // shadowed by value in tx cache
-    //     store.set(vec![10], vec![7]); // shadows a persisted value
-    //     store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
-    //     store.write_then_clear_tx_cache();
+        // values in this group will be in the block cache
+        store.set(vec![2], vec![3]);
+        store.set(vec![9], vec![4]); // shadowed by value in tx cache
+        store.set(vec![10], vec![7]); // shadows a persisted value
+        store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
+        store.write_then_clear_tx_cache();
 
-    //     // values in this group will be in the tx cache
-    //     store.set(vec![3], vec![5]);
-    //     store.set(vec![8], vec![6]);
-    //     store.set(vec![7], vec![5]); // shadows a persisted value
-    //     store.set(vec![9], vec![6]); // shadows a block cache value
-    //     store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
+        // values in this group will be in the tx cache
+        store.set(vec![3], vec![5]);
+        store.set(vec![8], vec![6]);
+        store.set(vec![7], vec![5]); // shadows a persisted value
+        store.set(vec![9], vec![6]); // shadows a block cache value
+        store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
 
-    //     let start = vec![0];
-    //     let stop = vec![20];
-    //     let got_pairs: Vec<(Vec<u8>, Vec<u8>)> = store
-    //         .range((Bound::Excluded(start), Bound::Excluded(stop)))
-    //         .collect();
-    //     let expected_pairs = vec![
-    //         (vec![1], vec![1]),
-    //         (vec![2], vec![3]),
-    //         (vec![3], vec![5]),
-    //         (vec![7], vec![5]),
-    //         (vec![8], vec![6]),
-    //         (vec![9], vec![6]),
-    //         (vec![10], vec![7]),
-    //         (vec![14], vec![212]),
-    //     ];
+        let start = vec![0];
+        let stop = vec![20];
+        let got_pairs = store
+            .range((Bound::Excluded(start), Bound::Excluded(stop)))
+            .collect::<Vec<_>>();
+        let expected_pairs = vec![
+            (vec![1], vec![1]),
+            (vec![2], vec![3]),
+            (vec![3], vec![5]),
+            (vec![7], vec![5]),
+            (vec![8], vec![6]),
+            (vec![9], vec![6]),
+            (vec![10], vec![7]),
+            (vec![14], vec![212]),
+        ]
+        .into_iter()
+        .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)))
+        .collect::<Vec<_>>();
 
-    //     assert_eq!(expected_pairs, got_pairs);
-    // }
+        assert_eq!(expected_pairs, got_pairs);
+    }
 }

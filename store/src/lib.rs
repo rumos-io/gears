@@ -1,8 +1,8 @@
 #![warn(rust_2018_idioms)]
 
 use strum::IntoEnumIterator;
-use trees::iavl::Range;
 use types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
+use utils::MergedRange;
 
 pub mod error;
 mod hash;
@@ -32,7 +32,7 @@ pub trait WritePrefixStore: ReadPrefixStore {
 pub trait QueryableKVStore<DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>>;
     fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB>;
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB>;
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> MergedRange<'_>;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
 }
 

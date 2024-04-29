@@ -1,9 +1,8 @@
 use std::ops::RangeBounds;
 
 use database::Database;
-use trees::iavl::Range;
 
-use crate::QueryableKVStore;
+use crate::{utils::MergedRange, QueryableKVStore};
 
 use super::{kv::KVStore, query::kv::QueryKVStore};
 
@@ -32,7 +31,7 @@ impl<'a, DB: Database> AnyKVStore<'a, DB> {
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, DB>
+    pub fn range<R>(&self, range: R) -> MergedRange<'_>
     where
         R: RangeBounds<Vec<u8>> + Clone,
     {

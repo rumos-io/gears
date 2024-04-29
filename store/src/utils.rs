@@ -1,37 +1,25 @@
 use std::{borrow::Cow, iter::Peekable};
 
 /// Favours a over b if keys are equal (so make a the cache)
-pub struct MergedRange<'a, A, B>
-where
-    A: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
-    B: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
-{
-    a: Peekable<A>,
-    b: Peekable<B>,
+pub struct MergedRange<'a> {
+    a: Peekable<std::vec::IntoIter<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>>,
+    b: Peekable<std::vec::IntoIter<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>>,
 }
 
-impl<'a, A, B> MergedRange<'a, A, B>
-where
-    A: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
-    B: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
-{
-    pub fn merge(a: A, b: B) -> MergedRange<'a, A, B>
+impl<'a> MergedRange<'a> {
+    pub fn merge<A, B>(a: A, b: B) -> MergedRange<'a>
     where
         A: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
         B: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
     {
         MergedRange {
-            a: a.peekable(),
-            b: b.peekable(),
+            a: a.collect::<Vec<_>>().into_iter().peekable(),
+            b: b.collect::<Vec<_>>().into_iter().peekable(),
         }
     }
 }
 
-impl<'a, A, B> Iterator for MergedRange<'a, A, B>
-where
-    A: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
-    B: Iterator<Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>,
-{
+impl<'a> Iterator for MergedRange<'a> {
     type Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>);
 
     fn next(&mut self) -> Option<Self::Item> {
