@@ -29,6 +29,8 @@ use gears::{
 };
 
 pub const TENDERMINT_PATH: &str = "./tests/assets";
+pub const BIP39_MNEMONIC : &str = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
+
 pub const NODE_URL_STR: &str = "http://localhost:26657/";
 
 pub fn node_url() -> url::Url {
@@ -97,9 +99,10 @@ pub const KEY_NAME: &str = "alice";
 pub fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
     let cmd = AddKeyCommand {
         name: KEY_NAME.to_owned(),
-        recover: Default::default(),
+        recover: true,
         home: home.into(),
         keyring_backend: KeyringBackend::Test,
+        bip39_mnemonic: Some(BIP39_MNEMONIC.to_owned()),
     };
 
     keys(KeyCommand::Add(cmd))?;

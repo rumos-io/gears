@@ -22,7 +22,11 @@ use gears::{
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     core::address::AccAddress,
-    tendermint::types::chain_id::ChainId,
+    tendermint::{
+        abci::{Event, EventAttribute},
+        rpc::response::tx::broadcast::Response,
+        types::chain_id::ChainId,
+    },
     types::{base::coin::Coin, denom::Denom},
 };
 use utilities::run_gaia_and_tendermint;
@@ -106,7 +110,12 @@ fn send_tx() -> anyhow::Result<()> {
 
     key_add(tendermint.1.to_path_buf())?;
 
-    let _result = run_tx(
+    let Response {
+        check_tx: _,
+        deliver_tx,
+        hash,
+        height: _,
+    } = run_tx(
         TxCommand {
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
@@ -121,7 +130,34 @@ fn send_tx() -> anyhow::Result<()> {
         &GaiaCoreClient,
     )?;
 
-    dbg!(_result);
+    let expected_hash = data_encoding::HEXUPPER
+        .decode("ADF35F8DCA01BD6A44F1260EDADA79C9FBED1C8C9F5431C3D192A2C1D0AF209D".as_bytes())?;
+
+    assert_eq!(&expected_hash, hash.as_bytes());
+    assert!(deliver_tx.code.is_ok());
+
+    let expected_events = [Event {
+        kind: "transfer".to_owned(),
+        attributes: vec![
+            EventAttribute {
+                key: "recipient".to_owned(),
+                value: "cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut".to_owned(),
+                index: true,
+            },
+            EventAttribute {
+                key: "sender".to_owned(),
+                value: "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux".to_owned(),
+                index: true,
+            },
+            EventAttribute {
+                key: "amount".to_owned(),
+                value: "10".to_owned(),
+                index: true,
+            },
+        ],
+    }];
+
+    assert_eq!(expected_events.as_slice(), deliver_tx.events.as_slice());
 
     Ok(())
 }
