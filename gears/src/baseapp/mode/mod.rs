@@ -28,7 +28,7 @@ pub trait ExecutionMode<DB: Database, SK: StoreKey>: Sealed {
 
     fn build_tx_gas_meter(fee: &Fee, block_height: u64) -> GasMeter<TxKind> {
         if block_height == 0 {
-            GasMeter::new(Box::new(InfiniteGasMeter::default()))
+            GasMeter::new(Box::<InfiniteGasMeter>::default())
         } else {
             GasMeter::new(Box::new(BasicGasMeter::new(fee.gas_limit)))
         }

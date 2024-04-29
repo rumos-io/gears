@@ -295,7 +295,7 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            GasMeter::new(Box::new(InfiniteGasMeter::default())),
+            GasMeter::new(Box::<InfiniteGasMeter>::default()),
         );
 
         self.abci_handler.begin_block(&mut ctx, request);
@@ -320,7 +320,7 @@ impl<
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            GasMeter::new(Box::new(InfiniteGasMeter::default())),
+            GasMeter::new(Box::<InfiniteGasMeter>::default()),
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);

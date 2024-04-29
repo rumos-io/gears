@@ -26,7 +26,7 @@ impl CheckTxMode {
     pub fn new(max_gas: Gas) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
-                Gas::Infinite => Box::new(InfiniteGasMeter::default()),
+                Gas::Infinite => Box::<InfiniteGasMeter>::default(),
                 Gas::Finite(max_gas) => Box::new(BasicGasMeter::new(max_gas)),
             }),
         }
