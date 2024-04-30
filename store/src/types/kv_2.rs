@@ -9,15 +9,22 @@ use trees::iavl::Tree;
 
 use crate::{error::StoreError, TREE_CACHE_SIZE};
 
+pub trait StoreKind {}
+
+#[derive(Debug)]
+pub struct Commit;
+
+impl StoreKind for Commit {}
+
+impl StoreKind for Cache {}
+
 #[derive(Debug, Clone, Default)]
-pub struct StoreCache {
+pub struct Cache {
     block: BTreeMap<Vec<u8>, Vec<u8>>,
     tx: BTreeMap<Vec<u8>, Vec<u8>>,
-
-    delete: HashSet<Vec<u8>>,
 }
 
-impl StoreCache {
+impl Cache {
     fn tx_upgrade_to_block(&mut self) {
         let tx_map = std::mem::take(&mut self.tx);
 
@@ -26,64 +33,101 @@ impl StoreCache {
         }
     }
 
-    fn commit(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
+    fn commit(&mut self) -> BTreeMap<Vec<u8>, Vec<u8>> {
         let tx_map = std::mem::take(&mut self.tx);
         let mut block_map = std::mem::take(&mut self.block);
 
         block_map.extend(tx_map);
-        (block_map, std::mem::take(&mut self.delete))
+        block_map
     }
 }
 
 #[derive(Debug)]
 pub struct KVStore<KSK, DB> {
     pub(crate) persistent_store: Tree<DB>,
-    store_cache: StoreCache,
-    _kind_marker: PhantomData<KSK>,
+    delete_cache: HashSet<Vec<u8>>,
+    ext: KSK,
 }
 
 impl<KSK, DB: Database> KVStore<KSK, DB> {
-    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, StoreError> {
+    pub fn new(db: DB, ext: KSK, target_version: Option<u32>) -> Result<Self, StoreError> {
         Ok(KVStore {
             persistent_store: Tree::new(
                 db,
                 target_version,
                 TREE_CACHE_SIZE.try_into().expect("tree cache size is > 0"),
             )?,
-            store_cache: Default::default(),
-            _kind_marker: PhantomData,
+            delete_cache: HashSet::new(),
+            ext,
         })
     }
 }
 
-impl<DB: Database> KVStore<CommitKVStore, DB> {
-    pub fn commit(&mut self) {
-        let (cache, to_delete) = self.store_cache.commit();
+impl<DB: Database> KVStore<Commit, DB> {
+    pub fn commit(&mut self, cache: &mut Cache) {
+        let cache = cache.commit();
+        let delete = std::mem::take(&mut self.delete_cache);
 
         for (key, value) in cache {
-            if to_delete.contains(&key) {
+            if delete.contains(&key) {
                 continue;
             }
 
             self.persistent_store.set(key, value);
         }
 
-        for key in to_delete {
+        for key in delete {
             let _ = self.persistent_store.remove(&key);
+        }
+    }
+
+    pub fn delete(&mut self, k: impl IntoIterator<Item = u8>) -> Option<Vec<u8>> {
+        let key = k.into_iter().collect::<Vec<_>>();
+
+        let persisted_value = self.persistent_store.get(&key);
+        let _ = self.delete_cache.insert(key);
+
+        persisted_value
+    }
+
+    pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
+        if self.delete_cache.contains(key) {
+            None
+        } else {
+            self.persistent_store.get(key)
         }
     }
 }
 
+impl<DB: Database> KVStore<Cache, DB> {
+    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        let tx_value = self.ext.tx.remove(k);
+        let block_value = self.ext.block.remove(k);
 
+        let persisted_value = if tx_value.is_none() || block_value.is_none() {
+            let persisted_value = self.persistent_store.get(k);
+            if persisted_value.is_some() {
+                let _ = self.delete_cache.insert(k.to_owned());
+            }
 
-pub trait StoreKind {}
+            persisted_value
+        } else {
+            None
+        };
 
-#[derive(Debug)]
-pub struct CommitKVStore;
+        tx_value.or(block_value).or(persisted_value)
+    }
 
-#[derive(Debug)]
-pub struct CachedKVStore;
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+        if self.delete_cache.contains(k.as_ref()) {
+            return None;
+        }
 
-impl StoreKind for CommitKVStore {}
-
-impl StoreKind for CachedKVStore {}
+        self.ext
+            .tx
+            .get(k.as_ref())
+            .or(self.ext.block.get(k.as_ref()))
+            .cloned()
+            .or(self.persistent_store.get(k.as_ref()))
+    }
+}
