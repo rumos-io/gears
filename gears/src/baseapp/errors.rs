@@ -9,7 +9,7 @@ pub enum RunTxError {
     #[error("Message validation error: {0}")]
     Validation(String),
     #[error("Gas errors: {0}")]
-    GasErrors( #[from] GasErrors),
+    GasErrors(#[from] GasErrors),
     #[error("Custom error: {0}")]
     Custom(String),
 }

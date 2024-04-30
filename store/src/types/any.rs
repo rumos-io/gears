@@ -1,9 +1,8 @@
 use std::ops::RangeBounds;
 
 use database::Database;
-use trees::iavl::Range;
 
-use crate::QueryableKVStore;
+use crate::{range::Range, QueryableKVStore};
 
 use super::{kv::KVStore, query::kv::QueryKVStore};
 

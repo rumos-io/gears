@@ -1,11 +1,12 @@
 #![warn(rust_2018_idioms)]
 
+use range::Range;
 use strum::IntoEnumIterator;
-use trees::iavl::Range;
 use types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
 
 pub mod error;
 mod hash;
+pub mod range;
 pub mod types;
 mod utils;
 

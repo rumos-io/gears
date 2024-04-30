@@ -1,9 +1,11 @@
-use std::{collections::BTreeMap, ops::RangeBounds};
+use std::{borrow::Cow, collections::BTreeMap, ops::RangeBounds};
 
 use database::Database;
-use trees::iavl::{Range, Tree};
+use trees::iavl::Tree;
 
-use crate::{error::StoreError, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE};
+use crate::{
+    error::StoreError, utils::MergedRange, QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE,
+};
 
 use super::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
 
@@ -77,18 +79,26 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<DB> {
         }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
-        //TODO: this doesn't iterate over cached values
-        // let tx_cached_values = self.tx_cache.range(range.clone());
-        // let block_cached_values = self.block_cache.range(range.clone());
-        // let persisted_values = self.persistent_store.range(range.clone());
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> crate::range::Range<'_, R, DB> {
+        let cached_values = {
+            let tx_cached_values = self.tx_cache.range(range.clone());
+            let mut block_cached_values = self
+                .block_cache
+                .range(range.clone())
+                .collect::<BTreeMap<_, _>>();
 
-        // MergedRange::merge(
-        //     tx_cached_values,
-        //     MergedRange::merge(block_cached_values, persisted_values),
-        // );
+            block_cached_values.extend(tx_cached_values);
+            block_cached_values
+                .into_iter()
+                .map(|(first, second)| (Cow::Borrowed(first), Cow::Borrowed(second)))
+        };
 
-        self.persistent_store.range(range)
+        let persisted_values = self
+            .persistent_store
+            .range(range)
+            .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
+
+        MergedRange::merge(cached_values, persisted_values).into()
     }
 
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
@@ -162,5 +172,63 @@ impl<DB: Database> KVStore<DB> {
 
     pub fn last_committed_version(&self) -> u32 {
         self.persistent_store.loaded_version()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::{borrow::Cow, ops::Bound};
+
+    use database::MemDB;
+
+    use crate::{types::kv::KVStore, QueryableKVStore, TransactionalKVStore};
+
+    /// Tests whether kv range works with cached and persisted values
+    #[test]
+    fn kv_store_merged_range_works() {
+        let db = MemDB::new();
+        let mut store = KVStore::new(db, None).unwrap();
+
+        // values in this group will be in the persistent store
+        store.set(vec![1], vec![1]);
+        store.set(vec![7], vec![13]); // shadowed by value in tx cache
+        store.set(vec![10], vec![2]); // shadowed by value in block cache
+        store.set(vec![14], vec![234]); // shadowed by value in block cache and tx cache
+        store.commit();
+
+        // values in this group will be in the block cache
+        store.set(vec![2], vec![3]);
+        store.set(vec![9], vec![4]); // shadowed by value in tx cache
+        store.set(vec![10], vec![7]); // shadows a persisted value
+        store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
+        store.write_then_clear_tx_cache();
+
+        // values in this group will be in the tx cache
+        store.set(vec![3], vec![5]);
+        store.set(vec![8], vec![6]);
+        store.set(vec![7], vec![5]); // shadows a persisted value
+        store.set(vec![9], vec![6]); // shadows a block cache value
+        store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
+
+        let start = vec![0];
+        let stop = vec![20];
+        let got_pairs = store
+            .range((Bound::Excluded(start), Bound::Excluded(stop)))
+            .collect::<Vec<_>>();
+        let expected_pairs = [
+            (vec![1], vec![1]),
+            (vec![2], vec![3]),
+            (vec![3], vec![5]),
+            (vec![7], vec![5]),
+            (vec![8], vec![6]),
+            (vec![9], vec![6]),
+            (vec![10], vec![7]),
+            (vec![14], vec![212]),
+        ]
+        .into_iter()
+        .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)))
+        .collect::<Vec<_>>();
+
+        assert_eq!(expected_pairs, got_pairs);
     }
 }
