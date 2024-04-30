@@ -43,7 +43,6 @@ pub trait TransactionalKVStore<DB>: QueryableKVStore<DB> {
         prefix: impl IntoIterator<Item = u8>,
     ) -> MutablePrefixStore<'_, DB>;
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, key: KI, value: VI);
-    fn commit(&mut self) -> [u8; 32];
 }
 
 pub trait QueryableMultiKVStore<DB, SK> {

@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use database::{Database, PrefixDB};
 
 use crate::{
-    error::KEY_EXISTS_MSG, hash::StoreInfo, QueryableMultiKVStore, StoreKey, TransactionalKVStore,
+    error::KEY_EXISTS_MSG, hash::StoreInfo, QueryableMultiKVStore, StoreKey,
     TransactionalMultiKVStore,
 };
 

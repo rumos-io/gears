@@ -27,18 +27,6 @@ impl<DB: Database> TransactionalKVStore<DB> for KVStore<DB> {
         }
     }
 
-    /// Returns default if failed to save cache
-    fn commit(&mut self) -> [u8; 32] {
-        self.write_then_clear_tx_cache();
-        self.write_then_clear_block_cache();
-        let (hash, _) = self
-            .persistent_store
-            .save_version()
-            .ok()
-            .unwrap_or_default(); //TODO: is it safe to assume this won't ever error?
-        hash
-    }
-
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         key: KI,
@@ -121,6 +109,18 @@ impl<DB: Database> KVStore<DB> {
             block_cache: BTreeMap::new(),
             tx_cache: BTreeMap::new(),
         })
+    }
+
+    /// Returns default if failed to save cache
+    pub fn commit(&mut self) -> [u8; 32] {
+        self.write_then_clear_tx_cache();
+        self.write_then_clear_block_cache();
+        let (hash, _) = self
+            .persistent_store
+            .save_version()
+            .ok()
+            .unwrap_or_default(); //TODO: is it safe to assume this won't ever error?
+        hash
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
