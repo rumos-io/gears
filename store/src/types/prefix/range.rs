@@ -1,13 +1,15 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Bound};
 
-use crate::utils::MergedRange;
+use database::Database;
 
-pub struct PrefixRange<'a> {
-    pub(super) parent_range: MergedRange<'a>,
+use crate::range::Range;
+
+pub struct PrefixRange<'a, DB> {
+    pub(super) parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
     pub(super) prefix_length: usize,
 }
 
-impl<'a> Iterator for PrefixRange<'a> {
+impl<'a, DB: Database> Iterator for PrefixRange<'a, DB> {
     type Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>);
 
     fn next(&mut self) -> Option<Self::Item> {

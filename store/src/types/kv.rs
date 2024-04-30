@@ -79,7 +79,7 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<DB> {
         }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> MergedRange<'_> {
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> crate::range::Range<'_, R, DB> {
         let cached_values = {
             let tx_cached_values = self.tx_cache.range(range.clone());
             let mut block_cached_values = self
@@ -98,7 +98,7 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<DB> {
             .range(range)
             .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
-        MergedRange::merge(cached_values, persisted_values)
+        MergedRange::merge(cached_values, persisted_values).into()
     }
 
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::RangeBounds};
+use std::ops::RangeBounds;
 
 use database::Database;
 use trees::iavl::QueryTree;
@@ -6,7 +6,6 @@ use trees::iavl::QueryTree;
 use crate::{
     error::StoreError,
     types::{kv::KVStore, prefix::immutable::ImmutablePrefixStore},
-    utils::MergedRange,
     QueryableKVStore,
 };
 
@@ -26,13 +25,8 @@ impl<'a, DB: Database> QueryableKVStore<DB> for QueryKVStore<'a, DB> {
         }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> MergedRange<'_> {
-        MergedRange::merge(
-            vec![].into_iter(),
-            self.persistent_store
-                .range(range)
-                .map(|(second, first)| (Cow::Owned(first), Cow::Owned(second))),
-        )
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> crate::range::Range<'_, R, DB> {
+        self.persistent_store.range(range).into()
     }
 
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
