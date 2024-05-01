@@ -5,7 +5,7 @@ use crate::{
     error::AppError,
     types::{
         base::send::SendCoins,
-        context::{KVContext, TransactionalContext},
+        context::{QueryableContext, TransactionalContext},
         denom::Denom,
         tx::metadata::Metadata,
     },
@@ -21,7 +21,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn get_denom_metadata<DB: Database, CTX: KVContext<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,

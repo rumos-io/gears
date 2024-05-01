@@ -7,7 +7,7 @@ use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
-use gears::types::context::KVContext;
+use gears::types::context::QueryableContext;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use gears::{
@@ -35,14 +35,14 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     type Params = Params;
 
-    fn get_auth_params<DB: Database, CTX: KVContext<PrefixDB<DB>, SK>>(
+    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &CTX,
     ) -> Self::Params {
         self.auth_params_keeper.get(ctx.multi_store())
     }
 
-    fn has_account<DB: Database, CTX: KVContext<DB, SK>>(
+    fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
@@ -52,7 +52,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         auth_store.get(&key).is_some()
     }
 
-    fn get_account<DB: Database, CTX: KVContext<DB, SK>>(
+    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,

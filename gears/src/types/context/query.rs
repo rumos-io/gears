@@ -3,15 +3,12 @@ use store_crate::types::kv::KVStore;
 use store_crate::QueryableMultiKVStore;
 use store_crate::{
     error::StoreError,
-    types::{
-        multi::MultiStore,
-        query::{kv::QueryKVStore, multi::QueryMultiStore},
-    },
+    types::{multi::MultiStore, query::multi::QueryMultiStore},
     StoreKey,
 };
 use tendermint::types::chain_id::ChainId;
 
-use super::{Context, KVContext, QueryableContext};
+use super::QueryableContext;
 
 pub struct QueryContext<'a, DB, SK> {
     pub multi_store: QueryMultiStore<'a, DB, SK>,
@@ -34,23 +31,9 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for QueryContext<'a, DB, SK> {
-    fn height(&self) -> u64 {
-        self.height
-    }
-
-    fn chain_id(&self) -> &ChainId {
-        &self.chain_id
-    }
-}
-
-impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for QueryContext<'_, DB, SK> {
-    fn query_store(&self, store_key: &SK) -> &QueryKVStore<PrefixDB<DB>> {
-        self.multi_store.kv_store(store_key)
-    }
-}
-
-impl<'a, DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for QueryContext<'a, DB, SK> {
+impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
+    for QueryContext<'a, DB, SK>
+{
     type MultiStore = QueryMultiStore<'a, DB, SK>;
 
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
@@ -59,5 +42,13 @@ impl<'a, DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for QueryContex
 
     fn multi_store(&self) -> &Self::MultiStore {
         &self.multi_store
+    }
+
+    fn height(&self) -> u64 {
+        self.height
+    }
+
+    fn chain_id(&self) -> &ChainId {
+        &self.chain_id
     }
 }

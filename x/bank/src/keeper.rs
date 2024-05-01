@@ -19,7 +19,7 @@ use gears::types::base::coin::Coin;
 use gears::types::base::send::SendCoins;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
-use gears::types::context::{KVContext, TransactionalContext};
+use gears::types::context::{QueryableContext, TransactionalContext};
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::tx::metadata::Metadata;
@@ -62,7 +62,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
         self.send_coins(ctx, msg)
     }
 
-    fn get_denom_metadata<DB: Database, CTX: KVContext<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
@@ -270,7 +270,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
             //TODO: if balance == 0 then denom should be removed from store
 
-            let mut to_account_store = Self::get_address_balances_store(&mut bank_store, &to_address);
+            let mut to_account_store =
+                Self::get_address_balances_store(&mut bank_store, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
 
             let mut to_balance: Coin = match to_balance {

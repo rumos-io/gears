@@ -13,7 +13,7 @@ use crate::types::{
     header::Header,
 };
 
-use super::{Context, KVContext, TransactionalContext};
+use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
@@ -50,17 +50,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for TxContext<'a, DB, SK> {
-    fn height(&self) -> u64 {
-        self.height
-    }
-
-    fn chain_id(&self) -> &ChainId {
-        &self.header.chain_id
-    }
-}
-
-impl<DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
     type MultiStore = MultiStore<DB, SK>;
 
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
@@ -69,6 +59,14 @@ impl<DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for TxContext<'_, D
 
     fn multi_store(&self) -> &Self::MultiStore {
         self.multi_store
+    }
+
+    fn height(&self) -> u64 {
+        self.height
+    }
+
+    fn chain_id(&self) -> &ChainId {
+        &self.header.chain_id
     }
 }
 

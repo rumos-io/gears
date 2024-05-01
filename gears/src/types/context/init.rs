@@ -6,7 +6,7 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-use super::{Context, KVContext, TransactionalContext};
+use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
@@ -27,17 +27,9 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
-    fn height(&self) -> u64 {
-        self.height
-    }
-
-    fn chain_id(&self) -> &ChainId {
-        &self.chain_id
-    }
-}
-
-impl<'a, DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for InitContext<'a, DB, SK> {
+impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
+    for InitContext<'a, DB, SK>
+{
     type MultiStore = MultiStore<DB, SK>;
 
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
@@ -46,6 +38,14 @@ impl<'a, DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for InitContext
 
     fn multi_store(&self) -> &Self::MultiStore {
         self.multi_store
+    }
+
+    fn height(&self) -> u64 {
+        self.height
+    }
+
+    fn chain_id(&self) -> &ChainId {
+        &self.chain_id
     }
 }
 

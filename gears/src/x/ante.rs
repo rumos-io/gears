@@ -5,7 +5,7 @@ use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
 use crate::types::context::tx::TxContext;
-use crate::types::context::KVContext;
+use crate::types::context::QueryableContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
@@ -17,7 +17,7 @@ use crate::x::module::Module;
 use crate::{
     error::AppError,
     types::{
-        context::{Context, TransactionalContext},
+        context::TransactionalContext,
         tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
@@ -213,7 +213,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn tx_timeout_height_ante_handler<DB: Database, CTX: Context<DB, SK>, M: TxMessage>(
+    fn tx_timeout_height_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: TxMessage>(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,
@@ -237,7 +237,11 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn validate_memo_ante_handler<DB: Database, CTX: KVContext<PrefixDB<DB>, SK>, M: TxMessage>(
+    fn validate_memo_ante_handler<
+        DB: Database,
+        CTX: QueryableContext<PrefixDB<DB>, SK>,
+        M: TxMessage,
+    >(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,
