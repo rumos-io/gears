@@ -73,24 +73,6 @@ impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
         self.stores.get_mut(store_key).expect(KEY_EXISTS_MSG)
     }
 
-    fn commit(&mut self) -> [u8; 32] {
-        let mut store_infos = vec![];
-        for (store, kv_store) in &mut self.stores {
-            let store_info = StoreInfo {
-                name: store.name().into(),
-                hash: kv_store.commit(),
-            };
-
-            store_infos.push(store_info)
-        }
-
-        let hash = crate::hash::hash_store_infos(store_infos);
-
-        self.head_commit_hash = hash;
-        self.head_version += 1;
-        hash
-    }
-
     fn tx_caches_write_then_clear(&mut self) {
         for (_, store) in &mut self.stores {
             store.cache.tx_upgrade_to_block();

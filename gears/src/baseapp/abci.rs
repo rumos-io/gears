@@ -10,6 +10,7 @@ use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
+use store_crate::commit::CommitMultiStore;
 use store_crate::{StoreKey, TransactionalMultiKVStore};
 use tendermint::{
     application::ABCIApplication,
