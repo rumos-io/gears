@@ -12,7 +12,7 @@ use super::commit::CommitKVStore;
 
 pub struct KVStoreMut<'a, DB>(pub(crate) &'a mut CommitKVStore<DB>);
 
-impl<DB: Database> KVStoreMut<'_, DB> {
+impl<'a, DB: Database> KVStoreMut<'a, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
         self.0.delete(k)
     }
@@ -51,5 +51,11 @@ impl<DB: Database> TransactionalKVStore<DB> for KVStoreMut<'_, DB> {
         value: VI,
     ) {
         self.0.set(key, value)
+    }
+}
+
+impl<'a, DB> From<&'a mut CommitKVStore<DB>> for KVStoreMut<'a, DB> {
+    fn from(value: &'a mut CommitKVStore<DB>) -> Self {
+        Self(value)
     }
 }

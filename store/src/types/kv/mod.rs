@@ -25,3 +25,9 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<'_, DB> {
         self.0.range(range)
     }
 }
+
+impl<'a, DB> From<&'a CommitKVStore<DB>> for KVStore<'a, DB> {
+    fn from(value: &'a CommitKVStore<DB>) -> Self {
+        Self(value)
+    }
+}

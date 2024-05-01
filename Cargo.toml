@@ -3,15 +3,14 @@ members = [
   # no local deps
   "database",
   "tendermint",
-  # "proto-types",
   "core-types",
 
   # with local deps
   "trees",
   "store",
   "keyring",
-  # "gears",
-  # "gears-derive",
+  "gears",
+  "gears-derive",
 
   # GAIA
   # "gaia-rs",

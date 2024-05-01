@@ -1,6 +1,9 @@
 use store_crate::{
     database::{Database, PrefixDB},
-    types::{kv::KVStore, multi::MultiStore},
+    types::{
+        kv::{mutable::KVStoreMut, KVStore},
+        multi::MultiStore,
+    },
     QueryableMultiKVStore, StoreKey, TransactionalMultiKVStore,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
@@ -10,7 +13,7 @@ use crate::types::{
     header::Header,
 };
 
-use super::{QueryableContext, TransactionalContext};
+use super::{KVContext, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
@@ -36,16 +39,17 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             gas_meter,
         }
     }
+
+    // pub(crate) fn multi_store(&self) -> &MultiStore<DB, SK> {
+    //     self.multi_store
+    // }
+
+    pub(crate) fn multi_store_mut(&mut self) -> &mut MultiStore<DB, SK> {
+        self.multi_store
+    }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
-    type KVStore = KVStore<PrefixDB<DB>>;
-    type MultiStore = MultiStore<DB, SK>;
-
-    fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
-        self.multi_store.kv_store(store_key)
-    }
-
+impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext<'a, DB, SK> {
     fn height(&self) -> u64 {
         self.height
     }
@@ -53,18 +57,17 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContex
     fn chain_id(&self) -> &ChainId {
         &self.header.chain_id
     }
+}
 
-    fn multi_store(&self) -> &Self::MultiStore {
-        self.multi_store
+impl<DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+        self.multi_store.kv_store(store_key).into()
     }
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
-    type KVStoreMut = KVStore<PrefixDB<DB>>;
-    type MultiStoreMut = MultiStore<DB, SK>;
-
-    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut {
-        self.multi_store.kv_store_mut(store_key)
+    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
+        self.multi_store.kv_store_mut(store_key).into()
     }
 
     fn push_event(&mut self, event: Event) {
@@ -77,9 +80,5 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxCo
 
     fn events_drain(&mut self) -> Vec<Event> {
         self.events.drain(..).collect()
-    }
-
-    fn multi_store_mut(&mut self) -> &mut Self::MultiStoreMut {
-        self.multi_store
     }
 }
