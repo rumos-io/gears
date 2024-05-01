@@ -13,7 +13,7 @@ use crate::types::{
     header::Header,
 };
 
-use super::{KVContext, QueryableContext, TransactionalContext};
+use super::{Context, KVContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
@@ -44,12 +44,13 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
     //     self.multi_store
     // }
 
+    // TODO:NOW rework it to not expose
     pub(crate) fn multi_store_mut(&mut self) -> &mut MultiStore<DB, SK> {
         self.multi_store
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext<'a, DB, SK> {
+impl<'a, DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for TxContext<'a, DB, SK> {
     fn height(&self) -> u64 {
         self.height
     }
@@ -60,12 +61,24 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxCo
 }
 
 impl<DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
+    type MultiStore = MultiStore<DB, SK>;
+
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
+    }
+
+    fn multi_store(&self) -> &Self::MultiStore {
+        self.multi_store
     }
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
+    type MultiStoreMut = MultiStore<DB, SK>;
+
+    fn multi_store_mut(&mut self) -> &mut Self::MultiStoreMut {
+        self.multi_store
+    }
+
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.multi_store.kv_store_mut(store_key).into()
     }

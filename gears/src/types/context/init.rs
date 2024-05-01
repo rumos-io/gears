@@ -6,7 +6,7 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-use super::{KVContext, QueryableContext, TransactionalContext};
+use super::{Context, KVContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
@@ -27,7 +27,7 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> Context<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
     fn height(&self) -> u64 {
         self.height
     }
@@ -37,15 +37,27 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for InitCont
     }
 }
 
-impl<DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for InitContext<'_, DB, SK> {
+impl<'a, DB: Database, SK: StoreKey> KVContext<PrefixDB<DB>, SK> for InitContext<'a, DB, SK> {
+    type MultiStore = MultiStore<DB, SK>;
+
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
+    }
+
+    fn multi_store(&self) -> &Self::MultiStore {
+        self.multi_store
     }
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK>
     for InitContext<'_, DB, SK>
 {
+    type MultiStoreMut = MultiStore<DB, SK>;
+
+    fn multi_store_mut(&mut self) -> &mut Self::MultiStoreMut {
+        self.multi_store
+    }
+
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.multi_store.kv_store_mut(store_key).into()
     }

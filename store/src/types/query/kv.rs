@@ -1,13 +1,9 @@
 use std::ops::RangeBounds;
 
 use database::Database;
-use trees::iavl::QueryTree;
+use trees::iavl::{QueryTree, Tree};
 
-use crate::{
-    error::StoreError,
-    types::{kv::KVStore, prefix::immutable::ImmutablePrefixStore},
-    QueryableKVStore,
-};
+use crate::{error::StoreError, types::prefix::immutable::ImmutablePrefixStore, QueryableKVStore};
 
 pub struct QueryKVStore<'a, DB> {
     persistent_store: QueryTree<'a, DB>,
@@ -40,9 +36,9 @@ impl<'a, DB: Database> QueryableKVStore<DB> for QueryKVStore<'a, DB> {
 
 impl<'a, DB: Database> QueryKVStore<'a, DB> {
     // TODO: I left it for now, but ref to KVStore only to get ref to Tree?
-    pub fn new(kv_store: KVStore<'a, DB>, version: u32) -> Result<Self, StoreError> {
+    pub fn new(persistent_store: &'a Tree<DB>, version: u32) -> Result<Self, StoreError> {
         Ok(QueryKVStore {
-            persistent_store: QueryTree::new(&kv_store.0.persistent_store, version)?,
+            persistent_store: QueryTree::new(persistent_store, version)?,
         })
     }
 }
@@ -54,10 +50,7 @@ mod test {
     use database::MemDB;
 
     use crate::{
-        types::{
-            kv::{commit::CommitKVStore, KVStore},
-            query::kv::QueryKVStore,
-        },
+        types::{kv::commit::CommitKVStore, query::kv::QueryKVStore},
         QueryableKVStore, TransactionalKVStore,
     };
 
@@ -88,7 +81,7 @@ mod test {
         store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
 
         let store =
-            QueryKVStore::new(KVStore(&mut store), 0).expect("Failed to create QueryKVStore");
+            QueryKVStore::new(&store.persistent_store, 0).expect("Failed to create QueryKVStore");
 
         let start = vec![0];
         let stop = vec![20];

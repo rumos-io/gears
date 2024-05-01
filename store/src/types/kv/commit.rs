@@ -11,7 +11,7 @@ use crate::{
     QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE,
 };
 
-use super::{cache::KVStoreCache, mutable::KVStoreMut, KVStore};
+use super::{cache::KVStoreCache, mutable::KVStoreMut, KVStore, KVStoreBackend};
 
 #[derive(Debug)]
 pub struct CommitKVStore<DB> {
@@ -73,7 +73,7 @@ impl<DB: Database> CommitKVStore<DB> {
     }
 
     pub fn kv_store(&mut self) -> KVStore<'_, DB> {
-        KVStore(self)
+        KVStore(KVStoreBackend::Commit(self))
     }
 
     pub fn head_commit_hash(&self) -> [u8; 32] {

@@ -4,30 +4,50 @@ use crate::{range::Range, QueryableKVStore};
 
 use self::commit::CommitKVStore;
 
-use super::prefix::immutable::ImmutablePrefixStore;
+use super::{prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore};
 
 pub mod cache;
 pub mod commit;
 pub mod mutable;
 
-pub struct KVStore<'a, DB>(pub(crate) &'a CommitKVStore<DB>);
+pub(crate) enum KVStoreBackend<'a, DB> {
+    Commit(&'a CommitKVStore<DB>),
+    Query(&'a QueryKVStore<'a, DB>),
+}
+
+pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
 impl<DB: Database> QueryableKVStore<DB> for KVStore<'_, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        self.0.get(k)
+        match self.0 {
+            KVStoreBackend::Commit(var) => var.get(k),
+            KVStoreBackend::Query(var) => var.get(k),
+        }
     }
 
     fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
-        self.0.prefix_store(prefix)
+        match self.0 {
+            KVStoreBackend::Commit(var) => var.prefix_store(prefix),
+            KVStoreBackend::Query(var) => var.prefix_store(prefix),
+        }
     }
 
     fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
-        self.0.range(range)
+        match self.0 {
+            KVStoreBackend::Commit(var) => var.range(range),
+            KVStoreBackend::Query(var) => var.range(range),
+        }
     }
 }
 
 impl<'a, DB> From<&'a CommitKVStore<DB>> for KVStore<'a, DB> {
     fn from(value: &'a CommitKVStore<DB>) -> Self {
-        Self(value)
+        Self(KVStoreBackend::Commit(value))
+    }
+}
+
+impl<'a, DB> From<&'a QueryKVStore<'a, DB>> for KVStore<'a, DB> {
+    fn from(value: &'a QueryKVStore<'a, DB>) -> Self {
+        Self(KVStoreBackend::Query(value))
     }
 }

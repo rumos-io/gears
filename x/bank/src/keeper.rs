@@ -19,7 +19,7 @@ use gears::types::base::coin::Coin;
 use gears::types::base::send::SendCoins;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
-use gears::types::context::{QueryableContext, TransactionalContext};
+use gears::types::context::{KVContext, TransactionalContext};
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::tx::metadata::Metadata;
@@ -62,7 +62,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
         self.send_coins(ctx, msg)
     }
 
-    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: KVContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
@@ -110,7 +110,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         self.bank_params_keeper
             .set(ctx.multi_store_mut(), genesis.params);
 
-        let bank_store = ctx.kv_store_mut(&self.store_key);
+        let mut bank_store = ctx.kv_store_mut(&self.store_key);
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {
@@ -240,7 +240,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
-        let bank_store = ctx.kv_store_mut(&self.store_key);
+        let mut bank_store = ctx.kv_store_mut(&self.store_key);
         let mut events = vec![];
 
         let from_address = msg.from_address;
@@ -248,7 +248,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
         for send_coin in msg.amount {
             let mut from_account_store =
-                Self::get_address_balances_store(bank_store, &from_address);
+                Self::get_address_balances_store(&mut bank_store, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
@@ -270,7 +270,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
             //TODO: if balance == 0 then denom should be removed from store
 
-            let mut to_account_store = Self::get_address_balances_store(bank_store, &to_address);
+            let mut to_account_store = Self::get_address_balances_store(&mut bank_store, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
 
             let mut to_balance: Coin = match to_balance {
@@ -320,7 +320,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) {
         // TODO: need to delete coins with zero balance
 
-        let bank_store = ctx.kv_store_mut(&self.store_key);
+        let mut bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
         supply_store.set(
@@ -345,7 +345,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) {
         // NOTE: we use the denom twice, once for the prefix and once for the key.
         // This seems unnecessary, I'm not sure why they do this in the SDK.
-        let bank_store = ctx.kv_store_mut(&self.store_key);
+        let mut bank_store = ctx.kv_store_mut(&self.store_key);
         let mut denom_metadata_store =
             bank_store.prefix_store_mut(denom_metadata_key(denom_metadata.base.clone()));
 

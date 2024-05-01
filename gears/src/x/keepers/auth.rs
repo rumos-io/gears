@@ -7,7 +7,7 @@ use store_crate::{
 use crate::{
     types::{
         account::Account,
-        context::{QueryableContext, TransactionalContext},
+        context::{KVContext, TransactionalContext},
     },
     x::module::Module,
 };
@@ -21,18 +21,18 @@ pub trait AuthParams {
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     type Params: AuthParams;
 
-    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    fn get_auth_params<DB: Database, CTX: KVContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &CTX,
     ) -> Self::Params;
 
-    fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn has_account<DB: Database, CTX: KVContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
     ) -> bool;
 
-    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn get_account<DB: Database, CTX: KVContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
