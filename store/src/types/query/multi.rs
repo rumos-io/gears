@@ -4,12 +4,16 @@ use database::{Database, PrefixDB};
 
 use crate::{
     error::{StoreError, KEY_EXISTS_MSG},
-    types::multi::MultiStore,
+    types::{
+        kv::{KVStore, KVStoreBackend},
+        multi::commit::CommitMultiStore,
+    },
     QueryableMultiKVStore, StoreKey,
 };
 
 use super::kv::QueryKVStore;
 
+#[derive(Debug)]
 pub struct QueryMultiStore<'a, DB, SK> {
     //head_version: u32,
     //head_commit_hash: [u8; 32],
@@ -17,7 +21,10 @@ pub struct QueryMultiStore<'a, DB, SK> {
 }
 
 impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
-    pub fn new(multi_store: &'a MultiStore<DB, SK>, version: u32) -> Result<Self, StoreError> {
+    pub fn new(
+        multi_store: &'a CommitMultiStore<DB, SK>,
+        version: u32,
+    ) -> Result<Self, StoreError> {
         let mut stores = HashMap::new();
         for (store, kv_store) in &multi_store.stores {
             stores.insert(
@@ -34,13 +41,13 @@ impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
-    for QueryMultiStore<'a, DB, SK>
+impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
+    for QueryMultiStore<'_, DB, SK>
 {
-    type KvStore = QueryKVStore<'a, PrefixDB<DB>>;
-
-    fn kv_store(&self, store_key: &SK) -> &Self::KvStore {
-        self.stores.get(store_key).expect(KEY_EXISTS_MSG)
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+        KVStore(KVStoreBackend::Query(
+            self.stores.get(store_key).expect(KEY_EXISTS_MSG),
+        ))
     }
 
     fn head_version(&self) -> u32 {

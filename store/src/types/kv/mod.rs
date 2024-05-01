@@ -10,11 +10,13 @@ pub mod cache;
 pub mod commit;
 pub mod mutable;
 
+#[derive(Debug)]
 pub(crate) enum KVStoreBackend<'a, DB> {
     Commit(&'a CommitKVStore<DB>),
     Query(&'a QueryKVStore<'a, DB>),
 }
 
+#[derive(Debug)]
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
 impl<DB: Database> QueryableKVStore<DB> for KVStore<'_, DB> {

@@ -6,6 +6,7 @@ use crate::{range::Range, QueryableKVStore};
 
 use super::{kv::commit::CommitKVStore, query::kv::QueryKVStore};
 
+#[derive(Debug)]
 pub enum AnyKVStore<'a, DB> {
     KVStore(&'a CommitKVStore<DB>),
     QueryKVStore(&'a QueryKVStore<'a, DB>),

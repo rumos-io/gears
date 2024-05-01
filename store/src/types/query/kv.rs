@@ -5,6 +5,7 @@ use trees::iavl::{QueryTree, Tree};
 
 use crate::{error::StoreError, types::prefix::immutable::ImmutablePrefixStore, QueryableKVStore};
 
+#[derive(Debug)]
 pub struct QueryKVStore<'a, DB> {
     persistent_store: QueryTree<'a, DB>,
 }

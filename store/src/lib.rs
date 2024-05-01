@@ -2,9 +2,11 @@
 
 use range::Range;
 use strum::IntoEnumIterator;
-use types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
+use types::{
+    kv::{mutable::KVStoreMut, KVStore},
+    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
+};
 
-pub mod commit;
 pub mod error;
 mod hash;
 pub mod range;
@@ -47,19 +49,15 @@ pub trait TransactionalKVStore<DB>: QueryableKVStore<DB> {
 }
 
 pub trait QueryableMultiKVStore<DB, SK> {
-    type KvStore: QueryableKVStore<DB>;
-
-    fn kv_store(&self, store_key: &SK) -> &Self::KvStore;
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, DB>;
     fn head_version(&self) -> u32;
     fn head_commit_hash(&self) -> [u8; 32];
 }
 
 pub trait TransactionalMultiKVStore<DB, SK> {
-    type KvStoreMut: TransactionalKVStore<DB>;
-
-    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut;
+    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, DB>;
     /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
-    fn tx_caches_write_then_clear(&mut self);
+    fn tx_cache_to_block(&mut self);
     /// Clears the tx caches
     fn tx_caches_clear(&mut self);
 }

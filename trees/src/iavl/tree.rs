@@ -913,6 +913,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Range<'a, R: RangeBounds<Vec<u8>>, DB> {
     pub(crate) range: R,
     pub(crate) delayed_nodes: Vec<Box<Node>>,

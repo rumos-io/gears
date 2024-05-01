@@ -10,17 +10,13 @@ use crate::{
 
 use super::commit::CommitKVStore;
 
+#[derive(Debug)]
 pub struct KVStoreMut<'a, DB>(pub(crate) &'a mut CommitKVStore<DB>);
 
 impl<'a, DB: Database> KVStoreMut<'a, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
         self.0.delete(k)
     }
-
-    // /// Commit changes from tx cache to block on successful tx
-    // fn commit(&mut self) {
-    //     self.0.cache.tx_upgrade_to_block()
-    // }
 }
 
 impl<DB: Database> QueryableKVStore<DB> for KVStoreMut<'_, DB> {
