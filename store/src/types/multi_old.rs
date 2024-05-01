@@ -7,13 +7,13 @@ use crate::{
     TransactionalMultiKVStore,
 };
 
-use super::kv::commit::CommitKVStore;
+use super::kv::KVStore;
 
 #[derive(Debug)]
 pub struct MultiStore<DB, SK> {
     pub(crate) head_version: u32,
     pub(crate) head_commit_hash: [u8; 32],
-    pub(crate) stores: HashMap<SK, CommitKVStore<PrefixDB<DB>>>,
+    pub(crate) stores: HashMap<SK, KVStore<PrefixDB<DB>>>,
 }
 
 impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
@@ -27,7 +27,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
         for store in SK::iter() {
             // TODO: check that store names are not prefixes
             let prefix = store.name().as_bytes().to_vec();
-            let kv_store = CommitKVStore::new(PrefixDB::new(db.clone(), prefix), None).unwrap();
+            let kv_store = KVStore::new(PrefixDB::new(db.clone(), prefix), None).unwrap();
 
             let store_info = StoreInfo {
                 name: store.name().into(),
@@ -49,7 +49,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK> for MultiStore<DB, SK> {
-    type KvStore = CommitKVStore<PrefixDB<DB>>;
+    type KvStore = KVStore<PrefixDB<DB>>;
 
     fn kv_store(&self, store_key: &SK) -> &Self::KvStore {
         self.stores.get(store_key).expect(KEY_EXISTS_MSG)
@@ -67,7 +67,7 @@ impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK> for Mul
 impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
     for MultiStore<DB, SK>
 {
-    type KvStoreMut = CommitKVStore<PrefixDB<DB>>;
+    type KvStoreMut = KVStore<PrefixDB<DB>>;
 
     fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut {
         self.stores.get_mut(store_key).expect(KEY_EXISTS_MSG)
@@ -93,13 +93,13 @@ impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
 
     fn tx_caches_write_then_clear(&mut self) {
         for (_, store) in &mut self.stores {
-            store.cache.tx_upgrade_to_block();
+            store.write_then_clear_tx_cache();
         }
     }
 
     fn tx_caches_clear(&mut self) {
         for (_, store) in &mut self.stores {
-            store.cache.tx.clear();
+            store.clear_tx_cache();
         }
     }
 }

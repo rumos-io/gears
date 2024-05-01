@@ -33,14 +33,14 @@ mod tests {
 
     use database::MemDB;
 
-    use crate::{types::kv::KVStore, QueryableKVStore, TransactionalKVStore};
+    use crate::{types::kv::commit::CommitKVStore, QueryableKVStore, TransactionalKVStore};
 
     use super::*;
 
     #[test]
     fn prefix_store_range_works() {
         let db = MemDB::new();
-        let mut store = KVStore::new(db, None).unwrap();
+        let mut store = CommitKVStore::new(db, None).unwrap();
         store.set(vec![0], vec![1]);
         store.set(vec![0, 1], vec![2]);
         store.set(vec![0, 2], vec![3]);

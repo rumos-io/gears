@@ -40,9 +40,9 @@ impl<'a, DB: Database> QueryableKVStore<DB> for QueryKVStore<'a, DB> {
 
 impl<'a, DB: Database> QueryKVStore<'a, DB> {
     // TODO: I left it for now, but ref to KVStore only to get ref to Tree?
-    pub fn new(kv_store: &'a KVStore<DB>, version: u32) -> Result<Self, StoreError> {
+    pub fn new(kv_store: KVStore<'a, DB>, version: u32) -> Result<Self, StoreError> {
         Ok(QueryKVStore {
-            persistent_store: QueryTree::new(&kv_store.persistent_store, version)?,
+            persistent_store: QueryTree::new(&kv_store.0.persistent_store, version)?,
         })
     }
 }
@@ -54,14 +54,17 @@ mod test {
     use database::MemDB;
 
     use crate::{
-        types::{kv::KVStore, query::kv::QueryKVStore},
+        types::{
+            kv::{commit::CommitKVStore, KVStore},
+            query::kv::QueryKVStore,
+        },
         QueryableKVStore, TransactionalKVStore,
     };
 
     #[test]
     fn kv_store_merged_range_works() {
         let db = MemDB::new();
-        let mut store = KVStore::new(db, None).unwrap();
+        let mut store = CommitKVStore::new(db, None).unwrap();
 
         // values in this group will be in the persistent store
         store.set(vec![1], vec![1]);
@@ -75,7 +78,7 @@ mod test {
         store.set(vec![9], vec![4]); // shadowed by value in tx cache
         store.set(vec![10], vec![7]); // shadows a persisted value
         store.set(vec![14], vec![212]); // shadows a persisted value AND shadowed by value in tx cache
-        store.write_then_clear_tx_cache();
+        store.cache.tx_upgrade_to_block();
 
         // values in this group will be in the tx cache
         store.set(vec![3], vec![5]);
@@ -84,7 +87,8 @@ mod test {
         store.set(vec![9], vec![6]); // shadows a block cache value
         store.set(vec![14], vec![212]); // shadows a persisted value which shadows a persisted value
 
-        let store = QueryKVStore::new(&store, 0).expect("Failed to create QueryKVStore");
+        let store =
+            QueryKVStore::new(KVStore(&mut store), 0).expect("Failed to create QueryKVStore");
 
         let start = vec![0];
         let stop = vec![20];
