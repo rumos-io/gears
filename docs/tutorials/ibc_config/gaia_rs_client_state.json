@@ -8,20 +8,20 @@
         "denominator": 3
     },
     "trusting_period": {
-        "secs": 64000,
+        "secs": 1209600,
         "nanos": 0
     },
     "unbonding_period": {
-        "secs": 128000,
+        "secs": 1814400,
         "nanos": 0
     },
     "max_clock_drift": {
-        "secs": 3,
+        "secs": 600,
         "nanos": 0
     },
     "latest_height": {
         "revision_number": 1,
-        "revision_height": 10
+        "revision_height": 20
     },
     "proof_specs": [
         {
@@ -61,7 +61,10 @@
             }
         }
     ],
-    "upgrade_path": [],
+    "upgrade_path": [
+        "upgrade",
+        "upgradedIBCState"
+    ],
     "allow_update": {
         "after_expiry": false,
         "after_misbehaviour": false

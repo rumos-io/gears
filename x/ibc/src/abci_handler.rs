@@ -39,11 +39,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
     pub fn tx<DB: Database + Sync + Send>(
         &self,
-        _ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
     ) -> Result<(), AppError> {
         match msg {
-            Message::ClientCreate(_msg) => {
+            Message::ClientCreate(msg) => {
                 // let MsgCreateClient {
                 //     client_state:,
                 //     consensus_state,
@@ -53,6 +53,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                 // let _ = self
                 //     .tx_keeper
                 //     .client_create(ctx, &client_state, consensus_state.into())?;
+
+                self.keeper.client_create(ctx, msg);
 
                 Ok(())
             } // Message::ClientUpdate(msg) => {

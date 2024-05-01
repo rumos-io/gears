@@ -1,12 +1,15 @@
 use gears::{
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::init_context::InitContext,
+    types::context::{init_context::InitContext, tx_context::TxContext},
 };
 
 use crate::{
-    ics02_client::Keeper as ClientKeeper, ics03_connection::Keeper as ConnectionKeeper,
-    ics04_channel::Keeper as ChannelKeeper, params::IBCParamsKeeper, types::genesis::GenesisState,
+    ics02_client::{message::MsgCreateClient, Keeper as ClientKeeper},
+    ics03_connection::Keeper as ConnectionKeeper,
+    ics04_channel::Keeper as ChannelKeeper,
+    params::IBCParamsKeeper,
+    types::genesis::GenesisState,
 };
 
 #[derive(Debug, Clone)]
@@ -55,5 +58,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             .init_genesis(ctx, genesis.connection_genesis);
         self.channel_keeper
             .init_genesis(ctx, genesis.channel_genesis);
+    }
+
+    pub fn client_create<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: MsgCreateClient,
+    ) {
+        self.client_keeper.client_create(ctx, msg);
     }
 }

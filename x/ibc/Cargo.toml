@@ -26,6 +26,7 @@ clap = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 constcat = { workspace = true }
+derive_more = "0.99.17"
 
 #networking
 tonic = { workspace = true }

@@ -1,4 +1,5 @@
 pub mod client;
+mod context;
 mod genesis;
 mod keeper;
 pub mod message;

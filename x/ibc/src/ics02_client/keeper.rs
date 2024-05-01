@@ -1,14 +1,27 @@
 use gears::{
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::init_context::InitContext,
+    types::context::{init_context::InitContext, tx_context::TxContext},
 };
 
-use super::{params::ClientParamsKeeper, GenesisState};
+use super::{
+    context::{ClientContext, ClientRouter},
+    message::MsgCreateClient,
+    params::ClientParamsKeeper,
+    GenesisState,
+};
 use gears::store::TransactionalKVStore;
 use gears::types::context::TransactionalContext;
+use ibc::core::{
+    client::types::{
+        msgs::{ClientMsg, MsgCreateClient as IBCMsgCreateClient},
+        proto::v1::MsgCreateClient as RawMsgCreateClient,
+    },
+    entrypoint::dispatch,
+    handler::types::msgs::MsgEnvelope,
+};
 
-const KEY_NEXT_CLIENT_SEQUENCE: &[u8; 18] = b"nextClientSequence";
+pub const KEY_NEXT_CLIENT_SEQUENCE: &[u8; 18] = b"nextClientSequence";
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK, PSK> {
@@ -30,6 +43,36 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
             store_key,
             client_params_keeper,
         }
+    }
+
+    pub fn client_create<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: MsgCreateClient,
+        // client_state: &(impl ClientStateCommon
+        //       + ClientStateExecution<ContextShim<'a, 'b, DB, SK>>
+        //       + ClientStateValidation<ContextShim<'a, 'b, DB, SK>>),
+        // consensus_state: WrappedConsensusState,
+    ) {
+        //todo!()
+
+        let mut ctx = ClientContext {
+            gears_ctx: ctx,
+            store_key: self.store_key.clone(),
+            client_params_keeper: self.client_params_keeper.clone(),
+        };
+        let mut router = ClientRouter;
+        // let msg = MsgEnvelope::Client(ClientMsg::CreateClient(IBCMsgCreateClient {
+        //     client_state: todo!(),
+        //     consensus_state: todo!(),
+        //     signer: ,
+        // }));
+
+        let raw_msg = RawMsgCreateClient::from(msg);
+        let msg = IBCMsgCreateClient::try_from(raw_msg).unwrap();
+        let msg = MsgEnvelope::Client(ClientMsg::CreateClient(msg));
+
+        dispatch(&mut ctx, &mut router, msg).unwrap()
     }
 
     pub fn init_genesis<DB: Database>(

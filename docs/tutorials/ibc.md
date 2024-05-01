@@ -8,6 +8,10 @@ This is more of a cheat sheet than a tutorial at this stage.
 gaiad tx ibc client create ibc_config/tendermint_client_state.json ibc_config/tendermint_consensus_state.json --from bob --keyring-backend=test --chain-id=test-chain
 ```
 
+Which gives the following app hash in the go implementation of gaia (this isn't deterministic):
+
+app_hash=????
+
 ```shell
 gaia-rs tx local alice ibc client create ibc_config/tendermint_client_state.json ibc_config/tendermint_consensus_state.json
 ```
