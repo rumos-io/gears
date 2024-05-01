@@ -2,9 +2,9 @@ use store_crate::{
     database::{Database, PrefixDB},
     types::{
         kv::{mutable::KVStoreMut, KVStore},
-        multi::MultiStore,
+        multi::{commit::CommitMultiStore, mutable::MultiStoreMut, MultiStore},
     },
-    QueryableMultiKVStore, StoreKey, TransactionalMultiKVStore,
+    StoreKey,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
@@ -19,14 +19,14 @@ use super::{QueryableContext, TransactionalContext};
 pub struct TxContext<'a, DB, SK> {
     pub gas_meter: GasMeter<TxKind>,
     pub(crate) events: Vec<Event>,
-    multi_store: &'a mut MultiStore<DB, SK>,
+    multi_store: &'a mut CommitMultiStore<DB, SK>,
     height: u64,
     header: Header,
 }
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiStore<DB, SK>,
+        multi_store: &'a mut CommitMultiStore<DB, SK>,
         height: u64,
         header: Header,
         gas_meter: GasMeter<TxKind>,
@@ -39,26 +39,15 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             gas_meter,
         }
     }
-
-    // pub(crate) fn multi_store(&self) -> &MultiStore<DB, SK> {
-    //     self.multi_store
-    // }
-
-    // TODO:NOW rework it to not expose
-    pub(crate) fn multi_store_mut(&mut self) -> &mut MultiStore<DB, SK> {
-        self.multi_store
-    }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
-    type MultiStore = MultiStore<DB, SK>;
-
+impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
     }
 
-    fn multi_store(&self) -> &Self::MultiStore {
-        self.multi_store
+    fn multi_store(&self) -> MultiStore<'_, DB, SK> {
+        self.multi_store.to_immutable()
     }
 
     fn height(&self) -> u64 {
@@ -70,11 +59,9 @@ impl<DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK> for TxContex
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalContext<PrefixDB<DB>, SK> for TxContext<'_, DB, SK> {
-    type MultiStoreMut = MultiStore<DB, SK>;
-
-    fn multi_store_mut(&mut self) -> &mut Self::MultiStoreMut {
-        self.multi_store
+impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
+    fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
+        self.multi_store.to_mutable()
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {

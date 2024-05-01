@@ -33,7 +33,7 @@ mod tests {
 
     use database::MemDB;
 
-    use crate::{types::kv::commit::CommitKVStore, QueryableKVStore, TransactionalKVStore};
+    use crate::types::kv::commit::CommitKVStore;
 
     use super::*;
 

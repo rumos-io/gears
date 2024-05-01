@@ -4,6 +4,8 @@ use database::{Database, PrefixDB};
 
 use crate::{error::KEY_EXISTS_MSG, hash::StoreInfo, types::kv::commit::CommitKVStore, StoreKey};
 
+use super::{mutable::MultiStoreMut, MultiStore};
+
 #[derive(Debug)]
 pub struct CommitMultiStore<DB, SK> {
     pub(crate) head_version: u32,
@@ -87,5 +89,13 @@ impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
         for (_, store) in &mut self.stores {
             store.cache.tx.clear();
         }
+    }
+
+    pub fn to_immutable(&self) -> MultiStore<'_, DB, SK> {
+        MultiStore::from(self)
+    }
+
+    pub fn to_mutable(&mut self) -> MultiStoreMut<'_, DB, SK> {
+        MultiStoreMut::from(self)
     }
 }

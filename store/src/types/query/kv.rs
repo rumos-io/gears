@@ -3,37 +3,60 @@ use std::ops::RangeBounds;
 use database::Database;
 use trees::iavl::{QueryTree, Tree};
 
-use crate::{error::StoreError, types::prefix::immutable::ImmutablePrefixStore, QueryableKVStore};
+use crate::{error::StoreError, types::prefix::immutable::ImmutablePrefixStore};
 
 #[derive(Debug)]
 pub struct QueryKVStore<'a, DB> {
     persistent_store: QueryTree<'a, DB>,
 }
 
-impl<'a, DB: Database> QueryableKVStore<DB> for QueryKVStore<'a, DB> {
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+impl<DB: Database> QueryKVStore<'_, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(
+        &self,
+        range: R,
+    ) -> crate::range::Range<'_, R, DB> {
+        self.persistent_store.range(range).into()
+    }
+
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         self.persistent_store.get(k.as_ref())
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+        &self,
+        prefix: I,
+    ) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
             prefix: prefix.into_iter().collect(),
         }
     }
-
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> crate::range::Range<'_, R, DB> {
-        self.persistent_store.range(range).into()
-    }
-
-    // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
-    //     self.persistent_store
-    //         .range(..)
-    //         .map(|(key, _value)| key)
-    //         .filter(|key| key.starts_with(key_prefix.as_ref()))
-    //         .collect()
-    // }
 }
+
+// impl<'a, DB: Database> QueryableKVStore<'a, DB> for QueryKVStore<'_, DB> {
+//     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+//         self.persistent_store.get(k.as_ref())
+//     }
+
+//     fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
+//         ImmutablePrefixStore {
+//             store: self.into(),
+//             prefix: prefix.into_iter().collect(),
+//         }
+//     }
+
+//     fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> crate::range::Range<'_, R, DB> {
+//         self.persistent_store.range(range).into()
+//     }
+
+//     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>> {
+//     //     self.persistent_store
+//     //         .range(..)
+//     //         .map(|(key, _value)| key)
+//     //         .filter(|key| key.starts_with(key_prefix.as_ref()))
+//     //         .collect()
+//     // }
+// }
 
 impl<'a, DB: Database> QueryKVStore<'a, DB> {
     // TODO: I left it for now, but ref to KVStore only to get ref to Tree?
@@ -50,10 +73,7 @@ mod test {
 
     use database::MemDB;
 
-    use crate::{
-        types::{kv::commit::CommitKVStore, query::kv::QueryKVStore},
-        QueryableKVStore, TransactionalKVStore,
-    };
+    use crate::types::{kv::commit::CommitKVStore, query::kv::QueryKVStore};
 
     #[test]
     fn kv_store_merged_range_works() {

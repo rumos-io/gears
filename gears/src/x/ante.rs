@@ -28,7 +28,7 @@ use core_types::{
 };
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
-use store_crate::database::{Database, PrefixDB};
+use store_crate::database::Database;
 use store_crate::StoreKey;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
@@ -237,11 +237,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn validate_memo_ante_handler<
-        DB: Database,
-        CTX: QueryableContext<PrefixDB<DB>, SK>,
-        M: TxMessage,
-    >(
+    fn validate_memo_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: TxMessage>(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,

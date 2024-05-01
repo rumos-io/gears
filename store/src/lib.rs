@@ -1,5 +1,6 @@
 #![warn(rust_2018_idioms)]
 
+use ::database::PrefixDB;
 use range::Range;
 use strum::IntoEnumIterator;
 use types::{
@@ -33,18 +34,15 @@ pub trait WritePrefixStore: ReadPrefixStore {
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI);
 }
 
-pub trait QueryableKVStore<DB> {
+pub trait QueryableKVStore<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>>;
-    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB>;
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB>;
     fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB>;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
 }
 
-pub trait TransactionalKVStore<DB>: QueryableKVStore<DB> {
-    fn prefix_store_mut(
-        &mut self,
-        prefix: impl IntoIterator<Item = u8>,
-    ) -> MutablePrefixStore<'_, DB>;
+pub trait TransactionalKVStore<'a, DB>: QueryableKVStore<'a, DB> {
+    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> MutablePrefixStore<'a, DB>;
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, key: KI, value: VI);
 }
 
@@ -55,7 +53,7 @@ pub trait QueryableMultiKVStore<DB, SK> {
 }
 
 pub trait TransactionalMultiKVStore<DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, DB>;
+    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
     /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
     fn tx_cache_to_block(&mut self);
     /// Clears the tx caches

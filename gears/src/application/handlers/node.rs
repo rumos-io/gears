@@ -7,10 +7,7 @@ use crate::{
     },
 };
 use serde::de::DeserializeOwned;
-use store_crate::{
-    database::{Database, PrefixDB},
-    StoreKey,
-};
+use store_crate::{database::Database, StoreKey};
 use tendermint::types::{
     proto::validator::ValidatorUpdate,
     request::{begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery},
@@ -43,7 +40,7 @@ pub trait ABCIHandler<
     ) -> Result<(), AppError>;
 
     #[allow(unused_variables)]
-    fn begin_block<'a, DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn begin_block<'a, DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         request: RequestBeginBlock,
@@ -51,7 +48,7 @@ pub trait ABCIHandler<
     }
 
     #[allow(unused_variables)]
-    fn end_block<'a, DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn end_block<'a, DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         request: RequestEndBlock,

@@ -19,7 +19,7 @@ pub(crate) enum KVStoreBackend<'a, DB> {
 #[derive(Debug)]
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
-impl<DB: Database> QueryableKVStore<DB> for KVStore<'_, DB> {
+impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStore<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         match self.0 {
             KVStoreBackend::Commit(var) => var.get(k),
@@ -27,7 +27,7 @@ impl<DB: Database> QueryableKVStore<DB> for KVStore<'_, DB> {
         }
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB> {
         match self.0 {
             KVStoreBackend::Commit(var) => var.prefix_store(prefix),
             KVStoreBackend::Query(var) => var.prefix_store(prefix),

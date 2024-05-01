@@ -29,9 +29,5 @@ pub mod tendermint {
 
 #[cfg(feature = "export")]
 pub mod store {
-    // WARNING: Never re-export store_crate::commit
-    pub use store_crate::{
-        database, error, range, types, QueryableKVStore, QueryableMultiKVStore, ReadPrefixStore,
-        StoreKey, TransactionalKVStore, TransactionalMultiKVStore, WritePrefixStore,
-    };
+    pub use store_crate::*;
 }

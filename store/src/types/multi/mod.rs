@@ -12,17 +12,17 @@ use super::{
 pub mod commit;
 pub mod mutable;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)] // TODO:NOW
 pub(crate) enum MultiStoreBackend<'a, DB, SK> {
     Commit(&'a CommitMultiStore<DB, SK>),
     Query(&'a QueryMultiStore<'a, DB, SK>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MultiStore<'a, DB, SK>(pub(crate) MultiStoreBackend<'a, DB, SK>);
 
-impl<'a, DB: Database, SK: StoreKey> MultiStore<'a, DB, SK> {}
+// impl<'a, DB: Database, SK: StoreKey> MultiStore<'a, DB, SK> {}
 
 impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
     for MultiStore<'_, DB, SK>
@@ -48,5 +48,17 @@ impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
             MultiStoreBackend::Commit(var) => var.head_commit_hash,
             MultiStoreBackend::Query(var) => var.head_commit_hash(),
         }
+    }
+}
+
+impl<'a, DB, SK> From<&'a QueryMultiStore<'a, DB, SK>> for MultiStore<'a, DB, SK> {
+    fn from(value: &'a QueryMultiStore<'a, DB, SK>) -> Self {
+        MultiStore(MultiStoreBackend::Query(value))
+    }
+}
+
+impl<'a, DB, SK> From<&'a CommitMultiStore<DB, SK>> for MultiStore<'a, DB, SK> {
+    fn from(value: &'a CommitMultiStore<DB, SK>) -> Self {
+        MultiStore(MultiStoreBackend::Commit(value))
     }
 }

@@ -8,7 +8,7 @@ use crate::{
     range::Range,
     types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     utils::MergedRange,
-    QueryableKVStore, TransactionalKVStore, TREE_CACHE_SIZE,
+    TREE_CACHE_SIZE,
 };
 
 use super::{cache::KVStoreCache, mutable::KVStoreMut, KVStore, KVStoreBackend};
@@ -83,10 +83,8 @@ impl<DB: Database> CommitKVStore<DB> {
     pub fn last_committed_version(&self) -> u32 {
         self.persistent_store.loaded_version()
     }
-}
 
-impl<DB: Database> QueryableKVStore<DB> for CommitKVStore<DB> {
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         if self.cache.delete.contains(k.as_ref()) {
             return None;
         }
@@ -99,14 +97,17 @@ impl<DB: Database> QueryableKVStore<DB> for CommitKVStore<DB> {
             .or(self.persistent_store.get(k.as_ref()))
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+        &self,
+        prefix: I,
+    ) -> ImmutablePrefixStore<'_, DB> {
         ImmutablePrefixStore {
             store: self.into(),
             prefix: prefix.into_iter().collect(),
         }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
         let cached_values = {
             let tx_cached_values = self.cache.tx.range(range.clone());
             let mut block_cached_values = self
@@ -128,10 +129,8 @@ impl<DB: Database> QueryableKVStore<DB> for CommitKVStore<DB> {
 
         MergedRange::merge(cached_values, persisted_values).into()
     }
-}
 
-impl<DB: Database> TransactionalKVStore<DB> for CommitKVStore<DB> {
-    fn prefix_store_mut(
+    pub fn prefix_store_mut(
         &mut self,
         prefix: impl IntoIterator<Item = u8>,
     ) -> MutablePrefixStore<'_, DB> {
@@ -141,7 +140,7 @@ impl<DB: Database> TransactionalKVStore<DB> for CommitKVStore<DB> {
         }
     }
 
-    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         key: KI,
         value: VI,

@@ -5,10 +5,16 @@ use crate::{
     QueryableMultiKVStore, StoreKey, TransactionalMultiKVStore,
 };
 
-use super::commit::CommitMultiStore;
+use super::{commit::CommitMultiStore, MultiStore};
 
 #[derive(Debug)]
 pub struct MultiStoreMut<'a, DB, SK>(pub(crate) &'a mut CommitMultiStore<DB, SK>);
+
+impl<DB, SK> MultiStoreMut<'_, DB, SK> {
+    pub fn to_immutable(&self) -> MultiStore<'_, DB, SK> {
+        MultiStore(super::MultiStoreBackend::Commit(self.0))
+    }
+}
 
 impl<'a, DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
     for MultiStoreMut<'a, DB, SK>
@@ -26,9 +32,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
-    for MultiStoreMut<'_, DB, SK>
-{
+impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<DB, SK> for MultiStoreMut<'_, DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         KVStoreMut(self.0.kv_store_mut(store_key))
     }
@@ -39,5 +43,11 @@ impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
 
     fn tx_caches_clear(&mut self) {
         self.0.tx_caches_clear()
+    }
+}
+
+impl<'a, DB, SK> From<&'a mut CommitMultiStore<DB, SK>> for MultiStoreMut<'a, DB, SK> {
+    fn from(value: &'a mut CommitMultiStore<DB, SK>) -> Self {
+        MultiStoreMut(value)
     }
 }

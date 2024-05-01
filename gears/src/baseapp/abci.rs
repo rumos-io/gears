@@ -10,8 +10,7 @@ use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
-use store_crate::commit::CommitMultiStore;
-use store_crate::{StoreKey, TransactionalMultiKVStore};
+use store_crate::StoreKey;
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -65,7 +64,7 @@ impl<
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
-                .set_consensus_params(&mut *multi_store, params);
+                .set_consensus_params(&mut multi_store.to_mutable(), params);
         }
 
         //TODO: handle request height > 1 as is done in SDK
@@ -90,7 +89,7 @@ impl<
 
         self.abci_handler.init_genesis(&mut ctx, genesis);
 
-        multi_store.tx_caches_write_then_clear();
+        multi_store.tx_cache_to_block();
 
         ResponseInitChain {
             consensus_params: request.consensus_params,
@@ -282,7 +281,7 @@ impl<
         {
             let max_gas = self
                 .baseapp_params_keeper
-                .block_params(&*multi_store)
+                .block_params(&multi_store.to_immutable())
                 .map(|e| e.max_gas)
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
@@ -302,7 +301,7 @@ impl<
         self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
-        multi_store.tx_caches_write_then_clear();
+        multi_store.tx_cache_to_block();
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -327,7 +326,7 @@ impl<
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
         let events = ctx.events;
-        multi_store.tx_caches_write_then_clear();
+        multi_store.tx_cache_to_block();
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

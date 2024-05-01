@@ -2,7 +2,7 @@ use std::ops::RangeBounds;
 
 use database::Database;
 
-use crate::{range::Range, QueryableKVStore};
+use crate::range::Range;
 
 use super::{kv::commit::CommitKVStore, query::kv::QueryKVStore};
 

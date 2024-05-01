@@ -8,7 +8,7 @@ use crate::{
     QueryableKVStore, TransactionalKVStore,
 };
 
-use super::commit::CommitKVStore;
+use super::{commit::CommitKVStore, KVStore};
 
 #[derive(Debug)]
 pub struct KVStoreMut<'a, DB>(pub(crate) &'a mut CommitKVStore<DB>);
@@ -17,14 +17,18 @@ impl<'a, DB: Database> KVStoreMut<'a, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
         self.0.delete(k)
     }
+
+    pub fn to_immutable(&self) -> KVStore<'_, DB> {
+        KVStore(super::KVStoreBackend::Commit(self.0))
+    }
 }
 
-impl<DB: Database> QueryableKVStore<DB> for KVStoreMut<'_, DB> {
+impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStoreMut<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         self.0.get(k)
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB> {
         self.0.prefix_store(prefix)
     }
 
@@ -33,12 +37,12 @@ impl<DB: Database> QueryableKVStore<DB> for KVStoreMut<'_, DB> {
     }
 }
 
-impl<DB: Database> TransactionalKVStore<DB> for KVStoreMut<'_, DB> {
-    fn prefix_store_mut(
-        &mut self,
-        prefix: impl IntoIterator<Item = u8>,
-    ) -> MutablePrefixStore<'_, DB> {
-        self.0.prefix_store_mut(prefix)
+impl<'a, DB: Database> TransactionalKVStore<'a, DB> for KVStoreMut<'a, DB> {
+    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> MutablePrefixStore<'a, DB> {
+        MutablePrefixStore {
+            store: self,
+            prefix: prefix.into_iter().collect(),
+        }
     }
 
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
