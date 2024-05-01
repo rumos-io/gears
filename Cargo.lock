@@ -203,6 +203,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "auth"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "ciborium",
+ "clap",
+ "data-encoding",
+ "gears",
+ "hex 0.4.3",
+ "num-bigint",
+ "num-format",
+ "num-traits",
+ "prost",
+ "rand",
+ "regex",
+ "secp256k1",
+ "serde",
+ "serde-aux",
+ "serde_json",
+ "sha2 0.10.8",
+ "strum",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -321,6 +348,23 @@ dependencies = [
  "miniz_oxide",
  "object",
  "rustc-demangle",
+]
+
+[[package]]
+name = "bank"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum 0.7.5",
+ "bytes",
+ "clap",
+ "gears",
+ "hex 0.4.3",
+ "prost",
+ "serde",
+ "serde_json",
+ "strum",
+ "tokio",
 ]
 
 [[package]]
@@ -1568,6 +1612,26 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
+]
+
+[[package]]
+name = "gaia-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "auth",
+ "axum 0.7.5",
+ "bank",
+ "bytes",
+ "clap",
+ "data-encoding",
+ "gears",
+ "gears-derive",
+ "prost",
+ "serde",
+ "serde_json",
+ "strum",
+ "url",
 ]
 
 [[package]]

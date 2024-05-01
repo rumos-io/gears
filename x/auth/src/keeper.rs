@@ -2,7 +2,7 @@ use crate::{AuthParamsKeeper, GenesisState, Params};
 use bytes::Bytes;
 use gears::core::{address::AccAddress, query::request::account::QueryAccountRequest};
 use gears::error::IBC_ENCODE_UNWRAP;
-use gears::store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
+use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::context::init::InitContext;
@@ -35,11 +35,11 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     type Params = Params;
 
-    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Self::Params {
-        self.auth_params_keeper.get(ctx.multi_store())
+        self.auth_params_keeper.get(&ctx.multi_store())
     }
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -146,7 +146,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     ) {
         //TODO: sdk sanitizes accounts
         self.auth_params_keeper
-            .set(ctx.multi_store_mut(), genesis.params);
+            .set(&mut ctx.multi_store_mut(), genesis.params);
 
         for mut acct in genesis.accounts {
             acct.account_number = self.get_next_account_number(ctx);

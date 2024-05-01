@@ -124,7 +124,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, KV: TransactionalMultiKVStore<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
         ctx: &mut KV,
         params: Params,

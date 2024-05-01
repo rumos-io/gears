@@ -8,10 +8,11 @@ use gears::core::address::AccAddress;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
-use gears::store::database::Database;
+use gears::store::database::{Database, PrefixDB};
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::{
-    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
+    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, TransactionalMultiKVStore,
+    WritePrefixStore,
 };
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
@@ -108,14 +109,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
         self.bank_params_keeper
-            .set(ctx.multi_store_mut(), genesis.params);
-
-        let mut bank_store = ctx.kv_store_mut(&self.store_key);
+            .set(&mut ctx.multi_store_mut(), genesis.params);
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {
             let prefix = create_denom_balance_prefix(balance.address);
-            let mut denom_balance_store = bank_store.prefix_store_mut(prefix);
+            let mut denom_balance_store =
+                ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix);
 
             for coin in balance.coins {
                 denom_balance_store.set(
@@ -240,15 +240,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
-        let mut bank_store = ctx.kv_store_mut(&self.store_key);
+        // let mut bank_store = ctx.kv_store_mut(&self.store_key);
+        let mut ms = ctx.multi_store_mut();
         let mut events = vec![];
 
         let from_address = msg.from_address;
         let to_address = msg.to_address;
 
         for send_coin in msg.amount {
-            let mut from_account_store =
-                Self::get_address_balances_store(&mut bank_store, &from_address);
+            let mut from_account_store = self.get_address_balances_store(&mut ms, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
@@ -270,8 +270,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
             //TODO: if balance == 0 then denom should be removed from store
 
-            let mut to_account_store =
-                Self::get_address_balances_store(&mut bank_store, &to_address);
+            let mut to_account_store = self.get_address_balances_store(&mut ms, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
 
             let mut to_balance: Coin = match to_balance {
@@ -321,7 +320,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) {
         // TODO: need to delete coins with zero balance
 
-        let mut bank_store = ctx.kv_store_mut(&self.store_key);
+        let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
         supply_store.set(
@@ -331,10 +330,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     }
 
     fn get_address_balances_store<'a, DB: Database>(
-        bank_store: &'a mut impl TransactionalKVStore<DB>,
+        &'a self,
+        ms: &'a mut impl TransactionalMultiKVStore<DB, SK>,
         address: &AccAddress,
-    ) -> MutablePrefixStore<'a, DB> {
+    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
         let prefix = create_denom_balance_prefix(address.to_owned());
+        let bank_store = ms.kv_store_mut(&self.store_key);
         bank_store.prefix_store_mut(prefix)
     }
 
@@ -346,7 +347,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) {
         // NOTE: we use the denom twice, once for the prefix and once for the key.
         // This seems unnecessary, I'm not sure why they do this in the SDK.
-        let mut bank_store = ctx.kv_store_mut(&self.store_key);
+        let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut denom_metadata_store =
             bank_store.prefix_store_mut(denom_metadata_key(denom_metadata.base.clone()));
 
