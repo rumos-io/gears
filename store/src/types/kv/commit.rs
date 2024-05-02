@@ -101,6 +101,7 @@ impl<DB: Database> CommitKVStore<DB> {
         }
     }
 
+    // TODO:NOW You could iterate over values that should have been deleted
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
         let cached_values = {
             let tx_cached_values = self.cache.tx.range(range.clone());

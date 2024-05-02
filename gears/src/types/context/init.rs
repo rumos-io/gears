@@ -39,7 +39,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'a
     }
 
     fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        self.multi_store.to_immutable()
+        self.multi_store.as_immutable()
     }
 
     fn height(&self) -> u64 {

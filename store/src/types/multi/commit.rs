@@ -94,7 +94,7 @@ impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
         }
     }
 
-    pub fn to_immutable(&self) -> MultiStore<'_, DB, SK> {
+    pub fn as_immutable(&self) -> MultiStore<'_, DB, SK> {
         MultiStore::from(self)
     }
 

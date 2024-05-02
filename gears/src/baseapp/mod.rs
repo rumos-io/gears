@@ -78,7 +78,7 @@ impl<
         };
 
         let max_gas = baseapp_params_keeper
-            .block_params(&multi_store.to_immutable())
+            .block_params(&multi_store.as_immutable())
             .map(|e| e.max_gas)
             .unwrap_or_default();
 

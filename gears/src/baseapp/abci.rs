@@ -281,7 +281,7 @@ impl<
         {
             let max_gas = self
                 .baseapp_params_keeper
-                .block_params(&multi_store.to_immutable())
+                .block_params(&multi_store.as_immutable())
                 .map(|e| e.max_gas)
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
