@@ -14,9 +14,7 @@ impl KVStoreCache {
     pub(crate) fn tx_upgrade_to_block(&mut self) {
         let tx_map = std::mem::take(&mut self.tx);
 
-        for (key, value) in tx_map {
-            let _ = self.block.insert(key, value);
-        }
+        self.block.extend(tx_map)
     }
 
     /// Take out all cache from storages. TX cache overwrites BLOCK cache
