@@ -13,9 +13,9 @@ use super::{QueryableContext, TransactionalContext};
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
     multi_store: &'a mut CommitMultiStore<DB, SK>,
-    pub height: u64,
+    pub(crate) height: u64,
     pub events: Vec<Event>,
-    pub chain_id: ChainId,
+    pub(crate) chain_id: ChainId,
 }
 
 impl<'a, DB, SK> InitContext<'a, DB, SK> {

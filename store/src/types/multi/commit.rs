@@ -6,6 +6,7 @@ use crate::{error::KEY_EXISTS_MSG, hash::StoreInfo, types::kv::commit::CommitKVS
 
 use super::{mutable::MultiStoreMut, MultiStore};
 
+/// MultiStore which stores all commitable KVStore and has right to commit changes too
 #[derive(Debug)]
 pub struct CommitMultiStore<DB, SK> {
     pub(crate) head_version: u32,
@@ -79,12 +80,14 @@ impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
         self.stores.get_mut(store_key).expect(KEY_EXISTS_MSG)
     }
 
+    /// Upgrade cache of TX to block in all stores
     pub fn tx_cache_to_block(&mut self) {
         for (_, store) in &mut self.stores {
             store.cache.tx_upgrade_to_block();
         }
     }
 
+    /// Clear TX cache in all stores
     pub fn tx_caches_clear(&mut self) {
         for (_, store) in &mut self.stores {
             store.cache.tx.clear();

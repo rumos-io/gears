@@ -10,6 +10,7 @@ use crate::{
 
 use super::{commit::CommitKVStore, KVStore};
 
+/// Mutable variant of `KVStore`
 #[derive(Debug)]
 pub struct KVStoreMut<'a, DB>(pub(crate) &'a mut CommitKVStore<DB>);
 

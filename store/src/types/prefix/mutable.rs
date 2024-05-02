@@ -5,7 +5,7 @@ use crate::{
     WritePrefixStore,
 };
 
-/// Wraps an mutable reference to a KVStore with a prefix
+/// Wraps an mutable KVStore with a prefix
 pub struct MutablePrefixStore<'a, DB> {
     pub(crate) store: KVStoreMut<'a, DB>,
     pub(crate) prefix: Vec<u8>,

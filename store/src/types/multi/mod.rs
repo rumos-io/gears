@@ -13,7 +13,6 @@ pub mod commit;
 pub mod mutable;
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)] // TODO:NOW
 pub(crate) enum MultiStoreBackend<'a, DB, SK> {
     Commit(&'a CommitMultiStore<DB, SK>),
     Query(&'a QueryMultiStore<'a, DB, SK>),
@@ -21,8 +20,6 @@ pub(crate) enum MultiStoreBackend<'a, DB, SK> {
 
 #[derive(Debug, Clone)]
 pub struct MultiStore<'a, DB, SK>(pub(crate) MultiStoreBackend<'a, DB, SK>);
-
-// impl<'a, DB: Database, SK: StoreKey> MultiStore<'a, DB, SK> {}
 
 impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
     for MultiStore<'_, DB, SK>

@@ -11,8 +11,9 @@ use crate::{
     TREE_CACHE_SIZE,
 };
 
-use super::{cache::KVStoreCache, mutable::KVStoreMut, KVStore, KVStoreBackend};
+use super::{cache::KVStoreCache, mutable::KVStoreMut};
 
+/// KVStore variant which has `commit` method which persist values in DB
 #[derive(Debug)]
 pub struct CommitKVStore<DB> {
     pub(crate) persistent_store: Tree<DB>,
@@ -32,7 +33,7 @@ impl<DB: Database> CommitKVStore<DB> {
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
-        let (cache, delete) = self.cache.commit();
+        let (cache, delete) = self.cache.take();
 
         for (key, value) in cache {
             if delete.contains(&key) {
@@ -70,10 +71,6 @@ impl<DB: Database> CommitKVStore<DB> {
         };
 
         tx_value.or(block_value).or(persisted_value)
-    }
-
-    pub fn kv_store(&mut self) -> KVStore<'_, DB> {
-        KVStore(KVStoreBackend::Commit(self))
     }
 
     pub fn head_commit_hash(&self) -> [u8; 32] {

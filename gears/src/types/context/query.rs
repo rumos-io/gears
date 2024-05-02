@@ -12,9 +12,9 @@ use tendermint::types::chain_id::ChainId;
 use super::QueryableContext;
 
 pub struct QueryContext<'a, DB, SK> {
-    pub multi_store: QueryMultiStore<'a, DB, SK>,
-    pub height: u64,
-    pub chain_id: ChainId,
+    multi_store: QueryMultiStore<'a, DB, SK>,
+    pub(crate) height: u64,
+    pub(crate) chain_id: ChainId,
 }
 
 impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {

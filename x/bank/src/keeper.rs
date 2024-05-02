@@ -240,7 +240,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
-        // let mut bank_store = ctx.kv_store_mut(&self.store_key);
         let mut ms = ctx.multi_store_mut();
         let mut events = vec![];
 

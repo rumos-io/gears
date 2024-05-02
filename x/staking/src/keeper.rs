@@ -227,7 +227,7 @@ impl<
 
         self.set_pool(ctx, genesis.pool)?;
         self.set_last_total_power(ctx, genesis.last_total_power);
-        self.staking_params_keeper.set(ctx.multi_store_mut(), genesis.params)?;
+        self.staking_params_keeper.set(&mut ctx.multi_store_mut(), genesis.params)?;
 
         genesis.validators.iter().for_each(|_v| todo!());
 
@@ -289,7 +289,7 @@ impl<
         }
     }
 
-    pub fn set_pool<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         pool: Pool,
@@ -312,12 +312,12 @@ impl<
         })
     }
 
-    pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         last_total_power: Uint256,
     ) {
-        let store = ctx.kv_store_mut(&self.store_key);
+        let mut store = ctx.kv_store_mut(&self.store_key);
         store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes());
     }
 

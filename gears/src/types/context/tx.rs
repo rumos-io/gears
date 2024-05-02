@@ -18,10 +18,10 @@ use super::{QueryableContext, TransactionalContext};
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
     pub gas_meter: GasMeter<TxKind>,
-    pub(crate) events: Vec<Event>,
+    pub events: Vec<Event>,
     multi_store: &'a mut CommitMultiStore<DB, SK>,
-    height: u64,
-    header: Header,
+    pub(crate) height: u64,
+    pub(crate) header: Header,
 }
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {

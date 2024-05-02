@@ -10,13 +10,15 @@ pub mod cache;
 pub mod commit;
 pub mod mutable;
 
-#[derive(Debug)]
+/// Internal structure which holds different stores
+#[derive(Debug, Clone)]
 pub(crate) enum KVStoreBackend<'a, DB> {
     Commit(&'a CommitKVStore<DB>),
     Query(&'a QueryKVStore<'a, DB>),
 }
 
-#[derive(Debug)]
+/// Non mutable kv store
+#[derive(Debug, Clone)]
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
 impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStore<'a, DB> {

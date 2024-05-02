@@ -37,7 +37,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     pub fn raw_subspace_mut<'a, DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
         store: &'a mut KV,
-        params_subspace_key: &'a PSK,
+        params_subspace_key: &PSK,
     ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
         let params_store = store.kv_store_mut(&self.store_key);
         params_store.prefix_store_mut(params_subspace_key.name().as_bytes().to_vec())
