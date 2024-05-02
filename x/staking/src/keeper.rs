@@ -227,7 +227,8 @@ impl<
 
         self.set_pool(ctx, genesis.pool)?;
         self.set_last_total_power(ctx, genesis.last_total_power);
-        self.staking_params_keeper.set(&mut ctx.multi_store_mut(), genesis.params)?;
+        self.staking_params_keeper
+            .set(&mut ctx.multi_store_mut(), genesis.params)?;
 
         genesis.validators.iter().for_each(|_v| todo!());
 

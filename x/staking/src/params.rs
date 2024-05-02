@@ -3,13 +3,10 @@ use gears::store::StoreKey;
 use gears::{
     params::ParamsSubspaceKey,
     store::{
-        QueryableMultiKVStore, TransactionalMultiKVStore,
         database::{Database, PrefixDB},
-        ReadPrefixStore, WritePrefixStore,
+        QueryableMultiKVStore, ReadPrefixStore, TransactionalMultiKVStore, WritePrefixStore,
     },
-    types::{
-        denom::Denom,
-    },
+    types::denom::Denom,
 };
 use serde::{de::Error, Deserialize, Serialize};
 
