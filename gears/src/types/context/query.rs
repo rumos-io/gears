@@ -34,7 +34,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        KVStore::from(self.multi_store.kv_store(store_key))
+        self.multi_store.kv_store(store_key)
     }
 
     fn multi_store(&self) -> MultiStore<'_, DB, SK> {
