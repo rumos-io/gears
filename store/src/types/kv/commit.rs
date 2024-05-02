@@ -146,6 +146,7 @@ impl<DB: Database> CommitKVStore<DB> {
             panic!("key is empty")
         }
 
+        let _ = self.cache.delete.remove(&key);
         self.cache.tx.insert(key, value.into_iter().collect());
     }
 }
