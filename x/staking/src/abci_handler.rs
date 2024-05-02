@@ -68,11 +68,14 @@ impl<
 
     fn end_block<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
-        _ctx: &mut CTX,
+        ctx: &mut CTX,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
-        vec![]
-        // self.keeper.end_block(ctx, request)
+        self.keeper
+            .block_validator_updates(ctx)
+            .expect("Unknown error")
+        // TODO
+        // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyEndBlocker)
     }
 
     fn run_ante_checks<DB: Database>(

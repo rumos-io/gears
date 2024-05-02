@@ -1,6 +1,6 @@
 use crate::{
-    Delegation, GenesisState, LastValidatorPower, Pool, Redelegation, StakingParamsKeeper,
-    UnbondingDelegation, Validator,
+    BondStatus, Delegation, DvPair, GenesisState, LastValidatorPower, Pool, Redelegation,
+    StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use chrono::Utc;
 use gears::{
@@ -12,8 +12,9 @@ use gears::{
         database::{Database, PrefixDB},
         QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
     },
+    tendermint::types::proto::validator::ValidatorUpdate,
     types::{
-        base::send::SendCoins,
+        base::{coin::Coin, send::SendCoins},
         context::{init::InitContext, QueryableContext, TransactionalContext},
         decimal256::Decimal256,
         uint::Uint256,
@@ -22,6 +23,7 @@ use gears::{
 };
 use prost::{bytes::BufMut, Message};
 use serde::de::Error;
+use std::{cmp::Ordering, collections::HashMap};
 
 pub trait Codec {}
 
@@ -32,7 +34,7 @@ pub trait AccountKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         todo!()
     }
     // // TODO: should be a sdk account interface
-    fn get_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
+    fn get_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         _ctx: CTX,
         _addr: ValAddress,
     ) -> AK {
@@ -42,13 +44,17 @@ pub trait AccountKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_module_address(_name: String) -> ValAddress {
         todo!()
     }
-    fn get_module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn get_module_account<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         _ctx: &CTX,
         _module_name: String,
     ) -> Self {
         todo!()
     }
-    fn set_module_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
+    fn set_module_account<
+        DB: Database,
+        AK: AuthKeeper<SK>,
+        CTX: QueryableContext<PrefixDB<DB>, SK>,
+    >(
         _context: &CTX,
         _acc: AK,
     ) {
@@ -56,21 +62,52 @@ pub trait AccountKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     }
 }
 
+/// BankKeeper defines the expected interface needed to retrieve account balances.
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn delegate_coins<DB: Database, AK: AuthKeeper<SK>, CTX: TransactionalContext<DB, SK>>(
-        _ctx: &mut CTX,
-        _addr: AccAddress,
-        _amt: SendCoins,
-    ) -> Result<Vec<(Vec<u8>, Vec<u8>)>, AppError> {
-        todo!()
-    }
-    fn undelegate_coins<DB: Database, AK: AuthKeeper<SK>, CTX: TransactionalContext<DB, SK>>(
-        _ctx: &mut CTX,
-        _addr: AccAddress,
-        _amt: SendCoins,
-    ) -> Result<Vec<(Vec<u8>, Vec<u8>)>, AppError> {
-        todo!()
-    }
+    // GetAllBalances(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
+    // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
+    // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
+    // SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
+    //
+    // GetSupply(ctx sdk.Context, denom string) sdk.Coin
+    //
+    // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
+
+    fn send_coins_from_module_to_module<
+        DB: Database,
+        AK: AccountKeeper<SK>,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        sender_pool: String,
+        recepient_pool: String,
+        amount: SendCoins,
+    ) -> Result<(), AppError>;
+
+    fn undelegate_coins_from_module_to_account<
+        DB: Database,
+        AK: AccountKeeper<SK>,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        sender_module: String,
+        addr: AccAddress,
+        amount: SendCoins,
+    ) -> Result<(), AppError>;
+
+    fn delegate_coins_from_account_to_module<
+        DB: Database,
+        AK: AccountKeeper<SK>,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        sender_addr: AccAddress,
+        recepient_module: String,
+        amount: SendCoins,
+    ) -> Result<(), AppError>;
 }
 
 /// Event Hooks
@@ -79,27 +116,19 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 /// state. The second keeper must implement this interface, which then the
 /// staking keeper can call.
 pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn after_validator_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         val_addr: ValAddress,
     );
 
-    fn before_validator_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn before_validator_modified<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         val_addr: ValAddress,
     );
 
-    fn after_validator_removed<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        // TODO: ConstAddr in cosmos sdk
-        const_addr: AccAddress,
-        val_addr: ValAddress,
-    );
-
-    fn after_validator_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn after_validator_removed<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         // TODO: ConstAddr in cosmos sdk
@@ -107,7 +136,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn after_validator_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         // TODO: ConstAddr in cosmos sdk
@@ -115,7 +144,15 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn before_delegation_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        // TODO: ConstAddr in cosmos sdk
+        const_addr: AccAddress,
+        val_addr: ValAddress,
+    );
+
+    fn before_delegation_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -125,7 +162,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn before_delegation_shares_modified<
         DB: Database,
         AK: AuthKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -136,7 +173,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn before_delegation_removed<
         DB: Database,
         AK: AuthKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -144,7 +181,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn after_delegation_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn after_delegation_modified<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -154,7 +191,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn before_validator_slashed<
         DB: Database,
         AK: AuthKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -169,6 +206,13 @@ const LAST_TOTAL_POWER_KEY: [u8; 1] = [1];
 const VALIDATORS_KEY: [u8; 1] = [2];
 const LAST_VALIDATOR_POWER_KEY: [u8; 1] = [3];
 const DELEGATIONS_KEY: [u8; 1] = [4];
+pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [4];
+const VALIDATORS_QUEUE_KEY: [u8; 1] = [5];
+const UBD_QUEUE_KEY: [u8; 1] = [6];
+const UNBONDING_QUEUE_KEY: [u8; 1] = [7];
+
+const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
+const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -223,27 +267,27 @@ impl<
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState,
     ) -> anyhow::Result<()> {
+        // TODO
         // ctx = ctx.WithBlockHeight(1 - sdk.ValidatorUpdateDelay)
 
         self.set_pool(ctx, genesis.pool)?;
         self.set_last_total_power(ctx, genesis.last_total_power);
-        self.staking_params_keeper.set(ctx.multi_store_mut(), genesis.params)?;
-
-        genesis.validators.iter().for_each(|_v| todo!());
+        self.staking_params_keeper
+            .set(ctx.multi_store_mut(), genesis.params)?;
 
         for validator in genesis.validators {
             self.set_validator(ctx, &validator)?;
             self.set_validator_by_cons_addr(ctx, &validator)?;
-            // TODO
-            // self.set_validator_by_power_index(ctx, validator)?;
+            self.set_validator_by_power_index(ctx, &validator)?;
+
             if !genesis.exported {
                 self.after_validator_created(ctx, &validator)?;
             }
 
-            // TODO
-            // if validator.status == BondStatus::Unbonding {
-            //     self.insert_validator_queue(ctx, &validator)
-            // }
+            if validator.status == BondStatus::Unbonding {
+                // TODO
+                //     self.insert_validator_queue(ctx, &validator)
+            }
         }
 
         for delegation in genesis.delegations {
@@ -321,9 +365,9 @@ impl<
         store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes());
     }
 
-    pub fn get_validator<DB: Database>(
+    pub fn get_validator<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut InitContext<'_, DB, SK>,
+        ctx: &CTX,
         key: &[u8],
     ) -> anyhow::Result<Validator> {
         let store = ctx.kv_store(&self.store_key);
@@ -337,7 +381,7 @@ impl<
         }
     }
 
-    pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -345,13 +389,96 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.set(
-            validator.operator_address.to_string().encode_to_vec(),
+            validator.operator_address.to_string().as_bytes().to_vec(),
             serde_json::to_vec(&validator)?,
         );
         Ok(())
     }
 
-    pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn remove_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        addr: &[u8],
+    ) -> anyhow::Result<()> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
+        validators_store.delete(addr);
+        Ok(())
+    }
+
+    /// get the last validator set
+    pub fn get_last_validators_by_addr<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> anyhow::Result<HashMap<String, Vec<u8>>> {
+        let mut last = HashMap::new();
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
+        for (k, v) in store.range(..) {
+            let k: ValAddress = serde_json::from_slice(&k)?;
+            last.insert(k.to_string(), v.to_vec());
+        }
+        Ok(last)
+    }
+
+    /// get the last validator set
+    // TODO: is a hack that allows to use store in the code after call,
+    // Otherwise, it borrows the store and it cannot be reused in mutable calls
+    pub fn get_validators_power_store_vals_map<
+        DB: Database,
+        CTX: QueryableContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &CTX,
+    ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
+        let store = ctx.kv_store(&self.store_key);
+        let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
+        let mut res = HashMap::new();
+        for (k, v) in iterator.range(..) {
+            res.insert(k.to_vec(), serde_json::from_slice(&v)?);
+        }
+        Ok(res)
+    }
+
+    pub fn set_validator_by_power_index<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) -> anyhow::Result<()> {
+        let power_reduction = self.power_reduction(ctx);
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
+
+        // jailed validators are not kept in the power index
+        if validator.jailed {
+            return Ok(());
+        }
+
+        validators_store.set(
+            validator.key_by_power_index_key(power_reduction),
+            validator.operator_address.to_string().as_bytes().to_vec(),
+        );
+        Ok(())
+    }
+
+    pub fn delete_validator_by_power_index<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) -> Option<Vec<u8>> {
+        let power_reduction = self.power_reduction(ctx);
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
+        store.delete(&validator.key_by_power_index_key(power_reduction))
+    }
+
+    pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -369,20 +496,7 @@ impl<
         Ok(())
     }
 
-    // pub fn set_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
-    //     &self,
-    //     ctx: &mut CTX,
-    //     validator: &Validator,
-    // ) -> anyhow::Result<()> {
-    //     if !validator.jailed {
-    //         let store = ctx.kv_store_mut(&self.store_key);
-    //         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
-    //         todo!()
-    //     }
-    //     Ok(())
-    // }
-
-    pub fn set_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_delegation<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
@@ -396,7 +510,7 @@ impl<
     }
 
     // TODO: the other key
-    pub fn set_unbonding_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_unbonding_delegation<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
@@ -409,46 +523,113 @@ impl<
         Ok(())
     }
 
+    /// Returns a concatenated list of all the timeslices inclusively previous to
+    /// currTime, and deletes the timeslices from the queue
+    pub fn dequeue_all_mature_ubd_queue<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        time: chrono::DateTime<Utc>,
+    ) -> anyhow::Result<Vec<DvPair>> {
+        let storage = ctx.kv_store_mut(&self.store_key);
+        let (keys, mature_unbonds) = {
+            let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
+            let end = {
+                let mut k = get_unbonding_delegation_time_key(time);
+                k.push(0);
+                k
+            };
+            let mut mature_unbonds = vec![];
+            let mut keys = vec![];
+            // gets an iterator for all timeslices from time 0 until the current Blockheader time
+            for (k, v) in store.range(..).take_while(|(k, _)| **k != end) {
+                let time_slice: Vec<DvPair> = serde_json::from_slice(&v)?;
+                mature_unbonds.extend(time_slice);
+                keys.push(k.to_vec());
+            }
+            (keys, mature_unbonds)
+        };
+        let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
+        keys.iter().for_each(|k| {
+            store.delete(k);
+        });
+        Ok(mature_unbonds)
+    }
+
     /// Insert an unbonding delegation to the appropriate timeslice in the unbonding queue
-    pub fn insert_ubd_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn insert_ubd_queue<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
         time: chrono::DateTime<Utc>,
     ) -> anyhow::Result<()> {
-        let _store = ctx.kv_store_mut(&self.store_key);
-        let _time_slice = self.get_ubd_queue_time_slice(ctx, time);
-        let _dv_pair = (
-            delegation.delegator_address.clone(),
+        let time_slice = self.get_ubd_queue_time_slice(ctx, time);
+        let dv_pair = DvPair::new(
             delegation.validator_address.clone(),
+            delegation.delegator_address.clone(),
         );
 
-        // TODO
-        Ok(())
-        // if let Some(time_slice) = time_slice {
-        //     let time_slice = time_slice.append(dv_pair);
-        // //     k.SetUBDQueueTimeSlice(ctx, completionTime, timeSlice)
-        // } else {
-        //     // self.set_ubd_queue_time_slice(ctx, completionTime, dv_pair);
-        // }
+        if let Some(mut time_slice) = time_slice {
+            time_slice.push(dv_pair);
+            self.set_ubd_queue_time_slice(ctx, time, time_slice)
+        } else {
+            self.set_ubd_queue_time_slice(ctx, time, vec![dv_pair])
+        }
     }
 
-    pub fn get_ubd_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn insert_unbonding_validator_queue<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) -> anyhow::Result<()> {
+        let mut addrs = self.get_unbonding_validators(
+            ctx,
+            validator.unbonding_time,
+            validator.unbonding_height,
+        )?;
+        addrs.push(validator.operator_address.to_string());
+        self.set_unbonding_validators_queue(
+            ctx,
+            validator.unbonding_time,
+            validator.unbonding_height,
+            addrs,
+        )
+    }
+
+    pub fn get_ubd_queue_time_slice<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
-    ) -> Option<(AccAddress, ValAddress)> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        if let Some(_bz) = store.get(time.to_string().as_bytes()) {
-            // TODO
-            None
+    ) -> Option<Vec<DvPair>> {
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(UBD_QUEUE_KEY);
+        if let Some(bz) = store.get(time.to_string().as_bytes()) {
+            serde_json::from_slice(&bz).unwrap_or_default()
         } else {
             None
         }
     }
 
+    pub fn set_ubd_queue_time_slice<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        time: chrono::DateTime<Utc>,
+        time_slice: Vec<DvPair>,
+    ) -> anyhow::Result<()> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut store = store.prefix_store_mut(UBD_QUEUE_KEY);
+        let key = time.to_string().as_bytes().to_vec();
+        store.set(key, serde_json::to_vec(&time_slice)?);
+        Ok(())
+    }
+
     // TODO: the other key
-    pub fn set_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_redelegation<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
@@ -462,8 +643,7 @@ impl<
         Ok(())
     }
 
-    // TODO: the other key
-    pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &LastValidatorPower,
@@ -475,7 +655,21 @@ impl<
         Ok(())
     }
 
-    pub fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn delete_last_validator_power<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        validator: &ValAddress,
+    ) -> anyhow::Result<()> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
+        delegations_store.delete(validator.to_string().as_bytes());
+        Ok(())
+    }
+
+    pub fn after_validator_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -486,7 +680,7 @@ impl<
         Ok(())
     }
 
-    pub fn before_delegation_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn before_delegation_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
@@ -501,7 +695,7 @@ impl<
         Ok(())
     }
 
-    pub fn after_delegation_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn after_delegation_modified<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
@@ -515,4 +709,641 @@ impl<
         }
         Ok(())
     }
+
+    pub fn after_validator_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) -> anyhow::Result<()> {
+        if let Some(ref hooks) = self.hooks_keeper {
+            hooks.after_validator_bonded(
+                ctx,
+                validator.get_cons_addr(),
+                validator.operator_address.clone(),
+            );
+        }
+        Ok(())
+    }
+
+    pub fn after_validator_begin_unbonding<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) -> anyhow::Result<()> {
+        if let Some(ref hooks) = self.hooks_keeper {
+            hooks.after_validator_begin_unbonding(
+                ctx,
+                validator.get_cons_addr(),
+                validator.operator_address.clone(),
+            );
+        }
+        Ok(())
+    }
+
+    /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block
+    /// Called in each EndBlock
+    pub fn block_validator_updates<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+    ) -> anyhow::Result<Vec<ValidatorUpdate>> {
+        // Calculate validator set changes.
+
+        // NOTE: ApplyAndReturnValidatorSetUpdates has to come before
+        // UnbondAllMatureValidatorQueue.
+        // This fixes a bug when the unbonding period is instant (is the case in
+        // some of the tests). The test expected the validator to be completely
+        // unbonded after the Endblocker (go from Bonded -> Unbonding during
+        // ApplyAndReturnValidatorSetUpdates and then Unbonding -> Unbonded during
+        // UnbondAllMatureValidatorQueue).
+        let _validator_updates = self.apply_and_return_validator_setup_dates(ctx)?;
+
+        // unbond all mature validators from the unbonding queue
+        self.unbond_all_mature_validators(ctx)?;
+
+        // Remove all mature unbonding delegations from the ubd queue.
+        let _mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, Utc::now());
+        //     for _, dvPair := range matureUnbonds {
+        //         addr, err := sdk.ValAddressFromBech32(dvPair.ValidatorAddress)
+        //         if err != nil {
+        //             panic(err)
+        //         }
+        //         delegatorAddress, err := sdk.AccAddressFromBech32(dvPair.DelegatorAddress)
+        //         if err != nil {
+        //             panic(err)
+        //         }
+        //         balances, err := k.CompleteUnbonding(ctx, delegatorAddress, addr)
+        //         if err != nil {
+        //             continue
+        //         }
+        //
+        //         ctx.EventManager().EmitEvent(
+        //             sdk.NewEvent(
+        //                 types.EventTypeCompleteUnbonding,
+        //                 sdk.NewAttribute(sdk.AttributeKeyAmount, balances.String()),
+        //                 sdk.NewAttribute(types.AttributeKeyValidator, dvPair.ValidatorAddress),
+        //                 sdk.NewAttribute(types.AttributeKeyDelegator, dvPair.DelegatorAddress),
+        //             ),
+        //         )
+        //     }
+        todo!()
+    }
+
+    // func (k Keeper) BlockValidatorUpdates(ctx sdk.Context) []abci.ValidatorUpdate {
+    //     // Remove all mature redelegations from the red queue.
+    //     matureRedelegations := k.DequeueAllMatureRedelegationQueue(ctx, ctx.BlockHeader().Time)
+    //     for _, dvvTriplet := range matureRedelegations {
+    //         valSrcAddr, err := sdk.ValAddressFromBech32(dvvTriplet.ValidatorSrcAddress)
+    //         if err != nil {
+    //             panic(err)
+    //         }
+    //         valDstAddr, err := sdk.ValAddressFromBech32(dvvTriplet.ValidatorDstAddress)
+    //         if err != nil {
+    //             panic(err)
+    //         }
+    //         delegatorAddress, err := sdk.AccAddressFromBech32(dvvTriplet.DelegatorAddress)
+    //         if err != nil {
+    //             panic(err)
+    //         }
+    //         balances, err := k.CompleteRedelegation(
+    //             ctx,
+    //             delegatorAddress,
+    //             valSrcAddr,
+    //             valDstAddr,
+    //         )
+    //         if err != nil {
+    //             continue
+    //         }
+    //
+    //         ctx.EventManager().EmitEvent(
+    //             sdk.NewEvent(
+    //                 types.EventTypeCompleteRedelegation,
+    //                 sdk.NewAttribute(sdk.AttributeKeyAmount, balances.String()),
+    //                 sdk.NewAttribute(types.AttributeKeyDelegator, dvvTriplet.DelegatorAddress),
+    //                 sdk.NewAttribute(types.AttributeKeySrcValidator, dvvTriplet.ValidatorSrcAddress),
+    //                 sdk.NewAttribute(types.AttributeKeyDstValidator, dvvTriplet.ValidatorDstAddress),
+    //             ),
+    //         )
+    //     }
+    //
+    //     return validatorUpdates
+    // }
+
+    /// ApplyAndReturnValidatorSetUpdates applies and return accumulated updates to the bonded validator set. Also,
+    /// * Updates the active valset as keyed by LastValidatorPowerKey.
+    /// * Updates the total power as keyed by LastTotalPowerKey.
+    /// * Updates validator status' according to updated powers.
+    /// * Updates the fee pool bonded vs not-bonded tokens.
+    /// * Updates relevant indices.
+    /// It gets called once after genesis, another time maybe after genesis transactions,
+    /// then once at every EndBlock.
+    ///
+    /// CONTRACT: Only validators with non-zero power or zero-power that were bonded
+    /// at the previous block height or were removed from the validator set entirely
+    /// are returned to Tendermint.
+    pub fn apply_and_return_validator_setup_dates<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+    ) -> anyhow::Result<Vec<ValidatorUpdate>> {
+        let params = self.staking_params_keeper.get(ctx.multi_store())?;
+        let max_validators = params.max_validators;
+        let power_reduction = self.power_reduction(ctx);
+        let mut total_power = 0;
+        let mut amt_from_bonded_to_not_bonded: i64 = 0;
+        let amt_from_not_bonded_to_bonded: i64 = 0;
+
+        let mut last = self.get_last_validators_by_addr(ctx)?;
+        let validators_map = self.get_validators_power_store_vals_map(ctx)?;
+
+        let mut updates = vec![];
+
+        for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
+            // everything that is iterated in this loop is becoming or already a
+            // part of the bonded validator set
+            let mut validator: Validator =
+                self.get_validator(ctx, val_addr.to_string().as_bytes())?;
+
+            if validator.jailed {
+                return Err(AppError::Custom(
+                    "should never retrieve a jailed validator from the power store".to_string(),
+                )
+                .into());
+            }
+            // if we get to a zero-power validator (which we don't bond),
+            // there are no more possible bonded validators
+            if validator.tokens_to_consensus_power(self.power_reduction(ctx)) == 0 {
+                break;
+            }
+
+            // apply the appropriate state change if necessary
+            match validator.status {
+                BondStatus::Unbonded => {
+                    self.unbonded_to_bonded(ctx, &mut validator)?;
+                    amt_from_bonded_to_not_bonded =
+                        amt_from_not_bonded_to_bonded + validator.tokens.amount.parse::<i64>()?;
+                }
+                BondStatus::Unbonding => {
+                    self.unbonding_to_bonded(ctx, &mut validator)?;
+                    amt_from_bonded_to_not_bonded =
+                        amt_from_not_bonded_to_bonded + validator.tokens.amount.parse::<i64>()?;
+                }
+                BondStatus::Bonded => {}
+            }
+
+            // fetch the old power bytes
+            let val_addr_str = val_addr.to_string();
+            let old_power_bytes = last.get(&val_addr_str);
+            let new_power = validator.consensus_power(power_reduction);
+            let new_power_bytes = new_power.to_ne_bytes();
+            // update the validator set if power has changed
+            if old_power_bytes.is_none()
+                || old_power_bytes.map(|v| v.as_slice()) != Some(&new_power_bytes)
+            {
+                updates.push(validator.abci_validator_update(power_reduction));
+
+                self.set_last_validator_power(
+                    ctx,
+                    &LastValidatorPower {
+                        address: val_addr.clone(),
+                        power: new_power,
+                    },
+                )?;
+            }
+
+            last.remove(&val_addr_str);
+
+            total_power += new_power;
+        }
+
+        let no_longer_bonded = sort_no_longer_bonded(&last)?;
+
+        for val_addr_bytes in no_longer_bonded {
+            let mut validator = self.get_validator(ctx, val_addr_bytes.as_bytes())?;
+            self.bonded_to_unbonding(ctx, &mut validator)?;
+            amt_from_bonded_to_not_bonded =
+                amt_from_not_bonded_to_bonded + validator.tokens.amount.parse::<i64>()?;
+            self.delete_last_validator_power(ctx, &validator.operator_address)?;
+            updates.push(validator.abci_validator_update_zero());
+        }
+
+        // Update the pools based on the recent updates in the validator set:
+        // - The tokens from the non-bonded candidates that enter the new validator set need to be transferred
+        // to the Bonded pool.
+        // - The tokens from the bonded validators that are being kicked out from the validator set
+        // need to be transferred to the NotBonded pool.
+        // Compare and subtract the respective amounts to only perform one transfer.
+        // This is done in order to avoid doing multiple updates inside each iterator/loop.
+        match amt_from_bonded_to_not_bonded.cmp(&amt_from_not_bonded_to_bonded) {
+            Ordering::Greater => {
+                self.not_bonded_tokens_to_bonded(
+                    ctx,
+                    amt_from_bonded_to_not_bonded - amt_from_not_bonded_to_bonded,
+                )?;
+            }
+            Ordering::Less => {
+                self.bonded_tokens_to_not_bonded(
+                    ctx,
+                    amt_from_bonded_to_not_bonded - amt_from_not_bonded_to_bonded,
+                )?;
+            }
+            Ordering::Equal => {}
+        }
+
+        // set total power on lookup index if there are any updates
+        if !updates.is_empty() {
+            self.set_last_total_power(ctx, Uint256::from_u128(total_power as u128));
+        }
+        Ok(updates)
+    }
+
+    pub fn unbond_all_mature_validators<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+    ) -> anyhow::Result<()> {
+        // TODO: time in ctx
+        let block_time = Utc::now();
+        let block_height = ctx.height() as i64;
+
+        // unbondingValIterator will contains all validator addresses indexed under
+        // the ValidatorQueueKey prefix. Note, the entire index key is composed as
+        // ValidatorQueueKey | timeBzLen (8-byte big endian) | timeBz | heightBz (8-byte big endian),
+        // so it may be possible that certain validator addresses that are iterated
+        // over are not ready to unbond, so an explicit check is required.
+        let unbonding_val_iterator: HashMap<Vec<u8>, Vec<String>> =
+            self.validator_queue_iterator(ctx, block_time, block_height)?;
+
+        for (k, v) in &unbonding_val_iterator {
+            let (time, height) = parse_validator_queue_key(k)?;
+
+            // All addresses for the given key have the same unbonding height and time.
+            // We only unbond if the height and time are less than the current height
+            // and time.
+
+            if height < block_height && (time <= block_time) {
+                for addr in v {
+                    let mut validator = self.get_validator(ctx, addr.as_bytes())?;
+                    if validator.status != BondStatus::Unbonding {
+                        return Err(AppError::Custom(
+                            "unexpected validator in unbonding queue; status was not unbonding"
+                                .into(),
+                        )
+                        .into());
+                    }
+                    self.unbonding_to_unbonded(ctx, &mut validator)?;
+                    if validator.delegator_shares.is_zero() {
+                        self.remove_validator(
+                            ctx,
+                            validator.operator_address.to_string().as_bytes(),
+                        )?;
+                    }
+                }
+            }
+
+            let store = ctx.kv_store_mut(&self.store_key);
+            let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
+            unbonding_val_iterator.keys().for_each(|k| {
+                store.delete(k);
+            });
+        }
+        Ok(())
+    }
+
+    pub fn power_reduction<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+        &self,
+        _ctx: &CTX,
+    ) -> i64 {
+        // TODO: sdk constant in cosmos
+        1_000_000
+    }
+
+    pub fn not_bonded_tokens_to_bonded<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        amount: i64,
+    ) -> anyhow::Result<()> {
+        let params = self.staking_params_keeper.get(ctx.multi_store())?;
+        let coins = SendCoins::new(vec![Coin {
+            denom: params.bond_denom,
+            amount: Uint256::from(amount as u64),
+        }])?;
+        Ok(self
+            .bank_keeper
+            .send_coins_from_module_to_module::<DB, AK, CTX>(
+                ctx,
+                NOT_BONDED_POOL_NAME.into(),
+                BONDED_POOL_NAME.into(),
+                coins,
+            )?)
+    }
+
+    pub fn bonded_tokens_to_not_bonded<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        amount: i64,
+    ) -> anyhow::Result<()> {
+        let params = self.staking_params_keeper.get(ctx.multi_store())?;
+        let coins = SendCoins::new(vec![Coin {
+            denom: params.bond_denom,
+            amount: Uint256::from(amount as u64),
+        }])?;
+        Ok(self
+            .bank_keeper
+            .send_coins_from_module_to_module::<DB, AK, CTX>(
+                ctx,
+                BONDED_POOL_NAME.into(),
+                NOT_BONDED_POOL_NAME.into(),
+                coins,
+            )?)
+    }
+
+    pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        if validator.status != BondStatus::Bonded {
+            return Err(AppError::Custom(format!(
+                "bad state transition bonded to unbonding, validator: {:?}",
+                validator
+            ))
+            .into());
+        }
+        self.begin_unbonding_validator(ctx, validator)
+    }
+
+    pub fn unbonded_to_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        if validator.status != BondStatus::Unbonded {
+            return Err(AppError::Custom(format!(
+                "bad state transition unbonded to bonded, validator: {:?}",
+                validator
+            ))
+            .into());
+        }
+        self.bond_validator(ctx, validator)
+    }
+
+    pub fn unbonding_to_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        if validator.status != BondStatus::Unbonding {
+            return Err(AppError::Custom(format!(
+                "bad state transition unbonding to bonded, validator: {:?}",
+                validator
+            ))
+            .into());
+        }
+        self.bond_validator(ctx, validator)
+    }
+
+    pub fn unbonding_to_unbonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        if validator.status != BondStatus::Unbonding {
+            return Err(AppError::Custom(format!(
+                "bad state transition unbonding to unbonded, validator: {:?}",
+                validator
+            ))
+            .into());
+        }
+        self.complete_unbonding_validator(ctx, validator)?;
+        Ok(())
+    }
+
+    pub fn complete_unbonding_validator<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        validator.update_status(BondStatus::Unbonded);
+        self.set_validator(ctx, validator)
+    }
+
+    pub fn begin_unbonding_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        // delete the validator by power index, as the key will change
+        self.delete_validator_by_power_index(ctx, validator);
+        // sanity check
+        if validator.status != BondStatus::Bonded {
+            return Err(AppError::Custom(format!(
+                "should not already be unbonded or unbonding, validator: {:?}",
+                validator
+            ))
+            .into());
+        }
+        validator.update_status(BondStatus::Unbonding);
+
+        // set the unbonding completion time and completion height appropriately
+        // TODO: time in ctx
+        validator.unbonding_time = Utc::now();
+        validator.unbonding_height = ctx.height() as i64;
+
+        // save the now unbonded validator record and power index
+        self.set_validator(ctx, validator)?;
+        self.set_validator_by_power_index(ctx, validator)?;
+
+        // Adds to unbonding validator queue
+        self.insert_unbonding_validator_queue(ctx, validator)?;
+
+        // trigger hook
+        self.after_validator_begin_unbonding(ctx, validator)?;
+        Ok(())
+    }
+
+    pub fn bond_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        // delete the validator by power index, as the key will change
+        self.delete_validator_by_power_index(ctx, validator);
+
+        validator.update_status(BondStatus::Bonded);
+        // save the now bonded validator record to the two referenced stores
+        self.set_validator(ctx, validator)?;
+        self.set_validator_by_power_index(ctx, validator)?;
+
+        // delete from queue if present
+        self.delete_validator_queue(ctx, validator)?;
+        // trigger hook
+        self.after_validator_bonded(ctx, validator)?;
+        Ok(())
+    }
+
+    pub fn validator_queue_iterator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        block_time: chrono::DateTime<Utc>,
+        block_height: i64,
+    ) -> anyhow::Result<HashMap<Vec<u8>, Vec<String>>> {
+        let store = ctx.kv_store(&self.store_key);
+        let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
+
+        let end = {
+            let mut k = get_validator_queue_key(block_time, block_height);
+            k.push(0);
+            k
+        };
+
+        let mut res = HashMap::new();
+        for (k, v) in iterator.range(..).take_while(|(k, _)| **k != end) {
+            res.insert(k.to_vec(), serde_json::from_slice(&v)?);
+        }
+        Ok(res)
+    }
+
+    pub fn set_unbonding_validators_queue<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        end_time: chrono::DateTime<Utc>,
+        end_height: i64,
+        addrs: Vec<String>,
+    ) -> anyhow::Result<()> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
+        let key = get_validator_queue_key(end_time, end_height);
+        let value = serde_json::to_vec(&addrs)?;
+        store.set(key, value);
+        Ok(())
+    }
+
+    /// DeleteValidatorQueueTimeSlice deletes all entries in the queue indexed by a
+    /// given height and time.
+    pub fn delete_validator_queue_time_slice<
+        DB: Database,
+        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        end_time: chrono::DateTime<Utc>,
+        end_height: i64,
+    ) {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
+        store.delete(&get_validator_queue_key(end_time, end_height));
+    }
+
+    pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> anyhow::Result<()> {
+        let addrs = self.get_unbonding_validators(
+            ctx,
+            validator.unbonding_time,
+            validator.unbonding_height,
+        )?;
+        let val_addr = validator.operator_address.to_string();
+        let new_addrs = addrs
+            .into_iter()
+            .filter(|addr| val_addr != **addr)
+            .collect::<Vec<_>>();
+        if new_addrs.is_empty() {
+            self.delete_validator_queue_time_slice(
+                ctx,
+                validator.unbonding_time,
+                validator.unbonding_height,
+            );
+        } else {
+            self.set_unbonding_validators_queue(
+                ctx,
+                validator.unbonding_time,
+                validator.unbonding_height,
+                new_addrs,
+            )?;
+        }
+        Ok(())
+    }
+
+    pub fn get_unbonding_validators<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &mut CTX,
+        unbonding_time: chrono::DateTime<Utc>,
+        unbonding_height: i64,
+    ) -> anyhow::Result<Vec<String>> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let store = store.prefix_store(VALIDATORS_QUEUE_KEY);
+
+        if let Some(bz) = store.get(&get_validator_queue_key(unbonding_time, unbonding_height)) {
+            let res: Vec<String> = serde_json::from_slice(&bz)?;
+            Ok(res)
+        } else {
+            Ok(vec![])
+        }
+    }
+}
+
+fn get_validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i64) -> Vec<u8> {
+    let height_bz = end_height.to_ne_bytes();
+    let time_bz = end_time
+        .timestamp_nanos_opt()
+        .expect("Unknown time conversion error")
+        .to_ne_bytes();
+
+    let mut bz = VALIDATORS_QUEUE_KEY.to_vec();
+    bz.extend_from_slice(&(time_bz.len() as u64).to_ne_bytes());
+    bz.extend_from_slice(&time_bz);
+    bz.extend_from_slice(&height_bz);
+    bz
+}
+
+fn get_unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> Vec<u8> {
+    time.timestamp_nanos_opt()
+        .expect("Unknown time conversion error")
+        .to_ne_bytes()
+        .to_vec()
+}
+
+fn parse_validator_queue_key(key: &Vec<u8>) -> anyhow::Result<(chrono::DateTime<Utc>, i64)> {
+    let prefix_len = VALIDATORS_QUEUE_KEY.len();
+    if key[..prefix_len] != VALIDATORS_QUEUE_KEY {
+        return Err(
+            AppError::Custom("Invalid validators queue key. Invalid prefix.".into()).into(),
+        );
+    }
+    let time_len = u64::from_ne_bytes(key[prefix_len..prefix_len + 8].try_into()?);
+    let time = chrono::DateTime::from_timestamp_nanos(i64::from_ne_bytes(
+        key[prefix_len + 8..prefix_len + 8 + time_len as usize].try_into()?,
+    ));
+    let height = i64::from_ne_bytes(key[prefix_len + 8 + time_len as usize..].try_into()?);
+    Ok((time, height))
+}
+
+/// given a map of remaining validators to previous bonded power
+/// returns the list of validators to be unbonded, sorted by operator address
+fn sort_no_longer_bonded(last: &HashMap<String, Vec<u8>>) -> anyhow::Result<Vec<String>> {
+    let mut no_longer_bonded = last.iter().map(|(k, _v)| k.clone()).collect::<Vec<_>>();
+    // sorted by address - order doesn't matter
+    no_longer_bonded.sort();
+    Ok(no_longer_bonded)
 }
