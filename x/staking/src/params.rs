@@ -3,13 +3,10 @@ use gears::store::StoreKey;
 use gears::{
     params::ParamsSubspaceKey,
     store::{
-        QueryableMultiKVStore, TransactionalMultiKVStore,
         database::{Database, PrefixDB},
-        ReadPrefixStore, WritePrefixStore,
+        QueryableMultiKVStore, ReadPrefixStore, TransactionalMultiKVStore, WritePrefixStore,
     },
-    types::{
-        denom::Denom,
-    },
+    types::denom::Denom,
 };
 use serde::{de::Error, Deserialize, Serialize};
 
@@ -68,7 +65,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: TransactionalMultiKVStore<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, CTX: TransactionalMultiKVStore<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: Params,

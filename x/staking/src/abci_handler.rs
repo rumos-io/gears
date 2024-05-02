@@ -1,6 +1,6 @@
 use crate::{AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message};
 use gears::application::handlers::node::ABCIHandler as NodeABCIHandler;
-use gears::store::database::{Database, PrefixDB};
+use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::validator::ValidatorUpdate;
 use gears::tendermint::types::request::end_block::RequestEndBlock;
@@ -66,7 +66,7 @@ impl<
         todo!()
     }
 
-    fn end_block<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn end_block<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         _ctx: &mut CTX,
         _request: RequestEndBlock,

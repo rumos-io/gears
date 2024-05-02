@@ -16,7 +16,7 @@ use crate::{
     },
 };
 use bytes::Bytes;
-use store_crate::{database::RocksDB, types::multi::MultiStore, QueryableMultiKVStore, StoreKey};
+use store_crate::{database::RocksDB, types::multi::commit::CommitMultiStore, StoreKey};
 use tendermint::types::{
     chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},
@@ -46,7 +46,7 @@ pub struct BaseApp<
     G: Genesis,
     AI: ApplicationInfo,
 > {
-    multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
+    multi_store: Arc<RwLock<CommitMultiStore<RocksDB, SK>>>,
     state: Arc<RwLock<ApplicationState>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
@@ -71,14 +71,14 @@ impl<
         params_subspace_key: PSK,
         abci_handler: H,
     ) -> Self {
-        let multi_store = MultiStore::new(db);
+        let multi_store = CommitMultiStore::new(db);
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,
             params_subspace_key,
         };
 
         let max_gas = baseapp_params_keeper
-            .block_params(&multi_store)
+            .block_params(&multi_store.as_immutable())
             .map(|e| e.max_gas)
             .unwrap_or_default();
 

@@ -6,7 +6,8 @@ use crate::{types::any::AnyKVStore, ReadPrefixStore};
 
 use super::{prefix_end_bound, range::PrefixRange};
 
-/// Wraps an immutable reference to a KVStore with a prefix
+/// Wraps an immutable KVStore with a prefix
+#[derive(Debug)]
 pub struct ImmutablePrefixStore<'a, DB> {
     pub(crate) store: AnyKVStore<'a, DB>,
     pub(crate) prefix: Vec<u8>,

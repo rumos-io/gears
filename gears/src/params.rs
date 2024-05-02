@@ -1,5 +1,5 @@
 use std::{hash::Hash, marker::PhantomData};
-use store_crate::database::Database;
+use store_crate::database::{Database, PrefixDB};
 use store_crate::{
     types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     QueryableKVStore, StoreKey, TransactionalKVStore,
@@ -38,7 +38,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         store: &'a mut KV,
         params_subspace_key: &PSK,
-    ) -> MutablePrefixStore<'a, DB> {
+    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
         let params_store = store.kv_store_mut(&self.store_key);
         params_store.prefix_store_mut(params_subspace_key.name().as_bytes().to_vec())
     }

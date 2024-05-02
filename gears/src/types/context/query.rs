@@ -1,25 +1,25 @@
 use store_crate::database::{Database, PrefixDB};
+use store_crate::types::kv::KVStore;
+use store_crate::types::multi::commit::CommitMultiStore;
+use store_crate::QueryableMultiKVStore;
 use store_crate::{
     error::StoreError,
-    types::{
-        multi::MultiStore,
-        query::{kv::QueryKVStore, multi::QueryMultiStore},
-    },
-    QueryableMultiKVStore, StoreKey,
+    types::{multi::MultiStore, query::multi::QueryMultiStore},
+    StoreKey,
 };
 use tendermint::types::chain_id::ChainId;
 
 use super::QueryableContext;
 
 pub struct QueryContext<'a, DB, SK> {
-    pub multi_store: QueryMultiStore<'a, DB, SK>,
-    pub height: u64,
-    pub chain_id: ChainId,
+    multi_store: QueryMultiStore<'a, DB, SK>,
+    pub(crate) height: u64,
+    pub(crate) chain_id: ChainId,
 }
 
 impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a MultiStore<DB, SK>,
+        multi_store: &'a CommitMultiStore<DB, SK>,
         version: u32,
         // chain_id: ChainId,
     ) -> Result<Self, StoreError> {
@@ -32,14 +32,13 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
-    for QueryContext<'a, DB, SK>
-{
-    type KVStore = QueryKVStore<'a, PrefixDB<DB>>;
-    type MultiStore = QueryMultiStore<'a, DB, SK>;
-
-    fn kv_store(&self, store_key: &SK) -> &Self::KVStore {
+impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key)
+    }
+
+    fn multi_store(&self) -> MultiStore<'_, DB, SK> {
+        MultiStore::from(&self.multi_store)
     }
 
     fn height(&self) -> u64 {
@@ -48,9 +47,5 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<PrefixDB<DB>, SK>
 
     fn chain_id(&self) -> &ChainId {
         &self.chain_id
-    }
-
-    fn multi_store(&self) -> &Self::MultiStore {
-        &self.multi_store
     }
 }

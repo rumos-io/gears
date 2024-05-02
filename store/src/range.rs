@@ -5,6 +5,7 @@ use trees::iavl::Range as TreeRange;
 
 use crate::utils::MergedRange;
 
+#[derive(Debug)]
 pub enum Range<'a, R: RangeBounds<Vec<u8>>, DB> {
     Merged(MergedRange<'a>),
     Tree(TreeRange<'a, R, DB>),

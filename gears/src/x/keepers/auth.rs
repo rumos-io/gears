@@ -1,8 +1,5 @@
 use core_types::address::AccAddress;
-use store_crate::{
-    database::{Database, PrefixDB},
-    StoreKey,
-};
+use store_crate::{database::Database, StoreKey};
 
 use crate::{
     types::{
@@ -21,7 +18,7 @@ pub trait AuthParams {
 pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     type Params: AuthParams;
 
-    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Self::Params;
