@@ -5,6 +5,7 @@ use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
 use crate::types::context::tx::TxContext;
+use crate::types::context::QueryableContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
@@ -16,7 +17,7 @@ use crate::x::module::Module;
 use crate::{
     error::AppError,
     types::{
-        context::{QueryableContext, TransactionalContext},
+        context::TransactionalContext,
         tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
@@ -27,7 +28,7 @@ use core_types::{
 };
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
-use store_crate::database::{Database, PrefixDB};
+use store_crate::database::Database;
 use store_crate::StoreKey;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
@@ -51,7 +52,7 @@ impl SignGasConsumer for DefaultSignGasConsumer {
         _data: &SignatureData,
         params: &AP,
     ) -> anyhow::Result<()> {
-        // TODO:NOW I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
+        // TODO I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
         match pub_key {
             PublicKey::Secp256k1(_key) => {
                 let amount = params.sig_verify_cost_secp256k1().try_into()?;
@@ -236,11 +237,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn validate_memo_ante_handler<
-        DB: Database,
-        CTX: QueryableContext<PrefixDB<DB>, SK>,
-        M: TxMessage,
-    >(
+    fn validate_memo_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: TxMessage>(
         &self,
         ctx: &CTX,
         tx: &Tx<M>,

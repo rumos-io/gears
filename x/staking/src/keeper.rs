@@ -9,8 +9,8 @@ use gears::{
     error::AppError,
     params::ParamsSubspaceKey,
     store::{
-        database::{Database, PrefixDB},
-        QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
+        database::Database, QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore,
+        WritePrefixStore,
     },
     tendermint::types::proto::validator::ValidatorUpdate,
     types::{
@@ -34,7 +34,7 @@ pub trait AccountKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         todo!()
     }
     // // TODO: should be a sdk account interface
-    fn get_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    fn get_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
         _ctx: CTX,
         _addr: ValAddress,
     ) -> AK {
@@ -44,17 +44,13 @@ pub trait AccountKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_module_address(_name: String) -> ValAddress {
         todo!()
     }
-    fn get_module_account<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    fn get_module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         _ctx: &CTX,
         _module_name: String,
     ) -> Self {
         todo!()
     }
-    fn set_module_account<
-        DB: Database,
-        AK: AuthKeeper<SK>,
-        CTX: QueryableContext<PrefixDB<DB>, SK>,
-    >(
+    fn set_module_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
         _context: &CTX,
         _acc: AK,
     ) {
@@ -76,7 +72,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_module_to_module<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -88,7 +84,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn undelegate_coins_from_module_to_account<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -100,7 +96,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn delegate_coins_from_account_to_module<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -116,27 +112,19 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 /// state. The second keeper must implement this interface, which then the
 /// staking keeper can call.
 pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn after_validator_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         val_addr: ValAddress,
     );
 
-    fn before_validator_modified<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn before_validator_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         val_addr: ValAddress,
     );
 
-    fn after_validator_removed<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
-        &self,
-        ctx: &mut CTX,
-        // TODO: ConstAddr in cosmos sdk
-        const_addr: AccAddress,
-        val_addr: ValAddress,
-    );
-
-    fn after_validator_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn after_validator_removed<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         // TODO: ConstAddr in cosmos sdk
@@ -144,7 +132,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn after_validator_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         // TODO: ConstAddr in cosmos sdk
@@ -152,7 +140,15 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn before_delegation_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        // TODO: ConstAddr in cosmos sdk
+        const_addr: AccAddress,
+        val_addr: ValAddress,
+    );
+
+    fn before_delegation_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -162,7 +158,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn before_delegation_shares_modified<
         DB: Database,
         AK: AuthKeeper<SK>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -173,7 +169,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn before_delegation_removed<
         DB: Database,
         AK: AuthKeeper<SK>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -181,7 +177,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn after_delegation_modified<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    fn after_delegation_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -191,7 +187,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn before_validator_slashed<
         DB: Database,
         AK: AuthKeeper<SK>,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -273,7 +269,7 @@ impl<
         self.set_pool(ctx, genesis.pool)?;
         self.set_last_total_power(ctx, genesis.last_total_power);
         self.staking_params_keeper
-            .set(ctx.multi_store_mut(), genesis.params)?;
+            .set(&mut ctx.multi_store_mut(), genesis.params)?;
 
         for validator in genesis.validators {
             self.set_validator(ctx, &validator)?;
@@ -333,7 +329,7 @@ impl<
         }
     }
 
-    pub fn set_pool<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         pool: Pool,
@@ -346,7 +342,7 @@ impl<
     }
 
     /// Load the last total validator power.
-    pub fn get_last_total_power<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    pub fn get_last_total_power<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Option<Uint256> {
@@ -356,16 +352,16 @@ impl<
         })
     }
 
-    pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         last_total_power: Uint256,
     ) {
-        let store = ctx.kv_store_mut(&self.store_key);
+        let mut store = ctx.kv_store_mut(&self.store_key);
         store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes());
     }
 
-    pub fn get_validator<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    pub fn get_validator<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         key: &[u8],
@@ -381,7 +377,7 @@ impl<
         }
     }
 
-    pub fn set_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -395,7 +391,7 @@ impl<
         Ok(())
     }
 
-    pub fn remove_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: &[u8],
@@ -407,7 +403,7 @@ impl<
     }
 
     /// get the last validator set
-    pub fn get_last_validators_by_addr<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    pub fn get_last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> anyhow::Result<HashMap<String, Vec<u8>>> {
@@ -424,10 +420,7 @@ impl<
     /// get the last validator set
     // TODO: is a hack that allows to use store in the code after call,
     // Otherwise, it borrows the store and it cannot be reused in mutable calls
-    pub fn get_validators_power_store_vals_map<
-        DB: Database,
-        CTX: QueryableContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn get_validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
@@ -440,10 +433,7 @@ impl<
         Ok(res)
     }
 
-    pub fn set_validator_by_power_index<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn set_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -464,10 +454,7 @@ impl<
         Ok(())
     }
 
-    pub fn delete_validator_by_power_index<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn delete_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -478,7 +465,7 @@ impl<
         store.delete(&validator.key_by_power_index_key(power_reduction))
     }
 
-    pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -496,7 +483,7 @@ impl<
         Ok(())
     }
 
-    pub fn set_delegation<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
@@ -510,7 +497,7 @@ impl<
     }
 
     // TODO: the other key
-    pub fn set_unbonding_delegation<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_unbonding_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
@@ -525,16 +512,13 @@ impl<
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
     /// currTime, and deletes the timeslices from the queue
-    pub fn dequeue_all_mature_ubd_queue<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn dequeue_all_mature_ubd_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
     ) -> anyhow::Result<Vec<DvPair>> {
-        let storage = ctx.kv_store_mut(&self.store_key);
         let (keys, mature_unbonds) = {
+            let storage = ctx.kv_store(&self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
             let end = {
                 let mut k = get_unbonding_delegation_time_key(time);
@@ -551,6 +535,7 @@ impl<
             }
             (keys, mature_unbonds)
         };
+        let storage = ctx.kv_store_mut(&self.store_key);
         let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);
@@ -559,7 +544,7 @@ impl<
     }
 
     /// Insert an unbonding delegation to the appropriate timeslice in the unbonding queue
-    pub fn insert_ubd_queue<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn insert_ubd_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
@@ -579,10 +564,7 @@ impl<
         }
     }
 
-    pub fn insert_unbonding_validator_queue<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn insert_unbonding_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -601,7 +583,7 @@ impl<
         )
     }
 
-    pub fn get_ubd_queue_time_slice<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    pub fn get_ubd_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
@@ -615,7 +597,7 @@ impl<
         }
     }
 
-    pub fn set_ubd_queue_time_slice<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_ubd_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
@@ -629,7 +611,7 @@ impl<
     }
 
     // TODO: the other key
-    pub fn set_redelegation<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
@@ -643,7 +625,7 @@ impl<
         Ok(())
     }
 
-    pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &LastValidatorPower,
@@ -655,10 +637,7 @@ impl<
         Ok(())
     }
 
-    pub fn delete_last_validator_power<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn delete_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &ValAddress,
@@ -669,7 +648,7 @@ impl<
         Ok(())
     }
 
-    pub fn after_validator_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -680,7 +659,7 @@ impl<
         Ok(())
     }
 
-    pub fn before_delegation_created<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn before_delegation_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
@@ -695,7 +674,7 @@ impl<
         Ok(())
     }
 
-    pub fn after_delegation_modified<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn after_delegation_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
@@ -710,7 +689,7 @@ impl<
         Ok(())
     }
 
-    pub fn after_validator_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn after_validator_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -725,10 +704,7 @@ impl<
         Ok(())
     }
 
-    pub fn after_validator_begin_unbonding<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -745,7 +721,7 @@ impl<
 
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block
     /// Called in each EndBlock
-    pub fn block_validator_updates<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn block_validator_updates<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
@@ -845,12 +821,12 @@ impl<
     /// are returned to Tendermint.
     pub fn apply_and_return_validator_setup_dates<
         DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
-        let params = self.staking_params_keeper.get(ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
@@ -961,10 +937,7 @@ impl<
         Ok(updates)
     }
 
-    pub fn unbond_all_mature_validators<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn unbond_all_mature_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<()> {
@@ -1016,23 +989,17 @@ impl<
         Ok(())
     }
 
-    pub fn power_reduction<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
-        &self,
-        _ctx: &CTX,
-    ) -> i64 {
+    pub fn power_reduction<DB: Database, CTX: QueryableContext<DB, SK>>(&self, _ctx: &CTX) -> i64 {
         // TODO: sdk constant in cosmos
         1_000_000
     }
 
-    pub fn not_bonded_tokens_to_bonded<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn not_bonded_tokens_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         amount: i64,
     ) -> anyhow::Result<()> {
-        let params = self.staking_params_keeper.get(ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount: Uint256::from(amount as u64),
@@ -1047,15 +1014,12 @@ impl<
             )?)
     }
 
-    pub fn bonded_tokens_to_not_bonded<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn bonded_tokens_to_not_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         amount: i64,
     ) -> anyhow::Result<()> {
-        let params = self.staking_params_keeper.get(ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount: Uint256::from(amount as u64),
@@ -1070,7 +1034,7 @@ impl<
             )?)
     }
 
-    pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1085,7 +1049,7 @@ impl<
         self.begin_unbonding_validator(ctx, validator)
     }
 
-    pub fn unbonded_to_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn unbonded_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1100,7 +1064,7 @@ impl<
         self.bond_validator(ctx, validator)
     }
 
-    pub fn unbonding_to_bonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn unbonding_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1115,7 +1079,7 @@ impl<
         self.bond_validator(ctx, validator)
     }
 
-    pub fn unbonding_to_unbonded<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn unbonding_to_unbonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1131,10 +1095,7 @@ impl<
         Ok(())
     }
 
-    pub fn complete_unbonding_validator<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn complete_unbonding_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1143,7 +1104,7 @@ impl<
         self.set_validator(ctx, validator)
     }
 
-    pub fn begin_unbonding_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn begin_unbonding_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1177,7 +1138,7 @@ impl<
         Ok(())
     }
 
-    pub fn bond_validator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn bond_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1197,7 +1158,7 @@ impl<
         Ok(())
     }
 
-    pub fn validator_queue_iterator<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn validator_queue_iterator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: chrono::DateTime<Utc>,
@@ -1219,10 +1180,7 @@ impl<
         Ok(res)
     }
 
-    pub fn set_unbonding_validators_queue<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn set_unbonding_validators_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         end_time: chrono::DateTime<Utc>,
@@ -1239,10 +1197,7 @@ impl<
 
     /// DeleteValidatorQueueTimeSlice deletes all entries in the queue indexed by a
     /// given height and time.
-    pub fn delete_validator_queue_time_slice<
-        DB: Database,
-        CTX: TransactionalContext<PrefixDB<DB>, SK>,
-    >(
+    pub fn delete_validator_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         end_time: chrono::DateTime<Utc>,
@@ -1253,7 +1208,7 @@ impl<
         store.delete(&get_validator_queue_key(end_time, end_height));
     }
 
-    pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -1285,7 +1240,7 @@ impl<
         Ok(())
     }
 
-    pub fn get_unbonding_validators<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn get_unbonding_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         unbonding_time: chrono::DateTime<Utc>,

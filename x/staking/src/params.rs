@@ -65,7 +65,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: TransactionalMultiKVStore<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, CTX: TransactionalMultiKVStore<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: Params,

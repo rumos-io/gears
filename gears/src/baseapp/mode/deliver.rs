@@ -48,7 +48,7 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         }
 
         let events = ctx.events_drain();
-        ctx.multi_store_mut().tx_caches_write_then_clear();
+        ctx.multi_store_mut().tx_cache_to_block();
 
         Ok(events)
     }
@@ -60,7 +60,7 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
     ) -> Result<(), RunTxError> {
         match handler.run_ante_checks(ctx, tx_with_raw) {
             Ok(_) => {
-                ctx.multi_store_mut().tx_caches_write_then_clear();
+                ctx.multi_store_mut().tx_cache_to_block();
             }
             Err(e) => {
                 ctx.multi_store_mut().tx_caches_clear();

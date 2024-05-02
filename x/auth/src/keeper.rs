@@ -2,11 +2,12 @@ use crate::{AuthParamsKeeper, GenesisState, Params};
 use bytes::Bytes;
 use gears::core::{address::AccAddress, query::request::account::QueryAccountRequest};
 use gears::error::IBC_ENCODE_UNWRAP;
-use gears::store::database::{ext::UnwrapCorrupt, Database, PrefixDB};
+use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
+use gears::types::context::QueryableContext;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use gears::{
@@ -14,7 +15,7 @@ use gears::{
     params::ParamsSubspaceKey,
     types::{
         account::{Account, BaseAccount, ModuleAccount},
-        context::{QueryableContext, TransactionalContext},
+        context::TransactionalContext,
         query::account::QueryAccountResponse,
     },
 };
@@ -34,11 +35,11 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     type Params = Params;
 
-    fn get_auth_params<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Self::Params {
-        self.auth_params_keeper.get(ctx.multi_store())
+        self.auth_params_keeper.get(&ctx.multi_store())
     }
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -76,7 +77,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         ctx: &mut CTX,
         acct: Account,
     ) {
-        let auth_store = ctx.kv_store_mut(&self.store_key);
+        let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
@@ -145,7 +146,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     ) {
         //TODO: sdk sanitizes accounts
         self.auth_params_keeper
-            .set(ctx.multi_store_mut(), genesis.params);
+            .set(&mut ctx.multi_store_mut(), genesis.params);
 
         for mut acct in genesis.accounts {
             acct.account_number = self.get_next_account_number(ctx);
@@ -180,7 +181,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &mut CTX,
     ) -> u64 {
-        let auth_store = ctx.kv_store_mut(&self.store_key);
+        let mut auth_store = ctx.kv_store_mut(&self.store_key);
 
         // NOTE: The next available account number is what's stored in the KV store
         let acct_num = auth_store.get(&GLOBAL_ACCOUNT_NUMBER_KEY);
@@ -203,7 +204,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &mut CTX,
         acct: Account,
     ) {
-        let auth_store = ctx.kv_store_mut(&self.store_key);
+        let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
         auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP)); // TODO:IBC
