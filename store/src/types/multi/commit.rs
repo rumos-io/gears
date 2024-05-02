@@ -98,7 +98,7 @@ impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
         MultiStore::from(self)
     }
 
-    pub fn to_mutable(&mut self) -> MultiStoreMut<'_, DB, SK> {
+    pub fn as_mutable(&mut self) -> MultiStoreMut<'_, DB, SK> {
         MultiStoreMut::from(self)
     }
 }

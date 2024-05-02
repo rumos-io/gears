@@ -64,7 +64,7 @@ impl<
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
-                .set_consensus_params(&mut multi_store.to_mutable(), params);
+                .set_consensus_params(&mut multi_store.as_mutable(), params);
         }
 
         //TODO: handle request height > 1 as is done in SDK

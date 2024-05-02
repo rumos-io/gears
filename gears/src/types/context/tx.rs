@@ -61,7 +61,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
     fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        self.multi_store.to_mutable()
+        self.multi_store.as_mutable()
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
