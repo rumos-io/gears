@@ -56,16 +56,13 @@ impl<DB: Database> CommitKVStore<DB> {
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        let _ = self.cache.delete.insert(k.to_owned());
+
         let tx_value = self.cache.tx.remove(k);
         let block_value = self.cache.block.remove(k);
 
         let persisted_value = if tx_value.is_none() || block_value.is_none() {
-            let persisted_value = self.persistent_store.get(k);
-            if persisted_value.is_some() {
-                let _ = self.cache.delete.insert(k.to_owned());
-            }
-
-            persisted_value
+            self.persistent_store.get(k)
         } else {
             None
         };
