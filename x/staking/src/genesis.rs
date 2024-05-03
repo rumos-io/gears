@@ -1,11 +1,8 @@
 use crate::{Params, Validator};
 use chrono::Utc;
 use gears::{
-    core::{
-        address::{AccAddress, ValAddress},
-        base::coin::Coin,
-    },
-    types::{decimal256::Decimal256, uint::Uint256},
+    core::address::{AccAddress, ValAddress},
+    types::{base::coin::Coin, decimal256::Decimal256, uint::Uint256},
 };
 use serde::{Deserialize, Serialize};
 
@@ -51,6 +48,12 @@ pub struct UnbondingDelegationEntry {
     pub balance: Coin,
 }
 
+impl UnbondingDelegationEntry {
+    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        self.completion_time <= time
+    }
+}
+
 /// Redelegation contains the list of a particular delegator's
 /// redelegating bonds from a particular source validator to a
 /// particular destination validator
@@ -69,6 +72,12 @@ pub struct RedelegationEntry {
     pub completion_time: chrono::DateTime<Utc>,
     pub initial_balance: Coin,
     pub share_dst: Decimal256,
+}
+
+impl RedelegationEntry {
+    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        self.completion_time <= time
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

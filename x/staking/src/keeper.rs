@@ -1,6 +1,6 @@
 use crate::{
-    BondStatus, Delegation, DvPair, GenesisState, LastValidatorPower, Pool, Redelegation,
-    StakingParamsKeeper, UnbondingDelegation, Validator,
+    BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool,
+    Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use chrono::Utc;
 use gears::{
@@ -12,7 +12,10 @@ use gears::{
         database::Database, QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore,
         WritePrefixStore,
     },
-    tendermint::types::proto::validator::ValidatorUpdate,
+    tendermint::types::proto::{
+        event::{Event, EventAttribute},
+        validator::ValidatorUpdate,
+    },
     types::{
         base::{coin::Coin, send::SendCoins},
         context::{init::InitContext, QueryableContext, TransactionalContext},
@@ -25,37 +28,29 @@ use prost::{bytes::BufMut, Message};
 use serde::de::Error;
 use std::{cmp::Ordering, collections::HashMap};
 
-pub trait Codec {}
-
 /// AccountKeeper defines the expected account keeper methods (noalias)
 // TODO: AuthKeeper should implements module account stuff
 pub trait AccountKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn address_codec() -> Box<dyn Codec> {
-        todo!()
-    }
-    // // TODO: should be a sdk account interface
+    // TODO: should be a sdk account interface
     fn get_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
         _ctx: CTX,
         _addr: ValAddress,
-    ) -> AK {
-        todo!()
-    }
+    ) -> AK;
+
     // only used for simulation
     fn get_module_address(_name: String) -> ValAddress {
         todo!()
     }
+
     fn get_module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         _ctx: &CTX,
         _module_name: String,
-    ) -> Self {
-        todo!()
-    }
+    ) -> Self;
+
     fn set_module_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
         _context: &CTX,
         _acc: AK,
-    ) {
-        todo!()
-    }
+    );
 }
 
 /// BankKeeper defines the expected interface needed to retrieve account balances.
@@ -206,9 +201,15 @@ pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [4];
 const VALIDATORS_QUEUE_KEY: [u8; 1] = [5];
 const UBD_QUEUE_KEY: [u8; 1] = [6];
 const UNBONDING_QUEUE_KEY: [u8; 1] = [7];
+const REDELEGATION_QUEUE_KEY: [u8; 1] = [8];
 
 const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
 const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
+const EVENT_TYPE_COMPLETE_UNBONDING: &str = "complete_unbonding";
+const EVENT_TYPE_COMPLETE_REDELEGATION: &str = "complete_redelegation";
+const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
+const ATTRIBUTE_KEY_VALIDATOR: &str = "validator";
+const ATTRIBUTE_KEY_DELEGATOR: &str = "delegator";
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -496,7 +497,24 @@ impl<
         Ok(())
     }
 
-    // TODO: the other key
+    pub fn get_unbonding_delegation<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: AccAddress,
+        val_addr: ValAddress,
+    ) -> Option<UnbondingDelegation> {
+        let store = ctx.kv_store(&self.store_key);
+        let delegations_store = store.prefix_store(DELEGATIONS_KEY);
+        let mut key = del_addr.to_string().as_bytes().to_vec();
+        key.put(val_addr.to_string().as_bytes());
+        if let Some(bytes) = delegations_store.get(&key) {
+            if let Ok(delegation) = serde_json::from_slice(&bytes) {
+                return Some(delegation);
+            }
+        }
+        None
+    }
+
     pub fn set_unbonding_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -508,6 +526,57 @@ impl<
         key.put(delegation.validator_address.to_string().as_bytes());
         delegations_store.set(key, serde_json::to_vec(&delegation)?);
         Ok(())
+    }
+
+    pub fn remove_unbonding_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        delegation: &UnbondingDelegation,
+    ) -> Option<Vec<u8>> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
+        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
+        key.put(delegation.validator_address.to_string().as_bytes());
+        delegations_store.delete(&key)
+    }
+
+    /// Returns a concatenated list of all the timeslices inclusively previous to
+    /// currTime, and deletes the timeslices from the queue
+    pub fn dequeue_all_mature_redelegation_queue<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        time: chrono::DateTime<Utc>,
+    ) -> anyhow::Result<Vec<DvvTriplet>> {
+        let (keys, mature_redelegations) = {
+            let storage = ctx.kv_store(&self.store_key);
+            let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
+
+            // gets an iterator for all timeslices from time 0 until the current Blockheader time
+            let end = {
+                let mut k = get_unbonding_delegation_time_key(time);
+                k.push(0);
+                k
+            };
+            let mut mature_redelegations = vec![];
+            let mut keys = vec![];
+            // gets an iterator for all timeslices from time 0 until the current Blockheader time
+            for (k, v) in store.range(..).take_while(|(k, _)| **k != end) {
+                let time_slice: Vec<DvvTriplet> = serde_json::from_slice(&v)?;
+                mature_redelegations.extend(time_slice);
+                keys.push(k.to_vec());
+            }
+            (keys, mature_redelegations)
+        };
+
+        let storage = ctx.kv_store_mut(&self.store_key);
+        let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
+        keys.iter().for_each(|k| {
+            store.delete(k);
+        });
+        Ok(mature_redelegations)
     }
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
@@ -610,7 +679,27 @@ impl<
         Ok(())
     }
 
-    // TODO: the other key
+    pub fn get_redelegation<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: AccAddress,
+        val_src_addr: ValAddress,
+        val_dst_addr: ValAddress,
+    ) -> anyhow::Result<Redelegation> {
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(DELEGATIONS_KEY);
+        let mut key = del_addr.to_string().as_bytes().to_vec();
+        key.put(val_src_addr.to_string().as_bytes());
+        key.put(val_dst_addr.to_string().as_bytes());
+        if let Some(e) = store.get(&key) {
+            Ok(serde_json::from_slice(&e)?)
+        } else {
+            Err(anyhow::Error::from(serde_json::Error::custom(
+                "Validator doesn't exists.".to_string(),
+            )))
+        }
+    }
+
     pub fn set_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -623,6 +712,19 @@ impl<
         key.put(delegation.validator_dst_address.to_string().as_bytes());
         delegations_store.set(key, serde_json::to_vec(&delegation)?);
         Ok(())
+    }
+
+    pub fn remove_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        delegation: &Redelegation,
+    ) -> Option<Vec<u8>> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
+        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
+        key.put(delegation.validator_src_address.to_string().as_bytes());
+        key.put(delegation.validator_dst_address.to_string().as_bytes());
+        delegations_store.delete(&key)
     }
 
     pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -734,78 +836,79 @@ impl<
         // unbonded after the Endblocker (go from Bonded -> Unbonding during
         // ApplyAndReturnValidatorSetUpdates and then Unbonding -> Unbonded during
         // UnbondAllMatureValidatorQueue).
-        let _validator_updates = self.apply_and_return_validator_setup_dates(ctx)?;
+        let validator_updates = self.apply_and_return_validator_setup_dates(ctx)?;
 
         // unbond all mature validators from the unbonding queue
         self.unbond_all_mature_validators(ctx)?;
 
         // Remove all mature unbonding delegations from the ubd queue.
-        let _mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, Utc::now());
-        //     for _, dvPair := range matureUnbonds {
-        //         addr, err := sdk.ValAddressFromBech32(dvPair.ValidatorAddress)
-        //         if err != nil {
-        //             panic(err)
-        //         }
-        //         delegatorAddress, err := sdk.AccAddressFromBech32(dvPair.DelegatorAddress)
-        //         if err != nil {
-        //             panic(err)
-        //         }
-        //         balances, err := k.CompleteUnbonding(ctx, delegatorAddress, addr)
-        //         if err != nil {
-        //             continue
-        //         }
-        //
-        //         ctx.EventManager().EmitEvent(
-        //             sdk.NewEvent(
-        //                 types.EventTypeCompleteUnbonding,
-        //                 sdk.NewAttribute(sdk.AttributeKeyAmount, balances.String()),
-        //                 sdk.NewAttribute(types.AttributeKeyValidator, dvPair.ValidatorAddress),
-        //                 sdk.NewAttribute(types.AttributeKeyDelegator, dvPair.DelegatorAddress),
-        //             ),
-        //         )
-        //     }
-        todo!()
-    }
+        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, Utc::now())?;
+        for dv_pair in mature_unbonds {
+            let val_addr = dv_pair.val_addr;
+            let val_addr_str = val_addr.to_string();
+            let del_addr = dv_pair.del_addr;
+            let del_addr_str = del_addr.to_string();
+            let balances = self.complete_unbonding(ctx, val_addr, del_addr)?;
 
-    // func (k Keeper) BlockValidatorUpdates(ctx sdk.Context) []abci.ValidatorUpdate {
-    //     // Remove all mature redelegations from the red queue.
-    //     matureRedelegations := k.DequeueAllMatureRedelegationQueue(ctx, ctx.BlockHeader().Time)
-    //     for _, dvvTriplet := range matureRedelegations {
-    //         valSrcAddr, err := sdk.ValAddressFromBech32(dvvTriplet.ValidatorSrcAddress)
-    //         if err != nil {
-    //             panic(err)
-    //         }
-    //         valDstAddr, err := sdk.ValAddressFromBech32(dvvTriplet.ValidatorDstAddress)
-    //         if err != nil {
-    //             panic(err)
-    //         }
-    //         delegatorAddress, err := sdk.AccAddressFromBech32(dvvTriplet.DelegatorAddress)
-    //         if err != nil {
-    //             panic(err)
-    //         }
-    //         balances, err := k.CompleteRedelegation(
-    //             ctx,
-    //             delegatorAddress,
-    //             valSrcAddr,
-    //             valDstAddr,
-    //         )
-    //         if err != nil {
-    //             continue
-    //         }
-    //
-    //         ctx.EventManager().EmitEvent(
-    //             sdk.NewEvent(
-    //                 types.EventTypeCompleteRedelegation,
-    //                 sdk.NewAttribute(sdk.AttributeKeyAmount, balances.String()),
-    //                 sdk.NewAttribute(types.AttributeKeyDelegator, dvvTriplet.DelegatorAddress),
-    //                 sdk.NewAttribute(types.AttributeKeySrcValidator, dvvTriplet.ValidatorSrcAddress),
-    //                 sdk.NewAttribute(types.AttributeKeyDstValidator, dvvTriplet.ValidatorDstAddress),
-    //             ),
-    //         )
-    //     }
-    //
-    //     return validatorUpdates
-    // }
+            ctx.push_event(Event {
+                r#type: EVENT_TYPE_COMPLETE_UNBONDING.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
+                        value: serde_json::to_vec(&balances)?.into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
+                        value: val_addr_str.as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_DELEGATOR.as_bytes().into(),
+                        value: del_addr_str.as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                ],
+            });
+        }
+        // Remove all mature redelegations from the red queue.
+        let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, Utc::now())?;
+        for dvv_triplet in mature_redelegations {
+            let val_src_addr = dvv_triplet.val_src_addr;
+            let val_src_addr_str = val_src_addr.to_string();
+            let val_dst_addr = dvv_triplet.val_dst_addr;
+            let val_dst_addr_str = val_dst_addr.to_string();
+            let del_addr = dvv_triplet.del_addr;
+            let del_addr_str = del_addr.to_string();
+            let balances = self.complete_redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?;
+            ctx.push_event(Event {
+                r#type: EVENT_TYPE_COMPLETE_REDELEGATION.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
+                        value: serde_json::to_vec(&balances)?.into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_DELEGATOR.as_bytes().into(),
+                        value: del_addr_str.as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
+                        value: val_src_addr_str.as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
+                        value: val_dst_addr_str.as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                ],
+            });
+        }
+        Ok(validator_updates)
+    }
 
     /// ApplyAndReturnValidatorSetUpdates applies and return accumulated updates to the bonded validator set. Also,
     /// * Updates the active valset as keyed by LastValidatorPowerKey.
@@ -1093,6 +1196,88 @@ impl<
         }
         self.complete_unbonding_validator(ctx, validator)?;
         Ok(())
+    }
+
+    pub fn complete_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: AccAddress,
+        val_src_addr: ValAddress,
+        val_dst_addr: ValAddress,
+    ) -> anyhow::Result<Vec<Coin>> {
+        let redelegation = self.get_redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?;
+
+        let mut balances = vec![];
+        let ctx_time = Utc::now();
+
+        // loop through all the entries and complete mature redelegation entries
+        let mut new_redelegations = vec![];
+        for entry in &redelegation.entries {
+            if entry.is_mature(ctx_time) && !entry.initial_balance.amount.is_zero() {
+                balances.push(entry.initial_balance.clone());
+            } else {
+                new_redelegations.push(entry);
+            }
+        }
+
+        // set the redelegation or remove it if there are no more entries
+        if new_redelegations.is_empty() {
+            self.remove_redelegation(ctx, &redelegation);
+        } else {
+            self.set_redelegation(ctx, &redelegation)?;
+        }
+        Ok(balances)
+    }
+
+    pub fn complete_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        val_addr: ValAddress,
+        del_addr: AccAddress,
+    ) -> anyhow::Result<Vec<Coin>> {
+        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+        let ubd = if let Some(delegation) = self.get_unbonding_delegation(ctx, del_addr, val_addr) {
+            delegation
+        } else {
+            return Err(AppError::Custom("No unbonding delegation".into()).into());
+        };
+        let bond_denom = params.bond_denom;
+        let mut balances = vec![];
+        let ctx_time = Utc::now();
+
+        // loop through all the entries and complete unbonding mature entries
+        let mut new_ubd = vec![];
+        for entry in ubd.entries.iter() {
+            if entry.is_mature(ctx_time) {
+                // track undelegation only when remaining or truncated shares are non-zero
+                if entry.balance.amount.is_zero() {
+                    let coin = Coin {
+                        denom: bond_denom.clone(),
+                        amount: entry.balance.amount,
+                    };
+                    let amount = SendCoins::new(vec![coin.clone()])?;
+                    self.bank_keeper
+                        .undelegate_coins_from_module_to_account::<DB, AK, CTX>(
+                            ctx,
+                            NOT_BONDED_POOL_NAME.to_string(),
+                            ubd.delegator_address.clone(),
+                            amount,
+                        )?;
+                    balances.push(coin);
+                }
+            } else {
+                new_ubd.push(entry.clone());
+            }
+        }
+
+        // set the unbonding delegation or remove it if there are no more entries
+        if new_ubd.is_empty() {
+            self.remove_unbonding_delegation(ctx, &ubd);
+        } else {
+            self.set_unbonding_delegation(ctx, &ubd)?;
+        }
+
+        Ok(balances)
     }
 
     pub fn complete_unbonding_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
