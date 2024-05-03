@@ -1,4 +1,3 @@
-use constcat::concat_bytes;
 use derive_more::{From, TryInto};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
@@ -42,7 +41,6 @@ pub const KEY_PROCESSED_TIME: &str = "/processedTime";
 
 // KeyProcessedHeight is appended to consensus state key to store the processed height
 const KEY_PROCESSED_HEIGHT: &str = "/processedHeight";
-
 const KEY_ITERATE_CONSENSUS_STATE_PREFIX: &[u8; 22] = b"iterateConsensusStates";
 
 pub struct ClientContext<'a, 'b, DB, SK, PSK> {

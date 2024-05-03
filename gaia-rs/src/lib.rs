@@ -16,6 +16,7 @@ use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
 use gears::core::address::AccAddress;
 use genesis::GenesisState;
+use ibc::client::cli::query_handler::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
 
@@ -70,9 +71,10 @@ impl QueryHandler for GaiaCoreClient {
             }
             GaiaQueryCommands::Auth(command) => {
                 Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
-            } // GaiaQueryCommands::Ibc(command) => {
-              //     Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
-              // }
+            }
+            GaiaQueryCommands::Ibc(command) => {
+                Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
+            }
         };
 
         Ok(res)
@@ -90,9 +92,9 @@ impl QueryHandler for GaiaCoreClient {
             GaiaQueryCommands::Auth(command) => Self::QueryResponse::Auth(
                 AuthQueryHandler.handle_raw_response(query_bytes, command)?,
             ),
-            // GaiaQueryCommands::Ibc(command) => {
-            //     Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
-            // }
+            GaiaQueryCommands::Ibc(command) => {
+                Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
+            }
         };
 
         Ok(res)

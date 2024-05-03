@@ -6,7 +6,10 @@ use bank::cli::{
 };
 use clap::Subcommand;
 use gears::core::address::AccAddress;
-use ibc::client::cli::tx::{run_ibc_tx_command, IbcTxCli};
+use ibc::client::cli::{
+    query::IbcQueryCli,
+    tx::{run_ibc_tx_command, IbcTxCli},
+};
 
 use crate::message::Message;
 
@@ -31,5 +34,6 @@ pub enum GaiaQueryCommands {
     Bank(BankQueryCli),
     /// Querying commands for the auth module
     Auth(AuthQueryCli),
-    // Ibc(IbcQueryCli),
+    /// Querying commands for the ibc module
+    Ibc(IbcQueryCli),
 }

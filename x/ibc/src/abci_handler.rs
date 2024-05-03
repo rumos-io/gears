@@ -109,22 +109,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         &self,
         _ctx: &QueryContext<'_, DB, SK>,
         query: gears::tendermint::types::request::query::RequestQuery,
-    ) -> Result<bytes::Bytes, errors::query::client::ClientErrors> {
+    ) -> Result<bytes::Bytes, AppError> {
+        println!("query path: {:?}", query.path);
         match query.path.as_str() {
-            "/ibc.core.client.v1.Query/ClientParams" => {
-                //Ok(self.query_keeper.client_params(ctx)?.encode_vec().into())
-                Ok(vec![].into())
-            }
+            // "/ibc.core.client.v1.Query/ClientParams" => {
+            //     //Ok(self.query_keeper.client_params(ctx)?.encode_vec().into())
+            //     Ok(vec![].into())
+            // }
             // "/ibc.core.client.v1.Query/UpgradedClientState" => Ok(self
             //     .query_keeper
             //     .client_state(ctx, ProstMessage::decode(query.data)?)?
             //     .encode_vec()
             //     .into()),
-            // "/ibc.core.client.v1.Query/ClientStates" => Ok(self
-            //     .query_keeper
-            //     .client_states(ctx, ProstMessage::decode(query.data)?)?
-            //     .encode_vec()
-            //     .into()),
+            "/ibc.core.client.v1.Query/ClientStates" => {
+                Err(errors::query::client::ClientErrors::PathNotFound.into())
+                // Ok(self
+                //     .query_keeper
+                //     .client_states(ctx, ProstMessage::decode(query.data)?)?
+                //     .encode_vec()
+                //     .into())
+            }
             // "/ibc.core.client.v1.Query/ClientStatus" => Ok(self
             //     .query_keeper
             //     .client_status(ctx, ProstMessage::decode(query.data)?)?
@@ -145,7 +149,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
             //     .consensus_states(ctx, ProstMessage::decode(query.data)?)?
             //     .encode_vec()
             //     .into()),
-            _ => Err(errors::query::client::ClientErrors::PathNotFound),
+            _ => Err(errors::query::client::ClientErrors::PathNotFound.into()),
         }
     }
 

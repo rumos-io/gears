@@ -97,13 +97,9 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
             self.bank_abci_handler.query(ctx, query)
-        }
-        // else if query.path.starts_with("/ibc.core.client") {
-        //     self.ibc_handler
-        //         .query(ctx, query)
-        //         .map_err(|e| AppError::Query(e.to_string()))
-        //}
-        else {
+        } else if query.path.starts_with("/ibc.core.client") {
+            self.ibc_abci_handler.query(ctx, query)
+        } else {
             Err(AppError::InvalidRequest("query path not found".into()))
         }
     }
