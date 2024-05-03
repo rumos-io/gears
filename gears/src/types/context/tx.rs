@@ -9,7 +9,10 @@ use store_crate::{
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 use crate::types::{
-    gas::{kind::TxKind, GasMeter},
+    gas::{
+        kind::{BlockKind, TxKind},
+        GasMeter,
+    },
     header::Header,
 };
 
@@ -22,6 +25,7 @@ pub struct TxContext<'a, DB, SK> {
     multi_store: &'a mut CommitMultiStore<DB, SK>,
     pub(crate) height: u64,
     pub(crate) header: Header,
+    pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
 }
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
@@ -30,6 +34,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         height: u64,
         header: Header,
         gas_meter: GasMeter<TxKind>,
+        block_gas_meter: &'a mut GasMeter<BlockKind>,
     ) -> Self {
         Self {
             events: Vec::new(),
@@ -37,6 +42,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             height,
             header,
             gas_meter,
+            block_gas_meter,
         }
     }
 }

@@ -91,7 +91,7 @@ pub trait PlainGasMeter: Send + Sync + Debug {
     fn is_out_of_gas(&self) -> bool;
 }
 
-/// Wrapper around any gas meter which prevents usage of gas over limit with type system
+/// Wrapper around any gas meter
 #[derive(Debug)]
 pub struct GasMeter<DS> {
     meter: Box<dyn PlainGasMeter>,

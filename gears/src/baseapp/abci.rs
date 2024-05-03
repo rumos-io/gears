@@ -1,16 +1,16 @@
 use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
+use crate::baseapp::mode::ExecutionMode;
 use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
-use crate::types::context::tx::TxContext;
-use crate::types::gas::infinite_meter::InfiniteGasMeter;
-use crate::types::gas::{Gas, GasMeter};
+use crate::types::context::TransactionalContext;
+use crate::types::gas::Gas;
 use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
-use store_crate::StoreKey;
+use store_crate::{StoreKey, TransactionalMultiKVStore};
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -57,10 +57,12 @@ impl<
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
 
-        let mut multi_store = self
-            .multi_store
+        let mut multi_store = &mut self
+            .state
             .write()
-            .expect("RwLock will not be poisoned");
+            .expect(POISONED_LOCK)
+            .deliver_mode
+            .multi_store;
 
         if let Some(params) = request.consensus_params.clone() {
             self.baseapp_params_keeper
@@ -241,7 +243,14 @@ impl<
         info!("Got commit request");
         let new_height = self.block_height_increment();
 
-        let hash = self.multi_store.write().expect(POISONED_LOCK).commit();
+        let hash = self
+            .state
+            .write()
+            .expect(POISONED_LOCK)
+            .deliver_mode
+            .multi_store
+            .commit();
+
         info!(
             "Committed state, block height: {} app hash: {}",
             new_height,
@@ -276,32 +285,41 @@ impl<
         );
 
         let mut state = self.state.write().expect(POISONED_LOCK);
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         {
             let max_gas = self
                 .baseapp_params_keeper
-                .block_params(&multi_store.as_immutable())
+                .block_params(&state.deliver_mode.multi_store.as_immutable())
                 .map(|e| e.max_gas)
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
             state.replace_meter(Gas::from(max_gas))
         }
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
+        let mut ctx = state.deliver_mode.build_ctx(
             self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            GasMeter::new(Box::<InfiniteGasMeter>::default()),
+            None,
         );
+
+        // let mut ctx = TxContext::new(
+        //     &mut state.deliver_mode.multi_store,
+        //     self.block_height(),
+        //     self.get_block_header()
+        //         .expect("block header is set in begin block")
+        //         .try_into()
+        //         .expect("Invalid request"),
+        //     GasMeter::new(Box::<InfiniteGasMeter>::default()),
+        //     &mut state.deliver_mode.block_gas_meter,
+        // );
 
         self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
-        multi_store.tx_cache_to_block();
+        state.deliver_mode.multi_store.tx_cache_to_block();
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -311,22 +329,22 @@ impl<
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         info!("Got end block request");
 
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut state = self.state.write().expect(POISONED_LOCK);
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
+        let mut ctx = state.deliver_mode.build_ctx(
             self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            GasMeter::new(Box::<InfiniteGasMeter>::default()),
+            None,
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
+        ctx.multi_store_mut().tx_cache_to_block();
+
         let events = ctx.events;
-        multi_store.tx_cache_to_block();
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

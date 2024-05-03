@@ -100,6 +100,7 @@ fn denom_query() -> anyhow::Result<()> {
 }
 
 #[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn send_tx() -> anyhow::Result<()> {
     let (tendermint, _server_thread) = run_gaia_and_tendermint()?;
 

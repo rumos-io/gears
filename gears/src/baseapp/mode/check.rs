@@ -1,16 +1,20 @@
-use store_crate::{database::Database, StoreKey};
+use std::sync::Arc;
+
+use store_crate::{database::Database, types::multi::commit::CommitMultiStore, StoreKey};
 use tendermint::types::proto::event::Event;
 
-use super::ExecutionMode;
+use super::{build_tx_gas_meter, ExecutionMode};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, genesis::Genesis},
     types::{
+        auth::fee::Fee,
         context::{tx::TxContext, TransactionalContext},
         gas::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas,
             GasMeter,
         },
+        header::Header,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
@@ -18,22 +22,39 @@ use crate::{
 use store_crate::TransactionalMultiKVStore;
 
 #[derive(Debug)]
-pub struct CheckTxMode {
+pub struct CheckTxMode<DB, SK> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
+    pub(crate) multi_store: CommitMultiStore<DB, SK>,
 }
 
-impl CheckTxMode {
-    pub fn new(max_gas: Gas) -> Self {
+impl<DB: Database, SK: StoreKey> CheckTxMode<DB, SK> {
+    pub fn new(db: Arc<DB>, max_gas: Gas) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
                 Gas::Finite(max_gas) => Box::new(BasicGasMeter::new(max_gas)),
             }),
+            multi_store: CommitMultiStore::new(db),
         }
     }
 }
 
-impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode {
+impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
+    fn build_ctx(
+        &mut self,
+        height: u64,
+        header: Header,
+        fee: Option<&Fee>,
+    ) -> TxContext<'_, DB, SK> {
+        TxContext::new(
+            &mut self.multi_store,
+            height,
+            header,
+            build_tx_gas_meter(height, fee),
+            &mut self.block_gas_meter,
+        )
+    }
+
     fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         ctx: &mut TxContext<'_, DB, SK>,
         _handler: &AH,
@@ -56,13 +77,13 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode {
         result.map_err(|e| RunTxError::Custom(e.to_string()))
     }
 
-    fn runnable(&self, _: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
+    fn runnable(_: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
         Ok(())
     }
 
-    fn block_gas_meter_mut(&mut self) -> &mut GasMeter<BlockKind> {
-        &mut self.block_gas_meter
-    }
+    // fn block_gas_meter_mut(&mut self) -> &mut GasMeter<BlockKind> {
+    //     &mut self.block_gas_meter
+    // }
 
     // fn build_ctx<M: TxMessage>(
     //     &mut self,

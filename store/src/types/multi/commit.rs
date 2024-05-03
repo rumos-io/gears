@@ -15,8 +15,8 @@ pub struct CommitMultiStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
-    pub fn new(db: DB) -> Self {
-        let db = Arc::new(db);
+    pub fn new(db: Arc<DB>) -> Self {
+        // let db = Arc::new(db);
 
         let mut store_infos = vec![];
         let mut stores = HashMap::new();
