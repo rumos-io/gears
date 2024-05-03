@@ -46,7 +46,6 @@ pub struct BaseApp<
     G: Genesis,
     AI: ApplicationInfo,
 > {
-    // multi_store: Arc<RwLock<CommitMultiStore<RocksDB, SK>>>,
     state: Arc<RwLock<ApplicationState<RocksDB, SK>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
@@ -92,7 +91,6 @@ impl<
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
-            // multi_store: Arc::new(RwLock::new(multi_store)),
         }
     }
 
@@ -178,21 +176,7 @@ impl<
             .try_into()
             .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?;
 
-        // let mut multi_store = &mut self
-        //     .state
-        //     .write()
-        //     .expect(POISONED_LOCK)
-        //     .deliver_mode
-        //     .multi_store;
-
         let mut ctx = mode.build_ctx(height, header.clone(), Some(&tx_with_raw.tx.auth_info.fee));
-
-        // let mut ctx = TxContext::new(
-        //     &mut multi_store,
-        //     height,
-        //     header.clone(),
-        //     MD::build_tx_gas_meter(&tx_with_raw.tx.auth_info.fee, height),
-        // );
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;

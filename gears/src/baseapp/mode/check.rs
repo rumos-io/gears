@@ -80,27 +80,4 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
     fn runnable(_: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
         Ok(())
     }
-
-    // fn block_gas_meter_mut(&mut self) -> &mut GasMeter<BlockKind> {
-    //     &mut self.block_gas_meter
-    // }
-
-    // fn build_ctx<M: TxMessage>(
-    //     &mut self,
-    //     multi_store : &mut MultiStore<DB, SK>,
-    //     height: u64,
-    //     header: &Header,
-    //     tx: &TxWithRaw<M>,
-    // ) -> TxContext<'_, DB, SK> {
-    //     let mut ctx = TxContext::new(
-    //         &mut self.multi_store,
-    //         height,
-    //         header.clone(),
-    //         self.block_gas_meter.clone(),
-    //     );
-    //     ctx.gas_meter
-    //         .replace_meter(Self::build_tx_gas_meter(&tx.tx.auth_info.fee, height));
-
-    //     ctx
-    // }
 }
