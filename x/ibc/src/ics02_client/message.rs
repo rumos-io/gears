@@ -5,7 +5,14 @@ use gears::{
 };
 use ibc::{
     clients::tendermint::{client_state::ClientState, consensus_state::ConsensusState},
-    core::client::types::{error::ClientError, proto::v1::MsgCreateClient as RawMsgCreateClient},
+    core::{
+        client::types::{
+            error::ClientError,
+            msgs::{ClientMsg, MsgCreateClient as IBCMsgCreateClient},
+            proto::v1::MsgCreateClient as RawMsgCreateClient,
+        },
+        handler::types::msgs::MsgEnvelope,
+    },
     primitives::proto::Protobuf,
 };
 use serde::Serialize;
@@ -28,6 +35,14 @@ impl MsgCreateClient {
             consensus_state,
             signer,
         }
+    }
+}
+
+impl From<MsgCreateClient> for MsgEnvelope {
+    fn from(msg: MsgCreateClient) -> Self {
+        let raw_msg = RawMsgCreateClient::from(msg);
+        let msg = IBCMsgCreateClient::try_from(raw_msg).unwrap();
+        MsgEnvelope::Client(ClientMsg::CreateClient(msg))
     }
 }
 

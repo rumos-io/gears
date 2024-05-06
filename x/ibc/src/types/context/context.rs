@@ -31,8 +31,18 @@ use ibc::primitives::Timestamp;
 use ibc::primitives::ToVec;
 use serde::Serialize;
 
-use super::keeper::KEY_NEXT_CLIENT_SEQUENCE;
-use super::params::ClientParamsKeeper;
+use crate::{
+    ics02_client::{message::MsgCreateClient, Keeper as ClientKeeper},
+    ics03_connection::Keeper as ConnectionKeeper,
+    ics04_channel::Keeper as ChannelKeeper,
+    params::IBCParamsKeeper,
+    types::genesis::GenesisState,
+};
+
+use crate::ics02_client::ClientParamsKeeper;
+//use super::keeper::KEY_NEXT_CLIENT_SEQUENCE;
+//use super::params::ClientParamsKeeper;
+use crate::ics02_client::KEY_NEXT_CLIENT_SEQUENCE;
 use crate::params::CLIENT_STATE_KEY;
 
 pub const KEY_CLIENT_STORE_PREFIX: &str = "clients";
@@ -43,13 +53,15 @@ pub const KEY_PROCESSED_TIME: &str = "/processedTime";
 const KEY_PROCESSED_HEIGHT: &str = "/processedHeight";
 const KEY_ITERATE_CONSENSUS_STATE_PREFIX: &[u8; 22] = b"iterateConsensusStates";
 
-pub struct ClientContext<'a, 'b, DB, SK, PSK> {
+pub struct Context<'a, 'b, DB, SK, PSK> {
     pub gears_ctx: &'a mut TxContext<'b, DB, SK>,
-    pub store_key: SK,
-    pub client_params_keeper: ClientParamsKeeper<SK, PSK>,
+    pub client_keeper: &'a ClientKeeper<SK, PSK>,
+    pub connection_keeper: &'a ConnectionKeeper<SK, PSK>,
+    pub channel_keeper: &'a ChannelKeeper<SK>,
+    pub store_key: SK, //TODO: remove this
 }
 
-impl<'a, 'b, DB, SK, PSK> ClientContext<'a, 'b, DB, SK, PSK> {
+impl<'a, 'b, DB, SK, PSK> Context<'a, 'b, DB, SK, PSK> {
     fn big_endian_height_bytes(height: Height) -> [u8; 16] {
         let revision_number = height.revision_number().to_be_bytes();
         let revision_height = height.revision_height().to_be_bytes();
@@ -120,8 +132,8 @@ impl TryFrom<Any> for AnyConsensusState {
 }
 
 #[derive(ClientState, Clone, From, TryInto, Debug, Serialize)]
-#[validation(ClientContext<'a, 'b , DB: Database, SK: StoreKey, PSK:ParamsSubspaceKey >)]
-#[execution(ClientContext<'a, 'b, DB: Database, SK:StoreKey, PSK: ParamsSubspaceKey>)]
+#[validation(Context<'a, 'b , DB: Database, SK: StoreKey, PSK:ParamsSubspaceKey >)]
+#[execution(Context<'a, 'b, DB: Database, SK:StoreKey, PSK: ParamsSubspaceKey>)]
 pub enum AnyClientState {
     Tendermint(TmClientState),
 }
@@ -164,7 +176,7 @@ impl TryFrom<Any> for AnyClientState {
 }
 
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientValidationContext
-    for ClientContext<'a, 'b, DB, SK, PSK>
+    for Context<'a, 'b, DB, SK, PSK>
 {
     type ClientStateRef = AnyClientState;
     type ConsensusStateRef = AnyConsensusState;
@@ -212,7 +224,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientValidatio
 }
 
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ValidationContext
-    for ClientContext<'a, 'b, DB, SK, PSK>
+    for Context<'a, 'b, DB, SK, PSK>
 {
     type V = Self;
 
@@ -369,7 +381,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ValidationConte
 }
 
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExecutionContext
-    for ClientContext<'a, 'b, DB, SK, PSK>
+    for Context<'a, 'b, DB, SK, PSK>
 {
     type E = Self;
 
@@ -506,7 +518,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExecutionContex
 }
 
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecutionContext
-    for ClientContext<'a, 'b, DB, SK, PSK>
+    for Context<'a, 'b, DB, SK, PSK>
 {
     type ClientStateMut = AnyClientState;
 
@@ -669,7 +681,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
 }
 
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExtClientValidationContext
-    for ClientContext<'a, 'b, DB, SK, PSK>
+    for Context<'a, 'b, DB, SK, PSK>
 {
     fn host_timestamp(
         &self,

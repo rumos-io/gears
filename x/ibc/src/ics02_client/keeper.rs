@@ -4,12 +4,7 @@ use gears::{
     types::context::{init_context::InitContext, tx_context::TxContext},
 };
 
-use super::{
-    context::{ClientContext, ClientRouter},
-    message::MsgCreateClient,
-    params::ClientParamsKeeper,
-    GenesisState,
-};
+use super::{message::MsgCreateClient, params::ClientParamsKeeper, GenesisState};
 use gears::store::TransactionalKVStore;
 use gears::types::context::TransactionalContext;
 use ibc::core::{
@@ -45,35 +40,35 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    pub fn client_create<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        msg: MsgCreateClient,
-        // client_state: &(impl ClientStateCommon
-        //       + ClientStateExecution<ContextShim<'a, 'b, DB, SK>>
-        //       + ClientStateValidation<ContextShim<'a, 'b, DB, SK>>),
-        // consensus_state: WrappedConsensusState,
-    ) {
-        //todo!()
+    // pub fn client_create<DB: Database>(
+    //     &self,
+    //     ctx: &mut TxContext<'_, DB, SK>,
+    //     msg: MsgCreateClient,
+    //     // client_state: &(impl ClientStateCommon
+    //     //       + ClientStateExecution<ContextShim<'a, 'b, DB, SK>>
+    //     //       + ClientStateValidation<ContextShim<'a, 'b, DB, SK>>),
+    //     // consensus_state: WrappedConsensusState,
+    // ) {
+    //     //todo!()
 
-        let mut ctx = ClientContext {
-            gears_ctx: ctx,
-            store_key: self.store_key.clone(),
-            client_params_keeper: self.client_params_keeper.clone(),
-        };
-        let mut router = ClientRouter;
-        // let msg = MsgEnvelope::Client(ClientMsg::CreateClient(IBCMsgCreateClient {
-        //     client_state: todo!(),
-        //     consensus_state: todo!(),
-        //     signer: ,
-        // }));
+    //     let mut ctx = ClientContext {
+    //         gears_ctx: ctx,
+    //         store_key: self.store_key.clone(),
+    //         client_params_keeper: self.client_params_keeper.clone(),
+    //     };
+    //     let mut router = ClientRouter;
+    //     // let msg = MsgEnvelope::Client(ClientMsg::CreateClient(IBCMsgCreateClient {
+    //     //     client_state: todo!(),
+    //     //     consensus_state: todo!(),
+    //     //     signer: ,
+    //     // }));
 
-        let raw_msg = RawMsgCreateClient::from(msg);
-        let msg = IBCMsgCreateClient::try_from(raw_msg).unwrap();
-        let msg = MsgEnvelope::Client(ClientMsg::CreateClient(msg));
+    //     let raw_msg = RawMsgCreateClient::from(msg);
+    //     let msg = IBCMsgCreateClient::try_from(raw_msg).unwrap();
+    //     let msg = MsgEnvelope::Client(ClientMsg::CreateClient(msg));
 
-        dispatch(&mut ctx, &mut router, msg).unwrap()
-    }
+    //     dispatch(&mut ctx, &mut router, msg).unwrap()
+    // }
 
     pub fn init_genesis<DB: Database>(
         &self,

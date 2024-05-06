@@ -9,13 +9,17 @@ use crate::{
     ics03_connection::Keeper as ConnectionKeeper,
     ics04_channel::Keeper as ChannelKeeper,
     params::IBCParamsKeeper,
-    types::genesis::GenesisState,
+    types::{
+        context::{ClientRouter, Context},
+        genesis::GenesisState,
+    },
 };
+use ibc::core::entrypoint::dispatch;
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK, PSK> {
-    _store_key: SK,
-    _ibc_params_keeper: IBCParamsKeeper<SK, PSK>,
+    _store_key: SK,                               //TOOD: remove this
+    _ibc_params_keeper: IBCParamsKeeper<SK, PSK>, //TOOD: remove this
     client_keeper: ClientKeeper<SK, PSK>,
     connection_keeper: ConnectionKeeper<SK, PSK>,
     channel_keeper: ChannelKeeper<SK>,
@@ -65,6 +69,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &mut TxContext<'_, DB, SK>,
         msg: MsgCreateClient,
     ) {
-        self.client_keeper.client_create(ctx, msg);
+        let mut ctx = Context {
+            gears_ctx: ctx,
+            client_keeper: &self.client_keeper,
+            connection_keeper: &self.connection_keeper,
+            channel_keeper: &self.channel_keeper,
+            store_key: self._store_key.clone(),
+        };
+
+        let mut router = ClientRouter;
+
+        dispatch(&mut ctx, &mut router, msg.into()).unwrap() //TODO: unwrap
     }
 }
