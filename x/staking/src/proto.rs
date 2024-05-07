@@ -1,13 +1,14 @@
 use crate::VALIDATORS_BY_POWER_INDEX_KEY;
 use chrono::Utc;
 use gears::{
-    core::{
-        address::{AccAddress, ValAddress},
-        base::coin::Coin,
-    },
+    core::address::{AccAddress, ValAddress},
     crypto::{keys::ReadAccAddress, public::PublicKey},
     tendermint::types::proto::validator::ValidatorUpdate,
-    types::{base::send::SendCoins, decimal256::Decimal256, uint::Uint256},
+    types::{
+        base::{coin::Coin, send::SendCoins},
+        decimal256::Decimal256,
+        uint::Uint256,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -117,12 +118,12 @@ impl Validator {
     }
 
     pub fn potential_tendermint_power(&self) -> i64 {
-        let amount = self
-            .tokens
-            .amount
+        let amount = self.tokens.amount;
+        let amount = amount / Uint256::from(10u64).pow(6);
+        amount
+            .to_string()
             .parse::<i64>()
-            .expect("Unexpected conversion error");
-        amount / 10i64.pow(6)
+            .expect("Unexpected conversion error")
     }
 
     pub fn consensus_power(&self, power: i64) -> i64 {
@@ -137,12 +138,12 @@ impl Validator {
     }
 
     pub fn tokens_to_consensus_power(&self, power: i64) -> i64 {
-        let amount = self
-            .tokens
-            .amount
+        let amount = self.tokens.amount;
+        let amount = amount / Uint256::from(power as u64);
+        amount
+            .to_string()
             .parse::<i64>()
-            .expect("Unexpected conversion error");
-        amount / power
+            .expect("Unexpected conversion error")
     }
 
     /// GetValidatorsByPowerIndexKey creates the validator by power index.

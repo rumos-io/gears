@@ -53,9 +53,11 @@ impl<
     }
 
     fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        self.keeper
+        // TODO
+        let _updates = self
+            .keeper
             .init_genesis(ctx, genesis)
-            .expect("Cannot perform genesis actions.")
+            .expect("Cannot perform genesis actions.");
     }
 
     fn query<DB: Database + Send + Sync>(

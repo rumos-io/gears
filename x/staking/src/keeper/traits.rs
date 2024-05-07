@@ -1,33 +1,32 @@
+use gears::types::account::{Account, ModuleAccount};
+
 pub use super::*;
 
 /// AccountKeeper defines the expected account keeper methods (noalias)
 // TODO: AuthKeeper should implements module account stuff
-pub trait AccountKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait AccountKeeper<SK: StoreKey>: AuthKeeper<SK> + Clone + Send + Sync + 'static {
     // TODO: should be a sdk account interface
-    fn get_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
-        _ctx: CTX,
-        _addr: ValAddress,
-    ) -> AK;
-
-    // only used for simulation
-    fn get_module_address(_name: String) -> ValAddress {
-        todo!()
-    }
+    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: CTX,
+        addr: ValAddress,
+    ) -> Account;
 
     fn get_module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        _ctx: &CTX,
-        _module_name: String,
-    ) -> Self;
+        &self,
+        ctx: &CTX,
+        module_name: String,
+    ) -> Option<ModuleAccount>;
 
-    fn set_module_account<DB: Database, AK: AuthKeeper<SK>, CTX: QueryableContext<DB, SK>>(
-        _context: &CTX,
-        _acc: AK,
+    fn set_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        context: &mut CTX,
+        acc: ModuleAccount,
     );
 }
 
 /// BankKeeper defines the expected interface needed to retrieve account balances.
 pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
-    // GetAllBalances(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
     // SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
@@ -35,6 +34,12 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     // GetSupply(ctx sdk.Context, denom string) sdk.Coin
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
+
+    fn get_all_balances<DB: Database, AK: AccountKeeper<SK>, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        addr: AccAddress,
+    ) -> SendCoins;
 
     fn send_coins_from_module_to_module<
         DB: Database,

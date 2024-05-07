@@ -49,11 +49,12 @@ const LAST_TOTAL_POWER_KEY: [u8; 1] = [1];
 const VALIDATORS_KEY: [u8; 1] = [2];
 const LAST_VALIDATOR_POWER_KEY: [u8; 1] = [3];
 const DELEGATIONS_KEY: [u8; 1] = [4];
-pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [4];
-const VALIDATORS_QUEUE_KEY: [u8; 1] = [5];
-const UBD_QUEUE_KEY: [u8; 1] = [6];
-const UNBONDING_QUEUE_KEY: [u8; 1] = [7];
-const REDELEGATION_QUEUE_KEY: [u8; 1] = [8];
+const REDELEGATIONS_KEY: [u8; 1] = [5];
+pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [6];
+const VALIDATORS_QUEUE_KEY: [u8; 1] = [7];
+const UBD_QUEUE_KEY: [u8; 1] = [8];
+const UNBONDING_QUEUE_KEY: [u8; 1] = [9];
+const REDELEGATION_QUEUE_KEY: [u8; 1] = [10];
 
 const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
 const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
@@ -115,17 +116,21 @@ impl<
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Vec<ValidatorUpdate>> {
+        let mut bonded_tokens = Uint256::zero();
+        let mut not_bonded_tokens = Uint256::zero();
+
         // TODO
         // ctx = ctx.WithBlockHeight(1 - sdk.ValidatorUpdateDelay)
 
         self.set_pool(ctx, genesis.pool)?;
         self.set_last_total_power(ctx, genesis.last_total_power);
         self.staking_params_keeper
-            .set(&mut ctx.multi_store_mut(), genesis.params)?;
+            .set(&mut ctx.multi_store_mut(), genesis.params.clone())?;
 
         for validator in genesis.validators {
             self.set_validator(ctx, &validator)?;
+            // Manually set indices for the first time
             self.set_validator_by_cons_addr(ctx, &validator)?;
             self.set_validator_by_power_index(ctx, &validator)?;
 
@@ -134,8 +139,16 @@ impl<
             }
 
             if validator.status == BondStatus::Unbonding {
-                // TODO
-                //     self.insert_validator_queue(ctx, &validator)
+                self.insert_unbonding_validator_queue(ctx, &validator)?;
+            }
+
+            match validator.status {
+                BondStatus::Bonded => {
+                    bonded_tokens += validator.tokens.amount;
+                }
+                BondStatus::Unbonding | BondStatus::Unbonded => {
+                    not_bonded_tokens += validator.tokens.amount;
+                }
             }
         }
 
@@ -160,26 +173,92 @@ impl<
 
         for redelegation in genesis.redelegations {
             self.set_redelegation(ctx, &redelegation)?;
-            for _entry in redelegation.entries {
-                // TODO
-                // self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)?;
+            for entry in &redelegation.entries {
+                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)?;
             }
         }
-        // // don't need to run Tendermint updates if we exported
+
+        let bonded_coins = SendCoins::new(vec![Coin {
+            denom: genesis.params.bond_denom.clone(),
+            amount: bonded_tokens,
+        }])?;
+        let not_bonded_coins = SendCoins::new(vec![Coin {
+            denom: genesis.params.bond_denom,
+            amount: not_bonded_tokens,
+        }])?;
+
+        // check if the unbonded and bonded pools accounts exists
+        let bonded_pool = self.get_bonded_pool(ctx).ok_or(AppError::Custom(format!(
+            "{} module account has not been set",
+            BONDED_POOL_NAME
+        )))?;
+
+        // TODO: check cosmos issue
+        let bonded_balance = self
+            .bank_keeper
+            .get_all_balances::<DB, AK, InitContext<'_, DB, SK>>(
+                ctx,
+                bonded_pool.base_account.address.clone(),
+            );
+        if bonded_balance
+            .clone()
+            .into_iter()
+            .any(|e| e.amount.is_zero())
+        {
+            self.auth_keeper.set_module_account(ctx, bonded_pool);
+        }
+        // if balance is different from bonded coins panic because genesis is most likely malformed
+        if bonded_balance != bonded_coins {
+            return Err(AppError::Custom(format!(
+                "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
+                bonded_balance, bonded_coins
+            ))
+            .into());
+        }
+
+        let not_bonded_pool = self
+            .get_not_bonded_pool(ctx)
+            .ok_or(AppError::Custom(format!(
+                "{} module account has not been set",
+                NOT_BONDED_POOL_NAME
+            )))?;
+        let not_bonded_balance = self
+            .bank_keeper
+            .get_all_balances::<DB, AK, InitContext<'_, DB, SK>>(
+                ctx,
+                not_bonded_pool.base_account.address.clone(),
+            );
+        if not_bonded_balance
+            .clone()
+            .into_iter()
+            .any(|e| e.amount.is_zero())
+        {
+            self.auth_keeper.set_module_account(ctx, not_bonded_pool);
+        }
+        // if balance is different from non bonded coins panic because genesis is most likely malformed
+        if not_bonded_balance != not_bonded_coins {
+            return Err(AppError::Custom(format!(
+                "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
+                bonded_balance, bonded_coins
+            ))
+            .into());
+        }
+
+        let mut res = vec![];
+        // don't need to run Tendermint updates if we exported
         if genesis.exported {
             for last_validator in genesis.last_validator_powers {
                 self.set_last_validator_power(ctx, &last_validator)?;
-                // let validator =
-                //     self.get_validator(ctx, &last_validator.address.to_string().as_bytes())?;
-                // let mut update = validator.abci_validator_update();
-                // update.1 = last_validator.power;
+                let validator =
+                    self.get_validator(ctx, last_validator.address.to_string().as_bytes())?;
+                let mut update = validator.abci_validator_update(self.power_reduction(ctx));
+                update.power = last_validator.power;
+                res.push(update);
             }
-            Ok(())
         } else {
-            // TODO
-            // self.apply_and_return_validator_set_updates(ctx)?;
-            Ok(())
+            self.apply_and_return_validator_set_dates(ctx)?;
         }
+        Ok(res)
     }
 
     pub fn set_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -209,7 +288,7 @@ impl<
         // unbonded after the Endblocker (go from Bonded -> Unbonding during
         // ApplyAndReturnValidatorSetUpdates and then Unbonding -> Unbonded during
         // UnbondAllMatureValidatorQueue).
-        let validator_updates = self.apply_and_return_validator_setup_dates(ctx)?;
+        let validator_updates = self.apply_and_return_validator_set_dates(ctx)?;
 
         // unbond all mature validators from the unbonding queue
         self.unbond_all_mature_validators(ctx)?;
@@ -295,10 +374,7 @@ impl<
     /// CONTRACT: Only validators with non-zero power or zero-power that were bonded
     /// at the previous block height or were removed from the validator set entirely
     /// are returned to Tendermint.
-    pub fn apply_and_return_validator_setup_dates<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    pub fn apply_and_return_validator_set_dates<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
@@ -306,8 +382,8 @@ impl<
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
-        let mut amt_from_bonded_to_not_bonded: i64 = 0;
-        let amt_from_not_bonded_to_bonded: i64 = 0;
+        let mut amt_from_bonded_to_not_bonded = Uint256::zero();
+        let amt_from_not_bonded_to_bonded = Uint256::zero();
 
         let mut last = self.get_last_validators_by_addr(ctx)?;
         let validators_map = self.get_validators_power_store_vals_map(ctx)?;
@@ -337,12 +413,12 @@ impl<
                 BondStatus::Unbonded => {
                     self.unbonded_to_bonded(ctx, &mut validator)?;
                     amt_from_bonded_to_not_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens.amount.parse::<i64>()?;
+                        amt_from_not_bonded_to_bonded + validator.tokens.amount;
                 }
                 BondStatus::Unbonding => {
                     self.unbonding_to_bonded(ctx, &mut validator)?;
                     amt_from_bonded_to_not_bonded =
-                        amt_from_not_bonded_to_bonded + validator.tokens.amount.parse::<i64>()?;
+                        amt_from_not_bonded_to_bonded + validator.tokens.amount;
                 }
                 BondStatus::Bonded => {}
             }
@@ -351,7 +427,7 @@ impl<
             let val_addr_str = val_addr.to_string();
             let old_power_bytes = last.get(&val_addr_str);
             let new_power = validator.consensus_power(power_reduction);
-            let new_power_bytes = new_power.to_ne_bytes();
+            let new_power_bytes = new_power.to_be_bytes();
             // update the validator set if power has changed
             if old_power_bytes.is_none()
                 || old_power_bytes.map(|v| v.as_slice()) != Some(&new_power_bytes)
@@ -377,8 +453,7 @@ impl<
         for val_addr_bytes in no_longer_bonded {
             let mut validator = self.get_validator(ctx, val_addr_bytes.as_bytes())?;
             self.bonded_to_unbonding(ctx, &mut validator)?;
-            amt_from_bonded_to_not_bonded =
-                amt_from_not_bonded_to_bonded + validator.tokens.amount.parse::<i64>()?;
+            amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded + validator.tokens.amount;
             self.delete_last_validator_power(ctx, &validator.operator_address)?;
             updates.push(validator.abci_validator_update_zero());
         }
@@ -421,12 +496,12 @@ impl<
     pub fn not_bonded_tokens_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        amount: i64,
+        amount: Uint256,
     ) -> anyhow::Result<()> {
         let params = self.staking_params_keeper.get(&ctx.multi_store())?;
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
-            amount: Uint256::from(amount as u64),
+            amount,
         }])?;
         Ok(self
             .bank_keeper

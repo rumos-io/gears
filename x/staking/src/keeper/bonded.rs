@@ -1,3 +1,5 @@
+use gears::types::account::ModuleAccount;
+
 pub use super::*;
 
 impl<
@@ -8,15 +10,33 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
+    /// get_bonded_pool returns the bonded tokens pool's module account
+    pub fn get_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+    ) -> Option<ModuleAccount> {
+        self.auth_keeper
+            .get_module_account(ctx, BONDED_POOL_NAME.to_string())
+    }
+
+    /// get_bonded_pool returns the bonded tokens pool's module account
+    pub fn get_not_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+    ) -> Option<ModuleAccount> {
+        self.auth_keeper
+            .get_module_account(ctx, NOT_BONDED_POOL_NAME.to_string())
+    }
+
     pub fn bonded_tokens_to_not_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        amount: i64,
+        amount: Uint256,
     ) -> anyhow::Result<()> {
         let params = self.staking_params_keeper.get(&ctx.multi_store())?;
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
-            amount: Uint256::from(amount as u64),
+            amount,
         }])?;
         Ok(self
             .bank_keeper
