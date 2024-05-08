@@ -5,6 +5,7 @@ use crate::{
     types::genesis::GenesisState,
 };
 use gears::{
+    core::errors::Error,
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -12,11 +13,12 @@ use gears::{
         init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
     },
 };
+use ibc::primitives::proto::Protobuf;
 //use ibc::core::client::types::{
 //    msgs::{MsgUpdateClient, MsgUpgradeClient},
 //    proto::v1::MsgRecoverClient,
 //};
-//use prost::Message as ProstMessage;
+use prost::Message as ProstMessage;
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -107,7 +109,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
     pub fn query<DB: Database + Send + Sync>(
         &self,
-        _ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<'_, DB, SK>,
         query: gears::tendermint::types::request::query::RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         println!("query path: {:?}", query.path);
@@ -121,14 +123,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
             //     .client_state(ctx, ProstMessage::decode(query.data)?)?
             //     .encode_vec()
             //     .into()),
-            "/ibc.core.client.v1.Query/ClientStates" => {
-                Err(errors::query::client::ClientErrors::PathNotFound.into())
-                // Ok(self
-                //     .query_keeper
-                //     .client_states(ctx, ProstMessage::decode(query.data)?)?
-                //     .encode_vec()
-                //     .into())
-            }
+            "/ibc.core.client.v1.Query/ClientStates" => Ok(self
+                .keeper
+                .client_states(
+                    ctx,
+                    ProstMessage::decode(query.data)
+                        .map_err(|e| Error::DecodeProtobuf(e.to_string()))?,
+                )
+                .encode_vec()
+                .into()),
             // "/ibc.core.client.v1.Query/ClientStatus" => Ok(self
             //     .query_keeper
             //     .client_status(ctx, ProstMessage::decode(query.data)?)?

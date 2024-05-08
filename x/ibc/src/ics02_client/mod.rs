@@ -3,6 +3,7 @@ mod genesis;
 mod keeper;
 pub mod message;
 mod params;
+pub mod types;
 
 pub use genesis::GenesisState;
 pub use keeper::Keeper;

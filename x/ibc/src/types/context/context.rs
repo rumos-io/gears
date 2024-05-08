@@ -31,6 +31,7 @@ use ibc::primitives::Timestamp;
 use ibc::primitives::ToVec;
 use serde::Serialize;
 
+use crate::ics02_client::types::client_state::ClientState;
 use crate::{
     ics02_client::{message::MsgCreateClient, Keeper as ClientKeeper},
     ics03_connection::Keeper as ConnectionKeeper,
@@ -131,54 +132,10 @@ impl TryFrom<Any> for AnyConsensusState {
     }
 }
 
-#[derive(ClientState, Clone, From, TryInto, Debug, Serialize)]
-#[validation(Context<'a, 'b , DB: Database, SK: StoreKey, PSK:ParamsSubspaceKey >)]
-#[execution(Context<'a, 'b, DB: Database, SK:StoreKey, PSK: ParamsSubspaceKey>)]
-pub enum AnyClientState {
-    Tendermint(TmClientState),
-}
-
-impl From<ClientStateType> for AnyClientState {
-    fn from(value: ClientStateType) -> Self {
-        AnyClientState::Tendermint(value.into())
-    }
-}
-
-impl TryFrom<AnyClientState> for ClientStateType {
-    type Error = ClientError;
-
-    fn try_from(value: AnyClientState) -> Result<Self, Self::Error> {
-        match value {
-            AnyClientState::Tendermint(tm_client_state) => Ok(tm_client_state.inner().clone()),
-        }
-    }
-}
-
-impl From<AnyClientState> for Any {
-    fn from(value: AnyClientState) -> Self {
-        match value {
-            AnyClientState::Tendermint(tm_client_state) => tm_client_state.into(),
-        }
-    }
-}
-
-impl TryFrom<Any> for AnyClientState {
-    type Error = ClientError;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        match value.type_url.as_str() {
-            TENDERMINT_CLIENT_STATE_TYPE_URL => Ok(AnyClientState::Tendermint(value.try_into()?)),
-            _ => Err(ClientError::Other {
-                description: "Unknown client state type".into(),
-            }),
-        }
-    }
-}
-
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientValidationContext
     for Context<'a, 'b, DB, SK, PSK>
 {
-    type ClientStateRef = AnyClientState;
+    type ClientStateRef = ClientState;
     type ConsensusStateRef = AnyConsensusState;
 
     fn client_state(
@@ -520,7 +477,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExecutionContex
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecutionContext
     for Context<'a, 'b, DB, SK, PSK>
 {
-    type ClientStateMut = AnyClientState;
+    type ClientStateMut = ClientState;
 
     fn store_client_state(
         &mut self,
@@ -531,10 +488,10 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
 
         //dbg!(client_state.clone());
 
-        let data = serde_json::to_string(&client_state.clone()).unwrap();
+        //let data = serde_json::to_string(&client_state.clone()).unwrap();
 
         //let data = format!("{:?}", client_state.clone());
-        std::fs::write("tmp.json", data).expect("Unable to write file");
+        //std::fs::write("tmp.json", data).expect("Unable to write file");
 
         let any: Any = client_state.into();
         let encoded_bytes = any.to_vec();
@@ -662,9 +619,6 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         )
         .into_bytes();
         let prefix = format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_id).into_bytes();
-
-        println!("key: {:?}", key);
-        println!("value: {:?}", value);
 
         store.prefix_store_mut(prefix).set(key, value);
 

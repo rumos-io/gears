@@ -4,7 +4,7 @@ use ibc::core::client::types::proto::v1::{
     QueryClientStatusResponse, QueryConsensusStateResponse, QueryConsensusStatesResponse,
 };
 use prost::bytes::Bytes;
-use prost_012::Message;
+use prost::Message;
 
 use crate::ics02_client::client::cli::query::query_handler::ClientQueryHandler;
 

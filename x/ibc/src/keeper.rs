@@ -1,11 +1,15 @@
 use gears::{
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::{init_context::InitContext, tx_context::TxContext},
+    types::context::{
+        init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
+    },
 };
 
 use crate::{
-    ics02_client::{message::MsgCreateClient, Keeper as ClientKeeper},
+    ics02_client::{
+        message::MsgCreateClient, types::query::QueryClientStatesResponse, Keeper as ClientKeeper,
+    },
     ics03_connection::Keeper as ConnectionKeeper,
     ics04_channel::Keeper as ChannelKeeper,
     params::IBCParamsKeeper,
@@ -14,7 +18,7 @@ use crate::{
         genesis::GenesisState,
     },
 };
-use ibc::core::entrypoint::dispatch;
+use ibc::core::{client::types::proto::v1::QueryClientStatesRequest, entrypoint::dispatch};
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK, PSK> {
@@ -80,5 +84,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut router = ClientRouter;
 
         dispatch(&mut ctx, &mut router, msg.into()).unwrap() //TODO: unwrap
+    }
+
+    pub fn client_states<DB: Database>(
+        &self,
+        ctx: &QueryContext<'_, DB, SK>,
+        req: QueryClientStatesRequest,
+    ) -> QueryClientStatesResponse {
+        self.client_keeper.client_states(ctx, req)
     }
 }

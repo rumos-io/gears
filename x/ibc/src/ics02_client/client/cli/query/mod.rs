@@ -4,14 +4,15 @@ use clap::{Args, Subcommand};
 use gears::types::query::Query;
 use ibc::core::client::types::proto::v1::{
     QueryClientParamsRequest, QueryClientParamsResponse, QueryClientStateRequest,
-    QueryClientStateResponse, QueryClientStatesRequest, QueryClientStatesResponse,
-    QueryClientStatusRequest, QueryClientStatusResponse, QueryConsensusStateHeightsResponse,
-    QueryConsensusStateRequest, QueryConsensusStateResponse, QueryConsensusStatesRequest,
-    QueryConsensusStatesResponse,
+    QueryClientStateResponse, QueryClientStatesRequest, QueryClientStatusRequest,
+    QueryClientStatusResponse, QueryConsensusStateHeightsResponse, QueryConsensusStateRequest,
+    QueryConsensusStateResponse, QueryConsensusStatesRequest, QueryConsensusStatesResponse,
 };
-use prost_012::Message;
+use prost::Message;
 
 use serde::{Deserialize, Serialize};
+
+use crate::ics02_client::types::query::QueryClientStatesResponse;
 
 use self::{
     client_params::PARAMS_URL, client_state::STATE_URL, client_states::STATES_URL,

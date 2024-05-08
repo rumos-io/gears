@@ -26,6 +26,10 @@ Check if it was created:
 gaiad query ibc client states --output=json
 ```
 
+```shell
+cargo run -- query ibc client states
+```
+
 ## Relaying with hermes
 
 1. Add chain data to hermes config in `~/.hermes/config.toml`:

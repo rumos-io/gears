@@ -1,15 +1,18 @@
 use gears::application::handlers::client::QueryHandler;
 use ibc::core::client::types::proto::v1::{
-    QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatesResponse,
-    QueryClientStatusResponse, QueryConsensusStateResponse, QueryConsensusStatesResponse,
+    QueryClientParamsResponse, QueryClientStateResponse, QueryClientStatusResponse,
+    QueryConsensusStateResponse, QueryConsensusStatesResponse,
 };
-use prost::bytes::Bytes;
-use prost_012::Message;
+//use prost::bytes::Bytes;
+//use prost_012::Message;
+
+use crate::ics02_client::types::query::QueryClientStatesResponse;
 
 use super::{
     client_states::{self, CliClientStates},
     ClientQuery, ClientQueryCli, ClientQueryCommands, ClientQueryResponse,
 };
+use ibc::primitives::proto::Protobuf;
 
 // use super::query::{
 //     client_params, client_state, client_states, client_status, consensus_state, consensus_states,
@@ -71,7 +74,7 @@ impl QueryHandler for ClientQueryHandler {
             ClientQueryCommands::ClientParams(_) => todo!(),
             ClientQueryCommands::ClientState(_) => todo!(),
             ClientQueryCommands::ClientStates(_) => ClientQueryResponse::ClientStates(
-                QueryClientStatesResponse::decode::<Bytes>(query_bytes.into())?,
+                QueryClientStatesResponse::decode_vec(&query_bytes)?,
             ),
             ClientQueryCommands::ClientStatus(_) => todo!(),
             ClientQueryCommands::ConsensusState(_) => todo!(),

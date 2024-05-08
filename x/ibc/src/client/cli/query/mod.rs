@@ -9,7 +9,7 @@ use ibc::core::client::types::proto::v1::{
     QueryConsensusStateRequest, QueryConsensusStateResponse, QueryConsensusStatesRequest,
     QueryConsensusStatesResponse,
 };
-use prost_012::Message;
+use prost::Message;
 
 use serde::{Deserialize, Serialize};
 
