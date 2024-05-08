@@ -57,16 +57,15 @@ impl<
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
 
-        let mut multi_store = &mut self
-            .state
-            .write()
-            .expect(POISONED_LOCK)
-            .deliver_mode
-            .multi_store;
+        let mode = &mut self.state.write().expect(POISONED_LOCK);
 
         if let Some(params) = request.consensus_params.clone() {
+            self.baseapp_params_keeper.set_consensus_params(
+                &mut mode.deliver_mode.multi_store.as_mutable(),
+                params.clone(),
+            );
             self.baseapp_params_keeper
-                .set_consensus_params(&mut multi_store.as_mutable(), params);
+                .set_consensus_params(&mut mode.check_mode.multi_store.as_mutable(), params);
         }
 
         //TODO: handle request height > 1 as is done in SDK
@@ -75,8 +74,6 @@ impl<
             error!("Invalid chain id provided by Tendermint.\nTerminating process\n");
             std::process::exit(1)
         });
-
-        let mut ctx = InitContext::new(&mut multi_store, self.block_height(), chain_id);
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
             .map_err(|e| AppError::Genesis(e.to_string()))
@@ -89,9 +86,26 @@ impl<
                 std::process::exit(1)
             });
 
-        self.abci_handler.init_genesis(&mut ctx, genesis);
+        {
+            let mut ctx = InitContext::new(
+                &mut mode.deliver_mode.multi_store,
+                self.block_height(),
+                chain_id.clone(),
+            );
 
-        multi_store.tx_cache_to_block();
+            self.abci_handler.init_genesis(&mut ctx, genesis.clone());
+            mode.deliver_mode.multi_store.tx_cache_to_block();
+        }
+        {
+            let mut ctx = InitContext::new(
+                &mut mode.check_mode.multi_store,
+                self.block_height(),
+                chain_id,
+            );
+
+            self.abci_handler.init_genesis(&mut ctx, genesis);
+            mode.check_mode.multi_store.tx_cache_to_block();
+        }
 
         ResponseInitChain {
             consensus_params: request.consensus_params,
