@@ -72,7 +72,11 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
     ) -> Result<(), RunTxError> {
         let result = handler.run_ante_checks(ctx, tx_with_raw);
 
-        ctx.multi_store_mut().tx_caches_clear();
+        if result.is_ok() {
+            ctx.multi_store_mut().tx_cache_to_block();
+        } else {
+            ctx.multi_store_mut().tx_caches_clear();
+        }
 
         result.map_err(|e| RunTxError::Custom(e.to_string()))
     }
