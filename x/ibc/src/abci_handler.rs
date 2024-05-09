@@ -112,7 +112,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         ctx: &QueryContext<'_, DB, SK>,
         query: gears::tendermint::types::request::query::RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
-        println!("query path: {:?}", query.path);
         match query.path.as_str() {
             // "/ibc.core.client.v1.Query/ClientParams" => {
             //     //Ok(self.query_keeper.client_params(ctx)?.encode_vec().into())

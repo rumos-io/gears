@@ -154,7 +154,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut client_states = vec![];
 
         for (key, raw_state) in store.range(..) {
-            let key = String::from_utf8(key).unwrap();
+            let key = String::from_utf8(key).unwrap(); // TODO: unwrap
 
             let key_split: Vec<&str> = key.split("/").collect();
 
@@ -168,7 +168,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
             let client_id: ClientId = client_id.parse().unwrap(); //TODO: unwrap
 
-            println!("raw_state: {:?}", raw_state.clone());
             //let any: Any = Any::decode::<Bytes>(raw_state.into()).unwrap(); //TODO: unwrap
             //let client_id = key_split[1]; //TODO: check length
 

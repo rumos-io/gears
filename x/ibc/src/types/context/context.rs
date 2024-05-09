@@ -32,6 +32,7 @@ use ibc::primitives::ToVec;
 use serde::Serialize;
 
 use crate::ics02_client::types::client_state::ClientState;
+use crate::ics02_client::types::consensus_state::ConsensusState;
 use crate::{
     ics02_client::{message::MsgCreateClient, Keeper as ClientKeeper},
     ics03_connection::Keeper as ConnectionKeeper,
@@ -83,60 +84,11 @@ impl<'a, 'b, DB, SK, PSK> Context<'a, 'b, DB, SK, PSK> {
     }
 }
 
-// Note: We define `AnyConsensusState` just to showcase the use of the
-// derive macro. Technically, we could just use `TmConsensusState`
-// as the `AnyConsensusState`, since we only support this one variant.
-#[derive(ConsensusState, Clone, From, TryInto)]
-pub enum AnyConsensusState {
-    Tendermint(TmConsensusState),
-}
-
-impl From<ConsensusStateType> for AnyConsensusState {
-    fn from(value: ConsensusStateType) -> Self {
-        AnyConsensusState::Tendermint(value.into())
-    }
-}
-
-impl TryFrom<AnyConsensusState> for ConsensusStateType {
-    type Error = ClientError;
-
-    fn try_from(value: AnyConsensusState) -> Result<Self, Self::Error> {
-        match value {
-            AnyConsensusState::Tendermint(tm_consensus_state) => {
-                Ok(tm_consensus_state.inner().clone())
-            }
-        }
-    }
-}
-
-impl From<AnyConsensusState> for Any {
-    fn from(value: AnyConsensusState) -> Self {
-        match value {
-            AnyConsensusState::Tendermint(tm_consensus_state) => tm_consensus_state.into(),
-        }
-    }
-}
-
-impl TryFrom<Any> for AnyConsensusState {
-    type Error = ClientError;
-
-    fn try_from(value: Any) -> Result<Self, Self::Error> {
-        match value.type_url.as_str() {
-            TENDERMINT_CONSENSUS_STATE_TYPE_URL => {
-                Ok(AnyConsensusState::Tendermint(value.try_into()?))
-            }
-            _ => Err(ClientError::Other {
-                description: "Unknown consensus state type".into(),
-            }),
-        }
-    }
-}
-
 impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientValidationContext
     for Context<'a, 'b, DB, SK, PSK>
 {
     type ClientStateRef = ClientState;
-    type ConsensusStateRef = AnyConsensusState;
+    type ConsensusStateRef = ConsensusState;
 
     fn client_state(
         &self,

@@ -13,9 +13,9 @@ use super::params::Params;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct GenesisState {
     /// client states with their corresponding identifiers
-    pub clients: Vec<IdentifiedClientState>,
+    pub clients: Vec<IdentifiedClientState>, // TODO: should use our IdentifiedClientState
     /// consensus states from each client
-    pub clients_consensus: Vec<ClientConsensusStates>,
+    pub clients_consensus: Vec<ClientConsensusStates>, // TODO: should use our ClientConsensusStates
     /// metadata from each client
     pub clients_metadata: Vec<IdentifiedGenesisMetadata>,
 

@@ -31,6 +31,4 @@ http = { workspace = true }
 axum = { workspace = true }
 
 #other
-ibc = { version = "=0.51.0", features = [
-    "serde",
-] } # TODO: why are we using a checked out version?
+ibc = { version = "=0.51.0", features = ["serde"] }

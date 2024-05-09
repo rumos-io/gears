@@ -33,7 +33,7 @@ pub(crate) fn tx_command_handler(
             client_state,
             consensus_state,
         } => {
-            let client_state_result = serde_json::from_str::<ClientState>(&client_state);
+            let client_state_result = serde_json::from_str::<ClientState>(&client_state); //TODO: should use our ClientState
 
             let client_state = if let Ok(client_state) = client_state_result {
                 client_state
@@ -43,7 +43,7 @@ pub(crate) fn tx_command_handler(
                 serde_json::from_slice(&buffer)?
             };
 
-            let consensus_state_result = serde_json::from_str::<ConsensusState>(&consensus_state);
+            let consensus_state_result = serde_json::from_str::<ConsensusState>(&consensus_state); //TODO: should use our ConsensusState
             let consensus_state = if let Ok(consensus_state) = consensus_state_result {
                 consensus_state
             } else {

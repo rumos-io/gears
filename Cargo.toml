@@ -105,4 +105,4 @@ unused_async = "deny"
 # large_enum_variant = "deny"
 
 [patch.crates-io]
-ibc = { git = "https://github.com/cosmos/ibc-rs.git", rev = "e5c626f" }
+ibc = { git = "https://github.com/cosmos/ibc-rs.git", rev = "e5c626f" } # TODO: why do we need to patch?

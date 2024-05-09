@@ -18,7 +18,11 @@ use crate::types::context::Context;
 #[derive(ClientState, Clone, From, TryInto, Debug, Serialize, PartialEq, Deserialize)]
 #[validation(Context<'a, 'b , DB: Database, SK: StoreKey, PSK:ParamsSubspaceKey >)]
 #[execution(Context<'a, 'b, DB: Database, SK:StoreKey, PSK: ParamsSubspaceKey>)]
+// TODO: this enum doesn't serialize to the same JSON as the Cosmos SDK. This is a separate issue to the derive macro issue.
+// E.g. durations are serialized as fields rather than strings, some fields are in camleCase rather than snake_case.
+//#[serde(tag = "@type")] // TODO: uncommenting this causes ClientState derive macro to panic. Uncomment when fixed
 pub enum ClientState {
+    //#[serde(rename = "/ibc.lightclients.tendermint.v1.ClientState")] // TODO: uncomment when above TODO is fixed
     Tendermint(TmClientState),
 }
 
