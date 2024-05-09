@@ -436,32 +436,9 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         client_state_path: ibc::core::host::types::path::ClientStatePath,
         client_state: Self::ClientStateRef,
     ) -> Result<(), ibc::core::handler::types::error::ContextError> {
-        //TODO: check impl
-
-        //dbg!(client_state.clone());
-
-        //let data = serde_json::to_string(&client_state.clone()).unwrap();
-
-        //let data = format!("{:?}", client_state.clone());
-        //std::fs::write("tmp.json", data).expect("Unable to write file");
-
-        let any: Any = client_state.into();
-        let encoded_bytes = any.to_vec();
-
-        // println!("encoded bytes:\n {:?}", encoded_bytes.clone());
-
-        // let prefix = format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_state_path.0).into_bytes();
-        // println!("prefix: {:?}", prefix.clone());
-        // println!("key: {:?}", CLIENT_STATE_KEY.bytes());
-
-        self.gears_ctx
-            .kv_store_mut(&self.store_key)
-            .prefix_store_mut(
-                format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_state_path.0).into_bytes(),
-            )
-            .set(CLIENT_STATE_KEY.bytes(), encoded_bytes);
-
-        Ok(())
+        Ok(self
+            .client_keeper
+            .client_state_set(self.gears_ctx, client_state_path, client_state))
     }
 
     fn store_consensus_state(

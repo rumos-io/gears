@@ -44,10 +44,30 @@ impl From<QueryClientStatesResponse> for RawQueryClientStatesResponse {
 
 impl Protobuf<RawQueryClientStatesResponse> for QueryClientStatesResponse {}
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct IdentifiedClientState {
     pub client_id: ClientId,
     pub client_state: ClientState,
+}
+
+impl PartialEq for IdentifiedClientState {
+    fn eq(&self, other: &Self) -> bool {
+        self.client_id == other.client_id
+    }
+}
+
+impl Eq for IdentifiedClientState {}
+
+impl PartialOrd for IdentifiedClientState {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.client_id.cmp(&other.client_id))
+    }
+}
+
+impl Ord for IdentifiedClientState {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.client_id.cmp(&other.client_id)
+    }
 }
 
 impl From<IdentifiedClientState> for RawIdentifiedClientState {
