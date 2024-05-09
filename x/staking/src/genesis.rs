@@ -1,84 +1,8 @@
-use crate::{Params, Validator};
-use chrono::Utc;
-use gears::{
-    core::address::{AccAddress, ValAddress},
-    types::{base::coin::Coin, decimal256::Decimal256, uint::Uint256},
+use crate::{
+    Delegation, LastValidatorPower, Params, Pool, Redelegation, UnbondingDelegation, Validator,
 };
+use gears::types::uint::Uint256;
 use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Pool {
-    pub not_bonded_tokens: Coin,
-    pub bonded_tokens: Coin,
-}
-
-/// Last validator power, needed for validator set update logic
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct LastValidatorPower {
-    pub address: ValAddress,
-    pub power: i64,
-}
-
-/// Delegation represents the bond with tokens held by an account. It is
-/// owned by one delegator, and is associated with the voting power of one
-/// validator.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Delegation {
-    pub delegator_address: AccAddress,
-    pub validator_address: ValAddress,
-    pub shares: Decimal256,
-}
-
-/// Delegation represents the bond with tokens held by an account. It is
-/// owned by one delegator, and is associated with the voting power of one
-/// validator.
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct UnbondingDelegation {
-    pub delegator_address: AccAddress,
-    pub validator_address: ValAddress,
-    pub entries: Vec<UnbondingDelegationEntry>,
-}
-
-/// UnbondingDelegationEntry - entry to an UnbondingDelegation
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct UnbondingDelegationEntry {
-    pub creation_height: i64,
-    pub completion_time: chrono::DateTime<Utc>,
-    pub initial_balance: Coin,
-    pub balance: Coin,
-}
-
-impl UnbondingDelegationEntry {
-    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
-        self.completion_time <= time
-    }
-}
-
-/// Redelegation contains the list of a particular delegator's
-/// redelegating bonds from a particular source validator to a
-/// particular destination validator
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct Redelegation {
-    pub delegator_address: AccAddress,
-    pub validator_src_address: ValAddress,
-    pub validator_dst_address: ValAddress,
-    pub entries: Vec<RedelegationEntry>,
-}
-
-/// RedelegationEntry - entry to a Redelegation
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct RedelegationEntry {
-    pub creation_height: i64,
-    pub completion_time: chrono::DateTime<Utc>,
-    pub initial_balance: Coin,
-    pub share_dst: Decimal256,
-}
-
-impl RedelegationEntry {
-    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
-        self.completion_time <= time
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GenesisState {
