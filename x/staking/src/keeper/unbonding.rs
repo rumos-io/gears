@@ -62,7 +62,7 @@ impl<
             let storage = ctx.kv_store(&self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
             let end = {
-                let mut k = get_unbonding_delegation_time_key(time);
+                let mut k = get_unbonding_delegation_time_key(time).to_vec();
                 k.push(0);
                 k
             };
@@ -401,9 +401,9 @@ impl<
     }
 }
 
-pub(super) fn get_unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> Vec<u8> {
+pub(super) fn get_unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
     time.timestamp_nanos_opt()
-        .expect("Unknown time conversion error")
+        .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
+                The error in this method means that some system failure happened and the system cannot continue work.")
         .to_ne_bytes()
-        .to_vec()
 }

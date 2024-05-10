@@ -110,22 +110,6 @@ impl Validator {
         self.status = status;
     }
 
-    pub fn tendermint_power(&self) -> i64 {
-        if self.status == BondStatus::Bonded {
-            return self.potential_tendermint_power();
-        }
-        0
-    }
-
-    pub fn potential_tendermint_power(&self) -> i64 {
-        let amount = self.tokens.amount;
-        let amount = amount / Uint256::from(10u64).pow(6);
-        amount
-            .to_string()
-            .parse::<i64>()
-            .expect("Unexpected conversion error")
-    }
-
     pub fn consensus_power(&self, power: i64) -> i64 {
         match self.status {
             BondStatus::Bonded => self.potential_consensus_power(power),
@@ -143,7 +127,7 @@ impl Validator {
         amount
             .to_string()
             .parse::<i64>()
-            .expect("Unexpected conversion error")
+            .expect("It is expected that we can get i64 substitution from type Uint256")
     }
 
     /// GetValidatorsByPowerIndexKey creates the validator by power index.

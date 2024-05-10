@@ -54,10 +54,15 @@ impl<
 
     fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         // TODO
-        let _updates = self
-            .keeper
-            .init_genesis(ctx, genesis)
-            .expect("Cannot perform genesis actions.");
+        if let Err(err) = self.keeper.init_genesis(ctx, genesis) {
+            panic!(
+                "It is important to perform genesis actions.
+            During genesis staking module initialize pools and queues
+            using the parameters provided by the application.
+            Original error: {:?}",
+                err
+            );
+        }
     }
 
     fn query<DB: Database + Send + Sync>(
@@ -73,9 +78,14 @@ impl<
         ctx: &mut CTX,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
-        self.keeper
-            .block_validator_updates(ctx)
-            .expect("Unknown error")
+        match self.keeper.block_validator_updates(ctx) {
+            Ok(updates) => updates,
+            Err(err) => panic!(
+                "Error thrown in method 'end_block'. It can broke blockchain.
+                Original error: {:?}",
+                err
+            ),
+        }
         // TODO
         // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyEndBlocker)
     }

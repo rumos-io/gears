@@ -141,7 +141,8 @@ pub(super) fn get_validator_queue_key(end_time: chrono::DateTime<Utc>, end_heigh
     let height_bz = end_height.to_ne_bytes();
     let time_bz = end_time
         .timestamp_nanos_opt()
-        .expect("Unknown time conversion error")
+        .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
+                The error in this method means that some system failure happened and the system cannot continue work.")
         .to_ne_bytes();
 
     let mut bz = VALIDATORS_QUEUE_KEY.to_vec();

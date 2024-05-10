@@ -118,7 +118,8 @@ impl<
 
         let key = completion_time
             .timestamp_nanos_opt()
-            .expect("Unknown time conversion error")
+            .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
+                    The error in this method means that some system failure happened and the system cannot continue work.")
             .to_ne_bytes();
         if let Some(bytes) = store.get(&key) {
             Ok(serde_json::from_slice(&bytes)?)
@@ -138,7 +139,8 @@ impl<
 
         let key = completion_time
             .timestamp_nanos_opt()
-            .expect("Unknown time conversion error")
+            .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
+                    The error in this method means that some system failure happened and the system cannot continue work.")
             .to_ne_bytes();
         let value = serde_json::to_vec(&redelegations)?;
         store.set(key, value);
@@ -161,7 +163,7 @@ impl<
 
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
             let end = {
-                let mut k = get_unbonding_delegation_time_key(time);
+                let mut k = get_unbonding_delegation_time_key(time).to_vec();
                 k.push(0);
                 k
             };

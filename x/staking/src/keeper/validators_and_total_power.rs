@@ -15,7 +15,12 @@ impl<
     ) -> Option<Uint256> {
         let store = ctx.kv_store(&self.store_key);
         store.get(&LAST_TOTAL_POWER_KEY).map(|bytes| {
-            Uint256::from_be_bytes(bytes.try_into().expect("Unexpected conversion error."))
+            Uint256::from_be_bytes(bytes.try_into().expect(
+                "The method from_be_bytes accepts array of bytes.
+                The store returns owned value of stored array.
+                Error can happen when vector has invalid length.
+                Please, check the store methods",
+            ))
         })
     }
 

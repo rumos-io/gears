@@ -300,7 +300,11 @@ impl<
             let val_addr_str = val_addr.to_string();
             let del_addr = dv_pair.del_addr;
             let del_addr_str = del_addr.to_string();
-            let balances = self.complete_unbonding(ctx, val_addr, del_addr)?;
+            let balances = if let Ok(balances) = self.complete_unbonding(ctx, val_addr, del_addr) {
+                balances
+            } else {
+                continue;
+            };
 
             ctx.push_event(Event {
                 r#type: EVENT_TYPE_COMPLETE_UNBONDING.to_string(),
@@ -332,7 +336,14 @@ impl<
             let val_dst_addr_str = val_dst_addr.to_string();
             let del_addr = dvv_triplet.del_addr;
             let del_addr_str = del_addr.to_string();
-            let balances = self.complete_redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?;
+            let balances = if let Ok(balances) =
+                self.complete_redelegation(ctx, del_addr, val_src_addr, val_dst_addr)
+            {
+                balances
+            } else {
+                continue;
+            };
+
             ctx.push_event(Event {
                 r#type: EVENT_TYPE_COMPLETE_REDELEGATION.to_string(),
                 attributes: vec![
