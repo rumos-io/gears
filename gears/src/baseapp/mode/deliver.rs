@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use store_crate::types::multi::commit::CommitMultiStore;
+use database::Database;
+use store_crate::StoreKey;
 use store_crate::TransactionalMultiKVStore;
-use store_crate::{database::Database, StoreKey};
 use tendermint::types::proto::event::Event;
 
 use crate::types::auth::fee::Fee;

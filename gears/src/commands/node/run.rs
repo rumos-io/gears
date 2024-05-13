@@ -7,9 +7,9 @@ use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::rest::{run_rest_server, RestState};
 use crate::types::tx::TxMessage;
 use axum::Router;
+use database::RocksDB;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use store_crate::database::RocksDB;
 use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
 use tendermint::application::ABCI;
@@ -30,7 +30,7 @@ pub enum RunError {
     #[error("{0}")]
     HomeDirectory(String),
     #[error("{0}")]
-    Database(#[from] store_crate::database::error::Error),
+    Database(#[from] database::error::Error),
     #[error("{0}")]
     TendermintServer(#[from] tendermint::abci::errors::Error),
     #[error("{0}")]

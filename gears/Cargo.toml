@@ -12,6 +12,7 @@ tendermint = { path = "../tendermint" }
 core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
 store_crate = { path = "../store", package = "store" }
+database = { path = "../database", features = [ "rocksdb" ]}
 
 #newtypes
 # vec1 = "1.12.0"

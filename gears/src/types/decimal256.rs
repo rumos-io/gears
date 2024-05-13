@@ -5,7 +5,6 @@ use cosmwasm_std::StdError;
 
 /// Trait for converting to and from a string which is compatible with the cosmos SDK protobufs.
 /// The cosmos SDK uses a string representation of the inner `Uint256` to represent a `Decimal256`.
-#[allow(dead_code)] // TODO:NOW where it was used?
 trait CosmosDecimalProtoString: Sized {
     /// Converts to a string which is compatible with the cosmos SDK protobufs.
     fn to_cosmos_proto_string(&self) -> String;
