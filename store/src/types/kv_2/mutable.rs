@@ -5,12 +5,10 @@ use database::Database;
 use crate::{
     range::Range,
     types::prefix_v2::{immutable::ImmutablePrefixStoreV2, mutable::MutablePrefixStoreV2},
-    QueryableKVStoreV2, TransactionalKVStoreV2,
+    CacheKind, CommitKind, QueryableKVStoreV2, TransactionalKVStoreV2,
 };
 
 use super::{
-    cache::CacheKind,
-    commit::CommitKind,
     immutable::{KVStoreBackend, KVStoreV2},
     KVStorage,
 };

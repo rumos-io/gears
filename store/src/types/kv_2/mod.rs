@@ -8,12 +8,7 @@ use std::{
 use database::Database;
 use trees::iavl::Tree;
 
-use crate::{
-    error::{StoreError, POISONED_LOCK},
-    range::Range,
-    utils::MergedRange,
-    TREE_CACHE_SIZE,
-};
+use crate::{error::POISONED_LOCK, range::Range, utils::MergedRange};
 
 use self::store_cache::KVStoreCacheV2;
 
@@ -24,26 +19,12 @@ pub mod mutable;
 pub mod store_cache;
 
 pub struct KVStorage<DB, SK> {
-    persistent: Arc<RwLock<Tree<DB>>>,
+    pub(crate) persistent: Arc<RwLock<Tree<DB>>>,
     cache: KVStoreCacheV2,
     _marker: PhantomData<SK>,
 }
 
 impl<DB: Database, SK> KVStorage<DB, SK> {
-    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, StoreError> {
-        Ok(Self {
-            persistent: Arc::new(RwLock::new(Tree::new(
-                db,
-                target_version,
-                TREE_CACHE_SIZE
-                    .try_into()
-                    .expect("Unreachable. Tree cache size is > 0"),
-            )?)),
-            cache: Default::default(),
-            _marker: PhantomData,
-        })
-    }
-
     #[inline]
     pub fn head_commit_hash(&self) -> [u8; 32] {
         self.persistent.read().expect(POISONED_LOCK).root_hash()
@@ -71,6 +52,11 @@ impl<DB: Database, SK> KVStorage<DB, SK> {
         value: VI,
     ) {
         self.cache.set(key, value)
+    }
+
+    pub fn clear_cache(&mut self) {
+        self.cache.storage.clear();
+        self.cache.delete.clear();
     }
 
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {

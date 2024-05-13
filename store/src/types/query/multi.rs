@@ -4,8 +4,8 @@ use database::{Database, PrefixDB};
 
 use crate::{
     error::{StoreError, KEY_EXISTS_MSG},
-    types::kv_2::immutable::KVStoreV2,
-    QueryableMultiKVStore, StoreKey,
+    types::{kv_2::immutable::KVStoreV2, multi_v2::MultiStorage},
+    CommitKind, QueryableMultiKVStoreV2, StoreKey,
 };
 
 use super::kv::QueryKVStore;
@@ -19,14 +19,14 @@ pub struct QueryMultiStore<'a, DB, SK> {
 
 impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
     // pub fn new(
-    //     multi_store: &'a CommitMultiStore<DB, SK>,
+    //     multi_store: &'a MultiStorage<DB, SK, CommitKind>,
     //     version: u32,
     // ) -> Result<Self, StoreError> {
     //     let mut stores = HashMap::new();
     //     for (store, kv_store) in &multi_store.stores {
     //         stores.insert(
     //             store,
-    //             QueryKVStore::new(&kv_store.persistent_store, version)?,
+    //             QueryKVStore::new(&kv_store.persistent, version)?,
     //         );
     //     }
 
@@ -38,7 +38,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryMultiStore<'a, DB, SK> {
     // }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
+impl<DB: Database, SK: StoreKey> QueryableMultiKVStoreV2<PrefixDB<DB>, SK>
     for QueryMultiStore<'_, DB, SK>
 {
     fn kv_store(&self, store_key: &SK) -> KVStoreV2<'_, PrefixDB<DB>> {

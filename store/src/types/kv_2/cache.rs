@@ -2,20 +2,13 @@ use std::collections::{BTreeMap, HashSet};
 
 use database::Database;
 
-use crate::types::prefix_v2::immutable::ImmutablePrefixStoreV2;
+use crate::{types::prefix_v2::immutable::ImmutablePrefixStoreV2, CacheKind};
 
 use super::{immutable::KVStoreV2, KVStorage};
-
-pub struct CacheKind;
 
 impl<DB: Database> KVStorage<DB, CacheKind> {
     pub fn commit(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
         self.cache.take()
-    }
-
-    pub fn clear(&mut self) {
-        self.cache.storage.clear();
-        self.cache.delete.clear();
     }
 
     pub fn prefix_store<I: IntoIterator<Item = u8>>(

@@ -3,10 +3,10 @@ use database::Database;
 use crate::{
     range::Range,
     types::{prefix_v2::immutable::ImmutablePrefixStoreV2, query::kv::QueryKVStore},
-    QueryableKVStoreV2,
+    CacheKind, CommitKind, QueryableKVStoreV2,
 };
 
-use super::{cache::CacheKind, commit::CommitKind, KVStorage};
+use super::KVStorage;
 
 /// Internal structure which holds different stores
 pub(crate) enum KVStoreBackend<'a, DB> {

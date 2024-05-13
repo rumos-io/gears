@@ -1,14 +1,34 @@
-use std::sync::Arc;
+use std::{
+    marker::PhantomData,
+    sync::{Arc, RwLock},
+};
 
 use database::Database;
+use trees::iavl::Tree;
 
-use crate::{error::POISONED_LOCK, types::prefix_v2::immutable::ImmutablePrefixStoreV2};
+use crate::{
+    error::{StoreError, POISONED_LOCK},
+    types::prefix_v2::immutable::ImmutablePrefixStoreV2,
+    CacheKind, CommitKind, TREE_CACHE_SIZE,
+};
 
-use super::{cache::CacheKind, immutable::KVStoreV2, KVStorage};
-
-pub struct CommitKind;
+use super::{immutable::KVStoreV2, KVStorage};
 
 impl<DB: Database> KVStorage<DB, CommitKind> {
+    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, StoreError> {
+        Ok(Self {
+            persistent: Arc::new(RwLock::new(Tree::new(
+                db,
+                target_version,
+                TREE_CACHE_SIZE
+                    .try_into()
+                    .expect("Unreachable. Tree cache size is > 0"),
+            )?)),
+            cache: Default::default(),
+            _marker: PhantomData,
+        })
+    }
+
     pub fn commit(&mut self) -> [u8; 32] {
         let (cache, delete) = self.cache.take();
         let mut persistent = self.persistent.write().expect(POISONED_LOCK);

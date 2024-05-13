@@ -16,6 +16,9 @@ use std::{hash::Hash, ops::RangeBounds};
 
 pub(crate) const TREE_CACHE_SIZE: usize = 100_000;
 
+pub struct CacheKind;
+pub struct CommitKind;
+
 pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
 }
@@ -53,7 +56,7 @@ pub trait TransactionalKVStoreV2<'a, DB>: QueryableKVStoreV2<'a, DB> {
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, key: KI, value: VI);
 }
 
-pub trait QueryableMultiKVStore<DB, SK> {
+pub trait QueryableMultiKVStoreV2<DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStoreV2<'_, DB>;
     fn head_version(&self) -> u32;
     fn head_commit_hash(&self) -> [u8; 32];
@@ -67,10 +70,8 @@ pub trait QueryableMultiKVStore<DB, SK> {
 //     fn tx_caches_clear(&mut self);
 // }
 
-pub trait TransactionalMultiKVStore<DB, SK> {
+pub trait TransactionalMultiKVStoreV2<DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMutV2<'_, PrefixDB<DB>>;
-    /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
-    fn tx_cache_to_block(&mut self);
     /// Clears the tx caches
-    fn tx_caches_clear(&mut self);
+    fn caches_clear(&mut self);
 }
