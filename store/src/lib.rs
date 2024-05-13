@@ -1,5 +1,3 @@
-#![warn(rust_2018_idioms)]
-
 use ::database::PrefixDB;
 use range::Range;
 use strum::IntoEnumIterator;
@@ -13,10 +11,6 @@ mod hash;
 pub mod range;
 pub mod types;
 mod utils;
-
-pub mod database {
-    pub use database::*;
-}
 
 use std::{hash::Hash, ops::RangeBounds};
 

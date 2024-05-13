@@ -1653,6 +1653,7 @@ dependencies = [
  "core-types",
  "cosmwasm-std",
  "data-encoding",
+ "database",
  "derive_more",
  "dircpy",
  "dirs",
