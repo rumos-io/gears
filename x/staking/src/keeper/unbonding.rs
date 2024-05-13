@@ -171,7 +171,7 @@ impl<
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_begin_unbonding(
                 ctx,
-                validator.get_cons_addr(),
+                validator.get_cons_addr()?,
                 validator.operator_address.clone(),
             );
         }

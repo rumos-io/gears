@@ -57,7 +57,11 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.set(
-            validator.get_cons_addr().to_string().as_bytes().to_vec(),
+            validator.get_cons_addr()
+                .expect("Each validator should have a cons address. Cannot store invalid validator in chain.")
+                .to_string()
+                .as_bytes()
+                .to_vec(),
             serde_json::to_vec(&validator)?,
         );
         Ok(())

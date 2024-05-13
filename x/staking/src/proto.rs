@@ -97,11 +97,10 @@ impl Validator {
         self.abci_validator_update(0)
     }
 
-    pub fn get_cons_addr(&self) -> AccAddress {
-        let dom_pub_key: GearsPublicKey = self.consensus_pubkey.clone().try_into()
-            .expect("The tendermint public key should convert into PublicKey type without errors. The reason of the error can be in missed or corrupted key data.");
+    pub fn get_cons_addr(&self) -> anyhow::Result<AccAddress> {
+        let dom_pub_key: GearsPublicKey = self.consensus_pubkey.clone().try_into()?;
         // TODO: let's discuss
-        dom_pub_key.get_address()
+        Ok(dom_pub_key.get_address())
     }
 
     pub fn update_status(&mut self, status: BondStatus) {
