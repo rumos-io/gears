@@ -57,11 +57,7 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.set(
-            validator
-                .consensus_pubkey
-                .get_address()
-                .to_string()
-                .encode_to_vec(),
+            validator.get_cons_addr().to_string().as_bytes().to_vec(),
             serde_json::to_vec(&validator)?,
         );
         Ok(())

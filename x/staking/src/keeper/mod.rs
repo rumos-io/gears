@@ -5,7 +5,6 @@ use crate::{
 use chrono::Utc;
 use gears::{
     core::address::{AccAddress, ValAddress},
-    crypto::keys::ReadAccAddress,
     error::AppError,
     params::ParamsSubspaceKey,
     store::{
@@ -24,7 +23,7 @@ use gears::{
     },
     x::keepers::auth::AuthKeeper,
 };
-use prost::{bytes::BufMut, Message};
+use prost::bytes::BufMut;
 use serde::de::Error;
 use std::{cmp::Ordering, collections::HashMap};
 

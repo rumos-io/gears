@@ -2,8 +2,8 @@ use crate::VALIDATORS_BY_POWER_INDEX_KEY;
 use chrono::Utc;
 use gears::{
     core::address::{AccAddress, ValAddress},
-    crypto::{keys::ReadAccAddress, public::PublicKey},
-    tendermint::types::proto::validator::ValidatorUpdate,
+    crypto::{keys::ReadAccAddress, public::PublicKey as GearsPublicKey},
+    tendermint::types::proto::{crypto::PublicKey, validator::ValidatorUpdate},
     types::{
         base::{coin::Coin, send::SendCoins},
         decimal256::Decimal256,
@@ -89,7 +89,7 @@ pub struct Validator {
 impl Validator {
     pub fn abci_validator_update(&self, power: i64) -> ValidatorUpdate {
         ValidatorUpdate {
-            pub_key: Some(self.consensus_pubkey.clone().into()),
+            pub_key: Some(self.consensus_pubkey.clone()),
             power: self.consensus_power(power),
         }
     }
@@ -97,13 +97,11 @@ impl Validator {
         self.abci_validator_update(0)
     }
 
-    pub fn tm_cons_public_key(&self) -> AccAddress {
-        self.consensus_pubkey.get_address()
-    }
-
     pub fn get_cons_addr(&self) -> AccAddress {
-        // TODO: the other logic that
-        self.consensus_pubkey.get_address()
+        let dom_pub_key: GearsPublicKey = self.consensus_pubkey.clone().try_into()
+            .expect("The tendermint public key should convert into PublicKey type without errors. The reason of the error can be in missed or corrupted key data.");
+        // TODO: let's discuss
+        dom_pub_key.get_address()
     }
 
     pub fn update_status(&mut self, status: BondStatus) {
