@@ -61,13 +61,7 @@ impl<DB: Database> CommitKVStore<DB> {
         let tx_value = self.cache.tx.remove(k);
         let block_value = self.cache.block.remove(k);
 
-        let persisted_value = if tx_value.is_none() || block_value.is_none() {
-            self.persistent_store.get(k)
-        } else {
-            None
-        };
-
-        tx_value.or(block_value).or(persisted_value)
+        tx_value.or(block_value).or(self.persistent_store.get(k))
     }
 
     pub fn head_commit_hash(&self) -> [u8; 32] {
