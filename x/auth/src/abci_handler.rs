@@ -5,8 +5,8 @@ use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::context::init_context::InitContext;
-use gears::types::context::query_context::QueryContext;
+use gears::types::context::init::InitContext;
+use gears::types::context::query::QueryContext;
 use gears::{error::AppError, params::ParamsSubspaceKey};
 
 use crate::{GenesisState, Keeper};

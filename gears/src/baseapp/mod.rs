@@ -1,35 +1,42 @@
 use std::{
+    fmt::Debug,
     marker::PhantomData,
-    sync::{Arc, RwLock},
+    sync::{atomic::AtomicU64, Arc, RwLock},
 };
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
-    error::AppError,
+    error::{AppError, POISONED_LOCK},
     params::{Keeper, ParamsSubspaceKey},
     types::{
-        context::{query_context::QueryContext, tx_context::TxContext, ExecMode},
+        context::{query::QueryContext, tx::TxContext},
+        gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
+        header::Header,
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
 use bytes::Bytes;
-use store_crate::WriteMultiKVStore;
-use store_crate::{
-    database::{Database, RocksDB},
-    types::multi::MultiStore,
-    ReadMultiKVStore, StoreKey,
-};
+use database::RocksDB;
+use store_crate::{types::multi::commit::CommitMultiStore, StoreKey};
 use tendermint::types::{
     chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},
     request::query::RequestQuery,
 };
 
-use self::{genesis::Genesis, params::BaseAppParamsKeeper};
+use self::{
+    errors::RunTxError, genesis::Genesis, mode::ExecutionMode, params::BaseAppParamsKeeper,
+    state::ApplicationState,
+};
 
 mod abci;
+pub mod errors;
 pub mod genesis;
+pub mod mode;
 mod params;
+pub mod state;
+
+static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone)]
 pub struct BaseApp<
@@ -40,8 +47,8 @@ pub struct BaseApp<
     G: Genesis,
     AI: ApplicationInfo,
 > {
-    multi_store: Arc<RwLock<MultiStore<RocksDB, SK>>>,
-    height: Arc<RwLock<u64>>,
+    multi_store: Arc<RwLock<CommitMultiStore<RocksDB, SK>>>,
+    state: Arc<RwLock<ApplicationState>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -65,26 +72,35 @@ impl<
         params_subspace_key: PSK,
         abci_handler: H,
     ) -> Self {
-        let multi_store = MultiStore::new(db);
+        let multi_store = CommitMultiStore::new(db);
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,
             params_subspace_key,
         };
-        let height = multi_store.head_version().into();
+
+        let max_gas = baseapp_params_keeper
+            .block_params(&multi_store.as_immutable())
+            .map(|e| e.max_gas)
+            .unwrap_or_default();
+
         Self {
-            multi_store: Arc::new(RwLock::new(multi_store)),
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
-            height: Arc::new(RwLock::new(height)),
+            state: ApplicationState::new_sync(Gas::from(max_gas)),
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
+            multi_store: Arc::new(RwLock::new(multi_store)),
         }
     }
 
-    pub fn get_block_height(&self) -> u64 {
-        *self.height.read().expect("RwLock will not be poisoned")
+    fn block_height(&self) -> u64 {
+        APP_HEIGHT.load(std::sync::atomic::Ordering::Relaxed)
+    }
+
+    fn block_height_increment(&self) -> u64 {
+        APP_HEIGHT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
     }
 
     fn get_block_header(&self) -> Option<RawHeader> {
@@ -105,14 +121,8 @@ impl<
     fn get_last_commit_hash(&self) -> [u8; 32] {
         self.multi_store
             .read()
-            .expect("RwLock will not be poisoned")
+            .expect(POISONED_LOCK)
             .head_commit_hash()
-    }
-
-    fn increment_block_height(&self) -> u64 {
-        let mut height = self.height.write().expect("RwLock will not be poisoned");
-        *height += 1;
-        *height
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
@@ -120,94 +130,11 @@ impl<
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;
 
-        let multi_store = self
-            .multi_store
-            .read()
-            .expect("RwLock will not be poisoned");
+        let multi_store = self.multi_store.read().expect(POISONED_LOCK);
+
         let ctx = QueryContext::new(&multi_store, version)?;
 
         self.abci_handler.query(&ctx, request.clone())
-    }
-
-    fn run_tx(&self, raw: Bytes, mode: ExecMode) -> Result<Vec<Event>, AppError> {
-        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e: core_types::errors::Error| AppError::TxParseError(e.to_string()))?;
-
-        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())?;
-
-        let mut multi_store = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
-
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .map_err(|e: ChainIdErrors| AppError::Custom(e.to_string()))?,
-            raw.clone().into(),
-        );
-
-        match self.abci_handler.run_ante_checks(&mut ctx, &tx_with_raw) {
-            Ok(_) => {
-                if mode != ExecMode::Deliver {
-                    multi_store.tx_caches_clear();
-                } else {
-                    multi_store.tx_caches_write_then_clear()
-                }
-            }
-            Err(e) => {
-                multi_store.tx_caches_clear();
-                return Err(e);
-            }
-        };
-
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            self.get_block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .map_err(|e: ChainIdErrors| AppError::Custom(e.to_string()))?,
-            raw.into(),
-        );
-
-        let msg_run = match self.run_msgs(&mut ctx, tx_with_raw.tx.get_msgs(), mode.clone()) {
-            Ok(_) => {
-                let events = ctx.events;
-                if mode != ExecMode::Deliver {
-                    multi_store.tx_caches_clear();
-                } else {
-                    multi_store.tx_caches_write_then_clear()
-                }
-                Ok(events)
-            }
-            Err(e) => {
-                multi_store.tx_caches_clear();
-                Err(e)
-            }
-        }?;
-
-        Ok(msg_run)
-    }
-
-    fn run_msgs<T: Database + Sync + Send>(
-        &self,
-        ctx: &mut TxContext<'_, T, SK>,
-        msgs: &Vec<M>,
-        mode: ExecMode,
-    ) -> Result<(), AppError> {
-        for msg in msgs {
-            if mode == ExecMode::Check || mode == ExecMode::ReCheck {
-                break;
-            }
-
-            self.abci_handler.tx(ctx, msg)?
-        }
-
-        Ok(())
     }
 
     fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
@@ -224,4 +151,66 @@ impl<
 
         Ok(())
     }
+
+    fn run_tx<MD: ExecutionMode<RocksDB, SK>>(
+        &self,
+        raw: Bytes,
+        mode: &mut MD,
+    ) -> Result<RunTxInfo, RunTxError> {
+        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
+            .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
+
+        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
+            .map_err(|e| RunTxError::Validation(e.to_string()))?;
+
+        let height = self.block_height();
+        let header: Header = self
+            .get_block_header()
+            .expect("block header is set in begin block")
+            .try_into()
+            .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?;
+
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            height,
+            header.clone(),
+            MD::build_tx_gas_meter(&tx_with_raw.tx.auth_info.fee, height),
+        );
+
+        mode.runnable(&mut ctx)?;
+        MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
+        let gas_wanted = ctx.gas_meter.limit(); // TODO its needed for gas recovery middleware
+        let gas_used = ctx.gas_meter.consumed_or_limit();
+
+        let mut ctx = TxContext::new(
+            &mut multi_store,
+            height,
+            header,
+            MD::build_tx_gas_meter(&tx_with_raw.tx.auth_info.fee, height),
+        );
+
+        let events = MD::run_msg(
+            &mut ctx,
+            &self.abci_handler,
+            tx_with_raw.tx.get_msgs().iter(),
+        )?;
+
+        mode.block_gas_meter_mut()
+            .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
+
+        Ok(RunTxInfo {
+            events,
+            gas_wanted,
+            gas_used,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct RunTxInfo {
+    pub events: Vec<Event>,
+    pub gas_wanted: Gas,
+    pub gas_used: FiniteGas,
 }

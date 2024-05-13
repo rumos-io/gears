@@ -1,10 +1,11 @@
 use std::fmt::Display;
 
-use super::gas_meter::{ErrorNegativeGasConsumed, Gas, GasErrors, GasMeter};
+use super::{FiniteGas, Gas, GasErrors, PlainGasMeter};
 
 /// Gas meter without consumption limit
+#[derive(Debug, Clone)]
 pub struct InfiniteGasMeter {
-    consumed: Gas,
+    consumed: FiniteGas,
 }
 
 impl Default for InfiniteGasMeter {
@@ -16,49 +17,51 @@ impl Default for InfiniteGasMeter {
 impl InfiniteGasMeter {
     /// Create new `InfiniteGasMeter` with zero consumed gas.
     pub fn new() -> Self {
-        Self { consumed: Gas(0) }
+        Self {
+            consumed: FiniteGas::ZERO,
+        }
     }
 }
 
-impl GasMeter for InfiniteGasMeter {
-    fn gas_consumed(&self) -> Gas {
+impl PlainGasMeter for InfiniteGasMeter {
+    fn gas_consumed(&self) -> FiniteGas {
         self.consumed
     }
 
-    fn gas_consumed_to_limit(&self) -> Gas {
+    fn gas_consumed_or_limit(&self) -> FiniteGas {
         self.consumed
     }
 
     fn gas_remaining(&self) -> Gas {
-        Gas(u64::MAX)
+        Gas::Infinite
     }
 
     fn limit(&self) -> Gas {
-        Gas(u64::MAX)
+        Gas::Infinite
     }
 
-    fn consume_gas(&mut self, amount: Gas, descriptor: String) -> Result<(), GasErrors> {
-        if let Some(sum) = self.consumed.0.checked_add(amount.0) {
-            self.consumed = Gas(sum);
+    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
+        if let Some(sum) = self.consumed.checked_add(amount) {
+            self.consumed = sum;
             Ok(())
         } else {
-            Err(GasErrors::ErrorGasOverflow(descriptor))
+            Err(GasErrors::ErrorGasOverflow(descriptor.to_owned()))
         }
     }
 
-    fn refund_gas(
-        &mut self,
-        amount: Gas,
-        descriptor: String,
-    ) -> Result<(), ErrorNegativeGasConsumed> {
-        if self.consumed < amount {
-            Err(ErrorNegativeGasConsumed(descriptor))
-        } else {
-            self.consumed.0 -= amount.0;
+    // fn refund_gas(
+    //     &mut self,
+    //     amount: FiniteGas,
+    //     descriptor: &str,
+    // ) -> Result<(), ErrorNegativeGasConsumed> {
+    //     if self.consumed < amount {
+    //         Err(ErrorNegativeGasConsumed(descriptor.to_owned()))
+    //     } else {
+    //         self.consumed.0 -= amount.0;
 
-            Ok(())
-        }
-    }
+    //         Ok(())
+    //     }
+    // }
 
     fn is_past_limit(&self) -> bool {
         false
@@ -67,10 +70,14 @@ impl GasMeter for InfiniteGasMeter {
     fn is_out_of_gas(&self) -> bool {
         false
     }
+
+    fn name(&self) -> &'static str {
+        "gears infinite meter"
+    }
 }
 
 impl Display for InfiniteGasMeter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "InfiniteGasMeter: consumed {}", self.consumed.0)
+        write!(f, "InfiniteGasMeter: consumed {}", self.consumed)
     }
 }

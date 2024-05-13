@@ -29,10 +29,18 @@ use gears::{
 };
 
 pub const TENDERMINT_PATH: &str = "./tests/assets";
+pub const BIP39_MNEMONIC : &str = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
+
 pub const NODE_URL_STR: &str = "http://localhost:26657/";
 
 pub fn node_url() -> url::Url {
     NODE_URL_STR.try_into().expect("Default should be valid")
+}
+
+pub const ACC_ADDRESS: &str = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux";
+
+pub fn acc_address() -> AccAddress {
+    AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
 }
 
 /// Helper method to start gaia node and tendermint in tmp folder
@@ -40,10 +48,13 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.to_path_buf();
 
+    key_add(tmp_dir.to_path_buf())?;
+
     let tendermint = TmpChild::run_tendermint::<_, AppConfig>(
         tmp_dir,
         TENDERMINT_PATH,
         &MockGenesis::default(),
+        acc_address(),
     )?;
 
     std::thread::sleep(Duration::from_secs(10));
@@ -87,12 +98,13 @@ impl Genesis for MockGenesis {
 
 pub const KEY_NAME: &str = "alice";
 
-pub fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
+fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
     let cmd = AddKeyCommand {
         name: KEY_NAME.to_owned(),
-        recover: Default::default(),
+        recover: true,
         home: home.into(),
         keyring_backend: KeyringBackend::Test,
+        bip39_mnemonic: Some(BIP39_MNEMONIC.to_owned()),
     };
 
     keys(KeyCommand::Add(cmd))?;

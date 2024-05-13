@@ -1,19 +1,19 @@
 use std::ops::RangeBounds;
 
 use database::Database;
-use trees::iavl::Range;
 
-use crate::QueryableKVStore;
+use crate::range::Range;
 
-use super::{kv::KVStore, query::kv::QueryKVStore};
+use super::{kv::commit::CommitKVStore, query::kv::QueryKVStore};
 
+#[derive(Debug)]
 pub enum AnyKVStore<'a, DB> {
-    KVStore(&'a KVStore<DB>),
+    KVStore(&'a CommitKVStore<DB>),
     QueryKVStore(&'a QueryKVStore<'a, DB>),
 }
 
-impl<'a, DB: Database> From<&'a KVStore<DB>> for AnyKVStore<'a, DB> {
-    fn from(kv_store: &'a KVStore<DB>) -> Self {
+impl<'a, DB: Database> From<&'a CommitKVStore<DB>> for AnyKVStore<'a, DB> {
+    fn from(kv_store: &'a CommitKVStore<DB>) -> Self {
         Self::KVStore(kv_store)
     }
 }

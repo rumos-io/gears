@@ -1,4 +1,6 @@
+use gears::store::QueryableMultiKVStore;
 use gears::store::ReadPrefixStore;
+use gears::store::TransactionalMultiKVStore;
 use gears::store::WritePrefixStore;
 use gears::{
     params::ParamsSubspaceKey,
@@ -30,7 +32,7 @@ pub struct ClientParamsKeeper<SK, PSK> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> ClientParamsKeeper<SK, PSK> {
-    pub fn _get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn get<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(&self, ctx: &KV) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
@@ -49,9 +51,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ClientParamsKeeper<SK, PSK> {
         Params { allowed_clients }
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut KV,
         params: Params,
     ) {
         let mut store = self

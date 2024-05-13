@@ -1,6 +1,8 @@
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::{Database, PrefixDB};
-use gears::store::{ReadPrefixStore, StoreKey, WritePrefixStore};
+use gears::store::{
+    QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore, WritePrefixStore,
+};
 use gears::types::context::{QueryableContext, TransactionalContext};
 
 pub const CLIENT_STATE_KEY: &str = "clientState";
@@ -18,9 +20,9 @@ pub struct IBCParamsKeeper<SK, PSK> {
 pub struct ParamsError;
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> IBCParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(
+    pub fn get<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(
         &self,
-        ctx: &CTX,
+        ctx: &KV,
         key: &impl AsRef<[u8]>,
     ) -> Result<Vec<u8>, ParamsError> {
         let value = self
@@ -32,9 +34,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> IBCParamsKeeper<SK, PSK> {
         Ok(value)
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut KV,
         key: impl IntoIterator<Item = u8>,
         value: impl IntoIterator<Item = u8>,
     ) {

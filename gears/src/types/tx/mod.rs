@@ -54,6 +54,7 @@ pub struct Tx<M> {
 // 1. Many more checks are needed on DecodedTx::from_bytes see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/auth/tx/decoder.go#L16
 // 2. Implement equality on AccAddress to avoid conversion to string in get_signers()
 // 3. Consider removing the "seen" hashset in get_signers()
+// 4. Remove `get_` from method names.
 impl<M: TxMessage> Tx<M> {
     pub fn get_msgs(&self) -> &Vec<M> {
         &self.body.messages
@@ -99,8 +100,8 @@ impl<M: TxMessage> Tx<M> {
         &self.body.memo
     }
 
-    pub fn get_fee(&self) -> &Option<SendCoins> {
-        &self.auth_info.fee.amount
+    pub fn get_fee(&self) -> Option<&SendCoins> {
+        self.auth_info.fee.amount.as_ref()
     }
 
     pub fn get_fee_payer(&self) -> &AccAddress {
@@ -112,11 +113,11 @@ impl<M: TxMessage> Tx<M> {
         }
     }
 
-    pub fn get_public_keys(&self) -> Vec<&Option<PublicKey>> {
+    pub fn get_public_keys(&self) -> Vec<Option<&PublicKey>> {
         self.auth_info
             .signer_infos
             .iter()
-            .map(|si| &si.public_key)
+            .map(|si| si.public_key.as_ref())
             .collect()
     }
 }

@@ -74,7 +74,7 @@ impl<M: TxMessage> Envelope<M> {
             fee_granter: tx_data.auth_info.fee.granter,
             tip,
             tipper,
-            gas_limit: tx_data.auth_info.fee.gas_limit,
+            gas_limit: tx_data.auth_info.fee.gas_limit.into(),
             timeout_height: tx_data.body.timeout_height,
             hash_of_raw_bytes: hash_get(&body_bytes, &auth_info_bytes),
         }
@@ -299,7 +299,7 @@ mod tests {
                     }])
                     .unwrap(),
                 ),
-                gas_limit: 100000,
+                gas_limit: 100000_u64.try_into().expect("this is a valid gas limit"),
                 payer: None,
                 granter: String::new(),
             },

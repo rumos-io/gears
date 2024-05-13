@@ -7,7 +7,7 @@ use tendermint::{
     types::proto::{block::Height, Protobuf},
 };
 
-#[derive(Debug, Clone, derive_builder::Builder)]
+#[derive(Debug, Clone, former::Former)]
 pub struct QueryCommand<C> {
     pub node: url::Url,
     pub height: Option<Height>,

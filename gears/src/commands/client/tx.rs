@@ -16,7 +16,7 @@ use crate::types::tx::raw::TxRaw;
 
 use super::keys::KeyringBackend;
 
-#[derive(Debug, Clone, derive_builder::Builder)]
+#[derive(Debug, Clone, former::Former)]
 pub struct TxCommand<C> {
     pub node: url::Url,
     pub chain_id: ChainId,

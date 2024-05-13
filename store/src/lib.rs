@@ -1,17 +1,16 @@
-#![warn(rust_2018_idioms)]
-
+use ::database::PrefixDB;
+use range::Range;
 use strum::IntoEnumIterator;
-use trees::iavl::Range;
-use types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore};
+use types::{
+    kv::{mutable::KVStoreMut, KVStore},
+    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
+};
 
 pub mod error;
 mod hash;
+pub mod range;
 pub mod types;
 mod utils;
-
-pub mod database {
-    pub use database::*;
-}
 
 use std::{hash::Hash, ops::RangeBounds};
 
@@ -29,37 +28,28 @@ pub trait WritePrefixStore: ReadPrefixStore {
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI);
 }
 
-pub trait QueryableKVStore<DB> {
+pub trait QueryableKVStore<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>>;
-    fn prefix_store<I: IntoIterator<Item = u8>>(&self, prefix: I) -> ImmutablePrefixStore<'_, DB>;
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB>;
     fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB>;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
 }
 
-pub trait TransactionalKVStore<DB>: QueryableKVStore<DB> {
-    fn prefix_store_mut(
-        &mut self,
-        prefix: impl IntoIterator<Item = u8>,
-    ) -> MutablePrefixStore<'_, DB>;
+pub trait TransactionalKVStore<'a, DB>: QueryableKVStore<'a, DB> {
+    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> MutablePrefixStore<'a, DB>;
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, key: KI, value: VI);
-    fn commit(&mut self) -> [u8; 32];
 }
 
-pub trait ReadMultiKVStore<DB, SK> {
-    type KvStore: QueryableKVStore<DB>;
-
-    fn kv_store(&self, store_key: &SK) -> &Self::KvStore;
+pub trait QueryableMultiKVStore<DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, DB>;
     fn head_version(&self) -> u32;
     fn head_commit_hash(&self) -> [u8; 32];
 }
 
-pub trait WriteMultiKVStore<DB, SK> {
-    type KvStoreMut: TransactionalKVStore<DB>;
-
-    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KvStoreMut;
-    fn commit(&mut self) -> [u8; 32];
+pub trait TransactionalMultiKVStore<DB, SK> {
+    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
     /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
-    fn tx_caches_write_then_clear(&mut self);
+    fn tx_cache_to_block(&mut self);
     /// Clears the tx caches
     fn tx_caches_clear(&mut self);
 }

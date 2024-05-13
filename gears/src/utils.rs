@@ -4,7 +4,7 @@ use crate::{
     baseapp::genesis::Genesis,
     commands::node::{
         genesis::{genesis_account_add, GenesisCommand},
-        init::{init, InitCommand, InitCommandBuilder},
+        init::{init, InitCommand},
     },
     types::{
         base::{coin::Coin, send::SendCoins},
@@ -35,6 +35,7 @@ impl TmpChild {
         tmp_dir: TempDir,
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
         genesis: &G,
+        address: AccAddress,
     ) -> anyhow::Result<Self> {
         dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
             .overwrite(true)
@@ -51,18 +52,17 @@ impl TmpChild {
             env_vars: None,
         };
 
-        let opt: InitCommand = InitCommandBuilder::default()
+        let opt: InitCommand = InitCommand::former()
             .home(tmp_dir.to_path_buf())
             .chain_id(ChainId::from_str("test-chain")?)
             .moniker("test".to_owned())
-            .build()?;
+            .form();
 
         init::<_, AC>(opt, genesis)?;
 
         let genesis_account_cmd = GenesisCommand {
             home: tmp_dir.to_path_buf(),
-            address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
-                .expect("Default account should be valid"),
+            address,
             coins: SendCoins::new(vec![Coin {
                 denom: Denom::from_str("uatom").expect("default denom should be valid"),
                 amount: 34_u32.into(),
@@ -88,49 +88,6 @@ impl TmpChild {
         );
 
         let child = run_script::spawn(&script, &vec![], &options)?;
-
-        Ok(Self(child, tmp_dir))
-    }
-
-    pub fn start_tendermint(
-        path_to_tendermint: &(impl AsRef<Path> + ?Sized),
-    ) -> anyhow::Result<Self> {
-        let tmp_dir = TempDir::new()?;
-
-        dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
-            .overwrite(true)
-            .run()?;
-
-        let options = ScriptOptions {
-            runner: None,
-            runner_args: None,
-            working_directory: Some(tmp_dir.to_path_buf()),
-            input_redirection: IoOptions::Inherit,
-            output_redirection: IoOptions::Pipe,
-            exit_on_error: false,
-            print_commands: false,
-            env_vars: None,
-        };
-
-        let (_code, _output, _error) = run_script::run(
-            r#"
-            tar -xf tendermint.tar.gz
-            "#,
-            &vec![],
-            &options,
-        )?; // TODO: make it work for windows too?
-
-        let child = run_script::spawn(
-            "./tendermint start",
-            &vec![
-                "--home".to_owned(),
-                tmp_dir
-                    .to_str()
-                    .ok_or(anyhow!("failed to get path to tmp folder"))?
-                    .to_owned(),
-            ],
-            &options,
-        )?;
 
         Ok(Self(child, tmp_dir))
     }

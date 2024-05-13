@@ -6,7 +6,7 @@ use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::QueryableKVStore;
 use gears::store::StoreKey;
-use gears::types::context::tx_context::TxContext;
+use gears::types::context::tx::TxContext;
 use ibc::clients::tendermint::client_state::ClientState as TmClientState;
 use ibc::clients::tendermint::consensus_state::ConsensusState as TmConsensusState;
 use ibc::clients::tendermint::types::{
@@ -308,7 +308,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExecutionContex
 
         let sequence = self.client_counter()? + 1;
 
-        let ibc_store = self.gears_ctx.kv_store_mut(&self.store_key);
+        let mut ibc_store = self.gears_ctx.kv_store_mut(&self.store_key);
         ibc_store.set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes());
 
         Ok(())
@@ -527,6 +527,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         store.prefix_store_mut(prefix).set(key, value);
 
         // set processed height
+        let store = self.gears_ctx.kv_store_mut(&self.store_key);
         let key = format!(
             "{KEY_CONSENSUS_STATE_PREFIX}/{}-{}{KEY_PROCESSED_HEIGHT}",
             height.revision_number(),
@@ -543,6 +544,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         store.prefix_store_mut(prefix).set(key, value);
 
         // set iteration key
+        let store = self.gears_ctx.kv_store_mut(&self.store_key);
         let key = Self::iteration_key(height);
         let value = format!(
             "{KEY_CONSENSUS_STATE_PREFIX}/{}-{}",

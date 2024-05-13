@@ -1,6 +1,8 @@
 use gears::core::serializers::serialize_number_to_string;
 use gears::store::types::prefix::immutable::ImmutablePrefixStore;
+use gears::store::QueryableMultiKVStore;
 use gears::store::ReadPrefixStore;
+use gears::store::TransactionalMultiKVStore;
 use gears::store::WritePrefixStore;
 use gears::{
     params::ParamsSubspaceKey,
@@ -53,12 +55,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ConnectionParamsKeeper<SK, PSK> {
             .expect("should be valid u64")
     }
 
-    pub fn _get<DB: Database, CTX: QueryableContext<PrefixDB<DB>, SK>>(&self, ctx: &CTX) -> Params {
+    pub fn _get<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(&self, ctx: &KV) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
 
-        let raw = Self::_get_raw_param::<PrefixDB<DB>>(KEY_MAX_EXPECTED_TIME_PER_BLOCK, &store);
+        let raw = Self::_get_raw_param::<DB>(KEY_MAX_EXPECTED_TIME_PER_BLOCK, &store);
         let max_expected_time_per_block = Self::_parse_param(raw);
 
         Params {
@@ -66,9 +68,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ConnectionParamsKeeper<SK, PSK> {
         }
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut KV,
         params: Params,
     ) {
         let mut store = self

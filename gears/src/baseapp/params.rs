@@ -1,10 +1,12 @@
+use database::Database;
 use serde::{Deserialize, Serialize};
-use store_crate::database::{Database, PrefixDB};
-use store_crate::{StoreKey, WritePrefixStore};
+use serde_with::serde_as;
+use store_crate::{
+    QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore, WritePrefixStore,
+};
 use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::params::{Keeper, ParamsSubspaceKey};
-use crate::types::context::TransactionalContext;
 
 mod inner {
     pub use tendermint::types::proto::params::BlockParams;
@@ -33,17 +35,19 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 //##################################################################################
 //##################################################################################
 
+#[serde_as]
 #[derive(Serialize, Deserialize)]
 pub struct BlockParams {
     pub max_bytes: String,
-    pub max_gas: String,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    pub max_gas: i64,
 }
 
 impl From<inner::BlockParams> for BlockParams {
     fn from(params: inner::BlockParams) -> BlockParams {
         BlockParams {
             max_bytes: params.max_bytes.to_string(),
-            max_gas: params.max_gas.to_string(),
+            max_gas: params.max_gas,
         }
     }
 }
@@ -90,9 +94,9 @@ pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database, CTX: TransactionalContext<PrefixDB<DB>, SK>>(
+    pub fn set_consensus_params<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        kv_store: &mut KV,
         params: ConsensusParams,
     ) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
@@ -100,7 +104,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
 
         let mut store = self
             .params_keeper
-            .raw_subspace_mut(ctx, &self.params_subspace_key);
+            .raw_subspace_mut(kv_store, &self.params_subspace_key);
 
         if let Some(params) = params.block {
             let block_params = serde_json::to_string(&BlockParams::from(params))
@@ -118,6 +122,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
             store.set(KEY_VALIDATOR_PARAMS, params.into_bytes());
+        }
+    }
+
+    pub fn block_params<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(
+        &self,
+        store: &KV,
+    ) -> Option<BlockParams> {
+        let sub_store = self
+            .params_keeper
+            .raw_subspace(store, &self.params_subspace_key);
+
+        let params = sub_store.get(&KEY_BLOCK_PARAMS);
+
+        if let Some(params) = params {
+            let block_params: BlockParams =
+                serde_json::from_slice(&params).expect("conversion from json won't fail");
+
+            Some(block_params)
+        } else {
+            None
         }
     }
 }

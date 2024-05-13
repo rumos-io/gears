@@ -1,7 +1,5 @@
-use gears::{
-    store::{database::Database, StoreKey},
-    types::context::init_context::InitContext,
-};
+use gears::store::{database::Database, StoreKey};
+use gears::types::context::init::InitContext;
 
 use super::GenesisState;
 use gears::store::TransactionalKVStore;
@@ -56,7 +54,7 @@ impl<SK: StoreKey> Keeper<SK> {
         ctx: &mut InitContext<'_, DB, SK>,
         sequence: u64,
     ) {
-        let ibc_store = ctx.kv_store_mut(&self.store_key);
+        let mut ibc_store = ctx.kv_store_mut(&self.store_key);
         ibc_store.set(KEY_NEXT_CHANNEL_SEQUENCE.to_owned(), sequence.to_be_bytes());
     }
 }

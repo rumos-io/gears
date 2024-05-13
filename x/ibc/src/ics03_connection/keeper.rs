@@ -1,7 +1,7 @@
 use gears::{
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::init_context::InitContext,
+    types::context::init::InitContext,
 };
 
 use super::{params::ConnectionParamsKeeper, GenesisState};
@@ -48,7 +48,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         self.set_next_connection_sequence(ctx, genesis.next_connection_sequence);
         self.connection_params_keeper
-            .set(ctx, genesis.params.clone());
+            .set(&mut ctx.multi_store_mut(), genesis.params.clone());
     }
 
     pub fn set_next_connection_sequence<DB: Database>(
@@ -56,7 +56,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &mut InitContext<'_, DB, SK>,
         sequence: u64,
     ) {
-        let ibc_store = ctx.kv_store_mut(&self.store_key);
+        let mut ibc_store = ctx.kv_store_mut(&self.store_key);
         ibc_store.set(
             KEY_NEXT_CONNECTION_SEQUENCE.to_owned(),
             sequence.to_be_bytes(),

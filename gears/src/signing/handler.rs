@@ -96,7 +96,7 @@ mod tests {
                     }])
                     .unwrap(),
                 ),
-                gas_limit: 100000,
+                gas_limit: 100000_u64.try_into().expect("this is a valid gas limit"),
                 payer: None,
                 granter: String::new(),
             },
@@ -289,7 +289,7 @@ mod tests {
             signer_infos: vec![signer_info],
             fee: Fee {
                 amount: None,
-                gas_limit: 200000,
+                gas_limit: 200000_u64.try_into().expect("this is a valid gas limit"),
                 payer: None,
                 granter: String::new(),
             },
@@ -395,7 +395,7 @@ mod tests {
             signer_infos: vec![signer_info],
             fee: Fee {
                 amount: None,
-                gas_limit: 200_000,
+                gas_limit: 200_000_u64.try_into().expect("this is a valid gas limit"),
                 payer: None,
                 granter: String::new(),
             },

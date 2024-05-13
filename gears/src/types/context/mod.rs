@@ -1,48 +1,30 @@
-use store_crate::database::Database;
-use store_crate::{QueryableKVStore, TransactionalKVStore};
+use database::{Database, PrefixDB};
+use store_crate::types::kv::mutable::KVStoreMut;
+use store_crate::types::kv::KVStore;
+use store_crate::types::multi::mutable::MultiStoreMut;
+use store_crate::types::multi::MultiStore;
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-pub mod init_context;
-pub mod query_context;
-pub mod tx_context;
+pub mod init;
+pub mod query;
+pub mod tx;
 
-pub trait QueryableContext<DB: Database, SK> {
-    type KVStore: QueryableKVStore<DB>;
-
+pub trait QueryableContext<DB, SK> {
+    fn multi_store(&self) -> MultiStore<'_, DB, SK>;
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
-    fn kv_store(&self, store_key: &SK) -> &Self::KVStore; //AnyKVStore<'_, PrefixDB<DB>>;
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>>;
 
     fn height(&self) -> u64;
     fn chain_id(&self) -> &ChainId;
 }
 
 pub trait TransactionalContext<DB: Database, SK>: QueryableContext<DB, SK> {
-    type KVStoreMut: TransactionalKVStore<DB>;
+    fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK>;
 
     ///  Fetches an mutable ref to a KVStore from the MultiStore.
-    fn kv_store_mut(&mut self, store_key: &SK) -> &mut Self::KVStoreMut; //AnyKVStore<'_, PrefixDB<DB>>;
+    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
 
     fn push_event(&mut self, event: Event);
     fn append_events(&mut self, events: Vec<Event>);
-}
-
-/// Execution mode of transaction
-#[derive(Debug, PartialEq, Clone)]
-pub enum ExecMode {
-    /// Check a transaction
-    Check,
-    /// Recheck a (pending) transaction after a commit
-    ReCheck,
-    /// Simulate a transaction
-    Simulate,
-    /// Prepare a block proposal
-    PrepareProposal,
-    /// Process a block proposal
-    ProcessProposal,
-    /// Extend or verify a pre-commit vote
-    VoteExtension,
-    /// Finalize a block proposal
-    Finalize,
-    /// Deliver a transaction
-    Deliver,
+    fn events_drain(&mut self) -> Vec<Event>;
 }

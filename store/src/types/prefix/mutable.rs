@@ -1,12 +1,13 @@
 use database::Database;
 
 use crate::{
-    types::kv::KVStore, QueryableKVStore, ReadPrefixStore, TransactionalKVStore, WritePrefixStore,
+    types::kv::mutable::KVStoreMut, QueryableKVStore, ReadPrefixStore, TransactionalKVStore,
+    WritePrefixStore,
 };
 
-/// Wraps an mutable reference to a KVStore with a prefix
+/// Wraps an mutable KVStore with a prefix
 pub struct MutablePrefixStore<'a, DB> {
-    pub(crate) store: &'a mut KVStore<DB>,
+    pub(crate) store: KVStoreMut<'a, DB>, //TODO: does this need to own the store?
     pub(crate) prefix: Vec<u8>,
 }
 

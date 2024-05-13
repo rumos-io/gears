@@ -7,9 +7,9 @@ use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::rest::{run_rest_server, RestState};
 use crate::types::tx::TxMessage;
 use axum::Router;
+use database::RocksDB;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use store_crate::database::RocksDB;
 use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
 use tendermint::application::ABCI;
@@ -30,7 +30,7 @@ pub enum RunError {
     #[error("{0}")]
     HomeDirectory(String),
     #[error("{0}")]
-    Database(#[from] store_crate::database::error::Error),
+    Database(#[from] database::error::Error),
     #[error("{0}")]
     TendermintServer(#[from] tendermint::abci::errors::Error),
     #[error("{0}")]
@@ -95,10 +95,8 @@ pub fn run<
 
     info!("Using directory {} for config and data", home.display());
 
-    let mut db_dir = home.clone();
-    db_dir.push("data");
-    db_dir.push("application.db");
-    let db = RocksDB::new(db_dir)?;
+    let db_dir = home.join("data");
+    let db = RocksDB::new(db_dir.join("application.db"))?;
 
     let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
 

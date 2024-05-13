@@ -5,7 +5,7 @@ use rocksdb::{DBWithThreadMode, SingleThreaded};
 
 #[derive(Debug)]
 pub struct RocksDB {
-    db: DBWithThreadMode<SingleThreaded>,
+    db: DBWithThreadMode<SingleThreaded>, // QA: Are we sure? Probably
 }
 
 // TODO: remove panics

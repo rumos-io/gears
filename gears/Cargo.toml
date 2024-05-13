@@ -7,16 +7,15 @@ version = "0.1.0"
 workspace = true
 
 [dependencies]
-
+#local
+tendermint = { path = "../tendermint" }
+core-types = { path = "../core-types" }
+keyring = { path = "../keyring" }
+store_crate = { path = "../store", package = "store" }
+database = { path = "../database", features = [ "rocksdb" ]}
 
 #newtypes
 # vec1 = "1.12.0"
-keyring = { path = "../keyring" }
-database = { path = "../database" }
-store_crate = { path = "../store", package = "store" }
-trees = { path = "../trees" }
-tendermint = { path = "../tendermint" }
-core-types = { path = "../core-types" }
 secp256k1 = { workspace = true, features = ["hashes"] }
 bytes = { workspace = true }
 url = { workspace = true }
@@ -24,6 +23,7 @@ nutype = { workspace = true, features = ["serde"] }
 num-format = { workspace = true, features = ["with-num-bigint"] }
 num-bigint = { workspace = true }
 cosmwasm-std = "2.0.0"
+ux = { workspace = true }
 
 #utils
 anyhow = { workspace = true }
@@ -33,6 +33,7 @@ tracing-subscriber = { workspace = true }
 integer-encoding = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
+derive_more = { workspace = true }
 
 #serialization
 prost = { workspace = true }
@@ -53,8 +54,8 @@ human-panic = "1.1.4"
 strum = { workspace = true }
 text_io = "0.1.12"
 tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
-derive_builder = { workspace = true }
 ledger-cosmos = { git = "https://github.com/rumos-io/ledger-cosmos-rs" }
+former = { workspace = true }
 
 # networking
 axum = { workspace = true }

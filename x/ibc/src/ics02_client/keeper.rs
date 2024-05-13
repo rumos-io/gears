@@ -1,10 +1,14 @@
+use gears::store::database::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::WritePrefixStore;
+use gears::types::context::init::InitContext;
+use gears::types::context::query::QueryContext;
 use gears::{
     params::ParamsSubspaceKey,
     store::{database::Database, QueryableKVStore, StoreKey},
-    types::context::{init_context::InitContext, query_context::QueryContext, QueryableContext},
+    types::context::QueryableContext,
 };
+use ibc::primitives::ToVec;
 use ibc::{core::host::types::path::ClientStatePath, primitives::proto::Protobuf};
 
 use crate::{
@@ -49,7 +53,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState,
     ) {
-        self.client_params_keeper.set(ctx, genesis.params.clone());
+        self.client_params_keeper
+            .set(&mut ctx.multi_store_mut(), genesis.params.clone());
 
         // TODO: the following lines(from ibc-go) have not been implemented yet:
 
@@ -91,7 +96,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &mut InitContext<'_, DB, SK>,
         sequence: u64,
     ) {
-        let ibc_store = ctx.kv_store_mut(&self.store_key);
+        let mut ibc_store = ctx.kv_store_mut(&self.store_key);
         ibc_store.set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes());
     }
 
@@ -108,7 +113,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         let mut client_states = vec![];
 
         for (key, raw_state) in store.range(..) {
-            let Ok(key) = String::from_utf8(key) else {
+            let Ok(key) = String::from_utf8(key.to_vec()) else {
                 continue;
             };
 
@@ -163,7 +168,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &'a mut CTX,
         client_id: &ClientId,
-    ) -> MutablePrefixStore<'a, DB> {
+    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
         let prefix = format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_id).into_bytes();
         ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix)
     }

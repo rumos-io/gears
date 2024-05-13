@@ -913,6 +913,7 @@ where
     }
 }
 
+#[derive(Debug)]
 pub struct Range<'a, R: RangeBounds<Vec<u8>>, DB> {
     pub(crate) range: R,
     pub(crate) delayed_nodes: Vec<Box<Node>>,
@@ -972,7 +973,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
             Node::Leaf(leaf) => {
                 if self.range.contains(&leaf.key) {
                     // we have a leaf node within the range
-                    return Some((leaf.key.clone(), leaf.value.clone()));
+                    return Some((leaf.key, leaf.value));
                 }
             }
         }

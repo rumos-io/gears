@@ -7,9 +7,7 @@ use gears::{
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::{
-        init_context::InitContext, query_context::QueryContext, tx_context::TxContext,
-    },
+    types::context::{init::InitContext, query::QueryContext, tx::TxContext},
 };
 use ibc::primitives::proto::Protobuf;
 //use ibc::core::client::types::{
