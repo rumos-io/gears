@@ -1,8 +1,6 @@
 use crate::{
-    errors,
-    keeper::Keeper,
-    message::Message, //, MsgCreateClient},
-    types::genesis::GenesisState,
+    errors, ics02_client::client::cli::query::client_states::STATES_URL, keeper::Keeper,
+    message::Message, types::genesis::GenesisState,
 };
 use gears::{
     core::errors::Error,
@@ -122,7 +120,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
             //     .client_state(ctx, ProstMessage::decode(query.data)?)?
             //     .encode_vec()
             //     .into()),
-            "/ibc.core.client.v1.Query/ClientStates" => Ok(self
+            STATES_URL => Ok(self
                 .keeper
                 .client_states(
                     ctx,

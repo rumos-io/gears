@@ -62,10 +62,22 @@ hermes query packet unreceived-packets test-chain transfer channel-7
 hermes query packet acks test-chain transfer channel-7
 ```
 
-response:
+response (failed):
 
 ```txt
 Got query request to: store/ibc/key
+```
+
+### Opening a connection
+
+This requires keys:
+
+```shell
+hermes keys restore test-chain --mnemonic "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow"
+```
+
+```shell
+hermes create connection test-chain test-chain-1
 ```
 
 ## Getting client state and consensus state
