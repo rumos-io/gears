@@ -1,3 +1,7 @@
+#![allow(dead_code)] //TODO: remove this when ready
+#![allow(unused_variables)] // TODO: remove
+#![allow(unused_imports)] //TODO: remove
+
 mod abci_handler;
 pub mod client;
 pub mod errors;
