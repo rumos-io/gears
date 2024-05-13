@@ -7,3 +7,4 @@ pub enum StoreError {
 }
 
 pub const KEY_EXISTS_MSG: &str = "a store for every key is guaranteed to exist";
+pub const POISONED_LOCK: &str = "poisoned lock";
