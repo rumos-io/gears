@@ -1,6 +1,6 @@
+use database::Database;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use store_crate::database::Database;
 use store_crate::{
     QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore, WritePrefixStore,
 };

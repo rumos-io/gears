@@ -1,5 +1,6 @@
+use database::Database;
+use store_crate::StoreKey;
 use store_crate::TransactionalMultiKVStore;
-use store_crate::{database::Database, StoreKey};
 use tendermint::types::proto::event::Event;
 
 use crate::types::context::tx::TxContext;

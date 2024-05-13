@@ -1,5 +1,6 @@
 use core_types::address::AccAddress;
-use store_crate::{database::Database, StoreKey};
+use database::Database;
+use store_crate::StoreKey;
 
 use crate::{
     types::{
