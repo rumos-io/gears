@@ -1,9 +1,9 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData};
 
 use database::{Database, PrefixDB};
-use trees::iavl::{CacheSize, QueryTree, Tree};
+use trees::iavl::{QueryTree, Tree};
 
-use crate::{error::StoreError, StoreKey, TREE_CACHE_SIZE};
+use crate::{error::StoreError, StoreKey};
 
 use self::{kv::QueryKVStore, versioned::VersionedQueryMultiStore};
 
@@ -11,36 +11,28 @@ pub mod kv;
 pub mod versioned;
 
 #[derive(Debug)]
-pub struct QueryMultiBank<DB, SK>(HashMap<SK, Tree<PrefixDB<DB>>>);
+pub struct QueryMultiBank<'a, DB, SK> {
+    tree: &'a Tree<PrefixDB<DB>>,
+    _marker: PhantomData<SK>,
+}
 
-impl<DB: Database, SK: StoreKey> QueryMultiBank<DB, SK> {
-    pub fn new(db: Arc<DB>) -> Result<Self, StoreError> {
-        let mut stores = HashMap::new();
-
-        for key in SK::iter() {
-            let prefix = key.name().as_bytes().to_vec();
-
-            let tree = Tree::new(
-                PrefixDB::new(Arc::clone(&db), prefix),
-                None,
-                CacheSize::try_from(TREE_CACHE_SIZE).expect("Unreachable. Tree cache size is > 0"),
-            )?;
-
-            stores.insert(key, tree);
+impl<'a, DB: Database, SK: StoreKey> QueryMultiBank<'a, DB, SK> {
+    pub fn new(tree: &'a Tree<PrefixDB<DB>>) -> Self {
+        Self {
+            tree,
+            _marker: PhantomData,
         }
-
-        Ok(Self(stores))
     }
 
     pub fn to_versioned(
         &self,
         version: u32,
     ) -> Result<VersionedQueryMultiStore<'_, DB, SK>, StoreError> {
-        let mut stores = HashMap::with_capacity(self.0.len());
+        let mut stores = HashMap::new();
 
-        for (sk, tree) in &self.0 {
-            let query_store = QueryKVStore::new(QueryTree::new(tree, version)?);
-            stores.insert(sk, query_store);
+        for key in SK::iter() {
+            let query_store = QueryKVStore::new(QueryTree::new(self.tree, version)?);
+            stores.insert(key, query_store);
         }
 
         Ok(VersionedQueryMultiStore(stores))

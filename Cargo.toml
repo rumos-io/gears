@@ -9,16 +9,16 @@ members = [
   "trees",
   "store",
   "keyring",
-  "gears",
-  "gears-derive",
+  # "gears",
+  # "gears-derive",
 
   # GAIA
-  "gaia-rs",
+  # "gaia-rs",
 
   # xmodules
   # "x/ibc",
-  "x/bank",
-  "x/auth",
+  # "x/bank",
+  # "x/auth",
 #  "x/staking",
 
   # new unsorted

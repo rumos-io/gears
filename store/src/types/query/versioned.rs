@@ -12,7 +12,7 @@ use super::kv::QueryKVStore;
 
 #[derive(Debug)]
 pub struct VersionedQueryMultiStore<'a, DB, SK>(
-    pub(super) HashMap<&'a SK, QueryKVStore<'a, PrefixDB<DB>>>,
+    pub(super) HashMap<SK, QueryKVStore<'a, PrefixDB<DB>>>,
 );
 
 impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
