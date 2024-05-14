@@ -4,7 +4,6 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
-    core::address::{AccAddress, ValAddress},
     crypto::keys::ReadAccAddress,
     error::AppError,
     params::ParamsSubspaceKey,
@@ -12,6 +11,7 @@ use gears::{
         database::{Database, PrefixDB},
         QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
     },
+    types::address::{AccAddress, ValAddress},
     types::{
         base::send::SendCoins,
         context::{init::InitContext, QueryableContext, TransactionalContext},

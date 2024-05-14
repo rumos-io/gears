@@ -62,10 +62,10 @@ impl<
             .write()
             .expect("RwLock will not be poisoned");
 
-        if let Some(params) = request.consensus_params.clone() {
-            self.baseapp_params_keeper
-                .set_consensus_params(&mut multi_store.as_mutable(), params);
-        }
+        self.baseapp_params_keeper.set_consensus_params(
+            &mut multi_store.as_mutable(),
+            request.consensus_params.clone(),
+        );
 
         //TODO: handle request height > 1 as is done in SDK
 
@@ -92,7 +92,7 @@ impl<
         multi_store.tx_cache_to_block();
 
         ResponseInitChain {
-            consensus_params: request.consensus_params,
+            consensus_params: Some(request.consensus_params),
             validators: request.validators,
             app_hash: "hash_goes_here".into(), //TODO: set app hash
         }

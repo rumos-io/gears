@@ -1,10 +1,10 @@
-use core_types::address::AccAddress;
 use database::Database;
 use store_crate::StoreKey;
 
 use crate::{
     error::AppError,
     types::{
+        address::AccAddress,
         base::send::SendCoins,
         context::{QueryableContext, TransactionalContext},
         denom::Denom,

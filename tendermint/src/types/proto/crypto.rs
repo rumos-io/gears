@@ -1,21 +1,50 @@
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
-pub struct PublicKey {
-    #[prost(oneof = "public_key::Sum", tags = "1, 2")]
-    pub sum: Option<public_key::Sum>,
+use crate::error::Error;
+
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", content = "value")]
+pub enum PublicKey {
+    #[serde(
+        rename = "tendermint/PubKeyEd25519",
+        with = "crate::types::serializers::bytes::base64string"
+    )]
+    Ed25519(Vec<u8>), //TODO: should we check that bytes contain a valid public key?
+    #[serde(
+        rename = "tendermint/PubKeySecp256k1",
+        with = "crate::types::serializers::bytes::base64string"
+    )]
+    Secp256k1(Vec<u8>), //TODO: should we check that bytes contain a valid public key?
 }
 
-impl From<PublicKey> for inner::PublicKey {
-    fn from(PublicKey { sum }: PublicKey) -> Self {
-        Self {
-            sum: sum.map(Into::into),
+impl PublicKey {
+    pub fn raw(&self) -> &Vec<u8> {
+        match self {
+            PublicKey::Ed25519(value) => value,
+            PublicKey::Secp256k1(value) => value,
         }
     }
 }
 
-impl From<inner::PublicKey> for PublicKey {
-    fn from(inner::PublicKey { sum }: inner::PublicKey) -> Self {
-        Self {
-            sum: sum.map(Into::into),
+impl From<PublicKey> for inner::PublicKey {
+    fn from(key: PublicKey) -> Self {
+        match key {
+            PublicKey::Ed25519(value) => inner::PublicKey {
+                sum: Some(inner::Sum::Ed25519(value)),
+            },
+            PublicKey::Secp256k1(value) => inner::PublicKey {
+                sum: Some(inner::Sum::Secp256k1(value)),
+            },
+        }
+    }
+}
+
+impl TryFrom<inner::PublicKey> for PublicKey {
+    type Error = Error;
+
+    fn try_from(inner::PublicKey { sum }: inner::PublicKey) -> Result<Self, Self::Error> {
+        let sum = sum.ok_or(Error::InvalidData("public key is empty".to_string()))?;
+        match sum {
+            inner::Sum::Ed25519(value) => Ok(PublicKey::Ed25519(value)),
+            inner::Sum::Secp256k1(value) => Ok(PublicKey::Secp256k1(value)),
         }
     }
 }
@@ -65,48 +94,8 @@ impl From<inner::ProofOps> for ProofOps {
 }
 
 pub(crate) mod inner {
+    pub use tendermint_proto::crypto::public_key::Sum;
     pub use tendermint_proto::crypto::ProofOp;
     pub use tendermint_proto::crypto::ProofOps;
     pub use tendermint_proto::crypto::PublicKey;
-}
-
-pub mod public_key {
-    #[derive(Clone, PartialEq, Eq, ::prost::Oneof, serde::Serialize, serde::Deserialize)]
-    #[serde(tag = "type", content = "value")]
-    pub enum Sum {
-        #[prost(bytes, tag = "1")]
-        #[serde(
-            rename = "tendermint/PubKeyEd25519",
-            with = "crate::types::serializers::bytes::base64string"
-        )]
-        Ed25519(Vec<u8>),
-        #[prost(bytes, tag = "2")]
-        #[serde(
-            rename = "tendermint/PubKeySecp256k1",
-            with = "crate::types::serializers::bytes::base64string"
-        )]
-        Secp256k1(Vec<u8>),
-    }
-
-    impl From<Sum> for inner::Sum {
-        fn from(value: Sum) -> Self {
-            match value {
-                Sum::Ed25519(sum) => Self::Ed25519(sum),
-                Sum::Secp256k1(sum) => Self::Secp256k1(sum),
-            }
-        }
-    }
-
-    impl From<inner::Sum> for Sum {
-        fn from(value: inner::Sum) -> Self {
-            match value {
-                inner::Sum::Ed25519(sum) => Self::Ed25519(sum),
-                inner::Sum::Secp256k1(sum) => Self::Secp256k1(sum),
-            }
-        }
-    }
-
-    pub(crate) mod inner {
-        pub use tendermint_proto::crypto::public_key::Sum;
-    }
 }

@@ -1,9 +1,10 @@
 use bytes::Bytes;
-use core_types::{address::AccAddress, any::google::Any};
+use core_types::any::google::Any;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
 use crate::types::{
+    address::AccAddress,
     base::{coin::Coin, errors::CoinsError, send::SendCoins},
     tx::TxMessage,
 };

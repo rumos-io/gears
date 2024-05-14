@@ -1,11 +1,9 @@
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
-use gears::{
-    core::address::AccAddress,
-    types::{
-        base::{coin::Coin, send::SendCoins},
-        msg::send::MsgSend,
-    },
+use gears::types::{
+    address::AccAddress,
+    base::{coin::Coin, send::SendCoins},
+    msg::send::MsgSend,
 };
 
 use crate::Message as BankMessage;

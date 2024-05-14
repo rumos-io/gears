@@ -2,11 +2,10 @@ use std::borrow::Cow;
 
 use bytes::Bytes;
 use clap::{Args, Subcommand};
-
-use gears::core::Protobuf;
-use gears::core::{address::AccAddress, query::request::account::QueryAccountRequest};
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::tendermint::types::proto::Protobuf as _;
+use gears::types::address::AccAddress;
+use gears::types::query::account::QueryAccountRequest;
 use gears::{
     application::handlers::client::QueryHandler,
     types::query::{account::QueryAccountResponse, Query},

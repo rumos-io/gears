@@ -52,6 +52,7 @@ impl SignModeHandler {
 mod tests {
     use crate::signing::handler::SignModeHandler;
     use crate::signing::renderer::test_functions::{TestMetadataGetter, TestNoneMetadataGetter};
+    use crate::types::address::AccAddress;
     use crate::types::denom::Denom;
     use crate::types::{
         auth::{fee::Fee, info::AuthInfo},
@@ -65,10 +66,7 @@ mod tests {
         tx::{body::TxBody, data::TxData, signer::SignerData},
     };
     use ciborium::Value;
-    use core_types::{
-        address::AccAddress,
-        tx::mode_info::{ModeInfo, SignMode},
-    };
+    use core_types::tx::mode_info::{ModeInfo, SignMode};
     use cosmwasm_std::Uint256;
     use std::{collections::BTreeMap, str::FromStr};
     use tendermint::types::chain_id::ChainId;

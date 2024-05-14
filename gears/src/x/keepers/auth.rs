@@ -1,10 +1,10 @@
-use core_types::address::AccAddress;
 use database::Database;
 use store_crate::StoreKey;
 
 use crate::{
     types::{
         account::Account,
+        address::AccAddress,
         context::{QueryableContext, TransactionalContext},
     },
     x::module::Module,
