@@ -13,11 +13,13 @@ use super::{
     MultiBank,
 };
 
+#[derive(Debug)]
 pub(crate) enum MultiStoreBackendMut<'a, DB, SK> {
     Commit(&'a mut MultiBank<DB, SK, CommitKind>),
     Cache(&'a mut MultiBank<DB, SK, CacheKind>),
 }
 
+#[derive(Debug)]
 pub struct MultiStoreMut<'a, DB, SK>(pub(crate) MultiStoreBackendMut<'a, DB, SK>);
 
 impl<DB, SK> MultiStoreMut<'_, DB, SK> {

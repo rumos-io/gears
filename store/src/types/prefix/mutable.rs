@@ -5,6 +5,7 @@ use crate::{
     WritePrefixStore,
 };
 
+#[derive(Debug)]
 pub struct MutablePrefixStore<'a, DB> {
     pub(crate) store: KVStoreMut<'a, DB>,
     pub(crate) prefix: Vec<u8>,

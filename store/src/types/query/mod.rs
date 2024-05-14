@@ -10,6 +10,7 @@ use self::{kv::QueryKVStore, versioned::VersionedQueryMultiStore};
 pub mod kv;
 pub mod versioned;
 
+#[derive(Debug)]
 pub struct QueryMultiBank<DB, SK>(HashMap<SK, Tree<PrefixDB<DB>>>);
 
 impl<DB: Database, SK: StoreKey> QueryMultiBank<DB, SK> {

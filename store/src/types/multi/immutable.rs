@@ -10,12 +10,14 @@ use crate::{
 
 use super::MultiBank;
 
+#[derive(Debug)]
 pub(crate) enum MultiStoreBackend<'a, DB, SK> {
     Commit(&'a MultiBank<DB, SK, CommitKind>),
     Cache(&'a MultiBank<DB, SK, CacheKind>),
     Query(VersionedQueryMultiStore<'a, DB, SK>),
 }
 
+#[derive(Debug)]
 pub struct MultiStore<'a, DB, SK>(pub(crate) MultiStoreBackend<'a, DB, SK>);
 
 impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>

@@ -10,6 +10,8 @@ pub mod commit;
 pub mod immutable;
 pub mod mutable;
 
+/// Bank which stores all KVBanks
+#[derive(Debug)]
 pub struct MultiBank<DB, SK, ST> {
     pub(crate) head_version: u32,
     pub(crate) head_commit_hash: [u8; 32],

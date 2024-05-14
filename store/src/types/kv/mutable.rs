@@ -14,12 +14,14 @@ use super::{
 };
 
 /// Internal structure which holds different stores
+#[derive(Debug)]
 pub(crate) enum KVStoreBackendMut<'a, DB> {
     Commit(&'a mut KVBank<DB, CommitKind>),
     Cache(&'a mut KVBank<DB, CacheKind>),
 }
 
 /// Mutable variant of `KVStore`
+#[derive(Debug)]
 pub struct KVStoreMut<'a, DB>(pub(crate) KVStoreBackendMut<'a, DB>);
 
 impl<'a, DB: Database> KVStoreMut<'a, DB> {
