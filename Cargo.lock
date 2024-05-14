@@ -204,6 +204,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "auth"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "ciborium",
+ "clap",
+ "data-encoding",
+ "gears",
+ "hex 0.4.3",
+ "num-bigint",
+ "num-format",
+ "num-traits",
+ "prost",
+ "rand",
+ "regex",
+ "secp256k1",
+ "serde",
+ "serde-aux",
+ "serde_json",
+ "sha2 0.10.8",
+ "strum",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -322,6 +349,23 @@ dependencies = [
  "miniz_oxide",
  "object",
  "rustc-demangle",
+]
+
+[[package]]
+name = "bank"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum 0.7.5",
+ "bytes",
+ "clap",
+ "gears",
+ "hex 0.4.3",
+ "prost",
+ "serde",
+ "serde_json",
+ "strum",
+ "tokio",
 ]
 
 [[package]]
@@ -1573,6 +1617,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "gaia-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "auth",
+ "axum 0.7.5",
+ "bank",
+ "bytes",
+ "clap",
+ "data-encoding",
+ "gears",
+ "gears-derive",
+ "prost",
+ "serde",
+ "serde_json",
+ "strum",
+ "url",
+]
+
+[[package]]
 name = "gears"
 version = "0.1.0"
 dependencies = [
@@ -1626,6 +1690,15 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "ux",
+]
+
+[[package]]
+name = "gears-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+ "syner",
 ]
 
 [[package]]
@@ -3898,6 +3971,28 @@ name = "sync_wrapper"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7065abeca94b6a8a577f9bd45aa0867a2238b74e8eb67cf10d492bc39351394"
+
+[[package]]
+name = "syner"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c78fb1545c37943ac4266cb7be37079b45f518c7ea4dfb8286d7e053867a3a97"
+dependencies = [
+ "proc-macro2",
+ "syn 1.0.109",
+ "syner_derive",
+]
+
+[[package]]
+name = "syner_derive"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f68b18aaa926142df85fa458f5c165d1f1b0c5a0047ecda3957673cf549c6c3"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
 
 [[package]]
 name = "synstructure"

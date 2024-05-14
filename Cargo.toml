@@ -10,15 +10,15 @@ members = [
   "store",
   "keyring",
   "gears",
-  #"gears-derive",
+  "gears-derive",
 
   # GAIA
-  # "gaia-rs",
+  "gaia-rs",
 
   # xmodules
   # "x/ibc",
-  # "x/bank",
-  # "x/auth",
+  "x/bank",
+  "x/auth",
 #  "x/staking",
 
   # new unsorted

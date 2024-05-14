@@ -23,7 +23,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
     pub fn query<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {

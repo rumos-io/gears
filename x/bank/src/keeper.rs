@@ -8,7 +8,7 @@ use gears::core::address::AccAddress;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
-use gears::store::database::{Database, PrefixDB};
+use gears::store::database::Database;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::{
     QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, TransactionalMultiKVStore,
@@ -146,7 +146,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
     pub fn query_balance<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         req: QueryBalanceRequest,
     ) -> QueryBalanceResponse {
         let bank_store = ctx.kv_store(&self.store_key);
@@ -169,7 +169,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
     pub fn query_all_balances<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         req: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
         let bank_store = ctx.kv_store(&self.store_key);
@@ -197,7 +197,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     // TODO: does this method guarantee that coins are sorted?
     pub fn get_paginated_total_supply<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
     ) -> Vec<Coin> {
         let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
@@ -332,7 +332,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         &'a self,
         ms: &'a mut impl TransactionalMultiKVStore<DB, SK>,
         address: &AccAddress,
-    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
+    ) -> MutablePrefixStore<'a, DB> {
         let prefix = create_denom_balance_prefix(address.to_owned());
         let bank_store = ms.kv_store_mut(&self.store_key);
         bank_store.prefix_store_mut(prefix)
@@ -358,7 +358,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
     pub fn query_denoms_metadata<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
     ) -> QueryDenomsMetadataResponse {
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
