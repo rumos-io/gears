@@ -31,4 +31,4 @@ http = { workspace = true }
 axum = { workspace = true }
 
 #other
-ibc = { version = "=0.51.0", features = ["serde"] }
+ibc = { version = "=0.52.0", features = ["serde"] }
