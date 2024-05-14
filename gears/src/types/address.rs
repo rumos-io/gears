@@ -192,7 +192,7 @@ impl From<tendermint::types::proto::crypto::PublicKey> for ConsAddress {
 
         // sha256 hash
         let mut hasher = Sha256::new();
-        hasher.update(&pub_key);
+        hasher.update(pub_key);
         let hash = hasher.finalize();
 
         // ripemd160 hash
