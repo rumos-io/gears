@@ -31,4 +31,3 @@ impl From<Secp256k1PubKey> for PublicKey {
         Self::Secp256k1(value)
     }
 }
-
