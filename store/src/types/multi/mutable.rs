@@ -1,4 +1,4 @@
-use database::{Database, PrefixDB};
+use database::{prefix::PrefixDB, Database};
 
 use crate::{
     types::kv::{
@@ -60,7 +60,9 @@ impl<'a, DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<DB, SK> for MultiStoreMut<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
+    for MultiStoreMut<'_, DB, SK>
+{
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         match &mut self.0 {
             MultiStoreBackendMut::Commit(var) => {

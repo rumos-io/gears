@@ -1,20 +1,21 @@
 use std::{collections::HashMap, sync::Arc};
 
-use database::{Database, PrefixDB};
+use database::{prefix::PrefixDB, Database};
 
 use crate::{hash::StoreInfo, types::kv::KVBank, CacheKind, CommitKind, StoreKey};
 
 use super::{cache::CacheCommitData, MultiBank};
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
-    pub fn new(db: Arc<DB>) -> Self {
+    pub fn new(db: DB) -> Self {
+        let db = Arc::new(db);
+
         let mut store_infos = Vec::new();
         let mut stores = HashMap::new();
         let mut head_version = 0;
 
         for store in SK::iter() {
-            // TODO:NOW check that store names are not prefixes
-            let prefix = store.name().as_bytes().to_vec();
+            let prefix = store.name().as_bytes().to_vec(); // TODO:NOW check that store names are not prefixes
             let kv_store = KVBank::new(PrefixDB::new(Arc::clone(&db), prefix), None).unwrap();
 
             let store_info = StoreInfo {

@@ -1,4 +1,3 @@
-use ::database::PrefixDB;
 use range::Range;
 use strum::IntoEnumIterator;
 use types::{
@@ -52,7 +51,7 @@ pub trait QueryableMultiKVStore<DB, SK> {
 }
 
 pub trait TransactionalMultiKVStore<DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
+    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, DB>;
     /// Clears the tx caches
     fn caches_clear(&mut self);
 }

@@ -2,7 +2,7 @@ pub mod cache;
 use std::collections::HashMap;
 
 use crate::{error::KEY_EXISTS_MSG, StoreKey};
-use database::{Database, PrefixDB};
+use database::{prefix::PrefixDB, Database};
 
 use super::kv::KVBank;
 

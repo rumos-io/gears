@@ -1,4 +1,4 @@
-use database::{Database, PrefixDB};
+use database::{prefix::PrefixDB, Database};
 
 use crate::{
     types::{

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use database::{Database, PrefixDB};
+use database::{prefix::PrefixDB, Database};
 use trees::iavl::QueryTree;
 
 use crate::{
