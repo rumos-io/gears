@@ -3,7 +3,7 @@ use database::{Database, PrefixDB};
 use crate::{
     types::{
         kv::immutable::{KVStore, KVStoreBackend},
-        query::versioned::VersionedQueryMultiStore,
+        query::QueryMultiStore,
     },
     CacheKind, CommitKind, QueryableMultiKVStore, StoreKey,
 };
@@ -14,7 +14,7 @@ use super::MultiBank;
 pub(crate) enum MultiStoreBackend<'a, DB, SK> {
     Commit(&'a MultiBank<DB, SK, CommitKind>),
     Cache(&'a MultiBank<DB, SK, CacheKind>),
-    Query(&'a VersionedQueryMultiStore<'a, DB, SK>),
+    Query(&'a QueryMultiStore<DB, SK>),
 }
 
 #[derive(Debug)]
@@ -52,8 +52,8 @@ impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
     }
 }
 
-impl<'a, DB, SK> From<&'a VersionedQueryMultiStore<'a, DB, SK>> for MultiStore<'a, DB, SK> {
-    fn from(value: &'a VersionedQueryMultiStore<'a, DB, SK>) -> Self {
+impl<'a, DB, SK> From<&'a QueryMultiStore<DB, SK>> for MultiStore<'a, DB, SK> {
+    fn from(value: &'a QueryMultiStore<DB, SK>) -> Self {
         MultiStore(MultiStoreBackend::Query(value))
     }
 }

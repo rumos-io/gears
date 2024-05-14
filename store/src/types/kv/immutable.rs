@@ -13,7 +13,7 @@ use super::KVBank;
 pub(crate) enum KVStoreBackend<'a, DB> {
     Commit(&'a KVBank<DB, CommitKind>),
     Cache(&'a KVBank<DB, CacheKind>),
-    Query(&'a QueryKVStore<'a, DB>),
+    Query(&'a QueryKVStore<DB>),
 }
 
 /// Non mutable kv store
@@ -58,8 +58,8 @@ impl<'a, DB> From<&'a KVBank<DB, CacheKind>> for KVStore<'a, DB> {
     }
 }
 
-impl<'a, DB> From<&'a QueryKVStore<'a, DB>> for KVStore<'a, DB> {
-    fn from(value: &'a QueryKVStore<'a, DB>) -> Self {
+impl<'a, DB> From<&'a QueryKVStore<DB>> for KVStore<'a, DB> {
+    fn from(value: &'a QueryKVStore<DB>) -> Self {
         Self(KVStoreBackend::Query(value))
     }
 }

@@ -1,4 +1,7 @@
-use std::{collections::BTreeSet, sync::Mutex};
+use std::{
+    collections::BTreeSet,
+    sync::{Arc, Mutex},
+};
 
 use caches::{Cache, DefaultHashBuilder, LRUCache};
 use database::{ext::UnwrapCorrupt, Database};
@@ -8,10 +11,10 @@ use crate::{merkle::EMPTY_HASH, Error};
 
 use super::{CacheSize, Node};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeDB<T> {
     db: T,
-    cache: Mutex<LRUCache<[u8; 32], Node, DefaultHashBuilder>>,
+    cache: Arc<Mutex<LRUCache<[u8; 32], Node, DefaultHashBuilder>>>,
 }
 
 const ROOTS_PREFIX: [u8; 1] = [1];
@@ -26,9 +29,9 @@ where
     pub fn new(db: T, cache_size: CacheSize) -> NodeDB<T> {
         NodeDB {
             db,
-            cache: Mutex::new(
+            cache: Arc::new(Mutex::new(
                 LRUCache::new(cache_size.into()).expect("won't panic since cache_size > zero"),
-            ),
+            )),
         }
     }
 
@@ -154,7 +157,7 @@ mod tests {
         db.put(NodeDB::<MemDB>::get_root_key(1u32), vec![]);
         let node_db = NodeDB {
             db,
-            cache: Mutex::new(LRUCache::new(2).unwrap()),
+            cache: Arc::new(Mutex::new(LRUCache::new(2).unwrap())),
         };
 
         let mut expected_versions = BTreeSet::new();
@@ -174,7 +177,7 @@ mod tests {
         db.put(NodeDB::<MemDB>::get_root_key(1u32), root_hash.into());
         let node_db = NodeDB {
             db,
-            cache: Mutex::new(LRUCache::new(2).unwrap()),
+            cache: Arc::new(Mutex::new(LRUCache::new(2).unwrap())),
         };
 
         let got_root_hash = node_db.get_root_hash(1).unwrap();

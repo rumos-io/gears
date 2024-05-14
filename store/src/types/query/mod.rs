@@ -1,40 +1,58 @@
-use std::{collections::HashMap, marker::PhantomData};
+use std::collections::HashMap;
 
 use database::{Database, PrefixDB};
-use trees::iavl::{QueryTree, Tree};
+use trees::iavl::QueryTree;
 
-use crate::{error::StoreError, StoreKey};
+use crate::{
+    error::{StoreError, KEY_EXISTS_MSG, POISONED_LOCK},
+    CommitKind, QueryableMultiKVStore, StoreKey,
+};
 
-use self::{kv::QueryKVStore, versioned::VersionedQueryMultiStore};
+use self::kv::QueryKVStore;
+
+use super::{
+    kv::immutable::{KVStore, KVStoreBackend},
+    multi::MultiBank,
+};
 
 pub mod kv;
-pub mod versioned;
 
 #[derive(Debug)]
-pub struct QueryMultiBank<'a, DB, SK> {
-    tree: &'a Tree<PrefixDB<DB>>,
-    _marker: PhantomData<SK>,
+pub struct QueryMultiStore<DB, SK>(pub(crate) HashMap<SK, QueryKVStore<PrefixDB<DB>>>);
+
+impl<DB: Database + Clone, SK: StoreKey> QueryMultiStore<DB, SK> {
+    pub fn new(
+        multi_store: &MultiBank<DB, SK, CommitKind>, // TODO:NOW OTHER TYPE WHICH HIDES THIS. OR TRAIT Into<SomeMyType>
+        version: u32,
+    ) -> Result<Self, StoreError> {
+        let mut stores = HashMap::with_capacity(multi_store.stores.len());
+
+        for (key, bank) in &multi_store.stores {
+            let tree = bank.persistent.read().expect(POISONED_LOCK);
+
+            let query_kv_store = QueryKVStore::new(QueryTree::new(&tree, version)?);
+
+            stores.insert(key.to_owned(), query_kv_store);
+        }
+
+        Ok(Self(stores))
+    }
 }
 
-impl<'a, DB: Database, SK: StoreKey> QueryMultiBank<'a, DB, SK> {
-    pub fn new(tree: &'a Tree<PrefixDB<DB>>) -> Self {
-        Self {
-            tree,
-            _marker: PhantomData,
-        }
+impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
+    for QueryMultiStore<DB, SK>
+{
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+        KVStore(KVStoreBackend::Query(
+            self.0.get(store_key).expect(KEY_EXISTS_MSG),
+        ))
     }
 
-    pub fn to_versioned(
-        &self,
-        version: u32,
-    ) -> Result<VersionedQueryMultiStore<'_, DB, SK>, StoreError> {
-        let mut stores = HashMap::new();
+    fn head_version(&self) -> u32 {
+        unimplemented!() // TODO:NOW
+    }
 
-        for key in SK::iter() {
-            let query_store = QueryKVStore::new(QueryTree::new(self.tree, version)?);
-            stores.insert(key, query_store);
-        }
-
-        Ok(VersionedQueryMultiStore(stores))
+    fn head_commit_hash(&self) -> [u8; 32] {
+        unimplemented!() // TODO:NOW
     }
 }

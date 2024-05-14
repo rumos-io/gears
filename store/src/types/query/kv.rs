@@ -6,15 +6,15 @@ use trees::iavl::QueryTree;
 use crate::types::prefix::immutable::ImmutablePrefixStore;
 
 #[derive(Debug)]
-pub struct QueryKVStore<'a, DB>(QueryTree<'a, DB>);
+pub struct QueryKVStore<DB>(QueryTree<DB>);
 
-impl<'a, DB: Database> QueryKVStore<'a, DB> {
-    pub fn new(tree: QueryTree<'a, DB>) -> Self {
+impl<DB: Database> QueryKVStore<DB> {
+    pub fn new(tree: QueryTree<DB>) -> Self {
         Self(tree)
     }
 }
 
-impl<DB: Database> QueryKVStore<'_, DB> {
+impl<DB: Database> QueryKVStore<DB> {
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(
         &self,
         range: R,
