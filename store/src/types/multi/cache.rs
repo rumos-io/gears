@@ -4,9 +4,9 @@ use database::Database;
 
 use crate::{CacheKind, StoreKey};
 
-use super::MultiStorage;
+use super::MultiBank;
 
-impl<DB: Database, SK: StoreKey> MultiStorage<DB, SK, CacheKind> {
+impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CacheKind> {
     pub fn commit(&mut self) -> CacheCommitData<SK> {
         let mut map: Vec<(SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)> =
             Vec::with_capacity(self.stores.len());

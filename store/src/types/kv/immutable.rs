@@ -2,23 +2,23 @@ use database::Database;
 
 use crate::{
     range::Range,
-    types::{prefix_v2::immutable::ImmutablePrefixStoreV2, query_v2::kv::QueryKVStoreV2},
-    CacheKind, CommitKind, QueryableKVStoreV2,
+    types::{prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore},
+    CacheKind, CommitKind, QueryableKVStore,
 };
 
-use super::KVStorage;
+use super::KVBank;
 
 /// Internal structure which holds different stores
 pub(crate) enum KVStoreBackend<'a, DB> {
-    Commit(&'a KVStorage<DB, CommitKind>),
-    Cache(&'a KVStorage<DB, CacheKind>),
-    Query(&'a QueryKVStoreV2<'a, DB>),
+    Commit(&'a KVBank<DB, CommitKind>),
+    Cache(&'a KVBank<DB, CacheKind>),
+    Query(&'a QueryKVStore<'a, DB>),
 }
 
 /// Non mutable kv store
-pub struct KVStoreV2<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
+pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
-impl<'a, DB: Database> QueryableKVStoreV2<'a, DB> for KVStoreV2<'a, DB> {
+impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStore<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         match self.0 {
             KVStoreBackend::Commit(var) => var.get(k),
@@ -27,7 +27,7 @@ impl<'a, DB: Database> QueryableKVStoreV2<'a, DB> for KVStoreV2<'a, DB> {
         }
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStoreV2<'a, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB> {
         match self.0 {
             KVStoreBackend::Commit(var) => var.prefix_store(prefix),
             KVStoreBackend::Cache(var) => var.prefix_store(prefix),
@@ -44,20 +44,20 @@ impl<'a, DB: Database> QueryableKVStoreV2<'a, DB> for KVStoreV2<'a, DB> {
     }
 }
 
-impl<'a, DB> From<&'a KVStorage<DB, CommitKind>> for KVStoreV2<'a, DB> {
-    fn from(value: &'a KVStorage<DB, CommitKind>) -> Self {
+impl<'a, DB> From<&'a KVBank<DB, CommitKind>> for KVStore<'a, DB> {
+    fn from(value: &'a KVBank<DB, CommitKind>) -> Self {
         Self(KVStoreBackend::Commit(value))
     }
 }
 
-impl<'a, DB> From<&'a KVStorage<DB, CacheKind>> for KVStoreV2<'a, DB> {
-    fn from(value: &'a KVStorage<DB, CacheKind>) -> Self {
+impl<'a, DB> From<&'a KVBank<DB, CacheKind>> for KVStore<'a, DB> {
+    fn from(value: &'a KVBank<DB, CacheKind>) -> Self {
         Self(KVStoreBackend::Cache(value))
     }
 }
 
-impl<'a, DB> From<&'a QueryKVStoreV2<'a, DB>> for KVStoreV2<'a, DB> {
-    fn from(value: &'a QueryKVStoreV2<'a, DB>) -> Self {
+impl<'a, DB> From<&'a QueryKVStore<'a, DB>> for KVStore<'a, DB> {
+    fn from(value: &'a QueryKVStore<'a, DB>) -> Self {
         Self(KVStoreBackend::Query(value))
     }
 }

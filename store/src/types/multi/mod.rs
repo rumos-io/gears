@@ -1,61 +1,41 @@
+pub mod cache;
+use std::collections::HashMap;
+
+use crate::{error::KEY_EXISTS_MSG, StoreKey};
 use database::{Database, PrefixDB};
 
-use crate::{QueryableMultiKVStore, StoreKey};
-
-use self::commit::CommitMultiStore;
-
-use super::{
-    kv::{KVStore, KVStoreBackend},
-    query::multi::QueryMultiStore,
-};
+use super::kv::KVBank;
 
 pub mod commit;
+pub mod immutable;
 pub mod mutable;
 
-#[derive(Debug, Clone)]
-pub(crate) enum MultiStoreBackend<'a, DB, SK> {
-    Commit(&'a CommitMultiStore<DB, SK>),
-    Query(&'a QueryMultiStore<'a, DB, SK>),
+pub struct MultiBank<DB, SK, ST> {
+    pub(crate) head_version: u32,
+    pub(crate) head_commit_hash: [u8; 32],
+    pub(crate) stores: HashMap<SK, KVBank<PrefixDB<DB>, ST>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct MultiStore<'a, DB, SK>(pub(crate) MultiStoreBackend<'a, DB, SK>);
+impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
+    pub fn kv_store(&self, store_key: &SK) -> &KVBank<PrefixDB<DB>, ST> {
+        self.stores.get(store_key).expect(KEY_EXISTS_MSG)
+    }
 
-impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
-    for MultiStore<'_, DB, SK>
-{
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        match self.0 {
-            MultiStoreBackend::Commit(var) => {
-                KVStore(KVStoreBackend::Commit(var.kv_store(store_key)))
-            }
-            MultiStoreBackend::Query(var) => var.kv_store(store_key),
+    pub fn kv_store_mut(&mut self, store_key: &SK) -> &mut KVBank<PrefixDB<DB>, ST> {
+        self.stores.get_mut(store_key).expect(KEY_EXISTS_MSG)
+    }
+
+    pub fn head_version(&self) -> u32 {
+        self.head_version
+    }
+
+    pub fn head_commit_hash(&self) -> [u8; 32] {
+        self.head_commit_hash
+    }
+
+    pub fn caches_clear(&mut self) {
+        for (_, store) in &mut self.stores {
+            store.clear_cache();
         }
-    }
-
-    fn head_version(&self) -> u32 {
-        match self.0 {
-            MultiStoreBackend::Commit(var) => var.head_version,
-            MultiStoreBackend::Query(var) => var.head_version(),
-        }
-    }
-
-    fn head_commit_hash(&self) -> [u8; 32] {
-        match self.0 {
-            MultiStoreBackend::Commit(var) => var.head_commit_hash,
-            MultiStoreBackend::Query(var) => var.head_commit_hash(),
-        }
-    }
-}
-
-impl<'a, DB, SK> From<&'a QueryMultiStore<'a, DB, SK>> for MultiStore<'a, DB, SK> {
-    fn from(value: &'a QueryMultiStore<'a, DB, SK>) -> Self {
-        MultiStore(MultiStoreBackend::Query(value))
-    }
-}
-
-impl<'a, DB, SK> From<&'a CommitMultiStore<DB, SK>> for MultiStore<'a, DB, SK> {
-    fn from(value: &'a CommitMultiStore<DB, SK>) -> Self {
-        MultiStore(MultiStoreBackend::Commit(value))
     }
 }

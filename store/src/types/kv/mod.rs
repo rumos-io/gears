@@ -1,57 +1,86 @@
+use std::{
+    borrow::Cow,
+    marker::PhantomData,
+    ops::RangeBounds,
+    sync::{Arc, RwLock},
+};
+
 use database::Database;
+use trees::iavl::Tree;
 
-use crate::{range::Range, QueryableKVStore};
+use crate::{error::POISONED_LOCK, range::Range, utils::MergedRange};
 
-use self::commit::CommitKVStore;
-
-use super::{prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore};
+use self::store_cache::KVCache;
 
 pub mod cache;
 pub mod commit;
+pub mod immutable;
 pub mod mutable;
+pub mod store_cache;
 
-/// Internal structure which holds different stores
-#[derive(Debug, Clone)]
-pub(crate) enum KVStoreBackend<'a, DB> {
-    Commit(&'a CommitKVStore<DB>),
-    Query(&'a QueryKVStore<'a, DB>),
+pub struct KVBank<DB, SK> {
+    pub(crate) persistent: Arc<RwLock<Tree<DB>>>,
+    cache: KVCache,
+    _marker: PhantomData<SK>,
 }
 
-/// Non mutable kv store
-#[derive(Debug, Clone)]
-pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
-
-impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStore<'a, DB> {
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        match self.0 {
-            KVStoreBackend::Commit(var) => var.get(k),
-            KVStoreBackend::Query(var) => var.get(k),
-        }
+impl<DB: Database, SK> KVBank<DB, SK> {
+    #[inline]
+    pub fn head_commit_hash(&self) -> [u8; 32] {
+        self.persistent.read().expect(POISONED_LOCK).root_hash()
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB> {
-        match self.0 {
-            KVStoreBackend::Commit(var) => var.prefix_store(prefix),
-            KVStoreBackend::Query(var) => var.prefix_store(prefix),
-        }
+    #[inline]
+    pub fn last_committed_version(&self) -> u32 {
+        self.persistent
+            .read()
+            .expect(POISONED_LOCK)
+            .loaded_version()
     }
 
-    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
-        match self.0 {
-            KVStoreBackend::Commit(var) => var.range(range),
-            KVStoreBackend::Query(var) => var.range(range),
-        }
+    #[inline]
+    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        self.cache
+            .delete(k)
+            .or(self.persistent.read().expect(POISONED_LOCK).get(k))
     }
-}
 
-impl<'a, DB> From<&'a CommitKVStore<DB>> for KVStore<'a, DB> {
-    fn from(value: &'a CommitKVStore<DB>) -> Self {
-        Self(KVStoreBackend::Commit(value))
+    #[inline]
+    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+        &mut self,
+        key: KI,
+        value: VI,
+    ) {
+        self.cache.set(key, value)
     }
-}
 
-impl<'a, DB> From<&'a QueryKVStore<'a, DB>> for KVStore<'a, DB> {
-    fn from(value: &'a QueryKVStore<'a, DB>) -> Self {
-        Self(KVStoreBackend::Query(value))
+    pub fn clear_cache(&mut self) {
+        self.cache.storage.clear();
+        self.cache.delete.clear();
+    }
+
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+        self.cache.get(k.as_ref()).cloned().or(self
+            .persistent
+            .read()
+            .expect(POISONED_LOCK)
+            .get(k.as_ref()))
+    }
+
+    // TODO:NOW You could iterate over values that should have been deleted
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
+        let cached_values = self
+            .cache
+            .storage
+            .range(range.clone())
+            .into_iter()
+            .map(|(first, second)| (Cow::Borrowed(first), Cow::Borrowed(second)));
+
+        let tree = self.persistent.read().expect(POISONED_LOCK);
+        let persisted_values = tree
+            .range(range)
+            .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
+
+        MergedRange::merge(cached_values, persisted_values).into()
     }
 }

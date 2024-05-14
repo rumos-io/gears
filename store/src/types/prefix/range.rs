@@ -5,8 +5,8 @@ use database::Database;
 use crate::range::Range;
 
 pub struct PrefixRange<'a, DB> {
-    pub(super) parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
-    pub(super) prefix_length: usize,
+    pub(crate) parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
+    pub(crate) prefix_length: usize,
 }
 
 impl<'a, DB: Database> Iterator for PrefixRange<'a, DB> {

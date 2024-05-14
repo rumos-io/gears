@@ -2,12 +2,12 @@ use std::collections::{BTreeMap, HashSet};
 
 /// Storage for store cache
 #[derive(Debug, Clone, Default)]
-pub(crate) struct KVStoreCacheV2 {
+pub(crate) struct KVCache {
     pub(crate) storage: BTreeMap<Vec<u8>, Vec<u8>>,
     pub(crate) delete: HashSet<Vec<u8>>,
 }
 
-impl KVStoreCacheV2 {
+impl KVCache {
     /// Take out all cache from storages.
     pub fn take(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
         (

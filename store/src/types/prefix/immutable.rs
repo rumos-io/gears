@@ -2,12 +2,10 @@ use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 
-use crate::{types::kv::KVStore, QueryableKVStore, ReadPrefixStore};
+use crate::{types::kv::immutable::KVStore, QueryableKVStore, ReadPrefixStore};
 
 use super::{prefix_end_bound, range::PrefixRange};
 
-/// Wraps an immutable KVStore with a prefix
-#[derive(Debug)]
 pub struct ImmutablePrefixStore<'a, DB> {
     pub(crate) store: KVStore<'a, DB>,
     pub(crate) prefix: Vec<u8>,

@@ -5,36 +5,59 @@ use database::Database;
 use crate::{
     range::Range,
     types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
-    QueryableKVStore, TransactionalKVStore,
+    CacheKind, CommitKind, QueryableKVStore, TransactionalKVStore,
 };
 
-use super::{commit::CommitKVStore, KVStore};
+use super::{
+    immutable::{KVStore, KVStoreBackend},
+    KVBank,
+};
+
+/// Internal structure which holds different stores
+pub(crate) enum KVStoreBackendMut<'a, DB> {
+    Commit(&'a mut KVBank<DB, CommitKind>),
+    Cache(&'a mut KVBank<DB, CacheKind>),
+}
 
 /// Mutable variant of `KVStore`
-#[derive(Debug)]
-pub struct KVStoreMut<'a, DB>(pub(crate) &'a mut CommitKVStore<DB>);
+pub struct KVStoreMut<'a, DB>(pub(crate) KVStoreBackendMut<'a, DB>);
 
 impl<'a, DB: Database> KVStoreMut<'a, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
-        self.0.delete(k)
+        match &mut self.0 {
+            KVStoreBackendMut::Commit(var) => var.delete(k),
+            KVStoreBackendMut::Cache(var) => var.delete(k),
+        }
     }
 
     pub fn to_immutable(&self) -> KVStore<'_, DB> {
-        KVStore(super::KVStoreBackend::Commit(self.0))
+        match &self.0 {
+            KVStoreBackendMut::Commit(var) => KVStore(KVStoreBackend::Commit(var)),
+            KVStoreBackendMut::Cache(var) => KVStore(KVStoreBackend::Cache(var)),
+        }
     }
 }
 
 impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStoreMut<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        self.0.get(k)
+        match &self.0 {
+            KVStoreBackendMut::Commit(var) => var.get(k),
+            KVStoreBackendMut::Cache(var) => var.get(k),
+        }
     }
 
     fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB> {
-        self.0.prefix_store(prefix)
+        match self.0 {
+            KVStoreBackendMut::Commit(var) => var.prefix_store(prefix),
+            KVStoreBackendMut::Cache(var) => var.prefix_store(prefix),
+        }
     }
 
     fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
-        self.0.range(range)
+        match &self.0 {
+            KVStoreBackendMut::Commit(var) => var.range(range),
+            KVStoreBackendMut::Cache(var) => var.range(range),
+        }
     }
 }
 
@@ -51,12 +74,21 @@ impl<'a, DB: Database> TransactionalKVStore<'a, DB> for KVStoreMut<'a, DB> {
         key: KI,
         value: VI,
     ) {
-        self.0.set(key, value)
+        match &mut self.0 {
+            KVStoreBackendMut::Commit(var) => var.set(key, value),
+            KVStoreBackendMut::Cache(var) => var.set(key, value),
+        }
     }
 }
 
-impl<'a, DB> From<&'a mut CommitKVStore<DB>> for KVStoreMut<'a, DB> {
-    fn from(value: &'a mut CommitKVStore<DB>) -> Self {
-        Self(value)
+impl<'a, DB> From<&'a mut KVBank<DB, CommitKind>> for KVStoreMut<'a, DB> {
+    fn from(value: &'a mut KVBank<DB, CommitKind>) -> Self {
+        Self(KVStoreBackendMut::Commit(value))
+    }
+}
+
+impl<'a, DB> From<&'a mut KVBank<DB, CacheKind>> for KVStoreMut<'a, DB> {
+    fn from(value: &'a mut KVBank<DB, CacheKind>) -> Self {
+        Self(KVStoreBackendMut::Cache(value))
     }
 }
