@@ -9,7 +9,7 @@ members = [
   "trees",
   "store",
   "keyring",
-  #"gears",
+  "gears",
   #"gears-derive",
 
   # GAIA

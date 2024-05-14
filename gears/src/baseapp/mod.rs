@@ -20,7 +20,7 @@ use database::RocksDB;
 use store_crate::{
     types::{
         multi::{immutable::MultiStore, MultiBank},
-        query::QueryMultiBank,
+        query::QueryMultiStore,
     },
     CommitKind, StoreKey,
 };
@@ -55,7 +55,6 @@ pub struct BaseApp<
 > {
     state: Arc<RwLock<ApplicationState>>,
     multi_store: Arc<RwLock<MultiBank<RocksDB, SK, CommitKind>>>,
-    query_store: Arc<RwLock<QueryMultiBank<RocksDB, SK>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -79,9 +78,7 @@ impl<
         params_subspace_key: PSK,
         abci_handler: H,
     ) -> Self {
-        let db = Arc::new(db);
-
-        let multi_store = MultiBank::<_, _, CommitKind>::new(Arc::clone(&db));
+        let multi_store = MultiBank::<_, _, CommitKind>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,
@@ -93,14 +90,11 @@ impl<
             .map(|e| e.max_gas)
             .unwrap_or_default();
 
-        let query_store = QueryMultiBank::new(db).expect("Failed to create query store"); // TODO:NOW
-
         Self {
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
             state: Arc::new(RwLock::new(ApplicationState::new(Gas::from(max_gas)))),
-            query_store: Arc::new(RwLock::new(query_store)),
             multi_store: Arc::new(RwLock::new(multi_store)),
             m: PhantomData,
             g: PhantomData,
@@ -143,8 +137,10 @@ impl<
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;
 
-        let query_store = self.query_store.read().expect(POISONED_LOCK);
-        let ctx = QueryContext::new(query_store.to_versioned(version)?, version)?;
+        let query_store =
+            QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;
+
+        let ctx = QueryContext::new(query_store, version)?;
 
         self.abci_handler.query(&ctx, request.clone())
     }

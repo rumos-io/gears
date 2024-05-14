@@ -1,4 +1,5 @@
-use database::{Database, PrefixDB};
+use database::prefix::PrefixDB;
+use database::Database;
 use store_crate::types::kv::immutable::KVStore;
 use store_crate::types::multi::immutable::MultiStore;
 use store_crate::types::multi::mutable::MultiStoreMut;
