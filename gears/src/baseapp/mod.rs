@@ -81,7 +81,6 @@ impl<
     ) -> Self {
         let db = Arc::new(db);
 
-        let query_store = QueryMultiBank::new(Arc::clone(&db)).expect(""); // TODO:NOW
         let multi_store = MultiBank::<_, _, CommitKind>::new(Arc::clone(&db));
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
@@ -93,6 +92,8 @@ impl<
             .block_params(&MultiStore::from(&multi_store))
             .map(|e| e.max_gas)
             .unwrap_or_default();
+
+        let query_store = QueryMultiBank::new(db).expect("Failed to create query store"); // TODO:NOW
 
         Self {
             abci_handler,

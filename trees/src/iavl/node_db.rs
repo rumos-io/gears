@@ -43,7 +43,7 @@ where
         self.db
             .get(&Self::get_root_key(version))
             .map(|hash| hash.try_into().ok().unwrap_or_corrupt())
-            .ok_or(Error::VersionNotFound)
+            .ok_or(Error::VersionNotFound(version))
     }
 
     pub(crate) fn get_root_node(&self, version: u32) -> Result<Option<Box<Node>>, Error> {

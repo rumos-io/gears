@@ -30,7 +30,7 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
                 node_db: &tree.node_db,
             })
         } else {
-            Err(Error::VersionNotFound)
+            Err(Error::VersionNotFound(version))
         }
     }
 
