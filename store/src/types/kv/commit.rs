@@ -52,7 +52,7 @@ impl<DB: Database> KVBank<DB, CommitKind> {
     pub fn to_cache_kind(&self) -> KVBank<DB, CacheKind> {
         KVBank {
             persistent: Arc::clone(&self.persistent),
-            cache: Default::default(), // TODO:NOW Should cache be ignored?
+            cache: self.cache.clone(),
             _marker: std::marker::PhantomData,
         }
     }

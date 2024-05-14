@@ -28,7 +28,14 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CacheKind> {
     }
 }
 
+#[derive(Debug)]
 pub struct CacheCommitData<SK>(Vec<(SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)>);
+
+impl<SK> CacheCommitData<SK> {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
 
 impl<SK> IntoIterator for CacheCommitData<SK> {
     type Item = (SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>);

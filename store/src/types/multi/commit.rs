@@ -66,6 +66,10 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
     }
 
     pub fn sync(&mut self, data: CacheCommitData<SK>) {
+        if data.is_empty() {
+            return;
+        }
+
         for (store_key, set, delete) in data.into_iter() {
             let store = self.kv_store_mut(&store_key);
             for (key, value) in set {

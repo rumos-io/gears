@@ -3,7 +3,7 @@ pub mod deliver;
 pub mod re_check;
 
 use database::Database;
-use store_crate::StoreKey;
+use store_crate::{types::multi::MultiBank, CacheKind, StoreKey};
 use tendermint::types::proto::event::Event;
 
 use crate::{
@@ -22,23 +22,39 @@ use crate::{
 
 use self::sealed::Sealed;
 
-pub trait ExecutionMode<DB: Database, SK: StoreKey>: Sealed {
-    fn build_ctx(
+pub trait ExecutionMode: Sealed {
+    fn build_ctx<DB: Database, SK: StoreKey>(
         &mut self,
+        store: MultiBank<DB, SK, CacheKind>,
         height: u64,
         header: Header,
         fee: Option<&Fee>,
     ) -> TxContext<'_, DB, SK>;
 
-    fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;
+    fn runnable<DB: Database, SK: StoreKey>(
+        ctx: &mut TxContext<'_, DB, SK>,
+    ) -> Result<(), RunTxError>;
 
-    fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
+    fn run_ante_checks<
+        DB: Database + Send + Sync,
+        SK: StoreKey,
+        M: TxMessage,
+        G: Genesis,
+        AH: ABCIHandler<M, SK, G>,
+    >(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
     ) -> Result<(), RunTxError>;
 
-    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
+    fn run_msg<
+        'm,
+        DB: Database + Send + Sync,
+        SK: StoreKey,
+        M: TxMessage,
+        G: Genesis,
+        AH: ABCIHandler<M, SK, G>,
+    >(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
@@ -50,9 +66,9 @@ mod sealed {
 
     pub trait Sealed {}
 
-    impl<DB, SK> Sealed for CheckTxMode<DB, SK> {}
+    impl Sealed for CheckTxMode {}
     // impl Sealed for ReCheckTxMode {}
-    impl<DB, SK> Sealed for DeliverTxMode<DB, SK> {}
+    impl Sealed for DeliverTxMode {}
 }
 
 fn build_tx_gas_meter(block_height: u64, fee: Option<&Fee>) -> GasMeter<TxKind> {

@@ -1,18 +1,16 @@
 use database::{Database, PrefixDB};
-use store_crate::types::kv::mutable::KVStoreMut;
-use store_crate::types::multi::commit::CommitMultiStore;
+use store_crate::types::kv::immutable::KVStore;
+use store_crate::types::multi::immutable::MultiStore;
 use store_crate::types::multi::mutable::MultiStoreMut;
-use store_crate::{
-    types::{kv::KVStore, multi::MultiStore},
-    StoreKey,
-};
+use store_crate::types::{kv::mutable::KVStoreMut, multi::MultiBank};
+use store_crate::{CommitKind, StoreKey};
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
-    multi_store: &'a mut CommitMultiStore<DB, SK>,
+    multi_store: &'a mut MultiBank<DB, SK, CommitKind>,
     pub(crate) height: u64,
     pub events: Vec<Event>,
     pub(crate) chain_id: ChainId,
@@ -20,26 +18,26 @@ pub struct InitContext<'a, DB, SK> {
 
 impl<'a, DB, SK> InitContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut CommitMultiStore<DB, SK>,
+        multi_store: &'a mut MultiBank<DB, SK, CommitKind>,
         height: u64,
         chain_id: ChainId,
     ) -> Self {
         InitContext {
             multi_store,
             height,
-            events: vec![],
+            events: Vec::new(),
             chain_id,
         }
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'a, DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
     }
 
     fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        self.multi_store.as_immutable()
+        MultiStore::from(&*self.multi_store)
     }
 
     fn height(&self) -> u64 {
@@ -53,7 +51,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'a
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_, DB, SK> {
     fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        self.multi_store.as_mutable()
+        MultiStoreMut::from(&mut *self.multi_store)
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
@@ -69,6 +67,6 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_
     }
 
     fn events_drain(&mut self) -> Vec<Event> {
-        self.events.drain(..).collect()
+        std::mem::take(&mut self.events)
     }
 }
