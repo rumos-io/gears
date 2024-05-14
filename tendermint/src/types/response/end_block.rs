@@ -7,22 +7,6 @@ pub struct ResponseEndBlock {
     pub events: Vec<Event>,
 }
 
-impl From<super::inner::ResponseEndBlock> for ResponseEndBlock {
-    fn from(
-        super::inner::ResponseEndBlock {
-            validator_updates,
-            consensus_param_updates,
-            events,
-        }: super::inner::ResponseEndBlock,
-    ) -> Self {
-        Self {
-            validator_updates: validator_updates.into_iter().map(Into::into).collect(),
-            consensus_param_updates: consensus_param_updates.map(Into::into),
-            events: events.into_iter().map(Into::into).collect(),
-        }
-    }
-}
-
 impl From<ResponseEndBlock> for super::inner::ResponseEndBlock {
     fn from(
         ResponseEndBlock {

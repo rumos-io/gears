@@ -1,16 +1,21 @@
-use crate::types::{
-    proto::{consensus::ConsensusParams, validator::ValidatorUpdate},
-    time::Timestamp,
+use bytes::Bytes;
+
+use crate::{
+    error::Error,
+    types::{
+        proto::{consensus::ConsensusParams, validator::ValidatorUpdate},
+        time::Timestamp,
+    },
 };
 
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RequestInitChain {
-    pub time: Option<Timestamp>,
+    pub time: Timestamp,
     pub chain_id: String,
-    pub consensus_params: Option<ConsensusParams>,
-    pub validators: ::prost::alloc::vec::Vec<ValidatorUpdate>,
-    pub app_state_bytes: ::prost::bytes::Bytes,
-    pub initial_height: i64,
+    pub consensus_params: ConsensusParams,
+    pub validators: Vec<ValidatorUpdate>,
+    pub app_state_bytes: Bytes,
+    pub initial_height: i64, //TODO: use u64?
 }
 
 impl From<RequestInitChain> for super::inner::RequestInitChain {
@@ -25,9 +30,9 @@ impl From<RequestInitChain> for super::inner::RequestInitChain {
         }: RequestInitChain,
     ) -> Self {
         Self {
-            time: time.map(Into::into),
+            time: Some(time.into()),
             chain_id,
-            consensus_params: consensus_params.map(Into::into),
+            consensus_params: Some(consensus_params.into()),
             validators: validators.into_iter().map(Into::into).collect(),
             app_state_bytes,
             initial_height,
@@ -35,8 +40,10 @@ impl From<RequestInitChain> for super::inner::RequestInitChain {
     }
 }
 
-impl From<super::inner::RequestInitChain> for RequestInitChain {
-    fn from(
+impl TryFrom<super::inner::RequestInitChain> for RequestInitChain {
+    type Error = Error;
+
+    fn try_from(
         super::inner::RequestInitChain {
             time,
             chain_id,
@@ -45,14 +52,21 @@ impl From<super::inner::RequestInitChain> for RequestInitChain {
             app_state_bytes,
             initial_height,
         }: super::inner::RequestInitChain,
-    ) -> Self {
-        Self {
-            time: time.map(Into::into),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            time: time
+                .ok_or(Error::InvalidData("time is empty".to_string()))?
+                .into(),
             chain_id,
-            consensus_params: consensus_params.map(Into::into),
-            validators: validators.into_iter().map(Into::into).collect(),
+            consensus_params: consensus_params
+                .ok_or(Error::InvalidData("consensus params is empty".to_string()))?
+                .into(),
+            validators: validators
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<ValidatorUpdate>, Error>>()?,
             app_state_bytes,
             initial_height,
-        }
+        })
     }
 }

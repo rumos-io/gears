@@ -1,5 +1,6 @@
 use tendermint_abci::Application;
 
+use crate::ext::UnwrapInvalid;
 use crate::types::{
     request::{
         begin_block::RequestBeginBlock,
@@ -143,7 +144,7 @@ impl<T: ABCIApplication> Application for ABCI<T> {
         &self,
         request: tendermint_proto::abci::RequestInitChain,
     ) -> tendermint_proto::abci::ResponseInitChain {
-        T::init_chain(&self.handler, request.into()).into()
+        T::init_chain(&self.handler, request.try_into().unwrap_or_invalid()).into()
     }
 
     fn query(
