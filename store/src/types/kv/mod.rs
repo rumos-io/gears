@@ -74,7 +74,6 @@ impl<DB: Database, SK> KVBank<DB, SK> {
             .cache
             .storage
             .range(range.clone())
-            .into_iter()
             .map(|(first, second)| (Cow::Borrowed(first), Cow::Borrowed(second)));
 
         let tree = self.persistent.read().expect(POISONED_LOCK);
