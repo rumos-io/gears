@@ -2,7 +2,7 @@ use database::Database;
 
 use crate::{
     range::Range,
-    types::{prefix_v2::immutable::ImmutablePrefixStoreV2, query::kv::QueryKVStore},
+    types::{prefix_v2::immutable::ImmutablePrefixStoreV2, query_v2::kv::QueryKVStoreV2},
     CacheKind, CommitKind, QueryableKVStoreV2,
 };
 
@@ -12,7 +12,7 @@ use super::KVStorage;
 pub(crate) enum KVStoreBackend<'a, DB> {
     Commit(&'a KVStorage<DB, CommitKind>),
     Cache(&'a KVStorage<DB, CacheKind>),
-    Query(&'a QueryKVStore<'a, DB>),
+    Query(&'a QueryKVStoreV2<'a, DB>),
 }
 
 /// Non mutable kv store
@@ -56,8 +56,8 @@ impl<'a, DB> From<&'a KVStorage<DB, CacheKind>> for KVStoreV2<'a, DB> {
     }
 }
 
-impl<'a, DB> From<&'a QueryKVStore<'a, DB>> for KVStoreV2<'a, DB> {
-    fn from(value: &'a QueryKVStore<'a, DB>) -> Self {
+impl<'a, DB> From<&'a QueryKVStoreV2<'a, DB>> for KVStoreV2<'a, DB> {
+    fn from(value: &'a QueryKVStoreV2<'a, DB>) -> Self {
         Self(KVStoreBackend::Query(value))
     }
 }
