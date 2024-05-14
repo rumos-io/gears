@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
-use gears::core::address::AccAddress;
+use gears::types::address::AccAddress;
 
 use crate::{ics02_client::client::cli::tx::ClientTxCli, message::Message as IbcMessage};
 

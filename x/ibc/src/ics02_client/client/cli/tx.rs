@@ -1,5 +1,5 @@
 use clap::{Args, Subcommand};
-use gears::core::address::AccAddress;
+use gears::types::address::AccAddress;
 use ibc::clients::tendermint::client_state::ClientState;
 use ibc::clients::tendermint::consensus_state::ConsensusState;
 use std::fs::File;

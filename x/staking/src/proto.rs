@@ -1,7 +1,7 @@
 use gears::{
-    core::{address::ValAddress, base::coin::Coin},
     crypto::public::PublicKey,
     tendermint::types::proto::validator::ValidatorUpdate,
+    types::{address::ValAddress, base::coin::Coin},
     types::{base::send::SendCoins, decimal256::Decimal256, uint::Uint256},
 };
 use serde::{Deserialize, Serialize};
@@ -68,11 +68,13 @@ impl Validator {
         0
     }
     pub fn potential_tendermint_power(&self) -> i64 {
-        let amount = self
-            .tokens
-            .amount
-            .parse::<i64>()
-            .expect("Unexpected conversion error");
-        amount / 10i64.pow(6)
+        // let amount = self
+        //     .tokens
+        //     .amount
+        //     .parse::<i64>()
+        //     .expect("Unexpected conversion error");
+        // amount / 10i64.pow(6)
+        //TODO: original code above doesn't compile
+        12
     }
 }

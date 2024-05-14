@@ -1757,6 +1757,7 @@ dependencies = [
  "ciborium",
  "clap",
  "clap_complete",
+ "constcat",
  "core-types",
  "cosmwasm-std",
  "data-encoding",
@@ -4841,6 +4842,7 @@ dependencies = [
  "tendermint-rpc",
  "thiserror",
  "time",
+ "tracing",
 ]
 
 [[package]]

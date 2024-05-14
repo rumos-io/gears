@@ -8,11 +8,12 @@ use crate::{
     runtime::runtime,
     signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
+        address::AccAddress,
         auth::fee::Fee,
         base::send::SendCoins,
         denom::Denom,
         query::{
-            account::QueryAccountResponse,
+            account::{QueryAccountRequest, QueryAccountResponse},
             metadata::{
                 QueryDenomMetadataRequest, QueryDenomMetadataResponse,
                 RawQueryDenomMetadataResponse,
@@ -26,9 +27,7 @@ use crate::{
 use tendermint::types::proto::Protobuf as TMProtobuf;
 
 use anyhow::anyhow;
-use core_types::{
-    address::AccAddress, query::request::account::QueryAccountRequest, tx::mode_info::SignMode,
-};
+use core_types::tx::mode_info::SignMode;
 use serde::Serialize;
 
 use tendermint::{
@@ -165,8 +164,6 @@ pub trait QueryHandler {
 mod inner {
     pub use core_types::query::response::account::QueryAccountResponse;
 }
-
-use core_types::Protobuf;
 
 // TODO: we're assuming here that the app has an auth module which handles this query
 pub(crate) fn get_account_latest(

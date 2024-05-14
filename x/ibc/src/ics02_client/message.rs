@@ -1,7 +1,7 @@
 use bytes::Bytes;
 use gears::{
-    core::{address::AccAddress, any::google::Any},
-    types::tx::TxMessage,
+    core::any::google::Any,
+    types::{address::AccAddress, tx::TxMessage},
 };
 use ibc::{
     clients::tendermint::{client_state::ClientState, consensus_state::ConsensusState},

@@ -1,4 +1,5 @@
-use gears::core::{address::AccAddress, any::google::Any};
+use gears::core::any::google::Any;
+use gears::types::address::AccAddress;
 use gears::types::tx::TxMessage;
 use serde::Serialize;
 

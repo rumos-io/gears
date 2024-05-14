@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use core_types::address::AccAddress;
-use core_types::errors::AddressError;
 use cosmwasm_std::Uint256;
 use serde::Deserialize;
 use serde::Serialize;
@@ -9,6 +7,8 @@ use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use tendermint::types::proto::Protobuf;
 
+use crate::types::address::AccAddress;
+use crate::types::address::AddressError;
 use crate::types::base::coin::Coin;
 use crate::types::base::errors::CoinsError;
 use crate::types::base::errors::SendCoinsError;

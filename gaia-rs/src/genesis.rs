@@ -1,6 +1,6 @@
 use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
-use gears::{core::address::AccAddress, error::AppError, types::base::send::SendCoins};
+use gears::{error::AppError, types::address::AccAddress, types::base::send::SendCoins};
 use ibc::GenesisState as IBCGenesis;
 use serde::{Deserialize, Serialize};
 

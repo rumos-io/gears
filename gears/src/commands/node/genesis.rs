@@ -1,12 +1,13 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use core_types::address::AccAddress;
 use tendermint::informal::genesis::Genesis;
 
 use crate::{
-    baseapp::genesis::Genesis as SDKGenesis, config::ConfigDirectory, error::AppError,
-    types::base::send::SendCoins,
+    baseapp::genesis::Genesis as SDKGenesis,
+    config::ConfigDirectory,
+    error::AppError,
+    types::{address::AccAddress, base::send::SendCoins},
 };
 
 #[derive(Debug, Clone, former::Former)]

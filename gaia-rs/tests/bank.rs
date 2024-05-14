@@ -21,12 +21,12 @@ use gears::{
         tx::{run_tx, Keyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    core::address::AccAddress,
     tendermint::{
         abci::{Event, EventAttribute},
         rpc::response::tx::broadcast::Response,
         types::chain_id::ChainId,
     },
+    types::address::AccAddress,
     types::{base::coin::Coin, denom::Denom},
 };
 use utilities::run_gaia_and_tendermint;
