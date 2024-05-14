@@ -7,13 +7,14 @@ use crate::{
         init::{init, InitCommand},
     },
     types::{
+        address::AccAddress,
         base::{coin::Coin, send::SendCoins},
         denom::Denom,
     },
 };
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
-use core_types::address::AccAddress;
+
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;
 

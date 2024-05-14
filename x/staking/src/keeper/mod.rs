@@ -4,7 +4,6 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
-    core::address::{AccAddress, ValAddress},
     error::AppError,
     params::ParamsSubspaceKey,
     store::{
@@ -16,6 +15,7 @@ use gears::{
         validator::ValidatorUpdate,
     },
     types::{
+        address::{AccAddress, ValAddress},
         base::{coin::Coin, send::SendCoins},
         context::{init::InitContext, QueryableContext, TransactionalContext},
         decimal256::Decimal256,

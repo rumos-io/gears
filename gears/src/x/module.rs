@@ -1,4 +1,4 @@
-use core_types::address::AccAddress;
+use crate::types::address::AccAddress;
 
 pub enum Module {
     FeeCollector,

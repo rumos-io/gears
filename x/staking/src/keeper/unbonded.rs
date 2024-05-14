@@ -15,8 +15,8 @@ impl<
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonded {
             return Err(AppError::Custom(format!(
-                "bad state transition unbonded to bonded, validator: {:?}",
-                validator
+                "bad state transition unbonded to bonded, validator: {}",
+                validator.operator_address
             ))
             .into());
         }

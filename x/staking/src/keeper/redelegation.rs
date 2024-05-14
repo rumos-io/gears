@@ -71,8 +71,9 @@ impl<
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
         for entry in &redelegation.entries {
-            if entry.is_mature(ctx_time) && !entry.initial_balance.amount.is_zero() {
-                balances.push(entry.initial_balance.clone());
+            let coin = Coin::try_from(entry.initial_balance.clone())?;
+            if entry.is_mature(ctx_time) && !coin.amount.is_zero() {
+                balances.push(coin);
             } else {
                 new_redelegations.push(entry);
             }

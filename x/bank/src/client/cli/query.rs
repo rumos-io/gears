@@ -6,10 +6,10 @@ use clap::{Args, Subcommand};
 
 use gears::{
     application::handlers::client::QueryHandler,
-    core::{address::AccAddress, query::request::bank::QueryDenomsMetadataRequest},
+    core::query::request::bank::QueryDenomsMetadataRequest,
     error::IBC_ENCODE_UNWRAP,
     tendermint::types::proto::Protobuf,
-    types::query::Query,
+    types::{address::AccAddress, query::Query},
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};

@@ -1,8 +1,12 @@
 use crate::{Params, Validator};
 use chrono::Utc;
 use gears::{
-    core::address::{AccAddress, ValAddress},
-    types::{base::coin::Coin, decimal256::Decimal256, uint::Uint256},
+    core::base::coin::Coin,
+    types::{
+        address::{AccAddress, ValAddress},
+        decimal256::Decimal256,
+        uint::Uint256,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -80,7 +84,7 @@ impl RedelegationEntry {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct GenesisState {
     /// params defines all the parameters of related to deposit.
     pub params: Params,

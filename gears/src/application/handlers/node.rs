@@ -6,8 +6,9 @@ use crate::{
         tx::{raw::TxWithRaw, TxMessage},
     },
 };
+use database::Database;
 use serde::de::DeserializeOwned;
-use store_crate::{database::Database, StoreKey};
+use store_crate::StoreKey;
 use tendermint::types::{
     proto::validator::ValidatorUpdate,
     request::{begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery},

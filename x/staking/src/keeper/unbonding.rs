@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 pub use super::*;
 
 impl<
@@ -171,7 +173,7 @@ impl<
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_begin_unbonding(
                 ctx,
-                validator.get_cons_addr()?,
+                validator.get_cons_addr(),
                 validator.operator_address.clone(),
             );
         }
@@ -237,8 +239,8 @@ impl<
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonding {
             return Err(AppError::Custom(format!(
-                "bad state transition unbonding to bonded, validator: {:?}",
-                validator
+                "bad state transition unbonding to bonded, validator: {}",
+                validator.operator_address
             ))
             .into());
         }
@@ -252,8 +254,8 @@ impl<
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonding {
             return Err(AppError::Custom(format!(
-                "bad state transition unbonding to unbonded, validator: {:?}",
-                validator
+                "bad state transition unbonding to unbonded, validator: {}",
+                validator.operator_address
             ))
             .into());
         }
@@ -282,10 +284,11 @@ impl<
         for entry in ubd.entries.iter() {
             if entry.is_mature(ctx_time) {
                 // track undelegation only when remaining or truncated shares are non-zero
-                if entry.balance.amount.is_zero() {
+                let amount = Uint256::from_str(&entry.balance.amount)?;
+                if amount.is_zero() {
                     let coin = Coin {
                         denom: bond_denom.clone(),
-                        amount: entry.balance.amount,
+                        amount,
                     };
                     let amount = SendCoins::new(vec![coin.clone()])?;
                     self.bank_keeper
@@ -331,8 +334,8 @@ impl<
         // sanity check
         if validator.status != BondStatus::Bonded {
             return Err(AppError::Custom(format!(
-                "should not already be unbonded or unbonding, validator: {:?}",
-                validator
+                "should not already be unbonded or unbonding, validator: {}",
+                validator.operator_address
             ))
             .into());
         }

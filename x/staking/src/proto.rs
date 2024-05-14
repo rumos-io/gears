@@ -1,10 +1,9 @@
 use crate::VALIDATORS_BY_POWER_INDEX_KEY;
 use chrono::Utc;
 use gears::{
-    core::address::{AccAddress, ValAddress},
-    crypto::{keys::ReadAccAddress, public::PublicKey as GearsPublicKey},
     tendermint::types::proto::{crypto::PublicKey, validator::ValidatorUpdate},
     types::{
+        address::{AccAddress, ConsAddress, ValAddress},
         base::{coin::Coin, send::SendCoins},
         decimal256::Decimal256,
         uint::Uint256,
@@ -65,7 +64,7 @@ impl Display for BondStatus {
 /// bond shares is based on the amount of coins delegated divided by the current
 /// exchange rate. Voting power can be calculated as total bonded shares
 /// multiplied by exchange rate.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct Validator {
     pub operator_address: ValAddress,
     pub delegator_shares: Decimal256,
@@ -89,18 +88,17 @@ pub struct Validator {
 impl Validator {
     pub fn abci_validator_update(&self, power: i64) -> ValidatorUpdate {
         ValidatorUpdate {
-            pub_key: Some(self.consensus_pubkey.clone()),
+            pub_key: self.consensus_pubkey.clone(),
             power: self.consensus_power(power),
         }
     }
+
     pub fn abci_validator_update_zero(&self) -> ValidatorUpdate {
         self.abci_validator_update(0)
     }
 
-    pub fn get_cons_addr(&self) -> anyhow::Result<AccAddress> {
-        let dom_pub_key: GearsPublicKey = self.consensus_pubkey.clone().try_into()?;
-        // TODO: let's discuss
-        Ok(dom_pub_key.get_address())
+    pub fn get_cons_addr(&self) -> ConsAddress {
+        self.consensus_pubkey.clone().into()
     }
 
     pub fn update_status(&mut self, status: BondStatus) {
@@ -151,5 +149,16 @@ impl Validator {
         key.push(oper_addr_invr.len() as u8);
         key.extend_from_slice(&oper_addr_invr);
         key
+    }
+
+    pub fn potential_tendermint_power(&self) -> i64 {
+        // let amount = self
+        //     .tokens
+        //     .amount
+        //     .parse::<i64>()
+        //     .expect("Unexpected conversion error");
+        // amount / 10i64.pow(6)
+        //TODO: original code above doesn't compile
+        12
     }
 }

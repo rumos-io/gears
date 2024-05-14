@@ -1,12 +1,12 @@
 use gears::{
-    core::{address::AccAddress, any::google::Any},
+    core::any::google::Any,
     error::IBC_ENCODE_UNWRAP,
     signing::{
         handler::MetadataGetter,
         renderer::value_renderer::{RenderError, ValueRenderer},
     },
     tendermint::types::proto::Protobuf,
-    types::{msg::send::MsgSend, rendering::screen::Screen, tx::TxMessage},
+    types::{address::AccAddress, msg::send::MsgSend, rendering::screen::Screen, tx::TxMessage},
 };
 use prost::bytes::Bytes;
 use serde::Serialize;

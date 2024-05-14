@@ -1,7 +1,8 @@
 use gears::{
-    core::{address::AccAddress, errors::Error, query::request::PageRequest},
+    core::{errors::Error, query::request::PageRequest},
     tendermint::types::proto::Protobuf,
     types::{
+        address::AccAddress,
         base::{coin::Coin, errors::CoinsError},
         denom::Denom,
         response::PageResponse,

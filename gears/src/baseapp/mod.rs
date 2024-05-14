@@ -16,7 +16,8 @@ use crate::{
     },
 };
 use bytes::Bytes;
-use store_crate::{database::RocksDB, types::multi::commit::CommitMultiStore, StoreKey};
+use database::RocksDB;
+use store_crate::{types::multi::commit::CommitMultiStore, StoreKey};
 use tendermint::types::{
     chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},

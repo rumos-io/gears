@@ -4,7 +4,6 @@ use crate::types::query::{
 };
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
-use gears::core::address::AccAddress;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
@@ -16,6 +15,7 @@ use gears::store::{
 };
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
+use gears::types::address::AccAddress;
 use gears::types::base::coin::Coin;
 use gears::types::base::send::SendCoins;
 use gears::types::context::init::InitContext;

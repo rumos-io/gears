@@ -1,11 +1,11 @@
 use std::{marker::PhantomData, path::PathBuf};
 
 use clap::{ArgAction, ValueHint};
-use core_types::address::AccAddress;
 
 use crate::{
-    application::ApplicationInfo, commands::node::genesis::GenesisCommand,
-    types::base::send::SendCoins,
+    application::ApplicationInfo,
+    commands::node::genesis::GenesisCommand,
+    types::{address::AccAddress, base::send::SendCoins},
 };
 
 /// Add a genesis account to genesis.json. The provided account must specify the
