@@ -1,10 +1,8 @@
 use super::crypto::PublicKey;
 
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ValidatorUpdate {
-    #[prost(message, optional, tag = "1")]
     pub pub_key: Option<PublicKey>,
-    #[prost(int64, tag = "2")]
     pub power: i64,
 }
 

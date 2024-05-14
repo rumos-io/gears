@@ -5,7 +5,7 @@ use bank::cli::{
     tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
-use gears::core::address::AccAddress;
+use gears::types::address::AccAddress;
 
 use crate::message::Message;
 

@@ -1,11 +1,12 @@
 use crate::{Params, Validator};
 use chrono::Utc;
 use gears::{
-    core::{
+    core::base::coin::Coin,
+    types::{
         address::{AccAddress, ValAddress},
-        base::coin::Coin,
+        decimal256::Decimal256,
+        uint::Uint256,
     },
-    types::{decimal256::Decimal256, uint::Uint256},
 };
 use serde::{Deserialize, Serialize};
 
