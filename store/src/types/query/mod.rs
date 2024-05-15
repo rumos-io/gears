@@ -17,17 +17,32 @@ use super::{
 
 pub mod kv;
 
+pub struct QueryStoreOptions<'a, DB, SK>(
+    &'a HashMap<SK, super::kv::KVBank<PrefixDB<DB>, CommitKind>>,
+);
+
+impl<'a, DB, SK> From<&'a MultiBank<DB, SK, CommitKind>> for QueryStoreOptions<'a, DB, SK> {
+    fn from(value: &'a MultiBank<DB, SK, CommitKind>) -> Self {
+        Self(&value.stores)
+    }
+}
+
 #[derive(Debug)]
 pub struct QueryMultiStore<DB, SK>(pub(crate) HashMap<SK, QueryKVStore<PrefixDB<DB>>>);
 
 impl<DB: Database + Clone, SK: StoreKey> QueryMultiStore<DB, SK> {
-    pub fn new(
-        multi_store: &MultiBank<DB, SK, CommitKind>, // TODO:NOW OTHER TYPE WHICH HIDES THIS. OR TRAIT Into<SomeMyType>
+    pub fn new<'a>(
+        opt: impl Into<QueryStoreOptions<'a, DB, SK>>,
         version: u32,
-    ) -> Result<Self, StoreError> {
-        let mut stores = HashMap::with_capacity(multi_store.stores.len());
+    ) -> Result<Self, StoreError>
+    where
+        DB: 'a,
+    {
+        let opt = opt.into();
 
-        for (key, bank) in &multi_store.stores {
+        let mut stores = HashMap::with_capacity(opt.0.len());
+
+        for (key, bank) in opt.0 {
             let tree = bank.persistent.read().expect(POISONED_LOCK);
 
             let query_kv_store = QueryKVStore::new(QueryTree::new(&tree, version)?);
