@@ -1636,6 +1636,7 @@ dependencies = [
  "gears",
  "gears-derive",
  "prost",
+ "rayon",
  "serde",
  "serde_json",
  "strum",

@@ -37,6 +37,7 @@ impl TmpChild {
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
         genesis: &G,
         address: AccAddress,
+        coins: u32,
     ) -> anyhow::Result<Self> {
         dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
             .overwrite(true)
@@ -66,7 +67,7 @@ impl TmpChild {
             address,
             coins: SendCoins::new(vec![Coin {
                 denom: Denom::from_str("uatom").expect("default denom should be valid"),
-                amount: 34_u32.into(),
+                amount: coins.into(),
             }])
             .expect("not empty"),
         };
