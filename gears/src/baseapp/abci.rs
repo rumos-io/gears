@@ -60,10 +60,10 @@ impl<
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        if let Some(params) = request.consensus_params.clone() {
-            self.baseapp_params_keeper
-                .set_consensus_params(&mut MultiStoreMut::from(&mut *multi_store), params);
-        }
+        self.baseapp_params_keeper.set_consensus_params(
+            &mut MultiStoreMut::from(&mut *multi_store),
+            request.consensus_params.clone(),
+        );
 
         //TODO: handle request height > 1 as is done in SDK
 
