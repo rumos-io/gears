@@ -67,7 +67,7 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                 impl  ::gears::types::tx::TxMessage for #name {
 
 
-                    fn get_signers(&self) -> Vec<&::gears::core::address::AccAddress> {
+                    fn get_signers(&self) -> Vec<&::gears::types::address::AccAddress> {
 
                         match self {
                             #(#get_signers),*

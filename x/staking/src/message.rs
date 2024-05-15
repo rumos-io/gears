@@ -1,14 +1,13 @@
 use crate::CreateValidator;
 use gears::{
-    core::{address::AccAddress, any::google::Any},
+    core::{any::google::Any, Protobuf},
     error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
-    types::tx::TxMessage,
+    types::{address::AccAddress, tx::TxMessage},
 };
 use prost::bytes::Bytes;
 use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(tag = "@type")]
 pub enum Message {
     #[serde(rename = "/cosmos.staking.v1beta1.CreateValidator")]

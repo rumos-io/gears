@@ -7,6 +7,9 @@ pub enum Error {
 
     #[error(transparent)]
     Genesis(#[from] serde_json::Error),
+
+    #[error("invalid data: {0}")]
+    InvalidData(String),
 }
 
 pub mod proto {

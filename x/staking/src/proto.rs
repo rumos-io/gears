@@ -1,12 +1,9 @@
 use gears::{
-    core::address::{AccAddress, ValAddress},
-    crypto::public::PublicKey,
+    core::Protobuf,
     error::{AppError, SearchError},
-    tendermint::types::{
-        proto::{crypto::PublicKey as TendermintPublicKey, Protobuf},
-        time::Timestamp,
-    },
+    tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
     types::{
+        address::{AccAddress, ValAddress},
         auth::fee::inner::Coin as CoinRaw,
         base::coin::Coin,
         decimal256::{CosmosDecimalProtoString, Decimal256},
@@ -159,8 +156,8 @@ pub struct CreateValidatorRaw {
     pub delegator_address: String,
     #[prost(string)]
     pub validator_address: String,
-    #[prost(message, optional)]
-    pub pub_key: Option<TendermintPublicKey>,
+    #[prost(bytes)]
+    pub pub_key: Vec<u8>,
     #[prost(message, optional)]
     pub value: Option<CoinRaw>,
 }
@@ -173,14 +170,15 @@ impl From<CreateValidator> for CreateValidatorRaw {
             min_self_delegation: src.min_self_delegation.to_string(),
             delegator_address: src.delegator_address.to_string(),
             validator_address: src.validator_address.to_string(),
-            pub_key: Some(src.pub_key.into()),
+            // TODO: Consider to implement Protobuf on PublicKey
+            pub_key: serde_json::to_vec(&src.pub_key).expect("Expected valid public key that can be converted into vector of bytes using serde_json"),
             value: Some(src.value.into()),
         }
     }
 }
 
 /// CreateValidator defines a SDK message for creating a new validator.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreateValidator {
     pub description: Description,
     pub commission: CommissionRates,
@@ -209,13 +207,7 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
             min_self_delegation: Uint256::from_str(&src.min_self_delegation)?,
             delegator_address: AccAddress::from_bech32(&src.delegator_address)?,
             validator_address: ValAddress::from_bech32(&src.validator_address)?,
-            pub_key: src
-                .pub_key
-                .ok_or(SearchError::DecodeError(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
-                .try_into()?,
+            pub_key: serde_json::from_slice(&src.pub_key)?,
             value: src
                 .value
                 .ok_or(SearchError::DecodeError(

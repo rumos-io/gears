@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 pub use super::*;
 
 impl<
@@ -62,7 +64,7 @@ impl<
             let storage = ctx.kv_store(&self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
             let end = {
-                let mut k = get_unbonding_delegation_time_key(time);
+                let mut k = get_unbonding_delegation_time_key(time).to_vec();
                 k.push(0);
                 k
             };
@@ -171,7 +173,7 @@ impl<
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_begin_unbonding(
                 ctx,
-                validator.get_cons_addr()?,
+                validator.get_cons_addr(),
                 validator.operator_address.clone(),
             );
         }
@@ -238,8 +240,8 @@ impl<
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonding {
             return Err(AppError::Custom(format!(
-                "bad state transition unbonding to bonded, validator: {:?}",
-                validator
+                "bad state transition unbonding to bonded, validator: {}",
+                validator.operator_address
             ))
             .into());
         }
@@ -253,8 +255,8 @@ impl<
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonding {
             return Err(AppError::Custom(format!(
-                "bad state transition unbonding to unbonded, validator: {:?}",
-                validator
+                "bad state transition unbonding to unbonded, validator: {}",
+                validator.operator_address
             ))
             .into());
         }
@@ -283,10 +285,11 @@ impl<
         for entry in ubd.entries.iter() {
             if entry.is_mature(ctx_time) {
                 // track undelegation only when remaining or truncated shares are non-zero
-                if entry.balance.amount.is_zero() {
+                let amount = Uint256::from_str(&entry.balance.amount)?;
+                if amount.is_zero() {
                     let coin = Coin {
                         denom: bond_denom.clone(),
-                        amount: entry.balance.amount,
+                        amount,
                     };
                     let amount = SendCoins::new(vec![coin.clone()])?;
                     self.bank_keeper
@@ -332,8 +335,8 @@ impl<
         // sanity check
         if validator.status != BondStatus::Bonded {
             return Err(AppError::Custom(format!(
-                "should not already be unbonded or unbonding, validator: {:?}",
-                validator
+                "should not already be unbonded or unbonding, validator: {}",
+                validator.operator_address
             ))
             .into());
         }
@@ -402,9 +405,9 @@ impl<
     }
 }
 
-pub(super) fn get_unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> Vec<u8> {
+pub(super) fn get_unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
     time.timestamp_nanos_opt()
-        .expect("Unknown time conversion error")
+        .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
+                The error in this method means that some system failure happened and the system cannot continue work.")
         .to_ne_bytes()
-        .to_vec()
 }

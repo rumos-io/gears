@@ -4,13 +4,16 @@ use crate::{
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use gears::{
-    core::address::{AccAddress, ValAddress},
-    crypto::public::PublicKey,
     error::AppError,
     tendermint::types::proto::crypto::PublicKey as TendermintPublicKey,
-    types::{base::coin::Coin, decimal256::Decimal256, tx::TxMessage, uint::Uint256},
+    types::{
+        address::{AccAddress, ValAddress},
+        base::coin::Coin,
+        decimal256::Decimal256,
+        tx::TxMessage,
+        uint::Uint256,
+    },
 };
-use prost::Message;
 use std::str::FromStr;
 
 #[derive(Args, Debug, Clone)]
@@ -76,7 +79,7 @@ pub fn run_staking_tx_command(
         } => {
             let delegator_address = from_address.clone();
             let validator_address = ValAddress::try_from(encode_hex_str(&from_address.as_hex())?)?;
-            let pub_key: PublicKey = TendermintPublicKey::decode(pubkey.as_bytes())?.try_into()?;
+            let pub_key: TendermintPublicKey = serde_json::from_slice(pubkey.as_bytes())?;
             let description = Description {
                 moniker: moniker.to_string(),
                 identity: identity.to_string(),

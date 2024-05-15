@@ -4,10 +4,12 @@ pub mod error;
 pub mod ext;
 mod memory;
 mod prefix;
+#[cfg(feature = "rocksdb")]
 mod rocks;
 
 pub use memory::*;
 pub use prefix::*;
+#[cfg(feature = "rocksdb")]
 pub use rocks::*;
 
 pub trait Database {

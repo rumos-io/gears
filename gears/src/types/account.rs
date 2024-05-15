@@ -1,5 +1,5 @@
 use core_types::errors::Error as IbcError;
-use core_types::{address::AccAddress, any::google::Any, serializers::serialize_number_to_string};
+use core_types::{any::google::Any, serializers::serialize_number_to_string};
 use keyring::error::DecodeError;
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,8 @@ use tendermint::types::proto::Protobuf;
 use crate::crypto::public::PublicKey;
 use crate::crypto::secp256k1::{RawSecp256k1PubKey, Secp256k1PubKey};
 use crate::error::IBC_ENCODE_UNWRAP;
+
+use super::address::AccAddress;
 
 pub mod inner {
     pub use core_types::account::BaseAccount;
@@ -214,10 +216,9 @@ impl Protobuf<Any> for Account {}
 
 #[cfg(test)]
 mod tests {
-    use core_types::address::AccAddress;
     use tendermint::types::proto::Protobuf;
 
-    use crate::types::account::BaseAccount;
+    use crate::types::{account::BaseAccount, address::AccAddress};
 
     #[test]
     fn base_account_encode_works() {

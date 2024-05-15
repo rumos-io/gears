@@ -26,9 +26,9 @@ use core_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
+use database::Database;
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
-use store_crate::database::Database;
 use store_crate::StoreKey;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {

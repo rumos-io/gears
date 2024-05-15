@@ -2,9 +2,7 @@ pub mod data;
 pub mod errors;
 pub mod metadata;
 pub mod signer;
-use core_types::{
-    address::AccAddress, any::google::Any, errors::Error, tx::signature::SignatureData,
-};
+use core_types::{any::google::Any, errors::Error, tx::signature::SignatureData};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tendermint::types::proto::Protobuf;
@@ -13,7 +11,7 @@ use crate::crypto::public::PublicKey;
 
 use self::{body::TxBody, errors::TxError};
 
-use super::{auth::info::AuthInfo, base::send::SendCoins};
+use super::{address::AccAddress, auth::info::AuthInfo, base::send::SendCoins};
 
 pub mod body;
 pub mod raw;

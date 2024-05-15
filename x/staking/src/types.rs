@@ -1,13 +1,16 @@
-use crate::{encode_hex_str, CommissionRates, VALIDATORS_BY_POWER_INDEX_KEY};
+use crate::{CommissionRates, VALIDATORS_BY_POWER_INDEX_KEY};
 use chrono::Utc;
 use gears::{
-    core::address::{AccAddress, ConsAddress, ValAddress},
-    crypto::{keys::ReadAccAddress, public::PublicKey},
-    tendermint::types::proto::validator::ValidatorUpdate,
-    types::{base::coin::Coin, decimal256::Decimal256, uint::Uint256},
+    core::base::coin::Coin,
+    tendermint::types::proto::{crypto::PublicKey, validator::ValidatorUpdate},
+    types::{
+        address::{AccAddress, ConsAddress, ValAddress},
+        decimal256::Decimal256,
+        uint::Uint256,
+    },
 };
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Pool {
@@ -135,7 +138,7 @@ impl Display for BondStatus {
 /// bond shares is based on the amount of coins delegated divided by the current
 /// exchange rate. Voting power can be calculated as total bonded shares
 /// multiplied by exchange rate.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Validator {
     pub operator_address: ValAddress,
     pub delegator_shares: Decimal256,
@@ -158,7 +161,7 @@ pub struct Validator {
 impl Validator {
     pub fn abci_validator_update(&self, power: i64) -> ValidatorUpdate {
         ValidatorUpdate {
-            pub_key: Some(self.consensus_pubkey.clone().into()),
+            pub_key: self.consensus_pubkey.clone(),
             power: self.consensus_power(power),
         }
     }
@@ -167,13 +170,13 @@ impl Validator {
     }
 
     pub fn tm_cons_public_key(&self) -> AccAddress {
-        self.consensus_pubkey.get_address()
+        todo!()
+        // let pub_key = GearsPublicKey::from(self.consensus_pubkey.clone());
+        // self.consensus_pubkey.get_address()
     }
 
-    pub fn get_cons_addr(&self) -> anyhow::Result<ConsAddress> {
-        let addr = self.consensus_pubkey.get_address().as_hex();
-        let encoded = encode_hex_str(&addr)?;
-        Ok(ConsAddress::try_from(encoded)?)
+    pub fn get_cons_addr(&self) -> ConsAddress {
+        self.consensus_pubkey.clone().into()
     }
 
     pub fn update_status(&mut self, status: BondStatus) {
@@ -188,7 +191,8 @@ impl Validator {
     }
 
     pub fn potential_tendermint_power(&self) -> i64 {
-        let amount = self.tokens.amount;
+        let amount = Uint256::from_str(&self.tokens.amount)
+            .expect("Expected valid amount of tokens. Error in this method can broke calculation.");
         let amount = amount / Uint256::from(10u64).pow(6);
         amount
             .to_string()
@@ -208,7 +212,8 @@ impl Validator {
     }
 
     pub fn tokens_to_consensus_power(&self, power: i64) -> i64 {
-        let amount = self.tokens.amount;
+        let amount = Uint256::from_str(&self.tokens.amount)
+            .expect("Expected valid amount of tokens. Error in this method can broke calculation.");
         let amount = amount / Uint256::from(power as u64);
         amount
             .to_string()

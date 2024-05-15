@@ -1,5 +1,5 @@
+use database::{Database, PrefixDB};
 use store_crate::{
-    database::{Database, PrefixDB},
     types::{
         kv::{mutable::KVStoreMut, KVStore},
         multi::{commit::CommitMultiStore, mutable::MultiStoreMut, MultiStore},

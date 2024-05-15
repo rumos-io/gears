@@ -1,11 +1,13 @@
-use core_types::{address::AccAddress, errors::AddressError};
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
-use crate::types::base::{
-    coin::Coin,
-    errors::{CoinsError, SendCoinsError},
-    send::SendCoins,
+use crate::types::{
+    address::{AccAddress, AddressError},
+    base::{
+        coin::Coin,
+        errors::{CoinsError, SendCoinsError},
+        send::SendCoins,
+    },
 };
 
 mod inner {

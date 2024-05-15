@@ -1,5 +1,5 @@
+use database::{Database, PrefixDB};
 use std::{hash::Hash, marker::PhantomData};
-use store_crate::database::{Database, PrefixDB};
 use store_crate::{
     types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     QueryableKVStore, StoreKey, TransactionalKVStore,

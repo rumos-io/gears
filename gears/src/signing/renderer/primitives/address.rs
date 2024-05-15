@@ -1,7 +1,7 @@
 //! Default formatting implementation for address
 
+use crate::types::address::AccAddress;
 use crate::types::rendering::screen::Content;
-use core_types::address::AccAddress;
 
 use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, PrimitiveValueRenderer};
 

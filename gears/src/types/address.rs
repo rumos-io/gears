@@ -4,13 +4,27 @@ use std::{
 };
 
 use bech32::{FromBase32, ToBase32, Variant};
+use ripemd::Ripemd160;
 use serde::{Deserialize, Deserializer, Serialize};
+use sha2::{Digest, Sha256};
 
-use crate::errors::AddressError;
+use crate::crypto::keys::SIZE_ERR_MSG;
+
+const PREFIX_VALIDATOR: &str = "val";
+const PREFIX_OPERATOR: &str = "oper";
+const PREFIX_CONSENSUS: &str = "cons";
 
 const BECH_32_PREFIX_ACC_ADDR: &str = env!("BECH_32_MAIN_PREFIX");
-const BECH_32_PREFIX_VAL_ADDR: &str = concat!(env!("BECH_32_MAIN_PREFIX"), "valoper");
-const BECH_32_PREFIX_CONS_ADDR: &str = concat!(env!("BECH_32_MAIN_PREFIX"), "cons");
+const BECH_32_PREFIX_VAL_ADDR: &str = constcat::concat!(
+    env!("BECH_32_MAIN_PREFIX"),
+    PREFIX_VALIDATOR,
+    PREFIX_OPERATOR
+);
+const BECH_32_PREFIX_CONS_ADDR: &str = constcat::concat!(
+    env!("BECH_32_MAIN_PREFIX"),
+    PREFIX_VALIDATOR,
+    PREFIX_CONSENSUS
+);
 
 const MAX_ADDR_LEN: u8 = 255;
 
@@ -27,12 +41,10 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
     pub fn from_bech32(address: &str) -> Result<Self, AddressError> {
         let (hrp, data, variant) = bech32::decode(address)?;
 
-        let prefix = if PREFIX == 0 {
-            BECH_32_PREFIX_ACC_ADDR
-        } else if PREFIX == 1 {
-            BECH_32_PREFIX_VAL_ADDR
-        } else {
-            BECH_32_PREFIX_CONS_ADDR
+        let prefix = match PREFIX {
+            0 => BECH_32_PREFIX_ACC_ADDR,
+            1 => BECH_32_PREFIX_VAL_ADDR,
+            _ => BECH_32_PREFIX_CONS_ADDR,
         };
 
         if hrp != prefix {
@@ -123,13 +135,12 @@ impl<'de, const PREFIX: u8> serde::de::Visitor<'de> for BaseAddressVisitor<PREFI
 
 impl<const PREFIX: u8> Display for BaseAddress<PREFIX> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let hrp = if PREFIX == 0 {
-            BECH_32_PREFIX_ACC_ADDR
-        } else if PREFIX == 1 {
-            BECH_32_PREFIX_VAL_ADDR
-        } else {
-            BECH_32_PREFIX_CONS_ADDR
+        let hrp = match PREFIX {
+            0 => BECH_32_PREFIX_ACC_ADDR,
+            1 => BECH_32_PREFIX_VAL_ADDR,
+            _ => BECH_32_PREFIX_CONS_ADDR,
         };
+
         let addr = bech32::encode(hrp, self.0.to_base32(), Variant::Bech32)
             .expect("method can only error if HRP is not valid, hard coded HRP is valid");
         write!(f, "{}", addr)
@@ -173,11 +184,50 @@ impl<const PREFIX: u8> From<BaseAddress<PREFIX>> for Vec<u8> {
     }
 }
 
+impl From<tendermint::types::proto::crypto::PublicKey> for ConsAddress {
+    fn from(pk: tendermint::types::proto::crypto::PublicKey) -> Self {
+        //TODO: check if this is the correct implementation for Tendermint keys - I copied the method we use for Cosmos keys
+        //TODO: avoid repeating the code for Cosmos keys
+        let pub_key = pk.raw();
+
+        // sha256 hash
+        let mut hasher = Sha256::new();
+        hasher.update(pub_key);
+        let hash = hasher.finalize();
+
+        // ripemd160 hash
+        let mut hasher = Ripemd160::new();
+        hasher.update(hash);
+        let hash = hasher.finalize();
+
+        hash.as_slice().try_into().expect(SIZE_ERR_MSG)
+    }
+}
+
+#[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
+pub enum AddressError {
+    #[error(transparent)]
+    Decode(#[from] bech32::Error),
+
+    #[error("address has wrong prefix (expected {expected:?}, found {found:?})")]
+    InvalidPrefix { expected: String, found: String },
+
+    #[error("invalid variant (expected {expected:?}, found {found:?})")]
+    InvalidVariant { expected: String, found: String },
+
+    #[error("invalid length, max length is: {max:?}, found {found:?})")]
+    InvalidLength { max: u8, found: usize },
+
+    #[error("bech32 decode error: address is empty")]
+    EmptyAddress,
+}
+
 #[cfg(test)]
 mod tests {
 
-    use super::*;
     use bech32::ToBase32;
+
+    use super::*;
 
     #[test]
     fn from_bech32_success() {

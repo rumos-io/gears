@@ -1,14 +1,15 @@
 use std::error::Error;
 
 use bip32::PublicKey as PublicKeyTrait;
-use core_types::address::AccAddress;
 use keyring::key::pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair};
 use ripemd::Ripemd160;
 use sha2::{Digest, Sha256};
 
+use crate::types::address::AccAddress;
+
 use super::{public::PublicKey, secp256k1::Secp256k1PubKey};
 
-const SIZE_ERR_MSG: &str =
+pub const SIZE_ERR_MSG: &str =
     "ripemd160 digest size is 160 bytes which is less than AccAddress::MAX_ADDR_LEN";
 
 pub trait GearsPublicKey {

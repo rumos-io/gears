@@ -1,6 +1,6 @@
 use gears::{
-    core::address::ConsAddress,
     types::account::{Account, ModuleAccount},
+    types::address::{AccAddress, ConsAddress},
 };
 
 pub use super::*;

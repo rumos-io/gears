@@ -1,6 +1,9 @@
 pub use super::*;
-use crate::{encode_hex_str, Commission, CreateValidator, Validator};
-use gears::{core::address::ConsAddress, types::context::tx::TxContext};
+use crate::{Commission, CreateValidator, Validator};
+use gears::{
+    tendermint::types::proto::crypto::PublicKey, types::address::ConsAddress,
+    types::context::tx::TxContext,
+};
 
 impl<
         SK: StoreKey,
@@ -24,10 +27,7 @@ impl<
             .get_validator(ctx, &msg.validator_address)
             .map_err(|_e| AppError::AccountNotFound)?;
 
-        let cons_addr_bytes = encode_hex_str(&msg.pub_key.get_address().as_hex())
-            .map_err(|_e| AppError::InvalidPublicKey)?;
-        let cons_addr =
-            ConsAddress::try_from(cons_addr_bytes).map_err(|_e| AppError::InvalidPublicKey)?;
+        let cons_addr: ConsAddress = msg.pub_key.clone().into();
         let _val_by_cons_addr = self
             .get_validator_by_cons_addr(ctx, &cons_addr)
             .map_err(|_e| AppError::AccountNotFound)?;
@@ -45,8 +45,9 @@ impl<
             .consensus_validator(&ctx.multi_store());
         if let Ok(consensus_validators) = consensus_validators {
             // TODO: implement method on new type
-            let pub_key_type = match msg.pub_key {
-                gears::crypto::public::PublicKey::Secp256k1(_) => "secp256k1",
+            let pub_key_type = match &msg.pub_key {
+                PublicKey::Secp256k1(_) => "secp256k1",
+                PublicKey::Ed25519(_) => "ed25519",
             };
             if !consensus_validators
                 .pub_key_types
@@ -57,7 +58,7 @@ impl<
             }
         }
 
-        let commision = Commission {
+        let _commision = Commission {
             commission_rates: msg.commission,
             update_time: ctx
                 .header()
@@ -67,18 +68,18 @@ impl<
         };
 
         ctx.height();
-        let validator = Validator {
-            operator_address: msg.validator_address,
-            delegator_shares: Decimal256::zero(),
-            consensus_pubkey: msg.pub_key,
-            jailed: false,
-            tokens: todo!(),
-            unbonding_height: 0,
-            unbonding_time: Utc::now(),
-            commission: todo!(),
-            min_self_delegation: Uint256::one(),
-            status: BondStatus::Unbonded,
-        };
+        // let _validator = Validator {
+        //     operator_address: msg.validator_address,
+        //     delegator_shares: Decimal256::zero(),
+        //     consensus_pubkey: msg.pub_key,
+        //     jailed: false,
+        //     tokens: todo!(),
+        //     unbonding_height: 0,
+        //     unbonding_time: Utc::now(),
+        //     commission: todo!(),
+        //     min_self_delegation: Uint256::one(),
+        //     status: BondStatus::Unbonded,
+        // };
         todo!()
     }
     // func (k msgServer) CreateValidator(goCtx context.Context, msg *types.MsgCreateValidator) (*types.MsgCreateValidatorResponse, error) {
@@ -190,11 +191,8 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_CONS_ADDR_KEY);
 
-        let key_bytes = encode_hex_str(&validator.consensus_pubkey.get_address().as_hex())?;
-        let cons_addr = ConsAddress::try_from(key_bytes)?;
-
         validators_store.set(
-            cons_addr.to_string().as_bytes().to_vec(),
+            validator.get_cons_addr().to_string().as_bytes().to_vec(),
             serde_json::to_vec(&validator)?,
         );
         Ok(())
@@ -285,7 +283,8 @@ pub(super) fn get_validator_queue_key(end_time: chrono::DateTime<Utc>, end_heigh
     let height_bz = end_height.to_ne_bytes();
     let time_bz = end_time
         .timestamp_nanos_opt()
-        .expect("Unknown time conversion error")
+        .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
+                The error in this method means that some system failure happened and the system cannot continue work.")
         .to_ne_bytes();
 
     let mut bz = VALIDATORS_QUEUE_KEY.to_vec();
