@@ -81,7 +81,6 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
     fn commit(
         _ctx: TxContext<'_, DB, SK>,
         _global_ms: &mut MultiBank<DB, SK, store_crate::CommitKind>,
-    )   {
-        
+    ) {
     }
 }

@@ -1,4 +1,4 @@
-use gears::store::database::PrefixDB;
+use gears::store::database::prefix::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::WritePrefixStore;
 use gears::types::context::init::InitContext;
@@ -103,7 +103,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     /// Query all client states
     pub fn client_states<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         _req: QueryClientStatesRequest,
     ) -> QueryClientStatesResponse {
         let store = ctx

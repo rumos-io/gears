@@ -7,7 +7,7 @@ use gears::store::WritePrefixStore;
 use gears::{
     params::ParamsSubspaceKey,
     store::{
-        database::{Database, PrefixDB},
+        database::{prefix::PrefixDB, Database},
         StoreKey,
     },
     types::context::{QueryableContext, TransactionalContext},
