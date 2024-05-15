@@ -1,0 +1,14 @@
+{
+    "@type": "/ibc.lightclients.solomachine.v2.ClientState",
+    "sequence": "1",
+    "is_frozen": false,
+    "consensus_state": {
+        "public_key": {
+            "@type": "/cosmos.crypto.secp256k1.PubKey",
+            "key": "AtK50+5pJOoaa04qqAqrnyAqsYrwrR/INnA6UPIaYZlp"
+        },
+        "diversifier": "testing",
+        "timestamp": "10"
+    },
+    "allow_update_after_proposal": false
+}

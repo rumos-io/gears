@@ -27,7 +27,6 @@ use proto_messages::{
         },
     },
 };
-use store::StoreKey;
 
 use crate::{
     errors::tx::client::{
@@ -48,7 +47,7 @@ pub struct TxKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> TxKeeper<SK, PSK> {
     pub fn new(
         store_key: SK,
-        params_keeper: gears::x::params::Keeper<SK, PSK>,
+        params_keeper: gears::params::Keeper<SK, PSK>,
         params_subspace_key: PSK,
     ) -> Self {
         let abci_params_keeper = AbciParamsKeeper {

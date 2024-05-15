@@ -234,13 +234,14 @@ impl<
 
     fn commit(&self) -> ResponseCommit {
         info!("Got commit request");
-        let new_height = self.block_height_increment();
+
+        let height = self.block_height();
 
         let hash = self.multi_store.write().expect(POISONED_LOCK).commit();
 
         info!(
             "Committed state, block height: {} app hash: {}",
-            new_height,
+            height,
             hex::encode(hash)
         );
 
@@ -248,7 +249,7 @@ impl<
 
         ResponseCommit {
             data: hash.to_vec().into(),
-            retain_height: (new_height - 1)
+            retain_height: (height - 1)
                 .try_into()
                 .expect("can't believe we made it this far"),
         }
@@ -263,6 +264,8 @@ impl<
 
     fn begin_block(&self, request: RequestBeginBlock) -> ResponseBeginBlock {
         info!("Got begin block request");
+
+        self.block_height_increment();
 
         self.set_block_header(
             request

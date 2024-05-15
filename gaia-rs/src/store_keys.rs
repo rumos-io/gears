@@ -7,6 +7,8 @@ pub enum GaiaStoreKey {
     Bank,
     Auth,
     Params,
+    IBC,
+    Capability,
 }
 
 /// WARNING: a key name must not be a prefix of another, there is currently
@@ -17,6 +19,8 @@ impl StoreKey for GaiaStoreKey {
             GaiaStoreKey::Bank => "bank",
             GaiaStoreKey::Auth => "acc",
             GaiaStoreKey::Params => "params",
+            GaiaStoreKey::IBC => "ibc",
+            GaiaStoreKey::Capability => "capability",
         }
     }
 }
@@ -26,6 +30,8 @@ pub enum GaiaParamsStoreKey {
     Bank,
     Auth,
     BaseApp,
+    IBC,
+    Capability,
 }
 
 /// WARNING: a key name must not be a prefix of another, there is currently
@@ -36,6 +42,8 @@ impl ParamsSubspaceKey for GaiaParamsStoreKey {
             Self::Bank => "bank/",
             Self::Auth => "auth/",
             Self::BaseApp => "baseapp/",
+            Self::IBC => "ibc/",
+            Self::Capability => "capability/",
         }
     }
 }

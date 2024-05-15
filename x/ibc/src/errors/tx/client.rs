@@ -1,16 +1,24 @@
-use gears::error::SearchError;
-use proto_messages::cosmos::ibc::types::core::{
-    client::{
-        context::types::{Height, Status},
-        error::ClientError,
-    },
-    host::{
+//use gears::error::SearchError;
+// use proto_messages::cosmos::ibc::types::core::{
+//     client::{
+//         context::types::{Height, Status},
+//         error::ClientError,
+//     },
+//     host::{
+//         error::IdentifierError,
+//         identifiers::{ClientId, ClientType},
+//     },
+// };
+
+use ibc::core::{
+    client::types::{error::ClientError, Height, Status},
+    host::types::{
         error::IdentifierError,
         identifiers::{ClientId, ClientType},
     },
 };
 
-use crate::params::ParamsError;
+use crate::{errors::query::client::SearchError, params::ParamsError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClientErrors {
