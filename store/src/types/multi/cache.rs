@@ -18,14 +18,6 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CacheKind> {
 
         CacheCommitData(map)
     }
-
-    pub fn head_version_set(&mut self, version: u32) {
-        self.head_version = version;
-    }
-
-    pub fn head_commit_hash_set(&mut self, hash: [u8; 32]) {
-        self.head_commit_hash = hash;
-    }
 }
 
 #[derive(Debug)]

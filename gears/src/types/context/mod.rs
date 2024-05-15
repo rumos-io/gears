@@ -27,8 +27,3 @@ pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
     fn append_events(&mut self, events: Vec<Event>);
     fn events_drain(&mut self) -> Vec<Event>;
 }
-
-// TODO:NOW Concrete or for trait?
-// pub(crate) trait CommitableContext<DB, SK>: TransactionalContext<DB, SK> {
-//     fn commit(&mut self) -> CacheCommitData<SK>;
-// }
