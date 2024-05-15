@@ -5,45 +5,61 @@ use crate::{
     },
     params::CLIENT_STATE_KEY,
 };
-use gears::store::database::Database;
+use gears::store::{database::Database, StoreKey};
 use gears::types::context::{
     query_context::QueryContext, tx_context::TxContext, QueryableContext, TransactionalContext,
 };
-use proto_messages::{
-    any::PrimitiveAny,
-    cosmos::ibc::{
-        protobuf::Protobuf,
-        types::{
-            core::{
-                channel::{
-                    channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment,
-                    PacketCommitment,
-                },
-                client::{
-                    context::{types::Height, ClientExecutionContext, ClientValidationContext},
-                    error::ClientError,
-                },
-                commitment::CommitmentPrefix,
-                connection::ConnectionEnd,
-                handler::{error::ContextError, events::IbcEvent},
-                host::{
-                    identifiers::{ConnectionId, Sequence},
-                    path::{
-                        AckPath, ChannelEndPath, ClientConnectionPath, ClientConsensusStatePath,
-                        ClientStatePath, CommitmentPath, ConnectionPath, ReceiptPath, SeqAckPath,
-                        SeqRecvPath, SeqSendPath,
-                    },
-                },
-            },
-            primitives::Timestamp,
-            tendermint::{
-                consensus_state::WrappedConsensusState, context::CommonContext,
-                WrappedTendermintClientState,
-            },
+use ibc::core::{
+    channel::types::{channel::ChannelEnd, commitment::AcknowledgementCommitment, packet::Receipt},
+    client::{
+        context::ClientValidationContext,
+        types::{error::ClientError, Height},
+    },
+    commitment_types::commitment::CommitmentPrefix,
+    handler::types::error::ContextError,
+    host::types::{
+        identifiers::Sequence,
+        path::{
+            AckPath, ChannelEndPath, ClientConsensusStatePath, ClientStatePath, ReceiptPath,
+            SeqAckPath, SeqRecvPath, SeqSendPath,
         },
     },
 };
-use store::{QueryableKVStore, StoreKey, TransactionalKVStore, WritePrefixStore};
+// use proto_messages::{
+//     any::PrimitiveAny,
+//     cosmos::ibc::{
+//         protobuf::Protobuf,
+//         types::{
+//             core::{
+//                 channel::{
+//                     channel::ChannelEnd, packet::Receipt, AcknowledgementCommitment,
+//                     PacketCommitment,
+//                 },
+//                 client::{
+//                     context::{types::Height, ClientExecutionContext, ClientValidationContext},
+//                     error::ClientError,
+//                 },
+//                 commitment::CommitmentPrefix,
+//                 connection::ConnectionEnd,
+//                 handler::{error::ContextError, events::IbcEvent},
+//                 host::{
+//                     identifiers::{ConnectionId, Sequence},
+//                     path::{
+//                         AckPath, ChannelEndPath, ClientConnectionPath, ClientConsensusStatePath,
+//                         ClientStatePath, CommitmentPath, ConnectionPath, ReceiptPath, SeqAckPath,
+//                         SeqRecvPath, SeqSendPath,
+//                     },
+//                 },
+//             },
+//             primitives::Timestamp,
+//             tendermint::{
+//                 consensus_state::WrappedConsensusState, context::CommonContext,
+//                 WrappedTendermintClientState,
+//             },
+//         },
+//     },
+// };
+// use store::{QueryableKVStore, StoreKey, TransactionalKVStore, WritePrefixStore};
 
 // TODO: try to find this const in external crates
 pub const ATTRIBUTE_KEY_MODULE: &str = "module";

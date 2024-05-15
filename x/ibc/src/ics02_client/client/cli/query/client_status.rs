@@ -1,8 +1,11 @@
 use clap::Args;
-
-use proto_messages::cosmos::ibc::types::core::{
-    client::context::types::proto::v1::QueryClientStatusRequest, host::identifiers::ClientId,
+use ibc::core::{
+    client::types::proto::v1::QueryClientStatusRequest, host::types::identifiers::ClientId,
 };
+
+// use proto_messages::cosmos::ibc::types::core::{
+//     client::context::types::proto::v1::QueryClientStatusRequest, host::identifiers::ClientId,
+// };
 
 pub(crate) const STATUS_URL: &str = "/ibc.core.client.v1.Query/ClientStatus";
 

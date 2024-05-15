@@ -1,2 +1,2 @@
 pub mod cli;
-pub mod rest;
+//pub mod rest; //TODO: add rest module back in

@@ -1,7 +1,11 @@
 use clap::Args;
-use proto_messages::cosmos::ibc::types::core::{
-    client::context::types::proto::v1::QueryClientParamsRequest, host::identifiers::ClientId,
+use ibc::core::{
+    client::types::proto::v1::QueryClientParamsRequest, host::types::identifiers::ClientId,
 };
+
+// use proto_messages::cosmos::ibc::types::core::{
+//     client::context::types::proto::v1::QueryClientParamsRequest, host::identifiers::ClientId,
+// };
 
 pub(crate) const PARAMS_URL: &str = "/ibc.core.client.v1.Query/ClientParams";
 
