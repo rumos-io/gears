@@ -164,15 +164,16 @@ fn send_tx() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// NOTE: This test doesn't check resulted hash and what events occured. It tries to check that our app works under *sign* some load
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn send_tx_in_parallel() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
     let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
 
-    use rayon::prelude::*;
+    static COUNTER: AtomicU8 = AtomicU8::new(10); // This makes transaction's different
 
-    static COUNTER: AtomicU8 = AtomicU8::new(10);
+    use rayon::iter::{IntoParallelIterator, ParallelIterator};
 
     (0..10).into_par_iter().try_for_each(|_| {
         let tx_cmd = BankCommands::Send {
