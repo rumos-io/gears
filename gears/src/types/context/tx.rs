@@ -39,6 +39,10 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             gas_meter,
         }
     }
+
+    pub fn header(&self) -> &Header {
+        &self.header
+    }
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, SK> {

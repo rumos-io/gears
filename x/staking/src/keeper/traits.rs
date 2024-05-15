@@ -1,4 +1,7 @@
-use gears::types::account::{Account, ModuleAccount};
+use gears::{
+    core::address::ConsAddress,
+    types::account::{Account, ModuleAccount},
+};
 
 pub use super::*;
 
@@ -99,24 +102,21 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn after_validator_removed<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        // TODO: ConstAddr in cosmos sdk
-        const_addr: AccAddress,
+        cons_addr: ConsAddress,
         val_addr: ValAddress,
     );
 
     fn after_validator_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        // TODO: ConstAddr in cosmos sdk
-        const_addr: AccAddress,
+        cons_addr: ConsAddress,
         val_addr: ValAddress,
     );
 
     fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        // TODO: ConstAddr in cosmos sdk
-        const_addr: AccAddress,
+        cons_addr: ConsAddress,
         val_addr: ValAddress,
     );
 

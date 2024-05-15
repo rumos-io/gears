@@ -14,11 +14,11 @@ mod inner {
     pub use tendermint::types::proto::params::ValidatorParams;
 }
 
-const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
-const KEY_EVIDENCE_PARAMS: [u8; 14] = [
+pub const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
+pub const KEY_EVIDENCE_PARAMS: [u8; 14] = [
     069, 118, 105, 100, 101, 110, 099, 101, 080, 097, 114, 097, 109, 115,
 ]; // "EvidenceParams"
-const KEY_VALIDATOR_PARAMS: [u8; 15] = [
+pub const KEY_VALIDATOR_PARAMS: [u8; 15] = [
     086, 097, 108, 105, 100, 097, 116, 111, 114, 080, 097, 114, 097, 109, 115,
 ]; // "ValidatorParams"
 

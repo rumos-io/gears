@@ -34,6 +34,7 @@ pub mod genesis;
 pub mod mode;
 mod params;
 pub mod state;
+pub use params::{KEY_BLOCK_PARAMS, KEY_EVIDENCE_PARAMS, KEY_VALIDATOR_PARAMS};
 
 static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
 

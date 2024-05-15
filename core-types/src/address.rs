@@ -10,11 +10,13 @@ use crate::errors::AddressError;
 
 const BECH_32_PREFIX_ACC_ADDR: &str = env!("BECH_32_MAIN_PREFIX");
 const BECH_32_PREFIX_VAL_ADDR: &str = concat!(env!("BECH_32_MAIN_PREFIX"), "valoper");
+const BECH_32_PREFIX_CONS_ADDR: &str = concat!(env!("BECH_32_MAIN_PREFIX"), "cons");
 
 const MAX_ADDR_LEN: u8 = 255;
 
 pub type AccAddress = BaseAddress<0>;
 pub type ValAddress = BaseAddress<1>;
+pub type ConsAddress = BaseAddress<2>;
 
 // TODO: when more complex const parameter types arrive, replace u8 with &'static str
 // https://github.com/rust-lang/rust/issues/95174
@@ -27,8 +29,10 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
 
         let prefix = if PREFIX == 0 {
             BECH_32_PREFIX_ACC_ADDR
-        } else {
+        } else if PREFIX == 1 {
             BECH_32_PREFIX_VAL_ADDR
+        } else {
+            BECH_32_PREFIX_CONS_ADDR
         };
 
         if hrp != prefix {
@@ -121,8 +125,10 @@ impl<const PREFIX: u8> Display for BaseAddress<PREFIX> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let hrp = if PREFIX == 0 {
             BECH_32_PREFIX_ACC_ADDR
-        } else {
+        } else if PREFIX == 1 {
             BECH_32_PREFIX_VAL_ADDR
+        } else {
+            BECH_32_PREFIX_CONS_ADDR
         };
         let addr = bech32::encode(hrp, self.0.to_base32(), Variant::Bech32)
             .expect("method can only error if HRP is not valid, hard coded HRP is valid");
@@ -170,9 +176,8 @@ impl<const PREFIX: u8> From<BaseAddress<PREFIX>> for Vec<u8> {
 #[cfg(test)]
 mod tests {
 
-    use bech32::ToBase32;
-
     use super::*;
+    use bech32::ToBase32;
 
     #[test]
     fn from_bech32_success() {

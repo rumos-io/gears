@@ -1,10 +1,11 @@
-use std::str::FromStr;
-
 use gears::{
     core::address::{AccAddress, ValAddress},
     crypto::public::PublicKey,
-    error::SearchError,
-    tendermint::types::proto::{crypto::PublicKey as TendermintPublicKey, Protobuf},
+    error::{AppError, SearchError},
+    tendermint::types::{
+        proto::{crypto::PublicKey as TendermintPublicKey, Protobuf},
+        time::Timestamp,
+    },
     types::{
         auth::fee::inner::Coin as CoinRaw,
         base::coin::Coin,
@@ -15,6 +16,13 @@ use gears::{
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
+
+const MAX_MONIKER_LENGTH: usize = 70;
+const MAX_IDENTITY_LENGTH: usize = 3000;
+const MAX_WEBSITE_LENGTH: usize = 140;
+const MAX_SECURITY_CONTACT_LENGTH: usize = 140;
+const MAX_DETAILS_LENGTH: usize = 280;
 
 /// CommissionRates defines the initial commission rates to be used for creating
 /// a validator.
@@ -63,6 +71,14 @@ impl TryFrom<CommissionRatesRaw> for CommissionRates {
 
 impl Protobuf<CommissionRatesRaw> for CommissionRates {}
 
+/// Commission defines commission parameters for a given validator.
+pub struct Commission {
+    /// commission_rates defines the initial commission rates to be used for creating a validator.
+    pub commission_rates: CommissionRates,
+    /// update_time is the last time the commission rate was changed.
+    pub update_time: Timestamp,
+}
+
 /// Description defines a validator description.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct Description {
@@ -84,6 +100,52 @@ pub struct Description {
 }
 
 impl Protobuf<Description> for Description {}
+
+impl Description {
+    pub fn ensure_length(&self) -> Result<(), AppError> {
+        // TODO: can be wrapped by macro
+        if self.moniker.len() > MAX_MONIKER_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "moniker",
+                self.moniker.len(),
+                MAX_MONIKER_LENGTH,
+            ));
+        }
+        if self.identity.len() > MAX_IDENTITY_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "identity",
+                self.identity.len(),
+                MAX_IDENTITY_LENGTH,
+            ));
+        }
+        if self.website.len() > MAX_WEBSITE_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "website",
+                self.website.len(),
+                MAX_WEBSITE_LENGTH,
+            ));
+        }
+        if self.security_contact.len() > MAX_SECURITY_CONTACT_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "security_contact",
+                self.security_contact.len(),
+                MAX_SECURITY_CONTACT_LENGTH,
+            ));
+        }
+        if self.details.len() > MAX_DETAILS_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "details",
+                self.details.len(),
+                MAX_DETAILS_LENGTH,
+            ));
+        }
+        Ok(())
+    }
+
+    fn form_ensure_length_err(&self, name: &str, got: usize, max: usize) -> AppError {
+        AppError::InvalidRequest(format!("invalid {name} length; got: {got}, max: {max}"))
+    }
+}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct CreateValidatorRaw {

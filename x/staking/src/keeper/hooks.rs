@@ -57,7 +57,7 @@ impl<
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_bonded(
                 ctx,
-                validator.get_cons_addr(),
+                validator.get_cons_addr()?,
                 validator.operator_address.clone(),
             );
         }

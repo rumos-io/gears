@@ -8,6 +8,7 @@ mod message;
 mod params;
 mod proto;
 mod types;
+mod utils;
 
 pub use abci_handler::*;
 pub use client::*;
@@ -17,3 +18,4 @@ pub use message::*;
 pub use params::*;
 pub use proto::*;
 pub use types::*;
+pub use utils::*;

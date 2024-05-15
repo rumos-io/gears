@@ -1,7 +1,7 @@
-use crate::{CommissionRates, VALIDATORS_BY_POWER_INDEX_KEY};
+use crate::{encode_hex_str, CommissionRates, VALIDATORS_BY_POWER_INDEX_KEY};
 use chrono::Utc;
 use gears::{
-    core::address::{AccAddress, ValAddress},
+    core::address::{AccAddress, ConsAddress, ValAddress},
     crypto::{keys::ReadAccAddress, public::PublicKey},
     tendermint::types::proto::validator::ValidatorUpdate,
     types::{base::coin::Coin, decimal256::Decimal256, uint::Uint256},
@@ -170,9 +170,10 @@ impl Validator {
         self.consensus_pubkey.get_address()
     }
 
-    pub fn get_cons_addr(&self) -> AccAddress {
-        // TODO: the other logic that
-        self.consensus_pubkey.get_address()
+    pub fn get_cons_addr(&self) -> anyhow::Result<ConsAddress> {
+        let addr = self.consensus_pubkey.get_address().as_hex();
+        let encoded = encode_hex_str(&addr)?;
+        Ok(ConsAddress::try_from(encoded)?)
     }
 
     pub fn update_status(&mut self, status: BondStatus) {

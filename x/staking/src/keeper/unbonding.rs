@@ -171,7 +171,7 @@ impl<
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_begin_unbonding(
                 ctx,
-                validator.get_cons_addr(),
+                validator.get_cons_addr()?,
                 validator.operator_address.clone(),
             );
         }
@@ -203,7 +203,8 @@ impl<
 
             if height < block_height && (time <= block_time) {
                 for addr in v {
-                    let mut validator = self.get_validator(ctx, addr.as_bytes())?;
+                    let val_addr = ValAddress::from_bech32(&addr)?;
+                    let mut validator = self.get_validator(ctx, &val_addr)?;
                     if validator.status != BondStatus::Unbonding {
                         return Err(AppError::Custom(
                             "unexpected validator in unbonding queue; status was not unbonding"

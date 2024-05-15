@@ -1,5 +1,7 @@
+use gears::baseapp::KEY_VALIDATOR_PARAMS;
 use gears::core::base::coin::Coin;
 use gears::store::StoreKey;
+use gears::tendermint::types::proto::params::ValidatorParams;
 use gears::{
     params::ParamsSubspaceKey,
     store::{
@@ -59,6 +61,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
         if let Some(raw_params) = store.get(PARAMS_KEY.as_ref()) {
+            Ok(serde_json::from_slice(&raw_params)?)
+        } else {
+            Err(serde_json::Error::custom("Cannot find data to convert".to_string()).into())
+        }
+    }
+
+    pub fn consensus_validator<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> anyhow::Result<ValidatorParams> {
+        let store = self
+            .params_keeper
+            .raw_subspace(ctx, &self.params_subspace_key);
+
+        if let Some(raw_params) = store.get(KEY_VALIDATOR_PARAMS.as_ref()) {
             Ok(serde_json::from_slice(&raw_params)?)
         } else {
             Err(serde_json::Error::custom("Cannot find data to convert".to_string()).into())

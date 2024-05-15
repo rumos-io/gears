@@ -51,10 +51,11 @@ const LAST_VALIDATOR_POWER_KEY: [u8; 1] = [3];
 const DELEGATIONS_KEY: [u8; 1] = [4];
 const REDELEGATIONS_KEY: [u8; 1] = [5];
 pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [6];
-const VALIDATORS_QUEUE_KEY: [u8; 1] = [7];
-const UBD_QUEUE_KEY: [u8; 1] = [8];
-const UNBONDING_QUEUE_KEY: [u8; 1] = [9];
-const REDELEGATION_QUEUE_KEY: [u8; 1] = [10];
+const VALIDATORS_BY_CONS_ADDR_KEY: [u8; 1] = [7];
+const VALIDATORS_QUEUE_KEY: [u8; 1] = [8];
+const UBD_QUEUE_KEY: [u8; 1] = [9];
+const UNBONDING_QUEUE_KEY: [u8; 1] = [10];
+const REDELEGATION_QUEUE_KEY: [u8; 1] = [11];
 
 const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
 const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
@@ -249,8 +250,7 @@ impl<
         if genesis.exported {
             for last_validator in genesis.last_validator_powers {
                 self.set_last_validator_power(ctx, &last_validator)?;
-                let validator =
-                    self.get_validator(ctx, last_validator.address.to_string().as_bytes())?;
+                let validator = self.get_validator(ctx, &last_validator.address)?;
                 let mut update = validator.abci_validator_update(self.power_reduction(ctx));
                 update.power = last_validator.power;
                 res.push(update);
@@ -393,8 +393,7 @@ impl<
         for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
-            let mut validator: Validator =
-                self.get_validator(ctx, val_addr.to_string().as_bytes())?;
+            let mut validator: Validator = self.get_validator(ctx, &val_addr)?;
 
             if validator.jailed {
                 return Err(AppError::Custom(
@@ -450,8 +449,8 @@ impl<
 
         let no_longer_bonded = sort_no_longer_bonded(&last)?;
 
-        for val_addr_bytes in no_longer_bonded {
-            let mut validator = self.get_validator(ctx, val_addr_bytes.as_bytes())?;
+        for val_addr in no_longer_bonded {
+            let mut validator = self.get_validator(ctx, &ValAddress::from_bech32(&val_addr)?)?;
             self.bonded_to_unbonding(ctx, &mut validator)?;
             amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded + validator.tokens.amount;
             self.delete_last_validator_power(ctx, &validator.operator_address)?;
