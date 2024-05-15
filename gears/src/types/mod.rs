@@ -1,4 +1,5 @@
 pub mod account;
+pub mod address;
 pub mod auth;
 pub mod base;
 pub mod context;

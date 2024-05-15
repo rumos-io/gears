@@ -1,5 +1,6 @@
-use core_types::address::AccAddress;
 use ledger_cosmos::CosmosValidatorApp;
+
+use crate::types::address::AccAddress;
 
 use super::{
     keys::{GearsPublicKey, ReadAccAddress, SigningKey},

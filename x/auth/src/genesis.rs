@@ -1,5 +1,7 @@
-use gears::core::address::AccAddress;
-use gears::{error::AppError, types::account::BaseAccount};
+use gears::{
+    error::AppError,
+    types::{account::BaseAccount, address::AccAddress},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::Params;

@@ -88,7 +88,7 @@ impl<
         self.abci_handler.init_genesis(&mut ctx, genesis.clone());
 
         ResponseInitChain {
-            consensus_params: request.consensus_params,
+            consensus_params: Some(request.consensus_params),
             validators: request.validators,
             app_hash: "hash_goes_here".into(), //TODO: set app hash
         }

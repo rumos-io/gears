@@ -12,7 +12,7 @@ tendermint = { path = "../tendermint" }
 core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
 store_crate = { path = "../store", package = "store" }
-database = { path = "../database", features = [ "rocksdb" ]}
+database = { path = "../database", features = ["rocksdb"] }
 
 #newtypes
 # vec1 = "1.12.0"
@@ -34,6 +34,7 @@ integer-encoding = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
 derive_more = { workspace = true }
+constcat = { workspace = true }
 
 #serialization
 prost = { workspace = true }
