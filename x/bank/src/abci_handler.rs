@@ -39,7 +39,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<S
 
     pub fn query<DB: Database>(
         &self,
-        ctx: &QueryContext<'a, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {

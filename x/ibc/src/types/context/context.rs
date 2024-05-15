@@ -439,9 +439,10 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         client_state_path: ibc::core::host::types::path::ClientStatePath,
         client_state: Self::ClientStateRef,
     ) -> Result<(), ibc::core::handler::types::error::ContextError> {
-        Ok(self
-            .client_keeper
-            .client_state_set(self.gears_ctx, client_state_path, client_state))
+        self
+        .client_keeper
+        .client_state_set(self.gears_ctx, client_state_path, client_state);
+        Ok(())
     }
 
     fn store_consensus_state(

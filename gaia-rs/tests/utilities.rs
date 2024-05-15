@@ -44,7 +44,9 @@ pub fn acc_address() -> AccAddress {
 }
 
 /// Helper method to start gaia node and tendermint in tmp folder
-pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
+pub fn run_gaia_and_tendermint(
+    coins: u32,
+) -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.to_path_buf();
 
@@ -55,6 +57,7 @@ pub fn run_gaia_and_tendermint() -> anyhow::Result<(TmpChild, std::thread::JoinH
         TENDERMINT_PATH,
         &MockGenesis::default(),
         acc_address(),
+        coins,
     )?;
 
     std::thread::sleep(Duration::from_secs(10));

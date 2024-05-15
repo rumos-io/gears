@@ -1,15 +1,16 @@
 use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
+use crate::baseapp::mode::ExecutionMode;
 use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
-use crate::types::context::tx::TxContext;
-use crate::types::gas::infinite_meter::InfiniteGasMeter;
-use crate::types::gas::{Gas, GasMeter};
+use crate::types::gas::Gas;
 use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
+use store_crate::types::multi::immutable::MultiStore;
+use store_crate::types::multi::mutable::MultiStoreMut;
 use store_crate::StoreKey;
 use tendermint::{
     application::ABCIApplication,
@@ -57,13 +58,10 @@ impl<
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
 
-        let mut multi_store = self
-            .multi_store
-            .write()
-            .expect("RwLock will not be poisoned");
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         self.baseapp_params_keeper.set_consensus_params(
-            &mut multi_store.as_mutable(),
+            &mut MultiStoreMut::from(&mut *multi_store),
             request.consensus_params.clone(),
         );
 
@@ -73,8 +71,6 @@ impl<
             error!("Invalid chain id provided by Tendermint.\nTerminating process\n");
             std::process::exit(1)
         });
-
-        let mut ctx = InitContext::new(&mut multi_store, self.block_height(), chain_id);
 
         let genesis: G = String::from_utf8(request.app_state_bytes.into())
             .map_err(|e| AppError::Genesis(e.to_string()))
@@ -87,9 +83,9 @@ impl<
                 std::process::exit(1)
             });
 
-        self.abci_handler.init_genesis(&mut ctx, genesis);
+        let mut ctx = InitContext::new(&mut *multi_store, self.block_height(), chain_id.clone());
 
-        multi_store.tx_cache_to_block();
+        self.abci_handler.init_genesis(&mut ctx, genesis.clone());
 
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),
@@ -154,8 +150,7 @@ impl<
         let mut state = self.state.write().expect(POISONED_LOCK);
 
         let result = match r#type {
-            0 => self.run_tx(tx.clone(), &mut state.check_mode),
-            1 => self.run_tx(tx.clone(), &mut state.check_mode), // TODO: ReCheckTxMode
+            0 | 1 => self.run_tx(tx.clone(), &mut state.check_mode), // TODO: ReCheckTxMode
             _ => panic!("unknown Request CheckTx type: {}", r#type),
         };
 
@@ -243,11 +238,14 @@ impl<
         let height = self.block_height();
 
         let hash = self.multi_store.write().expect(POISONED_LOCK).commit();
+
         info!(
             "Committed state, block height: {} app hash: {}",
             height,
             hex::encode(hash)
         );
+
+        self.state.write().expect(POISONED_LOCK).cache_clear();
 
         ResponseCommit {
             data: hash.to_vec().into(),
@@ -284,27 +282,26 @@ impl<
         {
             let max_gas = self
                 .baseapp_params_keeper
-                .block_params(&multi_store.as_immutable())
+                .block_params(&MultiStore::from(&*multi_store))
                 .map(|e| e.max_gas)
                 .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
             state.replace_meter(Gas::from(max_gas))
         }
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
+        let mut ctx = state.deliver_mode.build_ctx(
             self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            GasMeter::new(Box::<InfiniteGasMeter>::default()),
+            None,
         );
 
         self.abci_handler.begin_block(&mut ctx, request);
 
+        multi_store.sync(ctx.commit());
         let events = ctx.events;
-        multi_store.tx_cache_to_block();
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -314,22 +311,22 @@ impl<
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         info!("Got end block request");
 
+        let mut state = self.state.write().expect(POISONED_LOCK);
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
+        let mut ctx = state.deliver_mode.build_ctx(
             self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            GasMeter::new(Box::<InfiniteGasMeter>::default()),
+            None,
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
+        multi_store.sync(ctx.commit());
         let events = ctx.events;
-        multi_store.tx_cache_to_block();
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

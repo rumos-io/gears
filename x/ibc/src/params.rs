@@ -1,5 +1,5 @@
 use gears::params::ParamsSubspaceKey;
-use gears::store::database::{Database, PrefixDB};
+use gears::store::database::{prefix::PrefixDB, Database};
 use gears::store::{
     QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore, WritePrefixStore,
 };

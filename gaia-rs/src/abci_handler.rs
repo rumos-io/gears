@@ -90,7 +90,7 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
 
     fn query<DB: Database + Send + Sync>(
         &self,
-        ctx: &QueryContext<'_, DB, GaiaStoreKey>,
+        ctx: &QueryContext<DB, GaiaStoreKey>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         if query.path.starts_with("/cosmos.auth") {

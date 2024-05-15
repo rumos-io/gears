@@ -9,13 +9,13 @@ use super::{node_db::NodeDB, Node, Range, Tree};
 /// QueryTree is a "checked out" Tree at a given height which
 /// borrows a Tree's NodeDb
 #[derive(Debug)]
-pub struct QueryTree<'a, DB> {
+pub struct QueryTree<DB> {
     pub(crate) root: Option<Box<Node>>,
-    pub(crate) node_db: &'a NodeDB<DB>,
+    pub(crate) node_db: NodeDB<DB>,
 }
 
-impl<'a, DB: Database> QueryTree<'a, DB> {
-    pub fn new(tree: &'a Tree<DB>, mut version: u32) -> Result<QueryTree<'a, DB>, Error> {
+impl<DB: Database + Clone> QueryTree<DB> {
+    pub fn new(tree: &Tree<DB>, mut version: u32) -> Result<Self, Error> {
         if version == 0 {
             version = tree.loaded_version;
         }
@@ -27,13 +27,15 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
 
             Ok(QueryTree {
                 root,
-                node_db: &tree.node_db,
+                node_db: tree.node_db.clone(),
             })
         } else {
-            Err(Error::VersionNotFound)
+            Err(Error::VersionNotFound(version))
         }
     }
+}
 
+impl<DB: Database> QueryTree<DB> {
     pub fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         match &self.root {
             Some(root) => self.get_(key, root),
@@ -96,16 +98,17 @@ impl<'a, DB: Database> QueryTree<'a, DB> {
             Some(root) => Range {
                 range,
                 delayed_nodes: vec![root.clone()], //TODO: remove clone
-                node_db: self.node_db,
+                node_db: &self.node_db,
             },
             None => Range {
                 range,
                 delayed_nodes: vec![],
-                node_db: self.node_db,
+                node_db: &self.node_db,
             },
         }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;

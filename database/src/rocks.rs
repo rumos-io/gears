@@ -1,11 +1,11 @@
 use crate::{error::Error, Database};
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use rocksdb::{DBWithThreadMode, SingleThreaded};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RocksDB {
-    db: DBWithThreadMode<SingleThreaded>, // QA: Are we sure? Probably
+    db: Arc<DBWithThreadMode<SingleThreaded>>, // QA: Are we sure? Probably
 }
 
 // TODO: remove panics
@@ -16,7 +16,7 @@ impl RocksDB {
         P: AsRef<Path>,
     {
         Ok(RocksDB {
-            db: rocksdb::DB::open_default(path)?,
+            db: Arc::new(rocksdb::DB::open_default(path)?),
         })
     }
 }

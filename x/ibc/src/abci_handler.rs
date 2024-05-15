@@ -105,7 +105,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
 
     pub fn query<DB: Database + Send + Sync>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         query: gears::tendermint::types::request::query::RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         match query.path.as_str() {

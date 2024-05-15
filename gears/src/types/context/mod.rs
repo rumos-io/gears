@@ -1,8 +1,7 @@
-use database::{Database, PrefixDB};
-use store_crate::types::kv::mutable::KVStoreMut;
-use store_crate::types::kv::KVStore;
+use database::prefix::PrefixDB;
+use store_crate::types::kv::{immutable::KVStore, mutable::KVStoreMut};
+use store_crate::types::multi::immutable::MultiStore;
 use store_crate::types::multi::mutable::MultiStoreMut;
-use store_crate::types::multi::MultiStore;
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 pub mod init;
@@ -18,7 +17,7 @@ pub trait QueryableContext<DB, SK> {
     fn chain_id(&self) -> &ChainId;
 }
 
-pub trait TransactionalContext<DB: Database, SK>: QueryableContext<DB, SK> {
+pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
     fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK>;
 
     ///  Fetches an mutable ref to a KVStore from the MultiStore.

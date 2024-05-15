@@ -86,7 +86,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn client_states<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         req: QueryClientStatesRequest,
     ) -> QueryClientStatesResponse {
         self.client_keeper.client_states(ctx, req)

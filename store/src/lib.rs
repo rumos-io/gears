@@ -1,8 +1,7 @@
-use ::database::PrefixDB;
 use range::Range;
 use strum::IntoEnumIterator;
 use types::{
-    kv::{mutable::KVStoreMut, KVStore},
+    kv::{immutable::KVStore, mutable::KVStoreMut},
     prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
 };
 
@@ -15,6 +14,11 @@ mod utils;
 use std::{hash::Hash, ops::RangeBounds};
 
 pub(crate) const TREE_CACHE_SIZE: usize = 100_000;
+
+#[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CacheKind;
+#[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct CommitKind;
 
 pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;
@@ -47,9 +51,7 @@ pub trait QueryableMultiKVStore<DB, SK> {
 }
 
 pub trait TransactionalMultiKVStore<DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
-    /// Writes then clears each store's tx cache to the store's block cache then clears the tx caches
-    fn tx_cache_to_block(&mut self);
+    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, DB>;
     /// Clears the tx caches
-    fn tx_caches_clear(&mut self);
+    fn caches_clear(&mut self);
 }

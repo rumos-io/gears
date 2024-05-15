@@ -16,7 +16,7 @@ impl Default for InfiniteGasMeter {
 
 impl InfiniteGasMeter {
     /// Create new `InfiniteGasMeter` with zero consumed gas.
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             consumed: FiniteGas::ZERO,
         }
