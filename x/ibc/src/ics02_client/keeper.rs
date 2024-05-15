@@ -108,7 +108,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     ) -> QueryClientStatesResponse {
         let store = ctx
             .kv_store(&self.store_key)
-            .prefix_store(format!("{KEY_CLIENT_STORE_PREFIX}").into_bytes());
+            .prefix_store(KEY_CLIENT_STORE_PREFIX.to_string().into_bytes());
 
         let mut client_states = vec![];
 
@@ -117,7 +117,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                 continue;
             };
 
-            let key_split: Vec<&str> = key.split("/").collect();
+            let key_split: Vec<&str> = key.split('/').collect();
             let [_, client_id, this_client_state_key] = key_split[..] else {
                 continue;
             };
@@ -158,7 +158,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         client_state_path: ClientStatePath,
         client_state: ClientState,
     ) {
-        let mut store = Self::client_store_mut(&self, ctx, &client_state_path.0);
+        let mut store = Self::client_store_mut(self, ctx, &client_state_path.0);
         store.set(CLIENT_STATE_KEY.bytes(), client_state.encode_vec());
     }
 
