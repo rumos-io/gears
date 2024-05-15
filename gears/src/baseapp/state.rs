@@ -1,3 +1,6 @@
+use database::Database;
+use store_crate::{types::multi::MultiBank, CommitKind, StoreKey};
+
 use crate::types::gas::{
     basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter,
 };
@@ -5,16 +8,16 @@ use crate::types::gas::{
 use super::mode::{check::CheckTxMode, deliver::DeliverTxMode};
 
 #[derive(Debug)]
-pub struct ApplicationState {
-    pub(super) check_mode: CheckTxMode,
-    pub(super) deliver_mode: DeliverTxMode,
+pub struct ApplicationState<DB, SK> {
+    pub(super) check_mode: CheckTxMode<DB, SK>,
+    pub(super) deliver_mode: DeliverTxMode<DB, SK>,
 }
 
-impl ApplicationState {
-    pub fn new(max_gas: Gas) -> Self {
+impl<DB: Database, SK: StoreKey> ApplicationState<DB, SK> {
+    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, SK, CommitKind>) -> Self {
         Self {
-            check_mode: CheckTxMode::new(max_gas),
-            deliver_mode: DeliverTxMode::new(max_gas),
+            check_mode: CheckTxMode::new(max_gas, global_ms.to_cache_kind()),
+            deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_cache_kind()),
         }
     }
 
@@ -32,5 +35,10 @@ impl ApplicationState {
                     GasMeter::new(Box::new(BasicGasMeter::new(max_gas)));
             }
         }
+    }
+
+    pub fn cache_clear(&mut self) {
+        self.check_mode.multi_store.caches_clear();
+        self.deliver_mode.multi_store.caches_clear();
     }
 }

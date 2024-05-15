@@ -22,7 +22,7 @@ use super::{QueryableContext, TransactionalContext};
 pub struct TxContext<'a, DB, SK> {
     pub gas_meter: GasMeter<TxKind>,
     pub events: Vec<Event>,
-    multi_store: MultiBank<DB, SK, CacheKind>,
+    multi_store: &'a mut MultiBank<DB, SK, CacheKind>,
     pub(crate) height: u64,
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
@@ -30,7 +30,7 @@ pub struct TxContext<'a, DB, SK> {
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
-        multi_store: MultiBank<DB, SK, CacheKind>,
+        multi_store: &'a mut MultiBank<DB, SK, CacheKind>,
         height: u64,
         header: Header,
         gas_meter: GasMeter<TxKind>,
@@ -59,7 +59,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
     }
 
     fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&self.multi_store)
+        MultiStore::from(&*self.multi_store)
     }
 
     fn height(&self) -> u64 {
@@ -73,7 +73,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
     fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        MultiStoreMut::from(&mut self.multi_store)
+        MultiStoreMut::from(&mut *self.multi_store)
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {

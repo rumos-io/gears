@@ -53,7 +53,7 @@ pub struct BaseApp<
     G: Genesis,
     AI: ApplicationInfo,
 > {
-    state: Arc<RwLock<ApplicationState>>,
+    state: Arc<RwLock<ApplicationState<RocksDB, SK>>>,
     multi_store: Arc<RwLock<MultiBank<RocksDB, SK, CommitKind>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
@@ -94,7 +94,10 @@ impl<
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
-            state: Arc::new(RwLock::new(ApplicationState::new(Gas::from(max_gas)))),
+            state: Arc::new(RwLock::new(ApplicationState::new(
+                Gas::from(max_gas),
+                &multi_store,
+            ))),
             multi_store: Arc::new(RwLock::new(multi_store)),
             m: PhantomData,
             g: PhantomData,
@@ -160,7 +163,7 @@ impl<
         Ok(())
     }
 
-    fn run_tx<MD: ExecutionMode>(
+    fn run_tx<MD: ExecutionMode<RocksDB, SK>>(
         &self,
         raw: Bytes,
         mode: &mut MD,
@@ -180,12 +183,7 @@ impl<
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let mut ctx = mode.build_ctx(
-            multi_store.to_cache_kind(),
-            height,
-            header.clone(),
-            Some(&tx_with_raw.tx.auth_info.fee),
-        );
+        let mut ctx = mode.build_ctx(height, header.clone(), Some(&tx_with_raw.tx.auth_info.fee));
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
@@ -202,7 +200,7 @@ impl<
         ctx.block_gas_meter
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
-        multi_store.sync(ctx.commit());
+        MD::commit(ctx, &mut multi_store);
 
         Ok(RunTxInfo {
             events,

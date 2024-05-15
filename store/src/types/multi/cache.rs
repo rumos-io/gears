@@ -27,6 +27,10 @@ impl<SK> CacheCommitData<SK> {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub fn empty() -> Self {
+        Self(Vec::new())
+    }
 }
 
 impl<SK> IntoIterator for CacheCommitData<SK> {

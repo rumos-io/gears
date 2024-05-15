@@ -22,31 +22,32 @@ use crate::{
 use super::{build_tx_gas_meter, ExecutionMode};
 
 #[derive(Debug)]
-pub struct DeliverTxMode {
+pub struct DeliverTxMode<DB, SK> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
+    pub(crate) multi_store: MultiBank<DB, SK, CacheKind>,
 }
 
-impl DeliverTxMode {
-    pub fn new(max_gas: Gas) -> Self {
+impl<DB, SK> DeliverTxMode<DB, SK> {
+    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, SK, CacheKind>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
                 Gas::Finite(max_gas) => Box::new(BasicGasMeter::new(max_gas)),
             }),
+            multi_store,
         }
     }
 }
 
-impl ExecutionMode for DeliverTxMode {
-    fn build_ctx<DB: Database, SK: StoreKey>(
+impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for DeliverTxMode<DB, SK> {
+    fn build_ctx(
         &mut self,
-        store: MultiBank<DB, SK, CacheKind>,
         height: u64,
         header: Header,
         fee: Option<&Fee>,
     ) -> TxContext<'_, DB, SK> {
         TxContext::new(
-            store,
+            &mut self.multi_store,
             height,
             header,
             build_tx_gas_meter(height, fee),
@@ -54,14 +55,7 @@ impl ExecutionMode for DeliverTxMode {
         )
     }
 
-    fn run_msg<
-        'm,
-        DB: Database + Send + Sync,
-        SK: StoreKey,
-        M: TxMessage,
-        G: Genesis,
-        AH: ABCIHandler<M, SK, G>,
-    >(
+    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,
@@ -78,13 +72,7 @@ impl ExecutionMode for DeliverTxMode {
         Ok(events)
     }
 
-    fn run_ante_checks<
-        DB: Database,
-        SK: StoreKey,
-        M: TxMessage,
-        G: Genesis,
-        AH: ABCIHandler<M, SK, G>,
-    >(
+    fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
@@ -98,13 +86,18 @@ impl ExecutionMode for DeliverTxMode {
         }
     }
 
-    fn runnable<DB: Database, SK: StoreKey>(
-        ctx: &mut TxContext<'_, DB, SK>,
-    ) -> Result<(), RunTxError> {
+    fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
         if ctx.block_gas_meter.is_out_of_gas() {
             Err(RunTxError::OutOfGas)
         } else {
             Ok(())
         }
+    }
+
+    fn commit(
+        mut ctx: TxContext<'_, DB, SK>,
+        global_ms: &mut MultiBank<DB, SK, store_crate::CommitKind>,
+    ) {
+        global_ms.sync(ctx.commit());
     }
 }

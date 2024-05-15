@@ -244,6 +244,8 @@ impl<
             hex::encode(hash)
         );
 
+        self.state.write().expect(POISONED_LOCK).cache_clear();
+
         ResponseCommit {
             data: hash.to_vec().into(),
             retain_height: (new_height - 1)
@@ -285,7 +287,6 @@ impl<
         }
 
         let mut ctx = state.deliver_mode.build_ctx(
-            multi_store.to_cache_kind(),
             self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
@@ -311,7 +312,6 @@ impl<
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         let mut ctx = state.deliver_mode.build_ctx(
-            multi_store.to_cache_kind(),
             self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
