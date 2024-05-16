@@ -61,11 +61,12 @@ impl<DB: Database, SK> KVBank<DB, SK> {
     }
 
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        self.cache.get(k.as_ref()).cloned().or(self
-            .persistent
-            .read()
-            .expect(POISONED_LOCK)
-            .get(k.as_ref()))
+        match self.cache.get(k.as_ref()) {
+            Ok(var) => var,
+            Err(_) => return None,
+        }
+        .cloned()
+        .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
     }
 
     // TODO:NOW You could iterate over values that should have been deleted
@@ -87,5 +88,133 @@ impl<DB: Database, SK> KVBank<DB, SK> {
     pub fn caches_update(&mut self, KVCache { storage, delete }: KVCache) {
         self.cache.storage.extend(storage);
         self.cache.delete.extend(delete);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use database::MemDB;
+
+    use crate::TREE_CACHE_SIZE;
+
+    use super::*;
+
+    #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct TestStore;
+
+    #[test]
+    fn delete_empty_cache() {
+        let mut tree = build_tree();
+
+        let key = vec![1];
+
+        tree.set(key.clone(), vec![2]);
+
+        let mut store = build_store(tree, None);
+
+        // ---
+        let deleted = store.delete(&key);
+
+        // ---
+        assert_eq!(Some(vec![2]), deleted);
+    }
+
+    #[test]
+    fn delete_taken_from_cache() {
+        let mut tree = build_tree();
+
+        let key = vec![1];
+
+        tree.set(key.clone(), vec![2]);
+
+        let mut cache = KVCache::default();
+
+        cache.storage.insert(key.clone(), vec![3]);
+
+        let mut store = build_store(tree, Some(cache));
+
+        // ---
+        let deleted = store.delete(&key);
+
+        // ---
+        assert_eq!(Some(vec![3]), deleted);
+    }
+
+    #[test]
+    fn get_empty_cache() {
+        let mut tree = build_tree();
+
+        let key = vec![1];
+
+        tree.set(key.clone(), vec![2]);
+
+        let store = build_store(tree, None);
+
+        // ---
+        let result = store.get(&key);
+
+        // ---
+        assert_eq!(Some(vec![2]), result);
+    }
+
+    #[test]
+    fn get_from_cache() {
+        let mut tree = build_tree();
+
+        let key = vec![1];
+
+        tree.set(key.clone(), vec![2]);
+
+        let mut cache = KVCache::default();
+
+        cache.storage.insert(key.clone(), vec![3]);
+
+        let store = build_store(tree, Some(cache));
+
+        // ---
+        let result = store.get(&key);
+
+        // ---
+        assert_eq!(Some(vec![3]), result);
+    }
+
+    #[test]
+    fn get_deleted() {
+        let mut tree = build_tree();
+
+        let key = vec![1];
+
+        tree.set(key.clone(), vec![2]);
+
+        let mut cache = KVCache::default();
+
+        cache.delete.insert(key.clone());
+
+        let store = build_store(tree, Some(cache));
+
+        // ---
+        let result = store.get(&key);
+
+        // ---
+        assert_eq!(None, result);
+    }
+
+    fn build_tree() -> Tree<MemDB> {
+        Tree::new(
+            MemDB::new(),
+            None,
+            TREE_CACHE_SIZE
+                .try_into()
+                .expect("Unreachable. Tree cache size is > 0"),
+        )
+        .expect("Failed to create Tree")
+    }
+
+    fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> KVBank<MemDB, TestStore> {
+        KVBank {
+            persistent: Arc::new(RwLock::new(tree)),
+            cache: cache.unwrap_or_default(),
+            _marker: PhantomData,
+        }
     }
 }

@@ -7,6 +7,10 @@ pub struct KVCache {
     pub(crate) delete: HashSet<Vec<u8>>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("Key deleted from cache")]
+pub struct DeletedError;
+
 impl KVCache {
     /// Take out all cache from storages.
     pub fn take(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
@@ -17,12 +21,12 @@ impl KVCache {
     }
 
     /// Get value from cache
-    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<&Vec<u8>> {
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<&Vec<u8>>, DeletedError> {
         if self.delete.contains(k.as_ref()) {
-            return None;
+            return Err(DeletedError);
         }
 
-        self.storage.get(k.as_ref())
+        Ok(self.storage.get(k.as_ref()))
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
@@ -67,6 +71,8 @@ impl<SK> IntoIterator for CacheCommitList<SK> {
 
 #[cfg(test)]
 mod tests {
+
+    use crate::types::kv::store_cache::DeletedError;
 
     use super::KVCache;
 
@@ -126,6 +132,6 @@ mod tests {
         let result = cache.get(&[1]);
 
         //
-        assert_eq!(None, result);
+        assert_eq!(Err(DeletedError), result);
     }
 }
