@@ -69,7 +69,6 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
     }
 
-    // TODO:NOW You could iterate over values that should have been deleted
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
         let cached_values = self
             .cache
@@ -80,6 +79,8 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         let tree = self.persistent.read().expect(POISONED_LOCK);
         let persisted_values = tree
             .range(range)
+            // NOTE: Keys filtered only for persisted 'cause cache structure should remove inserted values on delete, but if this change then it's a place for a bug
+            .filter(|(key, _)| !self.cache.delete.contains(&**key))
             .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
         MergedRange::merge(cached_values, persisted_values).into()
@@ -93,6 +94,8 @@ impl<DB: Database, SK> KVBank<DB, SK> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::BTreeMap;
+
     use database::MemDB;
 
     use crate::TREE_CACHE_SIZE;
@@ -197,6 +200,182 @@ mod tests {
 
         // ---
         assert_eq!(None, result);
+    }
+
+    #[test]
+    fn range_work_for_persist_values() {
+        let mut tree = build_tree();
+
+        let values_insert = [
+            (1, 11),
+            (2, 22),
+            (3, 33),
+            (4, 44),
+            (5, 55),
+            (6, 66),
+            (7, 77),
+            (8, 88),
+            (9, 99),
+            (10, 100),
+        ]
+        .into_iter()
+        .map(|(key, value)| (vec![key], vec![value]))
+        .collect::<BTreeMap<_, _>>();
+
+        for (key, value) in values_insert.clone() {
+            tree.set(key, value);
+        }
+
+        let range = vec![4]..vec![8];
+
+        let expected_range = values_insert
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .range(range.clone())
+            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+            .collect::<BTreeMap<_, _>>();
+
+        let store = build_store(tree, None);
+
+        // ---
+        let range = store.range(range).collect::<BTreeMap<_, _>>();
+
+        // ---
+        assert_eq!(expected_range, range);
+    }
+
+    #[test]
+    fn range_work_for_persist_and_cached_values() {
+        let mut tree = build_tree();
+
+        for (key, value) in [
+            (1, 11),
+            (2, 22),
+            (3, 33),
+            (4, 44),
+            (5, 55),
+            (6, 66),
+            (8, 88),
+            (9, 99),
+            (10, 100),
+        ] {
+            tree.set(vec![key], vec![value]);
+        }
+
+        let mut cache = KVCache::default();
+
+        cache.storage.insert(vec![6], vec![60]); // Overrides old value
+        cache.storage.insert(vec![7], vec![77]); // Adds new value
+
+        let range = vec![4]..vec![8];
+
+        let store = build_store(tree, Some(cache));
+
+        // ---
+        let result_range = store.range(range.clone()).collect::<BTreeMap<_, _>>();
+
+        // ---
+
+        let expected_range = [
+            (vec![4_u8], vec![44_u8]),
+            (vec![5], vec![55]),
+            (vec![6], vec![60]),
+            (vec![7], vec![77]),
+        ]
+        .into_iter()
+        .collect::<BTreeMap<_, _>>()
+        .range(range)
+        .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+        .collect::<BTreeMap<_, _>>();
+
+        assert_eq!(expected_range, result_range);
+    }
+
+    #[test]
+    fn range_work_for_persist_values_without_deleted() {
+        let mut tree = build_tree();
+
+        for (key, value) in [
+            (1, 11),
+            (2, 22),
+            (3, 33),
+            (4, 44),
+            (5, 55),
+            (6, 66),
+            (7, 77),
+            (8, 88),
+            (9, 99),
+            (10, 100),
+        ] {
+            tree.set(vec![key], vec![value]);
+        }
+
+        let mut cache = KVCache::default();
+
+        cache.delete.insert(vec![5]);
+        cache.delete.insert(vec![6]);
+
+        let range = vec![4]..vec![8];
+
+        let store = build_store(tree, Some(cache));
+
+        // ---
+        let result_range = store.range(range.clone()).collect::<BTreeMap<_, _>>();
+
+        // ---
+
+        let expected_range = [(vec![4_u8], vec![44_u8]), (vec![7], vec![77])]
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .range(range)
+            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+            .collect::<BTreeMap<_, _>>();
+
+        assert_eq!(expected_range, result_range);
+    }
+
+    #[test]
+    fn range_work_for_persist_and_cached_values_without_deleted() {
+        let mut tree = build_tree();
+
+        for (key, value) in [
+            (1, 11),
+            (2, 22),
+            (3, 33),
+            (4, 44),
+            (5, 55),
+            (6, 66),
+            (7, 77),
+            (8, 88),
+            (9, 99),
+            (10, 100),
+        ] {
+            tree.set(vec![key], vec![value]);
+        }
+
+        let mut cache = KVCache::default();
+
+        cache.storage.insert(vec![4], vec![40]);
+        cache.delete.insert(vec![5]);
+        cache.delete.insert(vec![6]);
+
+        let range = vec![4]..vec![8];
+
+        let store = build_store(tree, Some(cache));
+
+        // ---
+        let result_range = store.range(range.clone()).collect::<BTreeMap<_, _>>();
+
+        // ---
+
+        let expected_range = [(vec![4_u8], vec![40_u8]), (vec![7], vec![77])]
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .range(range)
+            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+            .collect::<BTreeMap<_, _>>();
+
+        assert_eq!(expected_range, result_range);
     }
 
     fn build_tree() -> Tree<MemDB> {
