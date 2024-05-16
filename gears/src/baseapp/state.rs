@@ -41,4 +41,12 @@ impl<DB: Database, SK: StoreKey> ApplicationState<DB, SK> {
         self.check_mode.multi_store.caches_clear();
         self.deliver_mode.multi_store.caches_clear();
     }
+
+    // TODO: It would be better to find difference in caches and extend it, but this solution is quicker
+    pub fn cache_update(&mut self, store: &mut MultiBank<DB, SK, ApplicationStore>) {
+        let cache = store.caches_copy();
+
+        self.check_mode.multi_store.caches_update(cache.clone());
+        self.deliver_mode.multi_store.caches_update(cache);
+    }
 }

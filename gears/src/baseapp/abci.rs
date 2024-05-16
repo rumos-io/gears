@@ -277,10 +277,9 @@ impl<
         self.set_block_header(header.clone());
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut state = self.state.write().expect(POISONED_LOCK);
 
         {
-            let mut state = self.state.write().expect(POISONED_LOCK);
-
             let max_gas = self
                 .baseapp_params_keeper
                 .block_params(&MultiStore::from(&*multi_store))
@@ -299,6 +298,8 @@ impl<
         self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
+
+        state.cache_update(&mut multi_store);
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -322,6 +323,11 @@ impl<
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
         let events = ctx.events;
+
+        self.state
+            .write()
+            .expect(POISONED_LOCK)
+            .cache_update(&mut multi_store);
 
         ResponseEndBlock {
             events: events.into_iter().collect(),
