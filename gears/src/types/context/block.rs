@@ -4,7 +4,7 @@ use store_crate::{
         kv::{immutable::KVStore, mutable::KVStoreMut},
         multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     },
-    CommitKind, StoreKey,
+    ApplicationStore, StoreKey,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
@@ -14,7 +14,7 @@ use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct BlockContext<'a, DB, SK> {
-    multi_store: &'a mut MultiBank<DB, SK, CommitKind>,
+    multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
     pub(crate) height: u64,
     pub header: Header,
     pub events: Vec<Event>,
@@ -22,7 +22,7 @@ pub struct BlockContext<'a, DB, SK> {
 
 impl<'a, DB, SK> BlockContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, CommitKind>,
+        multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
         height: u64,
         header: Header,
     ) -> Self {

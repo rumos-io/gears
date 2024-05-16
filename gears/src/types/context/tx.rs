@@ -4,7 +4,7 @@ use store_crate::{
         kv::{immutable::KVStore, mutable::KVStoreMut},
         multi::{cache::CacheCommitData, immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     },
-    CacheKind, StoreKey,
+    StoreKey, TransactionStore,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
@@ -22,7 +22,7 @@ use super::{QueryableContext, TransactionalContext};
 pub struct TxContext<'a, DB, SK> {
     pub gas_meter: GasMeter<TxKind>,
     pub events: Vec<Event>,
-    multi_store: &'a mut MultiBank<DB, SK, CacheKind>,
+    multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
     pub(crate) height: u64,
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
@@ -30,7 +30,7 @@ pub struct TxContext<'a, DB, SK> {
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, CacheKind>,
+        multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
         height: u64,
         header: Header,
         gas_meter: GasMeter<TxKind>,

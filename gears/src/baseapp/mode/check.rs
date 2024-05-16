@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, CacheKind, StoreKey, TransactionalMultiKVStore};
+use store_crate::{types::multi::MultiBank, TransactionStore, StoreKey, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use super::{build_tx_gas_meter, ExecutionMode};
@@ -21,11 +21,11 @@ use crate::{
 #[derive(Debug)]
 pub struct CheckTxMode<DB, SK> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiBank<DB, SK, CacheKind>,
+    pub(crate) multi_store: MultiBank<DB, SK, TransactionStore>,
 }
 
 impl<DB, SK> CheckTxMode<DB, SK> {
-    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, SK, CacheKind>) -> Self {
+    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, SK, TransactionStore>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
@@ -80,7 +80,7 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
 
     fn commit(
         _ctx: TxContext<'_, DB, SK>,
-        _global_ms: &mut MultiBank<DB, SK, store_crate::CommitKind>,
+        _global_ms: &mut MultiBank<DB, SK, store_crate::ApplicationStore>,
     ) {
     }
 }

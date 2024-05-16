@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, CommitKind, StoreKey};
+use store_crate::{types::multi::MultiBank, ApplicationStore, StoreKey};
 
 use crate::types::gas::{
     basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter,
@@ -14,7 +14,7 @@ pub struct ApplicationState<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> ApplicationState<DB, SK> {
-    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, SK, CommitKind>) -> Self {
+    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, SK, ApplicationStore>) -> Self {
         Self {
             check_mode: CheckTxMode::new(max_gas, global_ms.to_cache_kind()),
             deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_cache_kind()),

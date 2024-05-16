@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, HashSet};
 
 use database::Database;
 
-use crate::{types::prefix::immutable::ImmutablePrefixStore, CacheKind};
+use crate::{types::prefix::immutable::ImmutablePrefixStore, TransactionStore};
 
 use super::{immutable::KVStore, KVBank};
 
-impl<DB: Database> KVBank<DB, CacheKind> {
+impl<DB: Database> KVBank<DB, TransactionStore> {
     pub fn commit(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
         self.cache.take()
     }

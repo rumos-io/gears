@@ -16,9 +16,9 @@ use std::{hash::Hash, ops::RangeBounds};
 pub(crate) const TREE_CACHE_SIZE: usize = 100_000;
 
 #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct CacheKind;
+pub struct TransactionStore;
 #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct CommitKind;
+pub struct ApplicationStore;
 
 pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str;

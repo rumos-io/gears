@@ -22,7 +22,7 @@ use store_crate::{
         multi::{immutable::MultiStore, MultiBank},
         query::QueryMultiStore,
     },
-    CommitKind, StoreKey,
+    ApplicationStore, StoreKey,
 };
 use tendermint::types::{
     chain_id::ChainIdErrors,
@@ -54,7 +54,7 @@ pub struct BaseApp<
     AI: ApplicationInfo,
 > {
     state: Arc<RwLock<ApplicationState<RocksDB, SK>>>,
-    multi_store: Arc<RwLock<MultiBank<RocksDB, SK, CommitKind>>>,
+    multi_store: Arc<RwLock<MultiBank<RocksDB, SK, ApplicationStore>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -78,7 +78,7 @@ impl<
         params_subspace_key: PSK,
         abci_handler: H,
     ) -> Self {
-        let multi_store = MultiBank::<_, _, CommitKind>::new(db);
+        let multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,

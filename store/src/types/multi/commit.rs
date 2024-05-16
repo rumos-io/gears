@@ -2,11 +2,11 @@ use std::{collections::HashMap, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
-use crate::{hash::StoreInfo, types::kv::KVBank, CacheKind, CommitKind, StoreKey};
+use crate::{hash::StoreInfo, types::kv::KVBank, ApplicationStore, StoreKey, TransactionStore};
 
 use super::{cache::CacheCommitData, MultiBank};
 
-impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
+impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
     pub fn new(db: DB) -> Self {
         let db = Arc::new(db);
 
@@ -36,7 +36,7 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
         }
     }
 
-    pub fn to_cache_kind(&self) -> MultiBank<DB, SK, CacheKind> {
+    pub fn to_cache_kind(&self) -> MultiBank<DB, SK, TransactionStore> {
         MultiBank {
             head_version: self.head_version,
             head_commit_hash: self.head_commit_hash,

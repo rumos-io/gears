@@ -2,11 +2,11 @@ use std::collections::{BTreeMap, HashSet};
 
 use database::Database;
 
-use crate::{CacheKind, StoreKey};
+use crate::{StoreKey, TransactionStore};
 
 use super::MultiBank;
 
-impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CacheKind> {
+impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, TransactionStore> {
     pub fn commit(&mut self) -> CacheCommitData<SK> {
         let mut map: Vec<(SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)> =
             Vec::with_capacity(self.stores.len());
