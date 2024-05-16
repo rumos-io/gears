@@ -1,5 +1,8 @@
 pub use super::*;
-use crate::{Commission, CreateValidator, Validator};
+use crate::{
+    consts::expect::{SERDE_DECODING_DOMAIN_TYPE, SERDE_ENCODING_DOMAIN_TYPE},
+    Commission, CreateValidator, Validator,
+};
 use gears::{
     tendermint::types::proto::crypto::PublicKey, types::address::ConsAddress,
     types::context::tx::TxContext,
@@ -19,13 +22,10 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: CreateValidator,
     ) -> Result<(), AppError> {
-        let params = self
-            .staking_params_keeper
-            .get(&ctx.multi_store())
-            .map_err(|_e| AppError::Custom("Cannot access params store".into()))?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store());
         let _val_by_val_addr = self
             .validator(ctx, &msg.validator_address)
-            .map_err(|_e| AppError::AccountNotFound)?;
+            .expect("validator in the store was not found");
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
         let _val_by_cons_addr = self
@@ -128,30 +128,25 @@ impl<
         &self,
         ctx: &CTX,
         key: &ValAddress,
-    ) -> anyhow::Result<Validator> {
+    ) -> Option<Validator> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_KEY);
-        if let Some(e) = validators_store.get(key.to_string().as_bytes()) {
-            Ok(serde_json::from_slice(&e)?)
-        } else {
-            Err(anyhow::Error::from(serde_json::Error::custom(
-                "Validator doesn't exists.".to_string(),
-            )))
-        }
+        validators_store
+            .get(key.to_string().as_bytes())
+            .map(|e| serde_json::from_slice(&e).expect(SERDE_DECODING_DOMAIN_TYPE))
     }
 
     pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.set(
             validator.operator_address.to_string().as_bytes().to_vec(),
-            serde_json::to_vec(&validator)?,
+            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
         );
-        Ok(())
     }
 
     pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -175,15 +170,14 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_CONS_ADDR_KEY);
 
         validators_store.set(
             validator.cons_addr().to_string().as_bytes().to_vec(),
-            serde_json::to_vec(&validator)?,
+            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
         );
-        Ok(())
     }
 
     pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -252,15 +246,15 @@ impl<
     pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> anyhow::Result<HashMap<String, Vec<u8>>> {
+    ) -> HashMap<String, Vec<u8>> {
         let mut last = HashMap::new();
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
         for (k, v) in store.range(..) {
-            let k: ValAddress = serde_json::from_slice(&k)?;
+            let k: ValAddress = serde_json::from_slice(&k).expect(SERDE_DECODING_DOMAIN_TYPE);
             last.insert(k.to_string(), v.to_vec());
         }
-        Ok(last)
+        last
     }
 }
 

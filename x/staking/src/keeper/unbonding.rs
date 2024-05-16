@@ -209,8 +209,10 @@ impl<
 
             if height < block_height && (time <= block_time) {
                 for addr in v {
-                    let val_addr = ValAddress::from_bech32(&addr)?;
-                    let mut validator = self.validator(ctx, &val_addr)?;
+                    let val_addr = ValAddress::from_bech32(addr)?;
+                    let mut validator = self
+                        .validator(ctx, &val_addr)
+                        .expect("validator in the unbonding queue was not found");
                     if validator.status != BondStatus::Unbonding {
                         return Err(AppError::Custom(
                             "unexpected validator in unbonding queue; status was not unbonding"
@@ -218,7 +220,7 @@ impl<
                         )
                         .into());
                     }
-                    self.unbonding_to_unbonded(ctx, &mut validator)?;
+                    self.unbonding_to_unbonded(ctx, &mut validator);
                     if validator.delegator_shares.is_zero() {
                         self.remove_validator(
                             ctx,
@@ -256,16 +258,14 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         if validator.status != BondStatus::Unbonding {
-            return Err(AppError::Custom(format!(
+            panic!(
                 "bad state transition unbonding to unbonded, validator: {}",
                 validator.operator_address
-            ))
-            .into());
+            );
         }
-        self.complete_unbonding_validator(ctx, validator)?;
-        Ok(())
+        self.complete_unbonding_validator(ctx, validator);
     }
 
     pub fn complete_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -274,7 +274,7 @@ impl<
         val_addr: ValAddress,
         del_addr: AccAddress,
     ) -> anyhow::Result<Vec<Coin>> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store());
         let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr) {
             delegation
         } else {
@@ -324,9 +324,9 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         validator.update_status(BondStatus::Unbonded);
-        self.set_validator(ctx, validator)
+        self.set_validator(ctx, validator);
     }
 
     pub fn begin_unbonding_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -356,8 +356,8 @@ impl<
         validator.unbonding_height = ctx.height() as i64;
 
         // save the now unbonded validator record and power index
-        self.set_validator(ctx, validator)?;
-        self.set_validator_by_power_index(ctx, validator)?;
+        self.set_validator(ctx, validator);
+        self.set_validator_by_power_index(ctx, validator);
 
         // Adds to unbonding validator queue
         self.insert_unbonding_validator_queue(ctx, validator)?;

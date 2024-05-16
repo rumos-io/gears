@@ -33,7 +33,7 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) -> anyhow::Result<()> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store());
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
@@ -73,8 +73,8 @@ impl<
 
         validator.update_status(BondStatus::Bonded);
         // save the now bonded validator record to the two referenced stores
-        self.set_validator(ctx, validator)?;
-        self.set_validator_by_power_index(ctx, validator)?;
+        self.set_validator(ctx, validator);
+        self.set_validator_by_power_index(ctx, validator);
 
         // delete from queue if present
         self.delete_validator_queue(ctx, validator)?;

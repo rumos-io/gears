@@ -1,13 +1,14 @@
-use gears::baseapp::KEY_VALIDATOR_PARAMS;
-use gears::core::base::coin::Coin;
-use gears::store::StoreKey;
-use gears::tendermint::types::proto::params::ValidatorParams;
+use crate::consts::expect;
 use gears::{
+    baseapp::KEY_VALIDATOR_PARAMS,
+    core::base::coin::Coin,
     params::ParamsSubspaceKey,
     store::{
-        database::{Database, PrefixDB},
-        QueryableMultiKVStore, ReadPrefixStore, TransactionalMultiKVStore, WritePrefixStore,
+        database::{prefix::PrefixDB, Database},
+        QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore,
+        WritePrefixStore,
     },
+    tendermint::types::proto::params::ValidatorParams,
     types::denom::Denom,
 };
 use serde::{de::Error, Deserialize, Serialize};
@@ -56,15 +57,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
     pub fn get<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
         &self,
         ctx: &CTX,
-    ) -> anyhow::Result<Params> {
+    ) -> Params {
         let store = self
             .params_keeper
             .raw_subspace(ctx, &self.params_subspace_key);
-        if let Some(raw_params) = store.get(PARAMS_KEY.as_ref()) {
-            Ok(serde_json::from_slice(&raw_params)?)
-        } else {
-            Err(serde_json::Error::custom("Cannot find data to convert".to_string()).into())
-        }
+        let raw_params = store
+            .get(PARAMS_KEY.as_ref())
+            .expect("key should be set in kv store");
+        serde_json::from_slice(&raw_params).expect(expect::SERDE_DECODING_DOMAIN_TYPE)
     }
 
     pub fn consensus_validator<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(

@@ -66,7 +66,7 @@ impl<
         let redelegation = self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?;
 
         let mut balances = vec![];
-        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store());
         let denom = params.bond_denom;
         // TODO: time
         let ctx_time = Utc::now();

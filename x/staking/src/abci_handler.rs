@@ -66,7 +66,7 @@ impl<
 
     fn query<DB: Database + Send + Sync>(
         &self,
-        _ctx: &QueryContext<'_, DB, SK>,
+        _ctx: &QueryContext<DB, SK>,
         _query: RequestQuery,
     ) -> Result<prost::bytes::Bytes, AppError> {
         todo!()

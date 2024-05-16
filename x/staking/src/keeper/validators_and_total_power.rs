@@ -1,3 +1,5 @@
+use crate::consts::expect::SERDE_DECODING_DOMAIN_TYPE;
+
 pub use super::*;
 
 impl<
@@ -37,35 +39,37 @@ impl<
     pub fn validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
+    ) -> HashMap<Vec<u8>, ValAddress> {
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
         let mut res = HashMap::new();
         for (k, v) in iterator.range(..) {
-            res.insert(k.to_vec(), serde_json::from_slice(&v)?);
+            res.insert(
+                k.to_vec(),
+                serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE),
+            );
         }
-        Ok(res)
+        res
     }
 
     pub fn set_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
 
         // jailed validators are not kept in the power index
         if validator.jailed {
-            return Ok(());
+            return;
         }
 
         validators_store.set(
             validator.key_by_power_index_key(power_reduction),
             validator.operator_address.to_string().as_bytes().to_vec(),
         );
-        Ok(())
     }
 
     pub fn delete_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(

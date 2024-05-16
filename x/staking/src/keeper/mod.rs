@@ -108,10 +108,10 @@ impl<
             .set(&mut ctx.multi_store_mut(), genesis.params.clone())?;
 
         for validator in genesis.validators {
-            self.set_validator(ctx, &validator)?;
+            self.set_validator(ctx, &validator);
             // Manually set indices for the first time
-            self.set_validator_by_cons_addr(ctx, &validator)?;
-            self.set_validator_by_power_index(ctx, &validator)?;
+            self.set_validator_by_cons_addr(ctx, &validator);
+            self.set_validator_by_power_index(ctx, &validator);
 
             if !genesis.exported {
                 self.after_validator_created(ctx, &validator)?;
@@ -226,13 +226,15 @@ impl<
         if genesis.exported {
             for last_validator in genesis.last_validator_powers {
                 self.set_last_validator_power(ctx, &last_validator)?;
-                let validator = self.validator(ctx, &last_validator.address)?;
+                let validator = self
+                    .validator(ctx, &last_validator.address)
+                    .expect("validator in the store was not found");
                 let mut update = validator.abci_validator_update(self.power_reduction(ctx));
                 update.power = last_validator.power;
                 res.push(update);
             }
         } else {
-            self.apply_and_return_validator_set_dates(ctx)?;
+            self.apply_and_return_validator_set_updates(ctx)?;
         }
         Ok(res)
     }
@@ -264,7 +266,7 @@ impl<
         // unbonded after the Endblocker (go from Bonded -> Unbonding during
         // ApplyAndReturnValidatorSetUpdates and then Unbonding -> Unbonded during
         // UnbondAllMatureValidatorQueue).
-        let validator_updates = self.apply_and_return_validator_set_dates(ctx)?;
+        let validator_updates = self.apply_and_return_validator_set_updates(ctx)?;
 
         // unbond all mature validators from the unbonding queue
         self.unbond_all_mature_validators(ctx)?;
@@ -361,32 +363,34 @@ impl<
     /// CONTRACT: Only validators with non-zero power or zero-power that were bonded
     /// at the previous block height or were removed from the validator set entirely
     /// are returned to Tendermint.
-    pub fn apply_and_return_validator_set_dates<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn apply_and_return_validator_set_updates<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store());
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
         let amt_from_not_bonded_to_bonded = Uint256::zero();
 
-        let mut last = self.last_validators_by_addr(ctx)?;
-        let validators_map = self.validators_power_store_vals_map(ctx)?;
+        let mut last = self.last_validators_by_addr(ctx);
+        let validators_map = self.validators_power_store_vals_map(ctx);
 
         let mut updates = vec![];
 
         for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
-            let mut validator: Validator = self.validator(ctx, &val_addr)?;
+            let mut validator: Validator = self
+                .validator(ctx, val_addr)
+                .expect("validator should be presented in store");
 
             if validator.jailed {
-                return Err(AppError::Custom(
-                    "should never retrieve a jailed validator from the power store".to_string(),
-                )
-                .into());
+                panic!("should never retrieve a jailed validator from the power store",);
             }
             // if we get to a zero-power validator (which we don't bond),
             // there are no more possible bonded validators
@@ -437,7 +441,9 @@ impl<
         let no_longer_bonded = sort_no_longer_bonded(&last)?;
 
         for val_addr in no_longer_bonded {
-            let mut validator = self.validator(ctx, &ValAddress::from_bech32(&val_addr)?)?;
+            let mut validator = self
+                .validator(ctx, &ValAddress::from_bech32(&val_addr)?)
+                .expect("validator should be presented in store");
             self.bonded_to_unbonding(ctx, &mut validator)?;
             amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded + validator.tokens;
             self.delete_last_validator_power(ctx, &validator.operator_address)?;
@@ -484,7 +490,7 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) -> anyhow::Result<()> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+        let params = self.staking_params_keeper.get(&ctx.multi_store());
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,

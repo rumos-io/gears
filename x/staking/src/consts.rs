@@ -29,3 +29,10 @@ pub(crate) mod proto {
     pub(crate) const MAX_SECURITY_CONTACT_LENGTH: usize = 140;
     pub(crate) const MAX_DETAILS_LENGTH: usize = 280;
 }
+
+pub(crate) mod expect {
+    pub(crate) const SERDE_DECODING_DOMAIN_TYPE: &str =
+        "serde_json should decode domain type that implements deserialization";
+    pub(crate) const SERDE_ENCODING_DOMAIN_TYPE: &str =
+        "serde_json should encode domain type that implements deserialization";
+}

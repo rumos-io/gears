@@ -1,7 +1,7 @@
 use crate::consts::proto::*;
 use gears::{
     core::Protobuf,
-    error::{AppError, SearchError},
+    error::AppError,
     tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
     types::{
         address::{AccAddress, ValAddress},
@@ -188,12 +188,12 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
 
     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
         Ok(CreateValidator {
-            description: src.description.ok_or(SearchError::DecodeError(
+            description: src.description.ok_or(AppError::Custom(
                 "Value should exists. It's the proto3 rule to have Option<T> instead of T".into(),
             ))?,
             commission: src
                 .commission
-                .ok_or(SearchError::DecodeError(
+                .ok_or(AppError::Custom(
                     "Value should exists. It's the proto3 rule to have Option<T> instead of T"
                         .into(),
                 ))?
@@ -204,7 +204,7 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
             pub_key: serde_json::from_slice(&src.pub_key)?,
             value: src
                 .value
-                .ok_or(SearchError::DecodeError(
+                .ok_or(AppError::Custom(
                     "Value should exists. It's the proto3 rule to have Option<T> instead of T"
                         .into(),
                 ))?
