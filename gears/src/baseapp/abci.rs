@@ -1,9 +1,9 @@
 use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
-use crate::baseapp::mode::ExecutionMode;
 use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
+use crate::types::context::block::BlockContext;
 use crate::types::gas::Gas;
 use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
@@ -267,17 +267,17 @@ impl<
 
         self.block_height_increment();
 
-        self.set_block_header(
-            request
-                .header
-                .clone()
-                .expect("tendermint will never send nothing to the app")
-                .try_into()
-                .expect("tendermint will send a valid Header struct"),
-        );
+        let header: tendermint::types::proto::header::RawHeader = request
+            .header
+            .clone()
+            .expect("tendermint will never send nothing to the app")
+            .try_into()
+            .expect("tendermint will send a valid Header struct");
 
-        let mut state = self.state.write().expect(POISONED_LOCK);
+        self.set_block_header(header.clone());
+
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut state = self.state.write().expect(POISONED_LOCK);
 
         {
             let max_gas = self
@@ -289,19 +289,17 @@ impl<
             state.replace_meter(Gas::from(max_gas))
         }
 
-        let mut ctx = state.deliver_mode.build_ctx(
+        let mut ctx = BlockContext::new(
+            &mut multi_store,
             self.block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .expect("Invalid request"),
-            None,
+            header.try_into().expect("Invalid request"),
         );
 
         self.abci_handler.begin_block(&mut ctx, request);
 
-        multi_store.sync(ctx.commit());
         let events = ctx.events;
+
+        state.cache_update(&mut multi_store);
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -311,22 +309,25 @@ impl<
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         info!("Got end block request");
 
-        let mut state = self.state.write().expect(POISONED_LOCK);
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let mut ctx = state.deliver_mode.build_ctx(
+        let mut ctx = BlockContext::new(
+            &mut multi_store,
             self.block_height(),
             self.get_block_header()
                 .expect("block header is set in begin block")
                 .try_into()
                 .expect("Invalid request"),
-            None,
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
-        multi_store.sync(ctx.commit());
         let events = ctx.events;
+
+        self.state
+            .write()
+            .expect(POISONED_LOCK)
+            .cache_update(&mut multi_store);
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

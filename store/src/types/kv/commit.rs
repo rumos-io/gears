@@ -9,12 +9,12 @@ use trees::iavl::Tree;
 use crate::{
     error::{StoreError, POISONED_LOCK},
     types::prefix::immutable::ImmutablePrefixStore,
-    CacheKind, CommitKind, TREE_CACHE_SIZE,
+    ApplicationStore, TransactionStore, TREE_CACHE_SIZE,
 };
 
 use super::{immutable::KVStore, KVBank};
 
-impl<DB: Database> KVBank<DB, CommitKind> {
+impl<DB: Database> KVBank<DB, ApplicationStore> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, StoreError> {
         Ok(Self {
             persistent: Arc::new(RwLock::new(Tree::new(
@@ -49,7 +49,7 @@ impl<DB: Database> KVBank<DB, CommitKind> {
         hash
     }
 
-    pub fn to_cache_kind(&self) -> KVBank<DB, CacheKind> {
+    pub fn to_cache_kind(&self) -> KVBank<DB, TransactionStore> {
         KVBank {
             persistent: Arc::clone(&self.persistent),
             cache: self.cache.clone(),

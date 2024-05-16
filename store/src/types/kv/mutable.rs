@@ -5,7 +5,7 @@ use database::Database;
 use crate::{
     range::Range,
     types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
-    CacheKind, CommitKind, QueryableKVStore, TransactionalKVStore,
+    ApplicationStore, QueryableKVStore, TransactionStore, TransactionalKVStore,
 };
 
 use super::{
@@ -16,8 +16,8 @@ use super::{
 /// Internal structure which holds different stores
 #[derive(Debug)]
 pub(crate) enum KVStoreBackendMut<'a, DB> {
-    Commit(&'a mut KVBank<DB, CommitKind>),
-    Cache(&'a mut KVBank<DB, CacheKind>),
+    Commit(&'a mut KVBank<DB, ApplicationStore>),
+    Cache(&'a mut KVBank<DB, TransactionStore>),
 }
 
 /// Mutable variant of `KVStore`
@@ -83,14 +83,14 @@ impl<'a, DB: Database> TransactionalKVStore<'a, DB> for KVStoreMut<'a, DB> {
     }
 }
 
-impl<'a, DB> From<&'a mut KVBank<DB, CommitKind>> for KVStoreMut<'a, DB> {
-    fn from(value: &'a mut KVBank<DB, CommitKind>) -> Self {
+impl<'a, DB> From<&'a mut KVBank<DB, ApplicationStore>> for KVStoreMut<'a, DB> {
+    fn from(value: &'a mut KVBank<DB, ApplicationStore>) -> Self {
         Self(KVStoreBackendMut::Commit(value))
     }
 }
 
-impl<'a, DB> From<&'a mut KVBank<DB, CacheKind>> for KVStoreMut<'a, DB> {
-    fn from(value: &'a mut KVBank<DB, CacheKind>) -> Self {
+impl<'a, DB> From<&'a mut KVBank<DB, TransactionStore>> for KVStoreMut<'a, DB> {
+    fn from(value: &'a mut KVBank<DB, TransactionStore>) -> Self {
         Self(KVStoreBackendMut::Cache(value))
     }
 }
