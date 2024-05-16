@@ -160,7 +160,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     pub fn query_account<DB: Database>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         req: QueryAccountRequest,
     ) -> Result<QueryAccountResponse, AppError> {
         let auth_store = ctx.kv_store(&self.store_key);

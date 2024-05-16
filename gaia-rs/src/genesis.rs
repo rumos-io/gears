@@ -1,6 +1,7 @@
 use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
 use gears::{error::AppError, types::address::AccAddress, types::base::send::SendCoins};
+use ibc::GenesisState as IBCGenesis;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -8,6 +9,7 @@ use serde::{Deserialize, Serialize};
 pub struct GenesisState {
     pub bank: BankGenesis,
     pub auth: AuthGenesis,
+    pub ibc: IBCGenesis,
 }
 
 impl gears::baseapp::genesis::Genesis for GenesisState {

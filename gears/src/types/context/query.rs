@@ -1,29 +1,27 @@
-use database::{Database, PrefixDB};
-use store_crate::types::kv::KVStore;
-use store_crate::types::multi::commit::CommitMultiStore;
+use database::prefix::PrefixDB;
+use database::Database;
+
+use store_crate::types::kv::immutable::KVStore;
+use store_crate::types::multi::immutable::MultiStore;
+use store_crate::types::query::QueryMultiStore;
 use store_crate::QueryableMultiKVStore;
-use store_crate::{
-    error::StoreError,
-    types::{multi::MultiStore, query::multi::QueryMultiStore},
-    StoreKey,
-};
+use store_crate::{error::StoreError, StoreKey};
 use tendermint::types::chain_id::ChainId;
 
 use super::QueryableContext;
 
-pub struct QueryContext<'a, DB, SK> {
-    multi_store: QueryMultiStore<'a, DB, SK>,
+pub struct QueryContext<DB, SK> {
+    multi_store: QueryMultiStore<DB, SK>,
     pub(crate) height: u64,
     pub(crate) chain_id: ChainId,
 }
 
-impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryContext<DB, SK> {
     pub fn new(
-        multi_store: &'a CommitMultiStore<DB, SK>,
+        multi_store: QueryMultiStore<DB, SK>,
         version: u32,
         // chain_id: ChainId,
     ) -> Result<Self, StoreError> {
-        let multi_store = QueryMultiStore::new(multi_store, version)?;
         Ok(QueryContext {
             multi_store,
             height: version as u64, // TODO:
@@ -32,7 +30,7 @@ impl<'a, DB: Database, SK: StoreKey> QueryContext<'a, DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key)
     }

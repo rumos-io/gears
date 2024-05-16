@@ -9,7 +9,7 @@ use crate::{
     error::{AppError, POISONED_LOCK},
     params::{Keeper, ParamsSubspaceKey},
     types::{
-        context::{query::QueryContext, tx::TxContext},
+        context::query::QueryContext,
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
@@ -17,7 +17,13 @@ use crate::{
 };
 use bytes::Bytes;
 use database::RocksDB;
-use store_crate::{types::multi::commit::CommitMultiStore, StoreKey};
+use store_crate::{
+    types::{
+        multi::{immutable::MultiStore, MultiBank},
+        query::QueryMultiStore,
+    },
+    CommitKind, StoreKey,
+};
 use tendermint::types::{
     chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},
@@ -48,8 +54,8 @@ pub struct BaseApp<
     G: Genesis,
     AI: ApplicationInfo,
 > {
-    multi_store: Arc<RwLock<CommitMultiStore<RocksDB, SK>>>,
-    state: Arc<RwLock<ApplicationState>>,
+    state: Arc<RwLock<ApplicationState<RocksDB, SK>>>,
+    multi_store: Arc<RwLock<MultiBank<RocksDB, SK, CommitKind>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
@@ -73,14 +79,15 @@ impl<
         params_subspace_key: PSK,
         abci_handler: H,
     ) -> Self {
-        let multi_store = CommitMultiStore::new(db);
+        let multi_store = MultiBank::<_, _, CommitKind>::new(db);
+
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,
             params_subspace_key,
         };
 
         let max_gas = baseapp_params_keeper
-            .block_params(&multi_store.as_immutable())
+            .block_params(&MultiStore::from(&multi_store))
             .map(|e| e.max_gas)
             .unwrap_or_default();
 
@@ -88,11 +95,14 @@ impl<
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
             baseapp_params_keeper,
-            state: ApplicationState::new_sync(Gas::from(max_gas)),
+            state: Arc::new(RwLock::new(ApplicationState::new(
+                Gas::from(max_gas),
+                &multi_store,
+            ))),
+            multi_store: Arc::new(RwLock::new(multi_store)),
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
-            multi_store: Arc::new(RwLock::new(multi_store)),
         }
     }
 
@@ -121,7 +131,7 @@ impl<
 
     fn get_last_commit_hash(&self) -> [u8; 32] {
         self.multi_store
-            .read()
+            .write()
             .expect(POISONED_LOCK)
             .head_commit_hash()
     }
@@ -131,9 +141,10 @@ impl<
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;
 
-        let multi_store = self.multi_store.read().expect(POISONED_LOCK);
+        let query_store =
+            QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;
 
-        let ctx = QueryContext::new(&multi_store, version)?;
+        let ctx = QueryContext::new(query_store, version)?;
 
         self.abci_handler.query(&ctx, request.clone())
     }
@@ -173,24 +184,13 @@ impl<
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            height,
-            header.clone(),
-            MD::build_tx_gas_meter(&tx_with_raw.tx.auth_info.fee, height),
-        );
+        let mut ctx = mode.build_ctx(height, header.clone(), Some(&tx_with_raw.tx.auth_info.fee));
 
-        mode.runnable(&mut ctx)?;
+        MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
+
         let gas_wanted = ctx.gas_meter.limit(); // TODO its needed for gas recovery middleware
         let gas_used = ctx.gas_meter.consumed_or_limit();
-
-        let mut ctx = TxContext::new(
-            &mut multi_store,
-            height,
-            header,
-            MD::build_tx_gas_meter(&tx_with_raw.tx.auth_info.fee, height),
-        );
 
         let events = MD::run_msg(
             &mut ctx,
@@ -198,8 +198,10 @@ impl<
             tx_with_raw.tx.get_msgs().iter(),
         )?;
 
-        mode.block_gas_meter_mut()
+        ctx.block_gas_meter
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
+
+        MD::commit(ctx, &mut multi_store);
 
         Ok(RunTxInfo {
             events,

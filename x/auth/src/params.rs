@@ -1,6 +1,7 @@
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::ParamsSubspaceKey;
-use gears::store::database::{Database, PrefixDB};
+use gears::store::database::prefix::PrefixDB;
+use gears::store::database::Database;
 use gears::store::{
     types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,
 };

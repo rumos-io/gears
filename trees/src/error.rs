@@ -4,8 +4,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("rotate error: {0}")]
     RotateError(String),
-    #[error("could not find requested version in DB")]
-    VersionNotFound,
+    #[error("could not find requested version in DB: {0}")]
+    VersionNotFound(u32),
     #[error("unable to deserialize bytes to Node")]
     NodeDeserialize,
     #[error("cannot overwrite existing version")]

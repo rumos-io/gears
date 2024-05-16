@@ -21,7 +21,7 @@ pub struct GaiaABCIHandler {
         auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
     >,
     auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
-    // ibc_handler: ibc::handler::Handler<GaiaStoreKey, GaiaParamsStoreKey>,
+    ibc_abci_handler: ibc::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
         bank::Keeper<
             GaiaStoreKey,
@@ -51,22 +51,16 @@ impl GaiaABCIHandler {
             auth_keeper.clone(),
         );
 
-        // let ibc_tx_keeper = ibc::keeper::tx::TxKeeper::new(
-        //     GaiaStoreKey::Bank,
-        //     params_keeper.clone(),
-        //     GaiaParamsStoreKey::Bank,
-        // );
-
-        // let ibc_query_keeper = ibc::keeper::query::QueryKeeper::new(
-        //     GaiaStoreKey::Bank,
-        //     params_keeper,
-        //     GaiaParamsStoreKey::Bank,
-        // );
+        let ibc_keeper = ibc::keeper::Keeper::new(
+            GaiaStoreKey::IBC,
+            params_keeper.clone(),
+            GaiaParamsStoreKey::IBC,
+        );
 
         GaiaABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
-            // ibc_handler: ibc::handler::Handler::new(ibc_tx_keeper, ibc_query_keeper),
+            ibc_abci_handler: ibc::ABCIHandler::new(ibc_keeper.clone()),
             ante_handler: BaseAnteHandler::new(auth_keeper, bank_keeper, DefaultSignGasConsumer),
         }
     }
@@ -80,10 +74,7 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
     ) -> Result<(), AppError> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
-            // Message::Ibc(msg) => self
-            //     .ibc_handler
-            //     .tx(ctx, msg.clone())
-            //     .map_err(|e| AppError::IBC(e.to_string())),
+            Message::IBC(msg) => self.ibc_abci_handler.tx(ctx, msg.clone()),
         }
     }
 
@@ -94,24 +85,21 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
     ) {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
         self.auth_abci_handler.genesis(ctx, genesis.auth);
+        self.ibc_abci_handler.genesis(ctx, genesis.ibc);
     }
 
     fn query<DB: Database + Send + Sync>(
         &self,
-        ctx: &QueryContext<'_, DB, GaiaStoreKey>,
+        ctx: &QueryContext<DB, GaiaStoreKey>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError> {
         if query.path.starts_with("/cosmos.auth") {
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
             self.bank_abci_handler.query(ctx, query)
-        }
-        // else if query.path.starts_with("/ibc.core.client") {
-        //     self.ibc_handler
-        //         .query(ctx, query)
-        //         .map_err(|e| AppError::Query(e.to_string()))
-        //}
-        else {
+        } else if query.path.starts_with("/ibc.core.client") {
+            self.ibc_abci_handler.query(ctx, query)
+        } else {
             Err(AppError::InvalidRequest("query path not found".into()))
         }
     }

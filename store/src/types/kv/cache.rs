@@ -1,28 +1,23 @@
 use std::collections::{BTreeMap, HashSet};
 
-/// Storage for store cache
-#[derive(Debug, Clone, Default)]
-pub struct KVStoreCache {
-    pub(crate) block: BTreeMap<Vec<u8>, Vec<u8>>,
-    pub(crate) tx: BTreeMap<Vec<u8>, Vec<u8>>,
+use database::Database;
 
-    pub(crate) delete: HashSet<Vec<u8>>,
-}
+use crate::{types::prefix::immutable::ImmutablePrefixStore, CacheKind};
 
-impl KVStoreCache {
-    /// Take TX cache and push it to BLOCK
-    pub(crate) fn tx_upgrade_to_block(&mut self) {
-        let tx_map = std::mem::take(&mut self.tx);
+use super::{immutable::KVStore, KVBank};
 
-        self.block.extend(tx_map)
+impl<DB: Database> KVBank<DB, CacheKind> {
+    pub fn commit(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
+        self.cache.take()
     }
 
-    /// Take out all cache from storages. TX cache overwrites BLOCK cache
-    pub(crate) fn take(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
-        let tx_map = std::mem::take(&mut self.tx);
-        let mut block_map = std::mem::take(&mut self.block);
-
-        block_map.extend(tx_map);
-        (block_map, std::mem::take(&mut self.delete))
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+        &self,
+        prefix: I,
+    ) -> ImmutablePrefixStore<'_, DB> {
+        ImmutablePrefixStore {
+            store: KVStore::from(self),
+            prefix: prefix.into_iter().collect(),
+        }
     }
 }

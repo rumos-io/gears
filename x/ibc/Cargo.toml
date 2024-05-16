@@ -3,19 +3,19 @@ name = "ibc"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 #local
 gears = { path = "../../gears" }
+gears-derive = { path = "../../gears-derive" }
 
 # nutype
 bytes = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }
+serde-aux = { workspace = true }
 serde_json = { workspace = true }
-prost = { workspace = true }
+prost = { package = "prost", version = "0.12" }        # must match version used in ibc crate
 schemars = { workspace = true }
 
 #utils
@@ -23,8 +23,12 @@ clap = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 constcat = { workspace = true }
+derive_more = "0.99.17"          # TODO: move to workspace
 
 #networking
 tonic = { workspace = true }
 http = { workspace = true }
 axum = { workspace = true }
+
+#other
+ibc = { version = "=0.52.0", features = ["serde"] }

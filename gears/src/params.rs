@@ -1,4 +1,4 @@
-use database::{Database, PrefixDB};
+use database::Database;
 use std::{hash::Hash, marker::PhantomData};
 use store_crate::{
     types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
@@ -12,7 +12,7 @@ pub trait ParamsSubspaceKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync 
 }
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct Keeper<SK, PSK> {
     store_key: SK,
     p: PhantomData<PSK>,
 }
@@ -38,7 +38,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         store: &'a mut KV,
         params_subspace_key: &PSK,
-    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
+    ) -> MutablePrefixStore<'a, DB> {
         let params_store = store.kv_store_mut(&self.store_key);
         params_store.prefix_store_mut(params_subspace_key.name().as_bytes().to_vec())
     }

@@ -1,0 +1,8 @@
+{
+    "@type": "/ibc.lightclients.tendermint.v1.ConsensusState",
+    "timestamp": "2022-12-01T16:09:33.187235500Z",
+    "root": {
+        "hash": "bg0NjiOiKAbSJ5EpL3OJHqI9wLPFHvzA8Wz2Id1a6sQ="
+    },
+    "next_validators_hash": "CC6AA877F9714ED30A39F9F19820494E4E12F570875740F69C4278C2271DF963"
+}

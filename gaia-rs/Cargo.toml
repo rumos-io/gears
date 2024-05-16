@@ -9,10 +9,11 @@ workspace = true
 [dependencies]
 
 #local
-auth = {path = "../x/auth"}
-bank = {path = "../x/bank"}
-gears = {path = "../gears", features = [ "cli", "xmods" ] }
-gears-derive = {path = "../gears-derive"}
+auth = { path = "../x/auth" }
+bank = { path = "../x/bank" }
+ibc = { path = "../x/ibc" }
+gears = { path = "../gears", features = ["cli", "xmods"] }
+gears-derive = { path = "../gears-derive" }
 
 #newtypes
 bytes = { workspace = true }
@@ -32,5 +33,6 @@ axum = { workspace = true }
 [dev-dependencies]
 url = { workspace = true }
 serde_json = { workspace = true }
-gears = {path = "../gears", features = [ "cli", "utils"]}
+gears = { path = "../gears", features = ["cli", "utils"] }
 data-encoding = { workspace = true }
+rayon = "1.10.0"

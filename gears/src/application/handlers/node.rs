@@ -61,7 +61,7 @@ pub trait ABCIHandler<
 
     fn query<DB: Database + Send + Sync>(
         &self,
-        ctx: &QueryContext<'_, DB, SK>,
+        ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError>;
 }

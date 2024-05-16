@@ -1,32 +1,22 @@
 use std::{collections::HashMap, sync::Arc};
 
-use database::{Database, PrefixDB};
+use database::{prefix::PrefixDB, Database};
 
-use crate::{error::KEY_EXISTS_MSG, hash::StoreInfo, types::kv::commit::CommitKVStore, StoreKey};
+use crate::{hash::StoreInfo, types::kv::KVBank, CacheKind, CommitKind, StoreKey};
 
-use super::{mutable::MultiStoreMut, MultiStore};
+use super::{cache::CacheCommitData, MultiBank};
 
-/// MultiStore which stores all commitable KVStore and has right to commit changes too
-#[derive(Debug)]
-pub struct CommitMultiStore<DB, SK> {
-    pub(crate) head_version: u32,
-    pub(crate) head_commit_hash: [u8; 32],
-    pub(crate) stores: HashMap<SK, CommitKVStore<PrefixDB<DB>>>,
-}
-
-impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
+impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
     pub fn new(db: DB) -> Self {
         let db = Arc::new(db);
 
-        let mut store_infos = vec![];
+        let mut store_infos = Vec::new();
         let mut stores = HashMap::new();
         let mut head_version = 0;
 
         for store in SK::iter() {
-            // TODO: check that store names are not prefixes
-            let prefix = store.name().as_bytes().to_vec();
-            let kv_store =
-                CommitKVStore::new(PrefixDB::new(Arc::clone(&db), prefix), None).unwrap();
+            let prefix = store.name().as_bytes().to_vec(); // TODO:NOW check that store names are not prefixes
+            let kv_store = KVBank::new(PrefixDB::new(Arc::clone(&db), prefix), None).unwrap();
 
             let store_info = StoreInfo {
                 name: store.name().into(),
@@ -39,10 +29,22 @@ impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
             store_infos.push(store_info)
         }
 
-        CommitMultiStore {
+        MultiBank {
             head_version,
             head_commit_hash: crate::hash::hash_store_infos(store_infos),
             stores,
+        }
+    }
+
+    pub fn to_cache_kind(&self) -> MultiBank<DB, SK, CacheKind> {
+        MultiBank {
+            head_version: self.head_version,
+            head_commit_hash: self.head_commit_hash,
+            stores: self
+                .stores
+                .iter()
+                .map(|(sk, store)| (sk.to_owned(), store.to_cache_kind()))
+                .collect(),
         }
     }
 
@@ -64,41 +66,20 @@ impl<DB: Database, SK: StoreKey> CommitMultiStore<DB, SK> {
         hash
     }
 
-    pub fn kv_store(&self, store_key: &SK) -> &CommitKVStore<PrefixDB<DB>> {
-        self.stores.get(store_key).expect(KEY_EXISTS_MSG)
-    }
-
-    pub fn head_version(&self) -> u32 {
-        self.head_version
-    }
-
-    pub fn head_commit_hash(&self) -> [u8; 32] {
-        self.head_commit_hash
-    }
-
-    pub fn kv_store_mut(&mut self, store_key: &SK) -> &mut CommitKVStore<PrefixDB<DB>> {
-        self.stores.get_mut(store_key).expect(KEY_EXISTS_MSG)
-    }
-
-    /// Upgrade cache of TX to block in all stores
-    pub fn tx_cache_to_block(&mut self) {
-        for (_, store) in &mut self.stores {
-            store.cache.tx_upgrade_to_block();
+    pub fn sync(&mut self, data: CacheCommitData<SK>) {
+        if data.is_empty() {
+            return;
         }
-    }
 
-    /// Clear TX cache in all stores
-    pub fn tx_caches_clear(&mut self) {
-        for (_, store) in &mut self.stores {
-            store.cache.tx.clear();
+        for (store_key, set, delete) in data.into_iter() {
+            let store = self.kv_store_mut(&store_key);
+            for (key, value) in set {
+                store.set(key, value);
+            }
+
+            for key in delete {
+                store.delete(&key);
+            }
         }
-    }
-
-    pub fn as_immutable(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(self)
-    }
-
-    pub fn as_mutable(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        MultiStoreMut::from(self)
     }
 }
