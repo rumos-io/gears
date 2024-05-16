@@ -53,7 +53,6 @@ impl<
     }
 
     fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        // TODO
         if let Err(err) = self.keeper.init_genesis(ctx, genesis) {
             panic!(
                 "It is important to perform genesis actions.

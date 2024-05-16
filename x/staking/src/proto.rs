@@ -1,3 +1,4 @@
+use crate::consts::proto::*;
 use gears::{
     core::Protobuf,
     error::{AppError, SearchError},
@@ -14,12 +15,6 @@ use gears::{
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-
-const MAX_MONIKER_LENGTH: usize = 70;
-const MAX_IDENTITY_LENGTH: usize = 3000;
-const MAX_WEBSITE_LENGTH: usize = 140;
-const MAX_SECURITY_CONTACT_LENGTH: usize = 140;
-const MAX_DETAILS_LENGTH: usize = 280;
 
 /// CommissionRates defines the initial commission rates to be used for creating
 /// a validator.
@@ -100,7 +95,6 @@ impl Protobuf<Description> for Description {}
 
 impl Description {
     pub fn ensure_length(&self) -> Result<(), AppError> {
-        // TODO: can be wrapped by macro
         if self.moniker.len() > MAX_MONIKER_LENGTH {
             return Err(self.form_ensure_length_err(
                 "moniker",

@@ -1,4 +1,5 @@
-use std::str::FromStr;
+use chrono::Timelike;
+use gears::tendermint::types::time::Timestamp;
 
 pub use super::*;
 
@@ -10,7 +11,7 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    pub fn get_unbonding_delegation<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn unbonding_delegation<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -64,7 +65,7 @@ impl<
             let storage = ctx.kv_store(&self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
             let end = {
-                let mut k = get_unbonding_delegation_time_key(time).to_vec();
+                let mut k = unbonding_delegation_time_key(time).to_vec();
                 k.push(0);
                 k
             };
@@ -91,9 +92,9 @@ impl<
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
-        time: chrono::DateTime<Utc>,
+        time: Timestamp,
     ) -> anyhow::Result<()> {
-        let time_slice = self.get_ubd_queue_time_slice(ctx, time);
+        let time_slice = self.ubd_queue_time_slice(ctx, &time);
         let dv_pair = DvPair::new(
             delegation.validator_address.clone(),
             delegation.delegator_address.clone(),
@@ -112,27 +113,27 @@ impl<
         ctx: &mut CTX,
         validator: &Validator,
     ) -> anyhow::Result<()> {
-        let mut addrs = self.get_unbonding_validators(
-            ctx,
-            validator.unbonding_time,
-            validator.unbonding_height,
-        )?;
+        let mut addrs =
+            self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height)?;
         addrs.push(validator.operator_address.to_string());
         self.set_unbonding_validators_queue(
             ctx,
-            validator.unbonding_time,
+            validator.unbonding_time.clone(),
             validator.unbonding_height,
             addrs,
         )
     }
 
-    pub fn get_ubd_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn ubd_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        time: chrono::DateTime<Utc>,
+        time: &Timestamp,
     ) -> Option<Vec<DvPair>> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UBD_QUEUE_KEY);
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).expect(
+            "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
+        );
         if let Some(bz) = store.get(time.to_string().as_bytes()) {
             serde_json::from_slice(&bz).unwrap_or_default()
         } else {
@@ -143,11 +144,14 @@ impl<
     pub fn set_ubd_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        time: chrono::DateTime<Utc>,
+        time: Timestamp,
         time_slice: Vec<DvPair>,
     ) -> anyhow::Result<()> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(UBD_QUEUE_KEY);
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).expect(
+            "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
+        );
         let key = time.to_string().as_bytes().to_vec();
         store.set(key, serde_json::to_vec(&time_slice)?);
         Ok(())
@@ -173,7 +177,7 @@ impl<
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_begin_unbonding(
                 ctx,
-                validator.get_cons_addr(),
+                validator.cons_addr(),
                 validator.operator_address.clone(),
             );
         }
@@ -206,7 +210,7 @@ impl<
             if height < block_height && (time <= block_time) {
                 for addr in v {
                     let val_addr = ValAddress::from_bech32(&addr)?;
-                    let mut validator = self.get_validator(ctx, &val_addr)?;
+                    let mut validator = self.validator(ctx, &val_addr)?;
                     if validator.status != BondStatus::Unbonding {
                         return Err(AppError::Custom(
                             "unexpected validator in unbonding queue; status was not unbonding"
@@ -271,7 +275,7 @@ impl<
         del_addr: AccAddress,
     ) -> anyhow::Result<Vec<Coin>> {
         let params = self.staking_params_keeper.get(&ctx.multi_store())?;
-        let ubd = if let Some(delegation) = self.get_unbonding_delegation(ctx, del_addr, val_addr) {
+        let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr) {
             delegation
         } else {
             return Err(AppError::Custom("No unbonding delegation".into()).into());
@@ -285,7 +289,7 @@ impl<
         for entry in ubd.entries.iter() {
             if entry.is_mature(ctx_time) {
                 // track undelegation only when remaining or truncated shares are non-zero
-                let amount = Uint256::from_str(&entry.balance.amount)?;
+                let amount = entry.balance;
                 if amount.is_zero() {
                     let coin = Coin {
                         denom: bond_denom.clone(),
@@ -344,7 +348,11 @@ impl<
 
         // set the unbonding completion time and completion height appropriately
         // TODO: time in ctx
-        validator.unbonding_time = Utc::now();
+        let now = Utc::now();
+        validator.unbonding_time = Timestamp {
+            seconds: now.timestamp(),
+            nanos: now.nanosecond() as i32,
+        };
         validator.unbonding_height = ctx.height() as i64;
 
         // save the now unbonded validator record and power index
@@ -362,13 +370,17 @@ impl<
     pub fn set_unbonding_validators_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        end_time: chrono::DateTime<Utc>,
+        end_time: Timestamp,
         end_height: i64,
         addrs: Vec<String>,
     ) -> anyhow::Result<()> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
-        let key = get_validator_queue_key(end_time, end_height);
+        let end_time = chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32)
+            .expect(
+                "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
+            );
+        let key = validator_queue_key(end_time, end_height);
         let value = serde_json::to_vec(&addrs)?;
         store.set(key, value);
         Ok(())
@@ -379,24 +391,34 @@ impl<
     pub fn delete_validator_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        end_time: chrono::DateTime<Utc>,
+        end_time: Timestamp,
         end_height: i64,
     ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
-        store.delete(&get_validator_queue_key(end_time, end_height));
+        let end_time = chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32)
+            .expect(
+                "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
+            );
+        store.delete(&validator_queue_key(end_time, end_height));
     }
 
-    pub fn get_unbonding_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn unbonding_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        unbonding_time: chrono::DateTime<Utc>,
+        unbonding_time: &Timestamp,
         unbonding_height: i64,
     ) -> anyhow::Result<Vec<String>> {
         let store = ctx.kv_store_mut(&self.store_key);
         let store = store.prefix_store(VALIDATORS_QUEUE_KEY);
 
-        if let Some(bz) = store.get(&get_validator_queue_key(unbonding_time, unbonding_height)) {
+        if let Some(bz) = store.get(&validator_queue_key(
+            chrono::DateTime::from_timestamp(unbonding_time.seconds, unbonding_time.nanos as u32)
+                .expect(
+                "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
+            ),
+            unbonding_height,
+        )) {
             let res: Vec<String> = serde_json::from_slice(&bz)?;
             Ok(res)
         } else {
@@ -405,7 +427,7 @@ impl<
     }
 }
 
-pub(super) fn get_unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
+pub(super) fn unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
     time.timestamp_nanos_opt()
         .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
                 The error in this method means that some system failure happened and the system cannot continue work.")

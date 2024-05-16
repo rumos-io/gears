@@ -1,8 +1,10 @@
-use crate::{CommissionRates, VALIDATORS_BY_POWER_INDEX_KEY};
+use crate::{consts::keeper::VALIDATORS_BY_POWER_INDEX_KEY, CommissionRates, Description};
 use chrono::Utc;
 use gears::{
-    core::base::coin::Coin,
-    tendermint::types::proto::{crypto::PublicKey, validator::ValidatorUpdate},
+    tendermint::types::{
+        proto::{crypto::PublicKey, validator::ValidatorUpdate},
+        time::Timestamp,
+    },
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
@@ -10,12 +12,12 @@ use gears::{
     },
 };
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, str::FromStr};
+use std::fmt::Display;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Pool {
-    pub not_bonded_tokens: Coin,
-    pub bonded_tokens: Coin,
+    pub not_bonded_tokens: Uint256,
+    pub bonded_tokens: Uint256,
 }
 
 /// Last validator power, needed for validator set update logic
@@ -49,14 +51,19 @@ pub struct UnbondingDelegation {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct UnbondingDelegationEntry {
     pub creation_height: i64,
-    pub completion_time: chrono::DateTime<Utc>,
-    pub initial_balance: Coin,
-    pub balance: Coin,
+    pub completion_time: Timestamp,
+    pub initial_balance: Uint256,
+    pub balance: Uint256,
 }
 
 impl UnbondingDelegationEntry {
     pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
-        self.completion_time <= time
+        let completion_time = chrono::DateTime::from_timestamp(
+            self.completion_time.seconds,
+            self.completion_time.nanos as u32,
+        )
+        .expect("Expected correct conversion of timestamps. Invalid conversion can broke chain.");
+        completion_time <= time
     }
 }
 
@@ -76,7 +83,7 @@ pub struct Redelegation {
 pub struct RedelegationEntry {
     pub creation_height: i64,
     pub completion_time: chrono::DateTime<Utc>,
-    pub initial_balance: Coin,
+    pub initial_balance: Uint256,
     pub share_dst: Decimal256,
 }
 
@@ -140,18 +147,22 @@ impl Display for BondStatus {
 /// multiplied by exchange rate.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Validator {
+    /// operator_address defines the address of the validator's operator; bech encoded in JSON.
     pub operator_address: ValAddress,
+    /// delegator_shares defines total shares issued to a validator's delegators.
     pub delegator_shares: Decimal256,
+    /// description defines the description terms for the validator.
+    pub description: Description,
     /// consensus_pubkey is the consensus public key of the validator, as a Protobuf Any.
     pub consensus_pubkey: PublicKey,
     /// jailed defined whether the validator has been jailed from bonded status or not.
     pub jailed: bool,
     /// tokens define the delegated tokens (incl. self-delegation).
-    pub tokens: Coin,
+    pub tokens: Uint256,
     /// unbonding_height defines, if unbonding, the height at which this validator has begun unbonding.
     pub unbonding_height: i64,
     /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
-    pub unbonding_time: chrono::DateTime<Utc>,
+    pub unbonding_time: Timestamp,
     /// commission defines the commission parameters.
     pub commission: CommissionRates,
     pub min_self_delegation: Uint256,
@@ -159,6 +170,33 @@ pub struct Validator {
 }
 
 impl Validator {
+    pub fn new_with_defaults(
+        operator_address: ValAddress,
+        consensus_pubkey: PublicKey,
+        description: Description,
+    ) -> Validator {
+        Validator {
+            operator_address,
+            delegator_shares: Decimal256::zero(),
+            description,
+            consensus_pubkey,
+            jailed: false,
+            tokens: Uint256::zero(),
+            unbonding_height: 0,
+            unbonding_time: Timestamp {
+                seconds: 0,
+                nanos: 0,
+            },
+            commission: CommissionRates {
+                rate: Decimal256::zero(),
+                max_rate: Decimal256::zero(),
+                max_change_rate: Decimal256::zero(),
+            },
+            min_self_delegation: Uint256::one(),
+            status: BondStatus::Unbonded,
+        }
+    }
+
     pub fn abci_validator_update(&self, power: i64) -> ValidatorUpdate {
         ValidatorUpdate {
             pub_key: self.consensus_pubkey.clone(),
@@ -169,13 +207,7 @@ impl Validator {
         self.abci_validator_update(0)
     }
 
-    pub fn tm_cons_public_key(&self) -> AccAddress {
-        todo!()
-        // let pub_key = GearsPublicKey::from(self.consensus_pubkey.clone());
-        // self.consensus_pubkey.get_address()
-    }
-
-    pub fn get_cons_addr(&self) -> ConsAddress {
+    pub fn cons_addr(&self) -> ConsAddress {
         self.consensus_pubkey.clone().into()
     }
 
@@ -191,9 +223,7 @@ impl Validator {
     }
 
     pub fn potential_tendermint_power(&self) -> i64 {
-        let amount = Uint256::from_str(&self.tokens.amount)
-            .expect("Expected valid amount of tokens. Error in this method can broke calculation.");
-        let amount = amount / Uint256::from(10u64).pow(6);
+        let amount = self.tokens / Uint256::from(10u64).pow(6);
         amount
             .to_string()
             .parse::<i64>()
@@ -212,9 +242,7 @@ impl Validator {
     }
 
     pub fn tokens_to_consensus_power(&self, power: i64) -> i64 {
-        let amount = Uint256::from_str(&self.tokens.amount)
-            .expect("Expected valid amount of tokens. Error in this method can broke calculation.");
-        let amount = amount / Uint256::from(power as u64);
+        let amount = self.tokens / Uint256::from(power as u64);
         amount
             .to_string()
             .parse::<i64>()

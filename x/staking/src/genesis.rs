@@ -11,7 +11,6 @@ pub struct GenesisState {
     /// validators defines the validator set at genesis.
     pub validators: Vec<Validator>,
     pub pool: Pool,
-    // TODO: sdk.Int
     pub last_total_power: Uint256,
     pub exported: bool,
     pub last_validator_powers: Vec<LastValidatorPower>,

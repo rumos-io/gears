@@ -1,6 +1,6 @@
 use crate::{
-    BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool,
-    Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
+    consts::keeper::*, BondStatus, Delegation, DvPair, DvvTriplet, GenesisState,
+    LastValidatorPower, Pool, Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use chrono::Utc;
 use gears::{
@@ -25,7 +25,7 @@ use gears::{
 };
 use prost::bytes::BufMut;
 use serde::de::Error;
-use std::{cmp::Ordering, collections::HashMap, str::FromStr};
+use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
 // validator types.
@@ -42,27 +42,6 @@ mod validators_and_total_power;
 pub use traits::*;
 use unbonding::*;
 use validator::*;
-
-const POOL_KEY: [u8; 1] = [0];
-const LAST_TOTAL_POWER_KEY: [u8; 1] = [1];
-const VALIDATORS_KEY: [u8; 1] = [2];
-const LAST_VALIDATOR_POWER_KEY: [u8; 1] = [3];
-const DELEGATIONS_KEY: [u8; 1] = [4];
-const REDELEGATIONS_KEY: [u8; 1] = [5];
-pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [6];
-const VALIDATORS_BY_CONS_ADDR_KEY: [u8; 1] = [7];
-const VALIDATORS_QUEUE_KEY: [u8; 1] = [8];
-const UBD_QUEUE_KEY: [u8; 1] = [9];
-const UNBONDING_QUEUE_KEY: [u8; 1] = [10];
-const REDELEGATION_QUEUE_KEY: [u8; 1] = [11];
-
-const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
-const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
-const EVENT_TYPE_COMPLETE_UNBONDING: &str = "complete_unbonding";
-const EVENT_TYPE_COMPLETE_REDELEGATION: &str = "complete_redelegation";
-const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
-const ATTRIBUTE_KEY_VALIDATOR: &str = "validator";
-const ATTRIBUTE_KEY_DELEGATOR: &str = "delegator";
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -144,10 +123,10 @@ impl<
 
             match validator.status {
                 BondStatus::Bonded => {
-                    bonded_tokens += Uint256::from_str(&validator.tokens.amount)?;
+                    bonded_tokens += validator.tokens;
                 }
                 BondStatus::Unbonding | BondStatus::Unbonded => {
-                    not_bonded_tokens += Uint256::from_str(&validator.tokens.amount)?;
+                    not_bonded_tokens += validator.tokens;
                 }
             }
         }
@@ -167,7 +146,7 @@ impl<
         for unbonding_delegation in genesis.unbonding_delegations {
             self.set_unbonding_delegation(ctx, &unbonding_delegation)?;
             for entry in unbonding_delegation.entries.as_slice() {
-                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time)?;
+                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time.clone())?;
             }
         }
 
@@ -188,7 +167,7 @@ impl<
         }])?;
 
         // check if the unbonded and bonded pools accounts exists
-        let bonded_pool = self.get_bonded_pool(ctx).ok_or(AppError::Custom(format!(
+        let bonded_pool = self.bonded_pool(ctx).ok_or(AppError::Custom(format!(
             "{} module account has not been set",
             BONDED_POOL_NAME
         )))?;
@@ -196,7 +175,7 @@ impl<
         // TODO: check cosmos issue
         let bonded_balance = self
             .bank_keeper
-            .get_all_balances::<DB, AK, InitContext<'_, DB, SK>>(
+            .all_balances::<DB, AK, InitContext<'_, DB, SK>>(
                 ctx,
                 bonded_pool.base_account.address.clone(),
             );
@@ -216,15 +195,13 @@ impl<
             .into());
         }
 
-        let not_bonded_pool = self
-            .get_not_bonded_pool(ctx)
-            .ok_or(AppError::Custom(format!(
-                "{} module account has not been set",
-                NOT_BONDED_POOL_NAME
-            )))?;
+        let not_bonded_pool = self.not_bonded_pool(ctx).ok_or(AppError::Custom(format!(
+            "{} module account has not been set",
+            NOT_BONDED_POOL_NAME
+        )))?;
         let not_bonded_balance = self
             .bank_keeper
-            .get_all_balances::<DB, AK, InitContext<'_, DB, SK>>(
+            .all_balances::<DB, AK, InitContext<'_, DB, SK>>(
                 ctx,
                 not_bonded_pool.base_account.address.clone(),
             );
@@ -249,7 +226,7 @@ impl<
         if genesis.exported {
             for last_validator in genesis.last_validator_powers {
                 self.set_last_validator_power(ctx, &last_validator)?;
-                let validator = self.get_validator(ctx, &last_validator.address)?;
+                let validator = self.validator(ctx, &last_validator.address)?;
                 let mut update = validator.abci_validator_update(self.power_reduction(ctx));
                 update.power = last_validator.power;
                 res.push(update);
@@ -395,15 +372,15 @@ impl<
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
         let amt_from_not_bonded_to_bonded = Uint256::zero();
 
-        let mut last = self.get_last_validators_by_addr(ctx)?;
-        let validators_map = self.get_validators_power_store_vals_map(ctx)?;
+        let mut last = self.last_validators_by_addr(ctx)?;
+        let validators_map = self.validators_power_store_vals_map(ctx)?;
 
         let mut updates = vec![];
 
         for (_k, val_addr) in validators_map.iter().take(max_validators as usize) {
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
-            let mut validator: Validator = self.get_validator(ctx, &val_addr)?;
+            let mut validator: Validator = self.validator(ctx, &val_addr)?;
 
             if validator.jailed {
                 return Err(AppError::Custom(
@@ -421,13 +398,13 @@ impl<
             match validator.status {
                 BondStatus::Unbonded => {
                     self.unbonded_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded
-                        + Uint256::from_str(&validator.tokens.amount)?;
+                    amt_from_bonded_to_not_bonded =
+                        amt_from_not_bonded_to_bonded + validator.tokens;
                 }
                 BondStatus::Unbonding => {
                     self.unbonding_to_bonded(ctx, &mut validator)?;
-                    amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded
-                        + Uint256::from_str(&validator.tokens.amount)?;
+                    amt_from_bonded_to_not_bonded =
+                        amt_from_not_bonded_to_bonded + validator.tokens;
                 }
                 BondStatus::Bonded => {}
             }
@@ -460,10 +437,9 @@ impl<
         let no_longer_bonded = sort_no_longer_bonded(&last)?;
 
         for val_addr in no_longer_bonded {
-            let mut validator = self.get_validator(ctx, &ValAddress::from_bech32(&val_addr)?)?;
+            let mut validator = self.validator(ctx, &ValAddress::from_bech32(&val_addr)?)?;
             self.bonded_to_unbonding(ctx, &mut validator)?;
-            amt_from_bonded_to_not_bonded =
-                amt_from_not_bonded_to_bonded + Uint256::from_str(&validator.tokens.amount)?;
+            amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded + validator.tokens;
             self.delete_last_validator_power(ctx, &validator.operator_address)?;
             updates.push(validator.abci_validator_update_zero());
         }

@@ -10,22 +10,22 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    /// get_bonded_pool returns the bonded tokens pool's module account
-    pub fn get_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    /// bonded_pool returns the bonded tokens pool's module account
+    pub fn bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> Option<ModuleAccount> {
         self.auth_keeper
-            .get_module_account(ctx, BONDED_POOL_NAME.to_string())
+            .module_account(ctx, BONDED_POOL_NAME.to_string())
     }
 
-    /// get_bonded_pool returns the bonded tokens pool's module account
-    pub fn get_not_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    /// bonded_pool returns the bonded tokens pool's module account
+    pub fn not_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> Option<ModuleAccount> {
         self.auth_keeper
-            .get_module_account(ctx, NOT_BONDED_POOL_NAME.to_string())
+            .module_account(ctx, NOT_BONDED_POOL_NAME.to_string())
     }
 
     pub fn bonded_tokens_to_not_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(

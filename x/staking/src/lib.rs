@@ -2,6 +2,7 @@
 
 mod abci_handler;
 mod client;
+mod consts;
 mod genesis;
 mod keeper;
 mod message;

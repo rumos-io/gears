@@ -8,7 +8,7 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    pub fn get_redelegation<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn redelegation<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -63,15 +63,21 @@ impl<
         val_src_addr: ValAddress,
         val_dst_addr: ValAddress,
     ) -> anyhow::Result<Vec<Coin>> {
-        let redelegation = self.get_redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?;
+        let redelegation = self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?;
 
         let mut balances = vec![];
+        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+        let denom = params.bond_denom;
+        // TODO: time
         let ctx_time = Utc::now();
 
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
         for entry in &redelegation.entries {
-            let coin = Coin::try_from(entry.initial_balance.clone())?;
+            let coin = Coin {
+                denom: denom.clone(),
+                amount: entry.initial_balance,
+            };
             if entry.is_mature(ctx_time) && !coin.amount.is_zero() {
                 balances.push(coin);
             } else {
@@ -94,7 +100,7 @@ impl<
         redelegation: &Redelegation,
         completion_time: chrono::DateTime<Utc>,
     ) -> anyhow::Result<()> {
-        let mut time_slice = self.get_redelegation_queue_time_slice(ctx, completion_time)?;
+        let mut time_slice = self.redelegation_queue_time_slice(ctx, completion_time)?;
         let dvv_triplet = DvvTriplet {
             del_addr: redelegation.delegator_address.clone(),
             val_src_addr: redelegation.validator_src_address.clone(),
@@ -109,7 +115,7 @@ impl<
         Ok(())
     }
 
-    pub fn get_redelegation_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn redelegation_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
@@ -164,7 +170,7 @@ impl<
 
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
             let end = {
-                let mut k = get_unbonding_delegation_time_key(time).to_vec();
+                let mut k = unbonding_delegation_time_key(time).to_vec();
                 k.push(0);
                 k
             };

@@ -6,16 +6,14 @@ use gears::{
 pub use super::*;
 
 /// AccountKeeper defines the expected account keeper methods (noalias)
-// TODO: AuthKeeper should implements module account stuff
 pub trait AccountKeeper<SK: StoreKey>: AuthKeeper<SK> + Clone + Send + Sync + 'static {
-    // TODO: should be a sdk account interface
-    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: CTX,
         addr: ValAddress,
     ) -> Account;
 
-    fn get_module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         module_name: String,
@@ -38,7 +36,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 
-    fn get_all_balances<DB: Database, AK: AccountKeeper<SK>, CTX: TransactionalContext<DB, SK>>(
+    fn all_balances<DB: Database, AK: AccountKeeper<SK>, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: AccAddress,
@@ -164,7 +162,6 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut CTX,
         val_addr: ValAddress,
-        // TODO: original is an alias to bigint
         fraction: Decimal256,
     );
 }

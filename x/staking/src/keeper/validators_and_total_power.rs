@@ -9,7 +9,7 @@ impl<
     > Keeper<SK, PSK, AK, BK, KH>
 {
     /// Load the last total validator power.
-    pub fn get_last_total_power<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn last_total_power<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Option<Uint256> {
@@ -34,9 +34,7 @@ impl<
     }
 
     /// get the last validator set
-    // TODO: is a hack that allows to use store in the code after call,
-    // Otherwise, it borrows the store and it cannot be reused in mutable calls
-    pub fn get_validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {

@@ -24,12 +24,12 @@ impl<
             .get(&ctx.multi_store())
             .map_err(|_e| AppError::Custom("Cannot access params store".into()))?;
         let _val_by_val_addr = self
-            .get_validator(ctx, &msg.validator_address)
+            .validator(ctx, &msg.validator_address)
             .map_err(|_e| AppError::AccountNotFound)?;
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
         let _val_by_cons_addr = self
-            .get_validator_by_cons_addr(ctx, &cons_addr)
+            .validator_by_cons_addr(ctx, &cons_addr)
             .map_err(|_e| AppError::AccountNotFound)?;
         if msg.value.denom != params.bond_denom {
             return Err(AppError::InvalidRequest(format!(
@@ -58,28 +58,16 @@ impl<
             }
         }
 
+        let mut _validator =
+            Validator::new_with_defaults(msg.validator_address, msg.pub_key, msg.description);
+
+        let update_time = ctx.header().time.clone().ok_or(AppError::TxValidation(
+            "Transaction doesn't have valid timestamp.".to_string(),
+        ))?;
         let _commision = Commission {
             commission_rates: msg.commission,
-            update_time: ctx
-                .header()
-                .time
-                .clone()
-                .expect("Every valid header should contains of timestamp"),
+            update_time,
         };
-
-        ctx.height();
-        // let _validator = Validator {
-        //     operator_address: msg.validator_address,
-        //     delegator_shares: Decimal256::zero(),
-        //     consensus_pubkey: msg.pub_key,
-        //     jailed: false,
-        //     tokens: todo!(),
-        //     unbonding_height: 0,
-        //     unbonding_time: Utc::now(),
-        //     commission: todo!(),
-        //     min_self_delegation: Uint256::one(),
-        //     status: BondStatus::Unbonded,
-        // };
         todo!()
     }
     // func (k msgServer) CreateValidator(goCtx context.Context, msg *types.MsgCreateValidator) (*types.MsgCreateValidatorResponse, error) {
@@ -136,7 +124,7 @@ impl<
     //     return &types.MsgCreateValidatorResponse{}, nil
     // }
 
-    pub fn get_validator<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validator<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         key: &ValAddress,
@@ -166,7 +154,7 @@ impl<
         Ok(())
     }
 
-    pub fn get_validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &ConsAddress,
@@ -192,7 +180,7 @@ impl<
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_CONS_ADDR_KEY);
 
         validators_store.set(
-            validator.get_cons_addr().to_string().as_bytes().to_vec(),
+            validator.cons_addr().to_string().as_bytes().to_vec(),
             serde_json::to_vec(&validator)?,
         );
         Ok(())
@@ -219,7 +207,7 @@ impl<
         let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
 
         let end = {
-            let mut k = get_validator_queue_key(block_time, block_height);
+            let mut k = validator_queue_key(block_time, block_height);
             k.push(0);
             k
         };
@@ -236,11 +224,8 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
-        let addrs = self.get_unbonding_validators(
-            ctx,
-            validator.unbonding_time,
-            validator.unbonding_height,
-        )?;
+        let addrs =
+            self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height)?;
         let val_addr = validator.operator_address.to_string();
         let new_addrs = addrs
             .into_iter()
@@ -249,13 +234,13 @@ impl<
         if new_addrs.is_empty() {
             self.delete_validator_queue_time_slice(
                 ctx,
-                validator.unbonding_time,
+                validator.unbonding_time.clone(),
                 validator.unbonding_height,
             );
         } else {
             self.set_unbonding_validators_queue(
                 ctx,
-                validator.unbonding_time,
+                validator.unbonding_time.clone(),
                 validator.unbonding_height,
                 new_addrs,
             )?;
@@ -264,7 +249,7 @@ impl<
     }
 
     /// get the last validator set
-    pub fn get_last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> anyhow::Result<HashMap<String, Vec<u8>>> {
@@ -279,7 +264,7 @@ impl<
     }
 }
 
-pub(super) fn get_validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i64) -> Vec<u8> {
+pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i64) -> Vec<u8> {
     let height_bz = end_height.to_ne_bytes();
     let time_bz = end_time
         .timestamp_nanos_opt()
