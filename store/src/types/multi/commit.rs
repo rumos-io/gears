@@ -2,9 +2,13 @@ use std::{collections::HashMap, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
-use crate::{hash::StoreInfo, types::kv::KVBank, ApplicationStore, StoreKey, TransactionStore};
+use crate::{
+    hash::StoreInfo,
+    types::kv::{store_cache::CacheCommitData, KVBank},
+    ApplicationStore, StoreKey, TransactionStore,
+};
 
-use super::{cache::CacheCommitData, MultiBank};
+use super::MultiBank;
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
     pub fn new(db: DB) -> Self {

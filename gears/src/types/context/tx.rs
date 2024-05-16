@@ -1,8 +1,8 @@
 use database::{prefix::PrefixDB, Database};
 use store_crate::{
     types::{
-        kv::{immutable::KVStore, mutable::KVStoreMut},
-        multi::{cache::CacheCommitData, immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
+        kv::{immutable::KVStore, mutable::KVStoreMut, store_cache::CacheCommitData},
+        multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     },
     StoreKey, TransactionStore,
 };

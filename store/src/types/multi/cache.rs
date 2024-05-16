@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use database::Database;
 
-use crate::{StoreKey, TransactionStore};
+use crate::{types::kv::store_cache::CacheCommitData, StoreKey, TransactionStore};
 
 use super::MultiBank;
 
@@ -17,28 +17,5 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, TransactionStore> {
         }
 
         CacheCommitData(map)
-    }
-}
-
-#[derive(Debug)]
-pub struct CacheCommitData<SK>(Vec<(SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)>);
-
-impl<SK> CacheCommitData<SK> {
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    pub fn empty() -> Self {
-        Self(Vec::new())
-    }
-}
-
-impl<SK> IntoIterator for CacheCommitData<SK> {
-    type Item = (SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>);
-
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
     }
 }

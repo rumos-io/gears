@@ -41,3 +41,26 @@ impl KVCache {
         self.storage.insert(key, value.into_iter().collect());
     }
 }
+
+#[derive(Debug)]
+pub struct CacheCommitData<SK>(pub(crate) Vec<(SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)>);
+
+impl<SK> CacheCommitData<SK> {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn empty() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<SK> IntoIterator for CacheCommitData<SK> {
+    type Item = (SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>);
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
