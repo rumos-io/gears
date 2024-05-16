@@ -1,6 +1,6 @@
 use database::Database;
 use store_crate::types::multi::MultiBank;
-use store_crate::{TransactionStore, StoreKey, TransactionalMultiKVStore};
+use store_crate::{StoreKey, TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use crate::types::auth::fee::Fee;

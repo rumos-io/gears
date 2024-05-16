@@ -5,7 +5,7 @@ use crate::{
         immutable::{KVStore, KVStoreBackend},
         mutable::{KVStoreBackendMut, KVStoreMut},
     },
-    TransactionStore, ApplicationStore, QueryableMultiKVStore, StoreKey, TransactionalMultiKVStore,
+    ApplicationStore, QueryableMultiKVStore, StoreKey, TransactionStore, TransactionalMultiKVStore,
 };
 
 use super::{

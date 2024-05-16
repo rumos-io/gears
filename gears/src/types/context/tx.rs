@@ -1,7 +1,7 @@
 use database::{prefix::PrefixDB, Database};
 use store_crate::{
     types::{
-        kv::{immutable::KVStore, mutable::KVStoreMut, store_cache::CacheCommitData},
+        kv::{immutable::KVStore, mutable::KVStoreMut, store_cache::CacheCommitList},
         multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     },
     StoreKey, TransactionStore,
@@ -48,7 +48,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
-    pub(crate) fn commit(&mut self) -> CacheCommitData<SK> {
+    pub(crate) fn commit(&mut self) -> CacheCommitList<SK> {
         self.multi_store.commit()
     }
 }
