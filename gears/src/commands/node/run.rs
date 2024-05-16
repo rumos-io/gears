@@ -3,6 +3,7 @@ use crate::application::ApplicationInfo;
 use crate::baseapp::genesis::Genesis;
 use crate::baseapp::BaseApp;
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
+use crate::grpc::run_grpc_server;
 use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::rest::{run_rest_server, RestState};
 use crate::types::tx::TxMessage;
@@ -114,6 +115,8 @@ pub fn run<
         router,
         config.tendermint_rpc_address,
     );
+
+    run_grpc_server();
 
     let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
 

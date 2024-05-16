@@ -24,6 +24,7 @@ num-format = { workspace = true, features = ["with-num-bigint"] }
 num-bigint = { workspace = true }
 cosmwasm-std = "2.0.0"
 ux = { workspace = true }
+ibc-proto = { workspace = true }
 
 #utils
 anyhow = { workspace = true }
@@ -61,6 +62,8 @@ former = { workspace = true }
 # networking
 axum = { workspace = true }
 tower-http = { workspace = true, features = ["cors"] }
+tonic = { workspace = true }
+tonic-reflection = { workspace = true }
 
 #cli
 clap = { workspace = true, optional = true }
