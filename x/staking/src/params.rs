@@ -53,7 +53,7 @@ pub struct StakingParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
     pub fn get<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
     ) -> anyhow::Result<Params> {
         let store = self
             .params_keeper

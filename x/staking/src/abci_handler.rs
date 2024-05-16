@@ -53,9 +53,16 @@ impl<
     }
 
     fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        self.keeper
-            .init_genesis(ctx, genesis)
-            .expect("Cannot perform genesis actions.")
+        // TODO
+        if let Err(err) = self.keeper.init_genesis(ctx, genesis) {
+            panic!(
+                "It is important to perform genesis actions.
+            During genesis staking module initialize pools and queues
+            using the parameters provided by the application.
+            Original error: {:?}",
+                err
+            );
+        }
     }
 
     fn query<DB: Database + Send + Sync>(
@@ -68,11 +75,19 @@ impl<
 
     fn end_block<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        _ctx: &mut CTX,
+        ctx: &mut CTX,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
-        vec![]
-        // self.keeper.end_block(ctx, request)
+        match self.keeper.block_validator_updates(ctx) {
+            Ok(updates) => updates,
+            Err(err) => panic!(
+                "Error thrown in method 'end_block'. It can broke blockchain.
+                Original error: {:?}",
+                err
+            ),
+        }
+        // TODO
+        // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyEndBlocker)
     }
 
     fn run_ante_checks<DB: Database>(
