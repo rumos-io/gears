@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 
 /// Storage for store cache
 #[derive(Debug, Clone, Default)]
-pub(crate) struct KVCache {
+pub struct KVCache {
     pub(crate) storage: BTreeMap<Vec<u8>, Vec<u8>>,
     pub(crate) delete: HashSet<Vec<u8>>,
 }
@@ -39,5 +39,28 @@ impl KVCache {
 
         let _ = self.delete.remove(&key);
         self.storage.insert(key, value.into_iter().collect());
+    }
+}
+
+#[derive(Debug)]
+pub struct CacheCommitList<SK>(pub(crate) Vec<(SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)>);
+
+impl<SK> CacheCommitList<SK> {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn empty() -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl<SK> IntoIterator for CacheCommitList<SK> {
+    type Item = (SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>);
+
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }

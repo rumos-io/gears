@@ -2,7 +2,7 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use store_crate::{types::multi::MultiBank, CommitKind, StoreKey};
+use store_crate::{types::multi::MultiBank, ApplicationStore, StoreKey};
 use tendermint::types::proto::event::Event;
 
 use crate::{
@@ -43,7 +43,7 @@ pub trait ExecutionMode<DB, SK: StoreKey>: Sealed {
         msgs: impl Iterator<Item = &'m M>,
     ) -> Result<Vec<Event>, RunTxError>;
 
-    fn commit(ctx: TxContext<'_, DB, SK>, global_ms: &mut MultiBank<DB, SK, CommitKind>);
+    fn commit(ctx: TxContext<'_, DB, SK>, global_ms: &mut MultiBank<DB, SK, ApplicationStore>);
 }
 
 mod sealed {

@@ -21,7 +21,7 @@ pub mod store_cache;
 #[derive(Debug)]
 pub struct KVBank<DB, SK> {
     pub(crate) persistent: Arc<RwLock<Tree<DB>>>,
-    cache: KVCache,
+    pub(crate) cache: KVCache,
     _marker: PhantomData<SK>,
 }
 
@@ -82,5 +82,10 @@ impl<DB: Database, SK> KVBank<DB, SK> {
             .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
         MergedRange::merge(cached_values, persisted_values).into()
+    }
+
+    pub fn caches_update(&mut self, KVCache { storage, delete }: KVCache) {
+        self.cache.storage.extend(storage);
+        self.cache.delete.extend(delete);
     }
 }

@@ -2,11 +2,15 @@ use std::{collections::HashMap, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
-use crate::{hash::StoreInfo, types::kv::KVBank, CacheKind, CommitKind, StoreKey};
+use crate::{
+    hash::StoreInfo,
+    types::kv::{store_cache::CacheCommitList, KVBank},
+    ApplicationStore, StoreKey, TransactionStore,
+};
 
-use super::{cache::CacheCommitData, MultiBank};
+use super::MultiBank;
 
-impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
+impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
     pub fn new(db: DB) -> Self {
         let db = Arc::new(db);
 
@@ -36,7 +40,7 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
         }
     }
 
-    pub fn to_cache_kind(&self) -> MultiBank<DB, SK, CacheKind> {
+    pub fn to_cache_kind(&self) -> MultiBank<DB, SK, TransactionStore> {
         MultiBank {
             head_version: self.head_version,
             head_commit_hash: self.head_commit_hash,
@@ -66,20 +70,16 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, CommitKind> {
         hash
     }
 
-    pub fn sync(&mut self, data: CacheCommitData<SK>) {
+    pub fn sync(&mut self, data: CacheCommitList<SK>) {
         if data.is_empty() {
             return;
         }
 
         for (store_key, set, delete) in data.into_iter() {
             let store = self.kv_store_mut(&store_key);
-            for (key, value) in set {
-                store.set(key, value);
-            }
 
-            for key in delete {
-                store.delete(&key);
-            }
+            store.cache.storage.extend(set);
+            store.cache.delete.extend(delete);
         }
     }
 }
