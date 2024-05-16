@@ -9,6 +9,7 @@ use bank::{
     },
     types::query::{QueryAllBalancesResponse, QueryDenomsMetadataResponse},
 };
+use bytes::Bytes;
 use gaia_rs::{
     client::{GaiaQueryCommands, GaiaTxCommands, WrappedGaiaQueryCommands, WrappedGaiaTxCommands},
     query::GaiaQueryResponse,
@@ -24,11 +25,11 @@ use gears::{
     tendermint::{
         abci::{Event, EventAttribute},
         rpc::response::tx::broadcast::Response,
-        types::chain_id::ChainId,
+        types::{chain_id::ChainId, proto::Protobuf},
     },
-    types::address::AccAddress,
-    types::{base::coin::Coin, denom::Denom},
+    types::{address::AccAddress, base::coin::Coin, denom::Denom},
 };
+use serde_json::json;
 use utilities::run_gaia_and_tendermint;
 
 use crate::utilities::KEY_NAME;
@@ -104,7 +105,7 @@ fn denom_query() -> anyhow::Result<()> {
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn send_tx() -> anyhow::Result<()> {
-    let coins = 200_000_000_u32;
+    let coins = 34;
     let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
 
     let tx_cmd = BankCommands::Send {
@@ -160,6 +161,15 @@ fn send_tx() -> anyhow::Result<()> {
     }];
 
     assert_eq!(expected_events.as_slice(), deliver_tx.events.as_slice());
+
+    let expected_data: QueryAllBalancesResponse = serde_json::from_value(
+        json!({ "balances" : [ { "denom" : "uatom", "amount":"23"}], "pagination" : null }),
+    )?;
+
+    let actual_data: QueryAllBalancesResponse =
+        QueryAllBalancesResponse::decode::<Bytes>(deliver_tx.data.into())?;
+
+    assert_eq!(expected_data, actual_data);
 
     Ok(())
 }
