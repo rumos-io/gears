@@ -16,8 +16,7 @@ use super::{QueryableContext, TransactionalContext};
 pub struct BlockContext<'a, DB, SK> {
     multi_store: &'a mut MultiBank<DB, SK, CommitKind>,
     pub(crate) height: u64,
-    pub(crate) chain_id: ChainId,
-    pub header: Header, // TODO:NOW pub or pub(crate)?
+    pub header: Header,
     pub events: Vec<Event>,
 }
 
@@ -25,14 +24,12 @@ impl<'a, DB, SK> BlockContext<'a, DB, SK> {
     pub fn new(
         multi_store: &'a mut MultiBank<DB, SK, CommitKind>,
         height: u64,
-        chain_id: ChainId,
         header: Header,
     ) -> Self {
         BlockContext {
             multi_store,
             height,
             events: Vec::new(),
-            chain_id,
             header,
         }
     }
@@ -52,7 +49,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, D
     }
 
     fn chain_id(&self) -> &ChainId {
-        &self.chain_id
+        &self.header.chain_id
     }
 }
 
