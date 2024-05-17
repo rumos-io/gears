@@ -1,4 +1,4 @@
-use crate::consts::expect;
+use crate::consts::expect::{self, SERDE_ENCODING_DOMAIN_TYPE};
 use gears::{
     baseapp::KEY_VALIDATOR_PARAMS,
     core::base::coin::Coin,
@@ -86,11 +86,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
         &self,
         ctx: &mut CTX,
         params: Params,
-    ) -> anyhow::Result<()> {
+    ) {
         let mut store = self
             .params_keeper
             .raw_subspace_mut(ctx, &self.params_subspace_key);
-        store.set(PARAMS_KEY, serde_json::to_vec(&params)?);
-        Ok(())
+        store.set(
+            PARAMS_KEY,
+            serde_json::to_vec(&params).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        );
     }
 }

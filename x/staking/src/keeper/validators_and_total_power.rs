@@ -1,5 +1,3 @@
-use crate::consts::expect::SERDE_DECODING_DOMAIN_TYPE;
-
 pub use super::*;
 
 impl<
@@ -39,17 +37,14 @@ impl<
     pub fn validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> HashMap<Vec<u8>, ValAddress> {
+    ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
         let mut res = HashMap::new();
         for (k, v) in iterator.range(..) {
-            res.insert(
-                k.to_vec(),
-                serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE),
-            );
+            res.insert(k.to_vec(), serde_json::from_slice(&v)?);
         }
-        res
+        Ok(res)
     }
 
     pub fn set_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -87,10 +82,9 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &ValAddress,
-    ) -> anyhow::Result<()> {
+    ) -> Option<Vec<u8>> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        delegations_store.delete(validator.to_string().as_bytes());
-        Ok(())
+        delegations_store.delete(validator.to_string().as_bytes())
     }
 }

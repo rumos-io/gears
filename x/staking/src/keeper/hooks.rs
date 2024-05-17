@@ -12,18 +12,17 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_created(ctx, validator.operator_address.clone());
         }
-        Ok(())
     }
 
     pub fn before_delegation_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
-    ) -> anyhow::Result<()> {
+    ) {
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.before_delegation_created(
                 ctx,
@@ -31,14 +30,13 @@ impl<
                 delegation.validator_address.clone(),
             );
         }
-        Ok(())
     }
 
     pub fn after_delegation_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
-    ) -> anyhow::Result<()> {
+    ) {
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_delegation_modified(
                 ctx,
@@ -46,14 +44,13 @@ impl<
                 delegation.validator_address.clone(),
             );
         }
-        Ok(())
     }
 
     pub fn after_validator_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         if let Some(ref hooks) = self.hooks_keeper {
             hooks.after_validator_bonded(
                 ctx,
@@ -61,6 +58,5 @@ impl<
                 validator.operator_address.clone(),
             );
         }
-        Ok(())
     }
 }

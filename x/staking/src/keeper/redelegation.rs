@@ -1,3 +1,5 @@
+use crate::consts::expect::{SERDE_DECODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
+
 pub use super::*;
 
 impl<
@@ -33,14 +35,16 @@ impl<
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
-    ) -> anyhow::Result<()> {
+    ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
         key.put(delegation.validator_dst_address.to_string().as_bytes());
-        delegations_store.set(key, serde_json::to_vec(&delegation)?);
-        Ok(())
+        delegations_store.set(
+            key,
+            serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        );
     }
 
     pub fn remove_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -89,7 +93,7 @@ impl<
         if new_redelegations.is_empty() {
             self.remove_redelegation(ctx, &redelegation);
         } else {
-            self.set_redelegation(ctx, &redelegation)?;
+            self.set_redelegation(ctx, &redelegation);
         }
         Ok(balances)
     }
@@ -99,39 +103,37 @@ impl<
         ctx: &mut CTX,
         redelegation: &Redelegation,
         completion_time: chrono::DateTime<Utc>,
-    ) -> anyhow::Result<()> {
-        let mut time_slice = self.redelegation_queue_time_slice(ctx, completion_time)?;
+    ) {
+        let mut time_slice = self.redelegation_queue_time_slice(ctx, completion_time);
         let dvv_triplet = DvvTriplet {
             del_addr: redelegation.delegator_address.clone(),
             val_src_addr: redelegation.validator_src_address.clone(),
             val_dst_addr: redelegation.validator_dst_address.clone(),
         };
         if time_slice.is_empty() {
-            self.set_redelegation_queue_time_slice(ctx, completion_time, vec![dvv_triplet])?;
+            self.set_redelegation_queue_time_slice(ctx, completion_time, vec![dvv_triplet]);
         } else {
             time_slice.push(dvv_triplet);
-            self.set_redelegation_queue_time_slice(ctx, completion_time, time_slice)?;
+            self.set_redelegation_queue_time_slice(ctx, completion_time, time_slice);
         }
-        Ok(())
     }
 
     pub fn redelegation_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
-    ) -> anyhow::Result<Vec<DvvTriplet>> {
+    ) -> Vec<DvvTriplet> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
             .timestamp_nanos_opt()
-            .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
-                    The error in this method means that some system failure happened and the system cannot continue work.")
+            .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
         if let Some(bytes) = store.get(&key) {
-            Ok(serde_json::from_slice(&bytes)?)
+            serde_json::from_slice(&bytes).expect(SERDE_ENCODING_DOMAIN_TYPE)
         } else {
-            Ok(vec![])
+            vec![]
         }
     }
 
@@ -140,18 +142,16 @@ impl<
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
         redelegations: Vec<DvvTriplet>,
-    ) -> anyhow::Result<()> {
+    ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
             .timestamp_nanos_opt()
-            .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
-                    The error in this method means that some system failure happened and the system cannot continue work.")
+            .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
-        let value = serde_json::to_vec(&redelegations)?;
+        let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
         store.set(key, value);
-        Ok(())
     }
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
@@ -163,11 +163,12 @@ impl<
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
-    ) -> anyhow::Result<Vec<DvvTriplet>> {
+    ) -> Vec<DvvTriplet> {
         let (keys, mature_redelegations) = {
             let storage = ctx.kv_store(&self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
+            // TODO: check
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
             let end = {
                 let mut k = unbonding_delegation_time_key(time).to_vec();
@@ -178,7 +179,8 @@ impl<
             let mut keys = vec![];
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
             for (k, v) in store.range(..).take_while(|(k, _)| **k != end) {
-                let time_slice: Vec<DvvTriplet> = serde_json::from_slice(&v)?;
+                let time_slice: Vec<DvvTriplet> =
+                    serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE);
                 mature_redelegations.extend(time_slice);
                 keys.push(k.to_vec());
             }
@@ -190,6 +192,6 @@ impl<
         keys.iter().for_each(|k| {
             store.delete(k);
         });
-        Ok(mature_redelegations)
+        mature_redelegations
     }
 }

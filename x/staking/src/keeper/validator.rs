@@ -1,6 +1,8 @@
 pub use super::*;
 use crate::{
-    consts::expect::{SERDE_DECODING_DOMAIN_TYPE, SERDE_ENCODING_DOMAIN_TYPE},
+    consts::expect::{
+        SERDE_DECODING_DOMAIN_TYPE, SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT,
+    },
     Commission, CreateValidator, Validator,
 };
 use gears::{
@@ -25,7 +27,7 @@ impl<
         let params = self.staking_params_keeper.get(&ctx.multi_store());
         let _val_by_val_addr = self
             .validator(ctx, &msg.validator_address)
-            .expect("validator in the store was not found");
+            .ok_or(AppError::AccountNotFound)?;
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
         let _val_by_cons_addr = self
@@ -184,22 +186,22 @@ impl<
         &self,
         ctx: &mut CTX,
         addr: &[u8],
-    ) -> anyhow::Result<()> {
+    ) -> Option<Vec<u8>> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
-        validators_store.delete(addr);
-        Ok(())
+        validators_store.delete(addr)
     }
 
-    pub fn validator_queue_iterator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn validator_queue_map<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: chrono::DateTime<Utc>,
         block_height: i64,
-    ) -> anyhow::Result<HashMap<Vec<u8>, Vec<String>>> {
+    ) -> HashMap<Vec<u8>, Vec<String>> {
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
 
+        // TODO:
         let end = {
             let mut k = validator_queue_key(block_time, block_height);
             k.push(0);
@@ -208,9 +210,13 @@ impl<
 
         let mut res = HashMap::new();
         for (k, v) in iterator.range(..).take_while(|(k, _)| **k != end) {
-            res.insert(k.to_vec(), serde_json::from_slice(&v)?);
+            // TODO
+            res.insert(
+                k.to_vec(),
+                serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE),
+            );
         }
-        Ok(res)
+        res
     }
 
     pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -219,7 +225,7 @@ impl<
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
         let addrs =
-            self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height)?;
+            self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
         let val_addr = validator.operator_address.to_string();
         let new_addrs = addrs
             .into_iter()
@@ -237,7 +243,7 @@ impl<
                 validator.unbonding_time.clone(),
                 validator.unbonding_height,
                 new_addrs,
-            )?;
+            );
         }
         Ok(())
     }
@@ -246,15 +252,15 @@ impl<
     pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> HashMap<String, Vec<u8>> {
+    ) -> anyhow::Result<HashMap<String, Vec<u8>>> {
         let mut last = HashMap::new();
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
         for (k, v) in store.range(..) {
-            let k: ValAddress = serde_json::from_slice(&k).expect(SERDE_DECODING_DOMAIN_TYPE);
+            let k: ValAddress = serde_json::from_slice(&k)?;
             last.insert(k.to_string(), v.to_vec());
         }
-        last
+        Ok(last)
     }
 }
 
@@ -262,8 +268,7 @@ pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i
     let height_bz = end_height.to_ne_bytes();
     let time_bz = end_time
         .timestamp_nanos_opt()
-        .expect("The timestamp_nanos_opt produces an integer that represents time in nanoseconds.
-                The error in this method means that some system failure happened and the system cannot continue work.")
+        .expect(TIMESTAMP_NANOS_EXPECT)
         .to_ne_bytes();
 
     let mut bz = VALIDATORS_QUEUE_KEY.to_vec();

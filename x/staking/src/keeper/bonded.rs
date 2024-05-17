@@ -32,20 +32,24 @@ impl<
         &self,
         ctx: &mut CTX,
         amount: Uint256,
-    ) -> anyhow::Result<()> {
+    ) {
         let params = self.staking_params_keeper.get(&ctx.multi_store());
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
-        }])?;
-        Ok(self
+        }])
+        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
+        if let Err(e) = self
             .bank_keeper
             .send_coins_from_module_to_module::<DB, AK, CTX>(
                 ctx,
                 BONDED_POOL_NAME.into(),
                 NOT_BONDED_POOL_NAME.into(),
                 coins,
-            )?)
+            )
+        {
+            panic!("{}", e);
+        }
     }
 
     pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -79,7 +83,7 @@ impl<
         // delete from queue if present
         self.delete_validator_queue(ctx, validator)?;
         // trigger hook
-        self.after_validator_bonded(ctx, validator)?;
+        self.after_validator_bonded(ctx, validator);
         Ok(())
     }
 }
