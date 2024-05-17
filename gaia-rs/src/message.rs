@@ -14,7 +14,7 @@ pub enum Message {
     #[gears(url = "/cosmos.bank.v1beta1")]
     Bank(bank::Message),
     #[gears(url = "/ibc.core.client.v1")]
-    IBC(ibc::message::Message),
+    IBC(ibc_rs::message::Message),
 }
 
 impl ValueRenderer for Message {
