@@ -22,6 +22,8 @@ use tonic::{transport::Server, Request, Response, Status};
 
 use crate::runtime::runtime;
 
+mod auth;
+
 #[derive(Debug, Default)]
 pub struct StakingService;
 
@@ -143,7 +145,7 @@ pub fn run_grpc_server() {
     std::thread::spawn(move || {
         let result = runtime().block_on(launch());
         if let Err(err) = result {
-            panic!("Failed to run rest server with err: {}", err)
+            panic!("Failed to run gRPC server with err: {}", err)
         }
     });
 }
@@ -155,11 +157,10 @@ async fn launch() -> Result<(), Box<dyn std::error::Error>> {
     let reflection_service = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(ibc_proto::FILE_DESCRIPTOR_SET)
         .build()
-        .unwrap();
+        .unwrap(); //TODO: unwrap
     let staking_service = StakingService::default();
 
     let server = Server::builder()
-        .trace_fn(|_| tracing::info_span!("helloworld_server"))
         .add_service(reflection_service)
         .add_service(StakingQueryServer::new(staking_service));
 

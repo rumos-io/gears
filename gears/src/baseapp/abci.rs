@@ -1,6 +1,8 @@
 use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
 use crate::baseapp::mode::ExecutionMode;
+use crate::baseapp::QueryRequest;
+use crate::baseapp::QueryResponse;
 use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
@@ -50,10 +52,12 @@ impl<
         M: TxMessage,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G>,
+        H: ABCIHandler<M, SK, G, QReq, QRes>,
         G: Genesis,
         AI: ApplicationInfo,
-    > ABCIApplication for BaseApp<SK, PSK, M, H, G, AI>
+        QReq: QueryRequest,
+        QRes: QueryResponse,
+    > ABCIApplication for BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");

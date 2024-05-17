@@ -5,19 +5,22 @@ use axum::{
 };
 use gears::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
-    baseapp::{genesis::Genesis, BaseApp},
+    baseapp::{genesis::Genesis, BaseApp, NodeQueryHandler, QueryRequest, QueryResponse},
     params::ParamsSubspaceKey,
     rest::{error::Error, Pagination, RestState},
     tendermint::types::{proto::Protobuf, request::query::RequestQuery},
-    types::tx::TxMessage,
+    types::{denom::Denom, tx::TxMessage},
 };
 use gears::{error::IBC_ENCODE_UNWRAP, store::StoreKey};
 use gears::{tendermint::application::ABCIApplication, types::address::AccAddress};
 use serde::Deserialize;
 
-use crate::types::query::{
-    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
-    QueryTotalSupplyResponse,
+use crate::{
+    types::query::{
+        QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest,
+        QueryBalanceResponse, QueryTotalSupplyResponse,
+    },
+    BankNodeQueryRequest, BankNodeQueryResponse,
 };
 
 /// Gets the total supply of every denom
@@ -25,11 +28,13 @@ pub async fn supply<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
+    QReq: QueryRequest,
+    QRes: QueryResponse,
 >(
-    State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>>,
 ) -> Result<Json<QueryTotalSupplyResponse>, Error> {
     let request = RequestQuery {
         data: Default::default(),
@@ -51,13 +56,15 @@ pub async fn get_balances<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
+    QReq: QueryRequest,
+    QRes: QueryResponse,
 >(
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
-    State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>>,
 ) -> Result<Json<QueryAllBalancesResponse>, Error> {
     let req = QueryAllBalancesRequest {
         address,
@@ -80,8 +87,8 @@ pub async fn get_balances<
 }
 
 #[derive(Deserialize)]
-pub struct RawDenom {
-    denom: String,
+pub struct QueryData {
+    denom: Denom,
 }
 
 // TODO: returns {"balance":null} if balance is zero, is this expected?
@@ -91,46 +98,37 @@ pub async fn get_balances_by_denom<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
+    QReq: QueryRequest + From<BankNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
 >(
     Path(address): Path<AccAddress>,
-    denom: Query<RawDenom>,
-    State(app): State<BaseApp<SK, PSK, M, H, G, AI>>,
-) -> Result<Json<QueryBalanceResponse>, Error> {
-    let req = QueryBalanceRequest {
+    query: Query<QueryData>,
+    State(app): State<BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>>,
+) -> Result<Json<QRes>, Error> {
+    let req = BankNodeQueryRequest::Balance(QueryBalanceRequest {
         address,
-        denom: denom
-            .0
-            .denom
-            .try_into()
-            .map_err(|e: gears::types::errors::Error| Error::bad_request(e.to_string()))?,
-    };
+        denom: query.0.denom,
+    });
+    let res = app
+        .typed_query(req)
+        .map_err(|_| Error::internal_server_error())?;
 
-    let request: RequestQuery = RequestQuery {
-        data: req.encode_vec().expect(IBC_ENCODE_UNWRAP).into(), // TODO:IBC
-        path: "/cosmos.bank.v1beta1.Query/Balance".into(),
-        height: 0,
-        prove: false,
-    };
-
-    let response = app.query(request);
-
-    Ok(Json(
-        QueryBalanceResponse::decode(response.value)
-            .expect("should be a valid QueryBalanceResponse"),
-    ))
+    Ok(Json(res))
 }
 
 pub fn get_router<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
->() -> Router<RestState<SK, PSK, M, H, G, AI>> {
+    QReq: QueryRequest + From<BankNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
+>() -> Router<RestState<SK, PSK, M, H, G, AI, QReq, QRes>> {
     Router::new()
         .route("/v1beta1/supply", get(supply))
         .route("/v1beta1/balances/:address", get(get_balances))

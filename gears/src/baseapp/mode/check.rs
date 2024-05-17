@@ -52,7 +52,7 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
         )
     }
 
-    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
+    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G, QReq, QRes>, QReq, QRes>(
         ctx: &mut TxContext<'_, DB, SK>,
         _handler: &AH,
         _msgs: impl Iterator<Item = &'m M>,
@@ -62,7 +62,13 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
         Ok(ctx.events_drain())
     }
 
-    fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
+    fn run_ante_checks<
+        M: TxMessage,
+        G: Genesis,
+        AH: ABCIHandler<M, SK, G, QReq, QRes>,
+        QReq,
+        QRes,
+    >(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,

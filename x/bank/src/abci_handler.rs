@@ -11,8 +11,11 @@ use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadat
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::{error::AppError, params::ParamsSubspaceKey};
+use serde::Serialize;
 
-use crate::types::query::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse};
+use crate::types::query::{
+    QueryAllBalancesRequest, QueryBalanceRequest, QueryBalanceResponse, QueryTotalSupplyResponse,
+};
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
@@ -20,9 +23,48 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>>
     keeper: Keeper<SK, PSK, AK>,
 }
 
+#[derive(Debug, Clone)]
+pub enum BankNodeQueryRequest {
+    Balance(QueryBalanceRequest),
+    AllBalances(QueryAllBalancesRequest),
+    TotalSupply,
+    DenomsMetadata,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub enum BankNodeQueryResponse {
+    Balance(QueryBalanceResponse),
+}
+
 impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<SK, PSK, AK> {
     pub fn new(keeper: Keeper<SK, PSK, AK>) -> Self {
         ABCIHandler { keeper }
+    }
+
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: BankNodeQueryRequest,
+    ) -> Result<BankNodeQueryResponse, AppError> {
+        match query {
+            BankNodeQueryRequest::Balance(req) => {
+                let res = self.keeper.query_balance(ctx, req);
+                Ok(BankNodeQueryResponse::Balance(res))
+            }
+            BankNodeQueryRequest::AllBalances(req) => {
+                //let _ = self.keeper.query_all_balances(ctx, req);
+                todo!()
+            }
+            BankNodeQueryRequest::TotalSupply => {
+                //let _ = self.keeper.get_paginated_total_supply(ctx);
+                todo!()
+            }
+            BankNodeQueryRequest::DenomsMetadata => {
+                //let _ = self.keeper.query_denoms_metadata(ctx);
+                todo!()
+            }
+        }
     }
 
     pub fn tx<DB: Database>(

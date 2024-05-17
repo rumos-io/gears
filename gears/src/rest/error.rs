@@ -29,6 +29,20 @@ impl Error {
         }
     }
 
+    pub fn not_found() -> Error {
+        Error {
+            status: StatusCode::NOT_FOUND,
+            description: "The requested resource could not be found.".into(),
+        }
+    }
+
+    pub fn internal_server_error() -> Error {
+        Error {
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+            description: "An internal server error occurred.".into(),
+        }
+    }
+
     pub fn gateway_timeout() -> Error {
         Error {
             status: StatusCode::GATEWAY_TIMEOUT,

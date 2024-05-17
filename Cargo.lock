@@ -197,6 +197,7 @@ dependencies = [
  "data-encoding",
  "gears",
  "hex 0.4.3",
+ "ibc-proto 0.33.0",
  "num-bigint",
  "num-format",
  "num-traits",
@@ -211,6 +212,7 @@ dependencies = [
  "strum",
  "thiserror",
  "tokio",
+ "tonic",
 ]
 
 [[package]]

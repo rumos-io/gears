@@ -23,7 +23,7 @@ mod inner {
 }
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct QueryBalanceRequest {
     /// address is the address to query balances for.
     pub address: AccAddress,

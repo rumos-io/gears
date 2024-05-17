@@ -26,8 +26,16 @@ pub trait ABCIHandler<
     M: TxMessage,
     SK: StoreKey,
     G: DeserializeOwned + Clone + Send + Sync + 'static,
+    QReq,
+    QRes,
 >: Clone + Send + Sync + 'static
 {
+    fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QReq,
+    ) -> Result<QRes, AppError>;
+
     fn run_ante_checks<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,

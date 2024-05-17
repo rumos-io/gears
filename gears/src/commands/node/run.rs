@@ -1,7 +1,7 @@
 use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::genesis::Genesis;
-use crate::baseapp::BaseApp;
+use crate::baseapp::{BaseApp, QueryRequest, QueryResponse};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::grpc::run_grpc_server;
 use crate::params::{Keeper, ParamsSubspaceKey};
@@ -70,16 +70,18 @@ pub fn run<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AC: ApplicationConfig,
     AI: ApplicationInfo,
+    QReq: QueryRequest,
+    QRes: QueryResponse,
 >(
     cmd: RunCommand,
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
-    router: Router<RestState<SK, PSK, M, H, G, AI>>,
+    router: Router<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>,
 ) -> Result<(), RunError> {
     let RunCommand {
         home,
@@ -106,7 +108,7 @@ pub fn run<
 
     let abci_handler = abci_handler_builder(config.clone());
 
-    let app: BaseApp<SK, PSK, M, H, G, AI> =
+    let app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes> =
         BaseApp::new(db, params_keeper, params_subspace_key, abci_handler);
 
     run_rest_server(

@@ -1,6 +1,6 @@
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
-    baseapp::{genesis::Genesis, BaseApp},
+    baseapp::{genesis::Genesis, BaseApp, QueryRequest, QueryResponse},
     params::ParamsSubspaceKey,
     rest::handlers::{node_info, staking_params, txs},
     runtime::runtime,
@@ -16,13 +16,15 @@ pub fn run_rest_server<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
+    QReq: QueryRequest,
+    QRes: QueryResponse,
 >(
-    app: BaseApp<SK, PSK, M, H, G, AI>,
+    app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G, AI>>,
+    router: Router<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>,
     tendermint_rpc_address: Url,
 ) {
     std::thread::spawn(move || {
@@ -38,11 +40,13 @@ pub struct RestState<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
+    QReq,
+    QRes,
 > {
-    app: BaseApp<SK, PSK, M, H, G, AI>,
+    app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>,
     tendermint_rpc_address: Url,
 }
 
@@ -50,12 +54,17 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         M: TxMessage,
-        H: ABCIHandler<M, SK, G>,
+        H: ABCIHandler<M, SK, G, QReq, QRes>,
         G: Genesis,
         AI: ApplicationInfo,
-    > FromRef<RestState<SK, PSK, M, H, G, AI>> for BaseApp<SK, PSK, M, H, G, AI>
+        QReq: QueryRequest,
+        QRes: QueryResponse,
+    > FromRef<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>
+    for BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>
 {
-    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI>) -> BaseApp<SK, PSK, M, H, G, AI> {
+    fn from_ref(
+        rest_state: &RestState<SK, PSK, M, H, G, AI, QReq, QRes>,
+    ) -> BaseApp<SK, PSK, M, H, G, AI, QReq, QRes> {
         rest_state.app.clone()
     }
 }
@@ -64,12 +73,14 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         M: TxMessage,
-        H: ABCIHandler<M, SK, G>,
+        H: ABCIHandler<M, SK, G, QReq, QRes>,
         G: Genesis,
         AI: ApplicationInfo,
-    > FromRef<RestState<SK, PSK, M, H, G, AI>> for Url
+        QReq,
+        QRes,
+    > FromRef<RestState<SK, PSK, M, H, G, AI, QReq, QRes>> for Url
 {
-    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI>) -> Url {
+    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI, QReq, QRes>) -> Url {
         rest_state.tendermint_rpc_address.clone()
     }
 }
@@ -82,13 +93,15 @@ async fn launch<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
+    QReq: QueryRequest,
+    QRes: QueryResponse,
 >(
-    app: BaseApp<SK, PSK, M, H, G, AI>,
+    app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G, AI>>,
+    router: Router<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>,
     tendermint_rpc_address: Url,
 ) -> anyhow::Result<()> {
     let cors = CorsLayer::new()

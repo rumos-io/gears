@@ -31,13 +31,19 @@ pub trait ExecutionMode<DB, SK: StoreKey>: Sealed {
 
     fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;
 
-    fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
+    fn run_ante_checks<
+        M: TxMessage,
+        G: Genesis,
+        AH: ABCIHandler<M, SK, G, QReq, QRes>,
+        QReq,
+        QRes,
+    >(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         tx_with_raw: &TxWithRaw<M>,
     ) -> Result<(), RunTxError>;
 
-    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
+    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G, QReq, QRes>, QReq, QRes>(
         ctx: &mut TxContext<'_, DB, SK>,
         handler: &AH,
         msgs: impl Iterator<Item = &'m M>,

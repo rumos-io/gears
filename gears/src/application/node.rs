@@ -3,7 +3,7 @@ use super::{
     ApplicationInfo,
 };
 use crate::{
-    baseapp::genesis::Genesis,
+    baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
     commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
     params::Keeper as ParamsKeeper,
 };
@@ -22,8 +22,16 @@ pub trait Node: AuxHandler {
     type Genesis: Genesis;
     type StoreKey: StoreKey;
     type ParamsSubspaceKey: ParamsSubspaceKey;
-    type ABCIHandler: ABCIHandler<Self::Message, Self::StoreKey, Self::Genesis>;
+    type ABCIHandler: ABCIHandler<
+        Self::Message,
+        Self::StoreKey,
+        Self::Genesis,
+        Self::QReq,
+        Self::QRes,
+    >;
     type ApplicationConfig: ApplicationConfig;
+    type QReq: QueryRequest;
+    type QRes: QueryResponse;
 
     /// Builder method for defining routes of rest server
     fn router<AI: ApplicationInfo>() -> Router<
@@ -34,6 +42,8 @@ pub trait Node: AuxHandler {
             Self::ABCIHandler,
             Self::Genesis,
             AI,
+            Self::QReq,
+            Self::QRes,
         >,
     >;
 }
@@ -48,6 +58,8 @@ pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
             Core::ABCIHandler,
             Core::Genesis,
             AI,
+            Core::QReq,
+            Core::QRes,
         >,
     >,
     abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,

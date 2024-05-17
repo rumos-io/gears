@@ -17,6 +17,7 @@ use crate::{
 };
 use bytes::Bytes;
 use database::RocksDB;
+use serde::Serialize;
 use store_crate::{
     types::{
         multi::{immutable::MultiStore, MultiBank},
@@ -44,14 +45,51 @@ pub mod state;
 
 static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
 
+pub trait QueryRequest: Clone + Send + Sync + 'static {
+    fn height(&self) -> u32;
+}
+
+pub trait QueryResponse: Clone + Send + Sync + 'static + Serialize {}
+
+pub trait NodeQueryHandler<QReq, QRes>: Send + Sync + 'static {
+    fn typed_query<Q: Into<QReq>>(&self, request: Q) -> Result<QRes, AppError>;
+}
+
+impl<
+        M: TxMessage,
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        H: ABCIHandler<M, SK, G, QReq, QRes>,
+        G: Genesis,
+        AI: ApplicationInfo,
+        QReq: QueryRequest,
+        QRes: QueryResponse,
+    > NodeQueryHandler<QReq, QRes> for BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>
+{
+    fn typed_query<Q: Into<QReq>>(&self, request: Q) -> Result<QRes, AppError> {
+        // TODO: use a specific query error type that can be converted to HTTP error
+        let request = request.into();
+        let version = request.height();
+
+        let query_store =
+            QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;
+
+        let ctx = QueryContext::new(query_store, version)?;
+
+        self.abci_handler.typed_query(&ctx, request)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct BaseApp<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
+    H: ABCIHandler<M, SK, G, QReq, QRes>,
     G: Genesis,
     AI: ApplicationInfo,
+    QReq,
+    QRes,
 > {
     state: Arc<RwLock<ApplicationState<RocksDB, SK>>>,
     multi_store: Arc<RwLock<MultiBank<RocksDB, SK, CommitKind>>>,
@@ -61,16 +99,19 @@ pub struct BaseApp<
     pub m: PhantomData<M>,
     pub g: PhantomData<G>,
     _info_marker: PhantomData<AI>,
+    pub phantom: PhantomData<(QReq, QRes)>,
 }
 
 impl<
         M: TxMessage,
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G>,
+        H: ABCIHandler<M, SK, G, QReq, QRes>,
         G: Genesis,
         AI: ApplicationInfo,
-    > BaseApp<SK, PSK, M, H, G, AI>
+        QReq,
+        QRes,
+    > BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>
 {
     pub fn new(
         db: RocksDB,
@@ -102,6 +143,7 @@ impl<
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
+            phantom: PhantomData,
         }
     }
 
