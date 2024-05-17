@@ -4,6 +4,7 @@ use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
+use crate::types::base::coin::Coin;
 use crate::types::context::tx::TxContext;
 use crate::types::context::QueryableContext;
 use crate::types::denom::Denom;
@@ -21,6 +22,7 @@ use crate::{
         tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
+use anyhow::anyhow;
 use core_types::tx::signature::SignatureData;
 use core_types::{
     signing::SignDoc,
@@ -138,6 +140,56 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         //  - ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
         //  - ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
+
+        Ok(())
+    }
+
+    fn mempool_fee<M: TxMessage, DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        TxWithRaw {
+            tx,
+            raw: _,
+            tx_len: _,
+        }: &TxWithRaw<M>,
+    ) -> anyhow::Result<()> {
+        if !ctx.is_check() {
+            return Ok(());
+        }
+
+        let fee = tx.auth_info.fee.amount.as_ref();
+        let gas = tx.auth_info.fee.gas_limit;
+
+        let min_gas_prices = Vec::<Coin>::new(); // TODO:NOW Where it set? Check gaia for it
+
+        if min_gas_prices.is_empty() || min_gas_prices.iter().any(|this| this.amount.is_zero()) {
+            return Ok(());
+        }
+
+        if let Some(fee_coins) = fee {
+            let mut required_fees = Vec::with_capacity(min_gas_prices.len());
+
+            for gp in min_gas_prices {
+                required_fees.push(Coin {
+                    denom: gp.denom,
+                    amount: gp
+                        .amount
+                        .checked_mul_ceil(cosmwasm_std::Decimal::new(u64::from(gas).into()))?, // TODO:NOW Great. Replace it with something sane
+                });
+            }
+
+            if fee_coins.inner().into_iter().any(|fee_coin| {
+                required_fees
+                    .iter()
+                    .any(|req_fee| req_fee.amount >= fee_coin.amount)
+            }) {
+                Err(anyhow!(
+                    "insufficient fees; got: {:?} required: {:?}",
+                    fee_coins,
+                    required_fees
+                ))? // TODO:NOW
+            }
+        }
 
         Ok(())
     }

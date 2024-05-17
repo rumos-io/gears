@@ -52,6 +52,7 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
             header,
             build_tx_gas_meter(height, fee),
             &mut self.block_gas_meter,
+            false,
         )
     }
 

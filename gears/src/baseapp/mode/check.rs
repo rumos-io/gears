@@ -49,6 +49,7 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
             header,
             build_tx_gas_meter(height, fee),
             &mut self.block_gas_meter,
+            true,
         )
     }
 

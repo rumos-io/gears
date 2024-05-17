@@ -37,6 +37,10 @@ impl Gas {
 
     pub const ZERO: Self = Self(u63::new(0));
 
+    pub const fn new(val: u63) -> Self {
+        Self(val)
+    }
+
     // TODO: write a test for this
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
         if (Self::MAX - self) >= rhs {

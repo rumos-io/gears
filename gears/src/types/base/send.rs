@@ -61,6 +61,10 @@ impl SendCoins {
     pub fn into_inner(self) -> Vec<Coin> {
         self.0
     }
+
+    pub fn inner(&self) -> &Vec<Coin> {
+        &self.0
+    }
 }
 
 impl From<SendCoins> for Vec<Coin> {
