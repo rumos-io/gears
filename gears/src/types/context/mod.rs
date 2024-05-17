@@ -4,6 +4,7 @@ use store_crate::types::multi::immutable::MultiStore;
 use store_crate::types::multi::mutable::MultiStoreMut;
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
+pub mod block;
 pub mod init;
 pub mod query;
 pub mod tx;

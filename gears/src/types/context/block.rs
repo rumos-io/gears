@@ -1,63 +1,41 @@
 use database::{prefix::PrefixDB, Database};
 use store_crate::{
     types::{
-        kv::{immutable::KVStore, mutable::KVStoreMut, store_cache::CacheCommitList},
+        kv::{immutable::KVStore, mutable::KVStoreMut},
         multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     },
-    StoreKey, TransactionStore,
+    ApplicationStore, StoreKey,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-use crate::types::{
-    gas::{
-        kind::{BlockKind, TxKind},
-        GasMeter,
-    },
-    header::Header,
-};
+use crate::types::header::Header;
 
 use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
-pub struct TxContext<'a, DB, SK> {
-    pub gas_meter: GasMeter<TxKind>,
-    pub events: Vec<Event>,
-    multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
+pub struct BlockContext<'a, DB, SK> {
+    multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
     pub(crate) height: u64,
-    pub(crate) header: Header,
-    pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
+    pub header: Header,
+    pub events: Vec<Event>,
 }
 
-impl<'a, DB, SK> TxContext<'a, DB, SK> {
+impl<'a, DB, SK> BlockContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
+        multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
         height: u64,
         header: Header,
-        gas_meter: GasMeter<TxKind>,
-        block_gas_meter: &'a mut GasMeter<BlockKind>,
     ) -> Self {
-        Self {
-            events: Vec::new(),
+        BlockContext {
             multi_store,
             height,
+            events: Vec::new(),
             header,
-            gas_meter,
-            block_gas_meter,
         }
     }
-
-    pub fn header(&self) -> &Header {
-        &self.header
-    }
 }
 
-impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
-    pub(crate) fn commit(&mut self) -> CacheCommitList<SK> {
-        self.multi_store.commit()
-    }
-}
-
-impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
     }
@@ -75,7 +53,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'_, DB, SK> {
     fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
         MultiStoreMut::from(&mut *self.multi_store)
     }

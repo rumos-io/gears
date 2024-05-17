@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, CommitKind, StoreKey};
+use store_crate::{types::multi::MultiBank, ApplicationStore, StoreKey};
 
 use crate::types::gas::{
     basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter,
@@ -14,7 +14,7 @@ pub struct ApplicationState<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> ApplicationState<DB, SK> {
-    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, SK, CommitKind>) -> Self {
+    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, SK, ApplicationStore>) -> Self {
         Self {
             check_mode: CheckTxMode::new(max_gas, global_ms.to_cache_kind()),
             deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_cache_kind()),
@@ -40,5 +40,13 @@ impl<DB: Database, SK: StoreKey> ApplicationState<DB, SK> {
     pub fn cache_clear(&mut self) {
         self.check_mode.multi_store.caches_clear();
         self.deliver_mode.multi_store.caches_clear();
+    }
+
+    // TODO: It would be better to find difference in caches and extend it, but this solution is quicker
+    pub fn cache_update(&mut self, store: &mut MultiBank<DB, SK, ApplicationStore>) {
+        let cache = store.caches_copy();
+
+        self.check_mode.multi_store.caches_update(cache.clone());
+        self.deliver_mode.multi_store.caches_update(cache);
     }
 }

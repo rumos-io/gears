@@ -5,15 +5,15 @@ use crate::{
         kv::immutable::{KVStore, KVStoreBackend},
         query::QueryMultiStore,
     },
-    CacheKind, CommitKind, QueryableMultiKVStore, StoreKey,
+    ApplicationStore, QueryableMultiKVStore, StoreKey, TransactionStore,
 };
 
 use super::MultiBank;
 
 #[derive(Debug)]
 pub(crate) enum MultiStoreBackend<'a, DB, SK> {
-    Commit(&'a MultiBank<DB, SK, CommitKind>),
-    Cache(&'a MultiBank<DB, SK, CacheKind>),
+    Commit(&'a MultiBank<DB, SK, ApplicationStore>),
+    Cache(&'a MultiBank<DB, SK, TransactionStore>),
     Query(&'a QueryMultiStore<DB, SK>),
 }
 
@@ -58,14 +58,14 @@ impl<'a, DB, SK> From<&'a QueryMultiStore<DB, SK>> for MultiStore<'a, DB, SK> {
     }
 }
 
-impl<'a, DB, SK> From<&'a MultiBank<DB, SK, CommitKind>> for MultiStore<'a, DB, SK> {
-    fn from(value: &'a MultiBank<DB, SK, CommitKind>) -> Self {
+impl<'a, DB, SK> From<&'a MultiBank<DB, SK, ApplicationStore>> for MultiStore<'a, DB, SK> {
+    fn from(value: &'a MultiBank<DB, SK, ApplicationStore>) -> Self {
         MultiStore(MultiStoreBackend::Commit(value))
     }
 }
 
-impl<'a, DB, SK> From<&'a MultiBank<DB, SK, CacheKind>> for MultiStore<'a, DB, SK> {
-    fn from(value: &'a MultiBank<DB, SK, CacheKind>) -> Self {
+impl<'a, DB, SK> From<&'a MultiBank<DB, SK, TransactionStore>> for MultiStore<'a, DB, SK> {
+    fn from(value: &'a MultiBank<DB, SK, TransactionStore>) -> Self {
         MultiStore(MultiStoreBackend::Cache(value))
     }
 }
