@@ -51,6 +51,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, D
     fn chain_id(&self) -> &ChainId {
         &self.header.chain_id
     }
+
+    fn header(&self) -> Option<&Header> {
+        Some(&self.header)
+    }
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'_, DB, SK> {

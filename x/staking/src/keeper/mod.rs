@@ -18,7 +18,7 @@ use gears::{
     types::{
         address::{AccAddress, ValAddress},
         base::{coin::Coin, send::SendCoins},
-        context::{init::InitContext, QueryableContext, TransactionalContext},
+        context::{block::BlockContext, init::InitContext, QueryableContext, TransactionalContext},
         decimal256::Decimal256,
         uint::Uint256,
     },
@@ -154,7 +154,11 @@ impl<
         for redelegation in genesis.redelegations {
             self.set_redelegation(ctx, &redelegation);
             for entry in &redelegation.entries {
-                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time);
+                let completion_time = chrono::DateTime::from_timestamp(entry.completion_time.seconds, entry.completion_time.nanos as u32)
+                    .expect(
+                        "Invalid timestamp in redelegation. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
+                    );
+                self.insert_redelegation_queue(ctx, &redelegation, completion_time);
             }
         }
 
@@ -257,9 +261,9 @@ impl<
 
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block
     /// Called in each EndBlock
-    pub fn block_validator_updates<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn block_validator_updates<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut BlockContext<'_, DB, SK>,
     ) -> Vec<ValidatorUpdate> {
         // Calculate validator set changes.
 
@@ -279,7 +283,17 @@ impl<
         self.unbond_all_mature_validators(ctx);
 
         // Remove all mature unbonding delegations from the ubd queue.
-        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, Utc::now());
+        let time = ctx
+            .header()
+            .expect("BlockContext always has context")
+            .time
+            .as_ref()
+            .expect("Expected timestamp in block context header.");
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32)
+            .expect(
+                "Invalid timestamp in block context. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
+            );
+        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time.clone());
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;
             let val_addr_str = val_addr.to_string();
@@ -315,7 +329,7 @@ impl<
             });
         }
         // Remove all mature redelegations from the red queue.
-        let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, Utc::now());
+        let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, time);
         for dvv_triplet in mature_redelegations {
             let val_src_addr = dvv_triplet.val_src_addr;
             let val_src_addr_str = val_src_addr.to_string();

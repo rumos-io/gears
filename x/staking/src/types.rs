@@ -62,7 +62,7 @@ impl UnbondingDelegationEntry {
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
         )
-        .expect("Expected correct conversion of timestamps. Invalid conversion can broke chain.");
+        .expect("Invalid timestamp in unbonding delegation entry. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond");
         completion_time <= time
     }
 }
@@ -82,14 +82,19 @@ pub struct Redelegation {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct RedelegationEntry {
     pub creation_height: i64,
-    pub completion_time: chrono::DateTime<Utc>,
+    pub completion_time: Timestamp,
     pub initial_balance: Uint256,
     pub share_dst: Decimal256,
 }
 
 impl RedelegationEntry {
     pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
-        self.completion_time <= time
+        let completion_time = chrono::DateTime::from_timestamp(
+            self.completion_time.seconds,
+            self.completion_time.nanos as u32,
+        )
+        .expect("Invalid timestamp in unbonding delegation entry. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond");
+        completion_time <= time
     }
 }
 

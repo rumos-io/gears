@@ -60,9 +60,9 @@ impl<
         delegations_store.delete(&key)
     }
 
-    pub fn complete_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn complete_redelegation<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut BlockContext<'_, DB, SK>,
         del_addr: AccAddress,
         val_src_addr: ValAddress,
         val_dst_addr: ValAddress,
@@ -72,8 +72,15 @@ impl<
         let mut balances = vec![];
         let params = self.staking_params_keeper.get(&ctx.multi_store());
         let denom = params.bond_denom;
-        // TODO: time
-        let ctx_time = Utc::now();
+        let ctx_time = ctx
+            .header
+            .time
+            .as_ref()
+            .expect("Expected timestamp in transaction context header.");
+        let ctx_time = chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32)
+            .expect(
+                "Invalid timestamp in transaction header. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
+            );
 
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];

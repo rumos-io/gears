@@ -1,9 +1,7 @@
-use chrono::Timelike;
-use gears::tendermint::types::time::Timestamp;
-
 use crate::consts::expect::{
     SERDE_DECODING_DOMAIN_TYPE, SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT,
 };
+use gears::tendermint::types::time::Timestamp;
 
 pub use super::*;
 
@@ -196,12 +194,18 @@ impl<
         Ok(())
     }
 
-    pub fn unbond_all_mature_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-    ) {
-        // TODO: time in ctx
-        let block_time = Utc::now();
+    pub fn unbond_all_mature_validators<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
+        let block_time = ctx
+            .header()
+            .expect("BlockContext always has header")
+            .time
+            .as_ref()
+            .expect("Expected timestamp in block context header.");
+        let block_time = chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32)
+            .expect(
+                "Invalid timestamp in transactional header. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
+            );
+
         let block_height = ctx.height() as i64;
 
         // unbondingValIterator will contains all validator addresses indexed under
@@ -277,9 +281,9 @@ impl<
         self.complete_unbonding_validator(ctx, validator);
     }
 
-    pub fn complete_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn complete_unbonding<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut BlockContext<'_, DB, SK>,
         val_addr: ValAddress,
         del_addr: AccAddress,
     ) -> anyhow::Result<Vec<Coin>> {
@@ -291,7 +295,15 @@ impl<
         };
         let bond_denom = params.bond_denom;
         let mut balances = vec![];
-        let ctx_time = Utc::now();
+        let ctx_time = ctx
+            .header
+            .time
+            .as_ref()
+            .expect("Expected timestamp in block context header.");
+        let ctx_time = chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32)
+            .expect(
+                "Invalid timestamp in block header. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
+            );
 
         // loop through all the entries and complete unbonding mature entries
         let mut new_ubd = vec![];
@@ -306,7 +318,7 @@ impl<
                     };
                     let amount = SendCoins::new(vec![coin.clone()])?;
                     self.bank_keeper
-                        .undelegate_coins_from_module_to_account::<DB, AK, CTX>(
+                        .undelegate_coins_from_module_to_account::<DB, AK, BlockContext<'_, DB, SK>>(
                             ctx,
                             NOT_BONDED_POOL_NAME.to_string(),
                             ubd.delegator_address.clone(),
@@ -357,11 +369,12 @@ impl<
 
         // set the unbonding completion time and completion height appropriately
         // TODO: time in ctx
-        let now = Utc::now();
-        validator.unbonding_time = Timestamp {
-            seconds: now.timestamp(),
-            nanos: now.nanosecond() as i32,
-        };
+        validator.unbonding_time = ctx
+            .header()
+            .expect("Unexpected context, cannot get header")
+            .time
+            .clone()
+            .expect("Expected timestamp in context header.");
         validator.unbonding_height = ctx.height() as i64;
 
         // save the now unbonded validator record and power index

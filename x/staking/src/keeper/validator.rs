@@ -63,9 +63,14 @@ impl<
         let mut _validator =
             Validator::new_with_defaults(msg.validator_address, msg.pub_key, msg.description);
 
-        let update_time = ctx.header().time.clone().ok_or(AppError::TxValidation(
-            "Transaction doesn't have valid timestamp.".to_string(),
-        ))?;
+        let update_time = ctx
+            .header()
+            .expect("TxContext always has context")
+            .time
+            .clone()
+            .ok_or(AppError::TxValidation(
+                "Transaction doesn't have valid timestamp.".to_string(),
+            ))?;
         let _commision = Commission {
             commission_rates: msg.commission,
             update_time,

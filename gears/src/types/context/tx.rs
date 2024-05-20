@@ -45,10 +45,6 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             block_gas_meter,
         }
     }
-
-    pub fn header(&self) -> &Header {
-        &self.header
-    }
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
@@ -72,6 +68,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
 
     fn chain_id(&self) -> &ChainId {
         &self.header.chain_id
+    }
+
+    fn header(&self) -> Option<&Header> {
+        Some(&self.header)
     }
 }
 

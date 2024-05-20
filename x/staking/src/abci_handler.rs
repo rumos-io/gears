@@ -1,16 +1,16 @@
 use crate::{AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message};
-use gears::application::handlers::node::ABCIHandler as NodeABCIHandler;
-use gears::store::database::Database;
-use gears::store::StoreKey;
-use gears::tendermint::types::proto::validator::ValidatorUpdate;
-use gears::tendermint::types::request::end_block::RequestEndBlock;
-use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::context::init::InitContext;
-use gears::types::context::query::QueryContext;
-use gears::types::context::tx::TxContext;
-use gears::types::context::TransactionalContext;
-use gears::types::tx::raw::TxWithRaw;
-use gears::{error::AppError, params::ParamsSubspaceKey};
+use gears::{
+    application::handlers::node::ABCIHandler as NodeABCIHandler,
+    error::AppError,
+    params::ParamsSubspaceKey,
+    store::{database::Database, StoreKey},
+    tendermint::types::{
+        proto::validator::ValidatorUpdate, request::end_block::RequestEndBlock,
+        request::query::RequestQuery,
+    },
+    types::context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
+    types::tx::raw::TxWithRaw,
+};
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
@@ -64,9 +64,9 @@ impl<
         todo!()
     }
 
-    fn end_block<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn end_block<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut BlockContext<'_, DB, SK>,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
         self.keeper.block_validator_updates(ctx)
