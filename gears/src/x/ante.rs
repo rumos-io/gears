@@ -191,6 +191,8 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                     required_fees
                 ))?
             }
+        } else {
+            Err(anyhow!("rejected. `fee_coins` is None"))?
         }
 
         Ok(())
