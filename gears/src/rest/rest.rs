@@ -1,34 +1,32 @@
 use crate::{
-    application::{handlers::node::ABCIHandler, ApplicationInfo},
-    baseapp::{genesis::Genesis, BaseApp, QueryRequest, QueryResponse},
-    params::ParamsSubspaceKey,
+    baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
     rest::handlers::{node_info, staking_params, txs},
     runtime::runtime,
     types::tx::TxMessage,
 };
 use axum::{extract::FromRef, http::Method, routing::get, Router};
-use std::net::SocketAddr;
-use store_crate::StoreKey;
+use std::{marker::PhantomData, net::SocketAddr};
 use tendermint::rpc::url::Url;
 use tower_http::cors::{Any, CorsLayer};
 
 pub fn run_rest_server<
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G, QReq, QRes>,
-    G: Genesis,
-    AI: ApplicationInfo,
     QReq: QueryRequest,
     QRes: QueryResponse,
+    App: NodeQueryHandler<QReq, QRes>,
 >(
-    app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>,
+    app: App,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>,
+    router: Router<RestState<QReq, QRes, App>>,
     tendermint_rpc_address: Url,
 ) {
     std::thread::spawn(move || {
-        let result = runtime().block_on(launch(app, listen_addr, router, tendermint_rpc_address));
+        let result = runtime().block_on(launch::<M, _, _, _>(
+            app,
+            listen_addr,
+            router,
+            tendermint_rpc_address,
+        ));
         if let Err(err) = result {
             panic!("Failed to run rest server with err: {}", err)
         }
@@ -36,51 +34,22 @@ pub fn run_rest_server<
 }
 
 #[derive(Clone)]
-pub struct RestState<
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
-    M: TxMessage,
-    H: ABCIHandler<M, SK, G, QReq, QRes>,
-    G: Genesis,
-    AI: ApplicationInfo,
-    QReq,
-    QRes,
-> {
-    app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>,
-    tendermint_rpc_address: Url,
+pub struct RestState<QReq, QRes, App: NodeQueryHandler<QReq, QRes>> {
+    pub app: App,
+    pub tendermint_rpc_address: Url,
+    phantom: PhantomData<(QReq, QRes)>,
 }
 
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        M: TxMessage,
-        H: ABCIHandler<M, SK, G, QReq, QRes>,
-        G: Genesis,
-        AI: ApplicationInfo,
-        QReq: QueryRequest,
-        QRes: QueryResponse,
-    > FromRef<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>
-    for BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>
-{
-    fn from_ref(
-        rest_state: &RestState<SK, PSK, M, H, G, AI, QReq, QRes>,
-    ) -> BaseApp<SK, PSK, M, H, G, AI, QReq, QRes> {
-        rest_state.app.clone()
-    }
-}
+// impl<QReq: QueryRequest, QRes: QueryResponse, App: NodeQueryHandler<QReq, QRes>>
+//     FromRef<RestState<QReq, QRes, App>> for App
+// {
+//     fn from_ref(rest_state: &RestState<QReq, QRes, App>) -> App {
+//         rest_state.app.clone()
+//     }
+// }
 
-impl<
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        M: TxMessage,
-        H: ABCIHandler<M, SK, G, QReq, QRes>,
-        G: Genesis,
-        AI: ApplicationInfo,
-        QReq,
-        QRes,
-    > FromRef<RestState<SK, PSK, M, H, G, AI, QReq, QRes>> for Url
-{
-    fn from_ref(rest_state: &RestState<SK, PSK, M, H, G, AI, QReq, QRes>) -> Url {
+impl<QReq, QRes, App: NodeQueryHandler<QReq, QRes>> FromRef<RestState<QReq, QRes, App>> for Url {
+    fn from_ref(rest_state: &RestState<QReq, QRes, App>) -> Url {
         rest_state.tendermint_rpc_address.clone()
     }
 }
@@ -90,18 +59,14 @@ impl<
 // 2. what happens if a route panics?
 // 3. No error message unrecognized route - does return a 404 - can use a "fallback" route if necessary
 async fn launch<
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
     M: TxMessage,
-    H: ABCIHandler<M, SK, G, QReq, QRes>,
-    G: Genesis,
-    AI: ApplicationInfo,
     QReq: QueryRequest,
     QRes: QueryResponse,
+    App: NodeQueryHandler<QReq, QRes>,
 >(
-    app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>,
+    app: App,
     listen_addr: SocketAddr,
-    router: Router<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>,
+    router: Router<RestState<QReq, QRes, App>>,
     tendermint_rpc_address: Url,
 ) -> anyhow::Result<()> {
     let cors = CorsLayer::new()
@@ -111,6 +76,7 @@ async fn launch<
     let rest_state = RestState {
         app,
         tendermint_rpc_address,
+        phantom: PhantomData,
     };
 
     let app = Router::new()

@@ -63,7 +63,7 @@ pub fn run_gaia_and_tendermint(
     std::thread::sleep(Duration::from_secs(10));
 
     let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
+        let node = NodeApplication::<'_, GaiaCore>::new(
             GaiaCore,
             &GaiaABCIHandler::new,
             GaiaStoreKey::Params,
@@ -78,7 +78,7 @@ pub fn run_gaia_and_tendermint(
             log_level: LogLevel::Off,
         };
 
-        let _ = node.execute(AppCommands::Run(cmd));
+        let _ = node.execute::<GaiaApplication>(AppCommands::Run(cmd));
     });
 
     std::thread::sleep(Duration::from_secs(10));

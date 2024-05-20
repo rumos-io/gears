@@ -4,6 +4,7 @@ use crate::query::GaiaQueryResponse;
 use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
+use axum::Router;
 use bank::cli::query::BankQueryHandler;
 use bank::BankNodeQueryRequest;
 use bank::BankNodeQueryResponse;
@@ -15,9 +16,12 @@ use gears::application::handlers::client::{QueryHandler, TxHandler};
 use gears::application::handlers::AuxHandler;
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
+use gears::baseapp::NodeQueryHandler;
 use gears::baseapp::{QueryRequest, QueryResponse};
+use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
+use gears::rest::RestState;
 use gears::types::address::AccAddress;
 use genesis::GenesisState;
 use ibc::client::cli::query::IbcQueryHandler;
@@ -117,7 +121,7 @@ impl AuxHandler for GaiaCoreClient {
 
 impl Client for GaiaCoreClient {}
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum GaiaNodeQueryRequest {
     Bank(BankNodeQueryRequest),
 }
@@ -134,7 +138,7 @@ impl From<BankNodeQueryRequest> for GaiaNodeQueryRequest {
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(untagged)]
 pub enum GaiaNodeQueryResponse {
     Bank(BankNodeQueryResponse),
@@ -146,7 +150,9 @@ impl TryFrom<GaiaNodeQueryResponse> for BankNodeQueryResponse {
     fn try_from(res: GaiaNodeQueryResponse) -> Result<Self> {
         match res {
             GaiaNodeQueryResponse::Bank(res) => Ok(res),
-            _ => Err(anyhow::anyhow!("Invalid conversion")),
+            // _ => Err(anyhow::anyhow!(
+            //     "Could not convert to BankNodeQueryResponse"
+            // )),
         }
     }
 }
@@ -162,19 +168,12 @@ impl Node for GaiaCore {
     type ApplicationConfig = config::AppConfig;
     type QReq = GaiaNodeQueryRequest;
     type QRes = GaiaNodeQueryResponse;
+}
 
-    fn router<AI: ApplicationInfo>() -> axum::Router<
-        gears::rest::RestState<
-            Self::StoreKey,
-            Self::ParamsSubspaceKey,
-            Self::Message,
-            Self::ABCIHandler,
-            Self::Genesis,
-            AI,
-            Self::QReq,
-            Self::QRes,
-        >,
-    > {
+impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
+    fn build_router<App: NodeQueryHandler<GaiaNodeQueryRequest, GaiaNodeQueryResponse>>(
+        &self,
+    ) -> Router<RestState<GaiaNodeQueryRequest, GaiaNodeQueryResponse, App>> {
         get_router()
     }
 }

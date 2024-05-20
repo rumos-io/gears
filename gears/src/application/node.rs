@@ -4,20 +4,23 @@ use super::{
 };
 use crate::{
     baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
-    commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
+    commands::node::{
+        genesis::genesis_account_add,
+        init::init,
+        run::{run, RouterBuilder},
+        AppCommands,
+    },
     params::Keeper as ParamsKeeper,
 };
 use crate::{
     config::{ApplicationConfig, Config},
     params::ParamsSubspaceKey,
-    rest::RestState,
     types::tx::TxMessage,
 };
-use axum::Router;
 use store_crate::StoreKey;
 
 /// A Gears application.
-pub trait Node: AuxHandler {
+pub trait Node: AuxHandler + RouterBuilder<Self::QReq, Self::QRes> {
     type Message: TxMessage;
     type Genesis: Genesis;
     type StoreKey: StoreKey;
@@ -32,43 +35,17 @@ pub trait Node: AuxHandler {
     type ApplicationConfig: ApplicationConfig;
     type QReq: QueryRequest;
     type QRes: QueryResponse;
-
-    /// Builder method for defining routes of rest server
-    fn router<AI: ApplicationInfo>() -> Router<
-        RestState<
-            Self::StoreKey,
-            Self::ParamsSubspaceKey,
-            Self::Message,
-            Self::ABCIHandler,
-            Self::Genesis,
-            AI,
-            Self::QReq,
-            Self::QRes,
-        >,
-    >;
 }
 
-pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
+pub struct NodeApplication<'a, Core: Node> {
     core: Core,
-    router: Router<
-        RestState<
-            Core::StoreKey,
-            Core::ParamsSubspaceKey,
-            Core::Message,
-            Core::ABCIHandler,
-            Core::Genesis,
-            AI,
-            Core::QReq,
-            Core::QRes,
-        >,
-    >,
     abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
 
     params_store_key: Core::StoreKey,
     params_subspace_key: Core::ParamsSubspaceKey,
 }
 
-impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
+impl<'a, Core: Node> NodeApplication<'a, Core> {
     pub fn new(
         core: Core,
         abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
@@ -77,7 +54,6 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     ) -> Self {
         Self {
             core,
-            router: Core::router(),
             abci_handler_builder,
             params_store_key,
             params_subspace_key,
@@ -85,17 +61,20 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     }
 
     /// Runs the command passed on the command line.
-    pub fn execute(self, command: AppCommands<Core::AuxCommands>) -> anyhow::Result<()> {
+    pub fn execute<AI: ApplicationInfo>(
+        self,
+        command: AppCommands<Core::AuxCommands>,
+    ) -> anyhow::Result<()> {
         match command {
             AppCommands::Init(cmd) => {
                 init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
             }
-            AppCommands::Run(cmd) => run(
+            AppCommands::Run(cmd) => run::<_, _, _, _, _, _, AI, _, _>(
                 cmd,
                 ParamsKeeper::new(self.params_store_key),
                 self.params_subspace_key,
                 self.abci_handler_builder,
-                self.router,
+                self.core,
             )?,
             AppCommands::GenesisAdd(cmd) => genesis_account_add::<Core::Genesis>(cmd)?,
             AppCommands::Aux(cmd) => {

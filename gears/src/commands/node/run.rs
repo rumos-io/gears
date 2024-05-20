@@ -1,7 +1,7 @@
 use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::genesis::Genesis;
-use crate::baseapp::{BaseApp, QueryRequest, QueryResponse};
+use crate::baseapp::{BaseApp, NodeQueryHandler, QueryRequest, QueryResponse};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::grpc::run_grpc_server;
 use crate::params::{Keeper, ParamsSubspaceKey};
@@ -66,6 +66,11 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
+pub trait RouterBuilder<QReq: QueryRequest, QRes: QueryResponse> {
+    fn build_router<App: NodeQueryHandler<QReq, QRes>>(&self)
+        -> Router<RestState<QReq, QRes, App>>;
+}
+
 pub fn run<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
@@ -81,7 +86,8 @@ pub fn run<
     params_keeper: Keeper<SK, PSK>,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
-    router: Router<RestState<SK, PSK, M, H, G, AI, QReq, QRes>>,
+    //router: Router<RestState<QReq, QRes, NodeQueryHandler<QReq, QRes>>>,
+    router_builder: impl RouterBuilder<QReq, QRes>,
 ) -> Result<(), RunError> {
     let RunCommand {
         home,
@@ -111,10 +117,10 @@ pub fn run<
     let app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes> =
         BaseApp::new(db, params_keeper, params_subspace_key, abci_handler);
 
-    run_rest_server(
+    run_rest_server::<M, _, _, _>(
         app.clone(),
         rest_listen_addr,
-        router,
+        router_builder.build_router::<BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>>(),
         config.tendermint_rpc_address,
     );
 

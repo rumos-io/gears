@@ -14,7 +14,8 @@ use gears::{error::AppError, params::ParamsSubspaceKey};
 use serde::Serialize;
 
 use crate::types::query::{
-    QueryAllBalancesRequest, QueryBalanceRequest, QueryBalanceResponse, QueryTotalSupplyResponse,
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
+    QueryDenomsMetadataResponse, QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
 
@@ -23,18 +24,23 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>>
     keeper: Keeper<SK, PSK, AK>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum BankNodeQueryRequest {
     Balance(QueryBalanceRequest),
     AllBalances(QueryAllBalancesRequest),
     TotalSupply,
     DenomsMetadata,
+    DenomMetadata(QueryDenomMetadataRequest),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 #[serde(untagged)]
 pub enum BankNodeQueryResponse {
     Balance(QueryBalanceResponse),
+    AllBalances(QueryAllBalancesResponse),
+    TotalSupply(QueryTotalSupplyResponse),
+    DenomsMetadata(QueryDenomsMetadataResponse),
+    DenomMetadata(QueryDenomMetadataResponse),
 }
 
 impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<SK, PSK, AK> {
@@ -53,16 +59,27 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<S
                 Ok(BankNodeQueryResponse::Balance(res))
             }
             BankNodeQueryRequest::AllBalances(req) => {
-                //let _ = self.keeper.query_all_balances(ctx, req);
-                todo!()
+                let res = self.keeper.query_all_balances(ctx, req);
+                Ok(BankNodeQueryResponse::AllBalances(res))
             }
             BankNodeQueryRequest::TotalSupply => {
-                //let _ = self.keeper.get_paginated_total_supply(ctx);
-                todo!()
+                let res = self.keeper.get_paginated_total_supply(ctx);
+                Ok(BankNodeQueryResponse::TotalSupply(
+                    QueryTotalSupplyResponse {
+                        supply: res,
+                        pagination: None,
+                    },
+                ))
             }
             BankNodeQueryRequest::DenomsMetadata => {
-                //let _ = self.keeper.query_denoms_metadata(ctx);
-                todo!()
+                let res = self.keeper.query_denoms_metadata(ctx);
+                Ok(BankNodeQueryResponse::DenomsMetadata(res))
+            }
+            BankNodeQueryRequest::DenomMetadata(req) => {
+                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom);
+                Ok(BankNodeQueryResponse::DenomMetadata(
+                    QueryDenomMetadataResponse { metadata },
+                ))
             }
         }
     }

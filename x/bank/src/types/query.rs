@@ -165,7 +165,7 @@ impl Protobuf<inner::QueryBalanceResponse> for QueryBalanceResponse {}
 
 /// QueryTotalSupplyResponse is the response type for the Query/TotalSupply RPC
 /// method
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryTotalSupplyResponse {
     /// supply is the supply of the coins
     pub supply: Vec<Coin>,
