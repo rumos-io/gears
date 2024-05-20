@@ -64,11 +64,38 @@ impl TryFrom<CommissionRatesRaw> for CommissionRates {
 impl Protobuf<CommissionRatesRaw> for CommissionRates {}
 
 /// Commission defines commission parameters for a given validator.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Commission {
     /// commission_rates defines the initial commission rates to be used for creating a validator.
     pub commission_rates: CommissionRates,
     /// update_time is the last time the commission rate was changed.
     pub update_time: Timestamp,
+}
+
+impl Commission {
+    pub fn validate(&self) -> Result<(), AppError> {
+        let CommissionRates {
+            rate,
+            max_rate,
+            max_change_rate,
+        } = self.commission_rates;
+
+        if max_rate > ONE_DEC {
+            // max rate cannot be greater than 1
+            return Err(AppError::Send("max_rate too huge".into()));
+        }
+        if rate > max_rate {
+            // rate cannot be greater than the max rate
+            return Err(AppError::Send("rate is bigger than max_rate".into()));
+        }
+        if max_change_rate > max_rate {
+            // change rate cannot be greater than the max rate
+            return Err(AppError::Send(
+                "max_change_rate is bigger than max_rate".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 /// Description defines a validator description.

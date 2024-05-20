@@ -46,10 +46,12 @@ impl<
 {
     fn tx<DB: Database + Sync + Send>(
         &self,
-        _ctx: &mut TxContext<'_, DB, SK>,
-        _msg: &Message,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &Message,
     ) -> Result<(), AppError> {
-        todo!()
+        match msg {
+            Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+        }
     }
 
     fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {

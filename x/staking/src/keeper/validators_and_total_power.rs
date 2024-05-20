@@ -67,6 +67,21 @@ impl<
         );
     }
 
+    pub fn set_new_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) {
+        let power_reduction = self.power_reduction(ctx);
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
+
+        validators_store.set(
+            validator.key_by_power_index_key(power_reduction),
+            validator.operator_address.to_string().as_bytes().to_vec(),
+        );
+    }
+
     pub fn delete_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,

@@ -22,6 +22,13 @@ impl PublicKey {
             PublicKey::Secp256k1(value) => value,
         }
     }
+
+    pub fn str_type(&self) -> &'static str {
+        match self {
+            PublicKey::Secp256k1(_) => "secp256k1",
+            PublicKey::Ed25519(_) => "ed25519",
+        }
+    }
 }
 
 impl From<PublicKey> for inner::PublicKey {

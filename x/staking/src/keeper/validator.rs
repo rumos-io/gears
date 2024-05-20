@@ -5,10 +5,7 @@ use crate::{
     },
     Commission, CreateValidator, Validator,
 };
-use gears::{
-    tendermint::types::proto::crypto::PublicKey, types::address::ConsAddress,
-    types::context::tx::TxContext,
-};
+use gears::{types::address::ConsAddress, types::context::tx::TxContext};
 
 impl<
         SK: StoreKey,
@@ -22,17 +19,25 @@ impl<
     pub fn create_validator<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
-        msg: CreateValidator,
+        msg: &CreateValidator,
     ) -> Result<(), AppError> {
         let params = self.staking_params_keeper.get(&ctx.multi_store());
-        let _val_by_val_addr = self
-            .validator(ctx, &msg.validator_address)
-            .ok_or(AppError::AccountNotFound)?;
+
+        if self.validator(ctx, &msg.validator_address).is_some() {
+            return Err(AppError::Custom(format!(
+                "Account {} exists",
+                msg.validator_address
+            )));
+        };
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
-        let _val_by_cons_addr = self
-            .validator_by_cons_addr(ctx, &cons_addr)
-            .map_err(|_e| AppError::AccountNotFound)?;
+        if self.validator_by_cons_addr(ctx, &cons_addr).is_ok() {
+            return Err(AppError::Custom(format!(
+                "Public key {} exists",
+                ConsAddress::from(msg.pub_key.clone())
+            )));
+        }
+
         if msg.value.denom != params.bond_denom {
             return Err(AppError::InvalidRequest(format!(
                 "invalid coin denomination: got {}, expected {}",
@@ -46,11 +51,8 @@ impl<
             .staking_params_keeper
             .consensus_validator(&ctx.multi_store());
         if let Ok(consensus_validators) = consensus_validators {
-            // TODO: implement method on new type
-            let pub_key_type = match &msg.pub_key {
-                PublicKey::Secp256k1(_) => "secp256k1",
-                PublicKey::Ed25519(_) => "ed25519",
-            };
+            // TODO: discuss impl of `str_type`
+            let pub_key_type = msg.pub_key.str_type();
             if !consensus_validators
                 .pub_key_types
                 .iter()
@@ -60,8 +62,11 @@ impl<
             }
         }
 
-        let mut _validator =
-            Validator::new_with_defaults(msg.validator_address, msg.pub_key, msg.description);
+        let mut validator = Validator::new_with_defaults(
+            msg.validator_address.clone(),
+            msg.pub_key.clone(),
+            msg.description.clone(),
+        );
 
         let update_time = ctx
             .header()
@@ -71,65 +76,70 @@ impl<
             .ok_or(AppError::TxValidation(
                 "Transaction doesn't have valid timestamp.".to_string(),
             ))?;
-        let _commision = Commission {
-            commission_rates: msg.commission,
+        let commission = Commission {
+            commission_rates: msg.commission.clone(),
             update_time,
         };
-        todo!()
+
+        validator.set_initial_commission(commission)?;
+        validator.min_self_delegation = msg.min_self_delegation;
+
+        self.set_validator(ctx, &validator);
+        self.set_validator_by_cons_addr(ctx, &validator);
+        self.set_new_validator_by_power_index(ctx, &validator);
+
+        // call the after-creation hook
+        self.after_validator_created(ctx, &validator);
+
+        // move coins from the msg.address account to a (self-delegation) delegator account
+        // the validator account and global shares are updated within here
+        // NOTE source will always be from a wallet which are unbonded
+        self.delegate(
+            ctx,
+            msg.delegator_address.clone(),
+            msg.value.amount,
+            BondStatus::Unbonded,
+            &mut validator,
+            true,
+        )?;
+
+        ctx.append_events(vec![
+            Event {
+                r#type: EVENT_TYPE_CREATE_VALIDATOR.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
+                        value: msg.validator_address.to_string().as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
+                        value: serde_json::to_vec(&msg.value)
+                            .expect(SERDE_ENCODING_DOMAIN_TYPE)
+                            .into(),
+                        index: false,
+                    },
+                ],
+            },
+            Event {
+                r#type: EVENT_TYPE_MESSAGE.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_MODULE.as_bytes().into(),
+                        value: ATTRIBUTE_VALUE_CATEGORY.as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_SENDER.as_bytes().into(),
+                        value: msg.delegator_address.to_string().as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                ],
+            },
+        ]);
+
+        Ok(())
     }
-    // func (k msgServer) CreateValidator(goCtx context.Context, msg *types.MsgCreateValidator) (*types.MsgCreateValidatorResponse, error) {
-    //
-    //     validator, err := types.NewValidator(valAddr, pk, msg.Description)
-    //     if err != nil {
-    //         return nil, err
-    //     }
-    //     commission := types.NewCommissionWithTime(
-    //         msg.Commission.Rate, msg.Commission.MaxRate,
-    //         msg.Commission.MaxChangeRate, ctx.BlockHeader().Time,
-    //     )
-    //
-    //     validator, err = validator.SetInitialCommission(commission)
-    //     if err != nil {
-    //         return nil, err
-    //     }
-    //
-    //     delegatorAddress, err := sdk.AccAddressFromBech32(msg.DelegatorAddress)
-    //     if err != nil {
-    //         return nil, err
-    //     }
-    //
-    //     validator.MinSelfDelegation = msg.MinSelfDelegation
-    //
-    //     k.SetValidator(ctx, validator)
-    //     k.SetValidatorByConsAddr(ctx, validator)
-    //     k.SetNewValidatorByPowerIndex(ctx, validator)
-    //
-    //     // call the after-creation hook
-    //     k.AfterValidatorCreated(ctx, validator.GetOperator())
-    //
-    //     // move coins from the msg.Address account to a (self-delegation) delegator account
-    //     // the validator account and global shares are updated within here
-    //     // NOTE source will always be from a wallet which are unbonded
-    //     _, err = k.Keeper.Delegate(ctx, delegatorAddress, msg.Value.Amount, types.Unbonded, validator, true)
-    //     if err != nil {
-    //         return nil, err
-    //     }
-    //
-    //     ctx.EventManager().EmitEvents(sdk.Events{
-    //         sdk.NewEvent(
-    //             types.EventTypeCreateValidator,
-    //             sdk.NewAttribute(types.AttributeKeyValidator, msg.ValidatorAddress),
-    //             sdk.NewAttribute(sdk.AttributeKeyAmount, msg.Value.String()),
-    //         ),
-    //         sdk.NewEvent(
-    //             sdk.EventTypeMessage,
-    //             sdk.NewAttribute(sdk.AttributeKeyModule, types.AttributeValueCategory),
-    //             sdk.NewAttribute(sdk.AttributeKeySender, msg.DelegatorAddress),
-    //         ),
-    //     })
-    //
-    //     return &types.MsgCreateValidatorResponse{}, nil
-    // }
 
     pub fn validator<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
@@ -195,6 +205,20 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.delete(addr)
+    }
+
+    /// Update the tokens of an existing validator, update the validators power index key
+    pub fn add_validator_tokens_and_shares<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+        tokens_amount: Uint256,
+    ) -> Decimal256 {
+        self.delete_validator_by_power_index(ctx, validator);
+        let added_shares = validator.add_tokens_from_del(tokens_amount);
+        self.set_validator(ctx, validator);
+        self.set_validator_by_power_index(ctx, validator);
+        added_shares
     }
 
     pub fn validator_queue_map<DB: Database, CTX: TransactionalContext<DB, SK>>(

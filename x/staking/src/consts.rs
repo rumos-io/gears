@@ -15,19 +15,31 @@ pub(crate) mod keeper {
 
     pub(crate) const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
     pub(crate) const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
-    pub(crate) const EVENT_TYPE_COMPLETE_UNBONDING: &str = "complete_unbonding";
-    pub(crate) const EVENT_TYPE_COMPLETE_REDELEGATION: &str = "complete_redelegation";
+
     pub(crate) const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
+    pub(crate) const ATTRIBUTE_KEY_MODULE: &str = "module";
     pub(crate) const ATTRIBUTE_KEY_VALIDATOR: &str = "validator";
     pub(crate) const ATTRIBUTE_KEY_DELEGATOR: &str = "delegator";
+    pub(crate) const ATTRIBUTE_KEY_SENDER: &str = "sender";
+    // TODO: check
+    pub(crate) const ATTRIBUTE_VALUE_CATEGORY: &str = "staking";
+
+    pub(crate) const EVENT_TYPE_CREATE_VALIDATOR: &str = "create_validator";
+    pub(crate) const EVENT_TYPE_COMPLETE_UNBONDING: &str = "complete_unbonding";
+    pub(crate) const EVENT_TYPE_COMPLETE_REDELEGATION: &str = "complete_redelegation";
+    pub(crate) const EVENT_TYPE_MESSAGE: &str = "message";
 }
 
 pub(crate) mod proto {
+    use gears::types::decimal256::Decimal256;
+
     pub(crate) const MAX_MONIKER_LENGTH: usize = 70;
     pub(crate) const MAX_IDENTITY_LENGTH: usize = 3000;
     pub(crate) const MAX_WEBSITE_LENGTH: usize = 140;
     pub(crate) const MAX_SECURITY_CONTACT_LENGTH: usize = 140;
     pub(crate) const MAX_DETAILS_LENGTH: usize = 280;
+    // TODO: check
+    pub(crate) const ONE_DEC: Decimal256 = Decimal256::one();
 }
 
 pub(crate) mod expect {

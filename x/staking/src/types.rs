@@ -1,6 +1,9 @@
-use crate::{consts::keeper::VALIDATORS_BY_POWER_INDEX_KEY, CommissionRates, Description};
+use crate::{
+    consts::keeper::VALIDATORS_BY_POWER_INDEX_KEY, Commission, CommissionRates, Description,
+};
 use chrono::Utc;
 use gears::{
+    error::AppError,
     tendermint::types::{
         proto::{crypto::PublicKey, validator::ValidatorUpdate},
         time::Timestamp,
@@ -169,7 +172,7 @@ pub struct Validator {
     /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
     pub unbonding_time: Timestamp,
     /// commission defines the commission parameters.
-    pub commission: CommissionRates,
+    pub commission: Commission,
     pub min_self_delegation: Uint256,
     pub status: BondStatus,
 }
@@ -192,10 +195,16 @@ impl Validator {
                 seconds: 0,
                 nanos: 0,
             },
-            commission: CommissionRates {
-                rate: Decimal256::zero(),
-                max_rate: Decimal256::zero(),
-                max_change_rate: Decimal256::zero(),
+            commission: Commission {
+                commission_rates: CommissionRates {
+                    rate: Decimal256::zero(),
+                    max_rate: Decimal256::zero(),
+                    max_change_rate: Decimal256::zero(),
+                },
+                update_time: Timestamp {
+                    seconds: 0,
+                    nanos: 0,
+                },
             },
             min_self_delegation: Uint256::one(),
             status: BondStatus::Unbonded,
@@ -210,6 +219,44 @@ impl Validator {
     }
     pub fn abci_validator_update_zero(&self) -> ValidatorUpdate {
         self.abci_validator_update(0)
+    }
+
+    pub fn set_initial_commission(&mut self, commission: Commission) -> Result<(), AppError> {
+        commission.validate()?;
+        self.commission = commission;
+        Ok(())
+    }
+
+    /// add_tokens_from_del adds tokens to a validator
+    pub fn add_tokens_from_del(&mut self, amount: Uint256) -> Decimal256 {
+        // calculate the shares to issue
+        let issues_shares = if self.delegator_shares.is_zero() {
+            // the first delegation to a validator sets the exchange rate to one
+            Decimal256::new(amount)
+        } else {
+            match self.shares_from_tokens(amount) {
+                Ok(shares) => shares,
+                Err(err) => panic!("{}", err),
+            }
+        };
+
+        self.tokens += amount;
+        self.delegator_shares += issues_shares;
+        issues_shares
+    }
+
+    fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
+        if self.tokens.is_zero() {
+            return Err(AppError::Custom("insufficient shares".into()).into());
+        }
+        Ok(self
+            .delegator_shares
+            .checked_mul(Decimal256::new(amount))?
+            .checked_div(Decimal256::new(self.tokens))?)
+    }
+
+    pub fn invalid_ex_rate(&self) -> bool {
+        self.tokens.is_zero() && (self.delegator_shares > Decimal256::zero())
     }
 
     pub fn cons_addr(&self) -> ConsAddress {

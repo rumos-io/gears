@@ -134,13 +134,21 @@ impl<
 
         for delegation in genesis.delegations {
             if !genesis.exported {
-                self.before_delegation_created(ctx, &delegation);
+                self.before_delegation_created(
+                    ctx,
+                    &delegation.delegator_address,
+                    &delegation.validator_address,
+                );
             }
 
             self.set_delegation(ctx, &delegation);
 
             if !genesis.exported {
-                self.after_delegation_modified(ctx, &delegation);
+                self.after_delegation_modified(
+                    ctx,
+                    &delegation.delegator_address,
+                    &delegation.validator_address,
+                );
             }
         }
 
