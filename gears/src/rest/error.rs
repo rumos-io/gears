@@ -3,6 +3,8 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use serde::Serialize;
 
+use crate::baseapp::errors::QueryError;
+
 #[derive(Debug)]
 pub struct Error {
     status: StatusCode,
@@ -33,6 +35,13 @@ impl Error {
         Error {
             status: StatusCode::NOT_FOUND,
             description: "The requested resource could not be found.".into(),
+        }
+    }
+
+    pub fn not_found_with_msg(description: String) -> Error {
+        Error {
+            status: StatusCode::NOT_FOUND,
+            description,
         }
     }
 
@@ -83,5 +92,15 @@ impl Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         (self.status, Json(self.to_serializable())).into_response()
+    }
+}
+
+impl From<QueryError> for Error {
+    fn from(err: QueryError) -> Self {
+        match err {
+            QueryError::Store(_) => {
+                Error::not_found_with_msg("The requested version could not be found.".into())
+            }
+        }
     }
 }

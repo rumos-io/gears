@@ -26,10 +26,7 @@ pub async fn supply<
 ) -> Result<Json<QRes>, Error> {
     let req = BankNodeQueryRequest::TotalSupply;
 
-    let res = rest_state
-        .app
-        .typed_query(req)
-        .map_err(|_| Error::internal_server_error())?;
+    let res = rest_state.app.typed_query(req)?;
 
     Ok(Json(res))
 }
@@ -49,10 +46,7 @@ pub async fn get_balances<
         pagination: None,
     });
 
-    let res = rest_state
-        .app
-        .typed_query(req)
-        .map_err(|_| Error::internal_server_error())?;
+    let res = rest_state.app.typed_query(req)?;
 
     Ok(Json(res))
 }
@@ -79,10 +73,7 @@ pub async fn get_balances_by_denom<
         denom: query.0.denom,
     });
 
-    let res = rest_state
-        .app
-        .typed_query(req)
-        .map_err(|_| Error::internal_server_error())?;
+    let res = rest_state.app.typed_query(req)?;
 
     Ok(Json(res))
 }

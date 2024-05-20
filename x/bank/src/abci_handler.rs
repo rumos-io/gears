@@ -1,3 +1,4 @@
+use gears::baseapp::errors::QueryError;
 use gears::core::errors::Error as IbcError;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::store::database::Database;
@@ -52,7 +53,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<S
         &self,
         ctx: &QueryContext<DB, SK>,
         query: BankNodeQueryRequest,
-    ) -> Result<BankNodeQueryResponse, AppError> {
+    ) -> Result<BankNodeQueryResponse, QueryError> {
         match query {
             BankNodeQueryRequest::Balance(req) => {
                 let res = self.keeper.query_balance(ctx, req);
