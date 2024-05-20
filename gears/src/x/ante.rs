@@ -180,11 +180,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                 });
             }
 
-            if fee_coins.inner().into_iter().any(|fee_coin| {
-                required_fees
-                    .iter()
-                    .any(|req_fee| req_fee.amount >= fee_coin.amount)
-            }) {
+            if is_any_gte(fee_coins.inner(), &required_fees) {
                 Err(anyhow!(
                     "insufficient fees; got: {:?} required: {:?}",
                     fee_coins,
@@ -193,6 +189,21 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             }
         } else {
             Err(anyhow!("rejected. `fee_coins` is None"))?
+        }
+
+        fn is_any_gte(coins_a: &Vec<Coin>, coins_b: &Vec<Coin>) -> bool {
+            if coins_b.is_empty() {
+                return false;
+            }
+
+            for coin in coins_a {
+                let amount = Coin::amount_of(coins_b.iter(), &coin.denom);
+                if coin.amount >= amount && !amount.is_zero() {
+                    return true;
+                }
+            }
+
+            false
         }
 
         Ok(())

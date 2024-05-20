@@ -19,7 +19,7 @@ pub fn regex() -> &'static Regex {
     })
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, Eq, Hash, PartialOrd, Ord)]
 pub struct Denom(String);
 
 impl Denom {
