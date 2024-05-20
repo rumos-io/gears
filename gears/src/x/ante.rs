@@ -180,7 +180,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                 });
             }
 
-            if is_any_gte(fee_coins.inner(), &required_fees) {
+            if !is_any_gte(fee_coins.inner(), &required_fees) {
                 Err(anyhow!(
                     "insufficient fees; got: {:?} required: {:?}",
                     fee_coins,
