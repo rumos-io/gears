@@ -8,12 +8,15 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-use crate::types::{
-    gas::{
-        kind::{BlockKind, TxKind},
-        GasMeter,
+use crate::{
+    baseapp::options::NodeOptions,
+    types::{
+        gas::{
+            kind::{BlockKind, TxKind},
+            GasMeter,
+        },
+        header::Header,
     },
-    header::Header,
 };
 
 use super::{QueryableContext, TransactionalContext};
@@ -22,6 +25,7 @@ use super::{QueryableContext, TransactionalContext};
 pub struct TxContext<'a, DB, SK> {
     pub gas_meter: GasMeter<TxKind>,
     pub events: Vec<Event>,
+    pub options: NodeOptions,
     pub(crate) height: u64,
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
@@ -37,6 +41,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         gas_meter: GasMeter<TxKind>,
         block_gas_meter: &'a mut GasMeter<BlockKind>,
         is_check: bool,
+        options: NodeOptions,
     ) -> Self {
         Self {
             events: Vec::new(),
@@ -46,6 +51,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             gas_meter,
             block_gas_meter,
             is_check,
+            options,
         }
     }
 }

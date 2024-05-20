@@ -21,12 +21,15 @@ use crate::{
 
 use self::sealed::Sealed;
 
+use super::options::NodeOptions;
+
 pub trait ExecutionMode<DB, SK: StoreKey>: Sealed {
     fn build_ctx(
         &mut self,
         height: u64,
         header: Header,
         fee: Option<&Fee>,
+        options: NodeOptions,
     ) -> TxContext<'_, DB, SK>;
 
     fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;

@@ -144,7 +144,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn mempool_fee<M: TxMessage, DB: Database>(
+    fn _mempool_fee<M: TxMessage, DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         TxWithRaw {

@@ -6,6 +6,7 @@ use crate::{
     application::ApplicationInfo,
     commands::node::run::{LogLevel, RunCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
+    types::base::coin::Coin,
 };
 
 /// Run the full node application
@@ -22,6 +23,9 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     /// The logging level
     #[arg(long, action = ArgAction::Set, default_value_t = LogLevel::Info)]
     pub log_level: LogLevel,
+    /// Minimum gas prices to accept for transactions; Any fee in a tx must meet this minimum (e.g. 0.01photino;0.0001stake)
+    #[arg(long, action = ArgAction::Set)]
+    pub min_gas_prices: Vec<Coin>,
 
     #[arg(skip)]
     pub _marker: PhantomData<T>,
@@ -36,6 +40,7 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             read_buf_size,
             _marker,
             log_level,
+            min_gas_prices,
         }: CliRunCommand<T>,
     ) -> Self {
         Self {
@@ -44,6 +49,7 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             rest_listen_addr,
             read_buf_size,
             log_level,
+            min_gas_prices,
         }
     }
 }
