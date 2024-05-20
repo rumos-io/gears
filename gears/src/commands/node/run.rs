@@ -6,7 +6,7 @@ use crate::baseapp::BaseApp;
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::rest::{run_rest_server, RestState};
-use crate::types::base::coin::Coin;
+use crate::types::base::decimal_coin::DecimalCoin;
 use crate::types::tx::TxMessage;
 use axum::Router;
 use database::RocksDB;
@@ -25,7 +25,7 @@ pub struct RunCommand {
     pub rest_listen_addr: SocketAddr,
     pub read_buf_size: usize,
     pub log_level: LogLevel,
-    pub min_gas_prices: Vec<Coin>,
+    pub min_gas_prices: Vec<DecimalCoin>,
 }
 
 #[derive(Debug, thiserror::Error)]

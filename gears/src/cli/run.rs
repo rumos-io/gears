@@ -6,7 +6,7 @@ use crate::{
     application::ApplicationInfo,
     commands::node::run::{LogLevel, RunCommand},
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
-    types::base::coin::Coin,
+    types::base::decimal_coin::DecimalCoin,
 };
 
 /// Run the full node application
@@ -25,7 +25,7 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub log_level: LogLevel,
     /// Minimum gas prices to accept for transactions; Any fee in a tx must meet this minimum (e.g. 0.01photino;0.0001stake)
     #[arg(long, action = ArgAction::Set)]
-    pub min_gas_prices: Vec<Coin>,
+    pub min_gas_prices: Vec<DecimalCoin>,
 
     #[arg(skip)]
     pub _marker: PhantomData<T>,

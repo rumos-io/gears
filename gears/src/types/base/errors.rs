@@ -14,4 +14,6 @@ pub enum CoinsError {
     Denom(String),
     #[error("Uint256 parse error: {0}")]
     Uint(String),
+    #[error("Decimal256 parse error: {0}")]
+    Decimal(String),
 }

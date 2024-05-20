@@ -28,6 +28,7 @@ use core_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
+use cosmwasm_std::Decimal256;
 use database::Database;
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
@@ -176,7 +177,8 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                     denom: gp.denom,
                     amount: gp
                         .amount
-                        .checked_mul_ceil(cosmwasm_std::Decimal::new(u64::from(gas).into()))?, // TODO:NOW Great. Replace it with something sane
+                        .checked_mul(Decimal256::new(gas.into()))?
+                        .to_uint_ceil(),
                 });
             }
 
