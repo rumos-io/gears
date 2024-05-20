@@ -112,6 +112,8 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
     ) -> Result<(), AppError> {
         // Note: we currently don't have simulate mode at all, so some methods receive hardcoded values for this mode
         // ante.NewSetUpContextDecorator(), // WE not going to implement this in ante. Some logic should be in application
+        self.mempool_fee(ctx, tx)
+            .map_err(|e| AppError::Custom(e.to_string()))?;
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
@@ -144,7 +146,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn _mempool_fee<M: TxMessage, DB: Database>(
+    fn mempool_fee<M: TxMessage, DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         TxWithRaw {
@@ -160,7 +162,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         let fee = tx.auth_info.fee.amount.as_ref();
         let gas = tx.auth_info.fee.gas_limit;
 
-        let min_gas_prices = Vec::<Coin>::new(); // TODO:NOW Where it set? Check gaia for it
+        let min_gas_prices = ctx.options.min_gas_prices();
 
         if min_gas_prices.is_empty() || min_gas_prices.iter().any(|this| this.amount.is_zero()) {
             return Ok(());
@@ -187,7 +189,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                     "insufficient fees; got: {:?} required: {:?}",
                     fee_coins,
                     required_fees
-                ))? // TODO:NOW
+                ))?
             }
         }
 
