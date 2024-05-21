@@ -38,6 +38,7 @@ pub mod genesis;
 pub mod message;
 pub mod query;
 pub mod rest;
+mod staking_grpc;
 pub mod store_keys;
 
 #[derive(Debug, Clone, Serialize)]
@@ -184,7 +185,8 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
         &self,
         app: App,
     ) -> tonic::transport::server::Router<Identity> {
-        let bank_service = bank::grpc::new(app);
+        let bank_service = bank::grpc::new(app.clone());
+        let staking_service = staking_grpc::new(app);
 
         let reflection_service = tonic_reflection::server::Builder::configure()
             .register_encoded_file_descriptor_set(ibc_proto::FILE_DESCRIPTOR_SET)
@@ -192,8 +194,9 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
             .expect("ibc_proto::FILE_DESCRIPTOR_SET is a valid proto file descriptor set");
 
         Server::builder()
-            .add_service(bank_service)
             .add_service(reflection_service)
+            .add_service(staking_service)
+            .add_service(bank_service)
     }
 }
 
