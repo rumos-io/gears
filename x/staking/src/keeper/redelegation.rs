@@ -175,17 +175,18 @@ impl<
             let storage = ctx.kv_store(&self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
-            // TODO: check
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
-            let end = {
-                let mut k = unbonding_delegation_time_key(time).to_vec();
-                k.push(0);
-                k
-            };
+            let end = unbonding_delegation_time_key(time).to_vec();
             let mut mature_redelegations = vec![];
             let mut keys = vec![];
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
-            for (k, v) in store.range(..).take_while(|(k, _)| **k != end) {
+            let mut previous_was_end = false;
+            for (k, v) in store.range(..).take_while(|(k, _)| {
+                let is_not_end = **k != end;
+                let res = is_not_end && !previous_was_end;
+                previous_was_end = !is_not_end;
+                res
+            }) {
                 let time_slice: Vec<DvvTriplet> =
                     serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE);
                 mature_redelegations.extend(time_slice);

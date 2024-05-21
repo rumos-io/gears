@@ -230,15 +230,17 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
 
-        // TODO:
-        let end = {
-            let mut k = validator_queue_key(block_time, block_height);
-            k.push(0);
-            k
-        };
+        let end = validator_queue_key(block_time, block_height);
 
         let mut res = HashMap::new();
-        for (k, v) in iterator.range(..).take_while(|(k, _)| **k != end) {
+
+        let mut previous_was_end = false;
+        for (k, v) in iterator.range(..).take_while(|(k, _)| {
+            let is_not_end = **k != end;
+            let ret_res = is_not_end && !previous_was_end;
+            previous_was_end = !is_not_end;
+            ret_res
+        }) {
             // TODO
             res.insert(
                 k.to_vec(),
