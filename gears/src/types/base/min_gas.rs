@@ -9,7 +9,6 @@ use super::{
 
 // Represents a list of coins with the following properties:
 // - Contains at least one coin
-// - All coin amounts are positive
 // - No duplicate denominations
 // - Sorted lexicographically
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Default)]
@@ -26,7 +25,6 @@ impl MinGasPrices {
     // denomination (i.e no duplicates). Otherwise, it returns an error.
     // A valid list of coins satisfies:
     // - Contains at least one coin
-    // - All amounts are positive
     // - No duplicate denominations
     // - Sorted lexicographically
     // TODO: implement ordering on coins or denominations so that conversion to string can be avoided
@@ -35,17 +33,9 @@ impl MinGasPrices {
             return Err(SendCoinsError::EmptyList);
         }
 
-        if coins[0].amount.is_zero() {
-            return Err(SendCoinsError::InvalidAmount);
-        };
-
         let mut previous_denom = coins[0].denom.to_string();
 
         for coin in &coins[1..] {
-            if coin.amount.is_zero() {
-                return Err(SendCoinsError::InvalidAmount);
-            };
-
             // Less than to ensure lexicographical ordering
             // Equality to ensure that there are no duplications
             if coin.denom.to_string() <= previous_denom {
