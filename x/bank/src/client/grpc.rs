@@ -1,29 +1,18 @@
-use std::{error::Error, marker::PhantomData};
-
-use axum::http::response;
 use gears::baseapp::{NodeQueryHandler, QueryRequest, QueryResponse};
-use ibc_proto::cosmos::{
-    bank::v1beta1::{
-        query_server::{Query, QueryServer},
-        QueryAllBalancesRequest, QueryAllBalancesResponse,
-        QueryBalanceRequest as RawQueryBalanceRequest,
-        QueryBalanceResponse as RawQueryBalanceResponse, QueryDenomMetadataRequest,
-        QueryDenomMetadataResponse, QueryDenomOwnersRequest, QueryDenomOwnersResponse,
-        QueryDenomsMetadataRequest, QueryDenomsMetadataResponse, QueryParamsRequest,
-        QueryParamsResponse, QuerySpendableBalancesRequest, QuerySpendableBalancesResponse,
-        QuerySupplyOfRequest, QuerySupplyOfResponse, QueryTotalSupplyRequest,
-        QueryTotalSupplyResponse,
-    },
-    staking::v1beta1::QueryValidatorsRequest,
+use ibc_proto::cosmos::bank::v1beta1::{
+    query_server::{Query, QueryServer},
+    QueryAllBalancesRequest, QueryAllBalancesResponse,
+    QueryBalanceRequest as RawQueryBalanceRequest, QueryBalanceResponse as RawQueryBalanceResponse,
+    QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomOwnersRequest,
+    QueryDenomOwnersResponse, QueryDenomsMetadataRequest, QueryDenomsMetadataResponse,
+    QueryParamsRequest, QueryParamsResponse, QuerySpendableBalancesRequest,
+    QuerySpendableBalancesResponse, QuerySupplyOfRequest, QuerySupplyOfResponse,
+    QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
+use std::marker::PhantomData;
+use tonic::{Request, Response, Status};
 
-use prost::Message;
-use tonic::{transport::Server, Request, Response, Status};
-
-use crate::{
-    types::query::{QueryBalanceRequest, QueryBalanceResponse},
-    BankNodeQueryRequest, BankNodeQueryResponse,
-};
+use crate::{BankNodeQueryRequest, BankNodeQueryResponse};
 
 #[derive(Debug, Default)]
 pub struct BankService<QH, QReq, QRes> {
@@ -38,94 +27,88 @@ impl<
         QH: NodeQueryHandler<QReq, QRes>,
     > Query for BankService<QH, QReq, QRes>
 where
-    // QReq: TryFrom<QueryAccountRequest>,
-    // QRes: Into<QueryAccountResponse>,
     QReq: QueryRequest + From<BankNodeQueryRequest>,
-    QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
-    <QRes as TryInto<BankNodeQueryResponse>>::Error: Error, // TODO: remove this once unwrap is removed
+    QRes: QueryResponse + TryInto<BankNodeQueryResponse, Error = Status>,
 {
     async fn balance(
         &self,
         request: Request<RawQueryBalanceRequest>,
     ) -> Result<Response<RawQueryBalanceResponse>, Status> {
-        let req = BankNodeQueryRequest::Balance(request.into_inner().try_into().unwrap()); //TODO: unwrap
+        let req = BankNodeQueryRequest::Balance(request.into_inner().try_into()?);
+        let response = self.app.typed_query(req)?;
+        let response: BankNodeQueryResponse = response.try_into()?;
 
-        let response = self.app.typed_query(req).unwrap(); //TODO: unwrap
-
-        let response: BankNodeQueryResponse = response.try_into().unwrap(); //TODO: unwrap
-
-        match response {
-            BankNodeQueryResponse::Balance(response) => {
-                let response = response.into();
-                Ok(Response::new(response))
-            }
-            _ => unimplemented!(), //TODO: return an error
+        if let BankNodeQueryResponse::Balance(response) = response {
+            Ok(Response::new(response.into()))
+        } else {
+            Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ))
         }
     }
 
     async fn all_balances(
         &self,
-        request: Request<QueryAllBalancesRequest>,
+        _request: Request<QueryAllBalancesRequest>,
     ) -> Result<Response<QueryAllBalancesResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 
     async fn spendable_balances(
         &self,
-        request: Request<QuerySpendableBalancesRequest>,
+        _request: Request<QuerySpendableBalancesRequest>,
     ) -> Result<Response<QuerySpendableBalancesResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 
     async fn total_supply(
         &self,
-        request: Request<QueryTotalSupplyRequest>,
+        _request: Request<QueryTotalSupplyRequest>,
     ) -> Result<Response<QueryTotalSupplyResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 
     async fn supply_of(
         &self,
-        request: Request<QuerySupplyOfRequest>,
+        _request: Request<QuerySupplyOfRequest>,
     ) -> Result<Response<QuerySupplyOfResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 
     async fn params(
         &self,
-        request: Request<QueryParamsRequest>,
+        _request: Request<QueryParamsRequest>,
     ) -> Result<Response<QueryParamsResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 
     async fn denom_metadata(
         &self,
-        request: Request<QueryDenomMetadataRequest>,
+        _request: Request<QueryDenomMetadataRequest>,
     ) -> Result<Response<QueryDenomMetadataResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 
     async fn denoms_metadata(
         &self,
-        request: Request<QueryDenomsMetadataRequest>,
+        _request: Request<QueryDenomsMetadataRequest>,
     ) -> Result<Response<QueryDenomsMetadataResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 
     async fn denom_owners(
         &self,
-        request: Request<QueryDenomOwnersRequest>,
+        _request: Request<QueryDenomOwnersRequest>,
     ) -> Result<Response<QueryDenomOwnersResponse>, Status> {
-        unimplemented!()
+        unimplemented!() //TODO: implement
     }
 }
 
 pub fn new<QH, QReq, QRes>(app: QH) -> QueryServer<BankService<QH, QReq, QRes>>
 where
     QReq: QueryRequest + Send + Sync + 'static + From<BankNodeQueryRequest>,
-    QRes: QueryResponse + Send + Sync + 'static + TryInto<BankNodeQueryResponse>,
+    QRes: QueryResponse + Send + Sync + 'static + TryInto<BankNodeQueryResponse, Error = Status>,
     QH: NodeQueryHandler<QReq, QRes>,
-    <QRes as TryInto<BankNodeQueryResponse>>::Error: Error,
 {
     let bank_service = BankService {
         app,

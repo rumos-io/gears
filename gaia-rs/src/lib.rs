@@ -27,6 +27,9 @@ use genesis::GenesisState;
 use ibc::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
+use tonic::transport::Server;
+use tonic::Status;
+use tower_layer::Identity;
 
 pub mod abci_handler;
 pub mod client;
@@ -145,13 +148,13 @@ pub enum GaiaNodeQueryResponse {
 }
 
 impl TryFrom<GaiaNodeQueryResponse> for BankNodeQueryResponse {
-    type Error = anyhow::Error;
+    type Error = Status;
 
-    fn try_from(res: GaiaNodeQueryResponse) -> Result<Self> {
+    fn try_from(res: GaiaNodeQueryResponse) -> Result<Self, Status> {
         match res {
             GaiaNodeQueryResponse::Bank(res) => Ok(res),
-            // _ => Err(anyhow::anyhow!(
-            //     "Could not convert to BankNodeQueryResponse"
+            // _ => Err(Status::internal(
+            //     "An internal error occurred while querying the application state.",
             // )),
         }
     }
@@ -175,6 +178,22 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
         &self,
     ) -> Router<RestState<GaiaNodeQueryRequest, GaiaNodeQueryResponse, App>> {
         get_router()
+    }
+
+    fn build_grpc_router<App: NodeQueryHandler<GaiaNodeQueryRequest, GaiaNodeQueryResponse>>(
+        &self,
+        app: App,
+    ) -> tonic::transport::server::Router<Identity> {
+        let bank_service = bank::grpc::new(app);
+
+        let reflection_service = tonic_reflection::server::Builder::configure()
+            .register_encoded_file_descriptor_set(ibc_proto::FILE_DESCRIPTOR_SET)
+            .build()
+            .expect("ibc_proto::FILE_DESCRIPTOR_SET is a valid proto file descriptor set");
+
+        Server::builder()
+            .add_service(bank_service)
+            .add_service(reflection_service)
     }
 }
 

@@ -64,6 +64,9 @@ axum = { workspace = true }
 tower-http = { workspace = true, features = ["cors"] }
 tonic = { workspace = true }
 tonic-reflection = { workspace = true }
+tower-service = { workspace = true }
+tower-layer = { workspace = true }
+http = { workspace = true }
 
 #cli
 clap = { workspace = true, optional = true }

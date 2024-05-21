@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
 use tendermint::application::ABCI;
+use tower_layer::Identity;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
@@ -69,6 +70,11 @@ impl From<LogLevel> for LevelFilter {
 pub trait RouterBuilder<QReq: QueryRequest, QRes: QueryResponse> {
     fn build_router<App: NodeQueryHandler<QReq, QRes>>(&self)
         -> Router<RestState<QReq, QRes, App>>;
+
+    fn build_grpc_router<App: NodeQueryHandler<QReq, QRes>>(
+        &self,
+        app: App,
+    ) -> tonic::transport::server::Router<Identity>;
 }
 
 pub fn run<
@@ -124,7 +130,9 @@ pub fn run<
         config.tendermint_rpc_address,
     );
 
-    run_grpc_server();
+    run_grpc_server(
+        router_builder.build_grpc_router::<BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>>(app.clone()),
+    );
 
     let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
 

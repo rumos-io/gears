@@ -1,6 +1,7 @@
+use std::convert::Infallible;
+
 use ibc_proto::cosmos::staking::v1beta1::{
-    query_server::{Query as StakingQuery, QueryServer as StakingQueryServer},
-    QueryParamsRequest as StakingQueryParamsRequest,
+    query_server::Query as StakingQuery, QueryParamsRequest as StakingQueryParamsRequest,
     QueryParamsResponse as StakingQueryParamsResponse, QueryValidatorsRequest,
 };
 use ibc_proto::cosmos::staking::v1beta1::{
@@ -18,12 +19,21 @@ use ibc_proto::cosmos::staking::v1beta1::{
 
 use ibc_proto::google::protobuf::Duration;
 
-use tonic::{transport::Server, Request, Response, Status};
+use tonic::{
+    body::BoxBody,
+    server::NamedService,
+    transport::{server::Router, Body},
+    Request, Response, Status,
+};
+use tower_layer::Identity;
+use tower_service::Service;
 
 use crate::runtime::runtime;
 
 mod auth;
+mod error;
 
+// TODO: move into staking module
 #[derive(Debug, Default)]
 pub struct StakingService;
 
@@ -141,30 +151,34 @@ impl StakingQuery for StakingService {
     }
 }
 
-pub fn run_grpc_server() {
+pub fn run_grpc_server(router: Router<Identity>) {
     std::thread::spawn(move || {
-        let result = runtime().block_on(launch());
+        let result = runtime().block_on(launch(router));
         if let Err(err) = result {
             panic!("Failed to run gRPC server with err: {}", err)
         }
     });
 }
 
-async fn launch() -> Result<(), Box<dyn std::error::Error>> {
+trait GService:
+    Service<
+        http::Request<Body>,
+        Response = http::Response<BoxBody>,
+        Error = Infallible,
+        Future = dyn Send + 'static,
+    > + NamedService
+    + Clone
+    + Send
+    + 'static
+{
+}
+
+async fn launch(router: Router<Identity>) -> Result<(), Box<dyn std::error::Error>> {
     let address = "127.0.0.1:8080"
         .parse()
         .expect("hard coded address is valid");
-    let reflection_service = tonic_reflection::server::Builder::configure()
-        .register_encoded_file_descriptor_set(ibc_proto::FILE_DESCRIPTOR_SET)
-        .build()
-        .unwrap(); //TODO: unwrap
-    let staking_service = StakingService::default();
-
-    let server = Server::builder()
-        .add_service(reflection_service)
-        .add_service(StakingQueryServer::new(staking_service));
 
     tracing::info!("gRPC server running at {}", address);
-    server.serve(address).await?;
+    router.serve(address).await?;
     Ok(())
 }
