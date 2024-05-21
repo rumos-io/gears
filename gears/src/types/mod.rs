@@ -1,3 +1,4 @@
+pub mod store;
 pub mod account;
 pub mod address;
 pub mod auth;

@@ -84,6 +84,24 @@ impl TryFrom<u64> for Gas {
     }
 }
 
+impl From<u8> for Gas {
+    fn from(value: u8) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<u16> for Gas {
+    fn from(value: u16) -> Self {
+        Self(value.into())
+    }
+}
+
+impl From<u32> for Gas {
+    fn from(value: u32) -> Self {
+        Self(value.into())
+    }
+}
+
 impl From<Gas> for u64 {
     fn from(val: Gas) -> u64 {
         val.0.into()
