@@ -178,7 +178,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                     denom: gp.denom,
                     amount: gp
                         .amount
-                        .checked_mul(Decimal256::new(gas.into()))?
+                        .checked_mul(Decimal256::from_atomics(gas, 0)?)?
                         .to_uint_ceil(),
                 });
             }
