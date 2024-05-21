@@ -1,10 +1,12 @@
 use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::genesis::Genesis;
+use crate::baseapp::options::NodeOptions;
 use crate::baseapp::BaseApp;
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::rest::{run_rest_server, RestState};
+use crate::types::base::min_gas::MinGasPrices;
 use crate::types::tx::TxMessage;
 use axum::Router;
 use database::RocksDB;
@@ -23,6 +25,7 @@ pub struct RunCommand {
     pub rest_listen_addr: SocketAddr,
     pub read_buf_size: usize,
     pub log_level: LogLevel,
+    pub min_gas_prices: MinGasPrices,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -86,6 +89,7 @@ pub fn run<
         rest_listen_addr,
         read_buf_size,
         log_level,
+        min_gas_prices,
     } = cmd;
 
     tracing_subscriber::fmt()
@@ -105,8 +109,15 @@ pub fn run<
 
     let abci_handler = abci_handler_builder(config.clone());
 
-    let app: BaseApp<SK, PSK, M, H, G, AI> =
-        BaseApp::new(db, params_keeper, params_subspace_key, abci_handler);
+    let options = NodeOptions::new(min_gas_prices);
+
+    let app: BaseApp<SK, PSK, M, H, G, AI> = BaseApp::new(
+        db,
+        params_keeper,
+        params_subspace_key,
+        abci_handler,
+        options,
+    );
 
     run_rest_server(
         app.clone(),

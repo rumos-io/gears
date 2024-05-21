@@ -1,3 +1,4 @@
+pub mod options;
 use std::{
     fmt::Debug,
     marker::PhantomData,
@@ -31,8 +32,8 @@ use tendermint::types::{
 };
 
 use self::{
-    errors::RunTxError, genesis::Genesis, mode::ExecutionMode, params::BaseAppParamsKeeper,
-    state::ApplicationState,
+    errors::RunTxError, genesis::Genesis, mode::ExecutionMode, options::NodeOptions,
+    params::BaseAppParamsKeeper, state::ApplicationState,
 };
 
 mod abci;
@@ -58,6 +59,7 @@ pub struct BaseApp<
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
+    options: NodeOptions,
     pub m: PhantomData<M>,
     pub g: PhantomData<G>,
     _info_marker: PhantomData<AI>,
@@ -77,6 +79,7 @@ impl<
         params_keeper: Keeper<SK, PSK>,
         params_subspace_key: PSK,
         abci_handler: H,
+        options: NodeOptions,
     ) -> Self {
         let multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
@@ -99,6 +102,7 @@ impl<
                 &multi_store,
             ))),
             multi_store: Arc::new(RwLock::new(multi_store)),
+            options,
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
@@ -183,7 +187,12 @@ impl<
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let mut ctx = mode.build_ctx(height, header.clone(), Some(&tx_with_raw.tx.auth_info.fee));
+        let mut ctx = mode.build_ctx(
+            height,
+            header.clone(),
+            Some(&tx_with_raw.tx.auth_info.fee),
+            self.options.clone(),
+        );
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;

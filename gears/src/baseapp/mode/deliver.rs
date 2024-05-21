@@ -3,6 +3,7 @@ use store_crate::types::multi::MultiBank;
 use store_crate::{StoreKey, TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
+use crate::baseapp::options::NodeOptions;
 use crate::types::auth::fee::Fee;
 use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
@@ -45,6 +46,7 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         height: u64,
         header: Header,
         fee: Option<&Fee>,
+        options: NodeOptions,
     ) -> TxContext<'_, DB, SK> {
         TxContext::new(
             &mut self.multi_store,
@@ -52,6 +54,8 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
             header,
             build_tx_gas_meter(height, fee),
             &mut self.block_gas_meter,
+            false,
+            options,
         )
     }
 
