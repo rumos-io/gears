@@ -1,6 +1,6 @@
 use cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 use tendermint::types::proto::Protobuf;
 
 use crate::types::{denom::Denom, errors::Error};
@@ -16,22 +16,6 @@ mod inner {
 pub struct Coin {
     pub denom: Denom,
     pub amount: Uint256,
-}
-
-impl Coin {
-    pub fn amount_of<'a, I: Iterator<Item = &'a Coin>>(coins: I, denom: &Denom) -> Uint256 {
-        let coins = coins
-            .map(|this| (&this.denom, &this.amount))
-            .collect::<HashMap<_, _>>();
-
-        let coin = coins.get(denom);
-
-        if let Some(coin) = coin {
-            (**coin).clone()
-        } else {
-            Uint256::zero()
-        }
-    }
 }
 
 impl TryFrom<inner::Coin> for Coin {

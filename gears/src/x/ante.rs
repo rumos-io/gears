@@ -5,6 +5,7 @@ use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
 use crate::types::base::coin::Coin;
+use crate::types::base::send::SendCoins;
 use crate::types::context::tx::TxContext;
 use crate::types::context::QueryableContext;
 use crate::types::denom::Denom;
@@ -165,7 +166,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
 
         let min_gas_prices = ctx.options.min_gas_prices();
 
-        if min_gas_prices.is_empty() || min_gas_prices.iter().any(|this| this.amount.is_zero()) {
+        if min_gas_prices.is_empty() || min_gas_prices.is_zero() {
             return Ok(());
         }
 
@@ -182,6 +183,9 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                 });
             }
 
+            let required_fees =
+                SendCoins::new(required_fees).expect("MinGasPrices has same restriction as Self");
+
             if !is_any_gte(fee_coins.inner(), &required_fees) {
                 Err(anyhow!(
                     "insufficient fees; got: {:?} required: {:?}",
@@ -193,13 +197,13 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             Err(anyhow!("rejected. `fee_coins` is None"))?
         }
 
-        fn is_any_gte(coins_a: &Vec<Coin>, coins_b: &Vec<Coin>) -> bool {
+        fn is_any_gte(coins_a: &Vec<Coin>, coins_b: &SendCoins) -> bool {
             if coins_b.is_empty() {
                 return false;
             }
 
             for coin in coins_a {
-                let amount = Coin::amount_of(coins_b.iter(), &coin.denom);
+                let amount = coins_b.amount_of(&coin.denom);
                 if coin.amount >= amount && !amount.is_zero() {
                     return true;
                 }
