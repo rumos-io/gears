@@ -36,6 +36,7 @@ mod delegation;
 mod hooks;
 mod redelegation;
 mod traits;
+mod tx;
 mod unbonded;
 mod unbonding;
 mod validator;

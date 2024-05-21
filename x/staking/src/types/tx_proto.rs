@@ -1,6 +1,6 @@
 use crate::consts::proto::*;
 use gears::{
-    core::Protobuf,
+    core::{errors::Error, Protobuf},
     error::AppError,
     tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
     types::{
@@ -211,33 +211,90 @@ pub struct CreateValidator {
 }
 
 impl TryFrom<CreateValidatorRaw> for CreateValidator {
-    type Error = anyhow::Error;
+    type Error = Error;
 
     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
         Ok(CreateValidator {
-            description: src.description.ok_or(AppError::Custom(
+            description: src.description.ok_or(Error::MissingField(
                 "Value should exists. It's the proto3 rule to have Option<T> instead of T".into(),
             ))?,
             commission: src
                 .commission
-                .ok_or(AppError::Custom(
+                .ok_or(Error::MissingField(
                     "Value should exists. It's the proto3 rule to have Option<T> instead of T"
                         .into(),
                 ))?
-                .try_into()?,
-            min_self_delegation: Uint256::from_str(&src.min_self_delegation)?,
-            delegator_address: AccAddress::from_bech32(&src.delegator_address)?,
-            validator_address: ValAddress::from_bech32(&src.validator_address)?,
-            pub_key: serde_json::from_slice(&src.pub_key)?,
+                .try_into()
+                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+            min_self_delegation: Uint256::from_str(&src.min_self_delegation)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            validator_address: ValAddress::from_bech32(&src.validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            pub_key: serde_json::from_slice(&src.pub_key)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             value: src
                 .value
-                .ok_or(AppError::Custom(
+                .ok_or(Error::MissingField(
                     "Value should exists. It's the proto3 rule to have Option<T> instead of T"
                         .into(),
                 ))?
-                .try_into()?,
+                .try_into()
+                .map_err(|e| Error::Coin(format!("{e}")))?,
         })
     }
 }
 
 impl Protobuf<CreateValidatorRaw> for CreateValidator {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct DelegateMsgRaw {
+    #[prost(string)]
+    pub delegator_address: String,
+    #[prost(string)]
+    pub validator_address: String,
+    #[prost(message, optional)]
+    pub amount: Option<CoinRaw>,
+}
+
+impl From<DelegateMsg> for DelegateMsgRaw {
+    fn from(src: DelegateMsg) -> Self {
+        Self {
+            delegator_address: src.delegator_address.to_string(),
+            validator_address: src.validator_address.to_string(),
+            amount: Some(src.amount.into()),
+        }
+    }
+}
+
+/// Creates a new DelegateMsg transaction message instance.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct DelegateMsg {
+    pub delegator_address: AccAddress,
+    pub validator_address: ValAddress,
+    pub amount: Coin,
+}
+
+impl TryFrom<DelegateMsgRaw> for DelegateMsg {
+    type Error = Error;
+
+    fn try_from(src: DelegateMsgRaw) -> Result<Self, Self::Error> {
+        Ok(DelegateMsg {
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            validator_address: ValAddress::from_bech32(&src.validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            amount: src
+                .amount
+                .ok_or(Error::MissingField(
+                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
+                        .into(),
+                ))?
+                .try_into()
+                .map_err(|e| Error::Coin(format!("{e}")))?,
+        })
+    }
+}
+
+impl Protobuf<DelegateMsgRaw> for DelegateMsg {}

@@ -1,5 +1,6 @@
 use crate::{
-    encode_hex_str, CommissionRates, CreateValidator, Description, Message as StakingMessage,
+    encode_hex_str, CommissionRates, CreateValidator, DelegateMsg, Description,
+    Message as StakingMessage,
 };
 use anyhow::Result;
 use clap::{Args, Subcommand};
@@ -23,6 +24,7 @@ pub struct StakingTxCli {
 }
 
 #[derive(Subcommand, Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum StakingCommands {
     /// Create new validator initialized with a self-delegation to it
     CreateValidator {
@@ -56,6 +58,13 @@ pub enum StakingCommands {
         /// The minimum self delegation required on the validator
         #[arg(long, default_value_t = Uint256::one())]
         min_self_delegation: Uint256,
+    },
+    /// Delegate liquid tokens to a validator
+    Delegate {
+        /// The validator account address
+        validator_address: ValAddress,
+        /// Amount of coins to bond
+        amount: Coin,
     },
 }
 
@@ -117,5 +126,13 @@ pub fn run_staking_tx_command(
             //
             // return txf, msg, nil
         }
+        StakingCommands::Delegate {
+            validator_address,
+            amount,
+        } => Ok(StakingMessage::Delegate(DelegateMsg {
+            delegator_address: from_address.clone(),
+            validator_address: validator_address.clone(),
+            amount: amount.clone(),
+        })),
     }
 }

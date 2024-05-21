@@ -51,6 +51,7 @@ impl<
     ) -> Result<(), AppError> {
         match msg {
             Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
         }
     }
 

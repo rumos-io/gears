@@ -50,7 +50,7 @@ impl<
         // all non bonded
         if subtract_account {
             if token_src == BondStatus::Bonded {
-                panic!("delegation token source cannot be bonded")
+                panic!("delegation token source cannot be bonded");
             }
 
             let send_name = match validator.status {

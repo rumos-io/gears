@@ -1,18 +1,14 @@
-use std::borrow::Cow;
-use std::fmt::Debug;
-
+use crate::{QueryValidatorRequest, QueryValidatorResponse};
 use clap::{Args, Subcommand};
-use prost::bytes::Bytes;
-
 use gears::{
     application::handlers::client::QueryHandler,
     error::IBC_ENCODE_UNWRAP,
     tendermint::types::proto::Protobuf,
     types::{address::ValAddress, query::Query},
 };
+use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
-
-use crate::query::{QueryValidatorRequest, QueryValidatorResponse};
+use std::{borrow::Cow, fmt::Debug};
 
 #[derive(Args, Debug)]
 pub struct StakingQueryCli {
