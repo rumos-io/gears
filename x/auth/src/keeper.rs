@@ -1,8 +1,8 @@
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
 use gears::error::IBC_ENCODE_UNWRAP;
-use gears::params_v2::keeper::ParamsKeeper;
-use gears::params_v2::ParamsSubspaceKey;
+use gears::params::keeper::ParamsKeeper;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;

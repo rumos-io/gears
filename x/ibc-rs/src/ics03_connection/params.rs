@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use gears::core::serializers::serialize_number_to_string;
-use gears::params_v2::keeper::ParamsKeeper;
-use gears::params_v2::parse_primitive_optional;
-use gears::params_v2::Params;
-use gears::params_v2::ParamsDeserialize;
-use gears::params_v2::ParamsSubspaceKey;
+use gears::params::keeper::ParamsKeeper;
+use gears::params::parse_primitive_optional;
+use gears::params::Params;
+use gears::params::ParamsDeserialize;
+use gears::params::ParamsSubspaceKey;
 use gears::store::types::prefix::immutable::ImmutablePrefixStore;
 use gears::store::QueryableMultiKVStore;
 use gears::store::ReadPrefixStore;

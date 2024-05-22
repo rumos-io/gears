@@ -2,7 +2,7 @@
 #[allow(unused_variables)] // TODO: remove
 #[allow(unused_imports)] //TODO: remove
 use derive_more::{From, TryInto};
-use gears::params_v2::ParamsSubspaceKey;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::QueryableKVStore;
 use gears::store::StoreKey;

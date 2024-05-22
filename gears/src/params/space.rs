@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use database::Database;
 use store_crate::{types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore};
 
-use crate::params_v2::parse_param_bytes;
+use crate::params::parse_param_bytes;
 
 use super::{ParamString, ParamsDeserialize};
 

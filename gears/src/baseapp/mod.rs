@@ -8,7 +8,7 @@ use std::{
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::{AppError, POISONED_LOCK},
-    params_v2::{keeper::ParamsKeeper, ParamsSubspaceKey},
+    params::{keeper::ParamsKeeper, ParamsSubspaceKey},
     types::{
         context::{init::InitContext, query::QueryContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},

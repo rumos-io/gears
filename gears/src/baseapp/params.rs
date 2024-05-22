@@ -7,7 +7,7 @@ use store_crate::StoreKey;
 use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::{
-    params_v2::{keeper::ParamsKeeper, string::ParamString, Params, ParamsSubspaceKey},
+    params::{keeper::ParamsKeeper, string::ParamString, Params, ParamsSubspaceKey},
     types::context::{QueryableContext, TransactionalContext},
 };
 

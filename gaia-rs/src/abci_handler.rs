@@ -10,7 +10,7 @@ use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
-use gears::{config::Config, params_v2::keeper::ParamsKeeper};
+use gears::{config::Config, params::keeper::ParamsKeeper};
 use gears::{error::AppError, types::context::tx::TxContext, x::ante::DefaultSignGasConsumer};
 
 #[derive(Debug, Clone)]

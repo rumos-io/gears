@@ -1,5 +1,5 @@
-use gears::params_v2::keeper::ParamsKeeper;
-use gears::params_v2::ParamsSubspaceKey;
+use gears::params::keeper::ParamsKeeper;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::WritePrefixStore;

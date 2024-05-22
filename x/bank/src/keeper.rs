@@ -5,8 +5,8 @@ use crate::types::query::{
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::params_v2::keeper::ParamsKeeper;
-use gears::params_v2::ParamsSubspaceKey;
+use gears::params::keeper::ParamsKeeper;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::Database;
 use gears::store::types::prefix::mutable::MutablePrefixStore;

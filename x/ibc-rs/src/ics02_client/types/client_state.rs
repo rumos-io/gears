@@ -1,5 +1,5 @@
 use derive_more::{From, TryInto};
-use gears::params_v2::ParamsSubspaceKey;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 

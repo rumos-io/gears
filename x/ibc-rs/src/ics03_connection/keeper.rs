@@ -1,5 +1,5 @@
 use gears::{
-    params_v2::{keeper::ParamsKeeper, ParamsSubspaceKey},
+    params::{keeper::ParamsKeeper, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
     types::context::init::InitContext,
 };

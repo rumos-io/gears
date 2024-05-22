@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
 use gears::core::serializers::serialize_number_to_string;
-use gears::params_v2::keeper::ParamsKeeper;
-use gears::params_v2::{parse_primitive_optional, Params, ParamsDeserialize, ParamsSubspaceKey};
+use gears::params::keeper::ParamsKeeper;
+use gears::params::{parse_primitive_optional, Params, ParamsDeserialize, ParamsSubspaceKey};
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::types::context::{QueryableContext, TransactionalContext};

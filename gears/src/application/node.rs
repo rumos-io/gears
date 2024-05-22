@@ -5,7 +5,7 @@ use super::{
 use crate::{
     baseapp::genesis::Genesis,
     commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
-    params_v2::{keeper::ParamsKeeper, ParamsSubspaceKey},
+    params::{keeper::ParamsKeeper, ParamsSubspaceKey},
 };
 use crate::{
     config::{ApplicationConfig, Config},

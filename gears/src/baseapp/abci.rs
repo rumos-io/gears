@@ -2,7 +2,7 @@ use super::{BaseApp, Genesis};
 use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
-use crate::params_v2::ParamsSubspaceKey;
+use crate::params::ParamsSubspaceKey;
 use crate::types::context::block::BlockContext;
 use crate::types::gas::Gas;
 use crate::types::tx::TxMessage;

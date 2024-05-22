@@ -5,7 +5,7 @@ use crate::{
 use gears::{
     core::errors::Error,
     error::AppError,
-    params_v2::ParamsSubspaceKey,
+    params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     types::context::{init::InitContext, query::QueryContext, tx::TxContext},
 };
