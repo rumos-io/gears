@@ -34,6 +34,7 @@ use std::{cmp::Ordering, collections::HashMap};
 mod bonded;
 mod delegation;
 mod hooks;
+mod query;
 mod redelegation;
 mod traits;
 mod tx;

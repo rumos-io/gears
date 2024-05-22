@@ -17,14 +17,14 @@ use gears::{
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Pool {
     pub not_bonded_tokens: Uint256,
     pub bonded_tokens: Uint256,
 }
 
 /// Last validator power, needed for validator set update logic
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct LastValidatorPower {
     pub address: ValAddress,
     pub power: i64,
@@ -33,7 +33,7 @@ pub struct LastValidatorPower {
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
 /// validator.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Delegation {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
@@ -43,7 +43,7 @@ pub struct Delegation {
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
 /// validator.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UnbondingDelegation {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
@@ -51,7 +51,7 @@ pub struct UnbondingDelegation {
 }
 
 /// UnbondingDelegationEntry - entry to an UnbondingDelegation
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UnbondingDelegationEntry {
     pub creation_height: i64,
     pub completion_time: Timestamp,
@@ -73,7 +73,7 @@ impl UnbondingDelegationEntry {
 /// Redelegation contains the list of a particular delegator's
 /// redelegating bonds from a particular source validator to a
 /// particular destination validator
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Redelegation {
     pub delegator_address: AccAddress,
     pub validator_src_address: ValAddress,
@@ -82,7 +82,7 @@ pub struct Redelegation {
 }
 
 /// RedelegationEntry - entry to a Redelegation
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RedelegationEntry {
     pub creation_height: i64,
     pub completion_time: Timestamp,
@@ -253,6 +253,13 @@ impl Validator {
             .delegator_shares
             .checked_mul(Decimal256::new(amount))?
             .checked_div(Decimal256::new(self.tokens))?)
+    }
+
+    /// calculate the token worth of provided shares
+    pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
+        Ok(shares
+            .checked_mul(Decimal256::new(self.tokens))?
+            .checked_div(self.delegator_shares)?)
     }
 
     pub fn invalid_ex_rate(&self) -> bool {

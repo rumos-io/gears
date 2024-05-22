@@ -1,15 +1,20 @@
-use crate::{AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message};
+use crate::{
+    AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
+};
 use gears::{
     application::handlers::node::ABCIHandler as NodeABCIHandler,
-    error::AppError,
+    core::errors::Error,
+    error::{AppError, IBC_ENCODE_UNWRAP},
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
-        proto::validator::ValidatorUpdate, request::end_block::RequestEndBlock,
-        request::query::RequestQuery,
+        proto::{validator::ValidatorUpdate, Protobuf},
+        request::{end_block::RequestEndBlock, query::RequestQuery},
     },
-    types::context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    types::tx::raw::TxWithRaw,
+    types::{
+        context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
+        tx::raw::TxWithRaw,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -61,10 +66,23 @@ impl<
 
     fn query<DB: Database + Send + Sync>(
         &self,
-        _ctx: &QueryContext<DB, SK>,
-        _query: RequestQuery,
+        ctx: &QueryContext<DB, SK>,
+        query: RequestQuery,
     ) -> Result<prost::bytes::Bytes, AppError> {
-        todo!()
+        match query.path.as_str() {
+            "/cosmos.staking.v1beta1.Query/Delegation" => {
+                let req = QueryDelegationRequest::decode(query.data)
+                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_delegation(ctx, req)?
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into()) // TODO:IBC
+            }
+            _ => Err(AppError::InvalidRequest("query path not found".into())),
+        }
     }
 
     fn end_block<DB: Database>(
