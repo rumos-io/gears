@@ -7,11 +7,11 @@ use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
+use gears::store::database::prefix::PrefixDB;
 use gears::store::database::Database;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::{
-    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, TransactionalMultiKVStore,
-    WritePrefixStore,
+    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
 };
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
@@ -234,14 +234,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
     ) -> Result<(), AppError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
-        let mut ms = ctx.multi_store_mut();
         let mut events = vec![];
 
         let from_address = msg.from_address;
         let to_address = msg.to_address;
 
         for send_coin in msg.amount {
-            let mut from_account_store = self.get_address_balances_store(&mut ms, &from_address);
+            let mut from_account_store = self.get_address_balances_store(ctx, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())
                 .ok_or(AppError::Send("Insufficient funds".into()))?;
@@ -263,7 +262,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
             //TODO: if balance == 0 then denom should be removed from store
 
-            let mut to_account_store = self.get_address_balances_store(&mut ms, &to_address);
+            let mut to_account_store = self.get_address_balances_store(ctx, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
 
             let mut to_balance: Coin = match to_balance {
@@ -324,11 +323,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
     fn get_address_balances_store<'a, DB: Database>(
         &'a self,
-        ms: &'a mut impl TransactionalMultiKVStore<DB, SK>,
+        ctx: &'a mut impl TransactionalContext<DB, SK>,
         address: &AccAddress,
-    ) -> MutablePrefixStore<'a, DB> {
+    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
         let prefix = create_denom_balance_prefix(address.to_owned());
-        let bank_store = ms.kv_store_mut(&self.store_key);
+        let bank_store = ctx.kv_store_mut(&self.store_key);
         bank_store.prefix_store_mut(prefix)
     }
 

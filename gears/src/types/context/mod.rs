@@ -1,16 +1,14 @@
 use database::prefix::PrefixDB;
 use store_crate::types::kv::{immutable::KVStore, mutable::KVStoreMut};
-use store_crate::types::multi::immutable::MultiStore;
-use store_crate::types::multi::mutable::MultiStoreMut;
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
 pub mod block;
 pub mod init;
 pub mod query;
+pub(crate) mod simple;
 pub mod tx;
 
 pub trait QueryableContext<DB, SK> {
-    fn multi_store(&self) -> MultiStore<'_, DB, SK>;
     ///  Fetches an immutable ref to a KVStore from the MultiStore.
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>>;
 
@@ -19,8 +17,6 @@ pub trait QueryableContext<DB, SK> {
 }
 
 pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
-    fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK>;
-
     ///  Fetches an mutable ref to a KVStore from the MultiStore.
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
 

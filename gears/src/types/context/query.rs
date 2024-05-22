@@ -28,15 +28,16 @@ impl<DB: Database, SK: StoreKey> QueryContext<DB, SK> {
             chain_id: ChainId::new("todo-900").expect("default should be valid"),
         })
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn multi_store(&self) -> MultiStore<'_, DB, SK> {
+        MultiStore::from(&self.multi_store)
+    }
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key)
-    }
-
-    fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&self.multi_store)
     }
 
     fn height(&self) -> u64 {

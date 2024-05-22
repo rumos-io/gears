@@ -54,6 +54,15 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             options,
         }
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn multi_store(&self) -> MultiStore<'_, DB, SK> {
+        MultiStore::from(&*self.multi_store)
+    }
+
+    pub(crate) fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
+        MultiStoreMut::from(&mut *self.multi_store)
+    }
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
@@ -72,10 +81,6 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
         self.multi_store.kv_store(store_key).into()
     }
 
-    fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&*self.multi_store)
-    }
-
     fn height(&self) -> u64 {
         self.height
     }
@@ -86,10 +91,6 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
-    fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        MultiStoreMut::from(&mut *self.multi_store)
-    }
-
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.multi_store.kv_store_mut(store_key).into()
     }

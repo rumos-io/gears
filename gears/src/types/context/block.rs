@@ -33,15 +33,21 @@ impl<'a, DB, SK> BlockContext<'a, DB, SK> {
             header,
         }
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn multi_store(&self) -> MultiStore<'_, DB, SK> {
+        MultiStore::from(&*self.multi_store)
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
+        MultiStoreMut::from(&mut *self.multi_store)
+    }
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
-    }
-
-    fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&*self.multi_store)
     }
 
     fn height(&self) -> u64 {
@@ -54,10 +60,6 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, D
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'_, DB, SK> {
-    fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        MultiStoreMut::from(&mut *self.multi_store)
-    }
-
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.multi_store.kv_store_mut(store_key).into()
     }
