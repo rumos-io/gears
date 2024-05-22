@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use gears::params::string::ParamString;
 use gears::params::subspace;
 use gears::params::subspace_mut;
 use gears::params::Params;
@@ -37,12 +38,14 @@ impl Params for ClientParams {
         [KEY_ALLOWED_CLIENTS].into_iter().collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, ParamString> {
         let mut hash_map = HashMap::with_capacity(1);
 
         hash_map.insert(
             KEY_ALLOWED_CLIENTS,
-            serde_json::to_vec(&self.allowed_clients).expect("conversion to json won't fail"),
+            serde_json::to_vec(&self.allowed_clients)
+                .expect("conversion to json won't fail")
+                .into(),
         );
 
         hash_map
@@ -50,10 +53,13 @@ impl Params for ClientParams {
 }
 
 impl ParamsDeserialize for ClientParams {
-    fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(fields: HashMap<&'static str, ParamString>) -> Self {
         Self {
             allowed_clients: serde_json::from_slice(
-                fields.get(KEY_ALLOWED_CLIENTS).expect("expected to exists"),
+                fields
+                    .get(KEY_ALLOWED_CLIENTS)
+                    .expect("expected to exists")
+                    .as_bytes(),
             )
             .expect("conversion from json won't fail"),
         }

@@ -29,7 +29,16 @@ impl<DB: Database> ParamsSpaceMut<'_, DB> {
         let params = params.to_raw();
 
         for (key, value) in params {
-            self.inner.set(key.as_bytes().into_iter().cloned(), value)
+            self.inner
+                .set(key.as_bytes().into_iter().cloned(), value.into_bytes())
         }
+    }
+
+    /// Return only field from structure.
+    pub fn params_field_set<F: Into<ParamString>>(&mut self, path: &str, field: F) {
+        self.inner.set(
+            path.as_bytes().into_iter().cloned(),
+            field.into().0.into_bytes(),
+        )
     }
 }

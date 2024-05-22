@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use gears::params::string::ParamString;
 use gears::params::{
     parse_primitive_unwrap, subspace, subspace_mut, Params, ParamsDeserialize, ParamsSubspaceKey,
 };
@@ -28,23 +29,20 @@ impl Params for BankParams {
             .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, ParamString> {
         let mut hash_map = HashMap::with_capacity(2);
 
-        hash_map.insert(
-            KEY_DEFAULT_SEND_ENABLED,
-            self.default_send_enabled.to_string().into_bytes(),
-        );
+        hash_map.insert(KEY_DEFAULT_SEND_ENABLED, self.default_send_enabled.into());
 
         // The send_enabled field is hard coded to the empty list for now
-        hash_map.insert(KEY_SEND_ENABLED, "[]".as_bytes().to_vec());
+        hash_map.insert(KEY_SEND_ENABLED, "[]".into());
 
         hash_map
     }
 }
 
 impl ParamsDeserialize for BankParams {
-    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, ParamString>) -> Self {
         Self {
             default_send_enabled: parse_primitive_unwrap(fields.remove(KEY_DEFAULT_SEND_ENABLED)),
         }

@@ -62,17 +62,15 @@ pub trait ParamsSubspaceKey: Hash + Eq + Clone + Send + Sync + 'static {
 pub trait Params {
     /// Return all unique keys for this structure
     fn keys() -> HashSet<&'static str>;
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>>;
+    fn to_raw(&self) -> HashMap<&'static str, ParamString>;
 }
 
 pub trait ParamsDeserialize: Params {
-    fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self;
+    fn from_raw(fields: HashMap<&'static str, ParamString>) -> Self;
 }
 
 /// Parse params bytes into valid `String` which must we able to parse into param ***field***
-fn parse_param_bytes(value: Vec<u8>) -> ParamString {
-    let value = String::from_utf8(value).expect("should be valid utf-8");
-
+fn parse_param(value: String) -> ParamString {
     // Some types like `bool` gets saved without
     if let Some(cleared) = value
         .strip_suffix('\"')
@@ -84,13 +82,13 @@ fn parse_param_bytes(value: Vec<u8>) -> ParamString {
     }
 }
 
-pub fn parse_primitive<T: From<ParamString>>(value: Option<Vec<u8>>) -> Option<T> {
+pub fn parse_primitive<T: From<ParamString>>(value: Option<ParamString>) -> Option<T> {
     match value {
-        Some(value) => Some(parse_param_bytes(value).into()),
+        Some(value) => Some(parse_param(value.0).into()),
         None => None,
     }
 }
 
-pub fn parse_primitive_unwrap<T: From<ParamString>>(value: Option<Vec<u8>>) -> T {
-    parse_param_bytes(value.expect("Params expected to exists")).into()
+pub fn parse_primitive_unwrap<T: From<ParamString>>(value: Option<ParamString>) -> T {
+    parse_param(value.expect("Params expected to exists").0).into()
 }

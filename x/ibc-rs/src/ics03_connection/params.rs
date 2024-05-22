@@ -3,6 +3,7 @@ use std::collections::HashSet;
 
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::parse_primitive_unwrap;
+use gears::params::string::ParamString;
 use gears::params::subspace;
 use gears::params::subspace_mut;
 use gears::params::Params;
@@ -43,12 +44,12 @@ impl Params for ConnectionParams {
         [KEY_MAX_EXPECTED_TIME_PER_BLOCK].into_iter().collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, ParamString> {
         let mut hash_map = HashMap::with_capacity(1);
 
         hash_map.insert(
             KEY_MAX_EXPECTED_TIME_PER_BLOCK,
-            format!("\"{}\"", self.max_expected_time_per_block).into_bytes(),
+            self.max_expected_time_per_block.into(),
         );
 
         hash_map
@@ -56,7 +57,7 @@ impl Params for ConnectionParams {
 }
 
 impl ParamsDeserialize for ConnectionParams {
-    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, ParamString>) -> Self {
         Self {
             max_expected_time_per_block: parse_primitive_unwrap(
                 fields.remove(KEY_MAX_EXPECTED_TIME_PER_BLOCK),

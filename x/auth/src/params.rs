@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use gears::core::serializers::serialize_number_to_string;
+use gears::params::string::ParamString;
 use gears::params::{
     parse_primitive_unwrap, subspace, subspace_mut, Params, ParamsDeserialize, ParamsSubspaceKey,
 };
@@ -49,32 +50,23 @@ impl Params for AuthsParams {
         .collect()
     }
 
-    fn to_raw(&self) -> std::collections::HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, ParamString> {
         let mut hash_map = HashMap::with_capacity(5);
 
-        hash_map.insert(
-            KEY_MAX_MEMO_CHARACTERS,
-            format!("\"{}\"", self.max_memo_characters).into_bytes(),
-        );
+        hash_map.insert(KEY_MAX_MEMO_CHARACTERS, self.max_memo_characters.into());
 
-        hash_map.insert(
-            KEY_TX_SIG_LIMIT,
-            format!("\"{}\"", self.tx_sig_limit).into_bytes(),
-        );
+        hash_map.insert(KEY_TX_SIG_LIMIT, self.tx_sig_limit.into());
 
-        hash_map.insert(
-            KEY_TX_SIZE_COST_PER_BYTE,
-            format!("\"{}\"", self.tx_size_cost_per_byte).into_bytes(),
-        );
+        hash_map.insert(KEY_TX_SIZE_COST_PER_BYTE, self.tx_size_cost_per_byte.into());
 
         hash_map.insert(
             KEY_SIG_VERIFY_COST_ED25519,
-            format!("\"{}\"", self.sig_verify_cost_ed25519).into_bytes(),
+            self.sig_verify_cost_ed25519.into(),
         );
 
         hash_map.insert(
             KEY_SIG_VERIFY_COST_SECP256K1,
-            format!("\"{}\"", self.sig_verify_cost_secp256k1).into_bytes(),
+            self.sig_verify_cost_secp256k1.into(),
         );
 
         hash_map
@@ -82,7 +74,7 @@ impl Params for AuthsParams {
 }
 
 impl ParamsDeserialize for AuthsParams {
-    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, ParamString>) -> Self {
         Self {
             max_memo_characters: parse_primitive_unwrap(fields.remove(KEY_MAX_MEMO_CHARACTERS)),
             tx_sig_limit: parse_primitive_unwrap(fields.remove(KEY_TX_SIG_LIMIT)),
