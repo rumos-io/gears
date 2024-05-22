@@ -1,8 +1,6 @@
 use database::prefix::PrefixDB;
 use database::Database;
 use store_crate::types::kv::immutable::KVStore;
-use store_crate::types::multi::immutable::MultiStore;
-use store_crate::types::multi::mutable::MultiStoreMut;
 use store_crate::types::{kv::mutable::KVStoreMut, multi::MultiBank};
 use store_crate::{ApplicationStore, StoreKey};
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
@@ -29,16 +27,6 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
             events: Vec::new(),
             chain_id,
         }
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&*self.multi_store)
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        MultiStoreMut::from(&mut *self.multi_store)
     }
 
     pub fn height(&self) -> u64 {

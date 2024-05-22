@@ -2,7 +2,7 @@ use database::{prefix::PrefixDB, Database};
 use store_crate::{
     types::{
         kv::{immutable::KVStore, mutable::KVStoreMut},
-        multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
+        multi::MultiBank,
     },
     ApplicationStore, StoreKey,
 };
@@ -32,16 +32,6 @@ impl<'a, DB, SK> BlockContext<'a, DB, SK> {
             events: Vec::new(),
             header,
         }
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&*self.multi_store)
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        MultiStoreMut::from(&mut *self.multi_store)
     }
 
     pub fn height(&self) -> u64 {
