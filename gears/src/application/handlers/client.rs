@@ -70,10 +70,14 @@ pub trait TxHandler {
 
         let account = get_account_latest(address, node.as_str())?;
 
+        let account = account
+            .account
+            .ok_or_else(|| anyhow!("account not found"))?;
+
         let signing_info = SigningInfo {
             key,
-            sequence: account.account.get_sequence(),
-            account_number: account.account.get_account_number(),
+            sequence: account.get_sequence(),
+            account_number: account.get_account_number(),
         };
 
         let tx_body = TxBody {

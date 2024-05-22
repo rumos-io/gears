@@ -22,8 +22,6 @@ use ibc_proto::{
 use std::marker::PhantomData;
 use tonic::{Request, Response, Status};
 
-use crate::{BankNodeQueryRequest, BankNodeQueryResponse};
-
 #[derive(Debug, Default)]
 pub struct StakingService<QH, QReq, QRes> {
     _app: QH,
@@ -37,8 +35,8 @@ impl<
         QH: NodeQueryHandler<QReq, QRes>,
     > Query for StakingService<QH, QReq, QRes>
 where
-    QReq: QueryRequest + From<BankNodeQueryRequest>,
-    QRes: QueryResponse + TryInto<BankNodeQueryResponse, Error = Status>,
+// QReq: QueryRequest + From<StakingNodeQueryRequest>,
+// QRes: QueryResponse + TryInto<StakingNodeQueryResponse, Error = Status>,
 {
     async fn validators(
         &self,
@@ -155,8 +153,8 @@ where
 
 pub fn new<QH, QReq, QRes>(_app: QH) -> QueryServer<StakingService<QH, QReq, QRes>>
 where
-    QReq: QueryRequest + Send + Sync + 'static + From<BankNodeQueryRequest>,
-    QRes: QueryResponse + Send + Sync + 'static + TryInto<BankNodeQueryResponse, Error = Status>,
+    QReq: QueryRequest + Send + Sync + 'static, // + From<StakingNodeQueryRequest>,
+    QRes: QueryResponse + Send + Sync + 'static, // + TryInto<StakingNodeQueryResponse, Error = Status>,
     QH: NodeQueryHandler<QReq, QRes>,
 {
     let bank_service = StakingService {

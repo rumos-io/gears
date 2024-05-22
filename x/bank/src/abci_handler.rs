@@ -1,4 +1,3 @@
-use gears::baseapp::errors::QueryError;
 use gears::core::errors::Error as IbcError;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::store::database::Database;
@@ -53,34 +52,30 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<S
         &self,
         ctx: &QueryContext<DB, SK>,
         query: BankNodeQueryRequest,
-    ) -> Result<BankNodeQueryResponse, QueryError> {
+    ) -> BankNodeQueryResponse {
         match query {
             BankNodeQueryRequest::Balance(req) => {
                 let res = self.keeper.query_balance(ctx, req);
-                Ok(BankNodeQueryResponse::Balance(res))
+                BankNodeQueryResponse::Balance(res)
             }
             BankNodeQueryRequest::AllBalances(req) => {
                 let res = self.keeper.query_all_balances(ctx, req);
-                Ok(BankNodeQueryResponse::AllBalances(res))
+                BankNodeQueryResponse::AllBalances(res)
             }
             BankNodeQueryRequest::TotalSupply => {
                 let res = self.keeper.get_paginated_total_supply(ctx);
-                Ok(BankNodeQueryResponse::TotalSupply(
-                    QueryTotalSupplyResponse {
-                        supply: res,
-                        pagination: None,
-                    },
-                ))
+                BankNodeQueryResponse::TotalSupply(QueryTotalSupplyResponse {
+                    supply: res,
+                    pagination: None,
+                })
             }
             BankNodeQueryRequest::DenomsMetadata => {
                 let res = self.keeper.query_denoms_metadata(ctx);
-                Ok(BankNodeQueryResponse::DenomsMetadata(res))
+                BankNodeQueryResponse::DenomsMetadata(res)
             }
             BankNodeQueryRequest::DenomMetadata(req) => {
                 let metadata = self.keeper.get_denom_metadata(ctx, &req.denom);
-                Ok(BankNodeQueryResponse::DenomMetadata(
-                    QueryDenomMetadataResponse { metadata },
-                ))
+                BankNodeQueryResponse::DenomMetadata(QueryDenomMetadataResponse { metadata })
             }
         }
     }

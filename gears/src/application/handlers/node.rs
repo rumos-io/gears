@@ -1,5 +1,4 @@
 use crate::{
-    baseapp::errors::QueryError,
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::{
@@ -35,7 +34,7 @@ pub trait ABCIHandler<
         &self,
         ctx: &QueryContext<DB, SK>,
         query: QReq,
-    ) -> Result<QRes, QueryError>;
+    ) -> QRes;
 
     fn run_ante_checks<DB: Database>(
         &self,

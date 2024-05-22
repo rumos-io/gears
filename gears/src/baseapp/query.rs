@@ -40,6 +40,6 @@ impl<
 
         let ctx = QueryContext::new(query_store, version)?;
 
-        self.abci_handler.typed_query(&ctx, request)
+        Ok(self.abci_handler.typed_query(&ctx, request))
     }
 }

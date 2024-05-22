@@ -12,7 +12,6 @@ use gears::types::query::account::QueryAccountRequest;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use gears::{
-    error::AppError,
     params::ParamsSubspaceKey,
     types::{
         account::{Account, BaseAccount, ModuleAccount},
@@ -162,20 +161,22 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         &self,
         ctx: &QueryContext<DB, SK>,
         req: QueryAccountRequest,
-    ) -> Result<QueryAccountResponse, AppError> {
+    ) -> QueryAccountResponse {
         let auth_store = ctx.kv_store(&self.store_key);
         let key = create_auth_store_key(req.address);
         let account = auth_store.get(&key);
 
         if let Some(buf) = account {
-            let account = Account::decode::<Bytes>(buf.to_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
+            let account = Some(
+                Account::decode::<Bytes>(buf.to_owned().into())
+                    .ok()
+                    .unwrap_or_corrupt(),
+            );
 
-            return Ok(QueryAccountResponse { account });
+            return QueryAccountResponse { account };
+        } else {
+            QueryAccountResponse { account: None }
         }
-
-        Err(AppError::AccountNotFound)
     }
 
     fn get_next_account_number<DB: Database, CTX: TransactionalContext<DB, SK>>(

@@ -10,7 +10,6 @@ use tower_service::Service;
 
 use crate::runtime::runtime;
 
-mod auth;
 mod error;
 
 pub fn run_grpc_server(router: Router<Identity>) {

@@ -30,3 +30,7 @@ grpcurl -plaintext  -d '{}' localhost:8080  cosmos.staking.v1beta1.Query/Params
 ```shell
 grpcurl -plaintext  -d '{"address": "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux", "denom":"uatom"}' localhost:8080  cosmos.bank.v1beta1.Query/Balance
 ```
+
+```shell
+grpcurl -plaintext  -d '{"address": "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux"}' localhost:8080  cosmos.auth.v1beta1.Query/Account
+```
