@@ -1,11 +1,9 @@
 use axum::Router;
 use gears::application::handlers::node::ABCIHandler;
+use gears::params_v2::ParamsSubspaceKey;
 use gears::store::StoreKey;
 use gears::types::tx::TxMessage;
-use gears::{
-    application::ApplicationInfo, baseapp::genesis::Genesis, params::ParamsSubspaceKey,
-    rest::RestState,
-};
+use gears::{application::ApplicationInfo, baseapp::genesis::Genesis, rest::RestState};
 
 pub fn get_router<
     SK: StoreKey,
