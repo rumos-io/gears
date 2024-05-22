@@ -5,7 +5,8 @@ use crate::types::query::{
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::params::ParamsSubspaceKey;
+use gears::params_v2::keeper::ParamsKeeper;
+use gears::params_v2::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::Database;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
@@ -84,7 +85,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, AK> {
     pub fn new(
         store_key: SK,
-        params_keeper: gears::params::Keeper<SK, PSK>,
+        params_keeper: ParamsKeeper<SK>,
         params_subspace_key: PSK,
         auth_keeper: AK,
     ) -> Self {
@@ -108,8 +109,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         // 1. cosmos SDK sorts the balances first
         // 2. Need to confirm that the SDK does not validate list of coins in each balance (validates order, denom etc.)
         // 3. Need to set denom metadata
-        self.bank_params_keeper
-            .set(&mut ctx.multi_store_mut(), genesis.params);
+        self.bank_params_keeper.set(ctx, genesis.params);
 
         let mut total_supply: HashMap<Denom, Uint256> = HashMap::new();
         for balance in genesis.balances {

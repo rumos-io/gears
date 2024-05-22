@@ -17,7 +17,7 @@ members = [
 
   # xmodules
   # "x/ibc-rs",
-  # "x/bank",
+  "x/bank",
   "x/auth",
 #  "x/staking",
 

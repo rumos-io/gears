@@ -4,12 +4,7 @@ use axum::{
     Json, Router,
 };
 use gears::{
-    application::{handlers::node::ABCIHandler, ApplicationInfo},
-    baseapp::{genesis::Genesis, BaseApp},
-    params::ParamsSubspaceKey,
-    rest::{error::Error, Pagination, RestState},
-    tendermint::types::{proto::Protobuf, request::query::RequestQuery},
-    types::tx::TxMessage,
+    application::{handlers::node::ABCIHandler, ApplicationInfo}, baseapp::{genesis::Genesis, BaseApp}, params_v2::ParamsSubspaceKey, rest::{error::Error, Pagination, RestState}, tendermint::types::{proto::Protobuf, request::query::RequestQuery}, types::tx::TxMessage
 };
 use gears::{error::IBC_ENCODE_UNWRAP, store::StoreKey};
 use gears::{tendermint::application::ABCIApplication, types::address::AccAddress};

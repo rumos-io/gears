@@ -12,6 +12,12 @@ impl From<&str> for ParamString {
     }
 }
 
+impl From<ParamString> for bool {
+    fn from(value: ParamString) -> Self {
+        value.0.parse().expect("should be valid")
+    }
+}
+
 impl From<ParamString> for u8 {
     fn from(value: ParamString) -> Self {
         value.0.parse().expect("should be valid")
