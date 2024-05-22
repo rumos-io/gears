@@ -18,7 +18,7 @@ pub trait ModuleParams {
 pub trait Params {
     /// Return all unique keys for this structure
     fn keys() -> HashSet<&'static str>;
-    fn serialize(&self) -> HashMap<&'static str, Vec<u8>>;
+    fn serialize(&self) -> HashMap<&'static str, Vec<u8>>; // TODO:NOW CHANGE NAME
 }
 
 pub trait ParamsDeserialize: Params {
@@ -26,7 +26,7 @@ pub trait ParamsDeserialize: Params {
 }
 
 /// Parse params bytes into valid `String` which must we able to parse into param ***field***
-pub fn parse_param_bytes(value: Vec<u8>) -> String {
+pub fn parse_param_bytes(value: Vec<u8>) -> ParamString {
     String::from_utf8(value)
         .expect("should be valid utf-8")
         .strip_suffix('\"')
@@ -34,4 +34,19 @@ pub fn parse_param_bytes(value: Vec<u8>) -> String {
         .strip_prefix('\"')
         .expect("should have prefix")
         .to_owned()
+        .into()
+}
+
+pub struct ParamString(pub String);
+
+impl From<String> for ParamString {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&str> for ParamString {
+    fn from(value: &str) -> Self {
+        Self(value.to_owned())
+    }
 }

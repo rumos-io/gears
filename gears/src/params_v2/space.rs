@@ -5,7 +5,7 @@ use store_crate::{types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStor
 
 use crate::params_v2::parse_param_bytes;
 
-use super::{Params, ParamsDeserialize};
+use super::{ParamString, ParamsDeserialize};
 
 pub struct ParamsSpace<'a, DB> {
     pub(super) inner: ImmutablePrefixStore<'a, DB>,
@@ -27,7 +27,7 @@ impl<DB: Database> ParamsSpace<'_, DB> {
     }
 
     /// Return only field from structure.
-    pub fn params_field<T: Params, F: From<String>>(&self, path: &str) -> Option<F> {
+    pub fn params_field<F: From<ParamString>>(&self, path: &str) -> Option<F> {
         let param_string = parse_param_bytes(self.inner.get(path)?);
 
         Some(F::from(param_string))

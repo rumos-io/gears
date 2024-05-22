@@ -1,7 +1,7 @@
 use database::Database;
 use store_crate::{types::prefix::mutable::MutablePrefixStore, WritePrefixStore};
 
-use super::{space::ParamsSpace, Params, ParamsDeserialize};
+use super::{space::ParamsSpace, ParamString, Params, ParamsDeserialize};
 
 pub struct ParamsSpaceMut<'a, DB> {
     pub(super) inner: MutablePrefixStore<'a, DB>,
@@ -21,8 +21,8 @@ impl<DB: Database> ParamsSpaceMut<'_, DB> {
     }
 
     /// Return only field from structure.
-    pub fn params_field<T: Params, F: From<String>>(&self, path: &str) -> Option<F> {
-        self.to_immutable().params_field::<T, F>(path)
+    pub fn params_field<F: From<ParamString>>(&self, path: &str) -> Option<F> {
+        self.to_immutable().params_field::<F>(path)
     }
 
     pub fn params_set<T: Params>(&mut self, params: &T) {

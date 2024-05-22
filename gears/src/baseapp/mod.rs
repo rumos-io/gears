@@ -8,9 +8,9 @@ use std::{
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::{AppError, POISONED_LOCK},
-    params::{Keeper, ParamsSubspaceKey},
+    params_v2::{keeper::ParamsKeeper, ParamsSubspaceKey},
     types::{
-        context::query::QueryContext,
+        context::{init::InitContext, query::QueryContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
@@ -19,14 +19,11 @@ use crate::{
 use bytes::Bytes;
 use database::RocksDB;
 use store_crate::{
-    types::{
-        multi::{immutable::MultiStore, MultiBank},
-        query::QueryMultiStore,
-    },
+    types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore, StoreKey,
 };
 use tendermint::types::{
-    chain_id::ChainIdErrors,
+    chain_id::{ChainId, ChainIdErrors},
     proto::{event::Event, header::RawHeader},
     request::query::RequestQuery,
 };
@@ -76,20 +73,27 @@ impl<
 {
     pub fn new(
         db: RocksDB,
-        params_keeper: Keeper<SK, PSK>,
+        params_keeper: ParamsKeeper<SK>,
         params_subspace_key: PSK,
         abci_handler: H,
         options: NodeOptions,
     ) -> Self {
-        let multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
+        let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,
             params_subspace_key,
         };
 
+        // TODO:NOW Maybe... another context without this data?
+        let init_ctx = InitContext::new(
+            &mut multi_store,
+            0,
+            ChainId::new("todo-900").expect("default should be valid"),
+        );
+
         let max_gas = baseapp_params_keeper
-            .block_params(&MultiStore::from(&multi_store))
+            .block_params(&init_ctx)
             .map(|e| e.max_gas)
             .unwrap_or_default();
 

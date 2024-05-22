@@ -4,7 +4,8 @@ use crate::baseapp::genesis::Genesis;
 use crate::baseapp::options::NodeOptions;
 use crate::baseapp::BaseApp;
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
-use crate::params::{Keeper, ParamsSubspaceKey};
+use crate::params_v2::keeper::ParamsKeeper;
+use crate::params_v2::ParamsSubspaceKey;
 use crate::rest::{run_rest_server, RestState};
 use crate::types::base::min_gas::MinGasPrices;
 use crate::types::tx::TxMessage;
@@ -78,7 +79,7 @@ pub fn run<
     AI: ApplicationInfo,
 >(
     cmd: RunCommand,
-    params_keeper: Keeper<SK, PSK>,
+    params_keeper: ParamsKeeper<SK>,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
     router: Router<RestState<SK, PSK, M, H, G, AI>>,

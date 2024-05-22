@@ -7,7 +7,7 @@ pub mod config;
 pub mod crypto;
 pub mod defaults;
 pub mod error;
-pub mod params;
+// pub mod params;
 pub mod params_v2;
 pub mod rest;
 pub(crate) mod runtime;

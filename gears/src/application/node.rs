@@ -5,11 +5,10 @@ use super::{
 use crate::{
     baseapp::genesis::Genesis,
     commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
-    params::Keeper as ParamsKeeper,
+    params_v2::{keeper::ParamsKeeper, ParamsSubspaceKey},
 };
 use crate::{
     config::{ApplicationConfig, Config},
-    params::ParamsSubspaceKey,
     rest::RestState,
     types::tx::TxMessage,
 };
