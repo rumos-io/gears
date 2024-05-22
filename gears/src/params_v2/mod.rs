@@ -30,14 +30,17 @@ pub trait ParamsDeserialize: Params {
 
 /// Parse params bytes into valid `String` which must we able to parse into param ***field***
 fn parse_param_bytes(value: Vec<u8>) -> ParamString {
-    String::from_utf8(value)
-        .expect("should be valid utf-8")
+    let value = String::from_utf8(value).expect("should be valid utf-8");
+
+    // Some types like `bool` gets saved without
+    if let Some(cleared) = value
         .strip_suffix('\"')
-        .expect("should have suffix")
-        .strip_prefix('\"')
-        .expect("should have prefix")
-        .to_owned()
-        .into()
+        .and_then(|this| this.strip_prefix('\"'))
+    {
+        cleared.into()
+    } else {
+        value.into()
+    }
 }
 
 pub fn parse_primitive<T: From<ParamString>>(value: Vec<u8>) -> T {
