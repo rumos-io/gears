@@ -1,8 +1,7 @@
 use database::Database;
-use serde::{de::DeserializeOwned, Serialize};
 use store_crate::{types::prefix::mutable::MutablePrefixStore, WritePrefixStore};
 
-use super::{errors::ParamsError, space::ParamsSpace, ParamsPath};
+use super::{space::ParamsSpace, Params, ParamsDeserialize};
 
 pub struct ParamsSpaceMut<'a, DB> {
     pub(super) inner: MutablePrefixStore<'a, DB>,
@@ -17,30 +16,20 @@ impl<DB> ParamsSpaceMut<'_, DB> {
 }
 
 impl<DB: Database> ParamsSpaceMut<'_, DB> {
-    pub fn params<T: DeserializeOwned, PP: ParamsPath>(&self, path: &PP) -> Result<T, ParamsError> {
-        self.to_immutable().params(path)
+    pub fn params<T: ParamsDeserialize>(&self) -> Option<T> {
+        self.to_immutable().params()
     }
 
-    pub fn params_field<T: DeserializeOwned, F, PP: ParamsPath, L: FnOnce(T) -> Option<F>>(
-        &self,
-        path: &PP,
-        ex: L,
-    ) -> Result<F, ParamsError> {
-        self.to_immutable().params_field(path, ex)
+    /// Return only field from structure.
+    pub fn params_field<T: Params, F: From<String>>(&self, path: &str) -> Option<F> {
+        self.to_immutable().params_field::<T, F>(path)
     }
 
-    pub fn params_set<T: Serialize, PP: ParamsPath>(
-        &mut self,
-        path: &PP,
-        params: &T,
-    ) -> Result<(), ParamsError> {
-        let params_json = serde_json::to_string(params)?;
+    pub fn params_set<T: Params>(&mut self, params: &T) {
+        let params = params.serialize();
 
-        self.inner.set(
-            path.key().as_bytes().into_iter().cloned(),
-            params_json.into_bytes(),
-        );
-
-        Ok(())
+        for (key, value) in params {
+            self.inner.set(key.as_bytes().into_iter().cloned(), value)
+        }
     }
 }

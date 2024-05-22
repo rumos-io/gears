@@ -1,8 +1,11 @@
+use std::collections::HashMap;
+
 use database::Database;
-use serde::de::DeserializeOwned;
 use store_crate::{types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore};
 
-use super::{errors::ParamsError, ParamsPath};
+use crate::params_v2::parse_param_bytes;
+
+use super::{Params, ParamsDeserialize};
 
 pub struct ParamsSpace<'a, DB> {
     pub(super) inner: ImmutablePrefixStore<'a, DB>,
@@ -10,34 +13,23 @@ pub struct ParamsSpace<'a, DB> {
 
 impl<DB: Database> ParamsSpace<'_, DB> {
     /// Return whole serialized structure.
-    pub fn params<T: DeserializeOwned, PP: ParamsPath>(&self, path: &PP) -> Result<T, ParamsError> {
-        let params_json = self.inner.get(path.key()).ok_or(ParamsError::NotFound)?;
-        let params = serde_json::from_slice::<T>(&params_json)?;
+    ///
+    /// It's recommended to use `Self::params_field` 'cause it requires less writing parsing code from you
+    pub fn params<T: ParamsDeserialize>(&self) -> Option<T> {
+        let keys = T::keys();
+        let mut params_fields = HashMap::with_capacity(keys.len());
 
-        Ok(params)
+        for key in keys {
+            params_fields.insert(key, self.inner.get(key)?);
+        }
+
+        Some(T::deserialize(params_fields))
     }
 
-    /// Return only field from structure. Make sense to use if structure have all fields optional.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// struct Params // This structure should be able to deserialize always
-    /// {
-    ///     field_a : Option<i32>,
-    ///     field_b : Option<u32>,
-    /// }
-    /// ```
-    pub fn params_field<T: DeserializeOwned, F, PP: ParamsPath, L: FnOnce(T) -> Option<F>>(
-        &self,
-        path: &PP,
-        ex: L,
-    ) -> Result<F, ParamsError> {
-        let params_json = self.inner.get(path.key()).ok_or(ParamsError::NotFound)?;
-        let params = serde_json::from_slice::<T>(&params_json)?;
+    /// Return only field from structure.
+    pub fn params_field<T: Params, F: From<String>>(&self, path: &str) -> Option<F> {
+        let param_string = parse_param_bytes(self.inner.get(path)?);
 
-        let field = ex(params).ok_or(ParamsError::MissingField)?;
-
-        Ok(field)
+        Some(F::from(param_string))
     }
 }
