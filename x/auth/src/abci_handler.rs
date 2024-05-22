@@ -6,7 +6,7 @@ use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
 use gears::types::query::account::QueryAccountRequest;
-use gears::{error::AppError, params::ParamsSubspaceKey};
+use gears::{error::AppError, params_v2::ParamsSubspaceKey};
 
 use crate::{GenesisState, Keeper};
 

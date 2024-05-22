@@ -1,17 +1,38 @@
+use std::collections::HashMap;
+
 use gears::core::serializers::serialize_number_to_string;
-use gears::params::ParamsSubspaceKey;
-use gears::store::database::prefix::PrefixDB;
+use gears::params_v2::keeper::ParamsKeeper;
+use gears::params_v2::{parse_primitive_optional, Params, ParamsDeserialize, ParamsSubspaceKey};
 use gears::store::database::Database;
-use gears::store::{
-    types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore, StoreKey, WritePrefixStore,
-};
-use gears::store::{QueryableMultiKVStore, TransactionalMultiKVStore};
+use gears::store::StoreKey;
+use gears::types::context::{QueryableContext, TransactionalContext};
 use gears::x::keepers::auth::AuthParams;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 
+const KEY_MAX_MEMO_CHARACTERS: &str = "MaxMemoCharacters";
+// [u8; 17] = [
+//     077, 097, 120, 077, 101, 109, 111, 067, 104, 097, 114, 097, 099, 116, 101, 114, 115,
+// ]; // "MaxMemoCharacters"
+const KEY_TX_SIG_LIMIT: &str = "TxSigLimit";
+// [u8; 10] = [084, 120, 083, 105, 103, 076, 105, 109, 105, 116]; // "TxSigLimit"
+const KEY_TX_SIZE_COST_PER_BYTE: &str = "TxSizeCostPerByte";
+// [u8; 17] = [
+//     084, 120, 083, 105, 122, 101, 067, 111, 115, 116, 080, 101, 114, 066, 121, 116, 101,
+// ]; // "TxSizeCostPerByte"
+const KEY_SIG_VERIFY_COST_ED25519: &str = "SigVerifyCostED25519";
+// [u8; 20] = [
+//     083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 069, 068, 050, 053, 053, 049,
+//     057,
+// ]; // "SigVerifyCostED25519"
+const KEY_SIG_VERIFY_COST_SECP256K1: &str = "SigVerifyCostSecp256k1";
+// [u8; 22] = [
+//     083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 083, 101, 099, 112, 050, 053,
+//     054, 107, 049,
+// ]; // "SigVerifyCostSecp256k1"
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Params {
+pub struct AuthsParams {
     #[serde(serialize_with = "serialize_number_to_string")]
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub max_memo_characters: u64,
@@ -29,7 +50,70 @@ pub struct Params {
     pub sig_verify_cost_secp256k1: u64,
 }
 
-impl AuthParams for Params {
+impl Params for AuthsParams {
+    fn keys() -> std::collections::HashSet<&'static str> {
+        [
+            KEY_MAX_MEMO_CHARACTERS,
+            KEY_TX_SIG_LIMIT,
+            KEY_TX_SIZE_COST_PER_BYTE,
+            KEY_SIG_VERIFY_COST_ED25519,
+            KEY_SIG_VERIFY_COST_SECP256K1,
+        ]
+        .into_iter()
+        .collect()
+    }
+
+    fn serialize(&self) -> std::collections::HashMap<&'static str, Vec<u8>> {
+        let mut hash_map = HashMap::with_capacity(5);
+
+        hash_map.insert(
+            KEY_MAX_MEMO_CHARACTERS,
+            format!("\"{}\"", self.max_memo_characters).into_bytes(),
+        );
+
+        hash_map.insert(
+            KEY_TX_SIG_LIMIT,
+            format!("\"{}\"", self.tx_sig_limit).into_bytes(),
+        );
+
+        hash_map.insert(
+            KEY_TX_SIZE_COST_PER_BYTE,
+            format!("\"{}\"", self.tx_size_cost_per_byte).into_bytes(),
+        );
+
+        hash_map.insert(
+            KEY_SIG_VERIFY_COST_ED25519,
+            format!("\"{}\"", self.sig_verify_cost_ed25519).into_bytes(),
+        );
+
+        hash_map.insert(
+            KEY_SIG_VERIFY_COST_SECP256K1,
+            format!("\"{}\"", self.sig_verify_cost_secp256k1).into_bytes(),
+        );
+
+        hash_map
+    }
+}
+
+impl ParamsDeserialize for AuthsParams {
+    fn deserialize(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+        Self {
+            max_memo_characters: parse_primitive_optional(fields.remove(KEY_MAX_MEMO_CHARACTERS)),
+            tx_sig_limit: parse_primitive_optional(fields.remove(KEY_TX_SIG_LIMIT)),
+            tx_size_cost_per_byte: parse_primitive_optional(
+                fields.remove(KEY_TX_SIZE_COST_PER_BYTE),
+            ),
+            sig_verify_cost_ed25519: parse_primitive_optional(
+                fields.remove(KEY_SIG_VERIFY_COST_ED25519),
+            ),
+            sig_verify_cost_secp256k1: parse_primitive_optional(
+                fields.remove(KEY_SIG_VERIFY_COST_SECP256K1),
+            ),
+        }
+    }
+}
+
+impl AuthParams for AuthsParams {
     fn max_memo_characters(&self) -> u64 {
         self.max_memo_characters
     }
@@ -43,23 +127,7 @@ impl AuthParams for Params {
     }
 }
 
-const KEY_MAX_MEMO_CHARACTERS: [u8; 17] = [
-    077, 097, 120, 077, 101, 109, 111, 067, 104, 097, 114, 097, 099, 116, 101, 114, 115,
-]; // "MaxMemoCharacters"
-const KEY_TX_SIG_LIMIT: [u8; 10] = [084, 120, 083, 105, 103, 076, 105, 109, 105, 116]; // "TxSigLimit"
-const KEY_TX_SIZE_COST_PER_BYTE: [u8; 17] = [
-    084, 120, 083, 105, 122, 101, 067, 111, 115, 116, 080, 101, 114, 066, 121, 116, 101,
-]; // "TxSizeCostPerByte"
-const KEY_SIG_VERIFY_COST_ED25519: [u8; 20] = [
-    083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 069, 068, 050, 053, 053, 049,
-    057,
-]; // "SigVerifyCostED25519"
-const KEY_SIG_VERIFY_COST_SECP256K1: [u8; 22] = [
-    083, 105, 103, 086, 101, 114, 105, 102, 121, 067, 111, 115, 116, 083, 101, 099, 112, 050, 053,
-    054, 107, 049,
-]; // "SigVerifyCostSecp256k1"
-
-pub const DEFAULT_PARAMS: Params = Params {
+pub const DEFAULT_PARAMS: AuthsParams = AuthsParams {
     max_memo_characters: 256,
     tx_sig_limit: 7,
     tx_size_cost_per_byte: 10,
@@ -69,94 +137,26 @@ pub const DEFAULT_PARAMS: Params = Params {
 
 #[derive(Debug, Clone)]
 pub struct AuthParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: gears::params::Keeper<SK, PSK>,
+    pub params_keeper: ParamsKeeper<SK>,
     pub params_subspace_key: PSK,
 }
 
-// TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthParamsKeeper<SK, PSK> {
-    fn parse_param(value: Vec<u8>) -> u64 {
-        String::from_utf8(value)
-            .expect("should be valid utf-8")
-            .strip_suffix('\"')
-            .expect("should have suffix")
-            .strip_prefix('\"')
-            .expect("should have prefix")
-            .parse()
-            .expect("should be valid u64")
+    pub fn get<DB: Database, CTX: QueryableContext<DB, SK>>(&self, ctx: &CTX) -> AuthsParams {
+        let store = self.params_keeper.subspace(ctx, &self.params_subspace_key);
+
+        store.params().expect("Required to exists")
     }
 
-    fn get_raw_param<DB: Database>(key: &[u8], store: &ImmutablePrefixStore<'_, DB>) -> Vec<u8> {
-        store
-            .get(key)
-            .expect("key should be set in kv store")
-            .clone()
-    }
-
-    pub fn get<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Params {
-        let store = self
-            .params_keeper
-            .raw_subspace(ctx, &self.params_subspace_key);
-
-        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_MAX_MEMO_CHARACTERS, &store);
-        let max_memo_characters = Self::parse_param(raw);
-
-        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_TX_SIG_LIMIT, &store);
-        let tx_sig_limit = Self::parse_param(raw);
-
-        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_TX_SIZE_COST_PER_BYTE, &store);
-        let tx_size_cost_per_byte = Self::parse_param(raw);
-
-        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_SIG_VERIFY_COST_ED25519, &store);
-        let sig_verify_cost_ed25519 = Self::parse_param(raw);
-
-        let raw = Self::get_raw_param::<PrefixDB<DB>>(&KEY_SIG_VERIFY_COST_SECP256K1, &store);
-        let sig_verify_cost_secp256k1 = Self::parse_param(raw);
-
-        Params {
-            max_memo_characters,
-            tx_sig_limit,
-            tx_size_cost_per_byte,
-            sig_verify_cost_ed25519,
-            sig_verify_cost_secp256k1,
-        }
-    }
-
-    pub fn set<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
+    pub fn set<DB: Database, KV: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut KV,
-        params: Params,
+        params: AuthsParams,
     ) {
         let mut store = self
             .params_keeper
-            .raw_subspace_mut(ctx, &self.params_subspace_key);
+            .subspace_mut(ctx, &self.params_subspace_key);
 
-        store.set(
-            KEY_MAX_MEMO_CHARACTERS,
-            format!("\"{}\"", params.max_memo_characters).into_bytes(),
-        );
-
-        store.set(
-            KEY_TX_SIG_LIMIT,
-            format!("\"{}\"", params.tx_sig_limit).into_bytes(),
-        );
-
-        store.set(
-            KEY_TX_SIZE_COST_PER_BYTE,
-            format!("\"{}\"", params.tx_size_cost_per_byte).into_bytes(),
-        );
-
-        store.set(
-            KEY_SIG_VERIFY_COST_ED25519,
-            format!("\"{}\"", params.sig_verify_cost_ed25519).into_bytes(),
-        );
-
-        store.set(
-            KEY_SIG_VERIFY_COST_SECP256K1,
-            format!("\"{}\"", params.sig_verify_cost_secp256k1).into_bytes(),
-        );
+        store.params_set(&params)
     }
 }

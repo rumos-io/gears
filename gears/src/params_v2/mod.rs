@@ -3,9 +3,12 @@ use std::{
     hash::Hash,
 };
 
+use self::string::ParamString;
+
 pub mod keeper;
 pub mod space;
 pub mod space_mut;
+pub mod string;
 
 pub trait ParamsSubspaceKey: Hash + Eq + Clone + Send + Sync + 'static {
     fn name(&self) -> &'static str; // TODO:NOW Cow<'static>?
@@ -26,7 +29,7 @@ pub trait ParamsDeserialize: Params {
 }
 
 /// Parse params bytes into valid `String` which must we able to parse into param ***field***
-pub fn parse_param_bytes(value: Vec<u8>) -> ParamString {
+fn parse_param_bytes(value: Vec<u8>) -> ParamString {
     String::from_utf8(value)
         .expect("should be valid utf-8")
         .strip_suffix('\"')
@@ -37,16 +40,10 @@ pub fn parse_param_bytes(value: Vec<u8>) -> ParamString {
         .into()
 }
 
-pub struct ParamString(pub String);
-
-impl From<String> for ParamString {
-    fn from(value: String) -> Self {
-        Self(value)
-    }
+pub fn parse_primitive<T: From<ParamString>>(value: Vec<u8>) -> T {
+    parse_param_bytes(value).into()
 }
 
-impl From<&str> for ParamString {
-    fn from(value: &str) -> Self {
-        Self(value.to_owned())
-    }
+pub fn parse_primitive_optional<T: From<ParamString>>(value: Option<Vec<u8>>) -> T {
+    parse_param_bytes(value.expect("Params expected to exists")).into()
 }
