@@ -3,7 +3,7 @@ use store_crate::{QueryableKVStore, StoreKey, TransactionalKVStore};
 
 use crate::types::context::{QueryableContext, TransactionalContext};
 
-use super::{space::ParamsSpace, space_mut::ParamsSpaceMut, ParamsSubspaceKeyV2};
+use super::{space::ParamsSpace, space_mut::ParamsSpaceMut, ParamsSubspaceKey};
 
 #[derive(Debug, Clone)]
 pub struct ParamsKeeper<SK> {
@@ -17,7 +17,7 @@ impl<SK> ParamsKeeper<SK> {
 }
 
 impl<SK: StoreKey> ParamsKeeper<SK> {
-    pub fn subspace<'a, DB: Database, CTX: QueryableContext<DB, SK>, PSK: ParamsSubspaceKeyV2>(
+    pub fn subspace<'a, DB: Database, CTX: QueryableContext<DB, SK>, PSK: ParamsSubspaceKey>(
         &self,
         ctx: &'a CTX,
         params_subspace_key: &PSK,
@@ -33,7 +33,7 @@ impl<SK: StoreKey> ParamsKeeper<SK> {
         'a,
         DB: Database,
         CTX: TransactionalContext<DB, SK>,
-        PSK: ParamsSubspaceKeyV2,
+        PSK: ParamsSubspaceKey,
     >(
         &self,
         ctx: &'a mut CTX,
