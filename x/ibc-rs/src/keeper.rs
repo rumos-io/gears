@@ -1,5 +1,5 @@
 use gears::{
-    params::ParamsSubspaceKey,
+    params_v2::{keeper::ParamsKeeper, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
     types::context::{init::InitContext, query::QueryContext, tx::TxContext},
 };
@@ -10,7 +10,6 @@ use crate::{
     },
     ics03_connection::Keeper as ConnectionKeeper,
     ics04_channel::Keeper as ChannelKeeper,
-    params::IBCParamsKeeper,
     types::{
         context::{ClientRouter, Context},
         genesis::GenesisState,
@@ -20,26 +19,16 @@ use ibc::core::{client::types::proto::v1::QueryClientStatesRequest, entrypoint::
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK, PSK> {
-    _store_key: SK,                               //TOOD: remove this
-    _ibc_params_keeper: IBCParamsKeeper<SK, PSK>, //TOOD: remove this
+    _store_key: SK, //TOOD: remove this
     client_keeper: ClientKeeper<SK, PSK>,
     connection_keeper: ConnectionKeeper<SK, PSK>,
     channel_keeper: ChannelKeeper<SK>,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(
-        store_key: SK,
-        params_keeper: gears::params::Keeper<SK, PSK>,
-        params_subspace_key: PSK,
-    ) -> Self {
-        let ibc_params_keeper = IBCParamsKeeper {
-            params_keeper: params_keeper.clone(),
-            params_subspace_key: params_subspace_key.clone(),
-        };
+    pub fn new(store_key: SK, params_keeper: ParamsKeeper<SK>, params_subspace_key: PSK) -> Self {
         Self {
             _store_key: store_key.clone(),
-            _ibc_params_keeper: ibc_params_keeper,
             client_keeper: ClientKeeper::new(
                 store_key.clone(),
                 params_keeper.clone(),

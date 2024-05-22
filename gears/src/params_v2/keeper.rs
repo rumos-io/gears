@@ -5,6 +5,7 @@ use crate::types::context::{QueryableContext, TransactionalContext};
 
 use super::{space::ParamsSpace, space_mut::ParamsSpaceMut, ParamsSubspaceKey};
 
+// TODO:NOW Remove this structure as meaningless and make methods public
 #[derive(Debug, Clone)]
 pub struct ParamsKeeper<SK> {
     store_key: SK,

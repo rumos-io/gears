@@ -89,3 +89,17 @@ impl From<ParamString> for isize {
         value.0.parse().expect("should be valid")
     }
 }
+
+impl From<ParamString> for String {
+    fn from(value: ParamString) -> Self {
+        value.0
+    }
+}
+
+// impl<T> From<ParamString> for Vec<T>
+// {
+//     fn from(value: ParamString) -> Self {
+//         let vec = serde_json::from_str(&value.0).expect("should be valid");
+
+//     }
+// }

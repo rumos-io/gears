@@ -2,7 +2,7 @@
 #[allow(unused_variables)] // TODO: remove
 #[allow(unused_imports)] //TODO: remove
 use derive_more::{From, TryInto};
-use gears::params::ParamsSubspaceKey;
+use gears::params_v2::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::QueryableKVStore;
 use gears::store::StoreKey;
@@ -40,7 +40,6 @@ use crate::{
     ics02_client::{message::MsgCreateClient, Keeper as ClientKeeper},
     ics03_connection::Keeper as ConnectionKeeper,
     ics04_channel::Keeper as ChannelKeeper,
-    params::IBCParamsKeeper,
     types::genesis::GenesisState,
 };
 
@@ -48,7 +47,10 @@ use crate::ics02_client::ClientParamsKeeper;
 //use super::keeper::KEY_NEXT_CLIENT_SEQUENCE;
 //use super::params::ClientParamsKeeper;
 use crate::ics02_client::KEY_NEXT_CLIENT_SEQUENCE;
-use crate::params::CLIENT_STATE_KEY;
+
+pub const CLIENT_STATE_KEY: &str = "clientState";
+pub const CLIENT_PARAMS_KEY: &str = "clientParams";
+pub const NEXT_CLIENT_SEQUENCE: &str = "nextClientSequence";
 
 pub const KEY_CLIENT_STORE_PREFIX: &str = "clients";
 pub const KEY_CONSENSUS_STATE_PREFIX: &str = "consensusStates";

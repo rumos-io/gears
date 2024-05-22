@@ -1,20 +1,19 @@
+use gears::params_v2::keeper::ParamsKeeper;
+use gears::params_v2::ParamsSubspaceKey;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::WritePrefixStore;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
 use gears::{
-    params::ParamsSubspaceKey,
     store::{database::Database, QueryableKVStore, StoreKey},
     types::context::QueryableContext,
 };
 use ibc::primitives::ToVec;
 use ibc::{core::host::types::path::ClientStatePath, primitives::proto::Protobuf};
 
-use crate::{
-    ics02_client::types::{client_state::ClientState, query::IdentifiedClientState},
-    params::CLIENT_STATE_KEY,
-};
+use crate::ics02_client::types::{client_state::ClientState, query::IdentifiedClientState};
+use crate::types::context::CLIENT_STATE_KEY;
 
 use super::{params::ClientParamsKeeper, types::query::QueryClientStatesResponse, GenesisState};
 use gears::store::TransactionalKVStore;
@@ -33,11 +32,7 @@ pub struct Keeper<SK, PSK> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(
-        store_key: SK,
-        params_keeper: gears::params::Keeper<SK, PSK>,
-        params_subspace_key: PSK,
-    ) -> Self {
+    pub fn new(store_key: SK, params_keeper: ParamsKeeper<SK>, params_subspace_key: PSK) -> Self {
         let client_params_keeper = ClientParamsKeeper {
             params_keeper,
             params_subspace_key,
@@ -53,8 +48,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState,
     ) {
-        self.client_params_keeper
-            .set(&mut ctx.multi_store_mut(), genesis.params.clone());
+        self.client_params_keeper.set(ctx, genesis.params.clone());
 
         // TODO: the following lines(from ibc-go) have not been implemented yet:
 
