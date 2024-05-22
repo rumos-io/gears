@@ -1,18 +1,15 @@
 use std::collections::{HashMap, HashSet};
 
-use gears::params::keeper::ParamsKeeper;
-use gears::params::{parse_primitive_optional, Params, ParamsDeserialize, ParamsSubspaceKey};
+use gears::params::{
+    parse_primitive_unwrap, subspace, subspace_mut, Params, ParamsDeserialize, ParamsSubspaceKey,
+};
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::types::context::{QueryableContext, TransactionalContext};
 use serde::{Deserialize, Serialize};
 
 const KEY_SEND_ENABLED: &str = "SendEnabled";
-// [u8; 11] = [083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100]; // "SendEnabled"
 const KEY_DEFAULT_SEND_ENABLED: &str = "DefaultSendEnabled";
-//  [u8; 18] = [
-//     068, 101, 102, 097, 117, 108, 116, 083, 101, 110, 100, 069, 110, 097, 098, 108, 101, 100,
-// ]; // "DefaultSendEnabled"
 
 // NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -49,21 +46,20 @@ impl Params for BankParams {
 impl ParamsDeserialize for BankParams {
     fn deserialize(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
-            default_send_enabled: parse_primitive_optional(fields.remove(KEY_DEFAULT_SEND_ENABLED)),
+            default_send_enabled: parse_primitive_unwrap(fields.remove(KEY_DEFAULT_SEND_ENABLED)),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: ParamsKeeper<SK>,
+    pub store_key: SK,
     pub params_subspace_key: PSK,
 }
 
-// TODO: add a macro to create this?
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
     pub fn get<DB: Database, CTX: QueryableContext<DB, SK>>(&self, ctx: &CTX) -> BankParams {
-        let store = self.params_keeper.subspace(ctx, &self.params_subspace_key);
+        let store = subspace(ctx, &self.store_key, &self.params_subspace_key);
 
         store.params().expect("Required to be set")
     }
@@ -73,9 +69,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
         ctx: &mut CTX,
         params: BankParams,
     ) {
-        let mut store = self
-            .params_keeper
-            .subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
 
         store.params_set(&params)
     }

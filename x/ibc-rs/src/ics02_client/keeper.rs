@@ -1,4 +1,3 @@
-use gears::params::keeper::ParamsKeeper;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
@@ -32,9 +31,9 @@ pub struct Keeper<SK, PSK> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(store_key: SK, params_keeper: ParamsKeeper<SK>, params_subspace_key: PSK) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
         let client_params_keeper = ClientParamsKeeper {
-            params_keeper,
+            store_key: store_key.clone(),
             params_subspace_key,
         };
         Self {

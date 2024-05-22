@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use gears::core::serializers::serialize_number_to_string;
-use gears::params::keeper::ParamsKeeper;
-use gears::params::parse_primitive_optional;
+use gears::params::parse_primitive_unwrap;
+use gears::params::subspace;
+use gears::params::subspace_mut;
 use gears::params::Params;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSubspaceKey;
@@ -57,7 +58,7 @@ impl Params for ConnectionParams {
 impl ParamsDeserialize for ConnectionParams {
     fn deserialize(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
-            max_expected_time_per_block: parse_primitive_optional(
+            max_expected_time_per_block: parse_primitive_unwrap(
                 fields.remove(KEY_MAX_EXPECTED_TIME_PER_BLOCK),
             ),
         }
@@ -66,13 +67,13 @@ impl ParamsDeserialize for ConnectionParams {
 
 #[derive(Debug, Clone)]
 pub struct ConnectionParamsKeeper<SK, PSK> {
-    pub params_keeper: ParamsKeeper<SK>,
+    pub store_key: SK,
     pub params_subspace_key: PSK,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> ConnectionParamsKeeper<SK, PSK> {
     pub fn _get<DB: Database, CTX: QueryableContext<DB, SK>>(&self, ctx: &CTX) -> ConnectionParams {
-        let store = self.params_keeper.subspace(ctx, &self.params_subspace_key);
+        let store = subspace(ctx, &self.store_key, &self.params_subspace_key);
 
         store.params().expect("required to exists")
     }
@@ -82,9 +83,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ConnectionParamsKeeper<SK, PSK> {
         ctx: &mut CTX,
         params: ConnectionParams,
     ) {
-        let mut store = self
-            .params_keeper
-            .subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
 
         store.params_set(&params)
     }

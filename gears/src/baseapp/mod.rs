@@ -8,7 +8,7 @@ use std::{
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::{AppError, POISONED_LOCK},
-    params::{keeper::ParamsKeeper, ParamsSubspaceKey},
+    params::ParamsSubspaceKey,
     types::{
         context::{init::InitContext, query::QueryContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
@@ -73,7 +73,7 @@ impl<
 {
     pub fn new(
         db: RocksDB,
-        params_keeper: ParamsKeeper<SK>,
+        store_key: SK,
         params_subspace_key: PSK,
         abci_handler: H,
         options: NodeOptions,
@@ -81,7 +81,7 @@ impl<
         let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
-            params_keeper,
+            store_key,
             params_subspace_key,
         };
 

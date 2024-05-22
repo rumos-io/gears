@@ -5,7 +5,7 @@ use super::{
 use crate::{
     baseapp::genesis::Genesis,
     commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
-    params::{keeper::ParamsKeeper, ParamsSubspaceKey},
+    params::ParamsSubspaceKey,
 };
 use crate::{
     config::{ApplicationConfig, Config},
@@ -79,7 +79,7 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
             }
             AppCommands::Run(cmd) => run(
                 cmd,
-                ParamsKeeper::new(self.params_store_key),
+                self.params_store_key,
                 self.params_subspace_key,
                 self.abci_handler_builder,
                 self.router,

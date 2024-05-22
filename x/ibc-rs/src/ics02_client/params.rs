@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use gears::params::keeper::ParamsKeeper;
+use gears::params::subspace;
+use gears::params::subspace_mut;
 use gears::params::Params;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSubspaceKey;
@@ -61,13 +62,13 @@ impl ParamsDeserialize for ClientParams {
 
 #[derive(Debug, Clone)]
 pub struct ClientParamsKeeper<SK, PSK> {
-    pub params_keeper: ParamsKeeper<SK>,
+    pub store_key: SK,
     pub params_subspace_key: PSK,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> ClientParamsKeeper<SK, PSK> {
     pub fn get<DB: Database, KV: QueryableContext<DB, SK>>(&self, ctx: &KV) -> ClientParams {
-        let store = self.params_keeper.subspace(ctx, &self.params_subspace_key);
+        let store = subspace(ctx, &self.store_key, &self.params_subspace_key);
 
         store.params().expect("should exists")
     }
@@ -77,9 +78,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ClientParamsKeeper<SK, PSK> {
         ctx: &mut CTX,
         params: ClientParams,
     ) {
-        let mut store = self
-            .params_keeper
-            .subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
 
         store.params_set(&params)
     }

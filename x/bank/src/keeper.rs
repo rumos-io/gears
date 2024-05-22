@@ -5,7 +5,6 @@ use crate::types::query::{
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::params::keeper::ParamsKeeper;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::Database;
@@ -83,14 +82,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, AK> {
-    pub fn new(
-        store_key: SK,
-        params_keeper: ParamsKeeper<SK>,
-        params_subspace_key: PSK,
-        auth_keeper: AK,
-    ) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK, auth_keeper: AK) -> Self {
         let bank_params_keeper = BankParamsKeeper {
-            params_keeper,
+            store_key: store_key.clone(),
             params_subspace_key,
         };
         Keeper {

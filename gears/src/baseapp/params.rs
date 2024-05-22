@@ -7,7 +7,7 @@ use store_crate::StoreKey;
 use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::{
-    params::{keeper::ParamsKeeper, string::ParamString, Params, ParamsSubspaceKey},
+    params::{string::ParamString, subspace, subspace_mut, Params, ParamsSubspaceKey},
     types::context::{QueryableContext, TransactionalContext},
 };
 
@@ -102,7 +102,7 @@ impl From<inner::EvidenceParams> for EvidenceParams {
 
 #[derive(Debug, Clone)]
 pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: ParamsKeeper<SK>,
+    pub store_key: SK,
     pub params_subspace_key: PSK,
 }
 
@@ -113,9 +113,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
         ctx: &mut CTX,
         params: ConsensusParams,
     ) {
-        let mut store = self
-            .params_keeper
-            .subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
 
         store.params_set(&params);
     }
@@ -124,9 +122,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
         &self,
         store: &CTX,
     ) -> Option<BlockParams> {
-        let sub_store = self
-            .params_keeper
-            .subspace(store, &self.params_subspace_key);
+        let sub_store = subspace(store, &self.store_key, &self.params_subspace_key);
 
         sub_store.params_field::<BlockParams>(KEY_BLOCK_PARAMS)
     }

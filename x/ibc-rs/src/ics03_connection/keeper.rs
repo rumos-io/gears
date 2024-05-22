@@ -1,5 +1,5 @@
 use gears::{
-    params::{keeper::ParamsKeeper, ParamsSubspaceKey},
+    params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     types::context::init::InitContext,
 };
@@ -17,9 +17,9 @@ pub struct Keeper<SK, PSK> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(store_key: SK, params_keeper: ParamsKeeper<SK>, params_subspace_key: PSK) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
         let connection_params_keeper = ConnectionParamsKeeper {
-            params_keeper,
+            store_key: store_key.clone(),
             params_subspace_key,
         };
         Self {
