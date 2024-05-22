@@ -1,5 +1,6 @@
 use crate::{
     AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
+    QueryValidatorRequest,
 };
 use gears::{
     application::handlers::node::ABCIHandler as NodeABCIHandler,
@@ -70,6 +71,17 @@ impl<
         query: RequestQuery,
     ) -> Result<prost::bytes::Bytes, AppError> {
         match query.path.as_str() {
+            "/cosmos.staking.v1beta1.Query/Validator" => {
+                let req = QueryValidatorRequest::decode(query.data)
+                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_validator(ctx, req)?
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into()) // TODO:IBC
+            }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
                     .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;

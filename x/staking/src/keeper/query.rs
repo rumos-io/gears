@@ -1,8 +1,9 @@
-use gears::types::context::query::QueryContext;
-
-use crate::{DelegationResponse, QueryDelegationRequest, QueryDelegationResponse};
-
 pub use super::*;
+use crate::{
+    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryValidatorRequest,
+    QueryValidatorResponse,
+};
+use gears::types::context::query::QueryContext;
 
 impl<
         SK: StoreKey,
@@ -12,21 +13,25 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
+    pub fn query_validator<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorRequest,
+    ) -> Result<QueryValidatorResponse, AppError> {
+        let validator = self
+            .validator(ctx, &query.address)
+            .ok_or(AppError::Custom("Validator is not found".into()))?;
+        Ok(QueryValidatorResponse { validator })
+    }
+
     pub fn query_delegation<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
         query: QueryDelegationRequest,
     ) -> Result<QueryDelegationResponse, AppError> {
-        let delegator_address = query.delegator_address;
-        let validator_address = query.validator_address;
-        let delegation = if let Some(delegation) =
-            self.delegation(ctx, &delegator_address, &validator_address)
-        {
-            delegation
-        } else {
-            return Err(AppError::Custom("Delegation doesn't exists".into()));
-        };
-
+        let delegation = self
+            .delegation(ctx, &query.delegator_address, &query.validator_address)
+            .ok_or(AppError::Custom("Delegation doesn't exists".into()))?;
         let delegation_response = self.delegation_to_delegation_response(ctx, delegation)?;
         Ok(QueryDelegationResponse {
             delegation_response,
@@ -38,12 +43,9 @@ impl<
         ctx: &QueryContext<DB, SK>,
         delegation: Delegation,
     ) -> Result<DelegationResponse, AppError> {
-        let validator = if let Some(validator) = self.validator(ctx, &delegation.validator_address)
-        {
-            validator
-        } else {
-            return Err(AppError::AccountNotFound);
-        };
+        let validator = self
+            .validator(ctx, &delegation.validator_address)
+            .ok_or(AppError::AccountNotFound)?;
 
         let params = self.staking_params_keeper.get(&ctx.multi_store());
         let tokens = validator
