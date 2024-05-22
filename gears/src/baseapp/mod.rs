@@ -10,7 +10,7 @@ use crate::{
     error::{AppError, POISONED_LOCK},
     params::ParamsSubspaceKey,
     types::{
-        context::{init::InitContext, query::QueryContext},
+        context::{query::QueryContext, simple::SimpleContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
         header::Header,
         tx::{raw::TxWithRaw, TxMessage},
@@ -23,7 +23,7 @@ use store_crate::{
     ApplicationStore, StoreKey,
 };
 use tendermint::types::{
-    chain_id::{ChainId, ChainIdErrors},
+    chain_id::ChainIdErrors,
     proto::{event::Event, header::RawHeader},
     request::query::RequestQuery,
 };
@@ -85,15 +85,10 @@ impl<
             params_subspace_key,
         };
 
-        // TODO:NOW Maybe... another context without this data?
-        let init_ctx = InitContext::new(
-            &mut multi_store,
-            0,
-            ChainId::new("todo-900").expect("default should be valid"),
-        );
+        let ctx = SimpleContext::new(&mut multi_store);
 
         let max_gas = baseapp_params_keeper
-            .block_params(&init_ctx)
+            .block_params(&ctx)
             .map(|e| e.max_gas)
             .unwrap_or_default();
 

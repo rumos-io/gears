@@ -35,16 +35,18 @@ impl<DB: Database, SK: StoreKey> QueryContext<DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        self.multi_store.kv_store(store_key)
-    }
-
-    fn height(&self) -> u64 {
+impl<DB, SK> QueryContext<DB, SK> {
+    pub fn height(&self) -> u64 {
         self.height
     }
 
-    fn chain_id(&self) -> &ChainId {
+    pub fn chain_id(&self) -> &ChainId {
         &self.chain_id
+    }
+}
+
+impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+        self.multi_store.kv_store(store_key)
     }
 }

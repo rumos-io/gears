@@ -63,6 +63,14 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub(crate) fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
         MultiStoreMut::from(&mut *self.multi_store)
     }
+
+    pub fn height(&self) -> u64 {
+        self.height
+    }
+
+    pub fn chain_id(&self) -> &ChainId {
+        &self.header.chain_id
+    }
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
@@ -79,14 +87,6 @@ impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
-    }
-
-    fn height(&self) -> u64 {
-        self.height
-    }
-
-    fn chain_id(&self) -> &ChainId {
-        &self.header.chain_id
     }
 }
 
