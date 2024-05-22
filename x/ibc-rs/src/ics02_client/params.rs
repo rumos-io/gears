@@ -37,7 +37,7 @@ impl Params for ClientParams {
         [KEY_ALLOWED_CLIENTS].into_iter().collect()
     }
 
-    fn serialize(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
         let mut hash_map = HashMap::with_capacity(1);
 
         hash_map.insert(
@@ -50,7 +50,7 @@ impl Params for ClientParams {
 }
 
 impl ParamsDeserialize for ClientParams {
-    fn deserialize(fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             allowed_clients: serde_json::from_slice(
                 fields.get(KEY_ALLOWED_CLIENTS).expect("expected to exists"),

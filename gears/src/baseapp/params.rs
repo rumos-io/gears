@@ -135,7 +135,7 @@ impl Params for ConsensusParams {
             .collect()
     }
 
-    fn serialize(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
         let mut hash_map = HashMap::with_capacity(3);
 
         if let Some(params) = self.block.clone() {

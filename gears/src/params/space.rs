@@ -23,7 +23,7 @@ impl<DB: Database> ParamsSpace<'_, DB> {
             params_fields.insert(key, self.inner.get(key)?);
         }
 
-        Some(T::deserialize(params_fields))
+        Some(T::from_raw(params_fields))
     }
 
     /// Return only field from structure.

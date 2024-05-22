@@ -28,7 +28,7 @@ impl Params for BankParams {
             .collect()
     }
 
-    fn serialize(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
         let mut hash_map = HashMap::with_capacity(2);
 
         hash_map.insert(
@@ -44,7 +44,7 @@ impl Params for BankParams {
 }
 
 impl ParamsDeserialize for BankParams {
-    fn deserialize(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             default_send_enabled: parse_primitive_unwrap(fields.remove(KEY_DEFAULT_SEND_ENABLED)),
         }

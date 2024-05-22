@@ -43,7 +43,7 @@ impl Params for ConnectionParams {
         [KEY_MAX_EXPECTED_TIME_PER_BLOCK].into_iter().collect()
     }
 
-    fn serialize(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
         let mut hash_map = HashMap::with_capacity(1);
 
         hash_map.insert(
@@ -56,7 +56,7 @@ impl Params for ConnectionParams {
 }
 
 impl ParamsDeserialize for ConnectionParams {
-    fn deserialize(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             max_expected_time_per_block: parse_primitive_unwrap(
                 fields.remove(KEY_MAX_EXPECTED_TIME_PER_BLOCK),

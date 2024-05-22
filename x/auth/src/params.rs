@@ -49,7 +49,7 @@ impl Params for AuthsParams {
         .collect()
     }
 
-    fn serialize(&self) -> std::collections::HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> std::collections::HashMap<&'static str, Vec<u8>> {
         let mut hash_map = HashMap::with_capacity(5);
 
         hash_map.insert(
@@ -82,7 +82,7 @@ impl Params for AuthsParams {
 }
 
 impl ParamsDeserialize for AuthsParams {
-    fn deserialize(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
             max_memo_characters: parse_primitive_unwrap(fields.remove(KEY_MAX_MEMO_CHARACTERS)),
             tx_sig_limit: parse_primitive_unwrap(fields.remove(KEY_TX_SIG_LIMIT)),
