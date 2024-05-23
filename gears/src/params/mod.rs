@@ -1,18 +1,15 @@
-use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
-};
+use std::{collections::HashMap, hash::Hash, str::FromStr};
 
 use database::{prefix::PrefixDB, Database};
 use store_crate::{QueryableKVStore, StoreKey, TransactionalKVStore};
 
 use crate::types::context::{QueryableContext, TransactionalContext};
 
-use self::{space::ParamsSpace, space_mut::ParamsSpaceMut, string::ParamString};
+use self::{parsed::Params, space::ParamsSpace, space_mut::ParamsSpaceMut};
 
+pub mod parsed;
 pub mod space;
 pub mod space_mut;
-pub mod string;
 
 pub fn subspace<
     'a,
@@ -59,38 +56,66 @@ pub trait ParamsSubspaceKey: Hash + Eq + Clone + Send + Sync + 'static {
 //     fn module_params<PSK: ParamsSubspaceKey, P: Params>() -> (PSK, P);
 // }
 
-pub trait Params {
+pub trait ParamsSerialize {
     /// Return all unique keys for this structure
-    fn keys() -> HashSet<&'static str>;
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>>;
+    fn keys() -> HashMap<&'static str, ParamKind>;
+    fn to_raw(&self) -> HashMap<&'static str, (Vec<u8>, ParamKind)>;
 }
 
-pub trait ParamsDeserialize: Params {
-    fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self;
+pub trait ParamsDeserialize: ParamsSerialize {
+    fn from_raw(fields: HashMap<&'static str, (Vec<u8>, ParamKind)>) -> Self;
 }
 
-/// Parse params bytes into valid `String` which must we able to parse into param ***field***
-fn parse_param_bytes(value: Vec<u8>) -> ParamString {
-    let value = String::from_utf8(value).expect("should be valid utf-8");
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ParamKind {
+    Bytes,
+    String,
+    Bool,
+    U64,
+    I64,
+    U32,
+    I32,
+    U16,
+    I16,
+    U8,
+    I8,
+}
 
-    // Some types like `bool` gets saved without
-    if let Some(cleared) = value
-        .strip_suffix('\"')
-        .and_then(|this| this.strip_prefix('\"'))
-    {
-        cleared.into()
-    } else {
-        value.into()
+impl ParamKind {
+    pub fn parse_param(self, bytes: Vec<u8>) -> Params {
+        fn parse_primitive_bytes<T: FromStr>(value: Vec<u8>) -> T
+        where
+            <T as FromStr>::Err: std::fmt::Debug,
+        {
+            String::from_utf8(value)
+                .expect("should be valid utf-8")
+                .strip_suffix('\"')
+                .unwrap() // TODO
+                .strip_prefix('\"')
+                .unwrap() // TODO
+                .to_owned()
+                .parse()
+                .unwrap() // TODO
+        }
+
+        match self {
+            ParamKind::Bytes => Params::Bytes(bytes),
+            ParamKind::String => match String::from_utf8(bytes) {
+                Ok(var) => Params::String(var),
+                Err(err) => Params::InvalidCast(err.into_bytes()),
+            },
+            ParamKind::Bool => match bool::from_str(&String::from_utf8_lossy(&bytes)) {
+                Ok(var) => Params::Bool(var),
+                Err(_) => Params::InvalidCast(bytes),
+            },
+            ParamKind::U64 => Params::U64(parse_primitive_bytes(bytes)),
+            ParamKind::I64 => Params::I64(parse_primitive_bytes(bytes)),
+            ParamKind::U32 => Params::U32(parse_primitive_bytes(bytes)),
+            ParamKind::I32 => Params::I32(parse_primitive_bytes(bytes)),
+            ParamKind::U16 => Params::U16(parse_primitive_bytes(bytes)),
+            ParamKind::I16 => Params::I16(parse_primitive_bytes(bytes)),
+            ParamKind::U8 => Params::U8(parse_primitive_bytes(bytes)),
+            ParamKind::I8 => Params::I8(parse_primitive_bytes(bytes)),
+        }
     }
-}
-
-pub fn parse_primitive<T: From<ParamString>>(value: Option<Vec<u8>>) -> Option<T> {
-    match value {
-        Some(value) => Some(parse_param_bytes(value).into()),
-        None => None,
-    }
-}
-
-pub fn parse_primitive_unwrap<T: From<ParamString>>(value: Option<Vec<u8>>) -> T {
-    parse_param_bytes(value.expect("Params expected to exists")).into()
 }

@@ -1,7 +1,7 @@
 use database::Database;
 use store_crate::{types::prefix::mutable::MutablePrefixStore, WritePrefixStore};
 
-use super::{space::ParamsSpace, ParamString, Params, ParamsDeserialize};
+use super::{parsed::Params, space::ParamsSpace, ParamKind, ParamsDeserialize, ParamsSerialize};
 
 pub struct ParamsSpaceMut<'a, DB> {
     pub(super) inner: MutablePrefixStore<'a, DB>,
@@ -16,19 +16,20 @@ impl<DB> ParamsSpaceMut<'_, DB> {
 }
 
 impl<DB: Database> ParamsSpaceMut<'_, DB> {
+    /// Return whole serialized structure.
     pub fn params<T: ParamsDeserialize>(&self) -> Option<T> {
         self.to_immutable().params()
     }
 
     /// Return only field from structure.
-    pub fn params_field<F: From<ParamString>>(&self, path: &str) -> Option<F> {
-        self.to_immutable().params_field::<F>(path)
+    pub fn params_field(&self, path: &str, kind: ParamKind) -> Option<Params> {
+        self.to_immutable().params_field(path, kind)
     }
 
-    pub fn params_set<T: Params>(&mut self, params: &T) {
+    pub fn params_set<T: ParamsSerialize>(&mut self, params: &T) {
         let params = params.to_raw();
 
-        for (key, value) in params {
+        for (key, (value, _)) in params {
             self.inner.set(key.as_bytes().into_iter().cloned(), value)
         }
     }

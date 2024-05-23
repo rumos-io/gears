@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use database::Database;
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use store_crate::StoreKey;
 use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::{
-    params::{string::ParamString, subspace, subspace_mut, Params, ParamsSubspaceKey},
+    params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
     types::context::{QueryableContext, TransactionalContext},
 };
 
@@ -47,14 +47,6 @@ pub struct BlockParams {
     pub max_bytes: String,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_gas: i64,
-}
-
-impl From<ParamString> for BlockParams {
-    fn from(value: ParamString) -> Self {
-        let var = serde_json::from_str(&value.0);
-
-        var.expect("Should be valid")
-    }
 }
 
 impl From<inner::BlockParams> for BlockParams {
@@ -124,36 +116,55 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
     ) -> Option<BlockParams> {
         let sub_store = subspace(store, &self.store_key, &self.params_subspace_key);
 
-        sub_store.params_field::<BlockParams>(KEY_BLOCK_PARAMS)
+        serde_json::from_slice(
+            &sub_store
+                .params_field(KEY_BLOCK_PARAMS, ParamKind::Bytes)?
+                .bytes()
+                .expect("We sure that this is bytes"),
+        )
+        .ok()
     }
 }
 
-impl Params for ConsensusParams {
-    fn keys() -> HashSet<&'static str> {
-        [KEY_BLOCK_PARAMS, KEY_EVIDENCE_PARAMS, KEY_VALIDATOR_PARAMS]
-            .into_iter()
-            .collect()
+impl ParamsSerialize for ConsensusParams {
+    fn keys() -> HashMap<&'static str, ParamKind> {
+        [
+            (KEY_BLOCK_PARAMS, ParamKind::Bytes),
+            (KEY_EVIDENCE_PARAMS, ParamKind::Bytes),
+            (KEY_VALIDATOR_PARAMS, ParamKind::Bytes),
+        ]
+        .into_iter()
+        .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, (Vec<u8>, ParamKind)> {
         let mut hash_map = HashMap::with_capacity(3);
 
         if let Some(params) = self.block.clone() {
             let block_params = serde_json::to_string(&BlockParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(KEY_BLOCK_PARAMS, block_params.into_bytes());
+            hash_map.insert(
+                KEY_BLOCK_PARAMS,
+                (block_params.into_bytes(), ParamKind::Bytes),
+            );
         }
 
         if let Some(params) = self.evidence.clone() {
             let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(KEY_EVIDENCE_PARAMS, evidence_params.into_bytes());
+            hash_map.insert(
+                KEY_EVIDENCE_PARAMS,
+                (evidence_params.into_bytes(), ParamKind::Bytes),
+            );
         }
 
         if let Some(params) = self.validator.clone() {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(KEY_VALIDATOR_PARAMS, params.into_bytes());
+            hash_map.insert(
+                KEY_VALIDATOR_PARAMS,
+                (params.into_bytes(), ParamKind::Bytes),
+            );
         }
 
         hash_map
