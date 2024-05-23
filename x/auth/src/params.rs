@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::{
-    parse_primitive_unwrap, subspace, subspace_mut, Params, ParamsDeserialize, ParamsSubspaceKey,
+    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -36,45 +36,60 @@ pub struct AuthsParams {
     pub sig_verify_cost_secp256k1: u64,
 }
 
-impl Params for AuthsParams {
-    fn keys() -> std::collections::HashSet<&'static str> {
+impl ParamsSerialize for AuthsParams {
+    fn keys() -> HashMap<&'static str, ParamKind> {
         [
-            KEY_MAX_MEMO_CHARACTERS,
-            KEY_TX_SIG_LIMIT,
-            KEY_TX_SIZE_COST_PER_BYTE,
-            KEY_SIG_VERIFY_COST_ED25519,
-            KEY_SIG_VERIFY_COST_SECP256K1,
+            (KEY_MAX_MEMO_CHARACTERS, ParamKind::U64),
+            (KEY_TX_SIG_LIMIT, ParamKind::U64),
+            (KEY_TX_SIZE_COST_PER_BYTE, ParamKind::U64),
+            (KEY_SIG_VERIFY_COST_ED25519, ParamKind::U64),
+            (KEY_SIG_VERIFY_COST_SECP256K1, ParamKind::U64),
         ]
         .into_iter()
         .collect()
     }
 
-    fn to_raw(&self) -> std::collections::HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, (Vec<u8>, ParamKind)> {
         let mut hash_map = HashMap::with_capacity(5);
 
         hash_map.insert(
             KEY_MAX_MEMO_CHARACTERS,
-            format!("\"{}\"", self.max_memo_characters).into_bytes(),
+            (
+                format!("\"{}\"", self.max_memo_characters).into_bytes(),
+                ParamKind::U64,
+            ),
         );
 
         hash_map.insert(
             KEY_TX_SIG_LIMIT,
-            format!("\"{}\"", self.tx_sig_limit).into_bytes(),
+            (
+                format!("\"{}\"", self.tx_sig_limit).into_bytes(),
+                ParamKind::U64,
+            ),
         );
 
         hash_map.insert(
             KEY_TX_SIZE_COST_PER_BYTE,
-            format!("\"{}\"", self.tx_size_cost_per_byte).into_bytes(),
+            (
+                format!("\"{}\"", self.tx_size_cost_per_byte).into_bytes(),
+                ParamKind::U64,
+            ),
         );
 
         hash_map.insert(
             KEY_SIG_VERIFY_COST_ED25519,
-            format!("\"{}\"", self.sig_verify_cost_ed25519).into_bytes(),
+            (
+                format!("\"{}\"", self.sig_verify_cost_ed25519).into_bytes(),
+                ParamKind::U64,
+            ),
         );
 
         hash_map.insert(
             KEY_SIG_VERIFY_COST_SECP256K1,
-            format!("\"{}\"", self.sig_verify_cost_secp256k1).into_bytes(),
+            (
+                format!("\"{}\"", self.sig_verify_cost_secp256k1).into_bytes(),
+                ParamKind::U64,
+            ),
         );
 
         hash_map
@@ -82,17 +97,29 @@ impl Params for AuthsParams {
 }
 
 impl ParamsDeserialize for AuthsParams {
-    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, (Vec<u8>, ParamKind)>) -> Self {
+        // TODO:NOW THIS IS AWFUL
         Self {
-            max_memo_characters: parse_primitive_unwrap(fields.remove(KEY_MAX_MEMO_CHARACTERS)),
-            tx_sig_limit: parse_primitive_unwrap(fields.remove(KEY_TX_SIG_LIMIT)),
-            tx_size_cost_per_byte: parse_primitive_unwrap(fields.remove(KEY_TX_SIZE_COST_PER_BYTE)),
-            sig_verify_cost_ed25519: parse_primitive_unwrap(
-                fields.remove(KEY_SIG_VERIFY_COST_ED25519),
-            ),
-            sig_verify_cost_secp256k1: parse_primitive_unwrap(
-                fields.remove(KEY_SIG_VERIFY_COST_SECP256K1),
-            ),
+            max_memo_characters: ParamKind::U64
+                .parse_param(fields.remove(KEY_MAX_MEMO_CHARACTERS).unwrap().0)
+                .unsigned_64()
+                .unwrap(),
+            tx_sig_limit: ParamKind::U64
+                .parse_param(fields.remove(KEY_TX_SIG_LIMIT).unwrap().0)
+                .unsigned_64()
+                .unwrap(),
+            tx_size_cost_per_byte: ParamKind::U64
+                .parse_param(fields.remove(KEY_TX_SIZE_COST_PER_BYTE).unwrap().0)
+                .unsigned_64()
+                .unwrap(),
+            sig_verify_cost_ed25519: ParamKind::U64
+                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_ED25519).unwrap().0)
+                .unsigned_64()
+                .unwrap(),
+            sig_verify_cost_secp256k1: ParamKind::U64
+                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_SECP256K1).unwrap().0)
+                .unsigned_64()
+                .unwrap(),
         }
     }
 }
