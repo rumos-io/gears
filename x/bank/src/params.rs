@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use gears::params::{
-    parse_primitive_unwrap, subspace, subspace_mut, Params, ParamsDeserialize, ParamsSubspaceKey,
+    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -21,32 +21,44 @@ pub const DEFAULT_PARAMS: BankParams = BankParams {
     default_send_enabled: true,
 };
 
-impl Params for BankParams {
-    fn keys() -> HashSet<&'static str> {
-        [KEY_SEND_ENABLED, KEY_DEFAULT_SEND_ENABLED]
-            .into_iter()
-            .collect()
+impl ParamsSerialize for BankParams {
+    fn keys() -> HashMap<&'static str, ParamKind> {
+        [
+            (KEY_SEND_ENABLED, ParamKind::Bool),
+            (KEY_DEFAULT_SEND_ENABLED, ParamKind::Bytes),
+        ]
+        .into_iter()
+        .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
+    fn to_raw(&self) -> HashMap<&'static str, (Vec<u8>, ParamKind)> {
         let mut hash_map = HashMap::with_capacity(2);
 
         hash_map.insert(
             KEY_DEFAULT_SEND_ENABLED,
-            self.default_send_enabled.to_string().into_bytes(),
+            (
+                self.default_send_enabled.to_string().into_bytes(),
+                ParamKind::Bool,
+            ),
         );
 
         // The send_enabled field is hard coded to the empty list for now
-        hash_map.insert(KEY_SEND_ENABLED, "[]".as_bytes().to_vec());
+        hash_map.insert(
+            KEY_SEND_ENABLED,
+            ("[]".as_bytes().to_vec(), ParamKind::Bytes),
+        );
 
         hash_map
     }
 }
 
 impl ParamsDeserialize for BankParams {
-    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, (Vec<u8>, ParamKind)>) -> Self {
         Self {
-            default_send_enabled: parse_primitive_unwrap(fields.remove(KEY_DEFAULT_SEND_ENABLED)),
+            default_send_enabled: ParamKind::Bool
+                .parse_param(fields.remove(KEY_DEFAULT_SEND_ENABLED).unwrap().0)
+                .boolean()
+                .unwrap(),
         }
     }
 }
