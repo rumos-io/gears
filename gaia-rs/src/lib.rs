@@ -26,7 +26,7 @@ use gears::commands::NilAuxCommand;
 use gears::rest::RestState;
 use gears::types::address::AccAddress;
 use genesis::GenesisState;
-use ibc::client::cli::query::IbcQueryHandler;
+use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
 use tonic::transport::Server;

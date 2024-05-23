@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use crate::{error::KEY_EXISTS_MSG, StoreKey};
 use database::{prefix::PrefixDB, Database};
 
-use super::kv::KVBank;
+use super::kv::{store_cache::KVCache, KVBank};
 
 pub mod commit;
 pub mod immutable;
@@ -38,6 +38,26 @@ impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
     pub fn caches_clear(&mut self) {
         for (_, store) in &mut self.stores {
             store.clear_cache();
+        }
+    }
+
+    pub fn caches_copy(&self) -> Vec<(SK, KVCache)> {
+        let mut map: Vec<(SK, KVCache)> = Vec::with_capacity(self.stores.len());
+
+        for (sk, store) in &self.stores {
+            let cache = store.cache.clone();
+            map.push((sk.to_owned(), cache));
+        }
+
+        map
+    }
+
+    pub fn caches_update(&mut self, cache: Vec<(SK, KVCache)>) {
+        for (store_key, KVCache { storage, delete }) in cache {
+            let store = self.kv_store_mut(&store_key);
+
+            store.cache.storage.extend(storage);
+            store.cache.delete.extend(delete);
         }
     }
 }

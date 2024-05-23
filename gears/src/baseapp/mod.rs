@@ -1,3 +1,4 @@
+pub mod options;
 use std::{
     fmt::Debug,
     marker::PhantomData,
@@ -22,7 +23,7 @@ use store_crate::{
         multi::{immutable::MultiStore, MultiBank},
         query::QueryMultiStore,
     },
-    CommitKind, StoreKey,
+    ApplicationStore, StoreKey,
 };
 use tendermint::types::{
     chain_id::ChainIdErrors,
@@ -31,8 +32,8 @@ use tendermint::types::{
 };
 
 use self::{
-    errors::RunTxError, genesis::Genesis, mode::ExecutionMode, params::BaseAppParamsKeeper,
-    state::ApplicationState,
+    errors::RunTxError, genesis::Genesis, mode::ExecutionMode, options::NodeOptions,
+    params::BaseAppParamsKeeper, state::ApplicationState,
 };
 
 mod abci;
@@ -59,10 +60,11 @@ pub struct BaseApp<
     QRes,
 > {
     state: Arc<RwLock<ApplicationState<RocksDB, SK>>>,
-    multi_store: Arc<RwLock<MultiBank<RocksDB, SK, CommitKind>>>,
+    multi_store: Arc<RwLock<MultiBank<RocksDB, SK, ApplicationStore>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
+    options: NodeOptions,
     pub m: PhantomData<M>,
     pub g: PhantomData<G>,
     _info_marker: PhantomData<AI>,
@@ -85,8 +87,9 @@ impl<
         params_keeper: Keeper<SK, PSK>,
         params_subspace_key: PSK,
         abci_handler: H,
+        options: NodeOptions,
     ) -> Self {
-        let multi_store = MultiBank::<_, _, CommitKind>::new(db);
+        let multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_keeper,
@@ -98,6 +101,13 @@ impl<
             .map(|e| e.max_gas)
             .unwrap_or_default();
 
+        block_height_set(multi_store.head_version() as u64);
+
+        // For now let this func to exists only in new method
+        fn block_height_set(height: u64) {
+            let _ = APP_HEIGHT.swap(height, std::sync::atomic::Ordering::Relaxed);
+        }
+
         Self {
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
@@ -107,6 +117,7 @@ impl<
                 &multi_store,
             ))),
             multi_store: Arc::new(RwLock::new(multi_store)),
+            options,
             m: PhantomData,
             g: PhantomData,
             _info_marker: PhantomData,
@@ -192,7 +203,12 @@ impl<
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let mut ctx = mode.build_ctx(height, header.clone(), Some(&tx_with_raw.tx.auth_info.fee));
+        let mut ctx = mode.build_ctx(
+            height,
+            header.clone(),
+            Some(&tx_with_raw.tx.auth_info.fee),
+            self.options.clone(),
+        );
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;

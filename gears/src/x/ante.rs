@@ -4,6 +4,8 @@ use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
+use crate::types::base::coin::Coin;
+use crate::types::base::send::SendCoins;
 use crate::types::context::tx::TxContext;
 use crate::types::context::QueryableContext;
 use crate::types::denom::Denom;
@@ -21,11 +23,13 @@ use crate::{
         tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
     },
 };
+use anyhow::anyhow;
 use core_types::tx::signature::SignatureData;
 use core_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
 };
+use cosmwasm_std::Decimal256;
 use database::Database;
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
@@ -110,6 +114,8 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
     ) -> Result<(), AppError> {
         // Note: we currently don't have simulate mode at all, so some methods receive hardcoded values for this mode
         // ante.NewSetUpContextDecorator(), // WE not going to implement this in ante. Some logic should be in application
+        self.mempool_fee(ctx, tx)
+            .map_err(|e| AppError::Custom(e.to_string()))?;
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
@@ -138,6 +144,73 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         //  - ante.NewSigVerificationDecorator(opts.AccountKeeper, opts.SignModeHandler),
         //  - ante.NewIncrementSequenceDecorator(opts.AccountKeeper),
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
+
+        Ok(())
+    }
+
+    fn mempool_fee<M: TxMessage, DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        TxWithRaw {
+            tx,
+            raw: _,
+            tx_len: _,
+        }: &TxWithRaw<M>,
+    ) -> anyhow::Result<()> {
+        if !ctx.is_check() {
+            return Ok(());
+        }
+
+        let fee = tx.auth_info.fee.amount.as_ref();
+        let gas = tx.auth_info.fee.gas_limit;
+
+        let min_gas_prices = ctx.options.min_gas_prices();
+
+        if min_gas_prices.is_empty() || min_gas_prices.is_zero() {
+            return Ok(());
+        }
+
+        if let Some(fee_coins) = fee {
+            let mut required_fees = Vec::with_capacity(min_gas_prices.len());
+
+            for gp in min_gas_prices {
+                required_fees.push(Coin {
+                    denom: gp.denom,
+                    amount: gp
+                        .amount
+                        .checked_mul(Decimal256::from_atomics(gas, 0)?)?
+                        .to_uint_ceil(),
+                });
+            }
+
+            let required_fees =
+                SendCoins::new(required_fees).expect("MinGasPrices has same restriction as Self");
+
+            if !is_any_gte(fee_coins.inner(), &required_fees) {
+                Err(anyhow!(
+                    "insufficient fees; got: {:?} required: {:?}",
+                    fee_coins,
+                    required_fees
+                ))?
+            }
+        } else {
+            Err(anyhow!("rejected. `fee_coins` is None"))?
+        }
+
+        fn is_any_gte(coins_a: &Vec<Coin>, coins_b: &SendCoins) -> bool {
+            if coins_b.is_empty() {
+                return false;
+            }
+
+            for coin in coins_a {
+                let amount = coins_b.amount_of(&coin.denom);
+                if coin.amount >= amount && !amount.is_zero() {
+                    return true;
+                }
+            }
+
+            false
+        }
 
         Ok(())
     }

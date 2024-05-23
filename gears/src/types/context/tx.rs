@@ -1,19 +1,22 @@
 use database::{prefix::PrefixDB, Database};
 use store_crate::{
     types::{
-        kv::{immutable::KVStore, mutable::KVStoreMut},
-        multi::{cache::CacheCommitData, immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
+        kv::{immutable::KVStore, mutable::KVStoreMut, store_cache::CacheCommitList},
+        multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     },
-    CacheKind, StoreKey,
+    StoreKey, TransactionStore,
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event};
 
-use crate::types::{
-    gas::{
-        kind::{BlockKind, TxKind},
-        GasMeter,
+use crate::{
+    baseapp::options::NodeOptions,
+    types::{
+        gas::{
+            kind::{BlockKind, TxKind},
+            GasMeter,
+        },
+        header::Header,
     },
-    header::Header,
 };
 
 use super::{QueryableContext, TransactionalContext};
@@ -22,19 +25,23 @@ use super::{QueryableContext, TransactionalContext};
 pub struct TxContext<'a, DB, SK> {
     pub gas_meter: GasMeter<TxKind>,
     pub events: Vec<Event>,
-    multi_store: &'a mut MultiBank<DB, SK, CacheKind>,
+    pub options: NodeOptions,
     pub(crate) height: u64,
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
+    multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
+    is_check: bool,
 }
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, CacheKind>,
+        multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
         height: u64,
         header: Header,
         gas_meter: GasMeter<TxKind>,
         block_gas_meter: &'a mut GasMeter<BlockKind>,
+        is_check: bool,
+        options: NodeOptions,
     ) -> Self {
         Self {
             events: Vec::new(),
@@ -43,13 +50,20 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             header,
             gas_meter,
             block_gas_meter,
+            is_check,
+            options,
         }
     }
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
-    pub(crate) fn commit(&mut self) -> CacheCommitData<SK> {
+    pub(crate) fn commit(&mut self) -> CacheCommitList<SK> {
         self.multi_store.commit()
+    }
+
+    #[inline]
+    pub fn is_check(&self) -> bool {
+        self.is_check
     }
 }
 

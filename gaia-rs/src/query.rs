@@ -1,7 +1,7 @@
 use auth::cli::query::{AuthQuery, AuthQueryResponse};
 use bank::cli::query::{BankQuery, BankQueryResponse};
 use gears::types::query::Query;
-use ibc::client::cli::query::{IbcQuery, IbcQueryResponse};
+use ibc_rs::client::cli::query::{IbcQuery, IbcQueryResponse};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, PartialEq)]

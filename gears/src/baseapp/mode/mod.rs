@@ -2,7 +2,7 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use store_crate::{types::multi::MultiBank, CommitKind, StoreKey};
+use store_crate::{types::multi::MultiBank, ApplicationStore, StoreKey};
 use tendermint::types::proto::event::Event;
 
 use crate::{
@@ -21,12 +21,15 @@ use crate::{
 
 use self::sealed::Sealed;
 
+use super::options::NodeOptions;
+
 pub trait ExecutionMode<DB, SK: StoreKey>: Sealed {
     fn build_ctx(
         &mut self,
         height: u64,
         header: Header,
         fee: Option<&Fee>,
+        options: NodeOptions,
     ) -> TxContext<'_, DB, SK>;
 
     fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;
@@ -49,7 +52,7 @@ pub trait ExecutionMode<DB, SK: StoreKey>: Sealed {
         msgs: impl Iterator<Item = &'m M>,
     ) -> Result<Vec<Event>, RunTxError>;
 
-    fn commit(ctx: TxContext<'_, DB, SK>, global_ms: &mut MultiBank<DB, SK, CommitKind>);
+    fn commit(ctx: TxContext<'_, DB, SK>, global_ms: &mut MultiBank<DB, SK, ApplicationStore>);
 }
 
 mod sealed {

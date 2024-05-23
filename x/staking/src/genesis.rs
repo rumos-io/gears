@@ -52,6 +52,12 @@ pub struct UnbondingDelegationEntry {
     pub balance: Coin,
 }
 
+impl UnbondingDelegationEntry {
+    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        self.completion_time <= time
+    }
+}
+
 /// Redelegation contains the list of a particular delegator's
 /// redelegating bonds from a particular source validator to a
 /// particular destination validator
@@ -72,7 +78,13 @@ pub struct RedelegationEntry {
     pub share_dst: Decimal256,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+impl RedelegationEntry {
+    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        self.completion_time <= time
+    }
+}
+
+#[derive(Clone, Deserialize, Serialize)]
 pub struct GenesisState {
     /// params defines all the parameters of related to deposit.
     pub params: Params,

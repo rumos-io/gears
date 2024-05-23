@@ -1,54 +1,41 @@
-use std::{collections::HashMap, str::FromStr};
+use std::str::FromStr;
 
-use cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
 
-use crate::types::denom::Denom;
-
 use super::{
-    coin::Coin,
+    decimal_coin::DecimalCoin,
     errors::{CoinsParseError, SendCoinsError},
 };
 
 // Represents a list of coins with the following properties:
 // - Contains at least one coin
-// - All coin amounts are positive
 // - No duplicate denominations
 // - Sorted lexicographically
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Default)]
-pub struct SendCoins(Vec<Coin>);
+pub struct MinGasPrices(Vec<DecimalCoin>);
 
-impl SendCoins {
-    pub fn new(coins: Vec<Coin>) -> Result<SendCoins, SendCoinsError> {
+impl MinGasPrices {
+    pub fn new(coins: Vec<DecimalCoin>) -> Result<Self, SendCoinsError> {
         Self::validate_coins(&coins)?;
 
-        Ok(SendCoins(coins))
+        Ok(Self(coins))
     }
 
     // Checks that the SendCoins are sorted, have positive amount, with a valid and unique
     // denomination (i.e no duplicates). Otherwise, it returns an error.
     // A valid list of coins satisfies:
     // - Contains at least one coin
-    // - All amounts are positive
     // - No duplicate denominations
     // - Sorted lexicographically
     // TODO: implement ordering on coins or denominations so that conversion to string can be avoided
-    fn validate_coins(coins: &Vec<Coin>) -> Result<(), SendCoinsError> {
+    fn validate_coins(coins: &Vec<DecimalCoin>) -> Result<(), SendCoinsError> {
         if coins.is_empty() {
             return Err(SendCoinsError::EmptyList);
         }
 
-        if coins[0].amount.is_zero() {
-            return Err(SendCoinsError::InvalidAmount);
-        };
-
         let mut previous_denom = coins[0].denom.to_string();
 
         for coin in &coins[1..] {
-            if coin.amount.is_zero() {
-                return Err(SendCoinsError::InvalidAmount);
-            };
-
             // Less than to ensure lexicographical ordering
             // Equality to ensure that there are no duplications
             if coin.denom.to_string() <= previous_denom {
@@ -61,43 +48,35 @@ impl SendCoins {
         Ok(())
     }
 
-    pub fn into_inner(self) -> Vec<Coin> {
+    pub fn into_inner(self) -> Vec<DecimalCoin> {
         self.0
     }
 
-    pub fn inner(&self) -> &Vec<Coin> {
+    pub fn inner(&self) -> &Vec<DecimalCoin> {
         &self.0
-    }
-
-    pub fn amount_of(&self, denom: &Denom) -> Uint256 {
-        let coins = self
-            .0
-            .iter()
-            .map(|this| (&this.denom, &this.amount))
-            .collect::<HashMap<_, _>>();
-
-        let coin = coins.get(denom);
-
-        if let Some(coin) = coin {
-            (**coin).clone()
-        } else {
-            Uint256::zero()
-        }
     }
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.0.iter().any(|this| this.amount.is_zero())
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
-impl From<SendCoins> for Vec<Coin> {
-    fn from(coins: SendCoins) -> Vec<Coin> {
+impl From<MinGasPrices> for Vec<DecimalCoin> {
+    fn from(coins: MinGasPrices) -> Vec<DecimalCoin> {
         coins.0
     }
 }
 
-impl IntoIterator for SendCoins {
-    type Item = Coin;
+impl IntoIterator for MinGasPrices {
+    type Item = DecimalCoin;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -105,7 +84,7 @@ impl IntoIterator for SendCoins {
     }
 }
 
-impl FromStr for SendCoins {
+impl FromStr for MinGasPrices {
     type Err = CoinsParseError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -113,7 +92,7 @@ impl FromStr for SendCoins {
         let mut coins = vec![];
 
         for coin in coin_strings {
-            let coin = Coin::from_str(coin)?;
+            let coin = DecimalCoin::from_str(coin)?;
             coins.push(coin);
         }
 

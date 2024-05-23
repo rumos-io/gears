@@ -1,3 +1,4 @@
+use cosmwasm_std::Uint256;
 use derive_more::{Add, Deref, Display, From, Into, Mul, Sub};
 use std::{num::ParseIntError, str::FromStr};
 use ux::u63;
@@ -36,6 +37,10 @@ impl Gas {
     pub const MAX: Self = Self(u63::MAX);
 
     pub const ZERO: Self = Self(u63::new(0));
+
+    pub const fn new(val: u63) -> Self {
+        Self(val)
+    }
 
     // TODO: write a test for this
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
@@ -110,6 +115,13 @@ impl TryFrom<i64> for Gas {
         }
 
         Ok(u63::new(value as u64).into()) // cast is safe as we have already checked for negative values
+    }
+}
+
+impl From<Gas> for Uint256 {
+    fn from(val: Gas) -> Uint256 {
+        let u_64: u64 = val.0.into();
+        Uint256::from(u_64)
     }
 }
 

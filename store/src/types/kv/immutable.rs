@@ -3,7 +3,7 @@ use database::Database;
 use crate::{
     range::Range,
     types::{prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore},
-    CacheKind, CommitKind, QueryableKVStore,
+    ApplicationStore, QueryableKVStore, TransactionStore,
 };
 
 use super::KVBank;
@@ -11,8 +11,8 @@ use super::KVBank;
 /// Internal structure which holds different stores
 #[derive(Debug)]
 pub(crate) enum KVStoreBackend<'a, DB> {
-    Commit(&'a KVBank<DB, CommitKind>),
-    Cache(&'a KVBank<DB, CacheKind>),
+    Commit(&'a KVBank<DB, ApplicationStore>),
+    Cache(&'a KVBank<DB, TransactionStore>),
     Query(&'a QueryKVStore<DB>),
 }
 
@@ -46,14 +46,14 @@ impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStore<'a, DB> {
     }
 }
 
-impl<'a, DB> From<&'a KVBank<DB, CommitKind>> for KVStore<'a, DB> {
-    fn from(value: &'a KVBank<DB, CommitKind>) -> Self {
+impl<'a, DB> From<&'a KVBank<DB, ApplicationStore>> for KVStore<'a, DB> {
+    fn from(value: &'a KVBank<DB, ApplicationStore>) -> Self {
         Self(KVStoreBackend::Commit(value))
     }
 }
 
-impl<'a, DB> From<&'a KVBank<DB, CacheKind>> for KVStore<'a, DB> {
-    fn from(value: &'a KVBank<DB, CacheKind>) -> Self {
+impl<'a, DB> From<&'a KVBank<DB, TransactionStore>> for KVStore<'a, DB> {
+    fn from(value: &'a KVBank<DB, TransactionStore>) -> Self {
         Self(KVStoreBackend::Cache(value))
     }
 }

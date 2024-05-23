@@ -1,11 +1,11 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, CacheKind, StoreKey, TransactionalMultiKVStore};
+use store_crate::{types::multi::MultiBank, StoreKey, TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use super::{build_tx_gas_meter, ExecutionMode};
 use crate::{
     application::handlers::node::ABCIHandler,
-    baseapp::{errors::RunTxError, genesis::Genesis},
+    baseapp::{errors::RunTxError, genesis::Genesis, options::NodeOptions},
     types::{
         auth::fee::Fee,
         context::{tx::TxContext, TransactionalContext},
@@ -21,11 +21,11 @@ use crate::{
 #[derive(Debug)]
 pub struct CheckTxMode<DB, SK> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiBank<DB, SK, CacheKind>,
+    pub(crate) multi_store: MultiBank<DB, SK, TransactionStore>,
 }
 
 impl<DB, SK> CheckTxMode<DB, SK> {
-    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, SK, CacheKind>) -> Self {
+    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, SK, TransactionStore>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
@@ -42,6 +42,7 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
         height: u64,
         header: Header,
         fee: Option<&Fee>,
+        options: NodeOptions,
     ) -> TxContext<'_, DB, SK> {
         TxContext::new(
             &mut self.multi_store,
@@ -49,6 +50,8 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
             header,
             build_tx_gas_meter(height, fee),
             &mut self.block_gas_meter,
+            true,
+            options,
         )
     }
 
@@ -86,7 +89,7 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
 
     fn commit(
         _ctx: TxContext<'_, DB, SK>,
-        _global_ms: &mut MultiBank<DB, SK, store_crate::CommitKind>,
+        _global_ms: &mut MultiBank<DB, SK, store_crate::ApplicationStore>,
     ) {
     }
 }
