@@ -92,6 +92,13 @@ impl<
             .map(|e| e.max_gas)
             .unwrap_or_default();
 
+        block_height_set(multi_store.head_version() as u64);
+
+        // For now let this func to exists only in new method
+        fn block_height_set(height: u64) {
+            let _ = APP_HEIGHT.swap(height, std::sync::atomic::Ordering::Relaxed);
+        }
+
         Self {
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
