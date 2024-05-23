@@ -109,7 +109,7 @@ impl TryFrom<QueryValidatorResponseRaw> for QueryValidatorResponse {
     type Error = Error;
 
     fn try_from(raw: QueryValidatorResponseRaw) -> Result<Self, Self::Error> {
-        let validator: Validator = serde_json::from_slice(&raw.validator)
+        let validator: Validator = Validator::decode_vec(&raw.validator)
             .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
 
         Ok(QueryValidatorResponse { validator })
@@ -125,8 +125,7 @@ pub struct QueryValidatorResponseRaw {
 impl From<QueryValidatorResponse> for QueryValidatorResponseRaw {
     fn from(query: QueryValidatorResponse) -> QueryValidatorResponseRaw {
         Self {
-            // TODO: consider implement Protobuf for Validator
-            validator: serde_json::to_vec(&query.validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
+            validator: query.validator.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }

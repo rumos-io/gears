@@ -72,6 +72,31 @@ pub struct Commission {
     pub update_time: Timestamp,
 }
 
+impl TryFrom<CommissionRaw> for Commission {
+    type Error = Error;
+
+    fn try_from(value: CommissionRaw) -> Result<Self, Self::Error> {
+        Ok(Self {
+            commission_rates: value
+                .commission_rates
+                .ok_or(Error::MissingField(
+                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
+                        .into(),
+                ))?
+                .try_into()
+                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+            update_time: value
+                .update_time
+                .ok_or(Error::MissingField(
+                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
+                        .into(),
+                ))?
+                .try_into()
+                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+        })
+    }
+}
+
 impl Commission {
     pub fn validate(&self) -> Result<(), AppError> {
         let CommissionRates {
@@ -97,6 +122,26 @@ impl Commission {
         Ok(())
     }
 }
+
+/// Commission defines commission parameters for a given validator.
+#[derive(Clone, PartialEq, Message)]
+pub struct CommissionRaw {
+    #[prost(message, optional)]
+    pub commission_rates: Option<CommissionRatesRaw>,
+    #[prost(message, optional)]
+    pub update_time: Option<Timestamp>,
+}
+
+impl From<Commission> for CommissionRaw {
+    fn from(value: Commission) -> Self {
+        Self {
+            commission_rates: Some(value.commission_rates.into()),
+            update_time: Some(value.update_time),
+        }
+    }
+}
+
+impl Protobuf<CommissionRaw> for Commission {}
 
 /// Description defines a validator description.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]

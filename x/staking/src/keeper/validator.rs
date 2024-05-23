@@ -1,4 +1,6 @@
-use gears::types::address::ConsAddress;
+use gears::{
+    error::IBC_ENCODE_UNWRAP, tendermint::types::proto::Protobuf, types::address::ConsAddress,
+};
 
 pub use super::*;
 use crate::{
@@ -25,7 +27,7 @@ impl<
         let validators_store = store.prefix_store(VALIDATORS_KEY);
         validators_store
             .get(key.to_string().as_bytes())
-            .map(|e| serde_json::from_slice(&e).expect(SERDE_DECODING_DOMAIN_TYPE))
+            .map(|e| Validator::decode_vec(&e).expect(IBC_ENCODE_UNWRAP))
     }
 
     pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -49,13 +51,10 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_BY_CONS_ADDR_KEY);
 
-        if let Some(bytes) = validators_store.get(addr.to_string().as_bytes()) {
-            Ok(serde_json::from_slice(&bytes)?)
-        } else {
-            Err(anyhow::Error::from(serde_json::Error::custom(
-                "Validator doesn't exists.".to_string(),
-            )))
-        }
+        let bytes = validators_store
+            .get(addr.to_string().as_bytes())
+            .ok_or(AppError::Custom("Validator doesn't exists".to_string()))?;
+        Ok(Validator::decode_vec(&bytes)?)
     }
 
     pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(

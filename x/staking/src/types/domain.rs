@@ -1,11 +1,13 @@
 use crate::{
-    consts::keeper::VALIDATORS_BY_POWER_INDEX_KEY, Commission, CommissionRates, Description,
+    consts::{expect::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
+    Commission, CommissionRates, CommissionRaw, Description,
 };
 use chrono::Utc;
 use gears::{
+    core::errors::Error,
     error::AppError,
     tendermint::types::{
-        proto::{crypto::PublicKey, validator::ValidatorUpdate},
+        proto::{crypto::PublicKey, validator::ValidatorUpdate, Protobuf},
         time::Timestamp,
     },
     types::{
@@ -14,8 +16,9 @@ use gears::{
         uint::Uint256,
     },
 };
+use prost::{Enumeration, Message};
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Pool {
@@ -128,7 +131,7 @@ impl DvPair {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Enumeration)]
 pub enum BondStatus {
     Unbonded = 0,
     Unbonding = 1,
@@ -334,3 +337,82 @@ impl Validator {
         key
     }
 }
+
+impl TryFrom<ValidatorRaw> for Validator {
+    type Error = Error;
+    fn try_from(value: ValidatorRaw) -> Result<Self, Self::Error> {
+        let status = value.status();
+        Ok(Self {
+            operator_address: ValAddress::from_bech32(&value.operator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            delegator_shares: Decimal256::from_str(&value.delegator_shares)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            description: value
+                .description
+                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T"),
+            consensus_pubkey: serde_json::from_slice(&value.consensus_pubkey)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            jailed: value.jailed,
+            tokens: Uint256::from_str(&value.tokens)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            unbonding_height: value.unbonding_height,
+            unbonding_time: value
+                .unbonding_time
+                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T"),
+            commission: value
+                .commission
+                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T")
+                .try_into()?,
+            min_self_delegation: Uint256::from_str(&value.min_self_delegation)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            status,
+        })
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct ValidatorRaw {
+    #[prost(string)]
+    pub operator_address: String,
+    #[prost(string)]
+    pub delegator_shares: String,
+    #[prost(message, optional)]
+    pub description: Option<Description>,
+    #[prost(bytes)]
+    pub consensus_pubkey: Vec<u8>,
+    #[prost(bool)]
+    pub jailed: bool,
+    #[prost(string)]
+    pub tokens: String,
+    #[prost(int64)]
+    pub unbonding_height: i64,
+    #[prost(message, optional)]
+    pub unbonding_time: Option<Timestamp>,
+    #[prost(message, optional)]
+    pub commission: Option<CommissionRaw>,
+    #[prost(string)]
+    pub min_self_delegation: String,
+    #[prost(enumeration = "BondStatus")]
+    pub status: i32,
+}
+
+impl From<Validator> for ValidatorRaw {
+    fn from(value: Validator) -> Self {
+        Self {
+            operator_address: value.operator_address.to_string(),
+            delegator_shares: value.delegator_shares.to_string(),
+            description: Some(value.description),
+            consensus_pubkey: serde_json::to_vec(&value.consensus_pubkey)
+                .expect(SERDE_ENCODING_DOMAIN_TYPE),
+            jailed: value.jailed,
+            tokens: value.tokens.to_string(),
+            unbonding_height: value.unbonding_height,
+            unbonding_time: Some(value.unbonding_time),
+            commission: Some(value.commission.into()),
+            min_self_delegation: value.min_self_delegation.to_string(),
+            status: value.status.into(),
+        }
+    }
+}
+
+impl Protobuf<ValidatorRaw> for Validator {}
