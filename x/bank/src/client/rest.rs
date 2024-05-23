@@ -6,7 +6,7 @@ use axum::{
 use gears::types::address::AccAddress;
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::{error::Error, Pagination, RestState},
+    rest::{error::HTTPError, Pagination, RestState},
     types::denom::Denom,
 };
 use serde::Deserialize;
@@ -23,7 +23,7 @@ pub async fn supply<
     App: NodeQueryHandler<QReq, QRes>,
 >(
     State(rest_state): State<RestState<QReq, QRes, App>>,
-) -> Result<Json<QRes>, Error> {
+) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::TotalSupply;
 
     let res = rest_state.app.typed_query(req)?;
@@ -40,7 +40,7 @@ pub async fn get_balances<
     Path(address): Path<AccAddress>,
     _pagination: Query<Pagination>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
-) -> Result<Json<QRes>, Error> {
+) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::AllBalances(QueryAllBalancesRequest {
         address,
         pagination: None,
@@ -67,7 +67,7 @@ pub async fn get_balances_by_denom<
     Path(address): Path<AccAddress>,
     query: Query<QueryData>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
-) -> Result<Json<QRes>, Error> {
+) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::Balance(QueryBalanceRequest {
         address,
         denom: query.0.denom,
