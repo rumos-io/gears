@@ -15,8 +15,8 @@ impl<DB: Database> ParamsSpace<'_, DB> {
         let keys = T::keys();
         let mut params_fields = HashMap::with_capacity(keys.len());
 
-        for (key, p_type) in keys {
-            params_fields.insert(key, (self.inner.get(key)?, p_type));
+        for (key, _) in keys {
+            params_fields.insert(key, self.inner.get(key)?);
         }
 
         Some(T::from_raw(params_fields))

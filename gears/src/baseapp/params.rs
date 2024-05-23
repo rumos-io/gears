@@ -137,34 +137,25 @@ impl ParamsSerialize for ConsensusParams {
         .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, (Vec<u8>, ParamKind)> {
+    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
         let mut hash_map = HashMap::with_capacity(3);
 
         if let Some(params) = self.block.clone() {
             let block_params = serde_json::to_string(&BlockParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(
-                KEY_BLOCK_PARAMS,
-                (block_params.into_bytes(), ParamKind::Bytes),
-            );
+            hash_map.insert(KEY_BLOCK_PARAMS, block_params.into_bytes());
         }
 
         if let Some(params) = self.evidence.clone() {
             let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(
-                KEY_EVIDENCE_PARAMS,
-                (evidence_params.into_bytes(), ParamKind::Bytes),
-            );
+            hash_map.insert(KEY_EVIDENCE_PARAMS, evidence_params.into_bytes());
         }
 
         if let Some(params) = self.validator.clone() {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(
-                KEY_VALIDATOR_PARAMS,
-                (params.into_bytes(), ParamKind::Bytes),
-            );
+            hash_map.insert(KEY_VALIDATOR_PARAMS, params.into_bytes());
         }
 
         hash_map

@@ -59,11 +59,11 @@ pub trait ParamsSubspaceKey: Hash + Eq + Clone + Send + Sync + 'static {
 pub trait ParamsSerialize {
     /// Return all unique keys for this structure
     fn keys() -> HashMap<&'static str, ParamKind>;
-    fn to_raw(&self) -> HashMap<&'static str, (Vec<u8>, ParamKind)>;
+    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>>;
 }
 
 pub trait ParamsDeserialize: ParamsSerialize {
-    fn from_raw(fields: HashMap<&'static str, (Vec<u8>, ParamKind)>) -> Self;
+    fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -2,11 +2,11 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use gears::core::serializers::serialize_number_to_string;
-use gears::params::parse_primitive_unwrap;
 use gears::params::subspace;
 use gears::params::subspace_mut;
-use gears::params::Params;
+use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
+use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
 use gears::store::types::prefix::immutable::ImmutablePrefixStore;
 use gears::store::QueryableMultiKVStore;
@@ -38,9 +38,11 @@ pub struct ConnectionParams {
     pub max_expected_time_per_block: u64,
 }
 
-impl Params for ConnectionParams {
-    fn keys() -> HashSet<&'static str> {
-        [KEY_MAX_EXPECTED_TIME_PER_BLOCK].into_iter().collect()
+impl ParamsSerialize for ConnectionParams {
+    fn keys() -> HashMap<&'static str, ParamKind> {
+        [(KEY_MAX_EXPECTED_TIME_PER_BLOCK, ParamKind::U64)]
+            .into_iter()
+            .collect()
     }
 
     fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
@@ -58,9 +60,10 @@ impl Params for ConnectionParams {
 impl ParamsDeserialize for ConnectionParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         Self {
-            max_expected_time_per_block: parse_primitive_unwrap(
-                fields.remove(KEY_MAX_EXPECTED_TIME_PER_BLOCK),
-            ),
+            max_expected_time_per_block: ParamKind::U64
+                .parse_param(fields.remove(KEY_MAX_EXPECTED_TIME_PER_BLOCK).unwrap())
+                .unsigned_64()
+                .unwrap(),
         }
     }
 }

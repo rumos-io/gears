@@ -29,7 +29,7 @@ impl<DB: Database> ParamsSpaceMut<'_, DB> {
     pub fn params_set<T: ParamsSerialize>(&mut self, params: &T) {
         let params = params.to_raw();
 
-        for (key, (value, _)) in params {
+        for (key, value) in params {
             self.inner.set(key.as_bytes().into_iter().cloned(), value)
         }
     }

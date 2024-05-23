@@ -3,8 +3,9 @@ use std::collections::HashSet;
 
 use gears::params::subspace;
 use gears::params::subspace_mut;
-use gears::params::Params;
+use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
+use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
 use gears::store::QueryableMultiKVStore;
 use gears::store::ReadPrefixStore;
@@ -32,9 +33,11 @@ pub struct ClientParams {
     pub allowed_clients: Vec<String>,
 }
 
-impl Params for ClientParams {
-    fn keys() -> HashSet<&'static str> {
-        [KEY_ALLOWED_CLIENTS].into_iter().collect()
+impl ParamsSerialize for ClientParams {
+    fn keys() -> HashMap<&'static str, ParamKind> {
+        [(KEY_ALLOWED_CLIENTS, ParamKind::Bytes)]
+            .into_iter()
+            .collect()
     }
 
     fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {

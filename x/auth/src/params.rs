@@ -49,47 +49,32 @@ impl ParamsSerialize for AuthsParams {
         .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, (Vec<u8>, ParamKind)> {
+    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
         let mut hash_map = HashMap::with_capacity(5);
 
         hash_map.insert(
             KEY_MAX_MEMO_CHARACTERS,
-            (
-                format!("\"{}\"", self.max_memo_characters).into_bytes(),
-                ParamKind::U64,
-            ),
+            format!("\"{}\"", self.max_memo_characters).into_bytes(),
         );
 
         hash_map.insert(
             KEY_TX_SIG_LIMIT,
-            (
-                format!("\"{}\"", self.tx_sig_limit).into_bytes(),
-                ParamKind::U64,
-            ),
+            format!("\"{}\"", self.tx_sig_limit).into_bytes(),
         );
 
         hash_map.insert(
             KEY_TX_SIZE_COST_PER_BYTE,
-            (
-                format!("\"{}\"", self.tx_size_cost_per_byte).into_bytes(),
-                ParamKind::U64,
-            ),
+            format!("\"{}\"", self.tx_size_cost_per_byte).into_bytes(),
         );
 
         hash_map.insert(
             KEY_SIG_VERIFY_COST_ED25519,
-            (
-                format!("\"{}\"", self.sig_verify_cost_ed25519).into_bytes(),
-                ParamKind::U64,
-            ),
+            format!("\"{}\"", self.sig_verify_cost_ed25519).into_bytes(),
         );
 
         hash_map.insert(
             KEY_SIG_VERIFY_COST_SECP256K1,
-            (
-                format!("\"{}\"", self.sig_verify_cost_secp256k1).into_bytes(),
-                ParamKind::U64,
-            ),
+            format!("\"{}\"", self.sig_verify_cost_secp256k1).into_bytes(),
         );
 
         hash_map
@@ -97,27 +82,27 @@ impl ParamsSerialize for AuthsParams {
 }
 
 impl ParamsDeserialize for AuthsParams {
-    fn from_raw(mut fields: HashMap<&'static str, (Vec<u8>, ParamKind)>) -> Self {
+    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         // TODO:NOW THIS IS AWFUL
         Self {
             max_memo_characters: ParamKind::U64
-                .parse_param(fields.remove(KEY_MAX_MEMO_CHARACTERS).unwrap().0)
+                .parse_param(fields.remove(KEY_MAX_MEMO_CHARACTERS).unwrap())
                 .unsigned_64()
                 .unwrap(),
             tx_sig_limit: ParamKind::U64
-                .parse_param(fields.remove(KEY_TX_SIG_LIMIT).unwrap().0)
+                .parse_param(fields.remove(KEY_TX_SIG_LIMIT).unwrap())
                 .unsigned_64()
                 .unwrap(),
             tx_size_cost_per_byte: ParamKind::U64
-                .parse_param(fields.remove(KEY_TX_SIZE_COST_PER_BYTE).unwrap().0)
+                .parse_param(fields.remove(KEY_TX_SIZE_COST_PER_BYTE).unwrap())
                 .unsigned_64()
                 .unwrap(),
             sig_verify_cost_ed25519: ParamKind::U64
-                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_ED25519).unwrap().0)
+                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_ED25519).unwrap())
                 .unsigned_64()
                 .unwrap(),
             sig_verify_cost_secp256k1: ParamKind::U64
-                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_SECP256K1).unwrap().0)
+                .parse_param(fields.remove(KEY_SIG_VERIFY_COST_SECP256K1).unwrap())
                 .unsigned_64()
                 .unwrap(),
         }
