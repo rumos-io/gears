@@ -66,7 +66,7 @@ impl GaiaABCIHandler {
         }
     }
 }
-// <Message, GaiaStoreKey, GenesisState, GaiaNodeQueryRequest, GaiaNodeQueryResponse>
+
 impl ABCIHandler for GaiaABCIHandler {
     type Message = Message;
     type Genesis = GenesisState;
