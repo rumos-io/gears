@@ -234,10 +234,8 @@ impl Validator {
             // the first delegation to a validator sets the exchange rate to one
             Decimal256::new(amount)
         } else {
-            match self.shares_from_tokens(amount) {
-                Ok(shares) => shares,
-                Err(err) => panic!("{}", err),
-            }
+            // TODO: check the code, maybe remove unwrap
+            self.shares_from_tokens(amount).unwrap()
         };
 
         self.tokens += amount;

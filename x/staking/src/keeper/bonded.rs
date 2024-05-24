@@ -39,17 +39,16 @@ impl<
             amount,
         }])
         .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
-        if let Err(e) = self
-            .bank_keeper
+
+        // TODO: check and maybe remove unwrap
+        self.bank_keeper
             .send_coins_from_module_to_module::<DB, AK, CTX>(
                 ctx,
                 BONDED_POOL_NAME.into(),
                 NOT_BONDED_POOL_NAME.into(),
                 coins,
             )
-        {
-            panic!("{}", e);
-        }
+            .unwrap()
     }
 
     pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(

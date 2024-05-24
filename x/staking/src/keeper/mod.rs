@@ -201,12 +201,11 @@ impl<
             self.auth_keeper.set_module_account(ctx, bonded_pool);
         }
         // if balance is different from bonded coins panic because genesis is most likely malformed
-        if bonded_balance != bonded_coins {
-            panic!(
-                "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
-                bonded_balance, bonded_coins
-            )
-        }
+        assert_eq!(
+            bonded_balance, bonded_coins,
+            "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
+            bonded_balance, bonded_coins
+        );
 
         let not_bonded_pool = self
             .not_bonded_pool(ctx)
@@ -224,13 +223,13 @@ impl<
         {
             self.auth_keeper.set_module_account(ctx, not_bonded_pool);
         }
+
         // if balance is different from non bonded coins panic because genesis is most likely malformed
-        if not_bonded_balance != not_bonded_coins {
-            panic!(
-                "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
-                bonded_balance, bonded_coins
-            );
-        }
+        assert_eq!(
+            not_bonded_balance, not_bonded_coins,
+            "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
+            not_bonded_balance, not_bonded_coins,
+        );
 
         let mut res = vec![];
         // don't need to run Tendermint updates if we exported
@@ -245,13 +244,8 @@ impl<
                 res.push(update);
             }
         } else {
-            match self.apply_and_return_validator_set_updates(ctx) {
-                Ok(update) => {
-                    res = update;
-                }
-                // TODO: exit in sdk
-                Err(e) => panic!("{}", e),
-            }
+            // TODO: exit in sdk
+            res = self.apply_and_return_validator_set_updates(ctx).unwrap();
         }
         res
     }
@@ -296,7 +290,7 @@ impl<
             .expect(
                 "Invalid timestamp in block context. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
             );
-        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time.clone());
+        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time);
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;
             let val_addr_str = val_addr.to_string();
@@ -418,7 +412,10 @@ impl<
                 .expect("validator should be presented in store");
 
             if validator.jailed {
-                panic!("should never retrieve a jailed validator from the power store",);
+                return Err(AppError::Custom(
+                    "should never retrieve a jailed validator from the power store".to_string(),
+                )
+                .into());
             }
             // if we get to a zero-power validator (which we don't bond),
             // there are no more possible bonded validators
@@ -528,17 +525,16 @@ impl<
             amount,
         }])
         .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
-        if let Err(e) = self
-            .bank_keeper
+
+        // TODO: check and maybe remove unwrap
+        self.bank_keeper
             .send_coins_from_module_to_module::<DB, AK, CTX>(
                 ctx,
                 NOT_BONDED_POOL_NAME.into(),
                 BONDED_POOL_NAME.into(),
                 coins,
             )
-        {
-            panic!("{}", e);
-        }
+            .unwrap()
     }
 }
 

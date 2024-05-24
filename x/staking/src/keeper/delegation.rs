@@ -50,13 +50,17 @@ impl<
         // all non bonded
         if subtract_account {
             if token_src == BondStatus::Bonded {
-                panic!("delegation token source cannot be bonded")
+                return Err(AppError::Custom(
+                    "delegation token source cannot be bonded".to_string(),
+                ));
             }
 
             let send_name = match validator.status {
                 BondStatus::Bonded => BONDED_POOL_NAME,
                 BondStatus::Unbonding => NOT_BONDED_POOL_NAME,
-                BondStatus::Unbonded => panic!("invalid validator status"),
+                BondStatus::Unbonded => {
+                    return Err(AppError::Custom("invalid validator status".to_string()))
+                }
             };
 
             let denom = self

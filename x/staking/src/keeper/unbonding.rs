@@ -227,9 +227,13 @@ impl<
                     let mut validator = self
                         .validator(ctx, &val_addr)
                         .expect("validator in the unbonding queue was not found");
-                    if validator.status != BondStatus::Unbonding {
-                        panic!("unexpected validator in unbonding queue; status was not unbonding");
-                    }
+
+                    assert_eq!(
+                        validator.status,
+                        BondStatus::Unbonding,
+                        "unexpected validator in unbonding queue; status was not unbonding"
+                    );
+
                     self.unbonding_to_unbonded(ctx, &mut validator);
                     if validator.delegator_shares.is_zero() {
                         self.remove_validator(
@@ -268,12 +272,12 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
     ) {
-        if validator.status != BondStatus::Unbonding {
-            panic!(
-                "bad state transition unbonding to unbonded, validator: {}",
-                validator.operator_address
-            );
-        }
+        assert_eq!(
+            validator.status,
+            BondStatus::Unbonding,
+            "bad state transition unbonding to unbonded, validator: {}",
+            validator.operator_address
+        );
         self.complete_unbonding_validator(ctx, validator);
     }
 
