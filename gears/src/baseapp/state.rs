@@ -1,20 +1,21 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, ApplicationStore, StoreKey};
+use store_crate::{types::multi::MultiBank, ApplicationStore};
 
-use crate::types::gas::{
-    basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter,
+use crate::{
+    application::handlers::node::ABCIHandler,
+    types::gas::{basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter},
 };
 
 use super::mode::{check::CheckTxMode, deliver::DeliverTxMode};
 
 #[derive(Debug)]
-pub struct ApplicationState<DB, SK> {
-    pub(super) check_mode: CheckTxMode<DB, SK>,
-    pub(super) deliver_mode: DeliverTxMode<DB, SK>,
+pub struct ApplicationState<DB, AH: ABCIHandler> {
+    pub(super) check_mode: CheckTxMode<DB, AH>,
+    pub(super) deliver_mode: DeliverTxMode<DB, AH>,
 }
 
-impl<DB: Database, SK: StoreKey> ApplicationState<DB, SK> {
-    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, SK, ApplicationStore>) -> Self {
+impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
+    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, AH::StoreKey, ApplicationStore>) -> Self {
         Self {
             check_mode: CheckTxMode::new(max_gas, global_ms.to_cache_kind()),
             deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_cache_kind()),
@@ -43,7 +44,7 @@ impl<DB: Database, SK: StoreKey> ApplicationState<DB, SK> {
     }
 
     // TODO: It would be better to find difference in caches and extend it, but this solution is quicker
-    pub fn cache_update(&mut self, store: &mut MultiBank<DB, SK, ApplicationStore>) {
+    pub fn cache_update(&mut self, store: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>) {
         let cache = store.caches_copy();
 
         self.check_mode.multi_store.caches_update(cache.clone());

@@ -3,69 +3,46 @@ use super::{
     ApplicationInfo,
 };
 use crate::{
-    baseapp::genesis::Genesis,
-    commands::node::{genesis::genesis_account_add, init::init, run::run, AppCommands},
+    commands::node::{
+        genesis::genesis_account_add,
+        init::init,
+        run::{run, RouterBuilder},
+        AppCommands,
+    },
     params::Keeper as ParamsKeeper,
 };
 use crate::{
     config::{ApplicationConfig, Config},
     params::ParamsSubspaceKey,
-    rest::RestState,
-    types::tx::TxMessage,
 };
-use axum::Router;
-use store_crate::StoreKey;
 
 /// A Gears application.
-pub trait Node: AuxHandler {
-    type Message: TxMessage;
-    type Genesis: Genesis;
-    type StoreKey: StoreKey;
+pub trait Node:
+    AuxHandler
+    + RouterBuilder<<Self::Handler as ABCIHandler>::QReq, <Self::Handler as ABCIHandler>::QRes>
+{
     type ParamsSubspaceKey: ParamsSubspaceKey;
-    type ABCIHandler: ABCIHandler<Self::Message, Self::StoreKey, Self::Genesis>;
+    type Handler: ABCIHandler;
     type ApplicationConfig: ApplicationConfig;
-
-    /// Builder method for defining routes of rest server
-    fn router<AI: ApplicationInfo>() -> Router<
-        RestState<
-            Self::StoreKey,
-            Self::ParamsSubspaceKey,
-            Self::Message,
-            Self::ABCIHandler,
-            Self::Genesis,
-            AI,
-        >,
-    >;
 }
 
-pub struct NodeApplication<'a, Core: Node, AI: ApplicationInfo> {
+pub struct NodeApplication<'a, Core: Node> {
     core: Core,
-    router: Router<
-        RestState<
-            Core::StoreKey,
-            Core::ParamsSubspaceKey,
-            Core::Message,
-            Core::ABCIHandler,
-            Core::Genesis,
-            AI,
-        >,
-    >,
-    abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
+    abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
 
-    params_store_key: Core::StoreKey,
+    params_store_key: <<Core as Node>::Handler as ABCIHandler>::StoreKey,
     params_subspace_key: Core::ParamsSubspaceKey,
 }
 
-impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
+impl<'a, Core: Node> NodeApplication<'a, Core> {
     pub fn new(
         core: Core,
-        abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::ABCIHandler,
-        params_store_key: Core::StoreKey,
+        abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
+        params_store_key: <<Core as Node>::Handler as ABCIHandler>::StoreKey,
         params_subspace_key: Core::ParamsSubspaceKey,
     ) -> Self {
         Self {
             core,
-            router: Core::router(),
             abci_handler_builder,
             params_store_key,
             params_subspace_key,
@@ -73,19 +50,25 @@ impl<'a, Core: Node, AI: ApplicationInfo> NodeApplication<'a, Core, AI> {
     }
 
     /// Runs the command passed on the command line.
-    pub fn execute(self, command: AppCommands<Core::AuxCommands>) -> anyhow::Result<()> {
+    pub fn execute<AI: ApplicationInfo>(
+        self,
+        command: AppCommands<Core::AuxCommands>,
+    ) -> anyhow::Result<()> {
         match command {
-            AppCommands::Init(cmd) => {
-                init::<_, Core::ApplicationConfig>(cmd, &Core::Genesis::default())?
-            }
-            AppCommands::Run(cmd) => run(
+            AppCommands::Init(cmd) => init::<_, Core::ApplicationConfig>(
+                cmd,
+                &<<Core as Node>::Handler as ABCIHandler>::Genesis::default(),
+            )?,
+            AppCommands::Run(cmd) => run::<_, _, _, AI, _>(
                 cmd,
                 ParamsKeeper::new(self.params_store_key),
                 self.params_subspace_key,
                 self.abci_handler_builder,
-                self.router,
+                self.core,
             )?,
-            AppCommands::GenesisAdd(cmd) => genesis_account_add::<Core::Genesis>(cmd)?,
+            AppCommands::GenesisAdd(cmd) => {
+                genesis_account_add::<<<Core as Node>::Handler as ABCIHandler>::Genesis>(cmd)?
+            }
             AppCommands::Aux(cmd) => {
                 let cmd = self.core.prepare_aux(cmd)?;
                 self.core.handle_aux(cmd)?;

@@ -79,7 +79,7 @@ impl SendCoins {
         let coin = coins.get(denom);
 
         if let Some(coin) = coin {
-            (**coin).clone()
+            **coin
         } else {
             Uint256::zero()
         }

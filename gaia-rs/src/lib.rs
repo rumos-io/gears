@@ -1,10 +1,15 @@
 use crate::abci_handler::GaiaABCIHandler;
 use crate::query::GaiaQuery;
 use crate::query::GaiaQueryResponse;
-use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
+use crate::store_keys::GaiaParamsStoreKey;
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
+use auth::AuthNodeQueryRequest;
+use auth::AuthNodeQueryResponse;
+use axum::Router;
 use bank::cli::query::BankQueryHandler;
+use bank::BankNodeQueryRequest;
+use bank::BankNodeQueryResponse;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::WrappedGaiaQueryCommands;
@@ -13,13 +18,19 @@ use gears::application::handlers::client::{QueryHandler, TxHandler};
 use gears::application::handlers::AuxHandler;
 use gears::application::node::Node;
 use gears::application::ApplicationInfo;
+use gears::baseapp::NodeQueryHandler;
+use gears::baseapp::{QueryRequest, QueryResponse};
+use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
+use gears::rest::RestState;
 use gears::types::address::AccAddress;
-use genesis::GenesisState;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
+use tonic::transport::Server;
+use tonic::Status;
+use tower_layer::Identity;
 
 pub mod abci_handler;
 pub mod client;
@@ -28,6 +39,7 @@ pub mod genesis;
 pub mod message;
 pub mod query;
 pub mod rest;
+mod staking_grpc;
 pub mod store_keys;
 
 #[derive(Debug, Clone, Serialize)]
@@ -114,25 +126,92 @@ impl AuxHandler for GaiaCoreClient {
 
 impl Client for GaiaCoreClient {}
 
-impl Node for GaiaCore {
-    type Message = message::Message;
-    type Genesis = GenesisState;
-    type StoreKey = GaiaStoreKey;
-    type ParamsSubspaceKey = GaiaParamsStoreKey;
-    type ABCIHandler = GaiaABCIHandler;
-    type ApplicationConfig = config::AppConfig;
+#[derive(Clone)]
+pub enum GaiaNodeQueryRequest {
+    Bank(BankNodeQueryRequest),
+    Auth(AuthNodeQueryRequest),
+}
 
-    fn router<AI: ApplicationInfo>() -> axum::Router<
-        gears::rest::RestState<
-            Self::StoreKey,
-            Self::ParamsSubspaceKey,
-            Self::Message,
-            Self::ABCIHandler,
-            Self::Genesis,
-            AI,
-        >,
-    > {
+impl QueryRequest for GaiaNodeQueryRequest {
+    fn height(&self) -> u32 {
+        0
+    }
+}
+
+impl From<BankNodeQueryRequest> for GaiaNodeQueryRequest {
+    fn from(req: BankNodeQueryRequest) -> Self {
+        GaiaNodeQueryRequest::Bank(req)
+    }
+}
+
+impl From<AuthNodeQueryRequest> for GaiaNodeQueryRequest {
+    fn from(req: AuthNodeQueryRequest) -> Self {
+        GaiaNodeQueryRequest::Auth(req)
+    }
+}
+
+#[derive(Clone, Serialize)]
+#[serde(untagged)]
+pub enum GaiaNodeQueryResponse {
+    Bank(BankNodeQueryResponse),
+    Auth(AuthNodeQueryResponse),
+}
+
+impl TryFrom<GaiaNodeQueryResponse> for BankNodeQueryResponse {
+    type Error = Status;
+
+    fn try_from(res: GaiaNodeQueryResponse) -> Result<Self, Status> {
+        match res {
+            GaiaNodeQueryResponse::Bank(res) => Ok(res),
+            _ => Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            )),
+        }
+    }
+}
+
+impl TryFrom<GaiaNodeQueryResponse> for AuthNodeQueryResponse {
+    type Error = Status;
+
+    fn try_from(res: GaiaNodeQueryResponse) -> Result<Self, Status> {
+        match res {
+            GaiaNodeQueryResponse::Auth(res) => Ok(res),
+            _ => Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            )),
+        }
+    }
+}
+
+impl QueryResponse for GaiaNodeQueryResponse {}
+
+impl Node for GaiaCore {
+    type ParamsSubspaceKey = GaiaParamsStoreKey;
+    type Handler = GaiaABCIHandler;
+    type ApplicationConfig = config::AppConfig;
+}
+
+impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
+    fn build_router<App: NodeQueryHandler<GaiaNodeQueryRequest, GaiaNodeQueryResponse>>(
+        &self,
+    ) -> Router<RestState<GaiaNodeQueryRequest, GaiaNodeQueryResponse, App>> {
         get_router()
+    }
+
+    fn build_grpc_router<App: NodeQueryHandler<GaiaNodeQueryRequest, GaiaNodeQueryResponse>>(
+        &self,
+        app: App,
+    ) -> tonic::transport::server::Router<Identity> {
+        let reflection_service = tonic_reflection::server::Builder::configure()
+            .register_encoded_file_descriptor_set(ibc_proto::FILE_DESCRIPTOR_SET)
+            .build()
+            .expect("ibc_proto::FILE_DESCRIPTOR_SET is a valid proto file descriptor set");
+
+        Server::builder()
+            .add_service(reflection_service)
+            .add_service(staking_grpc::new(app.clone()))
+            .add_service(auth::grpc::new(app.clone()))
+            .add_service(bank::grpc::new(app))
     }
 }
 

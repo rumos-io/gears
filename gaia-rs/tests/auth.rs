@@ -42,12 +42,12 @@ fn account_query() -> anyhow::Result<()> {
     let result = run_query(cmd, &GaiaCoreClient)?;
 
     let expected = GaiaQueryResponse::Auth(AuthQueryResponse::Account(QueryAccountResponse {
-        account: Account::Base(BaseAccount {
+        account: Some(Account::Base(BaseAccount {
             address: acc_adress,
             pub_key: None,
             account_number: 0,
             sequence: 0,
-        }),
+        })),
     }));
 
     assert_eq!(result, expected);

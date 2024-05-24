@@ -1,17 +1,15 @@
-use super::{BaseApp, Genesis};
+use super::BaseApp;
 use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
 use crate::types::context::block::BlockContext;
 use crate::types::gas::Gas;
-use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
 use store_crate::types::multi::immutable::MultiStore;
 use store_crate::types::multi::mutable::MultiStoreMut;
-use store_crate::StoreKey;
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -46,14 +44,8 @@ use tendermint::{
 };
 use tracing::{debug, error, info};
 
-impl<
-        M: TxMessage,
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G>,
-        G: Genesis,
-        AI: ApplicationInfo,
-    > ABCIApplication for BaseApp<SK, PSK, M, H, G, AI>
+impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplication
+    for BaseApp<PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
@@ -72,7 +64,7 @@ impl<
             std::process::exit(1)
         });
 
-        let genesis: G = String::from_utf8(request.app_state_bytes.into())
+        let genesis: H::Genesis = String::from_utf8(request.app_state_bytes.into())
             .map_err(|e| AppError::Genesis(e.to_string()))
             .and_then(|s| serde_json::from_str(&s).map_err(|e| AppError::Genesis(e.to_string())))
             .unwrap_or_else(|e| {

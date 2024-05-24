@@ -1,6 +1,6 @@
 use database::Database;
 use store_crate::types::multi::MultiBank;
-use store_crate::{StoreKey, TransactionStore, TransactionalMultiKVStore};
+use store_crate::{TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use crate::baseapp::options::NodeOptions;
@@ -13,23 +13,20 @@ use crate::types::gas::{Gas, GasMeter};
 use crate::types::header::Header;
 use crate::{
     application::handlers::node::ABCIHandler,
-    baseapp::{errors::RunTxError, genesis::Genesis},
-    types::{
-        context::TransactionalContext,
-        tx::{raw::TxWithRaw, TxMessage},
-    },
+    baseapp::errors::RunTxError,
+    types::{context::TransactionalContext, tx::raw::TxWithRaw},
 };
 
 use super::{build_tx_gas_meter, ExecutionMode};
 
 #[derive(Debug)]
-pub struct DeliverTxMode<DB, SK> {
+pub struct DeliverTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiBank<DB, SK, TransactionStore>,
+    pub(crate) multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
 }
 
-impl<DB, SK> DeliverTxMode<DB, SK> {
-    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, SK, TransactionStore>) -> Self {
+impl<DB, AH: ABCIHandler> DeliverTxMode<DB, AH> {
+    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
@@ -40,14 +37,14 @@ impl<DB, SK> DeliverTxMode<DB, SK> {
     }
 }
 
-impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for DeliverTxMode<DB, SK> {
+impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, AH> {
     fn build_ctx(
         &mut self,
         height: u64,
         header: Header,
         fee: Option<&Fee>,
         options: NodeOptions,
-    ) -> TxContext<'_, DB, SK> {
+    ) -> TxContext<'_, DB, AH::StoreKey> {
         TxContext::new(
             &mut self.multi_store,
             height,
@@ -59,10 +56,10 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         )
     }
 
-    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        ctx: &mut TxContext<'_, DB, SK>,
+    fn run_msg<'m>(
+        ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
-        msgs: impl Iterator<Item = &'m M>,
+        msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError> {
         for msg in msgs {
             handler
@@ -76,10 +73,10 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         Ok(events)
     }
 
-    fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        ctx: &mut TxContext<'_, DB, SK>,
+    fn run_ante_checks(
+        ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
-        tx_with_raw: &TxWithRaw<M>,
+        tx_with_raw: &TxWithRaw<AH::Message>,
     ) -> Result<(), RunTxError> {
         match handler.run_ante_checks(ctx, tx_with_raw) {
             Ok(_) => Ok(()),
@@ -90,7 +87,7 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
         }
     }
 
-    fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
+    fn runnable(ctx: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError> {
         if ctx.block_gas_meter.is_out_of_gas() {
             Err(RunTxError::OutOfGas)
         } else {
@@ -99,8 +96,8 @@ impl<DB: Database + Sync + Send, SK: StoreKey> ExecutionMode<DB, SK> for Deliver
     }
 
     fn commit(
-        mut ctx: TxContext<'_, DB, SK>,
-        global_ms: &mut MultiBank<DB, SK, store_crate::ApplicationStore>,
+        mut ctx: TxContext<'_, DB, AH::StoreKey>,
+        global_ms: &mut MultiBank<DB, AH::StoreKey, store_crate::ApplicationStore>,
     ) {
         global_ms.sync(ctx.commit());
     }
