@@ -34,11 +34,15 @@ impl<
         amount: Uint256,
     ) {
         let params = self.staking_params_keeper.get(&ctx.multi_store());
+
+        // TODO: original routine is unfailable, it means that the amount is a valid number.
+        // The method is called from failable methods. Consider to provide correct solution taking
+        // into account additional analisis.
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
+        .unwrap();
 
         // TODO: check and maybe remove unwrap
         self.bank_keeper

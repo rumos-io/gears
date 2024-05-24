@@ -25,7 +25,7 @@ impl<
         // Validator loses all tokens due to slashing. In this case,
         // make all future delegations invalid.
         if validator.invalid_ex_rate() {
-            return Err(AppError::Send(
+            return Err(AppError::Custom(
                 "invalid delegation_share exchange rate ".into(),
             ));
         }
@@ -45,7 +45,7 @@ impl<
             }
         };
 
-        // if subtractAccount is true then we are
+        // if subtract_account is true then we are
         // performing a delegation and not a redelegation, thus the source tokens are
         // all non bonded
         if subtract_account {
@@ -71,9 +71,8 @@ impl<
                 denom,
                 amount: bound_amount,
             }])
-            .expect(
-                "Creation of SendCoins from params denom and valid Uint256 should be unfailable",
-            );
+            .map_err(|e| AppError::Coins(e.to_string()))?;
+
             self.bank_keeper
                 .delegate_coins_from_account_to_module::<DB, AK, CTX>(
                     ctx,

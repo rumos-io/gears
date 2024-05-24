@@ -170,16 +170,18 @@ impl<
             }
         }
 
+        // TODO: check
         let bonded_coins = SendCoins::new(vec![Coin {
             denom: genesis.params.bond_denom.clone(),
             amount: bonded_tokens,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
+        .unwrap_or_default();
+        // TODO: check
         let not_bonded_coins = SendCoins::new(vec![Coin {
             denom: genesis.params.bond_denom,
             amount: not_bonded_tokens,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
+        .unwrap_or_default();
 
         // check if the unbonded and bonded pools accounts exists
         let bonded_pool = self
@@ -521,12 +523,15 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) {
+        // TODO: original routine is unfailable, it means that the amount is a valid number.
+        // The method is called from failable methods. Consider to provide correct solution taking
+        // into account additional analisis.
         let params = self.staking_params_keeper.get(&ctx.multi_store());
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
+        .unwrap();
 
         // TODO: check and maybe remove unwrap
         self.bank_keeper

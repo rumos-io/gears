@@ -101,3 +101,15 @@ impl FromStr for SendCoins {
         Ok(Self::new(coins)?)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_send_coins() {
+        let coins = SendCoins::default();
+        let exp = SendCoins(vec![]);
+        assert_eq!(coins, exp);
+    }
+}
