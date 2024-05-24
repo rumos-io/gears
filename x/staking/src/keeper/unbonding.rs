@@ -196,7 +196,9 @@ impl<
     }
 
     pub fn unbond_all_mature_validators<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
-        let block_time = ctx.time().expect("Expected timestamp in block context.");
+        let block_time = ctx
+            .get_time()
+            .expect("Expected timestamp in block context.");
         let block_time = chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32)
             .expect(
                 "Invalid timestamp in transactional. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
@@ -295,7 +297,9 @@ impl<
         };
         let bond_denom = params.bond_denom;
         let mut balances = vec![];
-        let ctx_time = ctx.time().expect("Expected timestamp in block context.");
+        let ctx_time = ctx
+            .get_time()
+            .expect("Expected timestamp in block context.");
         let ctx_time = chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32)
             .expect(
                 "Invalid timestamp in block context. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
@@ -364,7 +368,7 @@ impl<
         validator.update_status(BondStatus::Unbonding);
 
         // set the unbonding completion time and completion height appropriately
-        validator.unbonding_time = ctx.time().expect("Expected timestamp in context.");
+        validator.unbonding_time = ctx.get_time().expect("Expected timestamp in context.");
         validator.unbonding_height = ctx.height() as i64;
 
         // save the now unbonded validator record and power index

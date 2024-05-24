@@ -68,7 +68,7 @@ impl<
             msg.description.clone(),
         );
 
-        let update_time = ctx.time().ok_or(AppError::TxValidation(
+        let update_time = ctx.get_time().ok_or(AppError::TxValidation(
             "Transaction doesn't have valid timestamp.".to_string(),
         ))?;
         let commission = Commission {
