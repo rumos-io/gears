@@ -1,19 +1,16 @@
 use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
-use crate::baseapp::genesis::Genesis;
 use crate::baseapp::options::NodeOptions;
-use crate::baseapp::{BaseApp, NodeQueryHandler, QueryRequest, QueryResponse};
+use crate::baseapp::{BaseApp, NodeQueryHandler};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::grpc::run_grpc_server;
 use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::rest::{run_rest_server, RestState};
 use crate::types::base::min_gas::MinGasPrices;
-use crate::types::tx::TxMessage;
 use axum::Router;
 use database::RocksDB;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
 use tendermint::application::ABCI;
 use tower_layer::Identity;
@@ -70,7 +67,7 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
-pub trait RouterBuilder<QReq: QueryRequest, QRes: QueryResponse> {
+pub trait RouterBuilder<QReq, QRes> {
     fn build_router<App: NodeQueryHandler<QReq, QRes>>(&self)
         -> Router<RestState<QReq, QRes, App>>;
 
@@ -81,22 +78,18 @@ pub trait RouterBuilder<QReq: QueryRequest, QRes: QueryResponse> {
 }
 
 pub fn run<
-    SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: TxMessage,
-    H: ABCIHandler<M, SK, G, QReq, QRes>,
-    G: Genesis,
+    H: ABCIHandler,
     AC: ApplicationConfig,
     AI: ApplicationInfo,
-    QReq: QueryRequest,
-    QRes: QueryResponse,
+    RB: RouterBuilder<H::QReq, H::QRes>,
 >(
     cmd: RunCommand,
-    params_keeper: Keeper<SK, PSK>,
+    params_keeper: Keeper<H::StoreKey, PSK>,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
     //router: Router<RestState<QReq, QRes, NodeQueryHandler<QReq, QRes>>>,
-    router_builder: impl RouterBuilder<QReq, QRes>,
+    router_builder: RB,
 ) -> Result<(), RunError> {
     let RunCommand {
         home,
@@ -126,7 +119,7 @@ pub fn run<
 
     let options = NodeOptions::new(min_gas_prices);
 
-    let app: BaseApp<SK, PSK, M, H, G, AI, QReq, QRes> = BaseApp::new(
+    let app: BaseApp<PSK, H, AI> = BaseApp::new(
         db,
         params_keeper,
         params_subspace_key,
@@ -134,16 +127,14 @@ pub fn run<
         options,
     );
 
-    run_rest_server::<M, _, _, _>(
+    run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),
         rest_listen_addr,
-        router_builder.build_router::<BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>>(),
+        router_builder.build_router::<BaseApp<PSK, H, AI>>(),
         config.tendermint_rpc_address,
     );
 
-    run_grpc_server(
-        router_builder.build_grpc_router::<BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>>(app.clone()),
-    );
+    run_grpc_server(router_builder.build_grpc_router::<BaseApp<PSK, H, AI>>(app.clone()));
 
     let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
 

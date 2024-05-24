@@ -21,6 +21,7 @@ pub fn run_grpc_server(router: Router<Identity>) {
     });
 }
 
+#[allow(dead_code)]
 trait GService:
     Service<
         http::Request<Body>,
