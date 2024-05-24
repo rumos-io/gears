@@ -83,7 +83,12 @@ impl<
                 std::process::exit(1)
             });
 
-        let mut ctx = InitContext::new(&mut *multi_store, self.block_height(), chain_id.clone());
+        let mut ctx = InitContext::new(
+            &mut *multi_store,
+            self.block_height(),
+            request.time,
+            chain_id.clone(),
+        );
 
         self.abci_handler.init_genesis(&mut ctx, genesis.clone());
 

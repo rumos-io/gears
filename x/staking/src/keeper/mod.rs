@@ -291,12 +291,7 @@ impl<
         self.unbond_all_mature_validators(ctx);
 
         // Remove all mature unbonding delegations from the ubd queue.
-        let time = ctx
-            .header()
-            .expect("BlockContext always has context")
-            .time
-            .as_ref()
-            .expect("Expected timestamp in block context header.");
+        let time = ctx.time().expect("Expected timestamp in block context.");
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32)
             .expect(
                 "Invalid timestamp in block context. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",

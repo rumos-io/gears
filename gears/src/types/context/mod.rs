@@ -2,9 +2,7 @@ use database::prefix::PrefixDB;
 use store_crate::types::kv::{immutable::KVStore, mutable::KVStoreMut};
 use store_crate::types::multi::immutable::MultiStore;
 use store_crate::types::multi::mutable::MultiStoreMut;
-use tendermint::types::{chain_id::ChainId, proto::event::Event};
-
-use super::header::Header;
+use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
 pub mod block;
 pub mod init;
@@ -18,10 +16,6 @@ pub trait QueryableContext<DB, SK> {
 
     fn height(&self) -> u64;
     fn chain_id(&self) -> &ChainId;
-    /// Public interface for getting context header. Default implementation returns `None`.
-    fn header(&self) -> Option<&Header> {
-        None
-    }
 }
 
 pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
@@ -33,4 +27,13 @@ pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
     fn push_event(&mut self, event: Event);
     fn append_events(&mut self, events: Vec<Event>);
     fn events_drain(&mut self) -> Vec<Event>;
+
+    // TODO: it is placed here taking into account knowledge about implementors structures. It's not
+    // a good idea to mix purposes of trait. The trait `QueryableContext` implements getters, the
+    // `TransactionalContext` implements setters. I hardly recommend to move the method to
+    // `QueryableContext` or create alternative trait.
+    /// Public interface for getting context timestamp. Default implementation returns `None`.
+    fn time(&self) -> Option<Timestamp> {
+        None
+    }
 }

@@ -6,7 +6,7 @@ use store_crate::{
     },
     StoreKey, TransactionStore,
 };
-use tendermint::types::{chain_id::ChainId, proto::event::Event};
+use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
 use crate::types::{
     gas::{
@@ -69,10 +69,6 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
     fn chain_id(&self) -> &ChainId {
         &self.header.chain_id
     }
-
-    fn header(&self) -> Option<&Header> {
-        Some(&self.header)
-    }
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
@@ -94,5 +90,9 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
 
     fn events_drain(&mut self) -> Vec<Event> {
         std::mem::take(&mut self.events)
+    }
+
+    fn time(&self) -> Option<Timestamp> {
+        self.header.time.clone()
     }
 }

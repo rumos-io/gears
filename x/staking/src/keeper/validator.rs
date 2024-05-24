@@ -68,14 +68,9 @@ impl<
             msg.description.clone(),
         );
 
-        let update_time = ctx
-            .header()
-            .expect("TxContext always has context")
-            .time
-            .clone()
-            .ok_or(AppError::TxValidation(
-                "Transaction doesn't have valid timestamp.".to_string(),
-            ))?;
+        let update_time = ctx.time().ok_or(AppError::TxValidation(
+            "Transaction doesn't have valid timestamp.".to_string(),
+        ))?;
         let commission = Commission {
             commission_rates: msg.commission.clone(),
             update_time,
