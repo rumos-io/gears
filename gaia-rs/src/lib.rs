@@ -186,14 +186,9 @@ impl TryFrom<GaiaNodeQueryResponse> for AuthNodeQueryResponse {
 impl QueryResponse for GaiaNodeQueryResponse {}
 
 impl Node for GaiaCore {
-    // type Message = message::Message;
-    // type Genesis = GenesisState;
-    // type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
     type Handler = GaiaABCIHandler;
     type ApplicationConfig = config::AppConfig;
-    // type QReq = GaiaNodeQueryRequest;
-    // type QRes = GaiaNodeQueryResponse;
 }
 
 impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
