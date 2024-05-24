@@ -1,4 +1,5 @@
 use crate::{
+    baseapp::genesis::Genesis,
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::{
@@ -7,7 +8,6 @@ use crate::{
     },
 };
 use database::Database;
-use serde::de::DeserializeOwned;
 use store_crate::StoreKey;
 use tendermint::types::{
     proto::validator::ValidatorUpdate,
@@ -22,36 +22,33 @@ pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
     ) -> Result<(), AppError>;
 }
 
-pub trait ABCIHandler<
-    M: TxMessage,
-    SK: StoreKey,
-    G: DeserializeOwned + Clone + Send + Sync + 'static,
-    QReq,
-    QRes,
->: Clone + Send + Sync + 'static
-{
-    fn typed_query<DB: Database + Send + Sync>(
+pub trait ABCIHandler: Clone + Send + Sync + 'static {
+    type Message: TxMessage;
+    type Genesis: Genesis;
+    type StoreKey: StoreKey;
+
+    fn typed_query<DB: Database + Send + Sync, QReq, QRes>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<DB, Self::StoreKey>,
         query: QReq,
     ) -> QRes;
 
     fn run_ante_checks<DB: Database>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        tx: &TxWithRaw<M>,
+        ctx: &mut TxContext<'_, DB, Self::StoreKey>,
+        tx: &TxWithRaw<Self::Message>,
     ) -> Result<(), AppError>;
 
     fn tx<DB: Database + Sync + Send>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        msg: &M,
+        ctx: &mut TxContext<'_, DB, Self::StoreKey>,
+        msg: &Self::Message,
     ) -> Result<(), AppError>;
 
     #[allow(unused_variables)]
     fn begin_block<'a, DB: Database>(
         &self,
-        ctx: &mut BlockContext<'_, DB, SK>,
+        ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
         request: RequestBeginBlock,
     ) {
     }
@@ -59,17 +56,21 @@ pub trait ABCIHandler<
     #[allow(unused_variables)]
     fn end_block<'a, DB: Database>(
         &self,
-        ctx: &mut BlockContext<'_, DB, SK>,
+        ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
         request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
         Vec::new()
     }
 
-    fn init_genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: G);
+    fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, Self::StoreKey>,
+        genesis: Self::Genesis,
+    );
 
     fn query<DB: Database + Send + Sync>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
     ) -> Result<bytes::Bytes, AppError>;
 }

@@ -1,14 +1,14 @@
 use serde::Serialize;
-use store_crate::{types::query::QueryMultiStore, StoreKey};
+use store_crate::types::query::QueryMultiStore;
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::POISONED_LOCK,
     params::ParamsSubspaceKey,
-    types::{context::query::QueryContext, tx::TxMessage},
+    types::context::query::QueryContext,
 };
 
-use super::{errors::QueryError, genesis::Genesis, BaseApp};
+use super::{errors::QueryError, BaseApp};
 
 pub trait QueryRequest: Clone + Send + Sync + 'static {
     fn height(&self) -> u32;
@@ -21,15 +21,12 @@ pub trait NodeQueryHandler<QReq, QRes>: Clone + Send + Sync + 'static {
 }
 
 impl<
-        M: TxMessage,
-        SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G, QReq, QRes>,
-        G: Genesis,
+        H: ABCIHandler,
         AI: ApplicationInfo,
         QReq: QueryRequest,
         QRes: QueryResponse,
-    > NodeQueryHandler<QReq, QRes> for BaseApp<SK, PSK, M, H, G, AI, QReq, QRes>
+    > NodeQueryHandler<QReq, QRes> for BaseApp<PSK, H, AI>
 {
     fn typed_query<Q: Into<QReq>>(&self, request: Q) -> Result<QRes, QueryError> {
         let request = request.into();
