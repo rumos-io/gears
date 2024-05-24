@@ -173,7 +173,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
                     .unwrap_or_corrupt(),
             );
 
-            return QueryAccountResponse { account };
+            QueryAccountResponse { account }
         } else {
             QueryAccountResponse { account: None }
         }
