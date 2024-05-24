@@ -59,7 +59,7 @@ pub trait ParamsSubspaceKey: Hash + Eq + Clone + Send + Sync + 'static {
 pub trait ParamsSerialize {
     /// Return all unique keys for this structure
     fn keys() -> HashMap<&'static str, ParamKind>;
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>>;
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)>;
 }
 
 pub trait ParamsDeserialize: ParamsSerialize {

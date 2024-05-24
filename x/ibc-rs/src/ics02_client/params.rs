@@ -40,13 +40,13 @@ impl ParamsSerialize for ClientParams {
             .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
-        let mut hash_map = HashMap::with_capacity(1);
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
+        let mut hash_map = Vec::with_capacity(1);
 
-        hash_map.insert(
+        hash_map.push((
             KEY_ALLOWED_CLIENTS,
             serde_json::to_vec(&self.allowed_clients).expect("conversion to json won't fail"),
-        );
+        ));
 
         hash_map
     }

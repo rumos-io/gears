@@ -49,33 +49,33 @@ impl ParamsSerialize for AuthsParams {
         .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
-        let mut hash_map = HashMap::with_capacity(5);
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
+        let mut hash_map = Vec::with_capacity(5);
 
-        hash_map.insert(
+        hash_map.push((
             KEY_MAX_MEMO_CHARACTERS,
             format!("\"{}\"", self.max_memo_characters).into_bytes(),
-        );
+        ));
 
-        hash_map.insert(
+        hash_map.push((
             KEY_TX_SIG_LIMIT,
             format!("\"{}\"", self.tx_sig_limit).into_bytes(),
-        );
+        ));
 
-        hash_map.insert(
+        hash_map.push((
             KEY_TX_SIZE_COST_PER_BYTE,
             format!("\"{}\"", self.tx_size_cost_per_byte).into_bytes(),
-        );
+        ));
 
-        hash_map.insert(
+        hash_map.push((
             KEY_SIG_VERIFY_COST_ED25519,
             format!("\"{}\"", self.sig_verify_cost_ed25519).into_bytes(),
-        );
+        ));
 
-        hash_map.insert(
+        hash_map.push((
             KEY_SIG_VERIFY_COST_SECP256K1,
             format!("\"{}\"", self.sig_verify_cost_secp256k1).into_bytes(),
-        );
+        ));
 
         hash_map
     }

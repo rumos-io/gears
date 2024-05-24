@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use database::Database;
 use store_crate::{types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore};
 
@@ -13,13 +11,13 @@ impl<DB: Database> ParamsSpace<'_, DB> {
     /// Return whole serialized structure.
     pub fn params<T: ParamsDeserialize>(&self) -> Option<T> {
         let keys = T::keys();
-        let mut params_fields = HashMap::with_capacity(keys.len());
+        let mut params_fields = Vec::with_capacity(keys.len());
 
         for (key, _) in keys {
-            params_fields.insert(key, self.inner.get(key)?);
+            params_fields.push((key, self.inner.get(key)?));
         }
 
-        Some(T::from_raw(params_fields))
+        Some(T::from_raw(params_fields.into_iter().collect()))
     }
 
     /// Return only field from structure.

@@ -31,16 +31,16 @@ impl ParamsSerialize for BankParams {
         .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
-        let mut hash_map = HashMap::with_capacity(2);
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
+        let mut hash_map = Vec::with_capacity(2);
 
-        hash_map.insert(
+        hash_map.push((
             KEY_DEFAULT_SEND_ENABLED,
             self.default_send_enabled.to_string().into_bytes(),
-        );
+        ));
 
         // The send_enabled field is hard coded to the empty list for now
-        hash_map.insert(KEY_SEND_ENABLED, "[]".as_bytes().to_vec());
+        hash_map.push((KEY_SEND_ENABLED, "[]".as_bytes().to_vec()));
 
         hash_map
     }

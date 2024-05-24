@@ -17,16 +17,9 @@ mod inner {
     pub use tendermint::types::proto::params::ValidatorParams;
 }
 
-const KEY_BLOCK_PARAMS: &str = "BlockParams"; //[u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
+const KEY_BLOCK_PARAMS: &str = "BlockParams";
 const KEY_EVIDENCE_PARAMS: &str = "EvidenceParams";
-// [u8; 14] = [
-//     069, 118, 105, 100, 101, 110, 099, 101, 080, 097, 114, 097, 109, 115,
-// ]; // "EvidenceParams"
-
 const KEY_VALIDATOR_PARAMS: &str = "ValidatorParams";
-// [u8; 15] = [
-//     086, 097, 108, 105, 100, 097, 116, 111, 114, 080, 097, 114, 097, 109, 115,
-// ]; // "ValidatorParams"
 
 const _SUBSPACE_NAME: &str = "baseapp/";
 
@@ -137,25 +130,25 @@ impl ParamsSerialize for ConsensusParams {
         .collect()
     }
 
-    fn to_raw(&self) -> HashMap<&'static str, Vec<u8>> {
-        let mut hash_map = HashMap::with_capacity(3);
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
+        let mut hash_map = Vec::with_capacity(3);
 
         if let Some(params) = self.block.clone() {
             let block_params = serde_json::to_string(&BlockParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(KEY_BLOCK_PARAMS, block_params.into_bytes());
+            hash_map.push((KEY_BLOCK_PARAMS, block_params.into_bytes()));
         }
 
         if let Some(params) = self.evidence.clone() {
             let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(KEY_EVIDENCE_PARAMS, evidence_params.into_bytes());
+            hash_map.push((KEY_EVIDENCE_PARAMS, evidence_params.into_bytes()));
         }
 
         if let Some(params) = self.validator.clone() {
             let params = serde_json::to_string(&ValidatorParams::from(params))
                 .expect("conversion to json won't fail");
-            hash_map.insert(KEY_VALIDATOR_PARAMS, params.into_bytes());
+            hash_map.push((KEY_VALIDATOR_PARAMS, params.into_bytes()));
         }
 
         hash_map
