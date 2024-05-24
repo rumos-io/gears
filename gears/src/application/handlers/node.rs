@@ -1,5 +1,5 @@
 use crate::{
-    baseapp::genesis::Genesis,
+    baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::{
@@ -27,11 +27,14 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
     type Genesis: Genesis;
     type StoreKey: StoreKey;
 
-    fn typed_query<DB: Database + Send + Sync, QReq, QRes>(
+    type QReq: QueryRequest;
+    type QRes: QueryResponse;
+
+    fn typed_query<DB: Database + Send + Sync>(
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
-        query: QReq,
-    ) -> QRes;
+        query: Self::QReq,
+    ) -> Self::QRes;
 
     fn run_ante_checks<DB: Database>(
         &self,

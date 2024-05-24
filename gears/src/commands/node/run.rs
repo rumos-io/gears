@@ -1,7 +1,7 @@
 use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::options::NodeOptions;
-use crate::baseapp::{BaseApp, NodeQueryHandler, QueryRequest, QueryResponse};
+use crate::baseapp::{BaseApp, NodeQueryHandler};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::grpc::run_grpc_server;
 use crate::params::{Keeper, ParamsSubspaceKey};
@@ -67,15 +67,11 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
-pub trait RouterBuilder {
-    type QReq: QueryRequest;
-    type QRes: QueryResponse;
+pub trait RouterBuilder<QReq, QRes> {
+    fn build_router<App: NodeQueryHandler<QReq, QRes>>(&self)
+        -> Router<RestState<QReq, QRes, App>>;
 
-    fn build_router<App: NodeQueryHandler<Self::QReq, Self::QRes>>(
-        &self,
-    ) -> Router<RestState<Self::QReq, Self::QRes, App>>;
-
-    fn build_grpc_router<App: NodeQueryHandler<Self::QReq, Self::QRes>>(
+    fn build_grpc_router<App: NodeQueryHandler<QReq, QRes>>(
         &self,
         app: App,
     ) -> tonic::transport::server::Router<Identity>;
@@ -86,7 +82,7 @@ pub fn run<
     H: ABCIHandler,
     AC: ApplicationConfig,
     AI: ApplicationInfo,
-    RB: RouterBuilder,
+    RB: RouterBuilder<H::QReq, H::QRes>,
 >(
     cmd: RunCommand,
     params_keeper: Keeper<H::StoreKey, PSK>,
@@ -131,7 +127,7 @@ pub fn run<
         options,
     );
 
-    run_rest_server::<H::Message, RB::QReq, RB::QRes, _>(
+    run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),
         rest_listen_addr,
         router_builder.build_router::<BaseApp<PSK, H, AI>>(),

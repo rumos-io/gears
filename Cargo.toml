@@ -13,12 +13,12 @@ members = [
   "gears-derive",
 
   # GAIA
-  # "gaia-rs",
+  "gaia-rs",
 
   # xmodules
-  # "x/ibc-rs",
-  # "x/bank",
-  # "x/auth",
+  "x/ibc-rs",
+  "x/bank",
+  "x/auth",
   #  "x/staking",
 
   # new unsorted

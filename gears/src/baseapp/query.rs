@@ -20,15 +20,10 @@ pub trait NodeQueryHandler<QReq, QRes>: Clone + Send + Sync + 'static {
     fn typed_query<Q: Into<QReq>>(&self, request: Q) -> Result<QRes, QueryError>;
 }
 
-impl<
-        PSK: ParamsSubspaceKey,
-        H: ABCIHandler,
-        AI: ApplicationInfo,
-        QReq: QueryRequest,
-        QRes: QueryResponse,
-    > NodeQueryHandler<QReq, QRes> for BaseApp<PSK, H, AI>
+impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> NodeQueryHandler<H::QReq, H::QRes>
+    for BaseApp<PSK, H, AI>
 {
-    fn typed_query<Q: Into<QReq>>(&self, request: Q) -> Result<QRes, QueryError> {
+    fn typed_query<Q: Into<H::QReq>>(&self, request: Q) -> Result<H::QRes, QueryError> {
         let request = request.into();
         let version = request.height();
 

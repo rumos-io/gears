@@ -66,10 +66,15 @@ impl GaiaABCIHandler {
         }
     }
 }
+// <Message, GaiaStoreKey, GenesisState, GaiaNodeQueryRequest, GaiaNodeQueryResponse>
+impl ABCIHandler for GaiaABCIHandler {
+    type Message = Message;
+    type Genesis = GenesisState;
+    type StoreKey = GaiaStoreKey;
 
-impl ABCIHandler<Message, GaiaStoreKey, GenesisState, GaiaNodeQueryRequest, GaiaNodeQueryResponse>
-    for GaiaABCIHandler
-{
+    type QReq = GaiaNodeQueryRequest;
+    type QRes = GaiaNodeQueryResponse;
+
     fn tx<DB: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,

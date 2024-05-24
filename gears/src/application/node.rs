@@ -17,7 +17,10 @@ use crate::{
 };
 
 /// A Gears application.
-pub trait Node: AuxHandler + RouterBuilder {
+pub trait Node:
+    AuxHandler
+    + RouterBuilder<<Self::Handler as ABCIHandler>::QReq, <Self::Handler as ABCIHandler>::QRes>
+{
     type ParamsSubspaceKey: ParamsSubspaceKey;
     type Handler: ABCIHandler;
     type ApplicationConfig: ApplicationConfig;

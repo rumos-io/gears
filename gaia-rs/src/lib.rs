@@ -1,7 +1,7 @@
 use crate::abci_handler::GaiaABCIHandler;
 use crate::query::GaiaQuery;
 use crate::query::GaiaQueryResponse;
-use crate::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
+use crate::store_keys::GaiaParamsStoreKey;
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
 use auth::AuthNodeQueryRequest;
@@ -25,7 +25,6 @@ use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
 use gears::rest::RestState;
 use gears::types::address::AccAddress;
-use genesis::GenesisState;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
@@ -187,14 +186,14 @@ impl TryFrom<GaiaNodeQueryResponse> for AuthNodeQueryResponse {
 impl QueryResponse for GaiaNodeQueryResponse {}
 
 impl Node for GaiaCore {
-    type Message = message::Message;
-    type Genesis = GenesisState;
-    type StoreKey = GaiaStoreKey;
+    // type Message = message::Message;
+    // type Genesis = GenesisState;
+    // type StoreKey = GaiaStoreKey;
     type ParamsSubspaceKey = GaiaParamsStoreKey;
-    type ABCIHandler = GaiaABCIHandler;
+    type Handler = GaiaABCIHandler;
     type ApplicationConfig = config::AppConfig;
-    type QReq = GaiaNodeQueryRequest;
-    type QRes = GaiaNodeQueryResponse;
+    // type QReq = GaiaNodeQueryRequest;
+    // type QRes = GaiaNodeQueryResponse;
 }
 
 impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
