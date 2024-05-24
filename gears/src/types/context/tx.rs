@@ -8,12 +8,15 @@ use store_crate::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
-use crate::types::{
-    gas::{
-        kind::{BlockKind, TxKind},
-        GasMeter,
+use crate::{
+    baseapp::ConsensusParams,
+    types::{
+        gas::{
+            kind::{BlockKind, TxKind},
+            GasMeter,
+        },
+        header::Header,
     },
-    header::Header,
 };
 
 use super::{QueryableContext, TransactionalContext};
@@ -26,6 +29,7 @@ pub struct TxContext<'a, DB, SK> {
     pub(crate) height: u64,
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
+    pub(crate) consensus_params: ConsensusParams,
 }
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
@@ -33,6 +37,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
         height: u64,
         header: Header,
+        consensus_params: ConsensusParams,
         gas_meter: GasMeter<TxKind>,
         block_gas_meter: &'a mut GasMeter<BlockKind>,
     ) -> Self {
@@ -43,6 +48,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             header,
             gas_meter,
             block_gas_meter,
+            consensus_params,
         }
     }
 }
@@ -50,6 +56,10 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
     pub(crate) fn commit(&mut self) -> CacheCommitList<SK> {
         self.multi_store.commit()
+    }
+
+    pub fn consensus_params(&self) -> &ConsensusParams {
+        &self.consensus_params
     }
 }
 

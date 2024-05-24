@@ -41,7 +41,7 @@ pub mod genesis;
 pub mod mode;
 mod params;
 pub mod state;
-pub use params::{KEY_BLOCK_PARAMS, KEY_EVIDENCE_PARAMS, KEY_VALIDATOR_PARAMS};
+pub use params::{BlockParams, ConsensusParams, EvidenceParams, ValidatorParams};
 
 static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
 
@@ -184,7 +184,16 @@ impl<
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        let mut ctx = mode.build_ctx(height, header.clone(), Some(&tx_with_raw.tx.auth_info.fee));
+        let consensus_params = self
+            .baseapp_params_keeper
+            .consensus_params(&MultiStore::from(&(*multi_store)));
+
+        let mut ctx = mode.build_ctx(
+            height,
+            header.clone(),
+            consensus_params,
+            Some(&tx_with_raw.tx.auth_info.fee),
+        );
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;

@@ -4,21 +4,21 @@ use serde_with::serde_as;
 use store_crate::{
     QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore, WritePrefixStore,
 };
-use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::params::{Keeper, ParamsSubspaceKey};
 
 mod inner {
+    pub use tendermint::types::proto::consensus::ConsensusParams;
     pub use tendermint::types::proto::params::BlockParams;
     pub use tendermint::types::proto::params::EvidenceParams;
     pub use tendermint::types::proto::params::ValidatorParams;
 }
 
-pub const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
-pub const KEY_EVIDENCE_PARAMS: [u8; 14] = [
+const KEY_BLOCK_PARAMS: [u8; 11] = [066, 108, 111, 099, 107, 080, 097, 114, 097, 109, 115]; // "BlockParams"
+const KEY_EVIDENCE_PARAMS: [u8; 14] = [
     069, 118, 105, 100, 101, 110, 099, 101, 080, 097, 114, 097, 109, 115,
 ]; // "EvidenceParams"
-pub const KEY_VALIDATOR_PARAMS: [u8; 15] = [
+const KEY_VALIDATOR_PARAMS: [u8; 15] = [
     086, 097, 108, 105, 100, 097, 116, 111, 114, 080, 097, 114, 097, 109, 115,
 ]; // "ValidatorParams"
 
@@ -35,8 +35,18 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 //##################################################################################
 //##################################################################################
 
+/// A domain ConsensusParams type that wraps domain consensus params types.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConsensusParams {
+    pub block: Option<BlockParams>,
+    pub evidence: Option<EvidenceParams>,
+    pub validator: Option<ValidatorParams>,
+    // TODO: consider to check the importance and usage
+    // pub version: Option<VersionParams>
+}
+
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BlockParams {
     pub max_bytes: String,
     #[serde_as(as = "serde_with::DisplayFromStr")]
@@ -52,7 +62,7 @@ impl From<inner::BlockParams> for BlockParams {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
@@ -65,7 +75,7 @@ impl From<inner::ValidatorParams> for ValidatorParams {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EvidenceParams {
     max_age_num_blocks: String,
     max_age_duration: Option<String>,
@@ -97,7 +107,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
     pub fn set_consensus_params<DB: Database, KV: TransactionalMultiKVStore<DB, SK>>(
         &self,
         kv_store: &mut KV,
-        params: ConsensusParams,
+        params: inner::ConsensusParams,
     ) {
         // let store = ctx.get_mutable_kv_store(crate::store::Store::Params);
         // let mut store = store.get_mutable_prefix_store(SUBSPACE_NAME.into());
@@ -125,6 +135,29 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
         }
     }
 
+    pub(crate) fn consensus_params<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(
+        &self,
+        store: &KV,
+    ) -> ConsensusParams {
+        let sub_store = self
+            .params_keeper
+            .raw_subspace(store, &self.params_subspace_key);
+
+        let block_params = self.block_params(store);
+        let evidence_params = sub_store
+            .get(&KEY_EVIDENCE_PARAMS)
+            .map(|bytes| serde_json::from_slice(&bytes).expect("conversion from json won't fail"));
+        let validator_params = sub_store
+            .get(&KEY_VALIDATOR_PARAMS)
+            .map(|bytes| serde_json::from_slice(&bytes).expect("conversion from json won't fail"));
+
+        ConsensusParams {
+            block: block_params,
+            evidence: evidence_params,
+            validator: validator_params,
+        }
+    }
+
     pub fn block_params<DB: Database, KV: QueryableMultiKVStore<DB, SK>>(
         &self,
         store: &KV,
@@ -133,16 +166,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
             .params_keeper
             .raw_subspace(store, &self.params_subspace_key);
 
-        let params = sub_store.get(&KEY_BLOCK_PARAMS);
-
-        if let Some(params) = params {
-            let block_params: BlockParams =
-                serde_json::from_slice(&params).expect("conversion from json won't fail");
-
-            Some(block_params)
-        } else {
-            None
-        }
+        sub_store
+            .get(&KEY_BLOCK_PARAMS)
+            .map(|params| serde_json::from_slice(&params).expect("conversion from json won't fail"))
     }
 }
 

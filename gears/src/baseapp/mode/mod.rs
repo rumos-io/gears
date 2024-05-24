@@ -21,11 +21,14 @@ use crate::{
 
 use self::sealed::Sealed;
 
+use super::params::ConsensusParams;
+
 pub trait ExecutionMode<DB, SK: StoreKey>: Sealed {
     fn build_ctx(
         &mut self,
         height: u64,
         header: Header,
+        consensus_params: ConsensusParams,
         fee: Option<&Fee>,
     ) -> TxContext<'_, DB, SK>;
 

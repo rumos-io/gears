@@ -1,6 +1,5 @@
 use crate::consts::expect::{self, SERDE_ENCODING_DOMAIN_TYPE};
 use gears::{
-    baseapp::KEY_VALIDATOR_PARAMS,
     core::base::coin::Coin,
     params::ParamsSubspaceKey,
     store::{
@@ -8,10 +7,9 @@ use gears::{
         QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore,
         WritePrefixStore,
     },
-    tendermint::types::proto::params::ValidatorParams,
     types::denom::Denom,
 };
-use serde::{de::Error, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 const PARAMS_KEY: [u8; 6] = [112, 97, 114, 97, 109, 115]; // "params"
 
@@ -65,21 +63,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
             .get(PARAMS_KEY.as_ref())
             .expect("key should be set in kv store");
         serde_json::from_slice(&raw_params).expect(expect::SERDE_DECODING_DOMAIN_TYPE)
-    }
-
-    pub fn consensus_validator<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> anyhow::Result<ValidatorParams> {
-        let store = self
-            .params_keeper
-            .raw_subspace(ctx, &self.params_subspace_key);
-
-        if let Some(raw_params) = store.get(KEY_VALIDATOR_PARAMS.as_ref()) {
-            Ok(serde_json::from_slice(&raw_params)?)
-        } else {
-            Err(serde_json::Error::custom("Cannot find data to convert".to_string()).into())
-        }
     }
 
     pub fn set<DB: Database, CTX: TransactionalMultiKVStore<DB, SK>>(
