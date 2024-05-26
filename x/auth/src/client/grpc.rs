@@ -11,6 +11,7 @@ use ibc_proto::cosmos::auth::v1beta1::{
 };
 use std::marker::PhantomData;
 use tonic::{Request, Response, Status};
+use tracing::info;
 
 use crate::{AuthNodeQueryRequest, AuthNodeQueryResponse};
 
@@ -41,6 +42,7 @@ where
         &self,
         request: Request<QueryAccountRequest>,
     ) -> Result<Response<QueryAccountResponse>, Status> {
+        info!("Received a gRPC request auth::account");
         let req = AuthNodeQueryRequest::Account(request.into_inner().try_into()?);
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;

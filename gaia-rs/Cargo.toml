@@ -27,6 +27,9 @@ strum = { workspace = true }
 serde = { workspace = true }
 prost = { workspace = true }
 
+# log
+tracing = { workspace = true }
+
 #networking
 axum = { workspace = true }
 tonic = { workspace = true }

@@ -23,6 +23,8 @@ use gears::baseapp::{QueryRequest, QueryResponse};
 use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
+use gears::grpc::health::health_server;
+use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
 use gears::types::address::AccAddress;
 use ibc_rs::client::cli::query::IbcQueryHandler;
@@ -212,6 +214,8 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
             .add_service(staking_grpc::new(app.clone()))
             .add_service(auth::grpc::new(app.clone()))
             .add_service(bank::grpc::new(app))
+            .add_service(health_server())
+            .add_service(tx_server())
     }
 }
 

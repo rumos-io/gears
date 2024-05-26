@@ -250,14 +250,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
             let mut from_account_store = self.get_address_balances_store(&mut ms, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())
-                .ok_or(AppError::Send("Insufficient funds".into()))?;
+                .ok_or(AppError::Send(format!(
+                    "insufficient funds: required: {}, actual: 0",
+                    send_coin.amount
+                )))?;
 
             let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
 
             if from_balance.amount < send_coin.amount {
-                return Err(AppError::Send("Insufficient funds".into()));
+                return Err(AppError::Send(format!(
+                    "insufficient funds: required: {}, actual: {}",
+                    send_coin.amount, from_balance.amount
+                )));
             }
 
             from_balance.amount -= send_coin.amount;

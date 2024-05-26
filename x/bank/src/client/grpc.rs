@@ -11,6 +11,7 @@ use ibc_proto::cosmos::bank::v1beta1::{
 };
 use std::marker::PhantomData;
 use tonic::{Request, Response, Status};
+use tracing::info;
 
 use crate::{BankNodeQueryRequest, BankNodeQueryResponse};
 
@@ -34,6 +35,7 @@ where
         &self,
         request: Request<RawQueryBalanceRequest>,
     ) -> Result<Response<RawQueryBalanceResponse>, Status> {
+        info!("Received a gRPC request bank::balance");
         let req = BankNodeQueryRequest::Balance(request.into_inner().try_into()?);
         let response = self.app.typed_query(req)?;
         let response: BankNodeQueryResponse = response.try_into()?;

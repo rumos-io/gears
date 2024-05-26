@@ -213,6 +213,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "tonic",
+ "tracing",
 ]
 
 [[package]]
@@ -353,6 +354,7 @@ dependencies = [
  "strum",
  "tokio",
  "tonic",
+ "tracing",
 ]
 
 [[package]]
@@ -1727,6 +1729,7 @@ dependencies = [
  "tonic",
  "tonic-reflection",
  "tower-layer",
+ "tracing",
  "url",
 ]
 
@@ -5360,6 +5363,7 @@ dependencies = [
  "pin-project-lite",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]

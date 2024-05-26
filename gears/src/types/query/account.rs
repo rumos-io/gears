@@ -35,7 +35,7 @@ impl From<QueryAccountResponse> for inner::QueryAccountResponse {
 impl Protobuf<inner::QueryAccountResponse> for QueryAccountResponse {}
 
 /// QueryAccountRequest is the request type for the Query/Account RPC method.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct QueryAccountRequest {
     /// address defines the address to query for.
     pub address: AccAddress,
