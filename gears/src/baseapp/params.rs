@@ -7,7 +7,9 @@ use store_crate::StoreKey;
 use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::{
-    params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
+    params::{
+        subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsStoreKey, ParamsSubspaceKey,
+    },
     types::context::{QueryableContext, TransactionalContext},
 };
 
@@ -87,7 +89,7 @@ impl From<inner::EvidenceParams> for EvidenceParams {
 
 #[derive(Debug, Clone)]
 pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub store_key: SK,
+    pub store_key: ParamsStoreKey<SK>,
     pub params_subspace_key: PSK,
 }
 

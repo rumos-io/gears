@@ -6,6 +6,7 @@ use gears::params::subspace_mut;
 use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
+use gears::params::ParamsStoreKey;
 use gears::params::ParamsSubspaceKey;
 use gears::store::QueryableMultiKVStore;
 use gears::store::ReadPrefixStore;
@@ -65,7 +66,7 @@ impl ParamsDeserialize for ClientParams {
 
 #[derive(Debug, Clone)]
 pub struct ClientParamsKeeper<SK, PSK> {
-    pub store_key: SK,
+    pub store_key: ParamsStoreKey<SK>,
     pub params_subspace_key: PSK,
 }
 

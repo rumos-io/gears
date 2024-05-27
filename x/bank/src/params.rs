@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
 use gears::params::{
-    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
+    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsStoreKey,
+    ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -59,7 +60,7 @@ impl ParamsDeserialize for BankParams {
 
 #[derive(Debug, Clone)]
 pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub store_key: SK,
+    pub store_key: ParamsStoreKey<SK>,
     pub params_subspace_key: PSK,
 }
 

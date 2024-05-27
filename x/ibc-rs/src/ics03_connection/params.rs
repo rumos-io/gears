@@ -7,6 +7,7 @@ use gears::params::subspace_mut;
 use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
+use gears::params::ParamsStoreKey;
 use gears::params::ParamsSubspaceKey;
 use gears::store::types::prefix::immutable::ImmutablePrefixStore;
 use gears::store::QueryableMultiKVStore;
@@ -70,7 +71,7 @@ impl ParamsDeserialize for ConnectionParams {
 
 #[derive(Debug, Clone)]
 pub struct ConnectionParamsKeeper<SK, PSK> {
-    pub store_key: SK,
+    pub store_key: ParamsStoreKey<SK>,
     pub params_subspace_key: PSK,
 }
 

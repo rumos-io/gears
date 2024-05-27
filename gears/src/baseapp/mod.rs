@@ -8,7 +8,7 @@ use std::{
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::{AppError, POISONED_LOCK},
-    params::ParamsSubspaceKey,
+    params::{ParamsStoreKey, ParamsSubspaceKey},
     types::{
         context::{query::QueryContext, simple::SimpleContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
@@ -81,7 +81,7 @@ impl<
         let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
-            store_key,
+            store_key: ParamsStoreKey::from(store_key),
             params_subspace_key,
         };
 

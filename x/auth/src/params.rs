@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::{
-    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
+    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsStoreKey,
+    ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -133,7 +134,7 @@ pub const DEFAULT_PARAMS: AuthsParams = AuthsParams {
 
 #[derive(Debug, Clone)]
 pub struct AuthParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub store_key: SK,
+    pub store_key: ParamsStoreKey<SK>,
     pub params_subspace_key: PSK,
 }
 

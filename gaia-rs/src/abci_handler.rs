@@ -4,13 +4,13 @@ use crate::{
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
 };
-use gears::config::Config;
 use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
+use gears::{config::Config, params::ParamsStoreKey};
 use gears::{error::AppError, types::context::tx::TxContext, x::ante::DefaultSignGasConsumer};
 
 #[derive(Debug, Clone)]
@@ -36,15 +36,23 @@ pub struct GaiaABCIHandler {
 
 impl GaiaABCIHandler {
     pub fn new(_cfg: Config<AppConfig>) -> GaiaABCIHandler {
-        let auth_keeper = auth::Keeper::new(GaiaStoreKey::Auth, GaiaParamsStoreKey::Auth);
+        let params_key = ParamsStoreKey::from(GaiaStoreKey::Params);
+
+        let auth_keeper = auth::Keeper::new(
+            GaiaStoreKey::Auth,
+            params_key.clone(),
+            GaiaParamsStoreKey::Auth,
+        );
 
         let bank_keeper = bank::Keeper::new(
             GaiaStoreKey::Bank,
+            params_key.clone(),
             GaiaParamsStoreKey::Bank,
             auth_keeper.clone(),
         );
 
-        let ibc_keeper = ibc_rs::keeper::Keeper::new(GaiaStoreKey::IBC, GaiaParamsStoreKey::IBC);
+        let ibc_keeper =
+            ibc_rs::keeper::Keeper::new(GaiaStoreKey::IBC, params_key, GaiaParamsStoreKey::IBC);
 
         GaiaABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
