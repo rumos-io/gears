@@ -61,11 +61,13 @@ pub struct UnbondingDelegationEntry {
 
 impl UnbondingDelegationEntry {
     pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
         )
-        .expect("Invalid timestamp in unbonding delegation entry. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond");
+        .unwrap();
         completion_time <= time
     }
 }
@@ -92,11 +94,13 @@ pub struct RedelegationEntry {
 
 impl RedelegationEntry {
     pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
         )
-        .expect("Invalid timestamp in unbonding delegation entry. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond");
+        .unwrap();
         completion_time <= time
     }
 }

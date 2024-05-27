@@ -1,5 +1,5 @@
 use crate::{
-    consts::{expect::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
+    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
     BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool,
     Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
 };
@@ -162,10 +162,13 @@ impl<
         for redelegation in genesis.redelegations {
             self.set_redelegation(ctx, &redelegation);
             for entry in &redelegation.entries {
-                let completion_time = chrono::DateTime::from_timestamp(entry.completion_time.seconds, entry.completion_time.nanos as u32)
-                    .expect(
-                        "Invalid timestamp in redelegation. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
-                    );
+                // TODO: consider to move the DataTime type and work with timestamps into Gears
+                // The timestamp is provided by context and conversion won't fail.
+                let completion_time = chrono::DateTime::from_timestamp(
+                    entry.completion_time.seconds,
+                    entry.completion_time.nanos as u32,
+                )
+                .unwrap();
                 self.insert_redelegation_queue(ctx, &redelegation, completion_time);
             }
         }
@@ -287,13 +290,11 @@ impl<
         self.unbond_all_mature_validators(ctx);
 
         // Remove all mature unbonding delegations from the ubd queue.
-        let time = ctx
-            .get_time()
-            .expect("Expected timestamp in block context.");
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32)
-            .expect(
-                "Invalid timestamp in block context. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
-            );
+        // TODO: make better api for timestamps in Gears
+        let time = ctx.get_time().unwrap();
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time);
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;

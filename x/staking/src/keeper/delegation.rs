@@ -1,6 +1,5 @@
-use crate::consts::expect::SERDE_DECODING_DOMAIN_TYPE;
-
 pub use super::*;
+use gears::store::database::ext::DATABASE_CORRUPTION_MSG;
 
 impl<
         SK: StoreKey,
@@ -16,7 +15,7 @@ impl<
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
-        bound_amount: Uint256,
+        bond_amount: Uint256,
         token_src: BondStatus,
         validator: &mut Validator,
         subtract_account: bool,
@@ -69,7 +68,7 @@ impl<
                 .bond_denom;
             let coins = SendCoins::new(vec![Coin {
                 denom,
-                amount: bound_amount,
+                amount: bond_amount,
             }])
             .map_err(|e| AppError::Coins(e.to_string()))?;
 
@@ -86,18 +85,18 @@ impl<
             match (token_src, validator.status == BondStatus::Bonded) {
                 (BondStatus::Unbonded | BondStatus::Unbonding, true) => {
                     // transfer pools
-                    self.not_bonded_tokens_to_bonded(ctx, bound_amount);
+                    self.not_bonded_tokens_to_bonded(ctx, bond_amount);
                 }
                 (BondStatus::Bonded, false) => {
                     // transfer pools
-                    self.bonded_tokens_to_not_bonded(ctx, bound_amount);
+                    self.bonded_tokens_to_not_bonded(ctx, bond_amount);
                 }
                 (BondStatus::Bonded, true)
                 | (BondStatus::Unbonded | BondStatus::Unbonding, false) => {}
             }
         }
 
-        let new_shares = self.add_validator_tokens_and_shares(ctx, validator, bound_amount);
+        let new_shares = self.add_validator_tokens_and_shares(ctx, validator, bond_amount);
         // Update delegation
         delegation.shares += new_shares;
         self.set_delegation(ctx, &delegation);
@@ -124,7 +123,7 @@ impl<
         key.put(val_addr.to_string().as_bytes());
         delegations_store
             .get(&key)
-            .map(|bytes| serde_json::from_slice(&bytes).expect(SERDE_DECODING_DOMAIN_TYPE))
+            .map(|bytes| serde_json::from_slice(&bytes).expect(DATABASE_CORRUPTION_MSG))
     }
 
     pub fn set_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(

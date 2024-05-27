@@ -1,8 +1,7 @@
+use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Validator};
 use gears::{core::errors::Error, tendermint::types::proto::Protobuf, types::address::ValAddress};
 use prost::Message;
 use serde::{Deserialize, Serialize};
-
-use crate::{consts::expect::SERDE_ENCODING_DOMAIN_TYPE, Validator};
 
 // ===
 // requests

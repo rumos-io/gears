@@ -1,6 +1,5 @@
-use gears::types::account::ModuleAccount;
-
 pub use super::*;
+use gears::types::account::ModuleAccount;
 
 impl<
         SK: StoreKey,
@@ -74,7 +73,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         // delete the validator by power index, as the key will change
         self.delete_validator_by_power_index(ctx, validator);
 
@@ -84,9 +83,8 @@ impl<
         self.set_validator_by_power_index(ctx, validator);
 
         // delete from queue if present
-        self.delete_validator_queue(ctx, validator)?;
+        self.delete_validator_queue(ctx, validator);
         // trigger hook
         self.after_validator_bonded(ctx, validator);
-        Ok(())
     }
 }

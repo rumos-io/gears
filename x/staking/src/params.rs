@@ -1,9 +1,9 @@
-use crate::consts::expect::{self, SERDE_ENCODING_DOMAIN_TYPE};
+use crate::consts::error::SERDE_ENCODING_DOMAIN_TYPE;
 use gears::{
     core::base::coin::Coin,
     params::ParamsSubspaceKey,
     store::{
-        database::{prefix::PrefixDB, Database},
+        database::{ext::DATABASE_CORRUPTION_MSG, prefix::PrefixDB, Database},
         QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore,
         WritePrefixStore,
     },
@@ -62,7 +62,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
         let raw_params = store
             .get(PARAMS_KEY.as_ref())
             .expect("key should be set in kv store");
-        serde_json::from_slice(&raw_params).expect(expect::SERDE_DECODING_DOMAIN_TYPE)
+        serde_json::from_slice(&raw_params).expect(DATABASE_CORRUPTION_MSG)
     }
 
     pub fn set<DB: Database, CTX: TransactionalMultiKVStore<DB, SK>>(

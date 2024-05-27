@@ -1,9 +1,6 @@
-use crate::consts::expect::{
-    SERDE_DECODING_DOMAIN_TYPE, SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT,
-};
-use gears::tendermint::types::time::Timestamp;
-
 pub use super::*;
+use crate::consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
+use gears::{store::database::ext::DATABASE_CORRUPTION_MSG, tendermint::types::time::Timestamp};
 
 impl<
         SK: StoreKey,
@@ -80,7 +77,7 @@ impl<
                 res
             }) {
                 let time_slice: Vec<DvPair> =
-                    serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE);
+                    serde_json::from_slice(&v).expect(DATABASE_CORRUPTION_MSG);
                 mature_unbonds.extend(time_slice);
                 keys.push(k.to_vec());
             }
@@ -138,9 +135,9 @@ impl<
     ) -> Option<Vec<DvPair>> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UBD_QUEUE_KEY);
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).expect(
-            "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
-        );
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         if let Some(bz) = store.get(time.to_string().as_bytes()) {
             serde_json::from_slice(&bz).unwrap_or_default()
         } else {
@@ -156,9 +153,9 @@ impl<
     ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(UBD_QUEUE_KEY);
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).expect(
-            "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
-        );
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let key = time.to_string().as_bytes().to_vec();
         store.set(
             key,
@@ -196,13 +193,12 @@ impl<
     }
 
     pub fn unbond_all_mature_validators<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
-        let block_time = ctx
-            .get_time()
-            .expect("Expected timestamp in block context.");
-        let block_time = chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32)
-            .expect(
-                "Invalid timestamp in transactional. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
-            );
+        // TODO: make better api for timestamps in Gears
+        let block_time = ctx.get_time().unwrap();
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let block_time =
+            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
 
         let block_height = ctx.height() as i64;
 
@@ -225,7 +221,7 @@ impl<
             if height < block_height && (time <= block_time) {
                 for addr in v {
                     let val_addr = ValAddress::from_bech32(addr)
-                        .expect("Failed to parse stored ValAddress in validators queue");
+                        .expect("Failed to parse stored ValAddress in validators queue. Validators queue map contains vector of string addresses that could be a valid ValAddress representation.");
                     let mut validator = self
                         .validator(ctx, &val_addr)
                         .expect("validator in the unbonding queue was not found");
@@ -266,7 +262,8 @@ impl<
             ))
             .into());
         }
-        self.bond_validator(ctx, validator)
+        self.bond_validator(ctx, validator);
+        Ok(())
     }
 
     pub fn unbonding_to_unbonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -297,13 +294,12 @@ impl<
         };
         let bond_denom = params.bond_denom;
         let mut balances = vec![];
-        let ctx_time = ctx
-            .get_time()
-            .expect("Expected timestamp in block context.");
-        let ctx_time = chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32)
-            .expect(
-                "Invalid timestamp in block context. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
-            );
+        // TODO: make better api for timestamps in Gears
+        let ctx_time = ctx.get_time().unwrap();
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let ctx_time =
+            chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32).unwrap();
 
         // loop through all the entries and complete unbonding mature entries
         let mut new_ubd = vec![];
@@ -368,7 +364,8 @@ impl<
         validator.update_status(BondStatus::Unbonding);
 
         // set the unbonding completion time and completion height appropriately
-        validator.unbonding_time = ctx.get_time().expect("Expected timestamp in context.");
+        // TODO: make better api for timestamps in Gears
+        validator.unbonding_time = ctx.get_time().unwrap();
         validator.unbonding_height = ctx.height() as i64;
 
         // save the now unbonded validator record and power index
@@ -392,10 +389,10 @@ impl<
     ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
-        let end_time = chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32)
-            .expect(
-                "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
-            );
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let end_time =
+            chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32).unwrap();
         let key = validator_queue_key(end_time, end_height);
         let value = serde_json::to_vec(&addrs).expect(SERDE_ENCODING_DOMAIN_TYPE);
         store.set(key, value);
@@ -411,10 +408,10 @@ impl<
     ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
-        let end_time = chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32)
-            .expect(
-                "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
-            );
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let end_time =
+            chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32).unwrap();
         store.delete(&validator_queue_key(end_time, end_height));
     }
 
@@ -428,13 +425,13 @@ impl<
         let store = store.prefix_store(VALIDATORS_QUEUE_KEY);
 
         if let Some(bz) = store.get(&validator_queue_key(
+            // TODO: consider to move the DataTime type and work with timestamps into Gears
+            // The timestamp is provided by context and conversion won't fail.
             chrono::DateTime::from_timestamp(unbonding_time.seconds, unbonding_time.nanos as u32)
-                .expect(
-                "Expected correct conversion of timestamps. Invalid conversion can broke chain.",
-            ),
+                .unwrap(),
             unbonding_height,
         )) {
-            let res: Vec<String> = serde_json::from_slice(&bz).expect(SERDE_DECODING_DOMAIN_TYPE);
+            let res: Vec<String> = serde_json::from_slice(&bz).expect(DATABASE_CORRUPTION_MSG);
             res
         } else {
             vec![]

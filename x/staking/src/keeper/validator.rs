@@ -1,11 +1,12 @@
 pub use super::*;
 use crate::{
-    consts::expect::{
-        SERDE_DECODING_DOMAIN_TYPE, SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT,
-    },
+    consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT},
     Commission, CreateValidator, Validator,
 };
-use gears::{types::address::ConsAddress, types::context::tx::TxContext};
+use gears::{
+    store::database::ext::DATABASE_CORRUPTION_MSG,
+    types::{address::ConsAddress, context::tx::TxContext},
+};
 
 impl<
         SK: StoreKey,
@@ -31,7 +32,7 @@ impl<
         };
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
-        if self.validator_by_cons_addr(ctx, &cons_addr).is_ok() {
+        if self.validator_by_cons_addr(ctx, &cons_addr).is_some() {
             return Err(AppError::Custom(format!(
                 "Public key {} exists",
                 ConsAddress::from(msg.pub_key.clone())
@@ -66,6 +67,7 @@ impl<
             msg.description.clone(),
         );
 
+        // TODO: make better api for timestamps in Gears
         let update_time = ctx.get_time().ok_or(AppError::TxValidation(
             "Transaction doesn't have valid timestamp.".to_string(),
         ))?;
@@ -143,7 +145,7 @@ impl<
         let validators_store = store.prefix_store(VALIDATORS_KEY);
         validators_store
             .get(key.to_string().as_bytes())
-            .map(|e| serde_json::from_slice(&e).expect(SERDE_DECODING_DOMAIN_TYPE))
+            .map(|e| serde_json::from_slice(&e).expect(DATABASE_CORRUPTION_MSG))
     }
 
     pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -163,17 +165,13 @@ impl<
         &self,
         ctx: &CTX,
         addr: &ConsAddress,
-    ) -> anyhow::Result<Validator> {
+    ) -> Option<Validator> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_BY_CONS_ADDR_KEY);
 
-        if let Some(bytes) = validators_store.get(addr.to_string().as_bytes()) {
-            Ok(serde_json::from_slice(&bytes)?)
-        } else {
-            Err(anyhow::Error::from(serde_json::Error::custom(
-                "Validator doesn't exists.".to_string(),
-            )))
-        }
+        validators_store
+            .get(addr.to_string().as_bytes())
+            .map(|bytes| serde_json::from_slice(&bytes).expect(DATABASE_CORRUPTION_MSG))
     }
 
     pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -237,7 +235,7 @@ impl<
             // TODO
             res.insert(
                 k.to_vec(),
-                serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE),
+                serde_json::from_slice(&v).expect(DATABASE_CORRUPTION_MSG),
             );
         }
         res
@@ -247,7 +245,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         let addrs =
             self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
         let val_addr = validator.operator_address.to_string();
@@ -269,7 +267,6 @@ impl<
                 new_addrs,
             );
         }
-        Ok(())
     }
 
     /// get the last validator set
