@@ -11,7 +11,7 @@ use serde::Serialize;
 
 use crate::{GenesisState, Keeper};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum AuthNodeQueryRequest {
     Account(QueryAccountRequest),
 }

@@ -11,6 +11,8 @@ use tower_service::Service;
 use crate::runtime::runtime;
 
 mod error;
+pub mod health;
+pub mod tx;
 
 pub fn run_grpc_server(router: Router<Identity>) {
     std::thread::spawn(move || {

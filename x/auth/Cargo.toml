@@ -15,6 +15,9 @@ num-traits = { workspace = true }
 secp256k1 = { workspace = true, features = ["hashes"] }
 ibc-proto = { workspace = true }                                  # TODO: should we import through gears via core-types?
 
+#log
+tracing = { workspace = true }
+
 #utils
 anyhow = { workspace = true }
 clap = { workspace = true }

@@ -7,7 +7,10 @@ use crate::{
 use axum::{extract::FromRef, http::Method, routing::get, Router};
 use std::{marker::PhantomData, net::SocketAddr};
 use tendermint::rpc::url::Url;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::TraceLayer,
+};
 
 pub fn run_rest_server<
     M: TxMessage,
@@ -85,6 +88,7 @@ async fn launch<
         .route("/cosmos/tx/v1beta1/txs", get(txs::<M>))
         .merge(router)
         .layer(cors)
+        .layer(TraceLayer::new_for_http())
         .with_state(rest_state);
 
     let listener = tokio::net::TcpListener::bind(listen_addr).await?;

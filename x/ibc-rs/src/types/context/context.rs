@@ -6,6 +6,8 @@ use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::QueryableKVStore;
 use gears::store::StoreKey;
+use gears::tendermint::types::proto::event::Event;
+use gears::tendermint::types::proto::event::EventAttribute;
 use gears::types::context::tx::TxContext;
 use ibc::clients::tendermint::client_state::ClientState as TmClientState;
 use ibc::clients::tendermint::consensus_state::ConsensusState as TmConsensusState;
@@ -24,6 +26,7 @@ use ibc::core::client::context::{
 use ibc::core::client::types::error::ClientError;
 use ibc::core::client::types::Height;
 use ibc::core::handler::types::error::ContextError;
+use ibc::core::handler::types::events::IbcEvent;
 use ibc::core::host::types::identifiers::ClientId;
 use ibc::core::host::{ExecutionContext, ValidationContext};
 use ibc::core::primitives::proto::Protobuf;
@@ -419,6 +422,55 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExecutionContex
         event: ibc::core::handler::types::events::IbcEvent,
     ) -> Result<(), ibc::core::handler::types::error::ContextError> {
         //TODO: implement
+
+        match event {
+            IbcEvent::CreateClient(c) => {
+                self.gears_ctx.push_event(Event::new(
+                    "create_client",
+                    [
+                        EventAttribute::new(
+                            "client_id".into(),
+                            c.client_id().as_bytes().to_vec().into(),
+                            true,
+                        ),
+                        EventAttribute::new(
+                            "client_type".into(),
+                            c.client_type().as_str().to_owned().into(),
+                            true,
+                        ),
+                        EventAttribute::new(
+                            "consensus_height".into(),
+                            c.consensus_height().to_string().into(),
+                            true,
+                        ),
+                    ],
+                ));
+            }
+            IbcEvent::UpdateClient(_) => todo!(),
+            IbcEvent::UpgradeClient(_) => todo!(),
+            IbcEvent::ClientMisbehaviour(_) => todo!(),
+            IbcEvent::OpenInitConnection(_) => todo!(),
+            IbcEvent::OpenTryConnection(_) => todo!(),
+            IbcEvent::OpenAckConnection(_) => todo!(),
+            IbcEvent::OpenConfirmConnection(_) => todo!(),
+            IbcEvent::OpenInitChannel(_) => todo!(),
+            IbcEvent::OpenTryChannel(_) => todo!(),
+            IbcEvent::OpenAckChannel(_) => todo!(),
+            IbcEvent::OpenConfirmChannel(_) => todo!(),
+            IbcEvent::CloseInitChannel(_) => todo!(),
+            IbcEvent::CloseConfirmChannel(_) => todo!(),
+            IbcEvent::SendPacket(_) => todo!(),
+            IbcEvent::ReceivePacket(_) => todo!(),
+            IbcEvent::WriteAcknowledgement(_) => todo!(),
+            IbcEvent::AcknowledgePacket(_) => todo!(),
+            IbcEvent::TimeoutPacket(_) => todo!(),
+            IbcEvent::ChannelClosed(_) => todo!(),
+            IbcEvent::Module(_) => todo!(),
+            IbcEvent::Message(m) => {
+                //TODO: implement
+            }
+        };
+
         Ok(())
     }
 

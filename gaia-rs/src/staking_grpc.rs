@@ -21,6 +21,7 @@ use ibc_proto::{
 };
 use std::marker::PhantomData;
 use tonic::{Request, Response, Status};
+use tracing::info;
 
 #[derive(Debug, Default)]
 pub struct StakingService<QH, QReq, QRes> {
@@ -133,6 +134,7 @@ where
         &self,
         _request: Request<QueryParamsRequest>,
     ) -> Result<Response<QueryParamsResponse>, Status> {
+        info!("Received a gRPC request staking::params");
         // TODO: replace hard coded values with actual values from the app
         let response = QueryParamsResponse {
             params: Some(Params {
