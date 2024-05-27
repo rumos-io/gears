@@ -14,4 +14,14 @@ pub enum CoinsError {
     Denom(String),
     #[error("Uint256 parse error: {0}")]
     Uint(String),
+    #[error("Decimal256 parse error: {0}")]
+    Decimal(String),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum CoinsParseError {
+    #[error("Failed to parse: {0}")]
+    Parse(#[from] CoinsError),
+    #[error("Parsed invalid coins: {0}")]
+    Validate(#[from] SendCoinsError),
 }

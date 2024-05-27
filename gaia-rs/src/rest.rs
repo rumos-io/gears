@@ -1,19 +1,15 @@
 use axum::Router;
-use gears::application::handlers::node::ABCIHandler;
-use gears::store::StoreKey;
-use gears::types::tx::TxMessage;
+use bank::{BankNodeQueryRequest, BankNodeQueryResponse};
+use gears::baseapp::NodeQueryHandler;
 use gears::{
-    application::ApplicationInfo, baseapp::genesis::Genesis, params::ParamsSubspaceKey,
+    baseapp::{QueryRequest, QueryResponse},
     rest::RestState,
 };
 
 pub fn get_router<
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
-    M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
-    G: Genesis,
-    AI: ApplicationInfo,
->() -> Router<RestState<SK, PSK, M, H, G, AI>> {
+    QReq: QueryRequest + From<BankNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>() -> Router<RestState<QReq, QRes, App>> {
     Router::new().nest("/cosmos/bank", bank::rest::get_router())
 }

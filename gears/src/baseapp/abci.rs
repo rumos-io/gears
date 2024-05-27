@@ -1,17 +1,13 @@
-use super::{BaseApp, Genesis};
+use super::BaseApp;
 use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
 use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
 use crate::types::context::block::BlockContext;
 use crate::types::gas::Gas;
-use crate::types::tx::TxMessage;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
-use store_crate::types::multi::immutable::MultiStore;
-use store_crate::types::multi::mutable::MultiStoreMut;
-use store_crate::StoreKey;
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -46,24 +42,13 @@ use tendermint::{
 };
 use tracing::{debug, error, info};
 
-impl<
-        M: TxMessage,
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G>,
-        G: Genesis,
-        AI: ApplicationInfo,
-    > ABCIApplication for BaseApp<SK, PSK, M, H, G, AI>
+impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplication
+    for BaseApp<PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
         info!("Got init chain request");
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
-
-        self.baseapp_params_keeper.set_consensus_params(
-            &mut MultiStoreMut::from(&mut *multi_store),
-            request.consensus_params.clone(),
-        );
 
         //TODO: handle request height > 1 as is done in SDK
 
@@ -72,7 +57,17 @@ impl<
             std::process::exit(1)
         });
 
-        let genesis: G = String::from_utf8(request.app_state_bytes.into())
+        let mut ctx = InitContext::new(
+            &mut multi_store,
+            self.block_height(),
+            request.time.clone(),
+            chain_id.clone(),
+        );
+
+        self.baseapp_params_keeper
+            .set_consensus_params(&mut ctx, request.consensus_params.clone());
+
+        let genesis: H::Genesis = String::from_utf8(request.app_state_bytes.into())
             .map_err(|e| AppError::Genesis(e.to_string()))
             .and_then(|s| serde_json::from_str(&s).map_err(|e| AppError::Genesis(e.to_string())))
             .unwrap_or_else(|e| {
@@ -284,21 +279,21 @@ impl<
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        {
-            let max_gas = self
-                .baseapp_params_keeper
-                .block_params(&MultiStore::from(&*multi_store))
-                .map(|e| e.max_gas)
-                .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
-
-            state.replace_meter(Gas::from(max_gas))
-        }
-
         let mut ctx = BlockContext::new(
             &mut multi_store,
             self.block_height(),
             header.try_into().expect("Invalid request"),
         );
+
+        {
+            let max_gas = self
+                .baseapp_params_keeper
+                .block_params(&mut ctx)
+                .map(|e| e.max_gas)
+                .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
+
+            state.replace_meter(Gas::from(max_gas))
+        }
 
         self.abci_handler.begin_block(&mut ctx, request);
 

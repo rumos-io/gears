@@ -17,7 +17,7 @@ use gears::{
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct Pool {
     pub not_bonded_tokens: Uint256,
     pub bonded_tokens: Uint256,

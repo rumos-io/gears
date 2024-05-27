@@ -20,8 +20,13 @@ pub struct TransactionStore;
 #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ApplicationStore;
 
-pub trait StoreKey: Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static {
+pub trait StoreKey:
+    std::fmt::Debug + Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static
+{
     fn name(&self) -> &'static str;
+
+    /// Return key for parameters
+    fn params() -> &'static Self;
 }
 
 pub trait ReadPrefixStore {

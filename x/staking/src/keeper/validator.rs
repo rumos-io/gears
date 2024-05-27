@@ -22,7 +22,7 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &CreateValidator,
     ) -> Result<(), AppError> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
 
         if self.validator(ctx, &msg.validator_address).is_some() {
             return Err(AppError::Custom(format!(

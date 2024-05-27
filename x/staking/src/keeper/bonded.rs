@@ -32,7 +32,7 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) {
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
 
         // TODO: original routine is unfailable, it means that the amount is a valid number.
         // The method is called from failable methods. Consider to provide correct solution taking

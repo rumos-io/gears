@@ -2,7 +2,7 @@ run-debug:
 	RUST_LOG=DEBUG cargo run -- run --verbose
 
 run:
-	cargo run -- run
+	cargo run -- run --min-gas-prices 0uatom
 
 test:
 	cargo test
@@ -25,6 +25,6 @@ tendermint-start-second:
 	tendermint start --home ~/.gaia-rs-second
 
 run-second:
-	cargo run -- run --home ~/.gaia-rs-second --address "127.0.0.1:26661" --rest-listen-addr "127.0.0.1:1318"
+	cargo run -- run --home ~/.gaia-rs-second --address "127.0.0.1:26661" --rest-listen-addr "127.0.0.1:1318" --min-gas-prices 0uatom
 
 .PHONY: run run-debug test install init tendermint-start init-second tendermint-start-second run-second

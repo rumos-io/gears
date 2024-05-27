@@ -4,19 +4,19 @@ use gears::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::Params;
+use crate::AuthsParams;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GenesisState {
     pub accounts: Vec<BaseAccount>,
-    pub params: Params,
+    pub params: AuthsParams,
 }
 
 impl Default for GenesisState {
     fn default() -> Self {
         Self {
             accounts: vec![],
-            params: Params {
+            params: AuthsParams {
                 max_memo_characters: 256,
                 tx_sig_limit: 7,
                 tx_size_cost_per_byte: 10,

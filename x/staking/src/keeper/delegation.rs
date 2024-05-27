@@ -62,10 +62,7 @@ impl<
                 }
             };
 
-            let denom = self
-                .staking_params_keeper
-                .get(&ctx.multi_store())
-                .bond_denom;
+            let denom = self.staking_params_keeper.get(ctx).bond_denom;
             let coins = SendCoins::new(vec![Coin {
                 denom,
                 amount: bond_amount,

@@ -2,7 +2,6 @@ use database::prefix::PrefixDB;
 use database::Database;
 
 use store_crate::types::kv::immutable::KVStore;
-use store_crate::types::multi::immutable::MultiStore;
 use store_crate::types::query::QueryMultiStore;
 use store_crate::QueryableMultiKVStore;
 use store_crate::{error::StoreError, StoreKey};
@@ -30,20 +29,18 @@ impl<DB: Database, SK: StoreKey> QueryContext<DB, SK> {
     }
 }
 
+impl<DB, SK> QueryContext<DB, SK> {
+    pub fn chain_id(&self) -> &ChainId {
+        &self.chain_id
+    }
+}
+
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key)
     }
 
-    fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&self.multi_store)
-    }
-
     fn height(&self) -> u64 {
         self.height
-    }
-
-    fn chain_id(&self) -> &ChainId {
-        &self.chain_id
     }
 }

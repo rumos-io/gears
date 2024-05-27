@@ -16,7 +16,7 @@ pub enum PublicKey {
 }
 
 impl PublicKey {
-    pub fn raw(&self) -> &Vec<u8> {
+    pub fn raw(&self) -> &[u8] {
         match self {
             PublicKey::Ed25519(value) => value,
             PublicKey::Secp256k1(value) => value,

@@ -286,7 +286,7 @@ impl<
         val_addr: ValAddress,
         del_addr: AccAddress,
     ) -> anyhow::Result<Vec<Coin>> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
         let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr) {
             delegation
         } else {
