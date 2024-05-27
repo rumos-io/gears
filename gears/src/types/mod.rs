@@ -1,4 +1,3 @@
-pub mod store;
 pub mod account;
 pub mod address;
 pub mod auth;
@@ -15,6 +14,7 @@ pub mod query;
 pub mod rendering;
 pub mod response;
 pub mod signing;
+pub mod store;
 pub mod tx;
 
 pub mod uint {

@@ -11,7 +11,7 @@ use crate::types::context::QueryableContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
-use crate::types::gas::{GasErrors, GasMeter};
+use crate::types::gas::{GasMeter, GasMeteringErrors};
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -229,7 +229,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         let cost_per_byte: Gas = params.tx_cost_per_byte().try_into()?;
         let gas_required = tx_len
             .checked_mul(cost_per_byte)
-            .ok_or(GasErrors::ErrorGasOverflow("tx size".to_string()))?;
+            .ok_or(GasMeteringErrors::ErrorGasOverflow("tx size".to_string()))?;
 
         ctx.gas_meter
             .consume_gas(gas_required, TX_SIZE_DESCRIPTOR)?;

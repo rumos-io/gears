@@ -1,4 +1,4 @@
-use crate::types::gas::GasErrors;
+use crate::types::gas::GasMeteringErrors;
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum RunTxError {
@@ -9,7 +9,7 @@ pub enum RunTxError {
     #[error("Message validation error: {0}")]
     Validation(String),
     #[error("Gas errors: {0}")]
-    GasErrors(#[from] GasErrors),
+    GasErrors(#[from] GasMeteringErrors),
     #[error("Custom error: {0}")]
     Custom(String),
 }

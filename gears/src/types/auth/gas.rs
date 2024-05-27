@@ -73,11 +73,11 @@ impl Gas {
 }
 
 impl TryFrom<u64> for Gas {
-    type Error = Error;
+    type Error = GasError;
 
     fn try_from(value: u64) -> Result<Self, Self::Error> {
         if value > u63::MAX.into() {
-            return Err(Error::Limit(value));
+            return Err(GasError::Limit(value));
         }
 
         Ok(Self(u63::new(value))) //new is safe as we have already checked the limit
@@ -109,11 +109,11 @@ impl From<Gas> for u64 {
 }
 
 impl FromStr for Gas {
-    type Err = Error;
+    type Err = GasError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let u_64 = u64::from_str(s)?;
-        u_64.try_into().map_err(|_| Error::Limit(u_64))
+        u_64.try_into().map_err(|_| GasError::Limit(u_64))
     }
 }
 
@@ -125,11 +125,11 @@ impl From<Gas> for i64 {
 }
 
 impl TryFrom<i64> for Gas {
-    type Error = Error;
+    type Error = GasError;
 
     fn try_from(value: i64) -> Result<Self, Self::Error> {
         if value < 0 {
-            return Err(Error::Negative(value));
+            return Err(GasError::Negative(value));
         }
 
         Ok(u63::new(value as u64).into()) // cast is safe as we have already checked for negative values
@@ -144,7 +144,7 @@ impl From<Gas> for Uint256 {
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
-pub enum Error {
+pub enum GasError {
     #[error("invalid gas amount {0} > max = {}", Gas::MAX)]
     Limit(u64),
     #[error("{0}")]
