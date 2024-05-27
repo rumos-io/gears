@@ -69,7 +69,7 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
     ) -> BankParams {
         let store = subspace(ctx, &self.params_subspace_key);
 
-        store.params().expect("Required to be set")
+        store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
     pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(

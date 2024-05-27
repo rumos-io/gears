@@ -143,7 +143,7 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
     ) -> AuthsParams {
         let store = subspace(ctx, &self.params_subspace_key);
 
-        store.params().expect("Required to exists")
+        store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
     pub fn set<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
