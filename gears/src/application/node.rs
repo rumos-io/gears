@@ -2,13 +2,11 @@ use super::{
     handlers::{node::ABCIHandler, AuxHandler},
     ApplicationInfo,
 };
-use crate::{
-    commands::node::{
-        genesis::genesis_account_add,
-        init::init,
-        run::{run, RouterBuilder},
-        AppCommands,
-    },
+use crate::commands::node::{
+    genesis::genesis_account_add,
+    init::init,
+    run::{run, RouterBuilder},
+    AppCommands,
 };
 use crate::{
     config::{ApplicationConfig, Config},
