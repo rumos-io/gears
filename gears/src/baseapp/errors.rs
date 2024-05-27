@@ -19,3 +19,9 @@ impl RunTxError {
         1
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum QueryError {
+    #[error(transparent)]
+    Store(#[from] store_crate::error::StoreError),
+}

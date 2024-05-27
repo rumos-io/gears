@@ -5,25 +5,23 @@ use std::{
     sync::{atomic::AtomicU64, Arc, RwLock},
 };
 
+use crate::types::tx::TxMessage;
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::{AppError, POISONED_LOCK},
-    params::{Keeper, ParamsSubspaceKey},
+    params::ParamsSubspaceKey,
     types::{
-        context::query::QueryContext,
+        context::{query::QueryContext, simple::SimpleContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
         header::Header,
-        tx::{raw::TxWithRaw, TxMessage},
+        tx::raw::TxWithRaw,
     },
 };
 use bytes::Bytes;
 use database::RocksDB;
 use store_crate::{
-    types::{
-        multi::{immutable::MultiStore, MultiBank},
-        query::QueryMultiStore,
-    },
-    ApplicationStore, StoreKey,
+    types::{multi::MultiBank, query::QueryMultiStore},
+    ApplicationStore,
 };
 use tendermint::types::{
     chain_id::ChainIdErrors,
@@ -32,8 +30,8 @@ use tendermint::types::{
 };
 
 use self::{
-    errors::RunTxError, genesis::Genesis, mode::ExecutionMode, options::NodeOptions,
-    params::BaseAppParamsKeeper, state::ApplicationState,
+    errors::RunTxError, mode::ExecutionMode, options::NodeOptions, params::BaseAppParamsKeeper,
+    state::ApplicationState,
 };
 
 mod abci;
@@ -41,57 +39,50 @@ pub mod errors;
 pub mod genesis;
 pub mod mode;
 mod params;
+mod query;
 pub mod state;
+
+pub use query::*;
 
 static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone)]
-pub struct BaseApp<
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
-    M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
-    G: Genesis,
-    AI: ApplicationInfo,
-> {
-    state: Arc<RwLock<ApplicationState<RocksDB, SK>>>,
-    multi_store: Arc<RwLock<MultiBank<RocksDB, SK, ApplicationStore>>>,
+pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
+    state: Arc<RwLock<ApplicationState<RocksDB, H>>>,
+    multi_store: Arc<RwLock<MultiBank<RocksDB, H::StoreKey, ApplicationStore>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
-    baseapp_params_keeper: BaseAppParamsKeeper<SK, PSK>,
+    baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
     options: NodeOptions,
-    pub m: PhantomData<M>,
-    pub g: PhantomData<G>,
     _info_marker: PhantomData<AI>,
 }
 
-impl<
-        M: TxMessage,
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        H: ABCIHandler<M, SK, G>,
-        G: Genesis,
-        AI: ApplicationInfo,
-    > BaseApp<SK, PSK, M, H, G, AI>
-{
+impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H, AI> {
     pub fn new(
         db: RocksDB,
-        params_keeper: Keeper<SK, PSK>,
         params_subspace_key: PSK,
         abci_handler: H,
         options: NodeOptions,
     ) -> Self {
-        let multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
+        let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
-            params_keeper,
             params_subspace_key,
         };
 
+        let ctx = SimpleContext::new(&mut multi_store);
+
         let max_gas = baseapp_params_keeper
-            .block_params(&MultiStore::from(&multi_store))
+            .block_params(&ctx)
             .map(|e| e.max_gas)
             .unwrap_or_default();
+
+        block_height_set(multi_store.head_version() as u64);
+
+        // For now let this func to exists only in new method
+        fn block_height_set(height: u64) {
+            let _ = APP_HEIGHT.swap(height, std::sync::atomic::Ordering::Relaxed);
+        }
 
         Self {
             abci_handler,
@@ -103,8 +94,6 @@ impl<
             ))),
             multi_store: Arc::new(RwLock::new(multi_store)),
             options,
-            m: PhantomData,
-            g: PhantomData,
             _info_marker: PhantomData,
         }
     }
@@ -152,7 +141,7 @@ impl<
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn validate_basic_tx_msgs(msgs: &Vec<M>) -> Result<(), AppError> {
+    fn validate_basic_tx_msgs(msgs: &Vec<H::Message>) -> Result<(), AppError> {
         if msgs.is_empty() {
             return Err(AppError::InvalidRequest(
                 "must contain at least one message".into(),
@@ -167,12 +156,12 @@ impl<
         Ok(())
     }
 
-    fn run_tx<MD: ExecutionMode<RocksDB, SK>>(
+    fn run_tx<MD: ExecutionMode<RocksDB, H>>(
         &self,
         raw: Bytes,
         mode: &mut MD,
     ) -> Result<RunTxInfo, RunTxError> {
-        let tx_with_raw: TxWithRaw<M> = TxWithRaw::from_bytes(raw.clone())
+        let tx_with_raw: TxWithRaw<H::Message> = TxWithRaw::from_bytes(raw.clone())
             .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())

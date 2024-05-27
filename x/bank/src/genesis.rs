@@ -1,13 +1,13 @@
 use gears::types::{address::AccAddress, base::send::SendCoins, tx::metadata::Metadata};
 use serde::{Deserialize, Serialize};
 
-use crate::Params;
+use crate::BankParams;
 
 // TODO: should remove total supply since it can be derived from the balances
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct GenesisState {
     pub balances: Vec<Balance>,
-    pub params: Params,
+    pub params: BankParams,
     pub denom_metadata: Vec<Metadata>,
 }
 
@@ -21,7 +21,7 @@ impl Default for GenesisState {
     fn default() -> Self {
         Self {
             balances: vec![],
-            params: Params {
+            params: BankParams {
                 default_send_enabled: true,
             },
             //TODO: this denom metadata should not be hard coded into the bank module

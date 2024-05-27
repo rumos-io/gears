@@ -31,7 +31,9 @@ impl<'a, DB: Database> KVStoreMut<'a, DB> {
             KVStoreBackendMut::Cache(var) => var.delete(k),
         }
     }
+}
 
+impl<'a, DB> KVStoreMut<'a, DB> {
     pub fn to_immutable(&self) -> KVStore<'_, DB> {
         match &self.0 {
             KVStoreBackendMut::Commit(var) => KVStore(KVStoreBackend::Commit(var)),

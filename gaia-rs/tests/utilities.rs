@@ -4,11 +4,8 @@
 use std::{path::PathBuf, time::Duration};
 
 use gaia_rs::{
-    abci_handler::GaiaABCIHandler,
-    config::AppConfig,
-    genesis::GenesisState,
-    store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
-    GaiaApplication, GaiaCore,
+    abci_handler::GaiaABCIHandler, config::AppConfig, genesis::GenesisState,
+    store_keys::GaiaParamsStoreKey, GaiaApplication, GaiaCore,
 };
 use gears::{
     application::node::NodeApplication,
@@ -63,10 +60,9 @@ pub fn run_gaia_and_tendermint(
     std::thread::sleep(Duration::from_secs(10));
 
     let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
+        let node = NodeApplication::<'_, GaiaCore>::new(
             GaiaCore,
             &GaiaABCIHandler::new,
-            GaiaStoreKey::Params,
             GaiaParamsStoreKey::BaseApp,
         );
 
@@ -79,7 +75,7 @@ pub fn run_gaia_and_tendermint(
             min_gas_prices: Default::default(),
         };
 
-        let _ = node.execute(AppCommands::Run(cmd));
+        let _ = node.execute::<GaiaApplication>(AppCommands::Run(cmd));
     });
 
     std::thread::sleep(Duration::from_secs(10));

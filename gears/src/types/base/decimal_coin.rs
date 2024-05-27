@@ -10,7 +10,7 @@ use super::errors::CoinsError;
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct DecimalCoin {
     pub denom: Denom,
-    pub amount: Decimal256, // TODO:NOW DO WE HAVE LOCAL COPY?
+    pub amount: Decimal256, // TODO:LATER DO WE HAVE LOCAL COPY?
 }
 
 impl DecimalCoin {

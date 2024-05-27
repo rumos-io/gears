@@ -11,8 +11,9 @@ use nutype::nutype;
 use sha2::{Digest, Sha256};
 
 use crate::{
-    error::{constants::LEAF_ROTATE_ERROR, Error},
+    error::{constants::LEAF_ROTATE_ERROR, InternalError},
     merkle::{Sha256Hash, EMPTY_HASH},
+    Error,
 };
 
 use super::node_db::NodeDB;
@@ -182,14 +183,16 @@ impl Node {
         &mut self,
         version: u32,
         node_db: &NodeDB<T>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), InternalError> {
         if let Node::Inner(z) = self {
             let mut z = mem::take(z);
             let y = mem::take(z.get_mut_left_node(node_db));
 
             let mut y = match y {
                 Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned())),
+                Node::Leaf(_) => {
+                    return Err(InternalError::RotateError(LEAF_ROTATE_ERROR.to_owned()))
+                }
             };
 
             let t3 = y.right_node;
@@ -212,18 +215,24 @@ impl Node {
             Ok(())
         } else {
             // Can't rotate a leaf node
-            Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned()))
+            Err(InternalError::RotateError(LEAF_ROTATE_ERROR.to_owned()))
         }
     }
 
-    fn left_rotate<T: Database>(&mut self, version: u32, node_db: &NodeDB<T>) -> Result<(), Error> {
+    fn left_rotate<T: Database>(
+        &mut self,
+        version: u32,
+        node_db: &NodeDB<T>,
+    ) -> Result<(), InternalError> {
         if let Node::Inner(z) = self {
             let mut z = mem::take(z);
             let y = mem::take(z.get_mut_right_node(node_db));
 
             let mut y = match y {
                 Node::Inner(y) => y,
-                Node::Leaf(_) => return Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned())),
+                Node::Leaf(_) => {
+                    return Err(InternalError::RotateError(LEAF_ROTATE_ERROR.to_owned()))
+                }
             };
 
             let t2 = y.left_node;
@@ -246,7 +255,7 @@ impl Node {
             Ok(())
         } else {
             // Can't rotate a leaf node
-            Err(Error::RotateError(LEAF_ROTATE_ERROR.to_owned()))
+            Err(InternalError::RotateError(LEAF_ROTATE_ERROR.to_owned()))
         }
     }
 
@@ -256,7 +265,7 @@ impl Node {
         &mut self,
         version: u32,
         node_db: &NodeDB<T>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), InternalError> {
         match self {
             Node::Leaf(_) => {
                 // A leaf node is always balanced
@@ -302,7 +311,7 @@ impl Node {
                     // The node is balanced
                     Ok(())
                 }
-                _ => Err(Error::Balancing),
+                _ => Err(InternalError::Balancing),
             },
         }
     }
@@ -414,11 +423,11 @@ impl Node {
         }
     }
 
-    pub(crate) fn deserialize(bytes: Vec<u8>) -> Result<Self, Error> {
-        let (height, mut n) = u8::decode_var(&bytes).ok_or(Error::NodeDeserialize)?;
-        let (size, ns) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
+    pub(crate) fn deserialize(bytes: Vec<u8>) -> Result<Self, InternalError> {
+        let (height, mut n) = u8::decode_var(&bytes).ok_or(InternalError::NodeDeserialize)?;
+        let (size, ns) = u32::decode_var(&bytes[n..]).ok_or(InternalError::NodeDeserialize)?;
         n += ns;
-        let (version, nv) = u32::decode_var(&bytes[n..]).ok_or(Error::NodeDeserialize)?;
+        let (version, nv) = u32::decode_var(&bytes[n..]).ok_or(InternalError::NodeDeserialize)?;
         n += nv;
         let (key, nk) = decode_bytes(&bytes[n..])?;
         n += nk;
@@ -442,8 +451,12 @@ impl Node {
                 right_node: None,
                 height,
                 size,
-                left_hash: left_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
-                right_hash: right_hash.try_into().map_err(|_| Error::NodeDeserialize)?,
+                left_hash: left_hash
+                    .try_into()
+                    .map_err(|_| InternalError::NodeDeserialize)?,
+                right_hash: right_hash
+                    .try_into()
+                    .map_err(|_| InternalError::NodeDeserialize)?,
                 key,
                 version,
             }))
@@ -997,8 +1010,8 @@ fn encode_bytes(bz: &[u8]) -> Vec<u8> {
     enc_bytes
 }
 
-fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), Error> {
-    let (bz_length, n_consumed) = usize::decode_var(bz).ok_or(Error::NodeDeserialize)?;
+fn decode_bytes(bz: &[u8]) -> Result<(Vec<u8>, usize), InternalError> {
+    let (bz_length, n_consumed) = usize::decode_var(bz).ok_or(InternalError::NodeDeserialize)?;
     let bytes = bz[n_consumed..n_consumed + bz_length].to_vec();
 
     Ok((bytes, n_consumed + bz_length))

@@ -18,7 +18,7 @@ use ibc::core::{
     },
 };
 
-use crate::{errors::query::client::SearchError, params::ParamsError};
+use crate::errors::query::client::SearchError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClientErrors {
@@ -80,8 +80,6 @@ pub enum ClientCreateError {
     InvalidType(ClientType),
     #[error("client state type {0} is not registered in the allowlist")]
     NotAllowed(ClientType),
-    #[error("{0}")]
-    ParamsError(#[from] ParamsError),
     #[error("Decode error: {0}")]
     DecodeError(#[from] prost::DecodeError),
     #[error("{0}")]

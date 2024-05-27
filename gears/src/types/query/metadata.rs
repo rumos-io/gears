@@ -1,3 +1,4 @@
+use serde::Serialize;
 use tendermint::types::proto::Protobuf;
 
 use crate::types::{denom::Denom, tx::metadata::Metadata};
@@ -46,7 +47,7 @@ pub struct RawQueryDenomMetadataResponse {
     pub metadata: Option<inner::Metadata>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct QueryDenomMetadataResponse {
     /// metadata describes and provides all the client information for the requested token.
     pub metadata: Option<Metadata>,
