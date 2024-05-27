@@ -25,3 +25,9 @@ pub enum Error {
     #[error("invalid sign mode: `{0}`")]
     InvalidSignMode(i32),
 }
+
+impl From<Error> for tonic::Status {
+    fn from(e: Error) -> Self {
+        tonic::Status::invalid_argument(format!("{:?}", e))
+    }
+}

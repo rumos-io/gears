@@ -1,11 +1,11 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, StoreKey, TransactionStore, TransactionalMultiKVStore};
+use store_crate::{types::multi::MultiBank, TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use super::{build_tx_gas_meter, ExecutionMode};
 use crate::{
     application::handlers::node::ABCIHandler,
-    baseapp::{errors::RunTxError, genesis::Genesis, options::NodeOptions},
+    baseapp::{errors::RunTxError, options::NodeOptions},
     types::{
         auth::fee::Fee,
         context::{tx::TxContext, TransactionalContext},
@@ -14,18 +14,18 @@ use crate::{
             GasMeter,
         },
         header::Header,
-        tx::{raw::TxWithRaw, TxMessage},
+        tx::raw::TxWithRaw,
     },
 };
 
 #[derive(Debug)]
-pub struct CheckTxMode<DB, SK> {
+pub struct CheckTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiBank<DB, SK, TransactionStore>,
+    pub(crate) multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
 }
 
-impl<DB, SK> CheckTxMode<DB, SK> {
-    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, SK, TransactionStore>) -> Self {
+impl<DB, AH: ABCIHandler> CheckTxMode<DB, AH> {
+    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
@@ -36,14 +36,14 @@ impl<DB, SK> CheckTxMode<DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
+impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH> {
     fn build_ctx(
         &mut self,
         height: u64,
         header: Header,
         fee: Option<&Fee>,
         options: NodeOptions,
-    ) -> TxContext<'_, DB, SK> {
+    ) -> TxContext<'_, DB, AH::StoreKey> {
         TxContext::new(
             &mut self.multi_store,
             height,
@@ -55,20 +55,20 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
         )
     }
 
-    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        ctx: &mut TxContext<'_, DB, SK>,
+    fn run_msg<'m>(
+        ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         _handler: &AH,
-        _msgs: impl Iterator<Item = &'m M>,
+        _msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError> {
         ctx.multi_store_mut().caches_clear();
 
         Ok(ctx.events_drain())
     }
 
-    fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        ctx: &mut TxContext<'_, DB, SK>,
+    fn run_ante_checks(
+        ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
-        tx_with_raw: &TxWithRaw<M>,
+        tx_with_raw: &TxWithRaw<AH::Message>,
     ) -> Result<(), RunTxError> {
         let result = handler.run_ante_checks(ctx, tx_with_raw);
 
@@ -77,13 +77,13 @@ impl<DB: Database, SK: StoreKey> ExecutionMode<DB, SK> for CheckTxMode<DB, SK> {
         result.map_err(|e| RunTxError::Custom(e.to_string()))
     }
 
-    fn runnable(_: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError> {
+    fn runnable(_: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError> {
         Ok(())
     }
 
     fn commit(
-        _ctx: TxContext<'_, DB, SK>,
-        _global_ms: &mut MultiBank<DB, SK, store_crate::ApplicationStore>,
+        _ctx: TxContext<'_, DB, AH::StoreKey>,
+        _global_ms: &mut MultiBank<DB, AH::StoreKey, store_crate::ApplicationStore>,
     ) {
     }
 }

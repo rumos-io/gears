@@ -24,13 +24,13 @@ fn main() -> anyhow::Result<()> {
     args.execute_or_help(
         |command| ClientApplication::new(GaiaCoreClient).execute(command.try_into()?),
         |command| {
-            NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
+            NodeApplication::<'_, GaiaCore>::new(
                 GaiaCore,
                 &GaiaABCIHandler::new,
                 GaiaStoreKey::Params,
                 GaiaParamsStoreKey::BaseApp,
             )
-            .execute(command.try_into()?)
+            .execute::<GaiaApplication>(command.try_into()?)
         },
     )
 }

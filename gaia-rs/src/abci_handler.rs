@@ -3,6 +3,7 @@ use crate::{
     genesis::GenesisState,
     message::Message,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
+    GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
 use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
@@ -63,7 +64,14 @@ impl GaiaABCIHandler {
     }
 }
 
-impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
+impl ABCIHandler for GaiaABCIHandler {
+    type Message = Message;
+    type Genesis = GenesisState;
+    type StoreKey = GaiaStoreKey;
+
+    type QReq = GaiaNodeQueryRequest;
+    type QRes = GaiaNodeQueryResponse;
+
     fn tx<DB: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
@@ -107,5 +115,20 @@ impl ABCIHandler<Message, GaiaStoreKey, GenesisState> for GaiaABCIHandler {
         tx: &TxWithRaw<Message>,
     ) -> Result<(), AppError> {
         self.ante_handler.run(ctx, tx)
+    }
+
+    fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, GaiaStoreKey>,
+        query: GaiaNodeQueryRequest,
+    ) -> GaiaNodeQueryResponse {
+        match query {
+            GaiaNodeQueryRequest::Bank(req) => {
+                GaiaNodeQueryResponse::Bank(self.bank_abci_handler.typed_query(ctx, req))
+            }
+            GaiaNodeQueryRequest::Auth(req) => {
+                GaiaNodeQueryResponse::Auth(self.auth_abci_handler.typed_query(ctx, req))
+            }
+        }
     }
 }

@@ -12,8 +12,13 @@ use gears::types::context::tx::TxContext;
 use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadataResponse};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
+use gears::{error::AppError, params::ParamsSubspaceKey};
+use serde::Serialize;
 
-use crate::types::query::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyResponse};
+use crate::types::query::{
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
+    QueryDenomsMetadataResponse, QueryTotalSupplyResponse,
+};
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
@@ -21,9 +26,60 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>>
     keeper: Keeper<SK, PSK, AK>,
 }
 
+#[derive(Clone)]
+pub enum BankNodeQueryRequest {
+    Balance(QueryBalanceRequest),
+    AllBalances(QueryAllBalancesRequest),
+    TotalSupply,
+    DenomsMetadata,
+    DenomMetadata(QueryDenomMetadataRequest),
+}
+
+#[derive(Clone, Serialize)]
+#[serde(untagged)]
+pub enum BankNodeQueryResponse {
+    Balance(QueryBalanceResponse),
+    AllBalances(QueryAllBalancesResponse),
+    TotalSupply(QueryTotalSupplyResponse),
+    DenomsMetadata(QueryDenomsMetadataResponse),
+    DenomMetadata(QueryDenomMetadataResponse),
+}
+
 impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<SK, PSK, AK> {
     pub fn new(keeper: Keeper<SK, PSK, AK>) -> Self {
         ABCIHandler { keeper }
+    }
+
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: BankNodeQueryRequest,
+    ) -> BankNodeQueryResponse {
+        match query {
+            BankNodeQueryRequest::Balance(req) => {
+                let res = self.keeper.query_balance(ctx, req);
+                BankNodeQueryResponse::Balance(res)
+            }
+            BankNodeQueryRequest::AllBalances(req) => {
+                let res = self.keeper.query_all_balances(ctx, req);
+                BankNodeQueryResponse::AllBalances(res)
+            }
+            BankNodeQueryRequest::TotalSupply => {
+                let res = self.keeper.get_paginated_total_supply(ctx);
+                BankNodeQueryResponse::TotalSupply(QueryTotalSupplyResponse {
+                    supply: res,
+                    pagination: None,
+                })
+            }
+            BankNodeQueryRequest::DenomsMetadata => {
+                let res = self.keeper.query_denoms_metadata(ctx);
+                BankNodeQueryResponse::DenomsMetadata(res)
+            }
+            BankNodeQueryRequest::DenomMetadata(req) => {
+                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom);
+                BankNodeQueryResponse::DenomMetadata(QueryDenomMetadataResponse { metadata })
+            }
+        }
     }
 
     pub fn tx<DB: Database>(

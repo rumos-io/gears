@@ -1,20 +1,20 @@
 use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
-use crate::baseapp::genesis::Genesis;
 use crate::baseapp::options::NodeOptions;
-use crate::baseapp::BaseApp;
+use crate::baseapp::{BaseApp, NodeQueryHandler};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
+use crate::grpc::run_grpc_server;
+use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::params::ParamsSubspaceKey;
 use crate::rest::{run_rest_server, RestState};
 use crate::types::base::min_gas::MinGasPrices;
-use crate::types::tx::TxMessage;
 use axum::Router;
 use database::RocksDB;
 use std::net::SocketAddr;
 use std::path::PathBuf;
-use store_crate::StoreKey;
 use tendermint::abci::ServerBuilder;
 use tendermint::application::ABCI;
+use tower_layer::Identity;
 use tracing::metadata::LevelFilter;
 use tracing::{error, info};
 
@@ -68,20 +68,29 @@ impl From<LogLevel> for LevelFilter {
     }
 }
 
+pub trait RouterBuilder<QReq, QRes> {
+    fn build_router<App: NodeQueryHandler<QReq, QRes>>(&self)
+        -> Router<RestState<QReq, QRes, App>>;
+
+    fn build_grpc_router<App: NodeQueryHandler<QReq, QRes>>(
+        &self,
+        app: App,
+    ) -> tonic::transport::server::Router<Identity>;
+}
+
 pub fn run<
-    SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    M: TxMessage,
-    H: ABCIHandler<M, SK, G>,
-    G: Genesis,
+    H: ABCIHandler,
     AC: ApplicationConfig,
     AI: ApplicationInfo,
+    RB: RouterBuilder<H::QReq, H::QRes>,
 >(
     cmd: RunCommand,
-    store_key: SK,
+    store_key: H::StoreKey,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
-    router: Router<RestState<SK, PSK, M, H, G, AI>>,
+    //router: Router<RestState<QReq, QRes, NodeQueryHandler<QReq, QRes>>>,
+    router_builder: RB,
 ) -> Result<(), RunError> {
     let RunCommand {
         home,
@@ -111,15 +120,21 @@ pub fn run<
 
     let options = NodeOptions::new(min_gas_prices);
 
-    let app: BaseApp<SK, PSK, M, H, G, AI> =
-        BaseApp::new(db, store_key, params_subspace_key, abci_handler, options);
+    let app: BaseApp<PSK, H, AI> = BaseApp::new(
+        db,
+        params_subspace_key,
+        abci_handler,
+        options,
+    );
 
-    run_rest_server(
+    run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),
         rest_listen_addr,
-        router,
+        router_builder.build_router::<BaseApp<PSK, H, AI>>(),
         config.tendermint_rpc_address,
     );
+
+    run_grpc_server(router_builder.build_grpc_router::<BaseApp<PSK, H, AI>>(app.clone()));
 
     let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
 
