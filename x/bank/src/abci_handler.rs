@@ -12,7 +12,6 @@ use gears::types::context::tx::TxContext;
 use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadataResponse};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
-use gears::{error::AppError, params::ParamsSubspaceKey};
 use serde::Serialize;
 
 use crate::types::query::{

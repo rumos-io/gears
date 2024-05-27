@@ -10,16 +10,13 @@ use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
 use gears::types::context::QueryableContext;
 use gears::types::query::account::QueryAccountRequest;
+use gears::types::{
+    account::{Account, BaseAccount, ModuleAccount},
+    context::TransactionalContext,
+    query::account::QueryAccountResponse,
+};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
-use gears::{
-    error::AppError,
-    types::{
-        account::{Account, BaseAccount, ModuleAccount},
-        context::TransactionalContext,
-        query::account::QueryAccountResponse,
-    },
-};
 use prost::Message;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];

@@ -21,11 +21,6 @@ use bytes::Bytes;
 use database::RocksDB;
 use store_crate::{
     types::{multi::MultiBank, query::QueryMultiStore},
-    ApplicationStore, StoreKey,
-    types::{
-        multi::{immutable::MultiStore, MultiBank},
-        query::QueryMultiStore,
-    },
     ApplicationStore,
 };
 use tendermint::types::{
@@ -65,8 +60,7 @@ pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> 
 impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H, AI> {
     pub fn new(
         db: RocksDB,
-        params_keeper: Keeper<H::StoreKey, PSK>,
-        store_key: SK,
+        store_key: H::StoreKey,
         params_subspace_key: PSK,
         abci_handler: H,
         options: NodeOptions,

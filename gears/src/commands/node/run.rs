@@ -4,7 +4,6 @@ use crate::baseapp::options::NodeOptions;
 use crate::baseapp::{BaseApp, NodeQueryHandler};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::grpc::run_grpc_server;
-use crate::params::{Keeper, ParamsSubspaceKey};
 use crate::params::ParamsSubspaceKey;
 use crate::rest::{run_rest_server, RestState};
 use crate::types::base::min_gas::MinGasPrices;
@@ -89,7 +88,6 @@ pub fn run<
     store_key: H::StoreKey,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
-    //router: Router<RestState<QReq, QRes, NodeQueryHandler<QReq, QRes>>>,
     router_builder: RB,
 ) -> Result<(), RunError> {
     let RunCommand {
@@ -120,12 +118,8 @@ pub fn run<
 
     let options = NodeOptions::new(min_gas_prices);
 
-    let app: BaseApp<PSK, H, AI> = BaseApp::new(
-        db,
-        params_subspace_key,
-        abci_handler,
-        options,
-    );
+    let app: BaseApp<PSK, H, AI> =
+        BaseApp::new(db, store_key, params_subspace_key, abci_handler, options);
 
     run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),

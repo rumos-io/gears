@@ -8,9 +8,6 @@ use crate::types::gas::Gas;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use std::str::FromStr;
-use store_crate::types::multi::immutable::MultiStore;
-use store_crate::types::multi::mutable::MultiStoreMut;
-use store_crate::StoreKey;
 use tendermint::{
     application::ABCIApplication,
     types::{
