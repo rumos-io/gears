@@ -80,7 +80,7 @@ impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
     ) -> ConnectionParams {
         let store = subspace(ctx, &self.params_subspace_key);
 
-        store.params().expect("required to exists")
+        store.params().unwrap() // TODO: Add default
     }
 
     pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(

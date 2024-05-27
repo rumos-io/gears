@@ -75,7 +75,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
     ) -> ClientParams {
         let store = subspace(ctx, &self.params_subspace_key);
 
-        store.params().expect("should exists")
+        store.params().unwrap() // TODO: Add default
     }
 
     pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
