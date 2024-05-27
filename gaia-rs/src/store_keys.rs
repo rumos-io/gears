@@ -22,6 +22,12 @@ impl StoreKey for GaiaStoreKey {
             GaiaStoreKey::Capability => "capability",
         }
     }
+
+    fn params() -> &'static Self {
+        const PARAM_KEY: GaiaStoreKey = GaiaStoreKey::Params;
+
+        &PARAM_KEY
+    }
 }
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]

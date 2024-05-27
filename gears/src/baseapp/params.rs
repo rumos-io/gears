@@ -7,9 +7,7 @@ use store_crate::StoreKey;
 use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::{
-    params::{
-        subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsStoreKey, ParamsSubspaceKey,
-    },
+    params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
     types::context::{QueryableContext, TransactionalContext},
 };
 
@@ -88,28 +86,27 @@ impl From<inner::EvidenceParams> for EvidenceParams {
 }
 
 #[derive(Debug, Clone)]
-pub struct BaseAppParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub store_key: ParamsStoreKey<SK>,
+pub struct BaseAppParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
 
 // TODO: add a macro to create this?
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> BaseAppParamsKeeper<SK, PSK> {
-    pub fn set_consensus_params<DB: Database, CTX: TransactionalContext<DB, SK>>(
+impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
+    pub fn set_consensus_params<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConsensusParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params);
     }
 
-    pub fn block_params<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn block_params<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         store: &CTX,
     ) -> Option<BlockParams> {
-        let sub_store = subspace(store, &self.store_key, &self.params_subspace_key);
+        let sub_store = subspace(store, &self.params_subspace_key);
 
         serde_json::from_slice(
             &sub_store

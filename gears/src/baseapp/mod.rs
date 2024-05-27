@@ -9,7 +9,7 @@ use crate::types::tx::TxMessage;
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     error::{AppError, POISONED_LOCK},
-    params::{ParamsStoreKey, ParamsSubspaceKey},
+    params::ParamsSubspaceKey,
     types::{
         context::{query::QueryContext, simple::SimpleContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
@@ -52,7 +52,7 @@ pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> 
     multi_store: Arc<RwLock<MultiBank<RocksDB, H::StoreKey, ApplicationStore>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
-    baseapp_params_keeper: BaseAppParamsKeeper<H::StoreKey, PSK>,
+    baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
     options: NodeOptions,
     _info_marker: PhantomData<AI>,
 }
@@ -60,7 +60,6 @@ pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> 
 impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H, AI> {
     pub fn new(
         db: RocksDB,
-        store_key: H::StoreKey,
         params_subspace_key: PSK,
         abci_handler: H,
         options: NodeOptions,
@@ -68,7 +67,6 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
-            store_key: ParamsStoreKey::from(store_key),
             params_subspace_key,
         };
 

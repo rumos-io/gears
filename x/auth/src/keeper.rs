@@ -1,7 +1,7 @@
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
 use gears::error::IBC_ENCODE_UNWRAP;
-use gears::params::{ParamsStoreKey, ParamsSubspaceKey};
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;
@@ -27,7 +27,7 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     store_key: SK,
-    auth_params_keeper: AuthParamsKeeper<SK, PSK>,
+    auth_params_keeper: AuthParamsKeeper<PSK>,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
@@ -122,9 +122,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(store_key: SK, params_key: ParamsStoreKey<SK>, params_subspace_key: PSK) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
         let auth_params_keeper = AuthParamsKeeper {
-            store_key: params_key,
             params_subspace_key,
         };
         Keeper {

@@ -27,7 +27,6 @@ pub struct NodeApplication<'a, Core: Node> {
     core: Core,
     abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
 
-    params_store_key: <<Core as Node>::Handler as ABCIHandler>::StoreKey,
     params_subspace_key: Core::ParamsSubspaceKey,
 }
 
@@ -35,13 +34,11 @@ impl<'a, Core: Node> NodeApplication<'a, Core> {
     pub fn new(
         core: Core,
         abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
-        params_store_key: <<Core as Node>::Handler as ABCIHandler>::StoreKey,
         params_subspace_key: Core::ParamsSubspaceKey,
     ) -> Self {
         Self {
             core,
             abci_handler_builder,
-            params_store_key,
             params_subspace_key,
         }
     }
@@ -58,7 +55,6 @@ impl<'a, Core: Node> NodeApplication<'a, Core> {
             )?,
             AppCommands::Run(cmd) => run::<_, _, _, AI, _>(
                 cmd,
-                self.params_store_key,
                 self.params_subspace_key,
                 self.abci_handler_builder,
                 self.core,

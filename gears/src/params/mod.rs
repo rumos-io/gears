@@ -11,22 +11,6 @@ pub mod parsed;
 pub mod space;
 pub mod space_mut;
 
-/// Newtype over StoreKey for storing params
-#[derive(Debug, Clone)]
-pub struct ParamsStoreKey<SK>(SK);
-
-impl<SK: StoreKey> From<SK> for ParamsStoreKey<SK> {
-    fn from(value: SK) -> Self {
-        Self(value)
-    }
-}
-
-impl<SK: StoreKey> AsRef<SK> for ParamsStoreKey<SK> {
-    fn as_ref(&self) -> &SK {
-        &self.0
-    }
-}
-
 pub fn subspace<
     'a,
     DB: Database,
@@ -35,12 +19,11 @@ pub fn subspace<
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a CTX,
-    store_key: &ParamsStoreKey<SK>,
     params_subspace_key: &PSK,
 ) -> ParamsSpace<'a, PrefixDB<DB>> {
     ParamsSpace {
         inner: ctx
-            .kv_store(&store_key.0)
+            .kv_store(SK::params())
             .prefix_store(params_subspace_key.name().as_bytes().to_vec()),
     }
 }
@@ -53,12 +36,11 @@ pub fn subspace_mut<
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a mut CTX,
-    store_key: &ParamsStoreKey<SK>,
     params_subspace_key: &PSK,
 ) -> ParamsSpaceMut<'a, PrefixDB<DB>> {
     ParamsSpaceMut {
         inner: ctx
-            .kv_store_mut(&store_key.0)
+            .kv_store_mut(SK::params())
             .prefix_store_mut(params_subspace_key.name().as_bytes().to_vec()),
     }
 }

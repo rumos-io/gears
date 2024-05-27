@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use gears::params::{
-    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsStoreKey,
-    ParamsSubspaceKey,
+    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -59,24 +58,26 @@ impl ParamsDeserialize for BankParams {
 }
 
 #[derive(Debug, Clone)]
-pub struct BankParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub store_key: ParamsStoreKey<SK>,
+pub struct BankParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> BankParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database, CTX: QueryableContext<DB, SK>>(&self, ctx: &CTX) -> BankParams {
-        let store = subspace(ctx, &self.store_key, &self.params_subspace_key);
+impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
+    pub fn get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> BankParams {
+        let store = subspace(ctx, &self.params_subspace_key);
 
         store.params().expect("Required to be set")
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: BankParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
     }

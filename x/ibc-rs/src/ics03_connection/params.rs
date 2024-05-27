@@ -7,7 +7,6 @@ use gears::params::subspace_mut;
 use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
-use gears::params::ParamsStoreKey;
 use gears::params::ParamsSubspaceKey;
 use gears::store::types::prefix::immutable::ImmutablePrefixStore;
 use gears::store::QueryableMultiKVStore;
@@ -70,24 +69,26 @@ impl ParamsDeserialize for ConnectionParams {
 }
 
 #[derive(Debug, Clone)]
-pub struct ConnectionParamsKeeper<SK, PSK> {
-    pub store_key: ParamsStoreKey<SK>,
+pub struct ConnectionParamsKeeper<PSK> {
     pub params_subspace_key: PSK,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> ConnectionParamsKeeper<SK, PSK> {
-    pub fn _get<DB: Database, CTX: QueryableContext<DB, SK>>(&self, ctx: &CTX) -> ConnectionParams {
-        let store = subspace(ctx, &self.store_key, &self.params_subspace_key);
+impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
+    pub fn _get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> ConnectionParams {
+        let store = subspace(ctx, &self.params_subspace_key);
 
         store.params().expect("required to exists")
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConnectionParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
     }

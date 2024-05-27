@@ -5,7 +5,7 @@ use crate::types::query::{
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::params::{ParamsStoreKey, ParamsSubspaceKey};
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::database::Database;
@@ -37,7 +37,7 @@ const DENOM_METADATA_PREFIX: [u8; 1] = [1];
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> {
     store_key: SK,
-    bank_params_keeper: BankParamsKeeper<SK, PSK>,
+    bank_params_keeper: BankParamsKeeper<PSK>,
     auth_keeper: AK,
 }
 
@@ -82,14 +82,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, AK> {
-    pub fn new(
-        store_key: SK,
-        params_key: ParamsStoreKey<SK>,
-        params_subspace_key: PSK,
-        auth_keeper: AK,
-    ) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK, auth_keeper: AK) -> Self {
         let bank_params_keeper = BankParamsKeeper {
-            store_key: params_key,
             params_subspace_key,
         };
         Keeper {

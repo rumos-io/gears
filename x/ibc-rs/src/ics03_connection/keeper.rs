@@ -1,5 +1,5 @@
 use gears::{
-    params::{ParamsStoreKey, ParamsSubspaceKey},
+    params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     types::context::init::InitContext,
 };
@@ -13,13 +13,12 @@ const KEY_NEXT_CONNECTION_SEQUENCE: &[u8; 22] = b"nextConnectionSequence";
 #[derive(Debug, Clone)]
 pub struct Keeper<SK, PSK> {
     store_key: SK,
-    connection_params_keeper: ConnectionParamsKeeper<SK, PSK>,
+    connection_params_keeper: ConnectionParamsKeeper<PSK>,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(store_key: SK, params_key: ParamsStoreKey<SK>, params_subspace_key: PSK) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
         let connection_params_keeper = ConnectionParamsKeeper {
-            store_key: params_key,
             params_subspace_key,
         };
         Self {

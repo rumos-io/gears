@@ -6,7 +6,6 @@ use gears::params::subspace_mut;
 use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
-use gears::params::ParamsStoreKey;
 use gears::params::ParamsSubspaceKey;
 use gears::store::QueryableMultiKVStore;
 use gears::store::ReadPrefixStore;
@@ -65,24 +64,26 @@ impl ParamsDeserialize for ClientParams {
 }
 
 #[derive(Debug, Clone)]
-pub struct ClientParamsKeeper<SK, PSK> {
-    pub store_key: ParamsStoreKey<SK>,
+pub struct ClientParamsKeeper<PSK> {
     pub params_subspace_key: PSK,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> ClientParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database, KV: QueryableContext<DB, SK>>(&self, ctx: &KV) -> ClientParams {
-        let store = subspace(ctx, &self.store_key, &self.params_subspace_key);
+impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
+    pub fn get<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &KV,
+    ) -> ClientParams {
+        let store = subspace(ctx, &self.params_subspace_key);
 
         store.params().expect("should exists")
     }
 
-    pub fn set<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ClientParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.store_key, &self.params_subspace_key);
+        let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
     }

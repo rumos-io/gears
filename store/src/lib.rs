@@ -24,6 +24,9 @@ pub trait StoreKey:
     std::fmt::Debug + Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static
 {
     fn name(&self) -> &'static str;
+
+    /// Return key for parameters
+    fn params() -> &'static Self;
 }
 
 pub trait ReadPrefixStore {

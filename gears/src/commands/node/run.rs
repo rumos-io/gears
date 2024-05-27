@@ -85,7 +85,6 @@ pub fn run<
     RB: RouterBuilder<H::QReq, H::QRes>,
 >(
     cmd: RunCommand,
-    store_key: H::StoreKey,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
     router_builder: RB,
@@ -118,8 +117,7 @@ pub fn run<
 
     let options = NodeOptions::new(min_gas_prices);
 
-    let app: BaseApp<PSK, H, AI> =
-        BaseApp::new(db, store_key, params_subspace_key, abci_handler, options);
+    let app: BaseApp<PSK, H, AI> = BaseApp::new(db, params_subspace_key, abci_handler, options);
 
     run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),
