@@ -19,7 +19,7 @@ members = [
   "x/ibc-rs",
   "x/bank",
   "x/auth",
-  #  "x/staking",
+  # "x/staking",
 
   # new unsorted
 ]

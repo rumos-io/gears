@@ -5,7 +5,7 @@ use ibc::core::connection::types::proto::v1::{ConnectionPaths, IdentifiedConnect
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
 
-use super::params::Params;
+use super::params::ConnectionParams;
 
 /// GenesisState defines the ibc connection submodule's genesis state.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -16,7 +16,7 @@ pub struct GenesisState {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     #[serde(serialize_with = "serialize_number_to_string")]
     pub next_connection_sequence: u64,
-    pub params: Params,
+    pub params: ConnectionParams,
 }
 
 impl Default for GenesisState {
@@ -25,7 +25,7 @@ impl Default for GenesisState {
             connections: vec![],
             client_connection_paths: vec![],
             next_connection_sequence: 0,
-            params: Params {
+            params: ConnectionParams {
                 max_expected_time_per_block: 30_000_000_000,
             },
         }

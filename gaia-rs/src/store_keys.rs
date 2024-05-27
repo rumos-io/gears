@@ -1,5 +1,4 @@
-use gears::params::ParamsSubspaceKey;
-use gears::store::StoreKey;
+use gears::{params::ParamsSubspaceKey, store::StoreKey};
 use strum::EnumIter;
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
@@ -22,6 +21,12 @@ impl StoreKey for GaiaStoreKey {
             GaiaStoreKey::IBC => "ibc",
             GaiaStoreKey::Capability => "capability",
         }
+    }
+
+    fn params() -> &'static Self {
+        const PARAM_KEY: GaiaStoreKey = GaiaStoreKey::Params;
+
+        &PARAM_KEY
     }
 }
 

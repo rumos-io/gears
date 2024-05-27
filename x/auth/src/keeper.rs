@@ -1,6 +1,7 @@
-use crate::{AuthParamsKeeper, GenesisState, Params};
+use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
 use gears::error::IBC_ENCODE_UNWRAP;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use gears::tendermint::types::proto::Protobuf as _;
@@ -9,16 +10,13 @@ use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
 use gears::types::context::QueryableContext;
 use gears::types::query::account::QueryAccountRequest;
+use gears::types::{
+    account::{Account, BaseAccount, ModuleAccount},
+    context::TransactionalContext,
+    query::account::QueryAccountResponse,
+};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
-use gears::{
-    params::ParamsSubspaceKey,
-    types::{
-        account::{Account, BaseAccount, ModuleAccount},
-        context::TransactionalContext,
-        query::account::QueryAccountResponse,
-    },
-};
 use prost::Message;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
@@ -29,17 +27,17 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
     store_key: SK,
-    auth_params_keeper: AuthParamsKeeper<SK, PSK>,
+    auth_params_keeper: AuthParamsKeeper<PSK>,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
-    type Params = Params;
+    type Params = AuthsParams;
 
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Self::Params {
-        self.auth_params_keeper.get(&ctx.multi_store())
+        self.auth_params_keeper.get(ctx)
     }
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -124,13 +122,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(
-        store_key: SK,
-        params_keeper: gears::params::Keeper<SK, PSK>,
-        params_subspace_key: PSK,
-    ) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
         let auth_params_keeper = AuthParamsKeeper {
-            params_keeper,
             params_subspace_key,
         };
         Keeper {
@@ -145,8 +138,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         genesis: GenesisState,
     ) {
         //TODO: sdk sanitizes accounts
-        self.auth_params_keeper
-            .set(&mut ctx.multi_store_mut(), genesis.params);
+        self.auth_params_keeper.set(ctx, genesis.params);
 
         for mut acct in genesis.accounts {
             acct.account_number = self.get_next_account_number(ctx);

@@ -286,9 +286,9 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn tx_timeout_height_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: TxMessage>(
+    fn tx_timeout_height_ante_handler<DB: Database, M: TxMessage>(
         &self,
-        ctx: &CTX,
+        ctx: &TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let timeout_height = tx.get_timeout_height();
@@ -399,13 +399,9 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn sig_verification_handler<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-        M: TxMessage + ValueRenderer,
-    >(
+    fn sig_verification_handler<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
     ) -> Result<(), AppError> {
         let signers = tx.tx.get_signers();

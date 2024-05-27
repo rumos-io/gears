@@ -2,14 +2,11 @@ use super::{
     handlers::{node::ABCIHandler, AuxHandler},
     ApplicationInfo,
 };
-use crate::{
-    commands::node::{
-        genesis::genesis_account_add,
-        init::init,
-        run::{run, RouterBuilder},
-        AppCommands,
-    },
-    params::Keeper as ParamsKeeper,
+use crate::commands::node::{
+    genesis::genesis_account_add,
+    init::init,
+    run::{run, RouterBuilder},
+    AppCommands,
 };
 use crate::{
     config::{ApplicationConfig, Config},
@@ -30,7 +27,6 @@ pub struct NodeApplication<'a, Core: Node> {
     core: Core,
     abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
 
-    params_store_key: <<Core as Node>::Handler as ABCIHandler>::StoreKey,
     params_subspace_key: Core::ParamsSubspaceKey,
 }
 
@@ -38,13 +34,11 @@ impl<'a, Core: Node> NodeApplication<'a, Core> {
     pub fn new(
         core: Core,
         abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
-        params_store_key: <<Core as Node>::Handler as ABCIHandler>::StoreKey,
         params_subspace_key: Core::ParamsSubspaceKey,
     ) -> Self {
         Self {
             core,
             abci_handler_builder,
-            params_store_key,
             params_subspace_key,
         }
     }
@@ -61,7 +55,6 @@ impl<'a, Core: Node> NodeApplication<'a, Core> {
             )?,
             AppCommands::Run(cmd) => run::<_, _, _, AI, _>(
                 cmd,
-                ParamsKeeper::new(self.params_store_key),
                 self.params_subspace_key,
                 self.abci_handler_builder,
                 self.core,
