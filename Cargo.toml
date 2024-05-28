@@ -91,7 +91,7 @@ axum = { version = "0.7.4" }
 http = { version = "0.2.12" }
 tonic = { version = "0.9" }
 tonic-reflection = { version = "0.9" }
-tower-http = { version = "0.5.2" }
+tower-http = { version = "0.5.2", features = ["trace"] }
 tower-service = "0.3.2"
 tower-layer = "0.3.2"
 
