@@ -4,6 +4,7 @@ use store_crate::{types::kv::mutable::KVStoreMut, TransactionalKVStore};
 use crate::types::{
     auth::gas::Gas,
     gas::{config::GasConfig, kind::TxKind, GasMeter},
+    store::constants::DELETE_DESC,
 };
 
 use super::{
@@ -66,5 +67,12 @@ impl<DB: Database> GasKVStoreMut<'_, DB> {
         self.inner.set(key, value);
 
         Ok(())
+    }
+
+    pub fn delete(&mut self, k: &[u8]) -> Result<Vec<u8>, GasStoreErrors> {
+        self.gas_meter
+            .consume_gas(GasConfig::kv().delete_cost, DELETE_DESC)?;
+
+        self.inner.delete(k).ok_or(GasStoreErrors::NotFound)
     }
 }
