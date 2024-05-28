@@ -16,7 +16,8 @@ pub struct MutablePrefixStore<'a, DB> {
 
 impl<DB: Database> MutablePrefixStore<'_, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
-        self.store.delete(k)
+        let full_key = [&self.prefix, k].concat();
+        self.store.delete(&full_key)
     }
 }
 
