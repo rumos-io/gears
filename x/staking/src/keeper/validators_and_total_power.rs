@@ -9,7 +9,7 @@ impl<
     > Keeper<SK, PSK, AK, BK, KH>
 {
     /// Load the last total validator power.
-    pub fn get_last_total_power<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn last_total_power<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Option<Uint256> {
@@ -34,9 +34,7 @@ impl<
     }
 
     /// get the last validator set
-    // TODO: is a hack that allows to use store in the code after call,
-    // Otherwise, it borrows the store and it cannot be reused in mutable calls
-    pub fn get_validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
@@ -53,21 +51,35 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
 
         // jailed validators are not kept in the power index
         if validator.jailed {
-            return Ok(());
+            return;
         }
 
         validators_store.set(
             validator.key_by_power_index_key(power_reduction),
             validator.operator_address.to_string().as_bytes().to_vec(),
         );
-        Ok(())
+    }
+
+    pub fn set_new_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) {
+        let power_reduction = self.power_reduction(ctx);
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
+
+        validators_store.set(
+            validator.key_by_power_index_key(power_reduction),
+            validator.operator_address.to_string().as_bytes().to_vec(),
+        );
     }
 
     pub fn delete_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -85,10 +97,9 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &ValAddress,
-    ) -> anyhow::Result<()> {
+    ) -> Option<Vec<u8>> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        delegations_store.delete(validator.to_string().as_bytes());
-        Ok(())
+        delegations_store.delete(validator.to_string().as_bytes())
     }
 }

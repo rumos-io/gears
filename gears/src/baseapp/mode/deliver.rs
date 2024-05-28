@@ -4,6 +4,7 @@ use store_crate::{TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use crate::baseapp::options::NodeOptions;
+use crate::baseapp::ConsensusParams;
 use crate::types::auth::fee::Fee;
 use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
@@ -42,6 +43,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         &mut self,
         height: u64,
         header: Header,
+        consensus_params: ConsensusParams,
         fee: Option<&Fee>,
         options: NodeOptions,
     ) -> TxContext<'_, DB, AH::StoreKey> {
@@ -49,6 +51,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
             &mut self.multi_store,
             height,
             header,
+            consensus_params,
             build_tx_gas_meter(height, fee),
             &mut self.block_gas_meter,
             false,

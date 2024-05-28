@@ -21,6 +21,9 @@ serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 prost = { workspace = true }
 
+#log
+tracing = { workspace = true }
+
 #other
 tokio = { workspace = true }
 axum = { workspace = true }

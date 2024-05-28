@@ -5,7 +5,7 @@ use tendermint::types::proto::event::Event;
 use super::{build_tx_gas_meter, ExecutionMode};
 use crate::{
     application::handlers::node::ABCIHandler,
-    baseapp::{errors::RunTxError, options::NodeOptions},
+    baseapp::{errors::RunTxError, options::NodeOptions, params::ConsensusParams},
     types::{
         auth::fee::Fee,
         context::{tx::TxContext, TransactionalContext},
@@ -41,6 +41,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         &mut self,
         height: u64,
         header: Header,
+        consensus_params: ConsensusParams,
         fee: Option<&Fee>,
         options: NodeOptions,
     ) -> TxContext<'_, DB, AH::StoreKey> {
@@ -48,6 +49,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
             &mut self.multi_store,
             height,
             header,
+            consensus_params,
             build_tx_gas_meter(height, fee),
             &mut self.block_gas_meter,
             true,

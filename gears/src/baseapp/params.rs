@@ -4,7 +4,6 @@ use database::Database;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use store_crate::StoreKey;
-use tendermint::types::proto::consensus::ConsensusParams;
 
 use crate::{
     params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
@@ -12,6 +11,7 @@ use crate::{
 };
 
 mod inner {
+    pub use tendermint::types::proto::consensus::ConsensusParams;
     pub use tendermint::types::proto::params::BlockParams;
     pub use tendermint::types::proto::params::EvidenceParams;
     pub use tendermint::types::proto::params::ValidatorParams;
@@ -34,12 +34,33 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 //##################################################################################
 //##################################################################################
 
+/// A domain ConsensusParams type that wraps domain consensus params types.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConsensusParams {
+    pub block: BlockParams,
+    pub evidence: EvidenceParams,
+    pub validator: ValidatorParams,
+    // TODO: consider to check the importance and usage
+    // pub version: Option<VersionParams>
+}
+
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BlockParams {
     pub max_bytes: String,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_gas: i64,
+}
+
+impl Default for BlockParams {
+    fn default() -> Self {
+        // TODO: implement defaults
+        // from sdk testing setup
+        BlockParams {
+            max_bytes: 200_000.to_string(),
+            max_gas: 2_000_000,
+        }
+    }
 }
 
 impl From<inner::BlockParams> for BlockParams {
@@ -51,9 +72,18 @@ impl From<inner::BlockParams> for BlockParams {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
+}
+
+impl Default for ValidatorParams {
+    fn default() -> Self {
+        // TODO: check defaults
+        Self {
+            pub_key_types: vec!["secp256k1".to_string()],
+        }
+    }
 }
 
 impl From<inner::ValidatorParams> for ValidatorParams {
@@ -64,11 +94,23 @@ impl From<inner::ValidatorParams> for ValidatorParams {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct EvidenceParams {
-    max_age_num_blocks: String,
-    max_age_duration: Option<String>,
-    max_bytes: String,
+    pub max_age_num_blocks: String,
+    pub max_age_duration: Option<String>,
+    pub max_bytes: String,
+}
+
+impl Default for EvidenceParams {
+    fn default() -> Self {
+        // TODO: update defaults
+        // from sdk testing setup
+        EvidenceParams {
+            max_age_num_blocks: 302400.to_string(),
+            max_age_duration: Some((504 * 3600 * SEC_TO_NANO).to_string()), // 3 weeks
+            max_bytes: 10000.to_string(),
+        }
+    }
 }
 
 impl From<inner::EvidenceParams> for EvidenceParams {
@@ -95,11 +137,41 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
     pub fn set_consensus_params<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        params: ConsensusParams,
+        params: inner::ConsensusParams,
     ) {
         let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params);
+    }
+
+    pub fn consensus_params<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+        &self,
+        store: &CTX,
+    ) -> ConsensusParams {
+        let sub_store = subspace(store, &self.params_subspace_key);
+
+        let block_params = self.block_params(store).unwrap_or_default();
+        let evidence_params = sub_store
+            .params_field(KEY_EVIDENCE_PARAMS, ParamKind::Bytes)
+            .map(|params| {
+                serde_json::from_slice(&params.bytes().expect("We sure that this is bytes"))
+                    .expect("conversion from json won't fail")
+            })
+            .unwrap_or_default();
+
+        let validator_params = sub_store
+            .params_field(KEY_VALIDATOR_PARAMS, ParamKind::Bytes)
+            .map(|params| {
+                serde_json::from_slice(&params.bytes().expect("We sure that this is bytes"))
+                    .expect("conversion from json won't fail")
+            })
+            .unwrap_or_default();
+
+        ConsensusParams {
+            block: block_params,
+            evidence: evidence_params,
+            validator: validator_params,
+        }
     }
 
     pub fn block_params<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
@@ -118,7 +190,7 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
     }
 }
 
-impl ParamsSerialize for ConsensusParams {
+impl ParamsSerialize for inner::ConsensusParams {
     fn keys() -> HashMap<&'static str, ParamKind> {
         [
             (KEY_BLOCK_PARAMS, ParamKind::Bytes),

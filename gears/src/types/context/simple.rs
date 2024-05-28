@@ -29,6 +29,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, 
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key).into()
     }
+
+    fn height(&self) -> u64 {
+        unreachable!("inner type that is not supposed to provide external interfaces")
+    }
 }
 
 impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for SimpleContext<'_, DB, SK> {
@@ -46,5 +50,9 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for SimpleContext<
 
     fn events_drain(&mut self) -> Vec<Event> {
         std::mem::take(&mut self.events)
+    }
+
+    fn get_time(&self) -> Option<tendermint::types::time::Timestamp> {
+        unreachable!("inner type that is not supposed to provide external interfaces")
     }
 }

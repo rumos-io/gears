@@ -1,6 +1,5 @@
-use gears::types::account::ModuleAccount;
-
 pub use super::*;
+use gears::types::account::ModuleAccount;
 
 impl<
         SK: StoreKey,
@@ -10,42 +9,49 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    /// get_bonded_pool returns the bonded tokens pool's module account
-    pub fn get_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    /// bonded_pool returns the bonded tokens pool's module account
+    pub fn bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> Option<ModuleAccount> {
         self.auth_keeper
-            .get_module_account(ctx, BONDED_POOL_NAME.to_string())
+            .module_account(ctx, BONDED_POOL_NAME.to_string())
     }
 
-    /// get_bonded_pool returns the bonded tokens pool's module account
-    pub fn get_not_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    /// bonded_pool returns the bonded tokens pool's module account
+    pub fn not_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> Option<ModuleAccount> {
         self.auth_keeper
-            .get_module_account(ctx, NOT_BONDED_POOL_NAME.to_string())
+            .module_account(ctx, NOT_BONDED_POOL_NAME.to_string())
     }
 
     pub fn bonded_tokens_to_not_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         amount: Uint256,
-    ) -> anyhow::Result<()> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store())?;
+    ) {
+        let params = self.staking_params_keeper.get(ctx);
+
+        // TODO: original routine is unfailable, it means that the amount is a valid number.
+        // The method is called from failable methods. Consider to provide correct solution taking
+        // into account additional analisis.
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
-        }])?;
-        Ok(self
-            .bank_keeper
+        }])
+        .unwrap();
+
+        // TODO: check and maybe remove unwrap
+        self.bank_keeper
             .send_coins_from_module_to_module::<DB, AK, CTX>(
                 ctx,
                 BONDED_POOL_NAME.into(),
                 NOT_BONDED_POOL_NAME.into(),
                 coins,
-            )?)
+            )
+            .unwrap()
     }
 
     pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -67,19 +73,18 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         // delete the validator by power index, as the key will change
         self.delete_validator_by_power_index(ctx, validator);
 
         validator.update_status(BondStatus::Bonded);
         // save the now bonded validator record to the two referenced stores
-        self.set_validator(ctx, validator)?;
-        self.set_validator_by_power_index(ctx, validator)?;
+        self.set_validator(ctx, validator);
+        self.set_validator_by_power_index(ctx, validator);
 
         // delete from queue if present
-        self.delete_validator_queue(ctx, validator)?;
+        self.delete_validator_queue(ctx, validator);
         // trigger hook
-        self.after_validator_bonded(ctx, validator)?;
-        Ok(())
+        self.after_validator_bonded(ctx, validator);
     }
 }

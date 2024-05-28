@@ -41,6 +41,7 @@ pub mod mode;
 mod params;
 mod query;
 pub mod state;
+pub use params::{BlockParams, ConsensusParams, EvidenceParams, ValidatorParams};
 
 pub use query::*;
 
@@ -174,14 +175,21 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             .try_into()
             .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?;
 
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let consensus_params = {
+            let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
+            let ctx = SimpleContext::new(multi_store);
+            self.baseapp_params_keeper.consensus_params(&ctx)
+        };
 
         let mut ctx = mode.build_ctx(
             height,
             header.clone(),
+            consensus_params,
             Some(&tx_with_raw.tx.auth_info.fee),
             self.options.clone(),
         );
+
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;

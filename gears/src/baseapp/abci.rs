@@ -57,7 +57,12 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
             std::process::exit(1)
         });
 
-        let mut ctx = InitContext::new(&mut multi_store, self.block_height(), chain_id);
+        let mut ctx = InitContext::new(
+            &mut multi_store,
+            self.block_height(),
+            request.time.clone(),
+            chain_id.clone(),
+        );
 
         self.baseapp_params_keeper
             .set_consensus_params(&mut ctx, request.consensus_params.clone());
@@ -72,6 +77,13 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
                 );
                 std::process::exit(1)
             });
+
+        let mut ctx = InitContext::new(
+            &mut *multi_store,
+            self.block_height(),
+            request.time,
+            chain_id.clone(),
+        );
 
         self.abci_handler.init_genesis(&mut ctx, genesis.clone());
 
