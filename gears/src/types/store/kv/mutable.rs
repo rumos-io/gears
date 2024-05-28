@@ -1,16 +1,14 @@
-use std::ops::RangeBounds;
+use std::{cell::RefCell, sync::Arc};
 
 use database::Database;
 use store_crate::{types::kv::mutable::KVStoreMut, QueryableKVStore, TransactionalKVStore};
 
 use crate::types::{
-    auth::gas::Gas,
-    gas::{config::GasConfig, kind::TxKind, GasMeter},
+    gas::{kind::TxKind, GasMeter},
     store::{
-        constants::{DELETE_DESC, WRITE_COST_FLAT_DESC, WRITE_PER_BYTE_DESC},
         errors::GasStoreErrors,
-        prefix::mutable::GasStorePrefixMut,
-        range::GasRange,
+        guard::GasGuard,
+        prefix::{mutable::GasStorePrefixMut, GasStorePrefix},
     },
 };
 
@@ -18,25 +16,28 @@ use super::GasKVStore;
 
 #[derive(Debug)]
 pub struct GasKVStoreMut<'a, DB> {
-    pub(super) gas_meter: &'a mut GasMeter<TxKind>,
+    pub(super) guard: GasGuard<'a>,
     pub(super) inner: KVStoreMut<'a, DB>,
 }
 
 impl<'a, DB> GasKVStoreMut<'a, DB> {
-    pub(crate) fn new(gas_meter: &'a mut GasMeter<TxKind>, inner: KVStoreMut<'a, DB>) -> Self {
-        Self { gas_meter, inner }
+    pub(crate) fn new(guard: &'a mut GasMeter<TxKind>, inner: KVStoreMut<'a, DB>) -> Self {
+        Self {
+            guard: GasGuard(Arc::new(RefCell::new(guard))),
+            inner,
+        }
     }
 
-    pub fn to_immutable(&mut self) -> GasKVStore<'_, DB> {
+    pub fn to_immutable(&'a self) -> GasKVStore<'a, DB> {
         GasKVStore {
-            gas_meter: &mut *self.gas_meter,
+            guard: self.guard.clone(),
             inner: self.inner.to_immutable(),
         }
     }
 }
 
 impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
-    pub fn get<R: AsRef<[u8]>>(&mut self, k: R) -> Result<Vec<u8>, GasStoreErrors> {
+    pub fn get<R: AsRef<[u8]>>(&'a self, k: R) -> Result<Vec<u8>, GasStoreErrors> {
         self.to_immutable().get(k)
     }
 
@@ -45,48 +46,34 @@ impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
         key: KI,
         value: VI,
     ) -> Result<(), GasStoreErrors> {
-        self.gas_meter
-            .consume_gas(GasConfig::kv().read_cost_flat, WRITE_COST_FLAT_DESC)?;
-
         let key = key.into_iter().collect::<Vec<_>>();
         let value = value.into_iter().collect::<Vec<_>>();
 
-        let write_cost_per_byte = GasConfig::kv().write_cost_per_byte;
-
-        self.gas_meter.consume_gas(
-            write_cost_per_byte
-                .checked_mul(Gas::try_from(key.len() as u64)?)
-                .ok_or(GasStoreErrors::GasOverflow)?,
-            WRITE_PER_BYTE_DESC,
-        )?;
-
-        self.gas_meter.consume_gas(
-            write_cost_per_byte
-                .checked_mul(Gas::try_from(value.len() as u64)?)
-                .ok_or(GasStoreErrors::GasOverflow)?,
-            WRITE_PER_BYTE_DESC,
-        )?;
+        self.guard.set(key.len(), value.len())?;
 
         self.inner.set(key, value);
 
         Ok(())
     }
 
-    pub fn delete(&mut self, k: &[u8]) -> Result<Vec<u8>, GasStoreErrors> {
-        self.gas_meter
-            .consume_gas(GasConfig::kv().delete_cost, DELETE_DESC)?;
+    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
+        self.guard.delete()?;
 
-        self.inner.delete(k).ok_or(GasStoreErrors::NotFound)
+        Ok(self.inner.delete(k))
+    }
+
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefix<'a, DB> {
+        GasStorePrefix::new(self.guard, self.inner.prefix_store(prefix))
     }
 
     pub fn prefix_store_mut<I: IntoIterator<Item = u8>>(
         self,
         prefix: I,
     ) -> GasStorePrefixMut<'a, DB> {
-        GasStorePrefixMut::new(self, prefix)
+        GasStorePrefixMut::new(self.guard, self.inner.prefix_store_mut(prefix))
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {
-        GasRange::new(self.inner.range(range), &mut self.gas_meter)
-    }
+    // pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {
+    //     GasRange::new(self.inner.range(range), &mut self.gas_meter)
+    // }
 }
