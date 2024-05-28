@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::prefix::mutable::MutablePrefixStore, WritePrefixStore};
+use store_crate::{types::prefix::mutable::MutablePrefixStore, ReadPrefixStore, WritePrefixStore};
 
 use crate::types::store::{errors::GasStoreErrors, guard::GasGuard};
 
@@ -23,28 +23,41 @@ impl<'a, DB> GasStorePrefixMut<'a, DB> {
     }
 }
 
-impl<'a, DB: Database> GasStorePrefixMut<'a, DB> {
-    fn get<T: AsRef<[u8]>>(&'a self, k: &T) -> Result<Vec<u8>, GasStoreErrors> {
-        self.to_immutable().get(k)
-    }
+impl<DB: Database> ReadPrefixStore for GasStorePrefixMut<'_, DB> {
+    type GetErr = GasStoreErrors;
 
-    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
-        self.guard.delete()?;
-        Ok(self.inner.delete(k))
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Vec<u8>, Self::GetErr> {
+        let value = self.inner.get(&k).ok();
+
+        self.guard
+            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+
+        value.ok_or(GasStoreErrors::NotFound)
     }
+}
+
+impl<DB: Database> WritePrefixStore for GasStorePrefixMut<'_, DB> {
+    type SetErr = GasStoreErrors;
 
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         k: KI,
         v: VI,
-    ) -> Result<(), GasStoreErrors> {
+    ) -> Result<(), Self::SetErr> {
         let key = k.into_iter().collect::<Vec<_>>();
         let value = v.into_iter().collect::<Vec<_>>();
 
         self.guard.set(key.len(), value.len())?;
 
-        self.inner.set(key, value);
+        self.inner.set(key, value).expect("Infallible");
 
         Ok(())
+    }
+}
+
+impl<'a, DB: Database> GasStorePrefixMut<'a, DB> {
+    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
+        self.guard.delete()?;
+        Ok(self.inner.delete(k))
     }
 }

@@ -30,7 +30,7 @@ impl<DB: Database> ParamsSpaceMut<'_, DB> {
         let params = params.to_raw();
 
         for (key, value) in params {
-            self.inner.set(key.as_bytes().iter().cloned(), value)
+            self.inner.set(key.as_bytes().iter().cloned(), value).expect( "Infallible")
         }
     }
 }

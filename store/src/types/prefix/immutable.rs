@@ -2,7 +2,9 @@ use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 
-use crate::{types::kv::immutable::KVStore, QueryableKVStore, ReadPrefixStore};
+use crate::{
+    error::NotFoundError, types::kv::immutable::KVStore, QueryableKVStore, ReadPrefixStore,
+};
 
 use super::{prefix_end_bound, range::PrefixRange};
 
@@ -34,8 +36,10 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
 }
 
 impl<DB: Database> ReadPrefixStore for ImmutablePrefixStore<'_, DB> {
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Option<Vec<u8>> {
+    type GetErr = NotFoundError;
+
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Vec<u8>, Self::GetErr> {
         let full_key = [&self.prefix, k.as_ref()].concat();
-        self.store.get(&full_key)
+        self.store.get(&full_key).ok_or(NotFoundError)
     }
 }

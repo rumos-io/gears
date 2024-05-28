@@ -30,11 +30,19 @@ pub trait StoreKey:
 }
 
 pub trait ReadPrefixStore {
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Option<Vec<u8>>;
+    type GetErr;
+
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Vec<u8>, Self::GetErr>;
 }
 
 pub trait WritePrefixStore: ReadPrefixStore {
-    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI);
+    type SetErr;
+
+    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+        &mut self,
+        k: KI,
+        v: VI,
+    ) -> Result<(), Self::SetErr>;
 }
 
 pub trait QueryableKVStore<'a, DB> {

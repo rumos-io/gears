@@ -1,8 +1,10 @@
+use std::convert::Infallible;
+
 use database::Database;
 
 use crate::{
-    types::kv::mutable::KVStoreMut, QueryableKVStore, ReadPrefixStore, TransactionalKVStore,
-    WritePrefixStore,
+    error::NotFoundError, types::kv::mutable::KVStoreMut, QueryableKVStore, ReadPrefixStore,
+    TransactionalKVStore, WritePrefixStore,
 };
 
 use super::immutable::ImmutablePrefixStore;
@@ -31,16 +33,26 @@ impl<DB> MutablePrefixStore<'_, DB> {
 }
 
 impl<DB: Database> ReadPrefixStore for MutablePrefixStore<'_, DB> {
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Option<Vec<u8>> {
+    type GetErr = NotFoundError;
+
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Vec<u8>, Self::GetErr> {
         let full_key = [&self.prefix, k.as_ref()].concat();
-        self.store.get(&full_key)
+        self.store.get(&full_key).ok_or(NotFoundError)
     }
 }
 
 impl<DB: Database> WritePrefixStore for MutablePrefixStore<'_, DB> {
-    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI) {
+    type SetErr = Infallible;
+
+    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+        &mut self,
+        k: KI,
+        v: VI,
+    ) -> Result<(), Self::SetErr> {
         // TODO: do we need to check for zero length keys as with the KVStore::set?
         let full_key = [self.prefix.clone(), k.into_iter().collect()].concat();
-        self.store.set(full_key, v)
+        self.store.set(full_key, v);
+
+        Ok(())
     }
 }
