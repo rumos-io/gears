@@ -3,6 +3,7 @@ use bytes::Bytes;
 use crate::{
     error::Error,
     types::{
+        chain_id::ChainId,
         proto::{consensus::ConsensusParams, validator::ValidatorUpdate},
         time::Timestamp,
     },
@@ -11,7 +12,7 @@ use crate::{
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RequestInitChain {
     pub time: Timestamp,
-    pub chain_id: String,
+    pub chain_id: ChainId,
     pub consensus_params: ConsensusParams,
     pub validators: Vec<ValidatorUpdate>,
     pub app_state_bytes: Bytes,
@@ -31,7 +32,7 @@ impl From<RequestInitChain> for super::inner::RequestInitChain {
     ) -> Self {
         Self {
             time: Some(time.into()),
-            chain_id,
+            chain_id: chain_id.into(),
             consensus_params: Some(consensus_params.into()),
             validators: validators.into_iter().map(Into::into).collect(),
             app_state_bytes,
@@ -57,7 +58,9 @@ impl TryFrom<super::inner::RequestInitChain> for RequestInitChain {
             time: time
                 .ok_or(Error::InvalidData("time is empty".to_string()))?
                 .into(),
-            chain_id,
+            chain_id: chain_id
+                .parse()
+                .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}").into()))?,
             consensus_params: consensus_params
                 .ok_or(Error::InvalidData("consensus params is empty".to_string()))?
                 .into(),

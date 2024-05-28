@@ -106,17 +106,11 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
     }
 
     fn get_block_header(&self) -> Option<Header> {
-        self.block_header
-            .read()
-            .expect("RwLock will not be poisoned")
-            .clone()
+        self.block_header.read().expect(POISONED_LOCK).clone()
     }
 
     fn set_block_header(&self, header: Header) {
-        let mut current_header = self
-            .block_header
-            .write()
-            .expect("RwLock will not be poisoned");
+        let mut current_header = self.block_header.write().expect(POISONED_LOCK);
         *current_header = Some(header);
     }
 
@@ -128,6 +122,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
+        //TODO: request height u32
         let version: u32 = request.height.try_into().map_err(|_| {
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;

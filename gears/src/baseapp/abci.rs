@@ -7,11 +7,9 @@ use crate::types::context::block::BlockContext;
 use crate::types::gas::Gas;
 use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
-use std::str::FromStr;
 use tendermint::{
     application::ABCIApplication,
     types::{
-        chain_id::ChainId,
         request::{
             begin_block::RequestBeginBlock,
             check_tx::RequestCheckTx,
@@ -52,16 +50,11 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let chain_id = ChainId::from_str(&request.chain_id).unwrap_or_else(|_| {
-            error!("Invalid chain id provided by Tendermint.\nTerminating process\n");
-            std::process::exit(1)
-        });
-
         let mut ctx = InitContext::new(
             &mut multi_store,
             self.block_height(),
             request.time.clone(),
-            chain_id.clone(),
+            request.chain_id.clone(),
         );
 
         self.baseapp_params_keeper
@@ -77,13 +70,6 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
                 );
                 std::process::exit(1)
             });
-
-        let mut ctx = InitContext::new(
-            &mut *multi_store,
-            self.block_height(),
-            request.time,
-            chain_id.clone(),
-        );
 
         self.abci_handler.init_genesis(&mut ctx, genesis.clone());
 
@@ -308,9 +294,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
             &mut multi_store,
             self.block_height(),
             self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .expect("Invalid request"),
+                .expect("block header is set in begin block"), //TODO: return error?
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
