@@ -1,6 +1,6 @@
+pub use super::*;
 use crate::{Commission, CreateValidator, DelegateMsg};
 use gears::types::{address::ConsAddress, context::tx::TxContext};
-pub use super::*;
 
 impl<
         SK: StoreKey,
@@ -16,7 +16,7 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &CreateValidator,
     ) -> Result<(), AppError> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
 
         if self.validator(ctx, &msg.validator_address).is_some() {
             return Err(AppError::Custom(format!(
@@ -26,7 +26,7 @@ impl<
         };
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
-        if self.validator_by_cons_addr(ctx, &cons_addr).is_ok() {
+        if self.validator_by_cons_addr(ctx, &cons_addr).is_some() {
             return Err(AppError::Custom(format!(
                 "Public key {} exists",
                 ConsAddress::from(msg.pub_key.clone())
@@ -42,19 +42,15 @@ impl<
 
         msg.description.ensure_length()?;
 
-        let consensus_validators = self
-            .staking_params_keeper
-            .consensus_validator(&ctx.multi_store());
-        if let Ok(consensus_validators) = consensus_validators {
-            // TODO: discuss impl of `str_type`
-            let pub_key_type = msg.pub_key.str_type();
-            if !consensus_validators
-                .pub_key_types
-                .iter()
-                .any(|key_type| pub_key_type == key_type)
-            {
-                return Err(AppError::InvalidPublicKey);
-            }
+        let consensus_validators = &ctx.consensus_params().validator;
+        // TODO: discuss impl of `str_type`
+        let pub_key_type = msg.pub_key.str_type();
+        if !consensus_validators
+            .pub_key_types
+            .iter()
+            .any(|key_type| pub_key_type == key_type)
+        {
+            return Err(AppError::InvalidPublicKey);
         }
 
         let mut validator = Validator::new_with_defaults(
@@ -63,20 +59,12 @@ impl<
             msg.description.clone(),
         );
 
-        let update_time = ctx
-            .header()
-            .expect("TxContext always has context")
-            .time
-            .clone()
-            .ok_or(AppError::TxValidation(
-                "Transaction doesn't have valid timestamp.".to_string(),
-            ))?;
-        let commission = Commission {
-            commission_rates: msg.commission.clone(),
-            update_time,
-        };
-
-        validator.set_initial_commission(commission)?;
+        // TODO: make better api for timestamps in Gears
+        let update_time = ctx.get_time().ok_or(AppError::TxValidation(
+            "Transaction doesn't have valid timestamp.".to_string(),
+        ))?;
+        let commission = Commission::new(msg.commission.clone(), update_time)?;
+        validator.set_initial_commission(commission);
         validator.min_self_delegation = msg.min_self_delegation;
 
         self.set_validator(ctx, &validator);
@@ -147,7 +135,7 @@ impl<
         } else {
             return Err(AppError::AccountNotFound);
         };
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
         let delegator_address = msg.delegator_address.clone();
 
         if msg.amount.denom != params.bond_denom {

@@ -1,5 +1,5 @@
 use super::pagination::parse_pagination;
-use crate::rest::{error::Error, pagination::Pagination};
+use crate::rest::{error::HTTPError, pagination::Pagination};
 use crate::types::response::any::AnyTx;
 use crate::types::response::tx::TxResponse;
 use crate::types::response::tx_event::GetTxsEventResponse;
@@ -30,12 +30,12 @@ pub struct NodeInfoResponse {
 
 pub async fn node_info(
     State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,
-) -> Result<Json<NodeInfoResponse>, Error> {
+) -> Result<Json<NodeInfoResponse>, HTTPError> {
     let client = HttpClient::new(tendermint_rpc_address).expect("hard coded URL is valid");
 
     let res = client.status().await.map_err(|e| {
         tracing::error!("Error connecting to Tendermint: {e}");
-        Error::gateway_timeout()
+        HTTPError::gateway_timeout()
     })?;
 
     let node_info = NodeInfoResponse {
@@ -53,14 +53,16 @@ pub async fn txs<M: TxMessage>(
     events: AxumQuery<RawEvents>,
     pagination: AxumQuery<Pagination>,
     State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,
-) -> Result<Json<GetTxsEventResponse<M>>, Error> {
+) -> Result<Json<GetTxsEventResponse<M>>, HTTPError> {
     let client = HttpClient::new(tendermint_rpc_address).expect("hard coded URL is valid");
 
     let query: Query = events
         .0
         .events
         .parse()
-        .map_err(|e: tendermint::rpc::error::Error| Error::bad_request(e.detail().to_string()))?;
+        .map_err(|e: tendermint::rpc::error::Error| {
+            HTTPError::bad_request(e.detail().to_string())
+        })?;
     let (page, limit) = parse_pagination(pagination.0.clone());
 
     let res_tx = client
@@ -68,7 +70,7 @@ pub async fn txs<M: TxMessage>(
         .await
         .map_err(|e| {
             tracing::error!("Error connecting to Tendermint: {e}");
-            Error::gateway_timeout()
+            HTTPError::gateway_timeout()
         })?;
 
     let res = map_responses(res_tx)?;
@@ -77,12 +79,12 @@ pub async fn txs<M: TxMessage>(
 }
 
 // Maps a tendermint tx_search response to a Cosmos get txs by event response
-fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M>, Error> {
+fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M>, HTTPError> {
     let mut tx_responses = Vec::with_capacity(res_tx.txs.len());
     let mut txs = Vec::with_capacity(res_tx.txs.len());
 
     for tx in res_tx.txs {
-        let cosmos_tx = Tx::decode::<Bytes>(tx.tx.into()).map_err(|_| Error::bad_gateway())?;
+        let cosmos_tx = Tx::decode::<Bytes>(tx.tx.into()).map_err(|_| HTTPError::bad_gateway())?;
         txs.push(cosmos_tx.clone());
 
         let any_tx = AnyTx::Tx(cosmos_tx);
@@ -104,7 +106,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
         });
     }
 
-    let total = txs.len().try_into().map_err(|_| Error::bad_gateway())?;
+    let total = txs.len().try_into().map_err(|_| HTTPError::bad_gateway())?;
 
     Ok(GetTxsEventResponse {
         pagination: Some(PageResponse {

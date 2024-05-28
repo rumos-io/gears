@@ -27,8 +27,15 @@ strum = { workspace = true }
 serde = { workspace = true }
 prost = { workspace = true }
 
-#other
+# log
+tracing = { workspace = true }
+
+#networking
 axum = { workspace = true }
+tonic = { workspace = true }
+tower-layer = { workspace = true }
+tonic-reflection = { workspace = true }
+ibc-proto = { workspace = true }
 
 [dev-dependencies]
 url = { workspace = true }

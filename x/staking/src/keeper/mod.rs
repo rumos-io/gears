@@ -1,5 +1,5 @@
 use crate::{
-    consts::{expect::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
+    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
     BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool,
     Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
 };
@@ -58,7 +58,7 @@ pub struct Keeper<
     store_key: SK,
     auth_keeper: AK,
     bank_keeper: BK,
-    staking_params_keeper: StakingParamsKeeper<SK, PSK>,
+    staking_params_keeper: StakingParamsKeeper<PSK>,
     codespace: String,
     hooks_keeper: Option<KH>,
 }
@@ -76,11 +76,9 @@ impl<
         params_subspace_key: PSK,
         auth_keeper: AK,
         bank_keeper: BK,
-        params_keeper: gears::params::Keeper<SK, PSK>,
         codespace: String,
     ) -> Self {
         let staking_params_keeper = StakingParamsKeeper {
-            params_keeper,
             params_subspace_key,
         };
 
@@ -107,8 +105,7 @@ impl<
 
         self.set_pool(ctx, genesis.pool);
         self.set_last_total_power(ctx, genesis.last_total_power);
-        self.staking_params_keeper
-            .set(&mut ctx.multi_store_mut(), genesis.params.clone());
+        self.staking_params_keeper.set(ctx, genesis.params.clone());
 
         for validator in genesis.validators {
             self.set_validator(ctx, &validator);
@@ -164,24 +161,29 @@ impl<
         for redelegation in genesis.redelegations {
             self.set_redelegation(ctx, &redelegation);
             for entry in &redelegation.entries {
-                let completion_time = chrono::DateTime::from_timestamp(entry.completion_time.seconds, entry.completion_time.nanos as u32)
-                    .expect(
-                        "Invalid timestamp in redelegation. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
-                    );
+                // TODO: consider to move the DataTime type and work with timestamps into Gears
+                // The timestamp is provided by context and conversion won't fail.
+                let completion_time = chrono::DateTime::from_timestamp(
+                    entry.completion_time.seconds,
+                    entry.completion_time.nanos as u32,
+                )
+                .unwrap();
                 self.insert_redelegation_queue(ctx, &redelegation, completion_time);
             }
         }
 
+        // TODO: check
         let bonded_coins = SendCoins::new(vec![Coin {
             denom: genesis.params.bond_denom.clone(),
             amount: bonded_tokens,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
+        .unwrap();
+        // TODO: check
         let not_bonded_coins = SendCoins::new(vec![Coin {
             denom: genesis.params.bond_denom,
             amount: not_bonded_tokens,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
+        .unwrap();
 
         // check if the unbonded and bonded pools accounts exists
         let bonded_pool = self
@@ -203,12 +205,11 @@ impl<
             self.auth_keeper.set_module_account(ctx, bonded_pool);
         }
         // if balance is different from bonded coins panic because genesis is most likely malformed
-        if bonded_balance != bonded_coins {
-            panic!(
-                "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
-                bonded_balance, bonded_coins
-            )
-        }
+        assert_eq!(
+            bonded_balance, bonded_coins,
+            "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
+            bonded_balance, bonded_coins
+        );
 
         let not_bonded_pool = self
             .not_bonded_pool(ctx)
@@ -226,13 +227,13 @@ impl<
         {
             self.auth_keeper.set_module_account(ctx, not_bonded_pool);
         }
+
         // if balance is different from non bonded coins panic because genesis is most likely malformed
-        if not_bonded_balance != not_bonded_coins {
-            panic!(
-                "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
-                bonded_balance, bonded_coins
-            );
-        }
+        assert_eq!(
+            not_bonded_balance, not_bonded_coins,
+            "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
+            not_bonded_balance, not_bonded_coins,
+        );
 
         let mut res = vec![];
         // don't need to run Tendermint updates if we exported
@@ -247,13 +248,8 @@ impl<
                 res.push(update);
             }
         } else {
-            match self.apply_and_return_validator_set_updates(ctx) {
-                Ok(update) => {
-                    res = update;
-                }
-                // TODO: exit in sdk
-                Err(e) => panic!("{}", e),
-            }
+            // TODO: exit in sdk
+            res = self.apply_and_return_validator_set_updates(ctx).unwrap();
         }
         res
     }
@@ -293,17 +289,12 @@ impl<
         self.unbond_all_mature_validators(ctx);
 
         // Remove all mature unbonding delegations from the ubd queue.
-        let time = ctx
-            .header()
-            .expect("BlockContext always has context")
-            .time
-            .as_ref()
-            .expect("Expected timestamp in block context header.");
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32)
-            .expect(
-                "Invalid timestamp in block context. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
-            );
-        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time.clone());
+        // TODO: make better api for timestamps in Gears
+        let time = ctx.get_time().unwrap();
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
+        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time);
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;
             let val_addr_str = val_addr.to_string();
@@ -405,14 +396,14 @@ impl<
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
         let amt_from_not_bonded_to_bonded = Uint256::zero();
 
-        let mut last = self.last_validators_by_addr(ctx)?;
+        let mut last = self.last_validators_by_addr(ctx);
         let validators_map = self.validators_power_store_vals_map(ctx)?;
 
         let mut updates = vec![];
@@ -425,7 +416,10 @@ impl<
                 .expect("validator should be presented in store");
 
             if validator.jailed {
-                panic!("should never retrieve a jailed validator from the power store",);
+                return Err(AppError::Custom(
+                    "should never retrieve a jailed validator from the power store".to_string(),
+                )
+                .into());
             }
             // if we get to a zero-power validator (which we don't bond),
             // there are no more possible bonded validators
@@ -529,23 +523,25 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) {
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        // TODO: original routine is unfailable, it means that the amount is a valid number.
+        // The method is called from failable methods. Consider to provide correct solution taking
+        // into account additional analisis.
+        let params = self.staking_params_keeper.get(ctx);
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
-        if let Err(e) = self
-            .bank_keeper
+        .unwrap();
+
+        // TODO: check and maybe remove unwrap
+        self.bank_keeper
             .send_coins_from_module_to_module::<DB, AK, CTX>(
                 ctx,
                 NOT_BONDED_POOL_NAME.into(),
                 BONDED_POOL_NAME.into(),
                 coins,
             )
-        {
-            panic!("{}", e);
-        }
+            .unwrap()
     }
 }
 

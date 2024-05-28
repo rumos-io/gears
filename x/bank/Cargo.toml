@@ -5,10 +5,11 @@ edition = "2021"
 
 [dependencies]
 #local
-gears = { path = "../../gears", features = [ "cli", "export", "xmods"] }
+gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
 
 #newtypes
 bytes = { workspace = true }
+ibc-proto = { workspace = true } # TODO: should we import through gears via core-types?
 
 #utils
 clap = { workspace = true }
@@ -20,9 +21,13 @@ serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 prost = { workspace = true }
 
+#log
+tracing = { workspace = true }
+
 #other
 tokio = { workspace = true }
 axum = { workspace = true }
+tonic = { workspace = true }
 
 [dev-dependencies]
 hex = { workspace = true }

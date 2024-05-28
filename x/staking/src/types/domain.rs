@@ -1,5 +1,5 @@
 use crate::{
-    consts::{expect::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
+    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
     Commission, CommissionRates, CommissionRaw, Description,
 };
 use chrono::Utc;
@@ -20,7 +20,7 @@ use prost::{Enumeration, Message};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, str::FromStr};
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
 pub struct Pool {
     pub not_bonded_tokens: Uint256,
     pub bonded_tokens: Uint256,
@@ -64,11 +64,13 @@ pub struct UnbondingDelegationEntry {
 
 impl UnbondingDelegationEntry {
     pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
         )
-        .expect("Invalid timestamp in unbonding delegation entry. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond");
+        .unwrap();
         completion_time <= time
     }
 }
@@ -95,11 +97,13 @@ pub struct RedelegationEntry {
 
 impl RedelegationEntry {
     pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
         )
-        .expect("Invalid timestamp in unbonding delegation entry. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond");
+        .unwrap();
         completion_time <= time
     }
 }
@@ -198,17 +202,18 @@ impl Validator {
                 seconds: 0,
                 nanos: 0,
             },
-            commission: Commission {
-                commission_rates: CommissionRates {
+            commission: Commission::new(
+                CommissionRates {
                     rate: Decimal256::zero(),
                     max_rate: Decimal256::zero(),
                     max_change_rate: Decimal256::zero(),
                 },
-                update_time: Timestamp {
+                Timestamp {
                     seconds: 0,
                     nanos: 0,
                 },
-            },
+            )
+            .expect("creation of commission with zeros shouldn't fail"),
             min_self_delegation: Uint256::one(),
             status: BondStatus::Unbonded,
         }
@@ -224,10 +229,8 @@ impl Validator {
         self.abci_validator_update(0)
     }
 
-    pub fn set_initial_commission(&mut self, commission: Commission) -> Result<(), AppError> {
-        commission.validate()?;
+    pub fn set_initial_commission(&mut self, commission: Commission) {
         self.commission = commission;
-        Ok(())
     }
 
     /// add_tokens_from_del adds tokens to a validator
@@ -237,10 +240,8 @@ impl Validator {
             // the first delegation to a validator sets the exchange rate to one
             Decimal256::new(amount)
         } else {
-            match self.shares_from_tokens(amount) {
-                Ok(shares) => shares,
-                Err(err) => panic!("{}", err),
-            }
+            // TODO: check the code, maybe remove unwrap
+            self.shares_from_tokens(amount).unwrap()
         };
 
         self.tokens += amount;

@@ -1,19 +1,22 @@
 use thiserror::Error;
 
+/// Error type for the AVL tree
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum Error {
-    #[error("rotate error: {0}")]
-    RotateError(String),
     #[error("could not find requested version in DB: {0}")]
     VersionNotFound(u32),
-    #[error("unable to deserialize bytes to Node")]
-    NodeDeserialize,
     #[error("cannot overwrite existing version")]
     Overwrite,
-    #[error("requested node is not exists")]
-    NodeNotExists, // TODO: More specific and special errors for removing node
-    #[error("custom error: {0}")]
-    CustomError(String),
+}
+
+#[derive(Error, Debug, PartialEq, Eq)]
+pub(crate) enum InternalError {
+    #[error("rotate error: {0}")]
+    RotateError(String),
+    // #[error("could not find requested version in DB: {0}")]
+    // VersionNotFound(u32),
+    #[error("unable to deserialize bytes to Node")]
+    NodeDeserialize,
     #[error("cannot balance a node with balance factor >2 or <-2")]
     Balancing,
 }

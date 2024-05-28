@@ -1,19 +1,21 @@
-use crate::consts::expect::{self, SERDE_ENCODING_DOMAIN_TYPE};
 use gears::{
-    baseapp::KEY_VALIDATOR_PARAMS,
     core::base::coin::Coin,
-    params::ParamsSubspaceKey,
-    store::{
-        database::{prefix::PrefixDB, Database},
-        QueryableMultiKVStore, ReadPrefixStore, StoreKey, TransactionalMultiKVStore,
-        WritePrefixStore,
+    params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
+    store::{database::Database, StoreKey},
+    types::{
+        context::{QueryableContext, TransactionalContext},
+        denom::Denom,
     },
-    tendermint::types::proto::params::ValidatorParams,
-    types::denom::Denom,
 };
-use serde::{de::Error, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-const PARAMS_KEY: [u8; 6] = [112, 97, 114, 97, 109, 115]; // "params"
+const KEY_UNBONDING_TIME: &str = "UnbondingTime";
+const KEY_MAX_VALIDATORS: &str = "MaxValidators";
+const KEY_MAX_ENTRIES: &str = "MaxEntries";
+const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
+const KEY_BOND_DENOM: &str = "BondDenom";
+const KEY_MIN_COMMISSION_RATE: &str = "MinCommissionRate";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Params {
@@ -41,6 +43,99 @@ impl Default for Params {
     }
 }
 
+impl ParamsSerialize for Params {
+    fn keys() -> HashMap<&'static str, ParamKind> {
+        [
+            (KEY_UNBONDING_TIME, ParamKind::Bytes),
+            (KEY_MAX_VALIDATORS, ParamKind::U32),
+            (KEY_MAX_ENTRIES, ParamKind::U32),
+            (KEY_HISTORICAL_ENTRIES, ParamKind::U32),
+            (KEY_BOND_DENOM, ParamKind::String),
+            (KEY_MIN_COMMISSION_RATE, ParamKind::Bytes),
+        ]
+        .into_iter()
+        .collect()
+    }
+
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
+        vec![
+            // TODO: remove unwrap
+            (
+                KEY_UNBONDING_TIME,
+                serde_json::to_vec(&self.unbonding_time).unwrap(),
+            ),
+            (
+                KEY_MAX_VALIDATORS,
+                self.max_validators.to_string().as_bytes().to_vec(),
+            ),
+            (
+                KEY_MAX_ENTRIES,
+                self.max_entries.to_string().as_bytes().to_vec(),
+            ),
+            (
+                KEY_HISTORICAL_ENTRIES,
+                self.historical_entries.to_string().as_bytes().to_vec(),
+            ),
+            (
+                KEY_BOND_DENOM,
+                self.max_validators.to_string().as_bytes().to_vec(),
+            ),
+            // TODO: remove unwrap
+            (
+                KEY_MIN_COMMISSION_RATE,
+                serde_json::to_vec(&self.min_commission_rate).unwrap(),
+            ),
+        ]
+    }
+}
+
+impl ParamsDeserialize for Params {
+    fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
+        // TODO: check unwraps
+        let unbonding_time: std::time::Duration = serde_json::from_slice(
+            &ParamKind::Bytes
+                .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
+                .bytes()
+                .unwrap(),
+        )
+        .unwrap();
+        let max_validators = ParamKind::U32
+            .parse_param(fields.remove(KEY_MAX_VALIDATORS).unwrap())
+            .unsigned_64()
+            .unwrap() as u32;
+        let max_entries = ParamKind::U32
+            .parse_param(fields.remove(KEY_MAX_ENTRIES).unwrap())
+            .unsigned_64()
+            .unwrap() as u32;
+        let historical_entries = ParamKind::U32
+            .parse_param(fields.remove(KEY_HISTORICAL_ENTRIES).unwrap())
+            .unsigned_64()
+            .unwrap() as u32;
+        let bond_denom = ParamKind::String
+            .parse_param(fields.remove(KEY_BOND_DENOM).unwrap())
+            .string()
+            .unwrap()
+            .try_into()
+            .unwrap();
+        let min_commission_rate: Coin = serde_json::from_slice(
+            &ParamKind::Bytes
+                .parse_param(fields.remove(KEY_MIN_COMMISSION_RATE).unwrap())
+                .bytes()
+                .unwrap(),
+        )
+        .unwrap();
+
+        Params {
+            unbonding_time,
+            max_validators,
+            max_entries,
+            bond_denom,
+            historical_entries,
+            min_commission_rate,
+        }
+    }
+}
+
 impl Params {
     pub fn validate(&self) -> Result<(), String> {
         todo!()
@@ -48,51 +143,25 @@ impl Params {
 }
 
 #[derive(Debug, Clone)]
-pub struct StakingParamsKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    pub params_keeper: gears::params::Keeper<SK, PSK>,
+pub struct StakingParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> StakingParamsKeeper<SK, PSK> {
-    pub fn get<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
+impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
+    pub fn get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Params {
-        let store = self
-            .params_keeper
-            .raw_subspace(ctx, &self.params_subspace_key);
-        let raw_params = store
-            .get(PARAMS_KEY.as_ref())
-            .expect("key should be set in kv store");
-        serde_json::from_slice(&raw_params).expect(expect::SERDE_DECODING_DOMAIN_TYPE)
+        let store = gears::params::subspace(ctx, &self.params_subspace_key);
+        store.params().expect("params should be stored in database")
     }
 
-    pub fn consensus_validator<DB: Database, CTX: QueryableMultiKVStore<PrefixDB<DB>, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> anyhow::Result<ValidatorParams> {
-        let store = self
-            .params_keeper
-            .raw_subspace(ctx, &self.params_subspace_key);
-
-        if let Some(raw_params) = store.get(KEY_VALIDATOR_PARAMS.as_ref()) {
-            Ok(serde_json::from_slice(&raw_params)?)
-        } else {
-            Err(serde_json::Error::custom("Cannot find data to convert".to_string()).into())
-        }
-    }
-
-    pub fn set<DB: Database, CTX: TransactionalMultiKVStore<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: Params,
     ) {
-        let mut store = self
-            .params_keeper
-            .raw_subspace_mut(ctx, &self.params_subspace_key);
-        store.set(
-            PARAMS_KEY,
-            serde_json::to_vec(&params).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        let mut store = gears::params::subspace_mut(ctx, &self.params_subspace_key);
+        store.params_set(&params);
     }
 }

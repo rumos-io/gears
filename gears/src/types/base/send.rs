@@ -1,10 +1,13 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
+use cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
+
+use crate::types::denom::Denom;
 
 use super::{
     coin::Coin,
-    errors::{CoinsError, SendCoinsError},
+    errors::{CoinsParseError, SendCoinsError},
 };
 
 // Represents a list of coins with the following properties:
@@ -12,7 +15,7 @@ use super::{
 // - All coin amounts are positive
 // - No duplicate denominations
 // - Sorted lexicographically
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct SendCoins(Vec<Coin>);
 
 impl SendCoins {
@@ -30,7 +33,7 @@ impl SendCoins {
     // - No duplicate denominations
     // - Sorted lexicographically
     // TODO: implement ordering on coins or denominations so that conversion to string can be avoided
-    fn validate_coins(coins: &Vec<Coin>) -> Result<(), SendCoinsError> {
+    fn validate_coins(coins: &[Coin]) -> Result<(), SendCoinsError> {
         if coins.is_empty() {
             return Err(SendCoinsError::EmptyList);
         }
@@ -61,6 +64,30 @@ impl SendCoins {
     pub fn into_inner(self) -> Vec<Coin> {
         self.0
     }
+
+    pub fn inner(&self) -> &Vec<Coin> {
+        &self.0
+    }
+
+    pub fn amount_of(&self, denom: &Denom) -> Uint256 {
+        let coins = self
+            .0
+            .iter()
+            .map(|this| (&this.denom, &this.amount))
+            .collect::<HashMap<_, _>>();
+
+        let coin = coins.get(denom);
+
+        if let Some(coin) = coin {
+            **coin
+        } else {
+            Uint256::zero()
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl From<SendCoins> for Vec<Coin> {
@@ -76,14 +103,6 @@ impl IntoIterator for SendCoins {
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum CoinsParseError {
-    #[error("Failed to parse: {0}")]
-    Parse(#[from] CoinsError),
-    #[error("Parsed invalid coins: {0}")]
-    Validate(#[from] SendCoinsError),
 }
 
 impl FromStr for SendCoins {

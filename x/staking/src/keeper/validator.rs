@@ -1,14 +1,9 @@
-use gears::{
-    error::IBC_ENCODE_UNWRAP, tendermint::types::proto::Protobuf, types::address::ConsAddress,
-};
-
 pub use super::*;
 use crate::{
-    consts::expect::{
-        SERDE_DECODING_DOMAIN_TYPE, SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT,
-    },
+    consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT},
     Validator,
 };
+use gears::{store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
         SK: StoreKey,
@@ -27,7 +22,7 @@ impl<
         let validators_store = store.prefix_store(VALIDATORS_KEY);
         validators_store
             .get(key.to_string().as_bytes())
-            .map(|e| Validator::decode_vec(&e).expect(IBC_ENCODE_UNWRAP))
+            .map(|e| serde_json::from_slice(&e).unwrap_or_corrupt())
     }
 
     pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -47,14 +42,13 @@ impl<
         &self,
         ctx: &CTX,
         addr: &ConsAddress,
-    ) -> anyhow::Result<Validator> {
+    ) -> Option<Validator> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_BY_CONS_ADDR_KEY);
 
-        let bytes = validators_store
+        validators_store
             .get(addr.to_string().as_bytes())
-            .ok_or(AppError::Custom("Validator doesn't exists".to_string()))?;
-        Ok(Validator::decode_vec(&bytes)?)
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
     }
 
     pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -116,10 +110,7 @@ impl<
             ret_res
         }) {
             // TODO
-            res.insert(
-                k.to_vec(),
-                serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE),
-            );
+            res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
         }
         res
     }
@@ -128,7 +119,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         let addrs =
             self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
         let val_addr = validator.operator_address.to_string();
@@ -150,22 +141,21 @@ impl<
                 new_addrs,
             );
         }
-        Ok(())
     }
 
     /// get the last validator set
     pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> anyhow::Result<HashMap<String, Vec<u8>>> {
+    ) -> HashMap<String, Vec<u8>> {
         let mut last = HashMap::new();
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
         for (k, v) in store.range(..) {
-            let k: ValAddress = serde_json::from_slice(&k)?;
+            let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
             last.insert(k.to_string(), v.to_vec());
         }
-        Ok(last)
+        last
     }
 }
 

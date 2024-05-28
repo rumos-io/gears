@@ -7,7 +7,7 @@ use ibc::core::client::types::proto::v1::{
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
 
-use super::params::Params;
+use super::params::ClientParams;
 
 /// GenesisState defines the ibc client submodule's genesis state.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -19,7 +19,7 @@ pub struct GenesisState {
     /// metadata from each client
     pub clients_metadata: Vec<IdentifiedGenesisMetadata>,
 
-    pub params: Params,
+    pub params: ClientParams,
     /// Deprecated: create_localhost has been deprecated.
     /// The localhost client is automatically created at genesis.
     pub create_localhost: bool,
@@ -35,7 +35,7 @@ impl Default for GenesisState {
             clients: vec![],
             clients_consensus: vec![],
             clients_metadata: vec![],
-            params: Params {
+            params: ClientParams {
                 allowed_clients: vec!["06-solomachine".into(), "07-tendermint".into()],
             },
             create_localhost: false,

@@ -4,7 +4,7 @@ use crate::{
 use gears::types::uint::Uint256;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct GenesisState {
     /// params defines all the parameters of related to deposit.
     pub params: Params,

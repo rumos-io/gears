@@ -8,7 +8,6 @@ mod keeper;
 mod message;
 mod params;
 mod types;
-mod utils;
 
 pub use abci_handler::*;
 pub use client::*;
@@ -17,4 +16,3 @@ pub use keeper::*;
 pub use message::*;
 pub use params::*;
 pub use types::*;
-pub use utils::*;

@@ -5,6 +5,8 @@ use crate::{
     WritePrefixStore,
 };
 
+use super::immutable::ImmutablePrefixStore;
+
 /// Wraps an mutable KVStore with a prefix
 #[derive(Debug)]
 pub struct MutablePrefixStore<'a, DB> {
@@ -12,14 +14,18 @@ pub struct MutablePrefixStore<'a, DB> {
     pub(crate) prefix: Vec<u8>,
 }
 
-impl<'a, DB: Database> MutablePrefixStore<'a, DB> {
-    pub fn get(&self, k: &[u8]) -> Option<Vec<u8>> {
-        let full_key = [&self.prefix, k].concat();
-        self.store.get(&full_key)
-    }
-
+impl<DB: Database> MutablePrefixStore<'_, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
         self.store.delete(k)
+    }
+}
+
+impl<DB> MutablePrefixStore<'_, DB> {
+    pub fn to_immutable(&self) -> ImmutablePrefixStore<'_, DB> {
+        ImmutablePrefixStore {
+            store: self.store.to_immutable(),
+            prefix: self.prefix.clone(),
+        }
     }
 }
 

@@ -44,9 +44,7 @@ pub(crate) mod proto {
     pub(crate) const ONE_DEC: Decimal256 = Decimal256::one();
 }
 
-pub(crate) mod expect {
-    pub(crate) const SERDE_DECODING_DOMAIN_TYPE: &str =
-        "serde_json should decode domain type that implements deserialization";
+pub(crate) mod error {
     pub(crate) const SERDE_ENCODING_DOMAIN_TYPE: &str =
         "serde_json should encode domain type that implements deserialization";
     pub(crate) const TIMESTAMP_NANOS_EXPECT: &str =

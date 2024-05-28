@@ -1,7 +1,6 @@
 use crate::{CreateValidator, DelegateMsg};
 use gears::{
     core::{any::google::Any, Protobuf},
-    error::IBC_ENCODE_UNWRAP,
     types::{address::AccAddress, tx::TxMessage},
 };
 use prost::bytes::Bytes;
@@ -9,6 +8,7 @@ use serde::Serialize;
 
 #[derive(Clone, Serialize)]
 #[serde(tag = "@type")]
+#[allow(clippy::large_enum_variant)]
 pub enum Message {
     #[serde(rename = "/cosmos.staking.v1beta1.CreateValidator")]
     CreateValidator(CreateValidator),
@@ -44,11 +44,11 @@ impl From<Message> for Any {
         match msg {
             Message::CreateValidator(msg) => Any {
                 type_url: "/cosmos.staking.v1beta1.CreateValidator".to_string(),
-                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+                value: msg.encode_vec(),
             },
             Message::Delegate(msg) => Any {
                 type_url: "/cosmos.staking.v1beta1.Delegate".to_string(),
-                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+                value: msg.encode_vec(),
             },
         }
     }

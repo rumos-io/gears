@@ -5,7 +5,7 @@ version = "0.1.0"
 
 [dependencies]
 #local
-gears = {path = "../../gears", features = [ "cli", "export", "xmods"]}
+gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
 
 #newtypes
 bytes = { workspace = true }
@@ -13,15 +13,19 @@ num-bigint = { workspace = true }
 num-format = { workspace = true, features = ["with-num-bigint"] }
 num-traits = { workspace = true }
 secp256k1 = { workspace = true, features = ["hashes"] }
+ibc-proto = { workspace = true }                                  # TODO: should we import through gears via core-types?
+
+#log
+tracing = { workspace = true }
 
 #utils
-anyhow = { workspace = true } 
+anyhow = { workspace = true }
 clap = { workspace = true }
 data-encoding = { workspace = true }
 hex = { workspace = true }
 regex = { workspace = true }
 sha2 = { workspace = true }
-thiserror = { workspace = true } 
+thiserror = { workspace = true }
 
 #serialization
 ciborium = { workspace = true }
@@ -32,6 +36,7 @@ serde-aux = { workspace = true }
 
 #other
 tokio = { workspace = true }
+tonic = { workspace = true }
 
 [dev-dependencies]
 rand = { workspace = true }

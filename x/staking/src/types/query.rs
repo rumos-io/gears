@@ -1,3 +1,4 @@
+use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Validator};
 use gears::{
     core::errors::Error,
     error::IBC_ENCODE_UNWRAP,
@@ -9,8 +10,6 @@ use gears::{
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
-
-use crate::{consts::expect::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Validator};
 
 // ===
 // requests

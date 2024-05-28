@@ -5,10 +5,22 @@ use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::context::init::InitContext;
 use gears::types::context::query::QueryContext;
-use gears::types::query::account::QueryAccountRequest;
+use gears::types::query::account::{QueryAccountRequest, QueryAccountResponse};
 use gears::{error::AppError, params::ParamsSubspaceKey};
+use serde::Serialize;
 
 use crate::{GenesisState, Keeper};
+
+#[derive(Clone, Debug)]
+pub enum AuthNodeQueryRequest {
+    Account(QueryAccountRequest),
+}
+
+#[derive(Clone, Serialize)]
+#[serde(untagged)]
+pub enum AuthNodeQueryResponse {
+    Account(QueryAccountResponse),
+}
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -18,6 +30,19 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
     pub fn new(keeper: Keeper<SK, PSK>) -> Self {
         ABCIHandler { keeper }
+    }
+
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: AuthNodeQueryRequest,
+    ) -> AuthNodeQueryResponse {
+        match query {
+            AuthNodeQueryRequest::Account(req) => {
+                let res = self.keeper.query_account(ctx, req);
+                AuthNodeQueryResponse::Account(res)
+            }
+        }
     }
 
     pub fn query<DB: Database>(
@@ -30,9 +55,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                 let req = QueryAccountRequest::decode(query.data)
                     .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
 
-                self.keeper
+                Ok(self
+                    .keeper
                     .query_account(ctx, req)
-                    .map(|res| res.encode_vec().expect(IBC_ENCODE_UNWRAP).into())
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into())
                 // TODO:IBC
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),

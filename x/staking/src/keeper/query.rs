@@ -47,7 +47,7 @@ impl<
             .validator(ctx, &delegation.validator_address)
             .ok_or(AppError::AccountNotFound)?;
 
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
         let tokens = validator
             .tokens_from_shares(delegation.shares)
             .map_err(|e| AppError::Coins(e.to_string()))?;

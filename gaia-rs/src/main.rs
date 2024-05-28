@@ -3,7 +3,7 @@
 use clap::Parser;
 use gaia_rs::abci_handler::GaiaABCIHandler;
 use gaia_rs::client::{GaiaQueryCommands, GaiaTxCommands};
-use gaia_rs::store_keys::{GaiaParamsStoreKey, GaiaStoreKey};
+use gaia_rs::store_keys::GaiaParamsStoreKey;
 use gaia_rs::{GaiaApplication, GaiaCore, GaiaCoreClient};
 use gears::application::client::ClientApplication;
 use gears::application::node::NodeApplication;
@@ -24,13 +24,12 @@ fn main() -> anyhow::Result<()> {
     args.execute_or_help(
         |command| ClientApplication::new(GaiaCoreClient).execute(command.try_into()?),
         |command| {
-            NodeApplication::<'_, GaiaCore, GaiaApplication>::new(
+            NodeApplication::<'_, GaiaCore>::new(
                 GaiaCore,
                 &GaiaABCIHandler::new,
-                GaiaStoreKey::Params,
                 GaiaParamsStoreKey::BaseApp,
             )
-            .execute(command.try_into()?)
+            .execute::<GaiaApplication>(command.try_into()?)
         },
     )
 }

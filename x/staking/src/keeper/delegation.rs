@@ -1,6 +1,5 @@
-use crate::consts::expect::SERDE_DECODING_DOMAIN_TYPE;
-
 pub use super::*;
+use gears::store::database::ext::UnwrapCorrupt;
 
 impl<
         SK: StoreKey,
@@ -16,7 +15,7 @@ impl<
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
-        bound_amount: Uint256,
+        bond_amount: Uint256,
         token_src: BondStatus,
         validator: &mut Validator,
         subtract_account: bool,
@@ -25,7 +24,7 @@ impl<
         // Validator loses all tokens due to slashing. In this case,
         // make all future delegations invalid.
         if validator.invalid_ex_rate() {
-            return Err(AppError::Send(
+            return Err(AppError::Custom(
                 "invalid delegation_share exchange rate ".into(),
             ));
         }
@@ -45,31 +44,31 @@ impl<
             }
         };
 
-        // if subtractAccount is true then we are
+        // if subtract_account is true then we are
         // performing a delegation and not a redelegation, thus the source tokens are
         // all non bonded
         if subtract_account {
             if token_src == BondStatus::Bonded {
-                panic!("delegation token source cannot be bonded");
+                return Err(AppError::Custom(
+                    "delegation token source cannot be bonded".to_string(),
+                ));
             }
 
             let send_name = match validator.status {
                 BondStatus::Bonded => BONDED_POOL_NAME,
                 BondStatus::Unbonding => NOT_BONDED_POOL_NAME,
-                BondStatus::Unbonded => panic!("invalid validator status"),
+                BondStatus::Unbonded => {
+                    return Err(AppError::Custom("invalid validator status".to_string()))
+                }
             };
 
-            let denom = self
-                .staking_params_keeper
-                .get(&ctx.multi_store())
-                .bond_denom;
+            let denom = self.staking_params_keeper.get(ctx).bond_denom;
             let coins = SendCoins::new(vec![Coin {
                 denom,
-                amount: bound_amount,
+                amount: bond_amount,
             }])
-            .expect(
-                "Creation of SendCoins from params denom and valid Uint256 should be unfailable",
-            );
+            .map_err(|e| AppError::Coins(e.to_string()))?;
+
             self.bank_keeper
                 .delegate_coins_from_account_to_module::<DB, AK, CTX>(
                     ctx,
@@ -83,18 +82,18 @@ impl<
             match (token_src, validator.status == BondStatus::Bonded) {
                 (BondStatus::Unbonded | BondStatus::Unbonding, true) => {
                     // transfer pools
-                    self.not_bonded_tokens_to_bonded(ctx, bound_amount);
+                    self.not_bonded_tokens_to_bonded(ctx, bond_amount);
                 }
                 (BondStatus::Bonded, false) => {
                     // transfer pools
-                    self.bonded_tokens_to_not_bonded(ctx, bound_amount);
+                    self.bonded_tokens_to_not_bonded(ctx, bond_amount);
                 }
                 (BondStatus::Bonded, true)
                 | (BondStatus::Unbonded | BondStatus::Unbonding, false) => {}
             }
         }
 
-        let new_shares = self.add_validator_tokens_and_shares(ctx, validator, bound_amount);
+        let new_shares = self.add_validator_tokens_and_shares(ctx, validator, bond_amount);
         // Update delegation
         delegation.shares += new_shares;
         self.set_delegation(ctx, &delegation);
@@ -121,7 +120,7 @@ impl<
         key.put(val_addr.to_string().as_bytes());
         delegations_store
             .get(&key)
-            .map(|bytes| serde_json::from_slice(&bytes).expect(SERDE_DECODING_DOMAIN_TYPE))
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
     }
 
     pub fn set_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(

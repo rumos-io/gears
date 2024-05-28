@@ -1,6 +1,6 @@
-use crate::consts::expect::{SERDE_DECODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
-
 pub use super::*;
+use crate::consts::error::TIMESTAMP_NANOS_EXPECT;
+use gears::store::database::ext::UnwrapCorrupt;
 
 impl<
         SK: StoreKey,
@@ -70,17 +70,17 @@ impl<
         let redelegation = self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?;
 
         let mut balances = vec![];
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
         let denom = params.bond_denom;
         let ctx_time = ctx
             .header
             .time
             .as_ref()
             .expect("Expected timestamp in transaction context header.");
-        let ctx_time = chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32)
-            .expect(
-                "Invalid timestamp in transaction header. It means that timestamp contains out-of-range number of seconds and/or invalid nanosecond",
-            );
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let ctx_time =
+            chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32).unwrap();
 
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
@@ -138,7 +138,7 @@ impl<
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
         if let Some(bytes) = store.get(&key) {
-            serde_json::from_slice(&bytes).expect(SERDE_ENCODING_DOMAIN_TYPE)
+            serde_json::from_slice(&bytes).unwrap_or_corrupt()
         } else {
             vec![]
         }
@@ -187,8 +187,7 @@ impl<
                 previous_was_end = !is_not_end;
                 res
             }) {
-                let time_slice: Vec<DvvTriplet> =
-                    serde_json::from_slice(&v).expect(SERDE_DECODING_DOMAIN_TYPE);
+                let time_slice: Vec<DvvTriplet> = serde_json::from_slice(&v).unwrap_or_corrupt();
                 mature_redelegations.extend(time_slice);
                 keys.push(k.to_vec());
             }

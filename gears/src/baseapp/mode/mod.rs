@@ -2,12 +2,14 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use store_crate::{types::multi::MultiBank, ApplicationStore, StoreKey};
+use store_crate::{types::multi::MultiBank, ApplicationStore};
 use tendermint::types::proto::event::Event;
 
+use self::sealed::Sealed;
+use super::{options::NodeOptions, params::ConsensusParams};
 use crate::{
     application::handlers::node::ABCIHandler,
-    baseapp::{errors::RunTxError, genesis::Genesis},
+    baseapp::errors::RunTxError,
     types::{
         auth::fee::Fee,
         context::tx::TxContext,
@@ -15,45 +17,50 @@ use crate::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::TxKind, GasMeter,
         },
         header::Header,
-        tx::{raw::TxWithRaw, TxMessage},
+        tx::raw::TxWithRaw,
     },
 };
 
-use self::sealed::Sealed;
-
-pub trait ExecutionMode<DB, SK: StoreKey>: Sealed {
+pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
     fn build_ctx(
         &mut self,
         height: u64,
         header: Header,
+        consensus_params: ConsensusParams,
         fee: Option<&Fee>,
-    ) -> TxContext<'_, DB, SK>;
+        options: NodeOptions,
+    ) -> TxContext<'_, DB, AH::StoreKey>;
 
-    fn runnable(ctx: &mut TxContext<'_, DB, SK>) -> Result<(), RunTxError>;
+    fn runnable(ctx: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError>;
 
-    fn run_ante_checks<M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        ctx: &mut TxContext<'_, DB, SK>,
+    fn run_ante_checks(
+        ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
-        tx_with_raw: &TxWithRaw<M>,
+        tx_with_raw: &TxWithRaw<AH::Message>,
     ) -> Result<(), RunTxError>;
 
-    fn run_msg<'m, M: TxMessage, G: Genesis, AH: ABCIHandler<M, SK, G>>(
-        ctx: &mut TxContext<'_, DB, SK>,
+    fn run_msg<'m>(
+        ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
-        msgs: impl Iterator<Item = &'m M>,
+        msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError>;
 
-    fn commit(ctx: TxContext<'_, DB, SK>, global_ms: &mut MultiBank<DB, SK, ApplicationStore>);
+    fn commit(
+        ctx: TxContext<'_, DB, AH::StoreKey>,
+        global_ms: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>,
+    );
 }
 
 mod sealed {
+    use crate::application::handlers::node::ABCIHandler;
+
     use super::{check::CheckTxMode, deliver::DeliverTxMode};
 
     pub trait Sealed {}
 
-    impl<DB, SK> Sealed for CheckTxMode<DB, SK> {}
+    impl<DB, AH: ABCIHandler> Sealed for CheckTxMode<DB, AH> {}
     // impl Sealed for ReCheckTxMode {}
-    impl<DB, SK> Sealed for DeliverTxMode<DB, SK> {}
+    impl<DB, AH: ABCIHandler> Sealed for DeliverTxMode<DB, AH> {}
 }
 
 fn build_tx_gas_meter(block_height: u64, fee: Option<&Fee>) -> GasMeter<TxKind> {

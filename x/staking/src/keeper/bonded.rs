@@ -1,6 +1,5 @@
-use gears::types::account::ModuleAccount;
-
 pub use super::*;
+use gears::types::account::ModuleAccount;
 
 impl<
         SK: StoreKey,
@@ -33,23 +32,26 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) {
-        let params = self.staking_params_keeper.get(&ctx.multi_store());
+        let params = self.staking_params_keeper.get(ctx);
+
+        // TODO: original routine is unfailable, it means that the amount is a valid number.
+        // The method is called from failable methods. Consider to provide correct solution taking
+        // into account additional analisis.
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
         }])
-        .expect("Creation of SendCoins from params denom and valid Uint256 should be unfailable");
-        if let Err(e) = self
-            .bank_keeper
+        .unwrap();
+
+        // TODO: check and maybe remove unwrap
+        self.bank_keeper
             .send_coins_from_module_to_module::<DB, AK, CTX>(
                 ctx,
                 BONDED_POOL_NAME.into(),
                 NOT_BONDED_POOL_NAME.into(),
                 coins,
             )
-        {
-            panic!("{}", e);
-        }
+            .unwrap()
     }
 
     pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -71,7 +73,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> anyhow::Result<()> {
+    ) {
         // delete the validator by power index, as the key will change
         self.delete_validator_by_power_index(ctx, validator);
 
@@ -81,9 +83,8 @@ impl<
         self.set_validator_by_power_index(ctx, validator);
 
         // delete from queue if present
-        self.delete_validator_queue(ctx, validator)?;
+        self.delete_validator_queue(ctx, validator);
         // trigger hook
         self.after_validator_bonded(ctx, validator);
-        Ok(())
     }
 }
