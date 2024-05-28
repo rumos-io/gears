@@ -1,6 +1,6 @@
 pub use super::*;
 use crate::consts::error::TIMESTAMP_NANOS_EXPECT;
-use gears::store::database::ext::DATABASE_CORRUPTION_MSG;
+use gears::store::database::ext::UnwrapCorrupt;
 
 impl<
         SK: StoreKey,
@@ -138,7 +138,7 @@ impl<
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
         if let Some(bytes) = store.get(&key) {
-            serde_json::from_slice(&bytes).expect(DATABASE_CORRUPTION_MSG)
+            serde_json::from_slice(&bytes).unwrap_or_corrupt()
         } else {
             vec![]
         }
@@ -187,8 +187,7 @@ impl<
                 previous_was_end = !is_not_end;
                 res
             }) {
-                let time_slice: Vec<DvvTriplet> =
-                    serde_json::from_slice(&v).expect(DATABASE_CORRUPTION_MSG);
+                let time_slice: Vec<DvvTriplet> = serde_json::from_slice(&v).unwrap_or_corrupt();
                 mature_redelegations.extend(time_slice);
                 keys.push(k.to_vec());
             }

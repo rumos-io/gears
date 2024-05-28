@@ -4,7 +4,7 @@ use crate::{
     Commission, CreateValidator, Validator,
 };
 use gears::{
-    store::database::ext::DATABASE_CORRUPTION_MSG,
+    store::database::ext::UnwrapCorrupt,
     types::{address::ConsAddress, context::tx::TxContext},
 };
 
@@ -145,7 +145,7 @@ impl<
         let validators_store = store.prefix_store(VALIDATORS_KEY);
         validators_store
             .get(key.to_string().as_bytes())
-            .map(|e| serde_json::from_slice(&e).expect(DATABASE_CORRUPTION_MSG))
+            .map(|e| serde_json::from_slice(&e).unwrap_or_corrupt())
     }
 
     pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -171,7 +171,7 @@ impl<
 
         validators_store
             .get(addr.to_string().as_bytes())
-            .map(|bytes| serde_json::from_slice(&bytes).expect(DATABASE_CORRUPTION_MSG))
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
     }
 
     pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -233,10 +233,7 @@ impl<
             ret_res
         }) {
             // TODO
-            res.insert(
-                k.to_vec(),
-                serde_json::from_slice(&v).expect(DATABASE_CORRUPTION_MSG),
-            );
+            res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
         }
         res
     }

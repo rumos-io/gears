@@ -1,5 +1,5 @@
 pub use super::*;
-use gears::store::database::ext::DATABASE_CORRUPTION_MSG;
+use gears::store::database::ext::UnwrapCorrupt;
 
 impl<
         SK: StoreKey,
@@ -120,7 +120,7 @@ impl<
         key.put(val_addr.to_string().as_bytes());
         delegations_store
             .get(&key)
-            .map(|bytes| serde_json::from_slice(&bytes).expect(DATABASE_CORRUPTION_MSG))
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
     }
 
     pub fn set_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(

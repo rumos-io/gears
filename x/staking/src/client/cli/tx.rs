@@ -79,6 +79,8 @@ pub fn run_staking_tx_command(
         } => {
             let delegator_address = from_address.clone();
             let validator_address = ValAddress::try_from(encode_hex_str(&from_address.as_hex())?)?;
+            // TODO: add implementation of FromStr to TendermintPublicKey and declare type in
+            // command enum
             let pub_key: TendermintPublicKey = serde_json::from_slice(pubkey.as_bytes())?;
             let description = Description {
                 moniker: moniker.to_string(),

@@ -1,6 +1,6 @@
 pub use super::*;
 use crate::consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
-use gears::{store::database::ext::DATABASE_CORRUPTION_MSG, tendermint::types::time::Timestamp};
+use gears::{store::database::ext::UnwrapCorrupt, tendermint::types::time::Timestamp};
 
 impl<
         SK: StoreKey,
@@ -76,8 +76,7 @@ impl<
                 previous_was_end = !is_not_end;
                 res
             }) {
-                let time_slice: Vec<DvPair> =
-                    serde_json::from_slice(&v).expect(DATABASE_CORRUPTION_MSG);
+                let time_slice: Vec<DvPair> = serde_json::from_slice(&v).unwrap_or_corrupt();
                 mature_unbonds.extend(time_slice);
                 keys.push(k.to_vec());
             }
@@ -431,7 +430,7 @@ impl<
                 .unwrap(),
             unbonding_height,
         )) {
-            let res: Vec<String> = serde_json::from_slice(&bz).expect(DATABASE_CORRUPTION_MSG);
+            let res: Vec<String> = serde_json::from_slice(&bz).unwrap_or_corrupt();
             res
         } else {
             vec![]
