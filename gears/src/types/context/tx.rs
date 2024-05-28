@@ -116,7 +116,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
         std::mem::take(&mut self.events)
     }
 
-    fn get_time(&self) -> Option<Timestamp> {
-        Some(self.header.time.clone())
+    fn get_time(&self) -> Timestamp {
+        self.header.time.clone()
     }
 }

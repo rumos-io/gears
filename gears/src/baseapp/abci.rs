@@ -275,7 +275,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
         let mut ctx = BlockContext::new(
             &mut multi_store,
             self.block_height(),
-            request.header.clone().try_into().expect("Invalid request"), //TODO:remove conversion
+            request.header.clone(),
         );
 
         {

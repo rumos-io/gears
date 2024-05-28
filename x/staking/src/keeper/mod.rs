@@ -287,8 +287,7 @@ impl<
         self.unbond_all_mature_validators(ctx);
 
         // Remove all mature unbonding delegations from the ubd queue.
-        // TODO: make better api for timestamps in Gears
-        let time = ctx.get_time().unwrap();
+        let time = ctx.get_time();
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();

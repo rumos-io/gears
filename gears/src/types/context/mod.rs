@@ -24,7 +24,6 @@ pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
     fn append_events(&mut self, events: Vec<Event>);
     fn events_drain(&mut self) -> Vec<Event>;
 
-    // TODO: change signature after changing struct `Header`
     /// Public interface for getting context timestamp. Default implementation returns `None`.
-    fn get_time(&self) -> Option<Timestamp>;
+    fn get_time(&self) -> Timestamp;
 }
