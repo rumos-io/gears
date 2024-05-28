@@ -1,5 +1,7 @@
+use std::ops::RangeBounds;
+
 use database::Database;
-use store_crate::{types::kv::mutable::KVStoreMut, TransactionalKVStore};
+use store_crate::{types::kv::mutable::KVStoreMut, QueryableKVStore, TransactionalKVStore};
 
 use crate::types::{
     auth::gas::Gas,
@@ -8,6 +10,7 @@ use crate::types::{
         constants::{DELETE_DESC, WRITE_COST_FLAT_DESC, WRITE_PER_BYTE_DESC},
         errors::GasStoreErrors,
         prefix::mutable::GasStorePrefixMut,
+        range::GasRange,
     },
 };
 
@@ -48,17 +51,17 @@ impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
         let key = key.into_iter().collect::<Vec<_>>();
         let value = value.into_iter().collect::<Vec<_>>();
 
-        let read_cost_per_byte = GasConfig::kv().write_cost_per_byte;
+        let write_cost_per_byte = GasConfig::kv().write_cost_per_byte;
 
         self.gas_meter.consume_gas(
-            read_cost_per_byte
+            write_cost_per_byte
                 .checked_mul(Gas::try_from(key.len() as u64)?)
                 .ok_or(GasStoreErrors::GasOverflow)?,
             WRITE_PER_BYTE_DESC,
         )?;
 
         self.gas_meter.consume_gas(
-            read_cost_per_byte
+            write_cost_per_byte
                 .checked_mul(Gas::try_from(value.len() as u64)?)
                 .ok_or(GasStoreErrors::GasOverflow)?,
             WRITE_PER_BYTE_DESC,
@@ -78,5 +81,9 @@ impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
 
     fn prefix_store_mut<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefixMut<'a, DB> {
         GasStorePrefixMut::new(self.gas_meter, self.inner.prefix_store_mut(prefix))
+    }
+
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {
+        GasRange::new(self.inner.range(range), &mut self.gas_meter)
     }
 }

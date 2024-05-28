@@ -1,5 +1,7 @@
 pub mod mutable;
 
+use std::ops::RangeBounds;
+
 use database::Database;
 use store_crate::{types::kv::immutable::KVStore, QueryableKVStore};
 
@@ -12,6 +14,7 @@ use super::{
     constants::{READ_COST_FLAT_DESC, READ_PER_BYTE_DESC},
     errors::GasStoreErrors,
     prefix::GasStorePrefix,
+    range::GasRange,
 };
 
 #[derive(Debug)]
@@ -55,7 +58,11 @@ impl<'a, DB: Database> GasKVStore<'a, DB> {
         value.ok_or(GasStoreErrors::NotFound)
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefix<'a, DB> {
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefix<'a, DB> {
         GasStorePrefix::new(self.gas_meter, self.inner.prefix_store(prefix))
+    }
+
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {
+        GasRange::new(self.inner.range(range), &mut self.gas_meter)
     }
 }
