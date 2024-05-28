@@ -2,16 +2,12 @@ use super::params::{BlockParams, EvidenceParams, ValidatorParams, VersionParams}
 
 /// ConsensusParams contains all consensus-relevant parameters
 /// that can be adjusted by the abci app
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ConsensusParams {
-    #[prost(message, optional, tag = "1")]
-    pub block: Option<BlockParams>,
-    #[prost(message, optional, tag = "2")]
-    pub evidence: Option<EvidenceParams>,
-    #[prost(message, optional, tag = "3")]
-    pub validator: Option<ValidatorParams>,
-    #[prost(message, optional, tag = "4")]
-    pub version: Option<VersionParams>,
+    pub block: BlockParams,
+    pub evidence: EvidenceParams,
+    pub validator: ValidatorParams,
+    pub version: VersionParams,
 }
 
 impl From<ConsensusParams> for inner::ConsensusParams {
@@ -24,41 +20,49 @@ impl From<ConsensusParams> for inner::ConsensusParams {
         }: ConsensusParams,
     ) -> Self {
         Self {
-            block: block.map(Into::into),
-            evidence: evidence.map(Into::into),
-            validator: validator.map(Into::into),
-            version: version.map(Into::into),
+            block: Some(block.into()),
+            evidence: Some(evidence.into()),
+            validator: Some(validator.into()),
+            version: Some(version.into()),
         }
     }
 }
 
-impl From<inner::ConsensusParams> for ConsensusParams {
-    fn from(
+impl TryFrom<inner::ConsensusParams> for ConsensusParams {
+    type Error = crate::error::Error;
+
+    fn try_from(
         inner::ConsensusParams {
             block,
             evidence,
             validator,
             version,
         }: inner::ConsensusParams,
-    ) -> Self {
-        Self {
-            block: block.map(Into::into),
-            evidence: evidence.map(Into::into),
-            validator: validator.map(Into::into),
-            version: version.map(Into::into),
-        }
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            block: block
+                .ok_or_else(|| Self::Error::InvalidData("block params is missing".into()))?
+                .into(),
+            evidence: evidence
+                .ok_or_else(|| Self::Error::InvalidData("evidence params is missing".into()))?
+                .into(),
+            validator: validator
+                .ok_or_else(|| Self::Error::InvalidData("validator params is missing".into()))?
+                .into(),
+            version: version
+                .ok_or_else(|| Self::Error::InvalidData("version params is missing".into()))?
+                .into(),
+        })
     }
 }
 
 /// Consensus captures the consensus rules for processing a block in the blockchain,
 /// including all blockchain data structures and the rules of the application's
 /// state transition machine.
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct Consensus {
-    #[prost(uint64, tag = "1")]
     #[serde(with = "crate::types::serializers::from_str")]
     pub block: u64,
-    #[prost(uint64, tag = "2")]
     #[serde(with = "crate::types::serializers::from_str", default)]
     pub app: u64,
 }

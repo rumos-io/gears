@@ -63,7 +63,7 @@ impl TryFrom<super::inner::RequestInitChain> for RequestInitChain {
                 .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}").into()))?,
             consensus_params: consensus_params
                 .ok_or(Error::InvalidData("consensus params is empty".to_string()))?
-                .into(),
+                .try_into()?,
             validators: validators
                 .into_iter()
                 .map(TryInto::try_into)
