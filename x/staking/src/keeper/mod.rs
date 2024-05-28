@@ -175,13 +175,13 @@ impl<
             denom: genesis.params.bond_denom.clone(),
             amount: bonded_tokens,
         }])
-        .unwrap_or_default();
+        .unwrap();
         // TODO: check
         let not_bonded_coins = SendCoins::new(vec![Coin {
             denom: genesis.params.bond_denom,
             amount: not_bonded_tokens,
         }])
-        .unwrap_or_default();
+        .unwrap();
 
         // check if the unbonded and bonded pools accounts exists
         let bonded_pool = self
