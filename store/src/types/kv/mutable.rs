@@ -1,4 +1,7 @@
-use std::ops::RangeBounds;
+use std::{
+    convert::Infallible,
+    ops::{Bound, RangeBounds},
+};
 
 use database::Database;
 
@@ -42,31 +45,42 @@ impl<'a, DB> KVStoreMut<'a, DB> {
     }
 }
 
-impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStoreMut<'a, DB> {
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        match &self.0 {
+impl<'a, DB: Database> QueryableKVStore for KVStoreMut<'a, DB> {
+    type Prefix = ImmutablePrefixStore<'a, DB>;
+
+    type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+
+    type GetErr = Infallible;
+
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr> {
+        Ok(match &self.0 {
             KVStoreBackendMut::Commit(var) => var.get(k),
             KVStoreBackendMut::Cache(var) => var.get(k),
-        }
+        })
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
         match self.0 {
             KVStoreBackendMut::Commit(var) => var.prefix_store(prefix),
             KVStoreBackendMut::Cache(var) => var.prefix_store(prefix),
         }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
-        match &self.0 {
-            KVStoreBackendMut::Commit(var) => var.range(range),
-            KVStoreBackendMut::Cache(var) => var.range(range),
-        }
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
+        //     match &self.0 {
+        //         KVStoreBackendMut::Commit(var) => var.range(range),
+        //         KVStoreBackendMut::Cache(var) => var.range(range),
+        //     }
+        todo!()
     }
 }
 
-impl<'a, DB: Database> TransactionalKVStore<'a, DB> for KVStoreMut<'a, DB> {
-    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> MutablePrefixStore<'a, DB> {
+impl<'a, DB: Database> TransactionalKVStore for KVStoreMut<'a, DB> {
+    type PrefixMut = MutablePrefixStore<'a, DB>;
+
+    type SetErr = Infallible;
+
+    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> Self::PrefixMut {
         MutablePrefixStore {
             store: self,
             prefix: prefix.into_iter().collect(),
@@ -77,11 +91,13 @@ impl<'a, DB: Database> TransactionalKVStore<'a, DB> for KVStoreMut<'a, DB> {
         &mut self,
         key: KI,
         value: VI,
-    ) {
+    ) -> Result<(), Self::SetErr> {
         match &mut self.0 {
             KVStoreBackendMut::Commit(var) => var.set(key, value),
             KVStoreBackendMut::Cache(var) => var.set(key, value),
-        }
+        };
+
+        Ok(())
     }
 }
 

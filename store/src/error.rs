@@ -1,9 +1,5 @@
 use thiserror::Error;
 
-#[derive(Error, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-#[error("Value not found in store")]
-pub struct NotFoundError;
-
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum StoreError {
     #[error(transparent)]

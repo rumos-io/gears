@@ -1,9 +1,13 @@
 pub mod mutable;
 
-use std::{cell::RefCell, ops::RangeBounds, sync::Arc};
+use std::{
+    cell::RefCell,
+    ops::{Bound, RangeBounds},
+    sync::Arc,
+};
 
 use database::Database;
-use store_crate::{types::kv::immutable::KVStore, QueryableKVStore};
+use store_crate::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
 
 use crate::types::gas::{kind::TxKind, GasMeter};
 
@@ -24,21 +28,28 @@ impl<'a, DB> GasKVStore<'a, DB> {
     }
 }
 
-impl<'a, DB: Database> GasKVStore<'a, DB> {
-    pub fn get<R: AsRef<[u8]>>(&self, k: R) -> Result<Vec<u8>, GasStoreErrors> {
-        let value = self.inner.get(&k);
+impl<'a, DB: Database> QueryableKVStore for GasKVStore<'a, DB> {
+    type Prefix = GasStorePrefix<'a, DB>;
+
+    type Range = GasRange<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+
+    type GetErr = GasStoreErrors;
+
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr> {
+        let value = self.inner.get(&k).infallible();
 
         self.guard
             .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
 
-        value.ok_or(GasStoreErrors::NotFound)
+        Ok(value)
     }
 
-    pub fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefix<'a, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
         GasStorePrefix::new(self.guard, self.inner.prefix_store(prefix))
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&'a self, range: R) -> GasRange<'a, R, DB> {
-        GasRange::new_kv(self.inner.range(range), self.guard.clone())
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
+        // GasRange::new_kv(self.inner.range(range), self.guard.clone())
+        todo!()
     }
 }

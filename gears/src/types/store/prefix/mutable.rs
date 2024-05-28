@@ -1,5 +1,8 @@
 use database::Database;
-use store_crate::{types::prefix::mutable::MutablePrefixStore, ReadPrefixStore, WritePrefixStore};
+use store_crate::{
+    ext::UnwrapInfallible, types::prefix::mutable::MutablePrefixStore, ReadPrefixStore,
+    WritePrefixStore,
+};
 
 use crate::types::store::{errors::GasStoreErrors, guard::GasGuard};
 
@@ -26,13 +29,13 @@ impl<'a, DB> GasStorePrefixMut<'a, DB> {
 impl<DB: Database> ReadPrefixStore for GasStorePrefixMut<'_, DB> {
     type GetErr = GasStoreErrors;
 
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Vec<u8>, Self::GetErr> {
-        let value = self.inner.get(&k).ok();
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::GetErr> {
+        let value = self.inner.get(&k).infallible();
 
         self.guard
             .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
 
-        value.ok_or(GasStoreErrors::NotFound)
+        Ok(value)
     }
 }
 
@@ -49,7 +52,7 @@ impl<DB: Database> WritePrefixStore for GasStorePrefixMut<'_, DB> {
 
         self.guard.set(key.len(), value.len())?;
 
-        self.inner.set(key, value).expect("Infallible");
+        self.inner.set(key, value).infallible();
 
         Ok(())
     }

@@ -1,10 +1,11 @@
-use std::ops::{Bound, RangeBounds};
+use std::{
+    convert::Infallible,
+    ops::{Bound, RangeBounds},
+};
 
 use database::Database;
 
-use crate::{
-    error::NotFoundError, types::kv::immutable::KVStore, QueryableKVStore, ReadPrefixStore,
-};
+use crate::{types::kv::immutable::KVStore, QueryableKVStore, ReadPrefixStore};
 
 use super::{prefix_end_bound, range::PrefixRange};
 
@@ -36,10 +37,10 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
 }
 
 impl<DB: Database> ReadPrefixStore for ImmutablePrefixStore<'_, DB> {
-    type GetErr = NotFoundError;
+    type GetErr = Infallible;
 
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Vec<u8>, Self::GetErr> {
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::GetErr> {
         let full_key = [&self.prefix, k.as_ref()].concat();
-        self.store.get(&full_key).ok_or(NotFoundError)
+        self.store.get(&full_key)
     }
 }

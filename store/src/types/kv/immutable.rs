@@ -1,3 +1,5 @@
+use std::{convert::Infallible, ops::Bound};
+
 use database::Database;
 
 use crate::{
@@ -20,16 +22,22 @@ pub(crate) enum KVStoreBackend<'a, DB> {
 #[derive(Debug)]
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
-impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStore<'a, DB> {
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        match self.0 {
+impl<'a, DB: Database> QueryableKVStore for KVStore<'a, DB> {
+    type Prefix = ImmutablePrefixStore<'a, DB>;
+
+    type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+
+    type GetErr = Infallible;
+
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr> {
+        Ok(match self.0 {
             KVStoreBackend::Commit(var) => var.get(k),
             KVStoreBackend::Cache(var) => var.get(k),
             KVStoreBackend::Query(var) => var.get(k),
-        }
+        })
     }
 
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB> {
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
         match self.0 {
             KVStoreBackend::Commit(var) => var.prefix_store(prefix),
             KVStoreBackend::Cache(var) => var.prefix_store(prefix),
@@ -37,12 +45,13 @@ impl<'a, DB: Database> QueryableKVStore<'a, DB> for KVStore<'a, DB> {
         }
     }
 
-    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
-        match self.0 {
-            KVStoreBackend::Commit(var) => var.range(range),
-            KVStoreBackend::Cache(var) => var.range(range),
-            KVStoreBackend::Query(var) => var.range(range),
-        }
+    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
+        //     match self.0 {
+        //     KVStoreBackend::Commit(var) => var.range(range),
+        //     KVStoreBackend::Cache(var) => var.range(range),
+        //     KVStoreBackend::Query(var) => var.range(range),
+        // }
+        todo!() // TODO:NOW Rework range
     }
 }
 

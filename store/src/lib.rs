@@ -1,11 +1,8 @@
-use range::Range;
 use strum::IntoEnumIterator;
-use types::{
-    kv::{immutable::KVStore, mutable::KVStoreMut},
-    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
-};
+use types::kv::{immutable::KVStore, mutable::KVStoreMut};
 
 pub mod error;
+pub mod ext;
 mod hash;
 pub mod range;
 pub mod types;
@@ -32,7 +29,7 @@ pub trait StoreKey:
 pub trait ReadPrefixStore {
     type GetErr;
 
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Vec<u8>, Self::GetErr>;
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::GetErr>;
 }
 
 pub trait WritePrefixStore: ReadPrefixStore {
@@ -45,16 +42,27 @@ pub trait WritePrefixStore: ReadPrefixStore {
     ) -> Result<(), Self::SetErr>;
 }
 
-pub trait QueryableKVStore<'a, DB> {
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>>;
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> ImmutablePrefixStore<'a, DB>;
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB>;
+pub trait QueryableKVStore {
+    type Prefix: ReadPrefixStore;
+    type Range: Iterator;
+    type GetErr;
+
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr>;
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix;
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
 }
 
-pub trait TransactionalKVStore<'a, DB>: QueryableKVStore<'a, DB> {
-    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> MutablePrefixStore<'a, DB>;
-    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, key: KI, value: VI);
+pub trait TransactionalKVStore: QueryableKVStore {
+    type PrefixMut: WritePrefixStore;
+    type SetErr;
+
+    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> Self::PrefixMut;
+    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+        &mut self,
+        key: KI,
+        value: VI,
+    ) -> Result<(), Self::SetErr>;
 }
 
 pub trait QueryableMultiKVStore<DB, SK> {
