@@ -23,7 +23,7 @@ pub struct GasKVStoreMut<'a, DB> {
 }
 
 impl<'a, DB> GasKVStoreMut<'a, DB> {
-    pub fn new(gas_meter: &'a mut GasMeter<TxKind>, inner: KVStoreMut<'a, DB>) -> Self {
+    pub(crate) fn new(gas_meter: &'a mut GasMeter<TxKind>, inner: KVStoreMut<'a, DB>) -> Self {
         Self { gas_meter, inner }
     }
 
@@ -40,7 +40,7 @@ impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
         self.to_immutable().get(k)
     }
 
-    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         key: KI,
         value: VI,
@@ -79,8 +79,11 @@ impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
         self.inner.delete(k).ok_or(GasStoreErrors::NotFound)
     }
 
-    fn prefix_store_mut<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefixMut<'a, DB> {
-        GasStorePrefixMut::new(self.gas_meter, self.inner.prefix_store_mut(prefix))
+    pub fn prefix_store_mut<I: IntoIterator<Item = u8>>(
+        self,
+        prefix: I,
+    ) -> GasStorePrefixMut<'a, DB> {
+        GasStorePrefixMut::new(self, prefix)
     }
 
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {

@@ -24,7 +24,7 @@ pub struct GasKVStore<'a, DB> {
 }
 
 impl<'a, DB> GasKVStore<'a, DB> {
-    pub fn new(gas_meter: &'a mut GasMeter<TxKind>, inner: KVStore<'a, DB>) -> Self {
+    pub(crate) fn new(gas_meter: &'a mut GasMeter<TxKind>, inner: KVStore<'a, DB>) -> Self {
         Self { gas_meter, inner }
     }
 }
@@ -59,7 +59,7 @@ impl<'a, DB: Database> GasKVStore<'a, DB> {
     }
 
     pub fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefix<'a, DB> {
-        GasStorePrefix::new(self.gas_meter, self.inner.prefix_store(prefix))
+        GasStorePrefix::new(self, prefix)
     }
 
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {

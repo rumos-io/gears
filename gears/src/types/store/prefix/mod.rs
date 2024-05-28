@@ -1,19 +1,26 @@
 use database::Database;
-use store_crate::types::prefix::immutable::ImmutablePrefixStore;
 
-use crate::types::gas::{kind::TxKind, GasMeter};
+use super::{errors::GasStoreErrors, kv::GasKVStore};
 
 pub mod mutable;
 
 pub struct GasStorePrefix<'a, DB> {
-    gas_meter: &'a mut GasMeter<TxKind>,
-    inner: ImmutablePrefixStore<'a, DB>,
+    inner: GasKVStore<'a, DB>,
+    prefix: Vec<u8>,
 }
 
 impl<'a, DB> GasStorePrefix<'a, DB> {
-    pub fn new(gas_meter: &'a mut GasMeter<TxKind>, inner: ImmutablePrefixStore<'a, DB>) -> Self {
-        Self { gas_meter, inner }
+    pub(crate) fn new(inner: GasKVStore<'a, DB>, prefix: impl IntoIterator<Item = u8>) -> Self {
+        Self {
+            inner,
+            prefix: prefix.into_iter().collect(),
+        }
     }
 }
 
-impl<DB: Database> GasStorePrefix<'_, DB> {}
+impl<DB: Database> GasStorePrefix<'_, DB> {
+    fn get<T: AsRef<[u8]> + ?Sized>(&mut self, k: &T) -> Result<Vec<u8>, GasStoreErrors> {
+        let full_key = [&self.prefix, k.as_ref()].concat();
+        self.inner.get(&full_key)
+    }
+}
