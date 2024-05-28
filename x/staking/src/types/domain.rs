@@ -199,17 +199,18 @@ impl Validator {
                 seconds: 0,
                 nanos: 0,
             },
-            commission: Commission {
-                commission_rates: CommissionRates {
+            commission: Commission::new(
+                CommissionRates {
                     rate: Decimal256::zero(),
                     max_rate: Decimal256::zero(),
                     max_change_rate: Decimal256::zero(),
                 },
-                update_time: Timestamp {
+                Timestamp {
                     seconds: 0,
                     nanos: 0,
                 },
-            },
+            )
+            .expect("creation of commission with zeros shouldn't fail"),
             min_self_delegation: Uint256::one(),
             status: BondStatus::Unbonded,
         }
@@ -225,10 +226,8 @@ impl Validator {
         self.abci_validator_update(0)
     }
 
-    pub fn set_initial_commission(&mut self, commission: Commission) -> Result<(), AppError> {
-        commission.validate()?;
+    pub fn set_initial_commission(&mut self, commission: Commission) {
         self.commission = commission;
-        Ok(())
     }
 
     /// add_tokens_from_del adds tokens to a validator

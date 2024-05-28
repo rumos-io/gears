@@ -71,12 +71,8 @@ impl<
         let update_time = ctx.get_time().ok_or(AppError::TxValidation(
             "Transaction doesn't have valid timestamp.".to_string(),
         ))?;
-        let commission = Commission {
-            commission_rates: msg.commission.clone(),
-            update_time,
-        };
-
-        validator.set_initial_commission(commission)?;
+        let commission = Commission::new(msg.commission.clone(), update_time)?;
+        validator.set_initial_commission(commission);
         validator.min_self_delegation = msg.min_self_delegation;
 
         self.set_validator(ctx, &validator);
@@ -270,15 +266,15 @@ impl<
     pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> anyhow::Result<HashMap<String, Vec<u8>>> {
+    ) -> HashMap<String, Vec<u8>> {
         let mut last = HashMap::new();
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
         for (k, v) in store.range(..) {
-            let k: ValAddress = serde_json::from_slice(&k)?;
+            let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
             last.insert(k.to_string(), v.to_vec());
         }
-        Ok(last)
+        last
     }
 }
 

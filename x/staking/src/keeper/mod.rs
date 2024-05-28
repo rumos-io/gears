@@ -401,7 +401,7 @@ impl<
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
         let amt_from_not_bonded_to_bonded = Uint256::zero();
 
-        let mut last = self.last_validators_by_addr(ctx)?;
+        let mut last = self.last_validators_by_addr(ctx);
         let validators_map = self.validators_power_store_vals_map(ctx)?;
 
         let mut updates = vec![];
