@@ -1,3 +1,5 @@
+pub mod mutable;
+
 use database::Database;
 use store_crate::{types::kv::immutable::KVStore, QueryableKVStore};
 
@@ -9,6 +11,7 @@ use crate::types::{
 use super::{
     constants::{READ_COST_FLAT_DESC, READ_PER_BYTE_DESC},
     errors::GasStoreErrors,
+    prefix::GasStorePrefix,
 };
 
 #[derive(Debug)]
@@ -23,7 +26,7 @@ impl<'a, DB> GasKVStore<'a, DB> {
     }
 }
 
-impl<DB: Database> GasKVStore<'_, DB> {
+impl<'a, DB: Database> GasKVStore<'a, DB> {
     pub fn get<R: AsRef<[u8]>>(&mut self, k: R) -> Result<Vec<u8>, GasStoreErrors> {
         self.gas_meter
             .consume_gas(GasConfig::kv().read_cost_flat, READ_COST_FLAT_DESC)?;
@@ -50,5 +53,9 @@ impl<DB: Database> GasKVStore<'_, DB> {
         }
 
         value.ok_or(GasStoreErrors::NotFound)
+    }
+
+    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefix<'a, DB> {
+        GasStorePrefix::new(self.gas_meter, self.inner.prefix_store(prefix))
     }
 }

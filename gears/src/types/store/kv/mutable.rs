@@ -4,14 +4,14 @@ use store_crate::{types::kv::mutable::KVStoreMut, TransactionalKVStore};
 use crate::types::{
     auth::gas::Gas,
     gas::{config::GasConfig, kind::TxKind, GasMeter},
-    store::constants::DELETE_DESC,
+    store::{
+        constants::{DELETE_DESC, WRITE_COST_FLAT_DESC, WRITE_PER_BYTE_DESC},
+        errors::GasStoreErrors,
+        prefix::mutable::GasStorePrefixMut,
+    },
 };
 
-use super::{
-    constants::{WRITE_COST_FLAT_DESC, WRITE_PER_BYTE_DESC},
-    errors::GasStoreErrors,
-    kv::GasKVStore,
-};
+use super::GasKVStore;
 
 #[derive(Debug)]
 pub struct GasKVStoreMut<'a, DB> {
@@ -32,7 +32,7 @@ impl<'a, DB> GasKVStoreMut<'a, DB> {
     }
 }
 
-impl<DB: Database> GasKVStoreMut<'_, DB> {
+impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
     pub fn get<R: AsRef<[u8]>>(&mut self, k: R) -> Result<Vec<u8>, GasStoreErrors> {
         self.to_immutable().get(k)
     }
@@ -74,5 +74,9 @@ impl<DB: Database> GasKVStoreMut<'_, DB> {
             .consume_gas(GasConfig::kv().delete_cost, DELETE_DESC)?;
 
         self.inner.delete(k).ok_or(GasStoreErrors::NotFound)
+    }
+
+    fn prefix_store_mut<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasStorePrefixMut<'a, DB> {
+        GasStorePrefixMut::new(self.gas_meter, self.inner.prefix_store_mut(prefix))
     }
 }
