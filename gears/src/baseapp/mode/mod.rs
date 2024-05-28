@@ -5,6 +5,8 @@ pub mod re_check;
 use store_crate::{types::multi::MultiBank, ApplicationStore};
 use tendermint::types::proto::event::Event;
 
+use self::sealed::Sealed;
+use super::{options::NodeOptions, params::ConsensusParams};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
@@ -19,15 +21,12 @@ use crate::{
     },
 };
 
-use self::sealed::Sealed;
-
-use super::options::NodeOptions;
-
 pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
     fn build_ctx(
         &mut self,
         height: u64,
         header: Header,
+        consensus_params: ConsensusParams,
         fee: Option<&Fee>,
         options: NodeOptions,
     ) -> TxContext<'_, DB, AH::StoreKey>;

@@ -15,7 +15,7 @@ use super::{
 // - All coin amounts are positive
 // - No duplicate denominations
 // - Sorted lexicographically
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct SendCoins(Vec<Coin>);
 
 impl SendCoins {
@@ -33,7 +33,7 @@ impl SendCoins {
     // - No duplicate denominations
     // - Sorted lexicographically
     // TODO: implement ordering on coins or denominations so that conversion to string can be avoided
-    fn validate_coins(coins: &Vec<Coin>) -> Result<(), SendCoinsError> {
+    fn validate_coins(coins: &[Coin]) -> Result<(), SendCoinsError> {
         if coins.is_empty() {
             return Err(SendCoinsError::EmptyList);
         }

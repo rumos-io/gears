@@ -1,164 +1,254 @@
-use crate::VALIDATORS_BY_POWER_INDEX_KEY;
-use chrono::Utc;
+use crate::consts::proto::*;
 use gears::{
-    tendermint::types::proto::{crypto::PublicKey, validator::ValidatorUpdate},
+    core::Protobuf,
+    error::AppError,
+    tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
     types::{
-        address::{AccAddress, ConsAddress, ValAddress},
-        base::{coin::Coin, send::SendCoins},
-        decimal256::Decimal256,
+        address::{AccAddress, ValAddress},
+        auth::fee::inner::Coin as CoinRaw,
+        base::coin::Coin,
+        decimal256::{CosmosDecimalProtoString, Decimal256},
+        errors::StdError,
         uint::Uint256,
     },
 };
+use prost::Message;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DvvTriplet {
-    pub del_addr: AccAddress,
-    pub val_src_addr: ValAddress,
-    pub val_dst_addr: ValAddress,
+/// CommissionRates defines the initial commission rates to be used for creating
+/// a validator.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct CommissionRatesRaw {
+    #[prost(string)]
+    pub rate: String,
+    #[prost(string)]
+    pub max_rate: String,
+    #[prost(string)]
+    pub max_change_rate: String,
 }
-impl DvvTriplet {
-    pub fn new(del_addr: AccAddress, val_src_addr: ValAddress, val_dst_addr: ValAddress) -> Self {
+
+impl From<CommissionRates> for CommissionRatesRaw {
+    fn from(value: CommissionRates) -> Self {
         Self {
-            del_addr,
-            val_src_addr,
-            val_dst_addr,
+            rate: value.rate.to_cosmos_proto_string(),
+            max_rate: value.max_rate.to_cosmos_proto_string(),
+            max_change_rate: value.max_change_rate.to_cosmos_proto_string(),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DvPair {
-    pub val_addr: ValAddress,
-    pub del_addr: AccAddress,
+/// CommissionRates defines the initial commission rates to be used for creating
+/// a validator.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CommissionRates {
+    /// rate is the commission rate charged to delegators, as a fraction.
+    pub rate: Decimal256,
+    /// max_rate defines the maximum commission rate which validator can ever charge, as a fraction.
+    pub max_rate: Decimal256,
+    /// max_change_rate defines the maximum daily increase of the validator commission, as a fraction.
+    pub max_change_rate: Decimal256,
 }
-impl DvPair {
-    pub fn new(val_addr: ValAddress, del_addr: AccAddress) -> Self {
-        Self { val_addr, del_addr }
+
+impl TryFrom<CommissionRatesRaw> for CommissionRates {
+    type Error = StdError;
+    fn try_from(value: CommissionRatesRaw) -> Result<Self, Self::Error> {
+        Ok(Self {
+            rate: Decimal256::from_cosmos_proto_string(&value.rate)?,
+            max_rate: Decimal256::from_cosmos_proto_string(&value.max_rate)?,
+            max_change_rate: Decimal256::from_cosmos_proto_string(&value.max_change_rate)?,
+        })
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum BondStatus {
-    Unbonded = 0,
-    Unbonding = 1,
-    Bonded = 2,
+impl Protobuf<CommissionRatesRaw> for CommissionRates {}
+
+/// Commission defines commission parameters for a given validator.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Commission {
+    /// commission_rates defines the initial commission rates to be used for creating a validator.
+    commission_rates: CommissionRates,
+    /// update_time is the last time the commission rate was changed.
+    update_time: Timestamp,
 }
 
-impl Display for BondStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BondStatus::Unbonded => write!(f, "Unbonded"),
-            BondStatus::Unbonding => write!(f, "Unbonding"),
-            BondStatus::Bonded => write!(f, "Bonded"),
+impl Commission {
+    pub fn new(
+        commission_rates: CommissionRates,
+        update_time: Timestamp,
+    ) -> Result<Commission, AppError> {
+        Self::validate_commission_rates(&commission_rates)?;
+        Ok(Commission {
+            commission_rates,
+            update_time,
+        })
+    }
+
+    pub fn validate_commission_rates(commission_rates: &CommissionRates) -> Result<(), AppError> {
+        let CommissionRates {
+            rate,
+            max_rate,
+            max_change_rate,
+        } = commission_rates;
+
+        if *max_rate > ONE_DEC {
+            // max rate cannot be greater than 1
+            return Err(AppError::Send("max_rate too huge".into()));
+        }
+        if *rate > *max_rate {
+            // rate cannot be greater than the max rate
+            return Err(AppError::Send("rate is bigger than max_rate".into()));
+        }
+        if *max_change_rate > *max_rate {
+            // change rate cannot be greater than the max rate
+            return Err(AppError::Send(
+                "max_change_rate is bigger than max_rate".into(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+/// Description defines a validator description.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct Description {
+    /// moniker defines a human-readable name for the validator.
+    #[prost(string)]
+    pub moniker: String,
+    /// identity defines an optional identity signature (ex. UPort or Keybase).
+    #[prost(string)]
+    pub identity: String,
+    /// website defines an optional website link.
+    #[prost(string)]
+    pub website: String,
+    /// security_contact defines an optional email for security contact.
+    #[prost(string)]
+    pub security_contact: String,
+    /// details define other optional details.
+    #[prost(string)]
+    pub details: String,
+}
+
+impl Protobuf<Description> for Description {}
+
+impl Description {
+    pub fn ensure_length(&self) -> Result<(), AppError> {
+        if self.moniker.len() > MAX_MONIKER_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "moniker",
+                self.moniker.len(),
+                MAX_MONIKER_LENGTH,
+            ));
+        }
+        if self.identity.len() > MAX_IDENTITY_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "identity",
+                self.identity.len(),
+                MAX_IDENTITY_LENGTH,
+            ));
+        }
+        if self.website.len() > MAX_WEBSITE_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "website",
+                self.website.len(),
+                MAX_WEBSITE_LENGTH,
+            ));
+        }
+        if self.security_contact.len() > MAX_SECURITY_CONTACT_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "security_contact",
+                self.security_contact.len(),
+                MAX_SECURITY_CONTACT_LENGTH,
+            ));
+        }
+        if self.details.len() > MAX_DETAILS_LENGTH {
+            return Err(self.form_ensure_length_err(
+                "details",
+                self.details.len(),
+                MAX_DETAILS_LENGTH,
+            ));
+        }
+        Ok(())
+    }
+
+    fn form_ensure_length_err(&self, name: &str, got: usize, max: usize) -> AppError {
+        AppError::InvalidRequest(format!("invalid {name} length; got: {got}, max: {max}"))
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct CreateValidatorRaw {
+    #[prost(message, optional)]
+    pub description: Option<Description>,
+    #[prost(message, optional)]
+    pub commission: Option<CommissionRatesRaw>,
+    #[prost(string)]
+    pub min_self_delegation: String,
+    #[prost(string)]
+    pub delegator_address: String,
+    #[prost(string)]
+    pub validator_address: String,
+    #[prost(bytes)]
+    pub pub_key: Vec<u8>,
+    #[prost(message, optional)]
+    pub value: Option<CoinRaw>,
+}
+
+impl From<CreateValidator> for CreateValidatorRaw {
+    fn from(src: CreateValidator) -> Self {
+        Self {
+            description: Some(src.description),
+            commission: Some(src.commission.into()),
+            min_self_delegation: src.min_self_delegation.to_string(),
+            delegator_address: src.delegator_address.to_string(),
+            validator_address: src.validator_address.to_string(),
+            // TODO: Consider to implement Protobuf on PublicKey
+            pub_key: serde_json::to_vec(&src.pub_key).expect("Expected valid public key that can be converted into vector of bytes using serde_json"),
+            value: Some(src.value.into()),
         }
     }
 }
 
-/// Validator defines a validator, together with the total amount of the
-/// Validator's bond shares and their exchange rate to coins. Slashing results in
-/// a decrease in the exchange rate, allowing correct calculation of future
-/// undelegations without iterating over delegators. When coins are delegated to
-/// this validator, the validator is credited with a delegation whose number of
-/// bond shares is based on the amount of coins delegated divided by the current
-/// exchange rate. Voting power can be calculated as total bonded shares
-/// multiplied by exchange rate.
+/// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Clone, PartialEq, Serialize, Deserialize)]
-pub struct Validator {
-    pub operator_address: ValAddress,
-    pub delegator_shares: Decimal256,
-    /// consensus_pubkey is the consensus public key of the validator, as a Protobuf Any.
-    pub consensus_pubkey: PublicKey,
-    /// jailed defined whether the validator has been jailed from bonded status or not.
-    pub jailed: bool,
-    /// tokens define the delegated tokens (incl. self-delegation).
-    pub tokens: Coin,
-    /// unbonding_height defines, if unbonding, the height at which this validator has begun unbonding.
-    pub unbonding_height: i64,
-    /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
-    pub unbonding_time: chrono::DateTime<Utc>,
-    /// commission defines the commission parameters.
-    // TODO: original code has complex structure for the field
-    pub commission: SendCoins,
+pub struct CreateValidator {
+    pub description: Description,
+    pub commission: CommissionRates,
     pub min_self_delegation: Uint256,
-    pub status: BondStatus,
+    pub delegator_address: AccAddress,
+    pub validator_address: ValAddress,
+    pub pub_key: PublicKey,
+    pub value: Coin,
 }
 
-impl Validator {
-    pub fn abci_validator_update(&self, power: i64) -> ValidatorUpdate {
-        ValidatorUpdate {
-            pub_key: self.consensus_pubkey.clone(),
-            power: self.consensus_power(power),
-        }
-    }
+impl TryFrom<CreateValidatorRaw> for CreateValidator {
+    type Error = anyhow::Error;
 
-    pub fn abci_validator_update_zero(&self) -> ValidatorUpdate {
-        self.abci_validator_update(0)
-    }
-
-    pub fn get_cons_addr(&self) -> ConsAddress {
-        self.consensus_pubkey.clone().into()
-    }
-
-    pub fn update_status(&mut self, status: BondStatus) {
-        self.status = status;
-    }
-
-    pub fn consensus_power(&self, power: i64) -> i64 {
-        match self.status {
-            BondStatus::Bonded => self.potential_consensus_power(power),
-            _ => 0,
-        }
-    }
-
-    pub fn potential_consensus_power(&self, power: i64) -> i64 {
-        self.tokens_to_consensus_power(power)
-    }
-
-    pub fn tokens_to_consensus_power(&self, power: i64) -> i64 {
-        let amount = self.tokens.amount;
-        let amount = amount / Uint256::from(power as u64);
-        amount
-            .to_string()
-            .parse::<i64>()
-            .expect("It is expected that we can get i64 substitution from type Uint256")
-    }
-
-    /// GetValidatorsByPowerIndexKey creates the validator by power index.
-    /// Power index is the key used in the power-store, and represents the relative
-    /// power ranking of the validator.
-    /// VALUE: validator operator address ([]byte)
-    pub fn key_by_power_index_key(&self, power_reduction: i64) -> Vec<u8> {
-        // NOTE the address doesn't need to be stored because counter bytes must always be different
-        // NOTE the larger values are of higher value
-        let consensus_power = self.tokens_to_consensus_power(power_reduction);
-        let consensus_power_bytes = consensus_power.to_ne_bytes();
-
-        let oper_addr_invr = self
-            .operator_address
-            .to_string()
-            .as_bytes()
-            .iter()
-            .map(|b| 255 ^ b)
-            .collect::<Vec<_>>();
-
-        // key is of format prefix || powerbytes || addrLen (1byte) || addrBytes
-        let mut key = VALIDATORS_BY_POWER_INDEX_KEY.to_vec();
-        key.extend_from_slice(&consensus_power_bytes);
-        key.push(oper_addr_invr.len() as u8);
-        key.extend_from_slice(&oper_addr_invr);
-        key
-    }
-
-    pub fn potential_tendermint_power(&self) -> i64 {
-        // let amount = self
-        //     .tokens
-        //     .amount
-        //     .parse::<i64>()
-        //     .expect("Unexpected conversion error");
-        // amount / 10i64.pow(6)
-        //TODO: original code above doesn't compile
-        12
+    fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
+        Ok(CreateValidator {
+            description: src.description.ok_or(AppError::Custom(
+                "Value should exists. It's the proto3 rule to have Option<T> instead of T".into(),
+            ))?,
+            commission: src
+                .commission
+                .ok_or(AppError::Custom(
+                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
+                        .into(),
+                ))?
+                .try_into()?,
+            min_self_delegation: Uint256::from_str(&src.min_self_delegation)?,
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)?,
+            validator_address: ValAddress::from_bech32(&src.validator_address)?,
+            pub_key: serde_json::from_slice(&src.pub_key)?,
+            value: src
+                .value
+                .ok_or(AppError::Custom(
+                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
+                        .into(),
+                ))?
+                .try_into()?,
+        })
     }
 }
+
+impl Protobuf<CreateValidatorRaw> for CreateValidator {}

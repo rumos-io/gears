@@ -41,6 +41,7 @@ pub mod mode;
 mod params;
 mod query;
 pub mod state;
+pub use params::{BlockParams, ConsensusParams, EvidenceParams, ValidatorParams};
 
 pub use query::*;
 
@@ -176,9 +177,21 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
+        let query_ctx = QueryContext::new(
+            QueryMultiStore::new(
+                &*self.multi_store.read().expect(POISONED_LOCK),
+                height as u32,
+            )
+            .map_err(|e| RunTxError::Custom(e.to_string()))?,
+            height as u32,
+        )
+        .map_err(|e| RunTxError::Custom(e.to_string()))?;
+        let consensus_params = self.baseapp_params_keeper.consensus_params(&query_ctx);
+
         let mut ctx = mode.build_ctx(
             height,
             header.clone(),
+            consensus_params,
             Some(&tx_with_raw.tx.auth_info.fee),
             self.options.clone(),
         );

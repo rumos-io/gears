@@ -1,6 +1,6 @@
 use crate::error::Error;
 
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", content = "value")]
 pub enum PublicKey {
     #[serde(
@@ -20,6 +20,13 @@ impl PublicKey {
         match self {
             PublicKey::Ed25519(value) => value,
             PublicKey::Secp256k1(value) => value,
+        }
+    }
+
+    pub fn str_type(&self) -> &'static str {
+        match self {
+            PublicKey::Secp256k1(_) => "secp256k1",
+            PublicKey::Ed25519(_) => "ed25519",
         }
     }
 }
