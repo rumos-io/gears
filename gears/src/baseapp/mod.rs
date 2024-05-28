@@ -175,18 +175,11 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             .try_into()
             .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?;
 
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
-
-        let query_ctx = QueryContext::new(
-            QueryMultiStore::new(
-                &*self.multi_store.read().expect(POISONED_LOCK),
-                height as u32,
-            )
-            .map_err(|e| RunTxError::Custom(e.to_string()))?,
-            height as u32,
-        )
-        .map_err(|e| RunTxError::Custom(e.to_string()))?;
-        let consensus_params = self.baseapp_params_keeper.consensus_params(&query_ctx);
+        let consensus_params = {
+            let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
+            let ctx = SimpleContext::new(multi_store);
+            self.baseapp_params_keeper.consensus_params(&ctx)
+        };
 
         let mut ctx = mode.build_ctx(
             height,
@@ -195,6 +188,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             Some(&tx_with_raw.tx.auth_info.fee),
             self.options.clone(),
         );
+
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
