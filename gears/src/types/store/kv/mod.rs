@@ -1,13 +1,13 @@
 pub mod mutable;
 
-use std::{cell::RefCell, sync::Arc};
+use std::{cell::RefCell, ops::RangeBounds, sync::Arc};
 
 use database::Database;
 use store_crate::{types::kv::immutable::KVStore, QueryableKVStore};
 
 use crate::types::gas::{kind::TxKind, GasMeter};
 
-use super::{errors::GasStoreErrors, guard::GasGuard, prefix::GasStorePrefix};
+use super::{errors::GasStoreErrors, guard::GasGuard, prefix::GasStorePrefix, range::GasRange};
 
 #[derive(Debug)]
 pub struct GasKVStore<'a, DB> {
@@ -38,7 +38,7 @@ impl<'a, DB: Database> GasKVStore<'a, DB> {
         GasStorePrefix::new(self.guard, self.inner.prefix_store(prefix))
     }
 
-    // pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {
-    //     GasRange::new(self.inner.range(range), &mut self.gas_meter)
-    // }
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&'a self, range: R) -> GasRange<'a, R, DB> {
+        GasRange::new_kv(self.inner.range(range), self.guard.clone())
+    }
 }

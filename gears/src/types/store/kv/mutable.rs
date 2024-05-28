@@ -1,4 +1,4 @@
-use std::{cell::RefCell, sync::Arc};
+use std::{cell::RefCell, ops::RangeBounds, sync::Arc};
 
 use database::Database;
 use store_crate::{types::kv::mutable::KVStoreMut, QueryableKVStore, TransactionalKVStore};
@@ -8,7 +8,7 @@ use crate::types::{
     store::{
         errors::GasStoreErrors,
         guard::GasGuard,
-        prefix::{mutable::GasStorePrefixMut, GasStorePrefix},
+        prefix::{mutable::GasStorePrefixMut, GasStorePrefix}, range::GasRange,
     },
 };
 
@@ -73,7 +73,7 @@ impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
         GasStorePrefixMut::new(self.guard, self.inner.prefix_store_mut(prefix))
     }
 
-    // pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&mut self, range: R) -> GasRange<'_, R, DB> {
-    //     GasRange::new(self.inner.range(range), &mut self.gas_meter)
-    // }
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&'a self, range: R) -> GasRange<'a, R, DB> {
+        GasRange::new_kv(self.inner.range(range), self.guard.clone())
+    }
 }
