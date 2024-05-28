@@ -267,14 +267,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
 
         self.block_height_increment();
 
-        let header: tendermint::types::proto::header::RawHeader = request
-            .header
-            .clone()
-            .expect("tendermint will never send nothing to the app")
-            .try_into()
-            .expect("tendermint will send a valid Header struct");
-
-        self.set_block_header(header.clone());
+        self.set_block_header(request.header.clone());
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
         let mut state = self.state.write().expect(POISONED_LOCK);
@@ -282,7 +275,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
         let mut ctx = BlockContext::new(
             &mut multi_store,
             self.block_height(),
-            header.try_into().expect("Invalid request"),
+            request.header.clone().try_into().expect("Invalid request"), //TODO:remove conversion
         );
 
         {

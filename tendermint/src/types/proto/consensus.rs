@@ -5,13 +5,13 @@ use super::params::{BlockParams, EvidenceParams, ValidatorParams, VersionParams}
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
 pub struct ConsensusParams {
     #[prost(message, optional, tag = "1")]
-    pub block: ::core::option::Option<BlockParams>,
+    pub block: Option<BlockParams>,
     #[prost(message, optional, tag = "2")]
-    pub evidence: ::core::option::Option<EvidenceParams>,
+    pub evidence: Option<EvidenceParams>,
     #[prost(message, optional, tag = "3")]
-    pub validator: ::core::option::Option<ValidatorParams>,
+    pub validator: Option<ValidatorParams>,
     #[prost(message, optional, tag = "4")]
-    pub version: ::core::option::Option<VersionParams>,
+    pub version: Option<VersionParams>,
 }
 
 impl From<ConsensusParams> for inner::ConsensusParams {

@@ -6,17 +6,18 @@ use store_crate::{
     },
     StoreKey, TransactionStore,
 };
-use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
+use tendermint::types::{
+    chain_id::ChainId,
+    proto::{event::Event, header::Header},
+    time::Timestamp,
+};
 
 use crate::{
     baseapp::options::NodeOptions,
     baseapp::ConsensusParams,
-    types::{
-        gas::{
-            kind::{BlockKind, TxKind},
-            GasMeter,
-        },
-        header::Header,
+    types::gas::{
+        kind::{BlockKind, TxKind},
+        GasMeter,
     },
 };
 
@@ -116,6 +117,6 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
     }
 
     fn get_time(&self) -> Option<Timestamp> {
-        self.header.time.clone()
+        Some(self.header.time.clone())
     }
 }

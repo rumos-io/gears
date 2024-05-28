@@ -72,11 +72,7 @@ impl<
         let mut balances = vec![];
         let params = self.staking_params_keeper.get(ctx);
         let denom = params.bond_denom;
-        let ctx_time = ctx
-            .header
-            .time
-            .as_ref()
-            .expect("Expected timestamp in transaction context header.");
+        let ctx_time = ctx.header.time.clone();
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let ctx_time =

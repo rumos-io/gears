@@ -165,7 +165,7 @@ impl<T: ABCIApplication> Application for ABCI<T> {
         &self,
         request: tendermint_proto::abci::RequestBeginBlock,
     ) -> tendermint_proto::abci::ResponseBeginBlock {
-        T::begin_block(&self.handler, request.into()).into()
+        T::begin_block(&self.handler, request.try_into().unwrap_or_invalid()).into()
     }
 
     fn deliver_tx(
