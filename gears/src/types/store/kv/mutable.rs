@@ -8,7 +8,8 @@ use crate::types::{
     store::{
         errors::GasStoreErrors,
         guard::GasGuard,
-        prefix::{mutable::GasStorePrefixMut, GasStorePrefix}, range::GasRange,
+        prefix::{mutable::GasStorePrefixMut, GasStorePrefix},
+        range::GasRange,
     },
 };
 

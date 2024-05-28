@@ -1,5 +1,5 @@
 pub const DELETE_DESC: &str = "Delete";
-pub const HAS_DESC: &str = "Has";
+// pub const HAS_DESC: &str = "Has";
 pub const READ_COST_FLAT_DESC: &str = "ReadFlat";
 pub const WRITE_COST_FLAT_DESC: &str = "WriteFlat";
 pub const READ_PER_BYTE_DESC: &str = "ReadPerByte";
