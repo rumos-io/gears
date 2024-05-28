@@ -37,9 +37,9 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 /// A domain ConsensusParams type that wraps domain consensus params types.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConsensusParams {
-    pub block: Option<BlockParams>,
-    pub evidence: Option<EvidenceParams>,
-    pub validator: Option<ValidatorParams>,
+    pub block: BlockParams,
+    pub evidence: EvidenceParams,
+    pub validator: ValidatorParams,
     // TODO: consider to check the importance and usage
     // pub version: Option<VersionParams>
 }
@@ -50,6 +50,17 @@ pub struct BlockParams {
     pub max_bytes: String,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_gas: i64,
+}
+
+impl Default for BlockParams {
+    fn default() -> Self {
+        // TODO: implement defaults
+        // from sdk testing setup
+        BlockParams {
+            max_bytes: 200_000.to_string(),
+            max_gas: 2_000_000,
+        }
+    }
 }
 
 impl From<inner::BlockParams> for BlockParams {
@@ -66,6 +77,15 @@ pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
 
+impl Default for ValidatorParams {
+    fn default() -> Self {
+        // TODO: check defaults
+        Self {
+            pub_key_types: vec!["secp256k1".to_string()],
+        }
+    }
+}
+
 impl From<inner::ValidatorParams> for ValidatorParams {
     fn from(params: inner::ValidatorParams) -> ValidatorParams {
         ValidatorParams {
@@ -76,9 +96,21 @@ impl From<inner::ValidatorParams> for ValidatorParams {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EvidenceParams {
-    max_age_num_blocks: String,
-    max_age_duration: Option<String>,
-    max_bytes: String,
+    pub max_age_num_blocks: String,
+    pub max_age_duration: Option<String>,
+    pub max_bytes: String,
+}
+
+impl Default for EvidenceParams {
+    fn default() -> Self {
+        // TODO: update defaults
+        // from sdk testing setup
+        EvidenceParams {
+            max_age_num_blocks: 302400.to_string(),
+            max_age_duration: Some((504 * 3600 * SEC_TO_NANO).to_string()), // 3 weeks
+            max_bytes: 10000.to_string(),
+        }
+    }
 }
 
 impl From<inner::EvidenceParams> for EvidenceParams {
@@ -118,20 +150,22 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
     ) -> ConsensusParams {
         let sub_store = subspace(store, &self.params_subspace_key);
 
-        let block_params = self.block_params(store);
+        let block_params = self.block_params(store).unwrap_or_default();
         let evidence_params = sub_store
             .params_field(KEY_EVIDENCE_PARAMS, ParamKind::Bytes)
             .map(|params| {
                 serde_json::from_slice(&params.bytes().expect("We sure that this is bytes"))
                     .expect("conversion from json won't fail")
-            });
+            })
+            .unwrap_or_default();
 
         let validator_params = sub_store
             .params_field(KEY_VALIDATOR_PARAMS, ParamKind::Bytes)
             .map(|params| {
                 serde_json::from_slice(&params.bytes().expect("We sure that this is bytes"))
                     .expect("conversion from json won't fail")
-            });
+            })
+            .unwrap_or_default();
 
         ConsensusParams {
             block: block_params,

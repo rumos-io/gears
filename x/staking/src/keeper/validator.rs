@@ -49,16 +49,14 @@ impl<
         msg.description.ensure_length()?;
 
         let consensus_validators = &ctx.consensus_params().validator;
-        if let Some(consensus_validators) = consensus_validators {
-            // TODO: discuss impl of `str_type`
-            let pub_key_type = msg.pub_key.str_type();
-            if !consensus_validators
-                .pub_key_types
-                .iter()
-                .any(|key_type| pub_key_type == key_type)
-            {
-                return Err(AppError::InvalidPublicKey);
-            }
+        // TODO: discuss impl of `str_type`
+        let pub_key_type = msg.pub_key.str_type();
+        if !consensus_validators
+            .pub_key_types
+            .iter()
+            .any(|key_type| pub_key_type == key_type)
+        {
+            return Err(AppError::InvalidPublicKey);
         }
 
         let mut validator = Validator::new_with_defaults(
