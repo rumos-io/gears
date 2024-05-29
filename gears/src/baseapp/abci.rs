@@ -1,7 +1,7 @@
 use super::BaseApp;
 use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
-use crate::error::{AppError, POISONED_LOCK};
+use crate::error::POISONED_LOCK;
 use crate::params::ParamsSubspaceKey;
 use crate::types::context::block::BlockContext;
 use crate::types::gas::Gas;
@@ -40,10 +40,10 @@ use tendermint::{
 };
 use tracing::{debug, error, info};
 
-impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplication
+impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplication<H::Genesis>
     for BaseApp<PSK, H, AI>
 {
-    fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
+    fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
         info!("Got init chain request");
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
@@ -60,18 +60,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
         self.baseapp_params_keeper
             .set_consensus_params(&mut ctx, request.consensus_params.clone());
 
-        let genesis: H::Genesis = String::from_utf8(request.app_state_bytes.into())
-            .map_err(|e| AppError::Genesis(e.to_string()))
-            .and_then(|s| serde_json::from_str(&s).map_err(|e| AppError::Genesis(e.to_string())))
-            .unwrap_or_else(|e| {
-                error!(
-                    "Invalid genesis provided by Tendermint.\n{}\nTerminating process",
-                    e.to_string()
-                );
-                std::process::exit(1)
-            });
-
-        self.abci_handler.init_genesis(&mut ctx, genesis.clone());
+        self.abci_handler
+            .init_genesis(&mut ctx, request.app_genesis.clone());
 
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),

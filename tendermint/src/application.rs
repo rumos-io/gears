@@ -1,3 +1,4 @@
+use serde::de::DeserializeOwned;
 use tendermint_abci::Application;
 
 use crate::ext::UnwrapInvalid;
@@ -37,7 +38,7 @@ use crate::types::{
 /// application.
 ///
 /// [`Server`]: crate::Server
-pub trait ABCIApplication: Send + Clone + 'static {
+pub trait ABCIApplication<G>: Send + Clone + 'static {
     /// Echo back the same message as provided in the request.
     fn echo(&self, request: RequestEcho) -> ResponseEcho {
         ResponseEcho {
@@ -51,7 +52,7 @@ pub trait ABCIApplication: Send + Clone + 'static {
     }
 
     /// Called once upon genesis.
-    fn init_chain(&self, _request: RequestInitChain) -> ResponseInitChain {
+    fn init_chain(&self, _request: RequestInitChain<G>) -> ResponseInitChain {
         Default::default()
     }
 
@@ -115,17 +116,23 @@ pub trait ABCIApplication: Send + Clone + 'static {
 }
 
 #[derive(Debug, Clone)]
-pub struct ABCI<T: ABCIApplication> {
+pub struct ABCI<T: ABCIApplication<G>, G> {
     handler: T,
+    _phantom: std::marker::PhantomData<G>,
 }
 
-impl<T: ABCIApplication> From<T> for ABCI<T> {
+impl<G, T: ABCIApplication<G>> From<T> for ABCI<T, G> {
     fn from(handler: T) -> Self {
-        Self { handler }
+        Self {
+            handler,
+            _phantom: Default::default(),
+        }
     }
 }
 
-impl<T: ABCIApplication> Application for ABCI<T> {
+impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Application
+    for ABCI<T, G>
+{
     fn echo(
         &self,
         request: tendermint_proto::abci::RequestEcho,

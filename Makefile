@@ -1,5 +1,8 @@
 run-debug:
-	RUST_LOG=DEBUG cargo run -- run --verbose
+	RUST_LOG=DEBUG cargo run -- run --min-gas-prices 0uatom
+
+run-backtrace:
+	RUST_BACKTRACE=1 cargo run -- run --min-gas-prices 0uatom
 
 run:
 	cargo run -- run --min-gas-prices 0uatom
