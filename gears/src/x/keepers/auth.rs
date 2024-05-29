@@ -2,11 +2,8 @@ use database::Database;
 use kv_store::StoreKey;
 
 use crate::{
-    types::{
-        account::Account,
-        address::AccAddress,
-        context::{QueryableContext, TransactionalContext},
-    },
+    context::{QueryableContext, TransactionalContext},
+    types::{account::Account, address::AccAddress},
     x::module::Module,
 };
 

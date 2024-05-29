@@ -8,10 +8,10 @@ use std::{
 use crate::types::tx::TxMessage;
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
+    context::{query::QueryContext, simple::SimpleContext},
     error::{AppError, POISONED_LOCK},
     params::ParamsSubspaceKey,
     types::{
-        context::{query::QueryContext, simple::SimpleContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
         header::Header,
         tx::raw::TxWithRaw,

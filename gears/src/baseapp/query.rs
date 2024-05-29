@@ -3,9 +3,9 @@ use serde::Serialize;
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
+    context::query::QueryContext,
     error::POISONED_LOCK,
     params::ParamsSubspaceKey,
-    types::context::query::QueryContext,
 };
 
 use super::{errors::QueryError, BaseApp};

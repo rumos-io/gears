@@ -6,7 +6,6 @@ use tendermint::types::proto::event::Event;
 use crate::baseapp::options::NodeOptions;
 use crate::baseapp::ConsensusParams;
 use crate::types::auth::fee::Fee;
-use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
@@ -15,7 +14,8 @@ use crate::types::header::Header;
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
-    types::{context::TransactionalContext, tx::raw::TxWithRaw},
+    context::{tx::TxContext, TransactionalContext},
+    types::tx::raw::TxWithRaw,
 };
 
 use super::{build_tx_gas_meter, ExecutionMode};

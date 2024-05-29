@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use crate::{
+    context::{QueryableContext, TransactionalContext},
     params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
-    types::context::{QueryableContext, TransactionalContext},
 };
 
 mod inner {

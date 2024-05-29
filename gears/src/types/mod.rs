@@ -2,7 +2,6 @@ pub mod account;
 pub mod address;
 pub mod auth;
 pub mod base;
-pub mod context;
 #[allow(dead_code)]
 pub mod decimal256;
 pub mod denom;

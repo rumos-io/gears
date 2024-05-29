@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, str::FromStr};
 use database::{prefix::PrefixDB, Database};
 use kv_store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 
-use crate::types::context::{QueryableContext, TransactionalContext};
+use crate::context::{QueryableContext, TransactionalContext};
 
 use self::{parsed::Params, space::ParamsSpace, space_mut::ParamsSpaceMut};
 

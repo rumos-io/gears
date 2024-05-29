@@ -2,14 +2,9 @@ use database::Database;
 use kv_store::StoreKey;
 
 use crate::{
+    context::{QueryableContext, TransactionalContext},
     error::AppError,
-    types::{
-        address::AccAddress,
-        base::send::SendCoins,
-        context::{QueryableContext, TransactionalContext},
-        denom::Denom,
-        tx::metadata::Metadata,
-    },
+    types::{address::AccAddress, base::send::SendCoins, denom::Denom, tx::metadata::Metadata},
     x::module::Module,
 };
 

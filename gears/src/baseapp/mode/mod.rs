@@ -10,9 +10,9 @@ use super::{options::NodeOptions, params::ConsensusParams};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
+    context::tx::TxContext,
     types::{
         auth::fee::Fee,
-        context::tx::TxContext,
         gas::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::TxKind, GasMeter,
         },

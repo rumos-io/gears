@@ -1,11 +1,9 @@
 use crate::{
     baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
+    context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
-    types::{
-        context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-        tx::{raw::TxWithRaw, TxMessage},
-    },
+    types::tx::{raw::TxWithRaw, TxMessage},
 };
 use database::Database;
 use kv_store::StoreKey;

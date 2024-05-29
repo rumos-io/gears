@@ -6,9 +6,9 @@ use super::{build_tx_gas_meter, ExecutionMode};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, options::NodeOptions, params::ConsensusParams},
+    context::{tx::TxContext, TransactionalContext},
     types::{
         auth::fee::Fee,
-        context::{tx::TxContext, TransactionalContext},
         gas::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas,
             GasMeter,

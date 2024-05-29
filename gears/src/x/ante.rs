@@ -6,8 +6,6 @@ use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRe
 use crate::types::auth::gas::Gas;
 use crate::types::base::coin::Coin;
 use crate::types::base::send::SendCoins;
-use crate::types::context::tx::TxContext;
-use crate::types::context::QueryableContext;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
@@ -17,11 +15,9 @@ use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
 use crate::x::module::Module;
 use crate::{
+    context::{tx::TxContext, QueryableContext, TransactionalContext},
     error::AppError,
-    types::{
-        context::TransactionalContext,
-        tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
-    },
+    types::tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
 };
 use anyhow::anyhow;
 use core_types::tx::signature::SignatureData;

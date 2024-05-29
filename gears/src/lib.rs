@@ -4,6 +4,7 @@ pub mod baseapp;
 pub mod cli;
 pub mod commands;
 pub mod config;
+pub mod context;
 pub mod crypto;
 pub mod defaults;
 pub mod error;
