@@ -11,11 +11,11 @@ pub mod mutable;
 
 pub struct GasStorePrefix<'a, DB> {
     inner: ImmutablePrefixStore<'a, DB>,
-    guard: GasGuard<'a>,
+    guard: GasGuard,
 }
 
 impl<'a, DB> GasStorePrefix<'a, DB> {
-    pub(crate) fn new(guard: GasGuard<'a>, inner: ImmutablePrefixStore<'a, DB>) -> Self {
+    pub(crate) fn new(guard: GasGuard, inner: ImmutablePrefixStore<'a, DB>) -> Self {
         Self { inner, guard }
     }
 }

@@ -10,11 +10,11 @@ use super::GasStorePrefix;
 
 pub struct GasStorePrefixMut<'a, DB> {
     inner: MutablePrefixStore<'a, DB>,
-    guard: GasGuard<'a>,
+    guard: GasGuard,
 }
 
 impl<'a, DB> GasStorePrefixMut<'a, DB> {
-    pub(crate) fn new(guard: GasGuard<'a>, inner: MutablePrefixStore<'a, DB>) -> Self {
+    pub(crate) fn new(guard: GasGuard, inner: MutablePrefixStore<'a, DB>) -> Self {
         Self { inner, guard }
     }
 

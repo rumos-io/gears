@@ -13,18 +13,18 @@ enum RangeBackend<'a, R: RangeBounds<Vec<u8>>, DB> {
 
 pub struct GasRange<'a, R: RangeBounds<Vec<u8>>, DB> {
     inner: RangeBackend<'a, R, DB>,
-    guard: GasGuard<'a>,
+    guard: GasGuard,
 }
 
 impl<'a, R: RangeBounds<Vec<u8>>, DB> GasRange<'a, R, DB> {
-    pub(super) fn new_kv(inner: Range<'a, R, DB>, guard: GasGuard<'a>) -> Self {
+    pub(super) fn new_kv(inner: Range<'a, R, DB>, guard: GasGuard) -> Self {
         Self {
             inner: RangeBackend::Kv(inner),
             guard,
         }
     }
 
-    pub(super) fn new_prefix(inner: PrefixRange<'a, DB>, guard: GasGuard<'a>) -> Self {
+    pub(super) fn new_prefix(inner: PrefixRange<'a, DB>, guard: GasGuard) -> Self {
         Self {
             inner: RangeBackend::Prefix(inner),
             guard,

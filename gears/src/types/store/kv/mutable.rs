@@ -1,38 +1,28 @@
-use std::{
-    cell::RefCell,
-    ops::{Bound, RangeBounds},
-    sync::Arc,
-};
+use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 use store_crate::{
     ext::UnwrapInfallible, types::kv::mutable::KVStoreMut, QueryableKVStore, TransactionalKVStore,
 };
 
-use crate::types::{
-    gas::{kind::TxKind, GasMeter},
-    store::{
-        errors::GasStoreErrors,
-        guard::GasGuard,
-        prefix::{mutable::GasStorePrefixMut, GasStorePrefix},
-        range::GasRange,
-    },
+use crate::types::store::{
+    errors::GasStoreErrors,
+    guard::GasGuard,
+    prefix::{mutable::GasStorePrefixMut, GasStorePrefix},
+    range::GasRange,
 };
 
 use super::GasKVStore;
 
 #[derive(Debug)]
 pub struct GasKVStoreMut<'a, DB> {
-    pub(super) guard: GasGuard<'a>,
+    pub(super) guard: GasGuard,
     pub(super) inner: KVStoreMut<'a, DB>,
 }
 
 impl<'a, DB> GasKVStoreMut<'a, DB> {
-    pub(crate) fn new(guard: &'a mut GasMeter<TxKind>, inner: KVStoreMut<'a, DB>) -> Self {
-        Self {
-            guard: GasGuard(Arc::new(RefCell::new(guard))),
-            inner,
-        }
+    pub(crate) fn new(guard: GasGuard, inner: KVStoreMut<'a, DB>) -> Self {
+        Self { guard, inner }
     }
 
     pub fn to_immutable(&'a self) -> GasKVStore<'a, DB> {

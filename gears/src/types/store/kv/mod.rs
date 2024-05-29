@@ -1,30 +1,21 @@
 pub mod mutable;
 
-use std::{
-    cell::RefCell,
-    ops::{Bound, RangeBounds},
-    sync::Arc,
-};
+use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 use store_crate::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
-
-use crate::types::gas::{kind::TxKind, GasMeter};
 
 use super::{errors::GasStoreErrors, guard::GasGuard, prefix::GasStorePrefix, range::GasRange};
 
 #[derive(Debug)]
 pub struct GasKVStore<'a, DB> {
-    pub(super) guard: GasGuard<'a>,
+    pub(super) guard: GasGuard,
     pub(super) inner: KVStore<'a, DB>,
 }
 
 impl<'a, DB> GasKVStore<'a, DB> {
-    pub(crate) fn new(guard: &'a mut GasMeter<TxKind>, inner: KVStore<'a, DB>) -> Self {
-        Self {
-            guard: GasGuard(Arc::new(RefCell::new(guard))),
-            inner,
-        }
+    pub(crate) fn new(guard: GasGuard, inner: KVStore<'a, DB>) -> Self {
+        Self { guard, inner }
     }
 }
 
