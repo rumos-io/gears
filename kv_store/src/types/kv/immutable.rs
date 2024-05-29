@@ -27,9 +27,9 @@ impl<'a, DB: Database> QueryableKVStore for KVStore<'a, DB> {
 
     type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
 
-    type GetErr = Infallible;
+    type Err = Infallible;
 
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr> {
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
         Ok(match self.0 {
             KVStoreBackend::Commit(var) => var.get(k),
             KVStoreBackend::Cache(var) => var.get(k),

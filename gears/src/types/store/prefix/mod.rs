@@ -1,40 +1,38 @@
-use std::ops::RangeBounds;
-
 use database::Database;
 use kv_store::{
     ext::UnwrapInfallible, types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore,
 };
 
-use super::{errors::GasStoreErrors, guard::GasGuard, range::GasRange};
+use super::gas::{errors::GasStoreErrors, prefix::GasPrefixStore};
 
 pub mod mutable;
 
-pub struct GasStorePrefix<'a, DB> {
-    inner: ImmutablePrefixStore<'a, DB>,
-    guard: GasGuard,
+enum PrefixStoreBackend<'a, DB> {
+    Gas(GasPrefixStore<'a, DB>),
+    Kv(ImmutablePrefixStore<'a, DB>),
 }
 
-impl<'a, DB> GasStorePrefix<'a, DB> {
-    pub(crate) fn new(guard: GasGuard, inner: ImmutablePrefixStore<'a, DB>) -> Self {
-        Self { inner, guard }
+pub struct PrefixStore<'a, DB>(PrefixStoreBackend<'a, DB>);
+
+impl<'a, DB> From<GasPrefixStore<'a, DB>> for PrefixStore<'a, DB> {
+    fn from(value: GasPrefixStore<'a, DB>) -> Self {
+        Self(PrefixStoreBackend::Gas(value))
     }
 }
 
-impl<DB: Database> ReadPrefixStore for GasStorePrefix<'_, DB> {
-    type GetErr = GasStoreErrors;
-
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::GetErr> {
-        let value = self.inner.get(&k).infallible();
-
-        self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
-
-        Ok(value)
+impl<'a, DB> From<ImmutablePrefixStore<'a, DB>> for PrefixStore<'a, DB> {
+    fn from(value: ImmutablePrefixStore<'a, DB>) -> Self {
+        Self(PrefixStoreBackend::Kv(value))
     }
 }
 
-impl<'a, DB: Database> GasStorePrefix<'a, DB> {
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&'a self, range: R) -> GasRange<'a, R, DB> {
-        GasRange::new_prefix(self.inner.range(range), self.guard.clone())
+impl<DB: Database> ReadPrefixStore for PrefixStore<'_, DB> {
+    type Err = GasStoreErrors;
+
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
+        match &self.0 {
+            PrefixStoreBackend::Gas(var) => var.get(k),
+            PrefixStoreBackend::Kv(var) => Ok(var.get(k).unwrap_infallible()),
+        }
     }
 }

@@ -33,25 +33,23 @@ impl<DB> MutablePrefixStore<'_, DB> {
 }
 
 impl<DB: Database> ReadPrefixStore for MutablePrefixStore<'_, DB> {
-    type GetErr = Infallible;
+    type Err = Infallible;
 
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::GetErr> {
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
         let full_key = [&self.prefix, k.as_ref()].concat();
         self.store.get(&full_key)
     }
 }
 
 impl<DB: Database> WritePrefixStore for MutablePrefixStore<'_, DB> {
-    type SetErr = Infallible;
-
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         k: KI,
         v: VI,
-    ) -> Result<(), Self::SetErr> {
+    ) -> Result<(), Self::Err> {
         // TODO: do we need to check for zero length keys as with the KVStore::set?
         let full_key = [self.prefix.clone(), k.into_iter().collect()].concat();
-        self.store.set(full_key, v).infallible();
+        self.store.set(full_key, v).unwrap_infallible();
 
         Ok(())
     }

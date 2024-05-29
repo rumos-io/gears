@@ -16,7 +16,7 @@ impl<DB: Database> ParamsSpace<'_, DB> {
         let mut params_fields = Vec::with_capacity(keys.len());
 
         for (key, _) in keys {
-            params_fields.push((key, self.inner.get(key).infallible()?));
+            params_fields.push((key, self.inner.get(key).unwrap_infallible()?));
         }
 
         Some(T::from_raw(params_fields.into_iter().collect()))
@@ -24,6 +24,6 @@ impl<DB: Database> ParamsSpace<'_, DB> {
 
     /// Return only field from structure.
     pub fn params_field(&self, path: &str, kind: ParamKind) -> Option<Params> {
-        Some(kind.parse_param(self.inner.get(path).infallible()?))
+        Some(kind.parse_param(self.inner.get(path).unwrap_infallible()?))
     }
 }

@@ -50,9 +50,9 @@ impl<'a, DB: Database> QueryableKVStore for KVStoreMut<'a, DB> {
 
     type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
 
-    type GetErr = Infallible;
+    type Err = Infallible;
 
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr> {
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
         Ok(match &self.0 {
             KVStoreBackendMut::Commit(var) => var.get(k),
             KVStoreBackendMut::Cache(var) => var.get(k),
@@ -78,8 +78,6 @@ impl<'a, DB: Database> QueryableKVStore for KVStoreMut<'a, DB> {
 impl<'a, DB: Database> TransactionalKVStore for KVStoreMut<'a, DB> {
     type PrefixMut = MutablePrefixStore<'a, DB>;
 
-    type SetErr = Infallible;
-
     fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> Self::PrefixMut {
         MutablePrefixStore {
             store: self,
@@ -91,7 +89,7 @@ impl<'a, DB: Database> TransactionalKVStore for KVStoreMut<'a, DB> {
         &mut self,
         key: KI,
         value: VI,
-    ) -> Result<(), Self::SetErr> {
+    ) -> Result<(), Self::Err> {
         match &mut self.0 {
             KVStoreBackendMut::Commit(var) => var.set(key, value),
             KVStoreBackendMut::Cache(var) => var.set(key, value),

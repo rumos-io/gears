@@ -1,4 +1,4 @@
-use std::ops::{Bound, RangeBounds};
+use std::ops::Bound;
 
 use database::Database;
 use kv_store::{
@@ -6,88 +6,73 @@ use kv_store::{
 };
 
 use crate::types::store::{
-    errors::GasStoreErrors,
-    guard::GasGuard,
-    prefix::{mutable::GasStorePrefixMut, GasStorePrefix},
-    range::GasRange,
+    gas::{errors::GasStoreErrors, kv::mutable::GasKVStoreMut},
+    prefix::{mutable::PrefixStoreMut, PrefixStore},
 };
 
-use super::GasKVStore;
-
-#[derive(Debug)]
-pub struct GasKVStoreMut<'a, DB> {
-    pub(super) guard: GasGuard,
-    pub(super) inner: KVStoreMut<'a, DB>,
+pub enum StoreMutBackend<'a, DB> {
+    Gas(GasKVStoreMut<'a, DB>),
+    Kv(KVStoreMut<'a, DB>),
 }
 
-impl<'a, DB> GasKVStoreMut<'a, DB> {
-    pub(crate) fn new(guard: GasGuard, inner: KVStoreMut<'a, DB>) -> Self {
-        Self { guard, inner }
-    }
+pub struct StoreMut<'a, DB>(StoreMutBackend<'a, DB>);
 
-    pub fn to_immutable(&'a self) -> GasKVStore<'a, DB> {
-        GasKVStore {
-            guard: self.guard.clone(),
-            inner: self.inner.to_immutable(),
+impl<'a, DB> From<GasKVStoreMut<'a, DB>> for StoreMut<'a, DB> {
+    fn from(value: GasKVStoreMut<'a, DB>) -> Self {
+        Self(StoreMutBackend::Gas(value))
+    }
+}
+
+impl<'a, DB> From<KVStoreMut<'a, DB>> for StoreMut<'a, DB> {
+    fn from(value: KVStoreMut<'a, DB>) -> Self {
+        Self(StoreMutBackend::Kv(value))
+    }
+}
+
+impl<'a, DB: Database> QueryableKVStore for StoreMut<'a, DB> {
+    type Prefix = PrefixStore<'a, DB>;
+
+    type Range = kv_store::range::Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+
+    type Err = GasStoreErrors;
+
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
+        match &self.0 {
+            StoreMutBackend::Gas(var) => var.get(k),
+            StoreMutBackend::Kv(var) => Ok(var.get(k).unwrap_infallible()),
         }
-    }
-}
-
-impl<'a, DB: Database> QueryableKVStore for GasKVStoreMut<'a, DB> {
-    type Prefix = GasStorePrefix<'a, DB>;
-
-    type Range = GasRange<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
-
-    type GetErr = GasStoreErrors;
-
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr> {
-        let value = self.inner.get(&k).infallible();
-
-        self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
-
-        Ok(value)
     }
 
     fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
-        GasStorePrefix::new(self.guard, self.inner.prefix_store(prefix))
+        match self.0 {
+            StoreMutBackend::Gas(var) => var.prefix_store(prefix).into(),
+            StoreMutBackend::Kv(var) => var.prefix_store(prefix).into(),
+        }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        // GasRange::new_kv(self.inner.range(range), self.guard.clone())
-        todo!()
+    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
+        todo!() // TODO:NOW
     }
 }
 
-impl<'a, DB: Database> TransactionalKVStore for GasKVStoreMut<'a, DB> {
-    type PrefixMut = GasStorePrefixMut<'a, DB>;
-
-    type SetErr = Self::GetErr;
+impl<'a, DB: Database> TransactionalKVStore for StoreMut<'a, DB> {
+    type PrefixMut = PrefixStoreMut<'a, DB>;
 
     fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> Self::PrefixMut {
-        GasStorePrefixMut::new(self.guard, self.inner.prefix_store_mut(prefix))
+        match self.0 {
+            StoreMutBackend::Gas(var) => var.prefix_store_mut(prefix).into(),
+            StoreMutBackend::Kv(var) => var.prefix_store_mut(prefix).into(),
+        }
     }
 
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         key: KI,
         value: VI,
-    ) -> Result<(), Self::SetErr> {
-        let key = key.into_iter().collect::<Vec<_>>();
-        let value = value.into_iter().collect::<Vec<_>>();
-
-        self.guard.set(key.len(), value.len())?;
-
-        self.inner.set(key, value).infallible();
-
-        Ok(())
-    }
-}
-
-impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
-    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
-        self.guard.delete()?;
-
-        Ok(self.inner.delete(k))
+    ) -> Result<(), Self::Err> {
+        match &mut self.0 {
+            StoreMutBackend::Gas(var) => var.set(key, value),
+            StoreMutBackend::Kv(var) => Ok(var.set(key, value).unwrap_infallible()),
+        }
     }
 }

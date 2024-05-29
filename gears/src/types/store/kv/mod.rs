@@ -1,46 +1,56 @@
-pub mod mutable;
-
-use std::ops::{Bound, RangeBounds};
+use std::ops::Bound;
 
 use database::Database;
 use kv_store::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
 
-use super::{errors::GasStoreErrors, guard::GasGuard, prefix::GasStorePrefix, range::GasRange};
+use super::{
+    gas::{errors::GasStoreErrors, kv::GasKVStore},
+    prefix::PrefixStore,
+};
 
-#[derive(Debug)]
-pub struct GasKVStore<'a, DB> {
-    pub(super) guard: GasGuard,
-    pub(super) inner: KVStore<'a, DB>,
+pub mod mutable;
+
+pub enum StoreBackend<'a, DB> {
+    Gas(GasKVStore<'a, DB>),
+    Kv(KVStore<'a, DB>),
 }
 
-impl<'a, DB> GasKVStore<'a, DB> {
-    pub(crate) fn new(guard: GasGuard, inner: KVStore<'a, DB>) -> Self {
-        Self { guard, inner }
+pub struct Store<'a, DB>(StoreBackend<'a, DB>);
+
+impl<'a, DB> From<GasKVStore<'a, DB>> for Store<'a, DB> {
+    fn from(value: GasKVStore<'a, DB>) -> Self {
+        Self(StoreBackend::Gas(value))
     }
 }
 
-impl<'a, DB: Database> QueryableKVStore for GasKVStore<'a, DB> {
-    type Prefix = GasStorePrefix<'a, DB>;
+impl<'a, DB> From<KVStore<'a, DB>> for Store<'a, DB> {
+    fn from(value: KVStore<'a, DB>) -> Self {
+        Self(StoreBackend::Kv(value))
+    }
+}
 
-    type Range = GasRange<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+impl<'a, DB: Database> QueryableKVStore for Store<'a, DB> {
+    type Prefix = PrefixStore<'a, DB>;
 
-    type GetErr = GasStoreErrors;
+    type Range = kv_store::range::Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
 
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr> {
-        let value = self.inner.get(&k).infallible();
+    type Err = GasStoreErrors;
 
-        self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
-
-        Ok(value)
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
+        match &self.0 {
+            StoreBackend::Gas(var) => var.get(k),
+            StoreBackend::Kv(var) => Ok(var.get(k).unwrap_infallible()),
+        }
     }
 
     fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
-        GasStorePrefix::new(self.guard, self.inner.prefix_store(prefix))
+        match self.0 {
+            StoreBackend::Gas(var) => var.prefix_store(prefix).into(),
+            StoreBackend::Kv(var) => var.prefix_store(prefix).into(),
+        }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        // GasRange::new_kv(self.inner.range(range), self.guard.clone())
-        todo!()
+    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
+        todo!() // TODO:NOW
     }
 }

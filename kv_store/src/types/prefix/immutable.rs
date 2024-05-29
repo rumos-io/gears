@@ -37,9 +37,9 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
 }
 
 impl<DB: Database> ReadPrefixStore for ImmutablePrefixStore<'_, DB> {
-    type GetErr = Infallible;
+    type Err = Infallible;
 
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::GetErr> {
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
         let full_key = [&self.prefix, k.as_ref()].concat();
         self.store.get(&full_key)
     }

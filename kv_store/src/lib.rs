@@ -27,27 +27,25 @@ pub trait StoreKey:
 }
 
 pub trait ReadPrefixStore {
-    type GetErr;
+    type Err;
 
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::GetErr>;
+    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err>;
 }
 
 pub trait WritePrefixStore: ReadPrefixStore {
-    type SetErr;
-
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         k: KI,
         v: VI,
-    ) -> Result<(), Self::SetErr>;
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait QueryableKVStore {
     type Prefix: ReadPrefixStore;
     type Range: Iterator;
-    type GetErr;
+    type Err;
 
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::GetErr>;
+    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err>;
     fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix;
     fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range;
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
@@ -55,14 +53,13 @@ pub trait QueryableKVStore {
 
 pub trait TransactionalKVStore: QueryableKVStore {
     type PrefixMut: WritePrefixStore;
-    type SetErr;
 
     fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> Self::PrefixMut;
     fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         key: KI,
         value: VI,
-    ) -> Result<(), Self::SetErr>;
+    ) -> Result<(), Self::Err>;
 }
 
 pub trait QueryableMultiKVStore<DB, SK> {
