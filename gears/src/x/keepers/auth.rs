@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::StoreKey;
+use kv_store::StoreKey;
 
 use crate::{
     types::{

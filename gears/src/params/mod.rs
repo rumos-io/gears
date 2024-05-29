@@ -1,7 +1,7 @@
 use std::{collections::HashMap, hash::Hash, str::FromStr};
 
 use database::{prefix::PrefixDB, Database};
-use store_crate::{QueryableKVStore, StoreKey, TransactionalKVStore};
+use kv_store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 
 use crate::types::context::{QueryableContext, TransactionalContext};
 

@@ -19,7 +19,7 @@ use crate::{
 };
 use bytes::Bytes;
 use database::RocksDB;
-use store_crate::{
+use kv_store::{
     types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore,
 };

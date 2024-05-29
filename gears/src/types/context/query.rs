@@ -1,10 +1,10 @@
 use database::prefix::PrefixDB;
 use database::Database;
 
-use store_crate::types::kv::immutable::KVStore;
-use store_crate::types::query::QueryMultiStore;
-use store_crate::QueryableMultiKVStore;
-use store_crate::{error::StoreError, StoreKey};
+use kv_store::types::kv::immutable::KVStore;
+use kv_store::types::query::QueryMultiStore;
+use kv_store::QueryableMultiKVStore;
+use kv_store::{error::StoreError, StoreKey};
 use tendermint::types::chain_id::ChainId;
 
 use super::QueryableContext;

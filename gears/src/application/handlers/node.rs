@@ -8,7 +8,7 @@ use crate::{
     },
 };
 use database::Database;
-use store_crate::StoreKey;
+use kv_store::StoreKey;
 use tendermint::types::{
     proto::validator::ValidatorUpdate,
     request::{begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery},

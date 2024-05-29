@@ -1,5 +1,5 @@
+use kv_store::types::query::QueryMultiStore;
 use serde::Serialize;
-use store_crate::types::query::QueryMultiStore;
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},

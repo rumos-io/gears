@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, TransactionStore, TransactionalMultiKVStore};
+use kv_store::{types::multi::MultiBank, TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use super::{build_tx_gas_meter, ExecutionMode};
@@ -85,7 +85,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
 
     fn commit(
         _ctx: TxContext<'_, DB, AH::StoreKey>,
-        _global_ms: &mut MultiBank<DB, AH::StoreKey, store_crate::ApplicationStore>,
+        _global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
     ) {
     }
 }

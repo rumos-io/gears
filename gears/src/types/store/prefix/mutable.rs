@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{
+use kv_store::{
     ext::UnwrapInfallible, types::prefix::mutable::MutablePrefixStore, ReadPrefixStore,
     WritePrefixStore,
 };

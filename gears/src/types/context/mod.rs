@@ -1,5 +1,5 @@
 use database::prefix::PrefixDB;
-use store_crate::types::kv::{immutable::KVStore, mutable::KVStoreMut};
+use kv_store::types::kv::{immutable::KVStore, mutable::KVStoreMut};
 use tendermint::types::{proto::event::Event, time::Timestamp};
 
 pub mod block;

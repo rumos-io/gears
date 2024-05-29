@@ -1,7 +1,7 @@
 use std::ops::{Bound, RangeBounds};
 
 use database::Database;
-use store_crate::{
+use kv_store::{
     ext::UnwrapInfallible, types::kv::mutable::KVStoreMut, QueryableKVStore, TransactionalKVStore,
 };
 

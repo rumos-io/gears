@@ -30,7 +30,7 @@ pub mod tendermint {
 
 #[cfg(feature = "export")]
 pub mod store {
-    pub use store_crate::*;
+    pub use kv_store::*;
     pub mod database {
         pub use database::*;
     }

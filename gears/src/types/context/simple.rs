@@ -1,5 +1,5 @@
 use database::{prefix::PrefixDB, Database};
-use store_crate::{
+use kv_store::{
     types::{
         kv::{immutable::KVStore, mutable::KVStoreMut},
         multi::MultiBank,

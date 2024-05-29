@@ -1,8 +1,8 @@
 use database::prefix::PrefixDB;
 use database::Database;
-use store_crate::types::kv::immutable::KVStore;
-use store_crate::types::{kv::mutable::KVStoreMut, multi::MultiBank};
-use store_crate::{ApplicationStore, StoreKey};
+use kv_store::types::kv::immutable::KVStore;
+use kv_store::types::{kv::mutable::KVStoreMut, multi::MultiBank};
+use kv_store::{ApplicationStore, StoreKey};
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
 use super::{QueryableContext, TransactionalContext};

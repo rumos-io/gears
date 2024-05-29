@@ -31,9 +31,9 @@ use core_types::{
 };
 use cosmwasm_std::Decimal256;
 use database::Database;
+use kv_store::StoreKey;
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
-use store_crate::StoreKey;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
     fn consume<AP: AuthParams>(

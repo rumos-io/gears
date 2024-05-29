@@ -2,7 +2,7 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use store_crate::{types::multi::MultiBank, ApplicationStore};
+use kv_store::{types::multi::MultiBank, ApplicationStore};
 use tendermint::types::proto::event::Event;
 
 use self::sealed::Sealed;

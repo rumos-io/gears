@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
 use database::Database;
+use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use store_crate::StoreKey;
 
 use crate::{
     params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},

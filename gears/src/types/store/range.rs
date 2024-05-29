@@ -1,7 +1,7 @@
 use std::{borrow::Cow, ops::RangeBounds};
 
 use database::Database;
-use store_crate::{range::Range, types::prefix::range::PrefixRange};
+use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
 use super::guard::GasGuard;
 

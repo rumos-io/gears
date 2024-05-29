@@ -1,6 +1,6 @@
 use database::Database;
-use store_crate::types::multi::MultiBank;
-use store_crate::{TransactionStore, TransactionalMultiKVStore};
+use kv_store::types::multi::MultiBank;
+use kv_store::{TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
 
 use crate::baseapp::options::NodeOptions;
@@ -100,7 +100,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
 
     fn commit(
         mut ctx: TxContext<'_, DB, AH::StoreKey>,
-        global_ms: &mut MultiBank<DB, AH::StoreKey, store_crate::ApplicationStore>,
+        global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
     ) {
         global_ms.sync(ctx.commit());
     }

@@ -11,7 +11,7 @@ workspace = true
 tendermint = { path = "../tendermint" }
 core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
-store_crate = { path = "../store", package = "store" }
+kv_store = { path = "../kv_store" }
 database = { path = "../database", features = ["rocksdb"] }
 
 #newtypes
