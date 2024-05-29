@@ -86,11 +86,19 @@ impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
     pub fn is_check(&self) -> bool {
         self.is_check
     }
+
+    pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+        KVStore::from(self.multi_store.kv_store(store_key))
+    }
+
+    pub fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
+        KVStoreMut::from(self.multi_store.kv_store_mut(store_key))
+    }
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        self.multi_store.kv_store(store_key).into()
+        self.kv_store(store_key)
     }
 
     fn height(&self) -> u64 {
