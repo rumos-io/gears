@@ -39,8 +39,7 @@ impl<'a, DB: Database> QueryableKVStore for GasKVStore<'a, DB> {
         GasPrefixStore::new(self.guard, self.inner.prefix_store(prefix))
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        // GasRange::new_kv(self.inner.range(range), self.guard.clone())
-        todo!()
+    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range {
+        GasRange::new_kv(self.inner.range(range), self.guard.clone())
     }
 }

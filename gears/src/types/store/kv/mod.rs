@@ -1,9 +1,7 @@
-use std::ops::Bound;
-
 use database::Database;
 use kv_store::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
 
-use super::{errors::StoreErrors, gas::kv::GasKVStore, prefix::PrefixStore};
+use super::{errors::StoreErrors, gas::kv::GasKVStore, prefix::PrefixStore, range::StoreRange};
 
 pub mod mutable;
 
@@ -29,7 +27,7 @@ impl<'a, DB> From<KVStore<'a, DB>> for Store<'a, DB> {
 impl<'a, DB: Database> QueryableKVStore for Store<'a, DB> {
     type Prefix = PrefixStore<'a, DB>;
 
-    type Range = kv_store::range::Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+    type Range = StoreRange<'a, DB>;
 
     type Err = StoreErrors;
 
@@ -47,7 +45,10 @@ impl<'a, DB: Database> QueryableKVStore for Store<'a, DB> {
         }
     }
 
-    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        todo!() // TODO:NOW
+    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range {
+        match &self.0 {
+            StoreBackend::Gas(var) => StoreRange::from(var.range(range)),
+            StoreBackend::Kv(var) => StoreRange::from(var.range(range)),
+        }
     }
 }

@@ -1,5 +1,3 @@
-use std::ops::Bound;
-
 use database::Database;
 use kv_store::{
     ext::UnwrapInfallible, types::kv::mutable::KVStoreMut, QueryableKVStore, TransactionalKVStore,
@@ -9,6 +7,7 @@ use crate::types::store::{
     errors::StoreErrors,
     gas::kv::mutable::GasKVStoreMut,
     prefix::{mutable::PrefixStoreMut, PrefixStore},
+    range::StoreRange,
 };
 
 pub enum StoreMutBackend<'a, DB> {
@@ -33,7 +32,7 @@ impl<'a, DB> From<KVStoreMut<'a, DB>> for StoreMut<'a, DB> {
 impl<'a, DB: Database> QueryableKVStore for StoreMut<'a, DB> {
     type Prefix = PrefixStore<'a, DB>;
 
-    type Range = kv_store::range::Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+    type Range = StoreRange<'a, DB>;
 
     type Err = StoreErrors;
 
@@ -51,8 +50,11 @@ impl<'a, DB: Database> QueryableKVStore for StoreMut<'a, DB> {
         }
     }
 
-    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        todo!() // TODO:NOW
+    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range {
+        match &self.0 {
+            StoreMutBackend::Gas(var) => StoreRange::from(var.range(range)),
+            StoreMutBackend::Kv(var) => StoreRange::from(var.range(range)),
+        }
     }
 }
 
