@@ -1,3 +1,5 @@
+use std::{cell::RefCell, sync::Arc};
+
 use database::{prefix::PrefixDB, Database};
 use kv_store::{
     types::{
@@ -16,7 +18,10 @@ use crate::{
             GasMeter,
         },
         header::Header,
-        store::gas::kv::{mutable::GasKVStoreMut, GasKVStore},
+        store::gas::{
+            guard::GasGuard,
+            kv::{mutable::GasKVStoreMut, GasKVStore},
+        },
     },
 };
 
@@ -24,7 +29,7 @@ use super::{ImmutableGasContext, MutableGasContext, QueryableContext, Transactio
 
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
-    pub gas_meter: GasMeter<TxKind>,
+    pub gas_meter: Arc<RefCell<GasMeter<TxKind>>>,
     pub events: Vec<Event>,
     pub options: NodeOptions,
     pub(crate) height: u64,
@@ -51,7 +56,7 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
             multi_store,
             height,
             header,
-            gas_meter,
+            gas_meter: Arc::new(RefCell::new(gas_meter)),
             block_gas_meter,
             consensus_params,
             is_check,
@@ -104,7 +109,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
 
 impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
-        GasKVStore::new(None, self.kv_store(store_key)) // TODO:NOW
+        GasKVStore::new(
+            Some(GasGuard::new(Arc::clone(&self.gas_meter))),
+            self.kv_store(store_key),
+        )
     }
 }
 
@@ -128,6 +136,9 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
 
 impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
-        GasKVStoreMut::new(None, self.kv_store_mut(store_key)) // TODO:NOW
+        GasKVStoreMut::new(
+            Some(GasGuard::new(Arc::clone(&self.gas_meter))),
+            self.kv_store_mut(store_key),
+        )
     }
 }

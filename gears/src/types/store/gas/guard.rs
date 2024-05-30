@@ -17,9 +17,9 @@ use super::{
 pub struct GasGuard(pub(super) Arc<RefCell<GasMeter<TxKind>>>);
 
 impl GasGuard {
-    // pub(crate) fn new(inner: Arc<RefCell<GasMeter<TxKind>>>) -> Self {
-    //     Self(inner)
-    // }
+    pub(crate) fn new(inner: Arc<RefCell<GasMeter<TxKind>>>) -> Self {
+        Self(inner)
+    }
 
     pub fn get(&self, key: usize, value: Option<usize>) -> Result<(), GasStoreErrors> {
         let mut gas_meter = self.0.borrow_mut();

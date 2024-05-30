@@ -228,6 +228,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             .ok_or(GasMeteringErrors::ErrorGasOverflow("tx size".to_string()))?;
 
         ctx.gas_meter
+            .borrow_mut()
             .consume_gas(gas_required, TX_SIZE_DESCRIPTOR)?;
 
         Ok(())
@@ -256,8 +257,12 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
 
             let sig = signatures.get(i).expect("TODO");
 
-            self.sign_gas_consumer
-                .consume(&mut ctx.gas_meter, pub_key, sig, &auth_params)?;
+            self.sign_gas_consumer.consume(
+                &mut *ctx.gas_meter.borrow_mut(),
+                pub_key,
+                sig,
+                &auth_params,
+            )?;
         }
 
         Ok(())

@@ -113,7 +113,7 @@ impl<DS: MeterKind> GasMeter<DS> {
         let _ = std::mem::replace(&mut self.meter, meter);
     }
 
-    pub fn consumed_or_limit(&mut self) -> FiniteGas {
+    pub fn consumed_or_limit(&self) -> FiniteGas {
         self.meter.gas_consumed_or_limit()
     }
 

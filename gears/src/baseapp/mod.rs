@@ -194,8 +194,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
-        let gas_wanted = ctx.gas_meter.limit(); // TODO its needed for gas recovery middleware
-        let gas_used = ctx.gas_meter.consumed_or_limit();
+        let gas_wanted = ctx.gas_meter.borrow().limit();
+        let gas_used = ctx.gas_meter.borrow().consumed_or_limit();
 
         let events = MD::run_msg(
             &mut ctx,
