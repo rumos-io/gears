@@ -7,7 +7,7 @@ use kv_store::QueryableMultiKVStore;
 use kv_store::{error::StoreError, StoreKey};
 use tendermint::types::chain_id::ChainId;
 
-use crate::types::store::gas::kv::GasKVStore;
+use crate::types::store::kv::Store;
 
 use super::{ImmutableContext, ImmutableGasContext, QueryableContext};
 
@@ -54,7 +54,7 @@ impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for QueryContext<DB, S
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for QueryContext<DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
-        GasKVStore::new(None, ImmutableContext::kv_store(self, store_key))
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        Store::from(self.kv_store(store_key))
     }
 }

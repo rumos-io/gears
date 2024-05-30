@@ -4,7 +4,7 @@ use kv_store::{
     WritePrefixStore,
 };
 
-use crate::types::store::gas::{errors::GasStoreErrors, prefix::mutable::GasPrefixStoreMut};
+use crate::types::store::{errors::StoreErrors, gas::prefix::mutable::GasPrefixStoreMut};
 
 enum PrefixStoreMutBackend<'a, DB> {
     Gas(GasPrefixStoreMut<'a, DB>),
@@ -26,11 +26,11 @@ impl<'a, DB> From<MutablePrefixStore<'a, DB>> for PrefixStoreMut<'a, DB> {
 }
 
 impl<DB: Database> ReadPrefixStore for PrefixStoreMut<'_, DB> {
-    type Err = GasStoreErrors;
+    type Err = StoreErrors;
 
     fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
         match &self.0 {
-            PrefixStoreMutBackend::Gas(var) => var.get(k),
+            PrefixStoreMutBackend::Gas(var) => Ok(var.get(k)?),
             PrefixStoreMutBackend::Kv(var) => Ok(var.get(k).unwrap_infallible()),
         }
     }
@@ -43,7 +43,7 @@ impl<DB: Database> WritePrefixStore for PrefixStoreMut<'_, DB> {
         v: VI,
     ) -> Result<(), Self::Err> {
         match &mut self.0 {
-            PrefixStoreMutBackend::Gas(var) => var.set(k, v),
+            PrefixStoreMutBackend::Gas(var) => Ok(var.set(k, v)?),
             PrefixStoreMutBackend::Kv(var) => Ok(var.set(k, v).unwrap_infallible()),
         }
     }

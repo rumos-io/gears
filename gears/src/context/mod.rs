@@ -2,7 +2,7 @@ use database::prefix::PrefixDB;
 use kv_store::types::kv::{immutable::KVStore, mutable::KVStoreMut};
 use tendermint::types::{proto::event::Event, time::Timestamp};
 
-use crate::types::store::gas::kv::{mutable::GasKVStoreMut, GasKVStore};
+use crate::types::store::kv::{mutable::StoreMut, Store};
 
 pub mod block;
 pub mod init;
@@ -22,7 +22,7 @@ pub trait ImmutableContext<DB, SK>: QueryableContext<DB, SK> {
 
 pub trait ImmutableGasContext<DB, SK>: QueryableContext<DB, SK> {
     /// Fetches an immutable ref to a KVStore from the MultiStore.
-    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>>;
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>>;
 }
 
 pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
@@ -42,5 +42,5 @@ pub trait MutableContext<DB, SK>: TransactionalContext<DB, SK> {
 
 pub trait MutableGasContext<DB, SK>: TransactionalContext<DB, SK> {
     ///  Fetches an mutable ref to a KVStore from the MultiStore.
-    fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>>;
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>>;
 }

@@ -11,11 +11,11 @@ pub mod mutable;
 
 pub struct GasPrefixStore<'a, DB> {
     inner: ImmutablePrefixStore<'a, DB>,
-    guard: Option<GasGuard>,
+    guard: GasGuard,
 }
 
 impl<'a, DB> GasPrefixStore<'a, DB> {
-    pub(crate) fn new(guard: Option<GasGuard>, inner: ImmutablePrefixStore<'a, DB>) -> Self {
+    pub(crate) fn new(guard: GasGuard, inner: ImmutablePrefixStore<'a, DB>) -> Self {
         Self { inner, guard }
     }
 }
@@ -26,9 +26,8 @@ impl<DB: Database> ReadPrefixStore for GasPrefixStore<'_, DB> {
     fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
         let value = self.inner.get(&k).unwrap_infallible();
 
-        if let Some(var) = &self.guard {
-            var.get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
-        }
+        self.guard
+            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
 
         Ok(value)
     }

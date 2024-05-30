@@ -5,8 +5,8 @@ use kv_store::types::{kv::mutable::KVStoreMut, multi::MultiBank};
 use kv_store::{ApplicationStore, StoreKey};
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
-use crate::types::store::gas::kv::mutable::GasKVStoreMut;
-use crate::types::store::gas::kv::GasKVStore;
+use crate::types::store::kv::mutable::StoreMut;
+use crate::types::store::kv::Store;
 
 use super::{
     ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext, QueryableContext,
@@ -73,14 +73,14 @@ impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for InitContext<'_, DB, 
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for InitContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
-        GasKVStore::new(None, ImmutableContext::kv_store(self, store_key))
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        Store::from(self.kv_store(store_key))
     }
 }
 
 impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for InitContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
-        GasKVStoreMut::new(None, MutableContext::kv_store_mut(self, store_key))
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
+        StoreMut::from(self.kv_store_mut(store_key))
     }
 }
 

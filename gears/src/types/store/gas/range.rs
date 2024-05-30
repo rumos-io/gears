@@ -1,34 +1,39 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Bound};
 
 use database::Database;
-use kv_store::types::prefix::range::PrefixRange;
+use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
-use super::guard::GasGuard;
+use super::{errors::GasStoreErrors, guard::GasGuard};
 
 #[derive(Debug)]
 enum RangeBackend<'a, DB> {
-    // Kv(Range<'a, R, DB>),
+    Kv(Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>),
     Prefix(PrefixRange<'a, DB>),
 }
 
 pub struct GasRange<'a, DB> {
     inner: RangeBackend<'a, DB>,
-    guard: Option<GasGuard>,
-    // TODO:NOW STORE ERROR
+    guard: GasGuard,
+    err: Option<GasStoreErrors>,
 }
 
 impl<'a, DB> GasRange<'a, DB> {
-    // pub(super) fn new_kv(inner: Range<'a, R, DB>, guard: GasGuard) -> Self {
-    //     Self {
-    //         inner: RangeBackend::Kv(inner),
-    //         guard,
-    //     }
-    // }
+    pub(super) fn new_kv(
+        inner: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
+        guard: GasGuard,
+    ) -> Self {
+        Self {
+            inner: RangeBackend::Kv(inner),
+            guard,
+            err: None,
+        }
+    }
 
-    pub(super) fn new_prefix(inner: PrefixRange<'a, DB>, guard: Option<GasGuard>) -> Self {
+    pub(super) fn new_prefix(inner: PrefixRange<'a, DB>, guard: GasGuard) -> Self {
         Self {
             inner: RangeBackend::Prefix(inner),
             guard,
+            err: None,
         }
     }
 }
@@ -38,17 +43,20 @@ impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let next = match &mut self.inner {
-            // RangeBackend::Kv(var) => var.next(),
+            RangeBackend::Kv(var) => var.next(),
             RangeBackend::Prefix(var) => var.next(),
         };
 
-        // TODO:NOW What to do with all this error handling?
-        if let Some(guard) = &self.guard {
-            guard
-                .range(next.as_ref().map(|(key, val)| (key.len(), val.len())))
-                .ok()?;
-        }
+        let err = self
+            .guard
+            .range(next.as_ref().map(|(key, val)| (key.len(), val.len())));
 
-        next
+        if let Err(err) = err {
+            self.err = Some(err);
+
+            None
+        } else {
+            next
+        }
     }
 }

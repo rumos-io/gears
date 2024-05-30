@@ -3,7 +3,7 @@ use kv_store::{
     ext::UnwrapInfallible, types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore,
 };
 
-use super::gas::{errors::GasStoreErrors, prefix::GasPrefixStore};
+use super::{errors::StoreErrors, gas::prefix::GasPrefixStore};
 
 pub mod mutable;
 
@@ -27,11 +27,11 @@ impl<'a, DB> From<ImmutablePrefixStore<'a, DB>> for PrefixStore<'a, DB> {
 }
 
 impl<DB: Database> ReadPrefixStore for PrefixStore<'_, DB> {
-    type Err = GasStoreErrors;
+    type Err = StoreErrors;
 
     fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
         match &self.0 {
-            PrefixStoreBackend::Gas(var) => var.get(k),
+            PrefixStoreBackend::Gas(var) => Ok(var.get(k)?),
             PrefixStoreBackend::Kv(var) => Ok(var.get(k).unwrap_infallible()),
         }
     }

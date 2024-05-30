@@ -3,7 +3,7 @@ use std::{cell::RefCell, sync::Arc};
 use database::{prefix::PrefixDB, Database};
 use kv_store::{
     types::{
-        kv::{immutable::KVStore, mutable::KVStoreMut, store_cache::CacheCommitList},
+        kv::store_cache::CacheCommitList,
         multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     },
     StoreKey, TransactionStore,
@@ -18,9 +18,12 @@ use crate::{
             GasMeter,
         },
         header::Header,
-        store::gas::{
-            guard::GasGuard,
-            kv::{mutable::GasKVStoreMut, GasKVStore},
+        store::{
+            gas::{
+                guard::GasGuard,
+                kv::{mutable::GasKVStoreMut, GasKVStore},
+            },
+            kv::{mutable::StoreMut, Store},
         },
     },
 };
@@ -92,12 +95,18 @@ impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
         self.is_check
     }
 
-    pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        KVStore::from(self.multi_store.kv_store(store_key))
+    pub fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
+        GasKVStore::new(
+            GasGuard::new(Arc::clone(&self.gas_meter)),
+            self.multi_store.kv_store(store_key).into(),
+        )
     }
 
-    pub fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
-        KVStoreMut::from(self.multi_store.kv_store_mut(store_key))
+    pub fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
+        GasKVStoreMut::new(
+            GasGuard::new(Arc::clone(&self.gas_meter)),
+            self.multi_store.kv_store_mut(store_key).into(),
+        )
     }
 }
 
@@ -108,11 +117,8 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
-        GasKVStore::new(
-            Some(GasGuard::new(Arc::clone(&self.gas_meter))),
-            self.kv_store(store_key),
-        )
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        Store::from(self.kv_store(store_key))
     }
 }
 
@@ -135,10 +141,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
 }
 
 impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
-        GasKVStoreMut::new(
-            Some(GasGuard::new(Arc::clone(&self.gas_meter))),
-            self.kv_store_mut(store_key),
-        )
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
+        StoreMut::from(self.kv_store_mut(store_key))
     }
 }

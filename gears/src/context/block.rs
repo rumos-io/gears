@@ -10,7 +10,7 @@ use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp}
 
 use crate::types::{
     header::Header,
-    store::gas::kv::{mutable::GasKVStoreMut, GasKVStore},
+    store::kv::{mutable::StoreMut, Store},
 };
 
 use super::{
@@ -74,14 +74,14 @@ impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for BlockContext<'_, DB,
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for BlockContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
-        GasKVStore::new(None, self.kv_store(store_key))
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        Store::from(self.kv_store(store_key))
     }
 }
 
 impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for BlockContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
-        GasKVStoreMut::new(None, self.kv_store_mut(store_key))
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
+        StoreMut::from(self.kv_store_mut(store_key))
     }
 }
 

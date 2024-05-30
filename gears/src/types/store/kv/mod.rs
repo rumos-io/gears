@@ -3,10 +3,7 @@ use std::ops::Bound;
 use database::Database;
 use kv_store::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
 
-use super::{
-    gas::{errors::GasStoreErrors, kv::GasKVStore},
-    prefix::PrefixStore,
-};
+use super::{errors::StoreErrors, gas::kv::GasKVStore, prefix::PrefixStore};
 
 pub mod mutable;
 
@@ -34,11 +31,11 @@ impl<'a, DB: Database> QueryableKVStore for Store<'a, DB> {
 
     type Range = kv_store::range::Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
 
-    type Err = GasStoreErrors;
+    type Err = StoreErrors;
 
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
         match &self.0 {
-            StoreBackend::Gas(var) => var.get(k),
+            StoreBackend::Gas(var) => Ok(var.get(k)?),
             StoreBackend::Kv(var) => Ok(var.get(k).unwrap_infallible()),
         }
     }
