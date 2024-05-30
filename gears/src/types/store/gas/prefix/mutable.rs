@@ -10,11 +10,11 @@ use super::GasPrefixStore;
 
 pub struct GasPrefixStoreMut<'a, DB> {
     inner: MutablePrefixStore<'a, DB>,
-    guard: GasGuard,
+    guard: Option<GasGuard>,
 }
 
 impl<'a, DB> GasPrefixStoreMut<'a, DB> {
-    pub(crate) fn new(guard: GasGuard, inner: MutablePrefixStore<'a, DB>) -> Self {
+    pub(crate) fn new(guard: Option<GasGuard>, inner: MutablePrefixStore<'a, DB>) -> Self {
         Self { inner, guard }
     }
 
@@ -32,8 +32,9 @@ impl<DB: Database> ReadPrefixStore for GasPrefixStoreMut<'_, DB> {
     fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
         let value = self.inner.get(&k).unwrap_infallible();
 
-        self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+        if let Some(guard) = &self.guard {
+            guard.get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+        }
 
         Ok(value)
     }
@@ -48,7 +49,9 @@ impl<DB: Database> WritePrefixStore for GasPrefixStoreMut<'_, DB> {
         let key = k.into_iter().collect::<Vec<_>>();
         let value = v.into_iter().collect::<Vec<_>>();
 
-        self.guard.set(key.len(), value.len())?;
+        if let Some(guard) = &self.guard {
+            guard.set(key.len(), value.len())?;
+        }
 
         self.inner.set(key, value).unwrap_infallible();
 
@@ -58,7 +61,9 @@ impl<DB: Database> WritePrefixStore for GasPrefixStoreMut<'_, DB> {
 
 impl<'a, DB: Database> GasPrefixStoreMut<'a, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
-        self.guard.delete()?;
+        if let Some(guard) = &self.guard {
+            guard.delete()?;
+        }
         Ok(self.inner.delete(k))
     }
 }

@@ -9,14 +9,14 @@ use super::{errors::GasStoreErrors, guard::GasGuard, prefix::GasPrefixStore, ran
 
 #[derive(Debug)]
 pub struct GasKVStore<'a, DB> {
-    pub(super) guard: GasGuard,
+    pub(super) guard: Option<GasGuard>,
     pub(super) inner: KVStore<'a, DB>,
 }
 
 impl<'a, DB> GasKVStore<'a, DB> {
-    // pub(crate) fn new(guard: GasGuard, inner: KVStore<'a, DB>) -> Self {
-    //     Self { guard, inner }
-    // }
+    pub(crate) fn new(guard: Option<GasGuard>, inner: KVStore<'a, DB>) -> Self {
+        Self { guard, inner }
+    }
 }
 
 impl<'a, DB: Database> QueryableKVStore for GasKVStore<'a, DB> {
@@ -29,8 +29,9 @@ impl<'a, DB: Database> QueryableKVStore for GasKVStore<'a, DB> {
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
         let value = self.inner.get(&k).unwrap_infallible();
 
-        self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+        if let Some(guard) = &self.guard {
+            guard.get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+        }
 
         Ok(value)
     }

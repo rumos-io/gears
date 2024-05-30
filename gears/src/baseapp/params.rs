@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use crate::{
-    context::{QueryableContext, TransactionalContext},
+    context::{ImmutableContext, MutableContext},
     params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
 };
 
@@ -134,7 +134,7 @@ pub struct BaseAppParamsKeeper<PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
-    pub fn set_consensus_params<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_consensus_params<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: inner::ConsensusParams,
@@ -144,7 +144,7 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
         store.params_set(&params);
     }
 
-    pub fn consensus_params<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn consensus_params<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
         &self,
         store: &CTX,
     ) -> ConsensusParams {
@@ -174,7 +174,7 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
         }
     }
 
-    pub fn block_params<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn block_params<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
         &self,
         store: &CTX,
     ) -> Option<BlockParams> {

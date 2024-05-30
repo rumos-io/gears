@@ -8,9 +8,15 @@ use kv_store::{
 };
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
-use crate::types::header::Header;
+use crate::types::{
+    header::Header,
+    store::gas::kv::{mutable::GasKVStoreMut, GasKVStore},
+};
 
-use super::{QueryableContext, TransactionalContext};
+use super::{
+    ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext, QueryableContext,
+    TransactionalContext,
+};
 
 #[derive(Debug)]
 pub struct BlockContext<'a, DB, SK> {
@@ -39,7 +45,7 @@ impl<'a, DB, SK> BlockContext<'a, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> BlockContext<'a, DB, SK> {
+impl<DB: Database, SK: StoreKey> BlockContext<'_, DB, SK> {
     pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         KVStore::from(self.multi_store.kv_store(store_key))
     }
@@ -50,20 +56,36 @@ impl<'a, DB: Database, SK: StoreKey> BlockContext<'a, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        self.kv_store(store_key)
-    }
-
     fn height(&self) -> u64 {
         self.height
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for BlockContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+        self.kv_store(store_key)
+    }
+}
+
+impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for BlockContext<'_, DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.kv_store_mut(store_key)
     }
+}
 
+impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for BlockContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
+        GasKVStore::new(None, self.kv_store(store_key))
+    }
+}
+
+impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for BlockContext<'_, DB, SK> {
+    fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
+        GasKVStoreMut::new(None, self.kv_store_mut(store_key))
+    }
+}
+
+impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'_, DB, SK> {
     fn push_event(&mut self, event: Event) {
         self.events.push(event);
     }

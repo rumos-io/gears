@@ -9,18 +9,18 @@ use kv_store::{
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
 use crate::{
-    baseapp::options::NodeOptions,
-    baseapp::ConsensusParams,
+    baseapp::{options::NodeOptions, ConsensusParams},
     types::{
         gas::{
             kind::{BlockKind, TxKind},
             GasMeter,
         },
         header::Header,
+        store::gas::kv::{mutable::GasKVStoreMut, GasKVStore},
     },
 };
 
-use super::{QueryableContext, TransactionalContext};
+use super::{ImmutableGasContext, MutableGasContext, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
@@ -97,20 +97,18 @@ impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        self.kv_store(store_key)
-    }
-
     fn height(&self) -> u64 {
         self.height
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
-        self.multi_store.kv_store_mut(store_key).into()
+impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
+        GasKVStore::new(None, self.kv_store(store_key)) // TODO:NOW
     }
+}
 
+impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, DB, SK> {
     fn push_event(&mut self, event: Event) {
         self.events.push(event);
     }
@@ -125,5 +123,11 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
 
     fn get_time(&self) -> Option<Timestamp> {
         self.header.time.clone()
+    }
+}
+
+impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
+    fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
+        GasKVStoreMut::new(None, self.kv_store_mut(store_key)) // TODO:NOW
     }
 }

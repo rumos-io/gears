@@ -13,7 +13,8 @@ enum RangeBackend<'a, DB> {
 
 pub struct GasRange<'a, DB> {
     inner: RangeBackend<'a, DB>,
-    guard: GasGuard,
+    guard: Option<GasGuard>,
+    // TODO:NOW STORE ERROR
 }
 
 impl<'a, DB> GasRange<'a, DB> {
@@ -24,7 +25,7 @@ impl<'a, DB> GasRange<'a, DB> {
     //     }
     // }
 
-    pub(super) fn new_prefix(inner: PrefixRange<'a, DB>, guard: GasGuard) -> Self {
+    pub(super) fn new_prefix(inner: PrefixRange<'a, DB>, guard: Option<GasGuard>) -> Self {
         Self {
             inner: RangeBackend::Prefix(inner),
             guard,
@@ -42,9 +43,11 @@ impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
         };
 
         // TODO:NOW What to do with all this error handling?
-        self.guard
-            .range(next.as_ref().map(|(key, val)| (key.len(), val.len())))
-            .ok()?;
+        if let Some(guard) = &self.guard {
+            guard
+                .range(next.as_ref().map(|(key, val)| (key.len(), val.len())))
+                .ok()?;
+        }
 
         next
     }

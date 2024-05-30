@@ -7,7 +7,9 @@ use kv_store::QueryableMultiKVStore;
 use kv_store::{error::StoreError, StoreKey};
 use tendermint::types::chain_id::ChainId;
 
-use super::QueryableContext;
+use crate::types::store::gas::kv::GasKVStore;
+
+use super::{ImmutableContext, ImmutableGasContext, QueryableContext};
 
 pub struct QueryContext<DB, SK> {
     multi_store: QueryMultiStore<DB, SK>,
@@ -34,17 +36,25 @@ impl<DB: Database, SK: StoreKey> QueryContext<DB, SK> {
         &self.chain_id
     }
 
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+    pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.multi_store.kv_store(store_key)
     }
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, SK> {
+    fn height(&self) -> u64 {
+        self.height
+    }
+}
+
+impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for QueryContext<DB, SK> {
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.kv_store(store_key)
     }
+}
 
-    fn height(&self) -> u64 {
-        self.height
+impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for QueryContext<DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
+        GasKVStore::new(None, ImmutableContext::kv_store(self, store_key))
     }
 }

@@ -5,7 +5,13 @@ use kv_store::types::{kv::mutable::KVStoreMut, multi::MultiBank};
 use kv_store::{ApplicationStore, StoreKey};
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
 
-use super::{QueryableContext, TransactionalContext};
+use crate::types::store::gas::kv::mutable::GasKVStoreMut;
+use crate::types::store::gas::kv::GasKVStore;
+
+use super::{
+    ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext, QueryableContext,
+    TransactionalContext,
+};
 // use crate::tendermint::types::time::Timestamp;
 
 #[derive(Debug)]
@@ -49,20 +55,36 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        self.kv_store(store_key)
-    }
-
     fn height(&self) -> u64 {
         self.height
     }
 }
 
-impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for InitContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+        self.kv_store(store_key)
+    }
+}
+
+impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for InitContext<'_, DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.kv_store_mut(store_key)
     }
+}
 
+impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for InitContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> GasKVStore<'_, PrefixDB<DB>> {
+        GasKVStore::new(None, ImmutableContext::kv_store(self, store_key))
+    }
+}
+
+impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for InitContext<'_, DB, SK> {
+    fn kv_store_mut(&mut self, store_key: &SK) -> GasKVStoreMut<'_, PrefixDB<DB>> {
+        GasKVStoreMut::new(None, MutableContext::kv_store_mut(self, store_key))
+    }
+}
+
+impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_, DB, SK> {
     fn push_event(&mut self, event: Event) {
         self.events.push(event);
     }

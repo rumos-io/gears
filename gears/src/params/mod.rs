@@ -3,7 +3,7 @@ use std::{collections::HashMap, hash::Hash, str::FromStr};
 use database::{prefix::PrefixDB, Database};
 use kv_store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 
-use crate::context::{QueryableContext, TransactionalContext};
+use crate::context::{ImmutableContext, MutableContext};
 
 use self::{parsed::Params, space::ParamsSpace, space_mut::ParamsSpaceMut};
 
@@ -15,7 +15,7 @@ pub fn subspace<
     'a,
     DB: Database,
     SK: StoreKey,
-    CTX: QueryableContext<DB, SK>,
+    CTX: ImmutableContext<DB, SK>,
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a CTX,
@@ -32,7 +32,7 @@ pub fn subspace_mut<
     'a,
     DB: Database,
     SK: StoreKey,
-    CTX: TransactionalContext<DB, SK>,
+    CTX: MutableContext<DB, SK>,
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a mut CTX,
