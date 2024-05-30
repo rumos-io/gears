@@ -2,6 +2,8 @@ use std::fmt::{Display, Formatter, Result};
 
 use kv_store::error::StoreError;
 
+use crate::types::store::errors::StoreErrors;
+
 pub const IBC_ENCODE_UNWRAP: &str = "Should be okay. In future versions of IBC they removed Result";
 pub const POISONED_LOCK: &str = "poisoned lock";
 
@@ -74,5 +76,11 @@ impl From<StoreError> for AppError {
 impl From<core_types::errors::Error> for AppError {
     fn from(value: core_types::errors::Error) -> Self {
         Self::IBC(value.to_string())
+    }
+}
+
+impl From<StoreErrors> for AppError {
+    fn from(value: StoreErrors) -> Self {
+        Self::Custom(value.to_string())
     }
 }

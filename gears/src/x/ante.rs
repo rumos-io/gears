@@ -220,7 +220,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             tx_len,
         }: &TxWithRaw<M>,
     ) -> anyhow::Result<()> {
-        let params = self.auth_keeper.get_auth_params(ctx);
+        let params = self.auth_keeper.get_auth_params(ctx)?;
         let tx_len: Gas = (*tx_len as u64).try_into()?;
         let cost_per_byte: Gas = params.tx_cost_per_byte().try_into()?;
         let gas_required = tx_len
@@ -239,7 +239,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> anyhow::Result<()> {
-        let auth_params = self.auth_keeper.get_auth_params(ctx);
+        let auth_params = self.auth_keeper.get_auth_params(ctx)?;
 
         let signatures = tx.get_signatures_data();
         let signers_addr = tx.get_signers();
@@ -247,7 +247,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         for (i, signer_addr) in signers_addr.into_iter().enumerate() {
             let acct = self
                 .auth_keeper
-                .get_account(ctx, signer_addr)
+                .get_account(ctx, signer_addr)?
                 .ok_or(AppError::AccountNotFound)?;
 
             let pub_key = acct
@@ -311,12 +311,12 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn validate_memo_ante_handler<DB: Database, CTX: QueryableContext<DB, SK>, M: TxMessage>(
+    fn validate_memo_ante_handler<DB: Database, M: TxMessage>(
         &self,
-        ctx: &CTX,
+        ctx: &TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
-        let max_memo_chars = self.auth_keeper.get_auth_params(ctx).max_memo_characters();
+        let max_memo_chars = self.auth_keeper.get_auth_params(ctx)?.max_memo_characters();
         let memo_length: u64 = tx
             .get_memo()
             .len()
@@ -329,20 +329,15 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn deduct_fee_ante_handler<
-        'a,
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-        M: TxMessage,
-    >(
+    fn deduct_fee_ante_handler<'a, DB: Database, M: TxMessage>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let fee = tx.get_fee();
         let fee_payer = tx.get_fee_payer();
 
-        if !self.auth_keeper.has_account(ctx, fee_payer) {
+        if !self.auth_keeper.has_account(ctx, fee_payer)? {
             return Err(AppError::AccountNotFound);
         }
 
@@ -358,9 +353,9 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn set_pub_key_ante_handler<DB: Database, CTX: TransactionalContext<DB, SK>, M: TxMessage>(
+    fn set_pub_key_ante_handler<DB: Database, M: TxMessage>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         let public_keys = tx.get_public_keys();
@@ -385,7 +380,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
 
                 let mut acct = self
                     .auth_keeper
-                    .get_account(ctx, &addr)
+                    .get_account(ctx, &addr)?
                     .ok_or(AppError::AccountNotFound)?;
 
                 if acct.get_public_key().is_some() {
@@ -393,7 +388,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
                 }
 
                 acct.set_public_key(key.clone());
-                self.auth_keeper.set_account(ctx, acct)
+                self.auth_keeper.set_account(ctx, acct)?;
             }
         }
 
@@ -423,7 +418,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             // check sequence number
             let acct = self
                 .auth_keeper
-                .get_account(ctx, signer)
+                .get_account(ctx, signer)?
                 .ok_or(AppError::AccountNotFound)?;
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
@@ -492,22 +487,18 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
         Ok(())
     }
 
-    fn increment_sequence_ante_handler<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-        M: TxMessage,
-    >(
+    fn increment_sequence_ante_handler<DB: Database, M: TxMessage>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AppError> {
         for signer in tx.get_signers() {
             let mut acct = self
                 .auth_keeper
-                .get_account(ctx, signer)
+                .get_account(ctx, signer)?
                 .ok_or(AppError::AccountNotFound)?;
             acct.increment_sequence();
-            self.auth_keeper.set_account(ctx, acct)
+            self.auth_keeper.set_account(ctx, acct)?;
         }
 
         Ok(())

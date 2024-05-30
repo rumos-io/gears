@@ -6,12 +6,27 @@ use kv_store::{
 
 use crate::types::store::{errors::StoreErrors, gas::prefix::mutable::GasPrefixStoreMut};
 
+use super::PrefixStore;
+
 enum PrefixStoreMutBackend<'a, DB> {
     Gas(GasPrefixStoreMut<'a, DB>),
     Kv(MutablePrefixStore<'a, DB>),
 }
 
 pub struct PrefixStoreMut<'a, DB>(PrefixStoreMutBackend<'a, DB>);
+
+impl<'a, DB> PrefixStoreMut<'a, DB> {
+    pub fn to_immutable(&'a self) -> PrefixStore<'a, DB> {
+        match &self.0 {
+            PrefixStoreMutBackend::Gas(var) => {
+                PrefixStore(super::PrefixStoreBackend::Gas(var.to_immutable()))
+            }
+            PrefixStoreMutBackend::Kv(var) => {
+                PrefixStore(super::PrefixStoreBackend::Kv(var.to_immutable()))
+            }
+        }
+    }
+}
 
 impl<'a, DB> From<GasPrefixStoreMut<'a, DB>> for PrefixStoreMut<'a, DB> {
     fn from(value: GasPrefixStoreMut<'a, DB>) -> Self {

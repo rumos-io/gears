@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 
+use gears::context::{ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext};
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::{
-    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
+    gas, subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::types::context::{QueryableContext, TransactionalContext};
+use gears::types::store::errors::StoreErrors;
 use gears::x::keepers::auth::AuthParams;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -137,7 +138,7 @@ pub struct AuthParamsKeeper<PSK: ParamsSubspaceKey> {
 }
 
 impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> AuthsParams {
@@ -146,12 +147,31 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
         store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
-    pub fn set<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
+    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: ImmutableGasContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<AuthsParams, StoreErrors> {
+        let store = gas::subspace(ctx, &self.params_subspace_key);
+
+        Ok(store.params()?.unwrap_or(DEFAULT_PARAMS.clone()))
+    }
+
+    pub fn set<DB: Database, SK: StoreKey, KV: MutableContext<DB, SK>>(
         &self,
         ctx: &mut KV,
         params: AuthsParams,
     ) {
         let mut store = subspace_mut(ctx, &self.params_subspace_key);
+
+        store.params_set(&params)
+    }
+
+    pub fn set_with_gas<DB: Database, SK: StoreKey, KV: MutableGasContext<DB, SK>>(
+        &self,
+        ctx: &mut KV,
+        params: AuthsParams,
+    ) -> Result<(), StoreErrors> {
+        let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
     }

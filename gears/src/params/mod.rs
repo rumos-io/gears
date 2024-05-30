@@ -1,3 +1,4 @@
+pub mod gas;
 use std::{collections::HashMap, hash::Hash, str::FromStr};
 
 use database::{prefix::PrefixDB, Database};

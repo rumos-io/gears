@@ -12,7 +12,7 @@ enum PrefixStoreBackend<'a, DB> {
     Kv(ImmutablePrefixStore<'a, DB>),
 }
 
-pub struct PrefixStore<'a, DB>(PrefixStoreBackend<'a, DB>);
+pub struct PrefixStore<'a, DB>(pub(self) PrefixStoreBackend<'a, DB>);
 
 impl<'a, DB> From<GasPrefixStore<'a, DB>> for PrefixStore<'a, DB> {
     fn from(value: GasPrefixStore<'a, DB>) -> Self {
