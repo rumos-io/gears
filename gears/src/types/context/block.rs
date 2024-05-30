@@ -6,9 +6,11 @@ use store_crate::{
     },
     ApplicationStore, StoreKey,
 };
-use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
-
-use crate::types::header::Header;
+use tendermint::types::{
+    chain_id::ChainId,
+    proto::{event::Event, header::Header},
+    time::Timestamp,
+};
 
 use super::{QueryableContext, TransactionalContext};
 
@@ -66,7 +68,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'
         std::mem::take(&mut self.events)
     }
 
-    fn get_time(&self) -> Option<Timestamp> {
+    fn get_time(&self) -> Timestamp {
         self.header.time.clone()
     }
 }

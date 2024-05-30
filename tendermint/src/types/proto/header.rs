@@ -1,71 +1,56 @@
-use crate::types::time::Timestamp;
+use crate::types::{chain_id::ChainId, time::Timestamp};
 
 use super::{block::BlockId, consensus::Consensus};
 
 /// Header defines the structure of a Tendermint block header.
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
-pub struct RawHeader {
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
+pub struct Header {
     /// basic block info
-    #[prost(message, optional, tag = "1")]
-    pub version: Option<Consensus>,
-    #[prost(string, tag = "2")]
-    pub chain_id: ::prost::alloc::string::String,
-    #[prost(int64, tag = "3")]
+    pub version: Consensus,
+    pub chain_id: ChainId,
     #[serde(with = "crate::types::serializers::from_str")]
-    pub height: i64,
-    #[prost(message, optional, tag = "4")]
-    #[serde(with = "crate::types::serializers::optional")]
-    pub time: ::core::option::Option<Timestamp>,
+    pub height: u32,
+    pub time: Timestamp,
     /// prev block info
-    #[prost(message, optional, tag = "5")]
-    pub last_block_id: Option<BlockId>,
+    pub last_block_id: BlockId,
     /// hashes of block data
     ///
     /// commit from validators from the last block
-    #[prost(bytes = "vec", tag = "6")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub last_commit_hash: Vec<u8>,
     /// transactions
-    #[prost(bytes = "vec", tag = "7")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub data_hash: Vec<u8>,
     /// hashes from the app output from the prev block
     ///
     /// validators for the current block
-    #[prost(bytes = "vec", tag = "8")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub validators_hash: Vec<u8>,
     /// validators for the next block
-    #[prost(bytes = "vec", tag = "9")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub next_validators_hash: Vec<u8>,
     /// consensus params for current block
-    #[prost(bytes = "vec", tag = "10")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub consensus_hash: Vec<u8>,
     /// state after txs from the previous block
-    #[prost(bytes = "vec", tag = "11")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub app_hash: Vec<u8>,
     /// root hash of all results from the txs from the previous block
-    #[prost(bytes = "vec", tag = "12")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub last_results_hash: Vec<u8>,
     /// consensus info
     ///
     /// evidence included in the block
-    #[prost(bytes = "vec", tag = "13")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub evidence_hash: Vec<u8>,
     /// original proposer of the block
-    #[prost(bytes = "vec", tag = "14")]
     #[serde(with = "crate::types::serializers::bytes::hexstring")]
     pub proposer_address: Vec<u8>,
 }
 
-impl From<RawHeader> for inner::Header {
+impl From<Header> for inner::Header {
     fn from(
-        RawHeader {
+        Header {
             version,
             chain_id,
             height,
@@ -80,14 +65,14 @@ impl From<RawHeader> for inner::Header {
             last_results_hash,
             evidence_hash,
             proposer_address,
-        }: RawHeader,
+        }: Header,
     ) -> Self {
         Self {
-            version: version.map(Into::into),
-            chain_id,
-            height,
-            time: time.map(Into::into),
-            last_block_id: last_block_id.map(Into::into),
+            version: Some(version.into()),
+            chain_id: chain_id.to_string(),
+            height: height.into(),
+            time: Some(time.into()),
+            last_block_id: Some(last_block_id.into()),
             last_commit_hash,
             data_hash,
             validators_hash,
@@ -101,8 +86,10 @@ impl From<RawHeader> for inner::Header {
     }
 }
 
-impl From<inner::Header> for RawHeader {
-    fn from(
+impl TryFrom<inner::Header> for Header {
+    type Error = crate::error::Error;
+
+    fn try_from(
         inner::Header {
             version,
             chain_id,
@@ -119,13 +106,26 @@ impl From<inner::Header> for RawHeader {
             evidence_hash,
             proposer_address,
         }: inner::Header,
-    ) -> Self {
-        Self {
-            version: version.map(Into::into),
-            chain_id,
-            height,
-            time: time.map(Into::into),
-            last_block_id: last_block_id.map(Into::into),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            version: version
+                .ok_or_else(|| Self::Error::InvalidData("version is missing".into()))?
+                .into(),
+            chain_id: chain_id
+                .parse()
+                .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}").into()))?,
+            height: height.try_into().map_err(|_| {
+                Self::Error::InvalidData(
+                    format!("provided height, {height}, is less than zero").into(),
+                )
+            })?,
+            time: time
+                .ok_or_else(|| Self::Error::InvalidData("time is missing".into()))?
+                .into(),
+            last_block_id: last_block_id
+                .ok_or_else(|| Self::Error::InvalidData("last_block_id is missing".into()))?
+                .into(),
+
             last_commit_hash,
             data_hash,
             validators_hash,
@@ -135,7 +135,7 @@ impl From<inner::Header> for RawHeader {
             last_results_hash,
             evidence_hash,
             proposer_address,
-        }
+        })
     }
 }
 

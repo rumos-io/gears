@@ -2,6 +2,7 @@ use database::Database;
 use store_crate::types::multi::MultiBank;
 use store_crate::{TransactionStore, TransactionalMultiKVStore};
 use tendermint::types::proto::event::Event;
+use tendermint::types::proto::header::Header;
 
 use crate::baseapp::options::NodeOptions;
 use crate::baseapp::ConsensusParams;
@@ -11,7 +12,6 @@ use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
 use crate::types::gas::{Gas, GasMeter};
-use crate::types::header::Header;
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,

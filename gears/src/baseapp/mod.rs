@@ -13,7 +13,6 @@ use crate::{
     types::{
         context::{query::QueryContext, simple::SimpleContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
-        header::Header,
         tx::raw::TxWithRaw,
     },
 };
@@ -24,8 +23,7 @@ use store_crate::{
     ApplicationStore,
 };
 use tendermint::types::{
-    chain_id::ChainIdErrors,
-    proto::{event::Event, header::RawHeader},
+    proto::{event::Event, header::Header},
     request::query::RequestQuery,
 };
 
@@ -52,7 +50,7 @@ pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> 
     state: Arc<RwLock<ApplicationState<RocksDB, H>>>,
     multi_store: Arc<RwLock<MultiBank<RocksDB, H::StoreKey, ApplicationStore>>>,
     abci_handler: H,
-    block_header: Arc<RwLock<Option<RawHeader>>>, // passed by Tendermint in call to begin_block
+    block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
     options: NodeOptions,
     _info_marker: PhantomData<AI>,
@@ -104,21 +102,15 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
     }
 
     fn block_height_increment(&self) -> u64 {
-        APP_HEIGHT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1
+        APP_HEIGHT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1 //TODO: wraps on overflow
     }
 
-    fn get_block_header(&self) -> Option<RawHeader> {
-        self.block_header
-            .read()
-            .expect("RwLock will not be poisoned")
-            .clone()
+    fn get_block_header(&self) -> Option<Header> {
+        self.block_header.read().expect(POISONED_LOCK).clone()
     }
 
-    fn set_block_header(&self, header: RawHeader) {
-        let mut current_header = self
-            .block_header
-            .write()
-            .expect("RwLock will not be poisoned");
+    fn set_block_header(&self, header: Header) {
+        let mut current_header = self.block_header.write().expect(POISONED_LOCK);
         *current_header = Some(header);
     }
 
@@ -130,6 +122,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
+        //TODO: request height u32
         let version: u32 = request.height.try_into().map_err(|_| {
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
         })?;
@@ -169,11 +162,6 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             .map_err(|e| RunTxError::Validation(e.to_string()))?;
 
         let height = self.block_height();
-        let header: Header = self
-            .get_block_header()
-            .expect("block header is set in begin block")
-            .try_into()
-            .map_err(|e: ChainIdErrors| RunTxError::Custom(e.to_string()))?;
 
         let consensus_params = {
             let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
@@ -183,7 +171,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
 
         let mut ctx = mode.build_ctx(
             height,
-            header.clone(),
+            self.get_block_header()
+                .expect("block header is set in begin block"), //TODO: return error
             consensus_params,
             Some(&tx_with_raw.tx.auth_info.fee),
             self.options.clone(),
