@@ -1,4 +1,4 @@
-use std::ops::RangeBounds;
+use std::ops::Bound;
 
 use database::Database;
 use kv_store::{
@@ -20,7 +20,7 @@ pub struct GasKVStoreMut<'a, DB> {
     pub(super) inner: KVStoreMut<'a, DB>,
 }
 
-impl<'a, DB> GasKVStoreMut<'a, DB> {
+impl<'a, DB: Database> GasKVStoreMut<'a, DB> {
     pub(crate) fn new(guard: GasGuard, inner: KVStoreMut<'a, DB>) -> Self {
         Self { guard, inner }
     }
@@ -31,12 +31,14 @@ impl<'a, DB> GasKVStoreMut<'a, DB> {
             inner: self.inner.to_immutable(),
         }
     }
+
+    pub fn range(&'a self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> GasRange<'a, DB> {
+        GasRange::new_kv(self.inner.range(range), self.guard.clone())
+    }
 }
 
 impl<'a, DB: Database> QueryableKVStore for GasKVStoreMut<'a, DB> {
     type Prefix = GasPrefixStore<'a, DB>;
-
-    type Range = GasRange<'a, DB>;
 
     type Err = GasStoreErrors;
 
@@ -51,11 +53,6 @@ impl<'a, DB: Database> QueryableKVStore for GasKVStoreMut<'a, DB> {
 
     fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
         GasPrefixStore::new(self.guard, self.inner.prefix_store(prefix))
-    }
-
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        // GasRange::new_kv(self.inner.range(range), self.guard.clone())
-        todo!()
     }
 }
 

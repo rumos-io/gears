@@ -22,10 +22,21 @@ pub(crate) enum KVStoreBackend<'a, DB> {
 #[derive(Debug)]
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
+impl<'a, DB: Database> KVStore<'a, DB> {
+    pub fn range(
+        &self,
+        range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
+    ) -> Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
+        match self.0 {
+            KVStoreBackend::Commit(var) => var.range(range),
+            KVStoreBackend::Cache(var) => var.range(range),
+            KVStoreBackend::Query(var) => var.range(range),
+        }
+    }
+}
+
 impl<'a, DB: Database> QueryableKVStore for KVStore<'a, DB> {
     type Prefix = ImmutablePrefixStore<'a, DB>;
-
-    type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
 
     type Err = Infallible;
 
@@ -43,15 +54,6 @@ impl<'a, DB: Database> QueryableKVStore for KVStore<'a, DB> {
             KVStoreBackend::Cache(var) => var.prefix_store(prefix),
             KVStoreBackend::Query(var) => var.prefix_store(prefix),
         }
-    }
-
-    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        //     match self.0 {
-        //     KVStoreBackend::Commit(var) => var.range(range),
-        //     KVStoreBackend::Cache(var) => var.range(range),
-        //     KVStoreBackend::Query(var) => var.range(range),
-        // }
-        todo!() // TODO:NOW Rework range
     }
 }
 

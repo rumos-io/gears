@@ -1,3 +1,5 @@
+use std::ops::Bound;
+
 use database::Database;
 use kv_store::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
 
@@ -24,10 +26,17 @@ impl<'a, DB> From<KVStore<'a, DB>> for Store<'a, DB> {
     }
 }
 
+impl<'a, DB: Database> Store<'a, DB> {
+    pub fn range(&'a self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> StoreRange<'a, DB> {
+        match &self.0 {
+            StoreBackend::Gas(var) => StoreRange::from(var.range(range)),
+            StoreBackend::Kv(var) => StoreRange::from(var.range(range)),
+        }
+    }
+}
+
 impl<'a, DB: Database> QueryableKVStore for Store<'a, DB> {
     type Prefix = PrefixStore<'a, DB>;
-
-    type Range = StoreRange<'a, DB>;
 
     type Err = StoreErrors;
 
@@ -42,13 +51,6 @@ impl<'a, DB: Database> QueryableKVStore for Store<'a, DB> {
         match self.0 {
             StoreBackend::Gas(var) => var.prefix_store(prefix).into(),
             StoreBackend::Kv(var) => var.prefix_store(prefix).into(),
-        }
-    }
-
-    fn range<R: std::ops::RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range {
-        match &self.0 {
-            StoreBackend::Gas(var) => StoreRange::from(var.range(range)),
-            StoreBackend::Kv(var) => StoreRange::from(var.range(range)),
         }
     }
 }

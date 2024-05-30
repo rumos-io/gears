@@ -1,7 +1,4 @@
-use std::{
-    convert::Infallible,
-    ops::{Bound, RangeBounds},
-};
+use std::{convert::Infallible, ops::Bound};
 
 use database::Database;
 
@@ -34,6 +31,16 @@ impl<'a, DB: Database> KVStoreMut<'a, DB> {
             KVStoreBackendMut::Cache(var) => var.delete(k),
         }
     }
+
+    pub fn range(
+        &'a self,
+        range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
+    ) -> Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
+        match &self.0 {
+            KVStoreBackendMut::Commit(var) => var.range(range),
+            KVStoreBackendMut::Cache(var) => var.range(range),
+        }
+    }
 }
 
 impl<'a, DB> KVStoreMut<'a, DB> {
@@ -48,7 +55,7 @@ impl<'a, DB> KVStoreMut<'a, DB> {
 impl<'a, DB: Database> QueryableKVStore for KVStoreMut<'a, DB> {
     type Prefix = ImmutablePrefixStore<'a, DB>;
 
-    type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
+    // type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
 
     type Err = Infallible;
 
@@ -66,13 +73,13 @@ impl<'a, DB: Database> QueryableKVStore for KVStoreMut<'a, DB> {
         }
     }
 
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, _range: R) -> Self::Range {
-        //     match &self.0 {
-        //         KVStoreBackendMut::Commit(var) => var.range(range),
-        //         KVStoreBackendMut::Cache(var) => var.range(range),
-        //     }
-        todo!()
-    }
+    // fn range(&self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> Self::Range {
+    //     // match self.0 {
+    //     //     KVStoreBackendMut::Commit(ref var) => var.range(range),
+    //     //     KVStoreBackendMut::Cache(ref var) => var.range(range),
+    //     // }
+    //     todo!()
+    // }
 }
 
 impl<'a, DB: Database> TransactionalKVStore for KVStoreMut<'a, DB> {

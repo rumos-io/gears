@@ -1,6 +1,6 @@
 pub mod mutable;
 
-use std::ops::RangeBounds;
+use std::ops::Bound;
 
 use database::Database;
 use kv_store::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
@@ -13,16 +13,18 @@ pub struct GasKVStore<'a, DB> {
     pub(super) inner: KVStore<'a, DB>,
 }
 
-impl<'a, DB> GasKVStore<'a, DB> {
+impl<'a, DB: Database> GasKVStore<'a, DB> {
     pub(crate) fn new(guard: GasGuard, inner: KVStore<'a, DB>) -> Self {
         Self { guard, inner }
+    }
+
+    pub fn range(&'a self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> GasRange<'a, DB> {
+        GasRange::new_kv(self.inner.range(range), self.guard.clone())
     }
 }
 
 impl<'a, DB: Database> QueryableKVStore for GasKVStore<'a, DB> {
     type Prefix = GasPrefixStore<'a, DB>;
-
-    type Range = GasRange<'a, DB>;
 
     type Err = GasStoreErrors;
 
@@ -37,9 +39,5 @@ impl<'a, DB: Database> QueryableKVStore for GasKVStore<'a, DB> {
 
     fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
         GasPrefixStore::new(self.guard, self.inner.prefix_store(prefix))
-    }
-
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range {
-        GasRange::new_kv(self.inner.range(range), self.guard.clone())
     }
 }

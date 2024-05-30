@@ -8,7 +8,7 @@ pub mod range;
 pub mod types;
 mod utils;
 
-use std::{hash::Hash, ops::RangeBounds};
+use std::hash::Hash;
 
 pub(crate) const TREE_CACHE_SIZE: usize = 100_000;
 
@@ -42,12 +42,11 @@ pub trait WritePrefixStore: ReadPrefixStore {
 
 pub trait QueryableKVStore {
     type Prefix: ReadPrefixStore;
-    type Range: Iterator;
     type Err;
 
     fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err>;
     fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix;
-    fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Self::Range;
+    // fn range(&self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> Self::Range; // Borrow checker won't work for mutable version of it
     // fn get_keys(&self, key_prefix: &(impl AsRef<[u8]> + ?Sized)) -> Vec<Vec<u8>>;
 }
 
