@@ -204,23 +204,17 @@ impl ParamsSerialize for inner::ConsensusParams {
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
         let mut hash_map = Vec::with_capacity(3);
 
-        if let Some(params) = self.block.clone() {
-            let block_params = serde_json::to_string(&BlockParams::from(params))
-                .expect("conversion to json won't fail");
-            hash_map.push((KEY_BLOCK_PARAMS, block_params.into_bytes()));
-        }
+        let block_params = serde_json::to_string(&BlockParams::from(self.block.clone()))
+            .expect("conversion to json won't fail");
+        hash_map.push((KEY_BLOCK_PARAMS, block_params.into_bytes()));
 
-        if let Some(params) = self.evidence.clone() {
-            let evidence_params = serde_json::to_string(&EvidenceParams::from(params))
-                .expect("conversion to json won't fail");
-            hash_map.push((KEY_EVIDENCE_PARAMS, evidence_params.into_bytes()));
-        }
+        let evidence_params = serde_json::to_string(&EvidenceParams::from(self.evidence.clone()))
+            .expect("conversion to json won't fail");
+        hash_map.push((KEY_EVIDENCE_PARAMS, evidence_params.into_bytes()));
 
-        if let Some(params) = self.validator.clone() {
-            let params = serde_json::to_string(&ValidatorParams::from(params))
-                .expect("conversion to json won't fail");
-            hash_map.push((KEY_VALIDATOR_PARAMS, params.into_bytes()));
-        }
+        let params = serde_json::to_string(&ValidatorParams::from(self.validator.clone()))
+            .expect("conversion to json won't fail");
+        hash_map.push((KEY_VALIDATOR_PARAMS, params.into_bytes()));
 
         hash_map
     }

@@ -1,6 +1,6 @@
 use database::Database;
 use store_crate::{types::multi::MultiBank, TransactionStore, TransactionalMultiKVStore};
-use tendermint::types::proto::event::Event;
+use tendermint::types::proto::{event::Event, header::Header};
 
 use super::{build_tx_gas_meter, ExecutionMode};
 use crate::{
@@ -13,7 +13,6 @@ use crate::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas,
             GasMeter,
         },
-        header::Header,
         tx::raw::TxWithRaw,
     },
 };

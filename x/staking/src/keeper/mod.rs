@@ -284,8 +284,9 @@ impl<
         self.unbond_all_mature_validators(ctx);
 
         // Remove all mature unbonding delegations from the ubd queue.
-        // TODO: make better api for timestamps in Gears
-        let time = ctx.get_time().unwrap();
+        let time = ctx.get_time();
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
         let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time.clone());
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;
@@ -555,19 +556,19 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.get(ctx);
-                // TODO
+                // TODO: consider to work with time in Gears
                 let duration = chrono::TimeDelta::new(
                     params.unbonding_time.seconds,
                     params.unbonding_time.nanos as u32,
                 )
                 .unwrap();
-                let time = ctx.get_time().unwrap();
-                // TODO
+                let time = ctx.get_time();
+                // TODO: consider to work with time in Gears
                 let time =
                     chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
                 let completion_time = time + duration;
                 let height = ctx.height();
-                // TODO
+                // TODO: consider to work with time in Gears
                 let completion_time = Timestamp {
                     seconds: completion_time.timestamp(),
                     nanos: completion_time.timestamp_subsec_nanos() as i32,

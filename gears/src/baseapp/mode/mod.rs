@@ -3,7 +3,7 @@ pub mod deliver;
 pub mod re_check;
 
 use store_crate::{types::multi::MultiBank, ApplicationStore};
-use tendermint::types::proto::event::Event;
+use tendermint::types::proto::{event::Event, header::Header};
 
 use self::sealed::Sealed;
 use super::{options::NodeOptions, params::ConsensusParams};
@@ -16,7 +16,6 @@ use crate::{
         gas::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::TxKind, GasMeter,
         },
-        header::Header,
         tx::raw::TxWithRaw,
     },
 };

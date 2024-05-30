@@ -7,7 +7,7 @@ use std::{
 
 use serde::{
     de::{Error, MapAccess, Visitor},
-    Deserialize, Deserializer,
+    Deserialize, Deserializer, Serialize,
 };
 
 use super::validate::{
@@ -28,7 +28,7 @@ pub enum ChainIdErrors {
     InvalidCharacter(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
 pub struct ChainId {
     id: String,
     revision_number: u64,
