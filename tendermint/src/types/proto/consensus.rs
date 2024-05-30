@@ -7,7 +7,7 @@ pub struct ConsensusParams {
     pub block: BlockParams,
     pub evidence: EvidenceParams,
     pub validator: ValidatorParams,
-    pub version: VersionParams,
+    pub version: Option<VersionParams>,
 }
 
 impl From<ConsensusParams> for inner::ConsensusParams {
@@ -23,7 +23,7 @@ impl From<ConsensusParams> for inner::ConsensusParams {
             block: Some(block.into()),
             evidence: Some(evidence.into()),
             validator: Some(validator.into()),
-            version: Some(version.into()),
+            version: version.map(Into::into),
         }
     }
 }
@@ -49,9 +49,7 @@ impl TryFrom<inner::ConsensusParams> for ConsensusParams {
             validator: validator
                 .ok_or_else(|| Self::Error::InvalidData("validator params is missing".into()))?
                 .into(),
-            version: version
-                .ok_or_else(|| Self::Error::InvalidData("version params is missing".into()))?
-                .into(),
+            version: version.map(Into::into),
         })
     }
 }
