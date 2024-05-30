@@ -53,8 +53,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
         let mut ctx = InitContext::new(
             &mut multi_store,
             self.block_height(),
-            request.time.clone(),
-            request.chain_id.clone(),
+            request.time,
+            request.chain_id,
         );
 
         self.baseapp_params_keeper
