@@ -1,8 +1,8 @@
 use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Validator};
 use gears::{
-    core::errors::Error,
+    core::{errors::Error, Protobuf},
     error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
+    tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::Coin,
@@ -124,7 +124,7 @@ pub struct QueryValidatorResponseRaw {
 impl From<QueryValidatorResponse> for QueryValidatorResponseRaw {
     fn from(query: QueryValidatorResponse) -> QueryValidatorResponseRaw {
         Self {
-            validator: query.validator.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            validator: query.validator.encode_vec(),
         }
     }
 }

@@ -1,6 +1,9 @@
 pub use super::*;
-use crate::{Commission, CreateValidator, DelegateMsg};
-use gears::types::{address::ConsAddress, context::tx::TxContext};
+use crate::{Commission, CreateValidator, DelegateMsg, RedelegateMsg};
+use gears::{
+    store::database::ext::UnwrapCorrupt,
+    types::{address::ConsAddress, context::tx::TxContext},
+};
 
 impl<
         SK: StoreKey,
@@ -79,7 +82,7 @@ impl<
         // NOTE source will always be from a wallet which are unbonded
         self.delegate(
             ctx,
-            msg.delegator_address.clone(),
+            &msg.delegator_address,
             msg.value.amount,
             BondStatus::Unbonded,
             &mut validator,
@@ -124,7 +127,7 @@ impl<
         Ok(())
     }
 
-    /// Delegate defines a method for performing a delegation of coins from a delegator to a validator
+    /// delegate_cmd_handler defines a method for performing a delegation of coins from a delegator to a validator
     pub fn delegate_cmd_handler<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
@@ -148,7 +151,7 @@ impl<
         // NOTE: source funds are always unbonded
         let new_shares = self.delegate(
             ctx,
-            delegator_address,
+            &delegator_address,
             msg.amount.amount,
             BondStatus::Unbonded,
             &mut validator,
@@ -207,6 +210,116 @@ impl<
             },
         ]);
 
+        Ok(())
+    }
+
+    /// redelegate_cmd_handler defines a method for performing a redelegation of coins from a delegator and source validator to a destination validator
+    pub fn redelegate_cmd_handler<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &RedelegateMsg,
+    ) -> Result<(), AppError> {
+        let shares = self
+            .validate_unbond_amount(
+                ctx,
+                &msg.delegator_address,
+                &msg.src_validator_address,
+                msg.amount.amount,
+            )
+            .map_err(|e| AppError::Coins(e.to_string()))?;
+
+        let params = self.staking_params_keeper.get(ctx);
+
+        if msg.amount.denom != params.bond_denom {
+            return Err(AppError::InvalidRequest(format!(
+                "invalid coin denomination: got {}, expected {}",
+                msg.amount.denom, params.bond_denom
+            )));
+        }
+
+        let completion_time = self
+            .begin_redelegation(
+                ctx,
+                &msg.delegator_address,
+                &msg.src_validator_address,
+                &msg.dst_validator_address,
+                shares,
+            )
+            .map_err(|e| AppError::Custom(e.to_string()))?;
+
+        // TODO
+        //     if msg.Amount.Amount.IsInt64() {
+        //         defer func() {
+        //             telemetry.IncrCounter(1, types.ModuleName, "redelegate")
+        //             telemetry.SetGaugeWithLabels(
+        //                 []string{"tx", "msg", msg.Type()},
+        //                 float32(msg.Amount.Amount.Int64()),
+        //                 []metrics.Label{telemetry.NewLabel("denom", msg.Amount.Denom)},
+        //             )
+        //         }()
+        //     }
+
+        ctx.append_events(vec![
+            Event {
+                r#type: EVENT_TYPE_REDELEGATE.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_SRC_VALIDATOR.as_bytes().into(),
+                        value: msg
+                            .src_validator_address
+                            .to_string()
+                            .as_bytes()
+                            .to_vec()
+                            .into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_DST_VALIDATOR.as_bytes().into(),
+                        value: msg
+                            .dst_validator_address
+                            .to_string()
+                            .as_bytes()
+                            .to_vec()
+                            .into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
+                        value: serde_json::to_vec(&msg.amount)
+                            .expect(SERDE_ENCODING_DOMAIN_TYPE)
+                            .into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_COMPLETION_TIME.as_bytes().into(),
+                        value: serde_json::to_vec(&completion_time)
+                            .unwrap_or_corrupt()
+                            .into(),
+                        index: false,
+                    },
+                ],
+            },
+            Event {
+                r#type: EVENT_TYPE_MESSAGE.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_MODULE.as_bytes().into(),
+                        value: ATTRIBUTE_VALUE_CATEGORY.as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_SENDER.as_bytes().into(),
+                        value: msg.delegator_address.to_string().as_bytes().to_vec().into(),
+                        index: false,
+                    },
+                ],
+            },
+        ]);
+
+        // TODO
+        //     return &types.MsgBeginRedelegateResponse{
+        //         CompletionTime: completionTime,
+        //     }, nil
         Ok(())
     }
 }

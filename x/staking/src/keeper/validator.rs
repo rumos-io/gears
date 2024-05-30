@@ -38,6 +38,31 @@ impl<
         );
     }
 
+    pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) -> Option<Vec<u8>> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
+        validators_store.delete(validator.operator_address.to_string().as_bytes())
+    }
+
+    pub fn jail_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) {
+        assert!(
+            !validator.jailed,
+            "cannot jail already jailed validator, validator: {}",
+            validator.operator_address
+        );
+        validator.jailed = true;
+        self.set_validator(ctx, validator);
+        self.delete_validator_by_power_index(ctx, validator);
+    }
+
     pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
@@ -65,16 +90,6 @@ impl<
         );
     }
 
-    pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        addr: &[u8],
-    ) -> Option<Vec<u8>> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
-        validators_store.delete(addr)
-    }
-
     /// Update the tokens of an existing validator, update the validators power index key
     pub fn add_validator_tokens_and_shares<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
@@ -89,11 +104,25 @@ impl<
         added_shares
     }
 
+    /// Update the tokens of an existing validator, update the validators power index key
+    pub fn remove_validator_tokens_and_shares<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+        shares_to_remove: Decimal256,
+    ) -> Uint256 {
+        self.delete_validator_by_power_index(ctx, validator);
+        let removed_tokens = validator.remove_del_shares(shares_to_remove);
+        self.set_validator(ctx, validator);
+        self.set_validator_by_power_index(ctx, validator);
+        removed_tokens
+    }
+
     pub fn validator_queue_map<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: chrono::DateTime<Utc>,
-        block_height: i64,
+        block_height: u64,
     ) -> HashMap<Vec<u8>, Vec<String>> {
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
@@ -159,7 +188,7 @@ impl<
     }
 }
 
-pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i64) -> Vec<u8> {
+pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: u64) -> Vec<u8> {
     let height_bz = end_height.to_ne_bytes();
     let time_bz = end_time
         .timestamp_nanos_opt()
@@ -175,7 +204,7 @@ pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i
 
 pub(super) fn parse_validator_queue_key(
     key: &[u8],
-) -> anyhow::Result<(chrono::DateTime<Utc>, i64)> {
+) -> anyhow::Result<(chrono::DateTime<Utc>, u64)> {
     let prefix_len = VALIDATORS_QUEUE_KEY.len();
     if key[..prefix_len] != VALIDATORS_QUEUE_KEY {
         return Err(
@@ -186,6 +215,6 @@ pub(super) fn parse_validator_queue_key(
     let time = chrono::DateTime::from_timestamp_nanos(i64::from_ne_bytes(
         key[prefix_len + 8..prefix_len + 8 + time_len as usize].try_into()?,
     ));
-    let height = i64::from_ne_bytes(key[prefix_len + 8 + time_len as usize..].try_into()?);
+    let height = u64::from_ne_bytes(key[prefix_len + 8 + time_len as usize..].try_into()?);
     Ok((time, height))
 }

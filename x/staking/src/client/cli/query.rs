@@ -4,8 +4,7 @@ use crate::{
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
-    error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
+    core::Protobuf,
     types::{
         address::{AccAddress, ValAddress},
         query::Query,
@@ -110,8 +109,8 @@ impl Query for StakingQuery {
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            StakingQuery::Validator(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-            StakingQuery::Delegation(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+            StakingQuery::Validator(var) => var.encode_vec(),
+            StakingQuery::Delegation(var) => var.encode_vec(),
         }
     }
 }

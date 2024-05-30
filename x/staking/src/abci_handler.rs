@@ -3,12 +3,12 @@ use crate::{
     QueryValidatorRequest,
 };
 use gears::{
-    core::errors::Error,
-    error::{AppError, IBC_ENCODE_UNWRAP},
+    core::{errors::Error, Protobuf},
+    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
-        proto::{validator::ValidatorUpdate, Protobuf},
+        proto::validator::ValidatorUpdate,
         request::{end_block::RequestEndBlock, query::RequestQuery},
     },
     types::context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
@@ -45,6 +45,7 @@ impl<
         match msg {
             Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
+            Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
         }
     }
 
@@ -66,23 +67,13 @@ impl<
                 let req = QueryValidatorRequest::decode(query.data)
                     .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self
-                    .keeper
-                    .query_validator(ctx, req)?
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                Ok(self.keeper.query_validator(ctx, req)?.encode_vec().into()) // TODO:IBC
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
                     .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self
-                    .keeper
-                    .query_delegation(ctx, req)?
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                Ok(self.keeper.query_delegation(ctx, req)?.encode_vec().into()) // TODO:IBC
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

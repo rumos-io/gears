@@ -4,10 +4,10 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
-    core::errors::Error,
+    core::{errors::Error, Protobuf},
     error::AppError,
     tendermint::types::{
-        proto::{crypto::PublicKey, validator::ValidatorUpdate, Protobuf},
+        proto::{crypto::PublicKey, validator::ValidatorUpdate},
         time::Timestamp,
     },
     types::{
@@ -86,10 +86,16 @@ pub struct Redelegation {
     pub entries: Vec<RedelegationEntry>,
 }
 
+impl Redelegation {
+    pub fn add_entry(&mut self, redelegation_entry: RedelegationEntry) {
+        self.entries.push(redelegation_entry);
+    }
+}
+
 /// RedelegationEntry - entry to a Redelegation
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RedelegationEntry {
-    pub creation_height: i64,
+    pub creation_height: u64,
     pub completion_time: Timestamp,
     pub initial_balance: Uint256,
     pub share_dst: Decimal256,
@@ -175,7 +181,7 @@ pub struct Validator {
     /// tokens define the delegated tokens (incl. self-delegation).
     pub tokens: Uint256,
     /// unbonding_height defines, if unbonding, the height at which this validator has begun unbonding.
-    pub unbonding_height: i64,
+    pub unbonding_height: u64,
     /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
     pub unbonding_time: Timestamp,
     /// commission defines the commission parameters.
@@ -249,7 +255,7 @@ impl Validator {
         issues_shares
     }
 
-    fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
+    pub fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
             return Err(AppError::Custom("insufficient shares".into()).into());
         }
@@ -259,7 +265,50 @@ impl Validator {
             .checked_div(Decimal256::new(self.tokens))?)
     }
 
+    pub fn shares_from_tokens_truncated(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
+        if self.tokens.is_zero() {
+            return Err(AppError::Custom("insufficient shares".into()).into());
+        }
+
+        // TODO: check
+        let mul = self.delegator_shares.checked_mul(Decimal256::new(amount))?;
+        // TODO: check constant 18 in decimals
+        let precision_reuse = Decimal256::new(Uint256::from_u128(10u128)).checked_pow(18)?;
+        let mul2 = mul
+            .checked_mul(precision_reuse)?
+            .checked_mul(precision_reuse)?;
+        let div = mul2.checked_div(Decimal256::new(self.tokens))?;
+        Ok(div.checked_div(precision_reuse)?)
+    }
+
+    /// RemoveDelShares removes delegator shares from a validator.
+    /// NOTE: because token fractions are left in the valiadator,
+    ///       the exchange rate of future shares of this validator can increase.
+    pub fn remove_del_shares(&mut self, del_shares: Decimal256) -> Uint256 {
+        let remaining_shares = self.delegator_shares - del_shares;
+
+        let issued_tokens = if remaining_shares.is_zero() {
+            // last delegation share gets any trimmings
+            let tokens = self.tokens;
+            self.tokens = Uint256::zero();
+            tokens
+        } else {
+            // leave excess tokens in the validator
+            // however fully use all the delegator shares
+            // TODO: unfailable + floor
+            let tokens = self.tokens_from_shares(del_shares).unwrap().to_uint_floor();
+            // TODO: check of negative result
+            self.tokens -= tokens;
+            //         panic("attempting to remove more tokens than available in validator")
+            tokens
+        };
+
+        self.delegator_shares = remaining_shares;
+        issued_tokens
+    }
+
     /// calculate the token worth of provided shares
+    // TODO: unfailable in sdk
     pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
         Ok(shares
             .checked_mul(Decimal256::new(self.tokens))?
@@ -385,8 +434,8 @@ pub struct ValidatorRaw {
     pub jailed: bool,
     #[prost(string)]
     pub tokens: String,
-    #[prost(int64)]
-    pub unbonding_height: i64,
+    #[prost(uint64)]
+    pub unbonding_height: u64,
     #[prost(message, optional)]
     pub unbonding_time: Option<Timestamp>,
     #[prost(message, optional)]

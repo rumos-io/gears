@@ -2,6 +2,7 @@ use gears::{
     core::base::coin::Coin,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
+    tendermint::types::time::Duration,
     types::{
         context::{QueryableContext, TransactionalContext},
         denom::Denom,
@@ -19,7 +20,7 @@ const KEY_MIN_COMMISSION_RATE: &str = "MinCommissionRate";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Params {
-    pub unbonding_time: std::time::Duration,
+    pub unbonding_time: Duration,
     pub max_validators: u32,
     pub max_entries: u32,
     pub historical_entries: u32,
@@ -33,7 +34,10 @@ impl Default for Params {
         let bond_denom = Denom::try_from("uatom".to_string()).unwrap();
         Params {
             // 3 weeks
-            unbonding_time: std::time::Duration::from_secs(60 * 60 * 24 * 7 * 3),
+            unbonding_time: Duration {
+                seconds: 60 * 60 * 24 * 7 * 3,
+                nanos: 0,
+            },
             max_validators: 100,
             max_entries: 7,
             bond_denom: bond_denom.clone(),
@@ -92,7 +96,7 @@ impl ParamsSerialize for Params {
 impl ParamsDeserialize for Params {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         // TODO: check unwraps
-        let unbonding_time: std::time::Duration = serde_json::from_slice(
+        let unbonding_time: Duration = serde_json::from_slice(
             &ParamKind::Bytes
                 .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
                 .bytes()

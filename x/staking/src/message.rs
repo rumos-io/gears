@@ -1,4 +1,4 @@
-use crate::{CreateValidator, DelegateMsg};
+use crate::{CreateValidator, DelegateMsg, RedelegateMsg};
 use gears::{
     core::{any::google::Any, Protobuf},
     types::{address::AccAddress, tx::TxMessage},
@@ -14,6 +14,8 @@ pub enum Message {
     CreateValidator(CreateValidator),
     #[serde(rename = "/cosmos.staking.v1beta1.Delegate")]
     Delegate(DelegateMsg),
+    #[serde(rename = "/cosmos.staking.v1beta1.Redelegate")]
+    Redelegate(RedelegateMsg),
 }
 
 impl TxMessage for Message {
@@ -21,6 +23,7 @@ impl TxMessage for Message {
         match &self {
             Message::CreateValidator(msg) => vec![&msg.delegator_address],
             Message::Delegate(msg) => vec![&msg.delegator_address],
+            Message::Redelegate(msg) => vec![&msg.delegator_address],
         }
     }
 
@@ -28,6 +31,7 @@ impl TxMessage for Message {
         match &self {
             Message::CreateValidator(_) => Ok(()),
             Message::Delegate(_) => Ok(()),
+            Message::Redelegate(_) => Ok(()),
         }
     }
 
@@ -35,6 +39,7 @@ impl TxMessage for Message {
         match self {
             Message::CreateValidator(_) => "/cosmos.staking.v1beta1.CreateValidator",
             Message::Delegate(_) => "/cosmos.staking.v1beta1.Delegate",
+            Message::Redelegate(_) => "/cosmos.staking.v1beta1.Redelegate",
         }
     }
 }
@@ -48,6 +53,10 @@ impl From<Message> for Any {
             },
             Message::Delegate(msg) => Any {
                 type_url: "/cosmos.staking.v1beta1.Delegate".to_string(),
+                value: msg.encode_vec(),
+            },
+            Message::Redelegate(msg) => Any {
+                type_url: "/cosmos.staking.v1beta1.Redelegate".to_string(),
                 value: msg.encode_vec(),
             },
         }
@@ -68,6 +77,11 @@ impl TryFrom<Any> for Message {
                 let msg = DelegateMsg::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::Error::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Delegate(msg))
+            }
+            "/cosmos.staking.v1beta1.Redelegate" => {
+                let msg = RedelegateMsg::decode::<Bytes>(value.value.clone().into())
+                    .map_err(|e| gears::core::errors::Error::DecodeProtobuf(e.to_string()))?;
+                Ok(Message::Redelegate(msg))
             }
             _ => Err(gears::core::errors::Error::DecodeGeneral(
                 "message type not recognized".into(),

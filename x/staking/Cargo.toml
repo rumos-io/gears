@@ -9,7 +9,6 @@ axum = { workspace = true }
 chrono = { version = "0.4.38", features = [ "serde" ] }
 clap = { workspace = true }
 gears = { path = "../../gears", features = [ "cli", "export", "xmods" ] }
-hex = { workspace = true }
 prost = { workspace = true }
 strum = { workspace = true }
 serde = { workspace = true, default-features = false }

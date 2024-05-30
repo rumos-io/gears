@@ -354,3 +354,60 @@ impl TryFrom<DelegateMsgRaw> for DelegateMsg {
 }
 
 impl Protobuf<DelegateMsgRaw> for DelegateMsg {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct RedelegateMsgRaw {
+    #[prost(string)]
+    pub delegator_address: String,
+    #[prost(string)]
+    pub src_validator_address: String,
+    #[prost(string)]
+    pub dst_validator_address: String,
+    #[prost(message, optional)]
+    pub amount: Option<CoinRaw>,
+}
+
+impl From<RedelegateMsg> for RedelegateMsgRaw {
+    fn from(src: RedelegateMsg) -> Self {
+        Self {
+            delegator_address: src.delegator_address.to_string(),
+            src_validator_address: src.src_validator_address.to_string(),
+            dst_validator_address: src.dst_validator_address.to_string(),
+            amount: Some(src.amount.into()),
+        }
+    }
+}
+
+/// Creates a new RedelegateMsg transaction message instance.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct RedelegateMsg {
+    pub delegator_address: AccAddress,
+    pub src_validator_address: ValAddress,
+    pub dst_validator_address: ValAddress,
+    pub amount: Coin,
+}
+
+impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
+    type Error = Error;
+
+    fn try_from(src: RedelegateMsgRaw) -> Result<Self, Self::Error> {
+        Ok(RedelegateMsg {
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            src_validator_address: ValAddress::from_bech32(&src.src_validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            dst_validator_address: ValAddress::from_bech32(&src.dst_validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            amount: src
+                .amount
+                .ok_or(Error::MissingField(
+                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
+                        .into(),
+                ))?
+                .try_into()
+                .map_err(|e| Error::Coin(format!("{e}")))?,
+        })
+    }
+}
+
+impl Protobuf<RedelegateMsgRaw> for RedelegateMsg {}

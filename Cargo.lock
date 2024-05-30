@@ -4677,7 +4677,6 @@ dependencies = [
  "chrono",
  "clap",
  "gears",
- "hex 0.4.3",
  "prost 0.11.9",
  "serde",
  "serde_json",

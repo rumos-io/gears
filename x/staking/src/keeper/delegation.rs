@@ -14,7 +14,7 @@ impl<
     pub fn delegate<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        del_addr: AccAddress,
+        del_addr: &AccAddress,
         bond_amount: Uint256,
         token_src: BondStatus,
         validator: &mut Validator,
@@ -116,8 +116,8 @@ impl<
     ) -> Option<Delegation> {
         let store = ctx.kv_store(&self.store_key);
         let delegations_store = store.prefix_store(DELEGATIONS_KEY);
-        let mut key = del_addr.to_string().as_bytes().to_vec();
-        key.put(val_addr.to_string().as_bytes());
+        let mut key = Vec::from(del_addr.clone());
+        key.extend_from_slice(&Vec::from(val_addr.clone()));
         delegations_store
             .get(&key)
             .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
@@ -130,11 +130,23 @@ impl<
     ) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
-        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
-        key.put(delegation.validator_address.to_string().as_bytes());
+        let mut key = Vec::from(delegation.delegator_address.clone());
+        key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.set(
             key,
             serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
         );
+    }
+
+    pub fn remove_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        delegation: &Delegation,
+    ) -> Option<Vec<u8>> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
+        let mut key = Vec::from(delegation.delegator_address.clone());
+        key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
+        delegations_store.delete(&key)
     }
 }
