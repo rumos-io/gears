@@ -1,11 +1,9 @@
 use gears::{
+    context::{ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext},
     core::base::coin::Coin,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
-    types::{
-        context::{QueryableContext, TransactionalContext},
-        denom::Denom,
-    },
+    types::{denom::Denom, store::errors::StoreErrors},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -148,7 +146,7 @@ pub struct StakingParamsKeeper<PSK: ParamsSubspaceKey> {
 }
 
 impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Params {
@@ -156,12 +154,31 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
         store.params().expect("params should be stored in database")
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: Params,
     ) {
         let mut store = gears::params::subspace_mut(ctx, &self.params_subspace_key);
         store.params_set(&params);
+    }
+
+    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: ImmutableGasContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<Params, StoreErrors> {
+        let store = gears::params::gas::subspace(ctx, &self.params_subspace_key);
+        Ok(store
+            .params()?
+            .expect("params should be stored in database"))
+    }
+
+    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: MutableGasContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: Params,
+    ) -> Result<(), StoreErrors> {
+        let mut store = gears::params::gas::subspace_mut(ctx, &self.params_subspace_key);
+        store.params_set(&params)
     }
 }

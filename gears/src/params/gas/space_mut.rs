@@ -12,7 +12,7 @@ pub struct GasParamsSpaceMut<'a, DB> {
     pub(super) inner: PrefixStoreMut<'a, DB>,
 }
 
-impl<DB> GasParamsSpaceMut<'_, DB> {
+impl<DB: Database> GasParamsSpaceMut<'_, DB> {
     pub fn to_immutable(&self) -> GasParamsSpace<'_, DB> {
         GasParamsSpace {
             inner: self.inner.to_immutable(),

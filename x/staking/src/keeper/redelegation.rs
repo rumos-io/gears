@@ -1,6 +1,9 @@
 pub use super::*;
 use crate::consts::error::TIMESTAMP_NANOS_EXPECT;
-use gears::store::database::ext::UnwrapCorrupt;
+use gears::{
+    context::{ImmutableContext, MutableContext},
+    store::{database::ext::UnwrapCorrupt, ext::UnwrapInfallible},
+};
 
 impl<
         SK: StoreKey,
@@ -10,19 +13,19 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    pub fn redelegation<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn redelegation<DB: Database, CTX: ImmutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
         val_src_addr: ValAddress,
         val_dst_addr: ValAddress,
     ) -> anyhow::Result<Redelegation> {
-        let store = ctx.kv_store(&self.store_key);
+        let store = ImmutableContext::kv_store(ctx, &self.store_key);
         let store = store.prefix_store(REDELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_src_addr.to_string().as_bytes());
         key.put(val_dst_addr.to_string().as_bytes());
-        if let Some(e) = store.get(&key) {
+        if let Some(e) = store.get(&key).unwrap_infallible() {
             Ok(serde_json::from_slice(&e)?)
         } else {
             Err(anyhow::Error::from(serde_json::Error::custom(
@@ -31,28 +34,30 @@ impl<
         }
     }
 
-    pub fn set_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_redelegation<DB: Database, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) {
-        let store = ctx.kv_store_mut(&self.store_key);
+        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
         key.put(delegation.validator_dst_address.to_string().as_bytes());
-        delegations_store.set(
-            key,
-            serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        delegations_store
+            .set(
+                key,
+                serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
+            )
+            .unwrap_infallible();
     }
 
-    pub fn remove_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn remove_redelegation<DB: Database, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) -> Option<Vec<u8>> {
-        let store = ctx.kv_store_mut(&self.store_key);
+        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
@@ -105,7 +110,7 @@ impl<
         Ok(balances)
     }
 
-    pub fn insert_redelegation_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn insert_redelegation_queue<DB: Database, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         redelegation: &Redelegation,
@@ -125,32 +130,32 @@ impl<
         }
     }
 
-    pub fn redelegation_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn redelegation_queue_time_slice<DB: Database, CTX: ImmutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
     ) -> Vec<DvvTriplet> {
-        let store = ctx.kv_store(&self.store_key);
+        let store = ImmutableContext::kv_store(ctx, &self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
             .timestamp_nanos_opt()
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
-        if let Some(bytes) = store.get(&key) {
+        if let Some(bytes) = store.get(&key).unwrap_infallible() {
             serde_json::from_slice(&bytes).unwrap_or_corrupt()
         } else {
             vec![]
         }
     }
 
-    pub fn set_redelegation_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_redelegation_queue_time_slice<DB: Database, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
         redelegations: Vec<DvvTriplet>,
     ) {
-        let store = ctx.kv_store_mut(&self.store_key);
+        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
@@ -158,21 +163,18 @@ impl<
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
         let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
-        store.set(key, value);
+        store.set(key, value).unwrap_infallible();
     }
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
     /// currTime, and deletes the timeslices from the queue
-    pub fn dequeue_all_mature_redelegation_queue<
-        DB: Database,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    pub fn dequeue_all_mature_redelegation_queue<DB: Database, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
     ) -> Vec<DvvTriplet> {
         let (keys, mature_redelegations) = {
-            let storage = ctx.kv_store(&self.store_key);
+            let storage = ImmutableContext::kv_store(ctx, &self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
@@ -194,7 +196,7 @@ impl<
             (keys, mature_redelegations)
         };
 
-        let storage = ctx.kv_store_mut(&self.store_key);
+        let storage = MutableContext::kv_store_mut(ctx, &self.store_key);
         let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);

@@ -15,7 +15,7 @@ enum PrefixStoreMutBackend<'a, DB> {
 
 pub struct PrefixStoreMut<'a, DB>(PrefixStoreMutBackend<'a, DB>);
 
-impl<'a, DB> PrefixStoreMut<'a, DB> {
+impl<'a, DB: Database> PrefixStoreMut<'a, DB> {
     pub fn to_immutable(&'a self) -> PrefixStore<'a, DB> {
         match &self.0 {
             PrefixStoreMutBackend::Gas(var) => {
@@ -24,6 +24,13 @@ impl<'a, DB> PrefixStoreMut<'a, DB> {
             PrefixStoreMutBackend::Kv(var) => {
                 PrefixStore(super::PrefixStoreBackend::Kv(var.to_immutable()))
             }
+        }
+    }
+
+    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, StoreErrors> {
+        match &mut self.0 {
+            PrefixStoreMutBackend::Gas(var) => Ok(var.delete(k)?),
+            PrefixStoreMutBackend::Kv(var) => Ok(var.delete(k)),
         }
     }
 }

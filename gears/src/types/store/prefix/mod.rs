@@ -1,9 +1,11 @@
+use std::ops::RangeBounds;
+
 use database::Database;
 use kv_store::{
     ext::UnwrapInfallible, types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore,
 };
 
-use super::{errors::StoreErrors, gas::prefix::GasPrefixStore};
+use super::{errors::StoreErrors, gas::prefix::GasPrefixStore, range::StoreRange};
 
 pub mod mutable;
 
@@ -23,6 +25,15 @@ impl<'a, DB> From<GasPrefixStore<'a, DB>> for PrefixStore<'a, DB> {
 impl<'a, DB> From<ImmutablePrefixStore<'a, DB>> for PrefixStore<'a, DB> {
     fn from(value: ImmutablePrefixStore<'a, DB>) -> Self {
         Self(PrefixStoreBackend::Kv(value))
+    }
+}
+
+impl<DB: Database> PrefixStore<'_, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> StoreRange<'_, DB> {
+        match &self.0 {
+            PrefixStoreBackend::Gas(var) => var.range(range).into(),
+            PrefixStoreBackend::Kv(var) => var.range(range).into(),
+        }
     }
 }
 

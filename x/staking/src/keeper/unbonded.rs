@@ -1,3 +1,5 @@
+use gears::context::MutableGasContext;
+
 pub use super::*;
 
 impl<
@@ -8,7 +10,7 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    pub fn unbonded_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn unbonded_to_bonded<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -20,7 +22,7 @@ impl<
             ))
             .into());
         }
-        self.bond_validator(ctx, validator);
+        self.bond_validator(ctx, validator)?;
         Ok(())
     }
 }

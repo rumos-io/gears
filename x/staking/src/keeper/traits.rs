@@ -1,6 +1,9 @@
 use gears::{
-    types::account::{Account, ModuleAccount},
-    types::address::{AccAddress, ConsAddress},
+    context::{MutableContext, MutableGasContext},
+    types::{
+        account::{Account, ModuleAccount},
+        address::{AccAddress, ConsAddress},
+    },
 };
 
 pub use super::*;
@@ -45,7 +48,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_module_to_module<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: MutableGasContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -57,7 +60,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn undelegate_coins_from_module_to_account<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: MutableContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -69,7 +72,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn delegate_coins_from_account_to_module<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: MutableGasContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,

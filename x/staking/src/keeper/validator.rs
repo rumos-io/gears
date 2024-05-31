@@ -4,8 +4,9 @@ use crate::{
     Commission, CreateValidator, Validator,
 };
 use gears::{
+    context::{tx::TxContext, ImmutableGasContext, MutableGasContext},
     store::database::ext::UnwrapCorrupt,
-    types::{address::ConsAddress, context::tx::TxContext},
+    types::{address::ConsAddress, store::errors::StoreErrors},
 };
 
 impl<
@@ -22,9 +23,9 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &CreateValidator,
     ) -> Result<(), AppError> {
-        let params = self.staking_params_keeper.get(ctx);
+        let params = self.staking_params_keeper.get_with_gas(ctx)?;
 
-        if self.validator(ctx, &msg.validator_address).is_some() {
+        if self.validator(ctx, &msg.validator_address)?.is_some() {
             return Err(AppError::Custom(format!(
                 "Account {} exists",
                 msg.validator_address
@@ -32,7 +33,7 @@ impl<
         };
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
-        if self.validator_by_cons_addr(ctx, &cons_addr).is_some() {
+        if self.validator_by_cons_addr(ctx, &cons_addr)?.is_some() {
             return Err(AppError::Custom(format!(
                 "Public key {} exists",
                 ConsAddress::from(msg.pub_key.clone())
@@ -73,9 +74,9 @@ impl<
         validator.set_initial_commission(commission);
         validator.min_self_delegation = msg.min_self_delegation;
 
-        self.set_validator(ctx, &validator);
-        self.set_validator_by_cons_addr(ctx, &validator);
-        self.set_new_validator_by_power_index(ctx, &validator);
+        self.set_validator(ctx, &validator)?;
+        self.set_validator_by_cons_addr(ctx, &validator)?;
+        self.set_new_validator_by_power_index(ctx, &validator)?;
 
         // call the after-creation hook
         self.after_validator_created(ctx, &validator);
@@ -130,83 +131,83 @@ impl<
         Ok(())
     }
 
-    pub fn validator<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validator<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
         &self,
         ctx: &CTX,
         key: &ValAddress,
-    ) -> Option<Validator> {
+    ) -> Result<Option<Validator>, StoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_KEY);
-        validators_store
-            .get(key.to_string().as_bytes())
-            .map(|e| serde_json::from_slice(&e).unwrap_or_corrupt())
+        Ok(validators_store
+            .get(key.to_string().as_bytes())?
+            .map(|e| serde_json::from_slice(&e).unwrap_or_corrupt()))
     }
 
-    pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_validator<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.set(
             validator.operator_address.to_string().as_bytes().to_vec(),
             serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        )
     }
 
-    pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validator_by_cons_addr<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &ConsAddress,
-    ) -> Option<Validator> {
+    ) -> Result<Option<Validator>, StoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_BY_CONS_ADDR_KEY);
 
-        validators_store
-            .get(addr.to_string().as_bytes())
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
+        Ok(validators_store
+            .get(addr.to_string().as_bytes())?
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
     }
 
-    pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_validator_by_cons_addr<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_CONS_ADDR_KEY);
 
         validators_store.set(
             validator.cons_addr().to_string().as_bytes().to_vec(),
             serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        )
     }
 
-    pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn remove_validator<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: &[u8],
-    ) -> Option<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>, StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.delete(addr)
     }
 
     /// Update the tokens of an existing validator, update the validators power index key
-    pub fn add_validator_tokens_and_shares<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn add_validator_tokens_and_shares<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
         tokens_amount: Uint256,
-    ) -> Decimal256 {
-        self.delete_validator_by_power_index(ctx, validator);
+    ) -> Result<Decimal256, StoreErrors> {
+        self.delete_validator_by_power_index(ctx, validator)?;
         let added_shares = validator.add_tokens_from_del(tokens_amount);
-        self.set_validator(ctx, validator);
-        self.set_validator_by_power_index(ctx, validator);
-        added_shares
+        self.set_validator(ctx, validator)?;
+        self.set_validator_by_power_index(ctx, validator)?;
+        Ok(added_shares)
     }
 
-    pub fn validator_queue_map<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn validator_queue_map<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: chrono::DateTime<Utc>,
@@ -232,15 +233,15 @@ impl<
         res
     }
 
-    pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn delete_validator_queue<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let addrs =
             self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
         let val_addr = validator.operator_address.to_string();
-        let new_addrs = addrs
+        let new_addrs = addrs?
             .into_iter()
             .filter(|addr| val_addr != **addr)
             .collect::<Vec<_>>();
@@ -249,19 +250,21 @@ impl<
                 ctx,
                 validator.unbonding_time.clone(),
                 validator.unbonding_height,
-            );
+            )?;
         } else {
             self.set_unbonding_validators_queue(
                 ctx,
                 validator.unbonding_time.clone(),
                 validator.unbonding_height,
                 new_addrs,
-            );
+            )?;
         }
+
+        Ok(())
     }
 
     /// get the last validator set
-    pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn last_validators_by_addr<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> HashMap<String, Vec<u8>> {

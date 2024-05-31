@@ -1,13 +1,14 @@
 use std::{borrow::Cow, ops::Bound};
 
 use database::Database;
-use kv_store::range::Range;
+use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
 use super::gas::range::GasRange;
 
 enum StoreRangeBackend<'a, DB> {
     Gas(GasRange<'a, DB>),
     Kv(Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>),
+    Prefix(PrefixRange<'a, DB>),
 }
 
 pub struct StoreRange<'a, DB>(StoreRangeBackend<'a, DB>);
@@ -19,6 +20,7 @@ impl<'a, DB: Database> Iterator for StoreRange<'a, DB> {
         match &mut self.0 {
             StoreRangeBackend::Gas(var) => var.next(),
             StoreRangeBackend::Kv(var) => var.next(),
+            StoreRangeBackend::Prefix(var) => var.next(),
         }
     }
 }
@@ -32,5 +34,11 @@ impl<'a, DB> From<GasRange<'a, DB>> for StoreRange<'a, DB> {
 impl<'a, DB> From<Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>> for StoreRange<'a, DB> {
     fn from(value: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>) -> Self {
         Self(StoreRangeBackend::Kv(value))
+    }
+}
+
+impl<'a, DB> From<PrefixRange<'a, DB>> for StoreRange<'a, DB> {
+    fn from(value: PrefixRange<'a, DB>) -> Self {
+        Self(StoreRangeBackend::Prefix(value))
     }
 }

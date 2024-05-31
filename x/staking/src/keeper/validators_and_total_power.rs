@@ -1,3 +1,9 @@
+use gears::{
+    context::{ImmutableContext, ImmutableGasContext, MutableGasContext},
+    store::ext::UnwrapInfallible,
+    types::store::errors::StoreErrors,
+};
+
 pub use super::*;
 
 impl<
@@ -9,32 +15,35 @@ impl<
     > Keeper<SK, PSK, AK, BK, KH>
 {
     /// Load the last total validator power.
-    pub fn last_total_power<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn last_total_power<DB: Database, CTX: ImmutableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Option<Uint256> {
-        let store = ctx.kv_store(&self.store_key);
-        store.get(&LAST_TOTAL_POWER_KEY).map(|bytes| {
-            Uint256::from_be_bytes(bytes.try_into().expect(
-                "The method from_be_bytes accepts array of bytes.
+        let store = ImmutableContext::kv_store(ctx, &self.store_key);
+        store
+            .get(&LAST_TOTAL_POWER_KEY)
+            .unwrap_infallible()
+            .map(|bytes| {
+                Uint256::from_be_bytes(bytes.try_into().expect(
+                    "The method from_be_bytes accepts array of bytes.
                 The store returns owned value of stored array.
                 Error can happen when vector has invalid length.
                 Please, check the store methods",
-            ))
-        })
+                ))
+            })
     }
 
-    pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_last_total_power<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         last_total_power: Uint256,
-    ) {
-        let mut store = ctx.kv_store_mut(&self.store_key);
-        store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes());
+    ) -> Result<(), StoreErrors> {
+        let mut store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes())
     }
 
     /// get the last validator set
-    pub fn validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validators_power_store_vals_map<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
@@ -47,31 +56,31 @@ impl<
         Ok(res)
     }
 
-    pub fn set_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_validator_by_power_index<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let power_reduction = self.power_reduction(ctx);
-        let store = ctx.kv_store_mut(&self.store_key);
+        let store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
 
         // jailed validators are not kept in the power index
         if validator.jailed {
-            return;
+            return Ok(());
         }
 
         validators_store.set(
             validator.key_by_power_index_key(power_reduction),
             validator.operator_address.to_string().as_bytes().to_vec(),
-        );
+        )
     }
 
-    pub fn set_new_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_new_validator_by_power_index<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
@@ -79,25 +88,25 @@ impl<
         validators_store.set(
             validator.key_by_power_index_key(power_reduction),
             validator.operator_address.to_string().as_bytes().to_vec(),
-        );
+        )
     }
 
-    pub fn delete_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn delete_validator_by_power_index<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Option<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>, StoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
         store.delete(&validator.key_by_power_index_key(power_reduction))
     }
 
-    pub fn delete_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn delete_last_validator_power<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &ValAddress,
-    ) -> Option<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>, StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
         delegations_store.delete(validator.to_string().as_bytes())
