@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]
-pub enum StoreError {
+pub enum KVStoreError {
     #[error(transparent)]
     Tree(#[from] trees::Error),
 }

@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-use kv_store::error::StoreError;
+use kv_store::error::KVStoreError;
 
 use crate::types::store::errors::StoreErrors;
 
@@ -19,7 +19,7 @@ pub enum AppError {
     Timeout { timeout: u64, current: u64 },
     Memo(u64),
     InvalidPublicKey,
-    Store(StoreError),
+    Store(KVStoreError),
     IBC(String),
     Genesis(String),
     Query(String),
@@ -67,8 +67,8 @@ impl From<bech32::Error> for AppError {
     }
 }
 
-impl From<StoreError> for AppError {
-    fn from(err: StoreError) -> AppError {
+impl From<KVStoreError> for AppError {
+    fn from(err: KVStoreError) -> AppError {
         AppError::Store(err)
     }
 }

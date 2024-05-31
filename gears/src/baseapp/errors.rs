@@ -23,5 +23,5 @@ impl RunTxError {
 #[derive(Debug, thiserror::Error)]
 pub enum QueryError {
     #[error(transparent)]
-    Store(#[from] kv_store::error::StoreError),
+    Store(#[from] kv_store::error::KVStoreError),
 }

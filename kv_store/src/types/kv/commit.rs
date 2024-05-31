@@ -7,7 +7,7 @@ use database::Database;
 use trees::iavl::Tree;
 
 use crate::{
-    error::{StoreError, POISONED_LOCK},
+    error::{KVStoreError, POISONED_LOCK},
     types::prefix::immutable::ImmutablePrefixStore,
     ApplicationStore, TransactionStore, TREE_CACHE_SIZE,
 };
@@ -15,7 +15,7 @@ use crate::{
 use super::{immutable::KVStore, KVBank};
 
 impl<DB: Database> KVBank<DB, ApplicationStore> {
-    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, StoreError> {
+    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, KVStoreError> {
         Ok(Self {
             persistent: Arc::new(RwLock::new(Tree::new(
                 db,

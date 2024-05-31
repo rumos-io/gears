@@ -4,7 +4,7 @@ use database::{prefix::PrefixDB, Database};
 use trees::iavl::QueryTree;
 
 use crate::{
-    error::{StoreError, KEY_EXISTS_MSG, POISONED_LOCK},
+    error::{KVStoreError, KEY_EXISTS_MSG, POISONED_LOCK},
     ApplicationStore, QueryableMultiKVStore, StoreKey,
 };
 
@@ -34,7 +34,7 @@ impl<DB: Database + Clone, SK: StoreKey> QueryMultiStore<DB, SK> {
     pub fn new<'a>(
         opt: impl Into<QueryStoreOptions<'a, DB, SK>>,
         version: u32,
-    ) -> Result<Self, StoreError>
+    ) -> Result<Self, KVStoreError>
     where
         DB: 'a,
     {

@@ -1,4 +1,5 @@
 use crate::application::handlers::node::AnteHandlerTrait;
+use crate::context::ImmutableGasContext;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
@@ -10,12 +11,13 @@ use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
 use crate::types::gas::{GasMeter, GasMeteringErrors};
+use crate::types::store::errors::StoreErrors;
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
 use crate::x::module::Module;
 use crate::{
-    context::{tx::TxContext, QueryableContext, TransactionalContext},
+    context::{tx::TxContext, QueryableContext},
     error::AppError,
     types::tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
 };
@@ -511,16 +513,16 @@ pub struct MetadataFromState<'a, DB, SK, BK, CTX> {
     pub _phantom: PhantomData<(DB, SK)>,
 }
 
-impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: TransactionalContext<DB, SK>>
+impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: ImmutableGasContext<DB, SK>>
     MetadataGetter for MetadataFromState<'a, DB, SK, BK, CTX>
 {
-    type Error = std::io::Error; // this is not used here
+    type Error = StoreErrors; // this is not used here
 
     fn metadata(
         &self,
         denom: &Denom,
     ) -> Result<Option<crate::types::tx::metadata::Metadata>, Self::Error> {
-        Ok(self.bank_keeper.get_denom_metadata(self.ctx, denom))
+        Ok(self.bank_keeper.get_denom_metadata(self.ctx, denom)?)
     }
 }
 

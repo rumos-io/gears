@@ -332,6 +332,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bank"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum 0.7.5",
+ "bytes",
+ "clap",
+ "gears",
+ "hex 0.4.3",
+ "ibc-proto",
+ "prost",
+ "serde",
+ "serde_json",
+ "strum",
+ "tokio",
+ "tonic",
+ "tracing",
+]
+
+[[package]]
 name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

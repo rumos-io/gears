@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
+use gears::context::{ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext};
 use gears::params::{
-    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
+    gas, subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::types::context::{QueryableContext, TransactionalContext};
+use gears::types::store::errors::StoreErrors;
 use serde::{Deserialize, Serialize};
 
 const KEY_SEND_ENABLED: &str = "SendEnabled";
@@ -63,7 +64,7 @@ pub struct BankParamsKeeper<PSK: ParamsSubspaceKey> {
 }
 
 impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> BankParams {
@@ -72,7 +73,7 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
         store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: BankParams,
@@ -80,5 +81,26 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
         let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
+    }
+
+    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: ImmutableGasContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<BankParams, StoreErrors> {
+        let store = gas::subspace(ctx, &self.params_subspace_key);
+
+        Ok(store.params()?.unwrap_or(DEFAULT_PARAMS.clone()))
+    }
+
+    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: MutableGasContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: BankParams,
+    ) -> Result<(), StoreErrors> {
+        let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
+
+        store.params_set(&params)?;
+
+        Ok(())
     }
 }

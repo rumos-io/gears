@@ -1,3 +1,4 @@
+use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
 use gears::core::errors::Error as IbcError;
 use gears::error::AppError;
 use gears::error::IBC_ENCODE_UNWRAP;
@@ -6,9 +7,6 @@ use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::context::init::InitContext;
-use gears::types::context::query::QueryContext;
-use gears::types::context::tx::TxContext;
 use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadataResponse};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
@@ -75,7 +73,10 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<S
                 BankNodeQueryResponse::DenomsMetadata(res)
             }
             BankNodeQueryRequest::DenomMetadata(req) => {
-                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom);
+                let metadata = self
+                    .keeper
+                    .get_denom_metadata(ctx, &req.denom)
+                    .expect("Query ctx doesn't have any gas");
                 BankNodeQueryResponse::DenomMetadata(QueryDenomMetadataResponse { metadata })
             }
         }
@@ -139,7 +140,10 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> ABCIHandler<S
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)
                     .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
-                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom);
+                let metadata = self
+                    .keeper
+                    .get_denom_metadata(ctx, &req.denom)
+                    .expect("Query ctx doesn't have any gas");
                 Ok(QueryDenomMetadataResponse { metadata }
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)

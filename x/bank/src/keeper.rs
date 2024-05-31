@@ -4,12 +4,14 @@ use crate::types::query::{
 };
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
+use gears::context::{init::InitContext, query::QueryContext};
+use gears::context::{ImmutableGasContext, MutableGasContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::database::Database;
-use gears::store::types::prefix::mutable::MutablePrefixStore;
+use gears::store::ext::UnwrapInfallible;
 use gears::store::{
     QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
 };
@@ -18,11 +20,10 @@ use gears::tendermint::types::proto::Protobuf;
 use gears::types::address::AccAddress;
 use gears::types::base::coin::Coin;
 use gears::types::base::send::SendCoins;
-use gears::types::context::init::InitContext;
-use gears::types::context::query::QueryContext;
-use gears::types::context::{QueryableContext, TransactionalContext};
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
+use gears::types::store::errors::StoreErrors;
+use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::keepers::auth::AuthKeeper;
@@ -44,7 +45,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
     for Keeper<SK, PSK, AK>
 {
-    fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn send_coins_from_account_to_module<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
@@ -52,7 +53,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
         amount: SendCoins,
     ) -> Result<(), AppError> {
         self.auth_keeper
-            .check_create_new_module_account(ctx, &to_module);
+            .check_create_new_module_account(ctx, &to_module)?;
 
         let msg = MsgSend {
             from_address,
@@ -63,21 +64,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
         self.send_coins(ctx, msg)
     }
 
-    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
-    ) -> Option<Metadata> {
+    ) -> Result<Option<Metadata>, StoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let denom_metadata_store = bank_store.prefix_store(denom_metadata_key(base.to_string()));
 
-        denom_metadata_store
-            .get(&base.to_string().into_bytes())
+        Ok(denom_metadata_store
+            .get(&base.to_string().into_bytes())?
             .map(|metadata| {
                 Metadata::decode::<&[u8]>(&metadata)
                     .ok()
                     .unwrap_or_corrupt()
-            })
+            }))
     }
 }
 
@@ -111,10 +112,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
                 ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(
-                    coin.denom.to_string().into_bytes(),
-                    coin.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-                );
+                denom_balance_store
+                    .set(
+                        coin.denom.to_string().into_bytes(),
+                        coin.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                    )
+                    .expect("Init ctx doesn't have any gas");
                 let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount + current_balance);
@@ -146,7 +149,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         let prefix = create_denom_balance_prefix(req.address);
 
         let account_store = bank_store.prefix_store(prefix);
-        let bal = account_store.get(req.denom.to_string().as_bytes());
+        let bal = account_store
+            .get(req.denom.to_string().as_bytes())
+            .unwrap_infallible();
 
         match bal {
             Some(amount) => QueryBalanceResponse {
@@ -209,7 +214,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
             .collect()
     }
 
-    pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn send_coins_from_account_to_account<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: &MsgSend,
@@ -218,15 +223,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
         // Create account if recipient does not exist
 
-        if !self.auth_keeper.has_account(ctx, &msg.to_address) {
+        if !self.auth_keeper.has_account(ctx, &msg.to_address)? {
             self.auth_keeper
-                .create_new_base_account(ctx, &msg.to_address);
+                .create_new_base_account(ctx, &msg.to_address)?;
         };
 
         Ok(())
     }
 
-    fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn send_coins<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: MsgSend,
@@ -241,7 +246,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         for send_coin in msg.amount {
             let mut from_account_store = self.get_address_balances_store(ctx, &from_address);
             let from_balance = from_account_store
-                .get(send_coin.denom.to_string().as_bytes())
+                .get(send_coin.denom.to_string().as_bytes())?
                 .ok_or(AppError::Send(format!(
                     "insufficient funds: required: {}, actual: 0",
                     send_coin.amount
@@ -263,12 +268,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
             from_account_store.set(
                 send_coin.denom.clone().to_string().into_bytes(),
                 from_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-            );
+            )?;
 
             //TODO: if balance == 0 then denom should be removed from store
 
             let mut to_account_store = self.get_address_balances_store(ctx, &to_address);
-            let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes());
+            let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes())?;
 
             let mut to_balance: Coin = match to_balance {
                 Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
@@ -285,7 +290,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
             to_account_store.set(
                 send_coin.denom.to_string().into_bytes(),
                 to_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-            );
+            )?;
 
             events.push(Event::new(
                 "transfer",
@@ -310,36 +315,34 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         Ok(())
     }
 
-    pub fn set_supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        coin: Coin,
-    ) {
+    pub fn set_supply<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, coin: Coin) {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
-        supply_store.set(
-            coin.denom.to_string().into_bytes(),
-            coin.amount.to_string().into_bytes(),
-        );
+        supply_store
+            .set(
+                coin.denom.to_string().into_bytes(),
+                coin.amount.to_string().into_bytes(),
+            )
+            .expect("Init ctx doesn't have any gas");
     }
 
     fn get_address_balances_store<'a, DB: Database>(
         &'a self,
-        ctx: &'a mut impl TransactionalContext<DB, SK>,
+        ctx: &'a mut impl MutableGasContext<DB, SK>,
         address: &AccAddress,
-    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
+    ) -> PrefixStoreMut<'a, PrefixDB<DB>> {
         let prefix = create_denom_balance_prefix(address.to_owned());
         let bank_store = ctx.kv_store_mut(&self.store_key);
         bank_store.prefix_store_mut(prefix)
     }
 
     /// Sets the denominations metadata
-    pub fn set_denom_metadata<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_denom_metadata<DB: Database>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut InitContext<'_, DB, SK>,
         denom_metadata: Metadata,
     ) {
         // NOTE: we use the denom twice, once for the prefix and once for the key.
@@ -348,10 +351,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         let mut denom_metadata_store =
             bank_store.prefix_store_mut(denom_metadata_key(denom_metadata.base.clone()));
 
-        denom_metadata_store.set(
-            denom_metadata.base.clone().into_bytes(),
-            denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-        );
+        denom_metadata_store
+            .set(
+                denom_metadata.base.clone().into_bytes(),
+                denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+            )
+            .expect("Init ctx doesn't have any gas");
     }
 
     pub fn query_denoms_metadata<DB: Database>(
