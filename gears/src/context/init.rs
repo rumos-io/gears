@@ -85,8 +85,8 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_
         std::mem::take(&mut self.events)
     }
 
-    fn get_time(&self) -> Option<Timestamp> {
-        Some(self.time.clone())
+    fn get_time(&self) -> Timestamp {
+        self.time.clone()
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {

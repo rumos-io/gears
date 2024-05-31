@@ -1,17 +1,13 @@
 use crate::types::proto::{
-    header::RawHeader,
+    header::Header,
     info::{Evidence, LastCommitInfo},
 };
 
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RequestBeginBlock {
-    #[prost(bytes = "bytes", tag = "1")]
     pub hash: ::prost::bytes::Bytes,
-    #[prost(message, optional, tag = "2")]
-    pub header: Option<RawHeader>,
-    #[prost(message, optional, tag = "3")]
+    pub header: Header,
     pub last_commit_info: Option<LastCommitInfo>,
-    #[prost(message, repeated, tag = "4")]
     pub byzantine_validators: Vec<Evidence>,
 }
 
@@ -26,27 +22,31 @@ impl From<RequestBeginBlock> for super::inner::RequestBeginBlock {
     ) -> Self {
         Self {
             hash,
-            header: header.map(Into::into),
+            header: Some(header.into()),
             last_commit_info: last_commit_info.map(Into::into),
             byzantine_validators: byzantine_validators.into_iter().map(Into::into).collect(),
         }
     }
 }
 
-impl From<super::inner::RequestBeginBlock> for RequestBeginBlock {
-    fn from(
+impl TryFrom<super::inner::RequestBeginBlock> for RequestBeginBlock {
+    type Error = crate::error::Error;
+
+    fn try_from(
         super::inner::RequestBeginBlock {
             hash,
             header,
             last_commit_info,
             byzantine_validators,
         }: super::inner::RequestBeginBlock,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
             hash,
-            header: header.map(Into::into),
+            header: header
+                .ok_or_else(|| crate::error::Error::InvalidData("header is missing".into()))?
+                .try_into()?,
             last_commit_info: last_commit_info.map(Into::into),
             byzantine_validators: byzantine_validators.into_iter().map(Into::into).collect(),
-        }
+        })
     }
 }

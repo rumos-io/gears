@@ -67,9 +67,7 @@ impl<
         );
 
         // TODO: make better api for timestamps in Gears
-        let update_time = ctx.get_time().ok_or(AppError::TxValidation(
-            "Transaction doesn't have valid timestamp.".to_string(),
-        ))?;
+        let update_time = ctx.get_time();
         let commission = Commission::new(msg.commission.clone(), update_time)?;
         validator.set_initial_commission(commission);
         validator.min_self_delegation = msg.min_self_delegation;

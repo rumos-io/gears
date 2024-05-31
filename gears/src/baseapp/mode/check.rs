@@ -13,7 +13,6 @@ use crate::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas,
             GasMeter,
         },
-        header::Header,
         tx::raw::TxWithRaw,
     },
 };

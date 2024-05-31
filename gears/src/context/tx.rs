@@ -8,7 +8,11 @@ use kv_store::{
     },
     StoreKey, TransactionStore,
 };
-use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
+use tendermint::types::{
+    chain_id::ChainId,
+    proto::{event::Event, header::Header},
+    time::Timestamp,
+};
 
 use crate::{
     baseapp::{options::NodeOptions, ConsensusParams},
@@ -25,6 +29,11 @@ use crate::{
             },
             kv::{mutable::StoreMut, Store},
         },
+    baseapp::options::NodeOptions,
+    baseapp::ConsensusParams,
+    types::gas::{
+        kind::{BlockKind, TxKind},
+        GasMeter,
     },
 };
 
@@ -133,7 +142,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
         std::mem::take(&mut self.events)
     }
 
-    fn get_time(&self) -> Option<Timestamp> {
+    fn get_time(&self) -> Timestamp {
         self.header.time.clone()
     }
 

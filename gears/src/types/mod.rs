@@ -7,7 +7,6 @@ pub mod decimal256;
 pub mod denom;
 pub mod errors;
 pub mod gas;
-pub mod header;
 pub mod msg;
 pub mod query;
 pub mod rendering;

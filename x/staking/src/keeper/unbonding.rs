@@ -206,8 +206,7 @@ impl<
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
     ) -> Result<(), StoreErrors> {
-        // TODO: make better api for timestamps in Gears
-        let block_time = ctx.get_time().unwrap();
+        let block_time = ctx.get_time();
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let block_time =
@@ -310,8 +309,7 @@ impl<
         };
         let bond_denom = params.bond_denom;
         let mut balances = vec![];
-        // TODO: make better api for timestamps in Gears
-        let ctx_time = ctx.get_time().unwrap();
+        let ctx_time = ctx.get_time();
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let ctx_time =
@@ -380,8 +378,7 @@ impl<
         validator.update_status(BondStatus::Unbonding);
 
         // set the unbonding completion time and completion height appropriately
-        // TODO: make better api for timestamps in Gears
-        validator.unbonding_time = ctx.get_time().unwrap();
+        validator.unbonding_time = ctx.get_time();
         validator.unbonding_height = ctx.height() as i64;
 
         // save the now unbonded validator record and power index

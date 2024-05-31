@@ -7,11 +7,9 @@ use crate::error::{AppError, POISONED_LOCK};
 use crate::params::ParamsSubspaceKey;
 use crate::types::gas::Gas;
 use bytes::Bytes;
-use std::str::FromStr;
 use tendermint::{
     application::ABCIApplication,
     types::{
-        chain_id::ChainId,
         request::{
             begin_block::RequestBeginBlock,
             check_tx::RequestCheckTx,
@@ -42,50 +40,28 @@ use tendermint::{
 };
 use tracing::{debug, error, info};
 
-impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplication
+impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplication<H::Genesis>
     for BaseApp<PSK, H, AI>
 {
-    fn init_chain(&self, request: RequestInitChain) -> ResponseInitChain {
+    fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
         info!("Got init chain request");
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let chain_id = ChainId::from_str(&request.chain_id).unwrap_or_else(|_| {
-            error!("Invalid chain id provided by Tendermint.\nTerminating process\n");
-            std::process::exit(1)
-        });
-
         let mut ctx = InitContext::new(
             &mut multi_store,
             self.block_height(),
-            request.time.clone(),
-            chain_id.clone(),
+            request.time,
+            request.chain_id,
         );
 
         self.baseapp_params_keeper
             .set_consensus_params(&mut ctx, request.consensus_params.clone());
 
-        let genesis: H::Genesis = String::from_utf8(request.app_state_bytes.into())
-            .map_err(|e| AppError::Genesis(e.to_string()))
-            .and_then(|s| serde_json::from_str(&s).map_err(|e| AppError::Genesis(e.to_string())))
-            .unwrap_or_else(|e| {
-                error!(
-                    "Invalid genesis provided by Tendermint.\n{}\nTerminating process",
-                    e.to_string()
-                );
-                std::process::exit(1)
-            });
-
-        let mut ctx = InitContext::new(
-            &mut *multi_store,
-            self.block_height(),
-            request.time,
-            chain_id.clone(),
-        );
-
-        self.abci_handler.init_genesis(&mut ctx, genesis.clone());
+        self.abci_handler
+            .init_genesis(&mut ctx, request.app_genesis.clone());
 
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),
@@ -267,14 +243,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
 
         self.block_height_increment();
 
-        let header: tendermint::types::proto::header::RawHeader = request
-            .header
-            .clone()
-            .expect("tendermint will never send nothing to the app")
-            .try_into()
-            .expect("tendermint will send a valid Header struct");
-
-        self.set_block_header(header.clone());
+        self.set_block_header(request.header.clone());
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
         let mut state = self.state.write().expect(POISONED_LOCK);
@@ -282,7 +251,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
         let mut ctx = BlockContext::new(
             &mut multi_store,
             self.block_height(),
-            header.try_into().expect("Invalid request"),
+            request.header.clone(),
         );
 
         {
@@ -315,9 +284,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplicatio
             &mut multi_store,
             self.block_height(),
             self.get_block_header()
-                .expect("block header is set in begin block")
-                .try_into()
-                .expect("Invalid request"),
+                .expect("block header is set in begin block"), //TODO: return error?
         );
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
