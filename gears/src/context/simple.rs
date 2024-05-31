@@ -10,10 +10,7 @@ use tendermint::types::proto::event::Event;
 
 use crate::types::store::kv::{mutable::StoreMut, Store};
 
-use super::{
-    ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext, QueryableContext,
-    TransactionalContext,
-};
+use super::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct SimpleContext<'a, DB, SK> {
@@ -34,6 +31,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, 
     fn height(&self) -> u64 {
         unreachable!("inner type that is not supposed to provide external interfaces")
     }
+
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        KVStore::from(self.multi_store.kv_store(store_key)).into()
+    }
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for SimpleContext<'_, DB, SK> {
@@ -42,21 +43,9 @@ impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for SimpleContext<'_, 
     }
 }
 
-impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for SimpleContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
-        KVStore::from(self.multi_store.kv_store(store_key)).into()
-    }
-}
-
 impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for SimpleContext<'_, DB, SK> {
     fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         KVStoreMut::from(self.multi_store.kv_store_mut(store_key))
-    }
-}
-
-impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for SimpleContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
-        KVStoreMut::from(self.multi_store.kv_store_mut(store_key)).into()
     }
 }
 
@@ -75,5 +64,9 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for SimpleContext<
 
     fn get_time(&self) -> Option<tendermint::types::time::Timestamp> {
         unreachable!("inner type that is not supposed to provide external interfaces")
+    }
+
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
+        KVStoreMut::from(self.multi_store.kv_store_mut(store_key)).into()
     }
 }

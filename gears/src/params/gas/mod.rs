@@ -3,7 +3,7 @@ use kv_store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 use space::GasParamsSpace;
 use space_mut::GasParamsSpaceMut;
 
-use crate::context::{ImmutableGasContext, MutableGasContext};
+use crate::context::{QueryableContext, TransactionalContext};
 
 use super::ParamsSubspaceKey;
 
@@ -14,7 +14,7 @@ pub fn subspace<
     'a,
     DB: Database,
     SK: StoreKey,
-    CTX: ImmutableGasContext<DB, SK>,
+    CTX: QueryableContext<DB, SK>,
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a CTX,
@@ -31,7 +31,7 @@ pub fn subspace_mut<
     'a,
     DB: Database,
     SK: StoreKey,
-    CTX: MutableGasContext<DB, SK>,
+    CTX: TransactionalContext<DB, SK>,
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a mut CTX,

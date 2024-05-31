@@ -9,7 +9,7 @@ use tendermint::types::chain_id::ChainId;
 
 use crate::types::store::kv::Store;
 
-use super::{ImmutableContext, ImmutableGasContext, QueryableContext};
+use super::{ImmutableContext, QueryableContext};
 
 pub struct QueryContext<DB, SK> {
     multi_store: QueryMultiStore<DB, SK>,
@@ -45,16 +45,14 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, S
     fn height(&self) -> u64 {
         self.height
     }
+
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        Store::from(self.kv_store(store_key))
+    }
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for QueryContext<DB, SK> {
     fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.kv_store(store_key)
-    }
-}
-
-impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for QueryContext<DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
-        Store::from(self.kv_store(store_key))
     }
 }

@@ -13,10 +13,7 @@ use crate::types::{
     store::kv::{mutable::StoreMut, Store},
 };
 
-use super::{
-    ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext, QueryableContext,
-    TransactionalContext,
-};
+use super::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct BlockContext<'a, DB, SK> {
@@ -59,6 +56,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, D
     fn height(&self) -> u64 {
         self.height
     }
+
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        Store::from(self.kv_store(store_key))
+    }
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for BlockContext<'_, DB, SK> {
@@ -70,18 +71,6 @@ impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for BlockContext<'_, D
 impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for BlockContext<'_, DB, SK> {
     fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.kv_store_mut(store_key)
-    }
-}
-
-impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for BlockContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
-        Store::from(self.kv_store(store_key))
-    }
-}
-
-impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for BlockContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
-        StoreMut::from(self.kv_store_mut(store_key))
     }
 }
 
@@ -100,5 +89,9 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'
 
     fn get_time(&self) -> Option<Timestamp> {
         self.header.time.clone()
+    }
+
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
+        StoreMut::from(self.kv_store_mut(store_key))
     }
 }

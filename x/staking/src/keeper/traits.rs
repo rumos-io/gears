@@ -1,5 +1,5 @@
 use gears::{
-    context::{MutableContext, MutableGasContext},
+    context::MutableContext,
     types::{
         account::{Account, ModuleAccount},
         address::{AccAddress, ConsAddress},
@@ -48,7 +48,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_module_to_module<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: MutableGasContext<DB, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
@@ -72,7 +72,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn delegate_coins_from_account_to_module<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: MutableGasContext<DB, SK>,
+        CTX: TransactionalContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,

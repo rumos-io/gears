@@ -5,10 +5,7 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
-    context::{
-        block::BlockContext, init::InitContext, MutableGasContext, QueryableContext,
-        TransactionalContext,
-    },
+    context::{block::BlockContext, init::InitContext, QueryableContext, TransactionalContext},
     error::AppError,
     params::ParamsSubspaceKey,
     store::{
@@ -398,7 +395,10 @@ impl<
     /// CONTRACT: Only validators with non-zero power or zero-power that were bonded
     /// at the previous block height or were removed from the validator set entirely
     /// are returned to Tendermint.
-    pub fn apply_and_return_validator_set_updates<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn apply_and_return_validator_set_updates<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
@@ -524,7 +524,7 @@ impl<
         1_000_000
     }
 
-    pub fn not_bonded_tokens_to_bonded<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn not_bonded_tokens_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         amount: Uint256,

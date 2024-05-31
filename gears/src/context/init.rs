@@ -8,11 +8,7 @@ use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp}
 use crate::types::store::kv::mutable::StoreMut;
 use crate::types::store::kv::Store;
 
-use super::{
-    ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext, QueryableContext,
-    TransactionalContext,
-};
-// use crate::tendermint::types::time::Timestamp;
+use super::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
@@ -58,6 +54,10 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'_, DB
     fn height(&self) -> u64 {
         self.height
     }
+
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        Store::from(self.kv_store(store_key))
+    }
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for InitContext<'_, DB, SK> {
@@ -69,18 +69,6 @@ impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for InitContext<'_, DB
 impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for InitContext<'_, DB, SK> {
     fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.kv_store_mut(store_key)
-    }
-}
-
-impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for InitContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
-        Store::from(self.kv_store(store_key))
-    }
-}
-
-impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for InitContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
-        StoreMut::from(self.kv_store_mut(store_key))
     }
 }
 
@@ -99,5 +87,9 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_
 
     fn get_time(&self) -> Option<Timestamp> {
         Some(self.time.clone())
+    }
+
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
+        StoreMut::from(self.kv_store_mut(store_key))
     }
 }

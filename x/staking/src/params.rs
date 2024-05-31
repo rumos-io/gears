@@ -1,5 +1,5 @@
 use gears::{
-    context::{ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext},
+    context::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext},
     core::base::coin::Coin,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
@@ -163,7 +163,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
         store.params_set(&params);
     }
 
-    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: ImmutableGasContext<DB, SK>>(
+    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Result<Params, StoreErrors> {
@@ -173,7 +173,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
             .expect("params should be stored in database"))
     }
 
-    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: Params,

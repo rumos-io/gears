@@ -2,7 +2,7 @@ use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
-use gears::context::{ImmutableGasContext, MutableGasContext};
+use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
@@ -35,14 +35,14 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     type Params = AuthsParams;
 
-    fn get_auth_params<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Result<Self::Params, StoreErrors> {
         self.auth_params_keeper.get_with_gas(ctx)
     }
 
-    fn has_account<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
@@ -52,7 +52,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         Ok(auth_store.get(&key)?.is_some())
     }
 
-    fn get_account<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
@@ -72,7 +72,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         }
     }
 
-    fn set_account<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         acct: Account,
@@ -85,7 +85,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         Ok(())
     }
 
-    fn create_new_base_account<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    fn create_new_base_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
@@ -102,7 +102,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         Ok(())
     }
 
-    fn check_create_new_module_account<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         module: &Module,
@@ -183,7 +183,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
     }
 
-    fn get_next_account_number<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    fn get_next_account_number<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
     ) -> Result<u64, StoreErrors> {
@@ -205,7 +205,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         Ok(acct_num)
     }
 
-    pub fn set_account<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         acct: Account,

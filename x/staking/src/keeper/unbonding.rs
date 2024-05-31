@@ -1,7 +1,7 @@
 pub use super::*;
 use crate::consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
 use gears::{
-    context::{ImmutableContext, MutableContext, MutableGasContext},
+    context::{ImmutableContext, MutableContext},
     store::{database::ext::UnwrapCorrupt, ext::UnwrapInfallible},
     tendermint::types::time::Timestamp,
     types::store::errors::StoreErrors,
@@ -118,7 +118,7 @@ impl<
         }
     }
 
-    pub fn insert_unbonding_validator_queue<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn insert_unbonding_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -173,12 +173,12 @@ impl<
             .unwrap_infallible();
     }
 
-    pub fn set_last_validator_power<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &LastValidatorPower,
     ) -> Result<(), StoreErrors> {
-        let store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
         let key = validator.address.to_string().as_bytes().to_vec();
         delegations_store.set(
@@ -266,7 +266,7 @@ impl<
         Ok(())
     }
 
-    pub fn unbonding_to_bonded<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn unbonding_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -282,7 +282,7 @@ impl<
         Ok(())
     }
 
-    pub fn unbonding_to_unbonded<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn unbonding_to_unbonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -353,7 +353,7 @@ impl<
         Ok(balances)
     }
 
-    pub fn complete_unbonding_validator<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn complete_unbonding_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -362,7 +362,7 @@ impl<
         self.set_validator(ctx, validator)
     }
 
-    pub fn begin_unbonding_validator<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn begin_unbonding_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -396,14 +396,14 @@ impl<
         Ok(())
     }
 
-    pub fn set_unbonding_validators_queue<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_unbonding_validators_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
         end_height: i64,
         addrs: Vec<String>,
     ) -> Result<(), StoreErrors> {
-        let store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
@@ -418,13 +418,13 @@ impl<
 
     /// DeleteValidatorQueueTimeSlice deletes all entries in the queue indexed by a
     /// given height and time.
-    pub fn delete_validator_queue_time_slice<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn delete_validator_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
         end_height: i64,
     ) -> Result<(), StoreErrors> {
-        let store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
@@ -435,13 +435,13 @@ impl<
         Ok(())
     }
 
-    pub fn unbonding_validators<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn unbonding_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         unbonding_time: &Timestamp,
         unbonding_height: i64,
     ) -> Result<Vec<String>, StoreErrors> {
-        let store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let store = store.prefix_store(VALIDATORS_QUEUE_KEY);
 
         if let Some(bz) = store.get(&validator_queue_key(

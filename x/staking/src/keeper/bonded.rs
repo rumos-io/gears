@@ -1,8 +1,5 @@
 pub use super::*;
-use gears::{
-    context::MutableGasContext,
-    types::{account::ModuleAccount, store::errors::StoreErrors},
-};
+use gears::types::{account::ModuleAccount, store::errors::StoreErrors};
 
 impl<
         SK: StoreKey,
@@ -30,7 +27,7 @@ impl<
             .module_account(ctx, NOT_BONDED_POOL_NAME.to_string())
     }
 
-    pub fn bonded_tokens_to_not_bonded<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn bonded_tokens_to_not_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         amount: Uint256,
@@ -59,7 +56,7 @@ impl<
         Ok(())
     }
 
-    pub fn bonded_to_unbonding<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -74,7 +71,7 @@ impl<
         self.begin_unbonding_validator(ctx, validator)
     }
 
-    pub fn bond_validator<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn bond_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,

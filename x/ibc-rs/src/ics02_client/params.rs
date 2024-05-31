@@ -2,9 +2,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use gears::context::ImmutableContext;
-use gears::context::ImmutableGasContext;
 use gears::context::MutableContext;
-use gears::context::MutableGasContext;
 use gears::params::gas;
 use gears::params::subspace;
 use gears::params::subspace_mut;
@@ -94,7 +92,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         store.params_set(&params)
     }
 
-    pub fn get_with_gas<DB: Database, SK: StoreKey, KV: ImmutableGasContext<DB, SK>>(
+    pub fn get_with_gas<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
         &self,
         ctx: &KV,
     ) -> Result<ClientParams, StoreErrors> {
@@ -103,7 +101,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         Ok(store.params()?.unwrap()) // TODO: Add default
     }
 
-    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ClientParams,

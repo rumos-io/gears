@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use gears::context::{ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext};
+use gears::context::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::{
     gas, subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
@@ -147,7 +147,7 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
         store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
-    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: ImmutableGasContext<DB, SK>>(
+    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Result<AuthsParams, StoreErrors> {
@@ -166,7 +166,7 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
         store.params_set(&params)
     }
 
-    pub fn set_with_gas<DB: Database, SK: StoreKey, KV: MutableGasContext<DB, SK>>(
+    pub fn set_with_gas<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut KV,
         params: AuthsParams,

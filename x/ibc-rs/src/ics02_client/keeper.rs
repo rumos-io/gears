@@ -17,7 +17,7 @@ use crate::ics02_client::types::{client_state::ClientState, query::IdentifiedCli
 use crate::types::context::CLIENT_STATE_KEY;
 
 use super::{params::ClientParamsKeeper, types::query::QueryClientStatesResponse, GenesisState};
-use gears::context::{MutableContext, MutableGasContext, TransactionalContext};
+use gears::context::{MutableContext, TransactionalContext};
 use gears::store::TransactionalKVStore;
 use ibc::core::{
     client::types::proto::v1::QueryClientStatesRequest, host::types::identifiers::ClientId,
@@ -148,7 +148,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     /// Writes the client state to the store
-    pub fn client_state_set<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn client_state_set<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         client_state_path: ClientStatePath,
@@ -160,7 +160,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
     /// Returns an isolated mutable prefix store for each client so they can read/write in separate
     /// namespaces without being able to read/write other client's data
-    fn client_store_mut<'a, DB: Database, CTX: MutableGasContext<DB, SK>>(
+    fn client_store_mut<'a, DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &'a mut CTX,
         client_id: &ClientId,

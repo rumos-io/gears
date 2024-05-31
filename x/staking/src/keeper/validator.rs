@@ -4,7 +4,7 @@ use crate::{
     Commission, CreateValidator, Validator,
 };
 use gears::{
-    context::{tx::TxContext, ImmutableGasContext, MutableGasContext},
+    context::tx::TxContext,
     store::database::ext::UnwrapCorrupt,
     types::{address::ConsAddress, store::errors::StoreErrors},
 };
@@ -131,7 +131,7 @@ impl<
         Ok(())
     }
 
-    pub fn validator<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    pub fn validator<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         key: &ValAddress,
@@ -143,7 +143,7 @@ impl<
             .map(|e| serde_json::from_slice(&e).unwrap_or_corrupt()))
     }
 
-    pub fn set_validator<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -156,7 +156,7 @@ impl<
         )
     }
 
-    pub fn validator_by_cons_addr<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &ConsAddress,
@@ -169,7 +169,7 @@ impl<
             .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
     }
 
-    pub fn set_validator_by_cons_addr<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_validator_by_cons_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -183,7 +183,7 @@ impl<
         )
     }
 
-    pub fn remove_validator<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: &[u8],
@@ -194,7 +194,7 @@ impl<
     }
 
     /// Update the tokens of an existing validator, update the validators power index key
-    pub fn add_validator_tokens_and_shares<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn add_validator_tokens_and_shares<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -207,7 +207,7 @@ impl<
         Ok(added_shares)
     }
 
-    pub fn validator_queue_map<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn validator_queue_map<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: chrono::DateTime<Utc>,
@@ -233,7 +233,7 @@ impl<
         res
     }
 
-    pub fn delete_validator_queue<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
@@ -264,7 +264,7 @@ impl<
     }
 
     /// get the last validator set
-    pub fn last_validators_by_addr<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> HashMap<String, Vec<u8>> {

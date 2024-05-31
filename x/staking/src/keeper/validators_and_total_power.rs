@@ -1,7 +1,5 @@
 use gears::{
-    context::{ImmutableContext, ImmutableGasContext, MutableGasContext},
-    store::ext::UnwrapInfallible,
-    types::store::errors::StoreErrors,
+    context::ImmutableContext, store::ext::UnwrapInfallible, types::store::errors::StoreErrors,
 };
 
 pub use super::*;
@@ -33,17 +31,17 @@ impl<
             })
     }
 
-    pub fn set_last_total_power<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         last_total_power: Uint256,
     ) -> Result<(), StoreErrors> {
-        let mut store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes())
     }
 
     /// get the last validator set
-    pub fn validators_power_store_vals_map<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    pub fn validators_power_store_vals_map<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> anyhow::Result<HashMap<Vec<u8>, ValAddress>> {
@@ -56,13 +54,13 @@ impl<
         Ok(res)
     }
 
-    pub fn set_validator_by_power_index<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
     ) -> Result<(), StoreErrors> {
         let power_reduction = self.power_reduction(ctx);
-        let store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
 
         // jailed validators are not kept in the power index
@@ -76,7 +74,7 @@ impl<
         )
     }
 
-    pub fn set_new_validator_by_power_index<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_new_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -91,7 +89,7 @@ impl<
         )
     }
 
-    pub fn delete_validator_by_power_index<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn delete_validator_by_power_index<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &Validator,
@@ -102,7 +100,7 @@ impl<
         store.delete(&validator.key_by_power_index_key(power_reduction))
     }
 
-    pub fn delete_last_validator_power<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn delete_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         validator: &ValAddress,

@@ -28,7 +28,7 @@ use crate::{
     },
 };
 
-use super::{ImmutableGasContext, MutableGasContext, QueryableContext, TransactionalContext};
+use super::{QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct TxContext<'a, DB, SK> {
@@ -114,9 +114,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, 
     fn height(&self) -> u64 {
         self.height
     }
-}
 
-impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
         Store::from(self.kv_store(store_key))
     }
@@ -138,9 +136,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
     fn get_time(&self) -> Option<Timestamp> {
         self.header.time.clone()
     }
-}
 
-impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for TxContext<'_, DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
         StoreMut::from(self.kv_store_mut(store_key))
     }

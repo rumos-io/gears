@@ -5,7 +5,7 @@ use crate::types::query::{
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::context::{init::InitContext, query::QueryContext};
-use gears::context::{ImmutableGasContext, MutableGasContext};
+use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
@@ -45,7 +45,7 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> {
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
     for Keeper<SK, PSK, AK>
 {
-    fn send_coins_from_account_to_module<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
@@ -64,7 +64,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
         self.send_coins(ctx, msg)
     }
 
-    fn get_denom_metadata<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         base: &Denom,
@@ -214,7 +214,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
             .collect()
     }
 
-    pub fn send_coins_from_account_to_account<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: &MsgSend,
@@ -231,7 +231,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         Ok(())
     }
 
-    fn send_coins<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         msg: MsgSend,
@@ -331,7 +331,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
 
     fn get_address_balances_store<'a, DB: Database>(
         &'a self,
-        ctx: &'a mut impl MutableGasContext<DB, SK>,
+        ctx: &'a mut impl TransactionalContext<DB, SK>,
         address: &AccAddress,
     ) -> PrefixStoreMut<'a, PrefixDB<DB>> {
         let prefix = create_denom_balance_prefix(address.to_owned());

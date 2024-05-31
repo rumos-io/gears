@@ -11,18 +11,16 @@ pub(crate) mod simple;
 pub mod tx;
 
 pub trait QueryableContext<DB, SK> {
+    /// Fetches an immutable ref to a KVStore from the MultiStore.
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>>;
+
     fn height(&self) -> u64;
     // fn chain_id(&self) -> &ChainId;
 }
 
-pub trait ImmutableContext<DB, SK>: QueryableContext<DB, SK> + ImmutableGasContext<DB, SK> {
+pub trait ImmutableContext<DB, SK>: QueryableContext<DB, SK> {
     /// Fetches an immutable ref to a KVStore from the MultiStore.
     fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>>;
-}
-
-pub trait ImmutableGasContext<DB, SK>: QueryableContext<DB, SK> {
-    /// Fetches an immutable ref to a KVStore from the MultiStore.
-    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>>;
 }
 
 pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
@@ -33,18 +31,11 @@ pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
     // TODO: change signature after changing struct `Header`
     /// Public interface for getting context timestamp. Default implementation returns `None`.
     fn get_time(&self) -> Option<Timestamp>;
-}
-
-pub trait MutableContext<DB, SK>:
-    TransactionalContext<DB, SK> + ImmutableContext<DB, SK> + MutableGasContext<DB, SK>
-{
-    ///  Fetches an mutable ref to a KVStore from the MultiStore.
-    fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
-}
-
-pub trait MutableGasContext<DB, SK>:
-    TransactionalContext<DB, SK> + ImmutableGasContext<DB, SK>
-{
     ///  Fetches an mutable ref to a KVStore from the MultiStore.
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>>;
+}
+
+pub trait MutableContext<DB, SK>: TransactionalContext<DB, SK> + ImmutableContext<DB, SK> {
+    ///  Fetches an mutable ref to a KVStore from the MultiStore.
+    fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
 }

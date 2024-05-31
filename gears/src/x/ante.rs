@@ -1,5 +1,4 @@
 use crate::application::handlers::node::AnteHandlerTrait;
-use crate::context::ImmutableGasContext;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
@@ -513,7 +512,7 @@ pub struct MetadataFromState<'a, DB, SK, BK, CTX> {
     pub _phantom: PhantomData<(DB, SK)>,
 }
 
-impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: ImmutableGasContext<DB, SK>>
+impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: QueryableContext<DB, SK>>
     MetadataGetter for MetadataFromState<'a, DB, SK, BK, CTX>
 {
     type Error = StoreErrors; // this is not used here

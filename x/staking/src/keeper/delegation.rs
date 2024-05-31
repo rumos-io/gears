@@ -1,9 +1,5 @@
 pub use super::*;
-use gears::{
-    context::{ImmutableGasContext, MutableGasContext},
-    store::database::ext::UnwrapCorrupt,
-    types::store::errors::StoreErrors,
-};
+use gears::{store::database::ext::UnwrapCorrupt, types::store::errors::StoreErrors};
 
 impl<
         SK: StoreKey,
@@ -15,7 +11,7 @@ impl<
 {
     /// Delegate performs a delegation, set/update everything necessary within the store.
     /// token_src indicates the bond status of the incoming funds.
-    pub fn delegate<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn delegate<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -112,13 +108,13 @@ impl<
         Ok(new_shares)
     }
 
-    pub fn delegation<DB: Database, CTX: ImmutableGasContext<DB, SK>>(
+    pub fn delegation<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         del_addr: &AccAddress,
         val_addr: &ValAddress,
     ) -> Result<Option<Delegation>, StoreErrors> {
-        let store = ImmutableGasContext::kv_store(ctx, &self.store_key);
+        let store = QueryableContext::kv_store(ctx, &self.store_key);
         let delegations_store = store.prefix_store(DELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_addr.to_string().as_bytes());
@@ -127,12 +123,12 @@ impl<
             .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
     }
 
-    pub fn set_delegation<DB: Database, CTX: MutableGasContext<DB, SK>>(
+    pub fn set_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
     ) -> Result<(), StoreErrors> {
-        let store = MutableGasContext::kv_store_mut(ctx, &self.store_key);
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_address.to_string().as_bytes());
