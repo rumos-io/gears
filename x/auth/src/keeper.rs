@@ -39,7 +39,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
         &self,
         ctx: &CTX,
     ) -> Result<Self::Params, StoreErrors> {
-        self.auth_params_keeper.get_with_gas(ctx)
+        self.auth_params_keeper.try_get(ctx)
     }
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(

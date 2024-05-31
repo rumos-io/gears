@@ -163,7 +163,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
         store.params_set(&params);
     }
 
-    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Result<Params, StoreErrors> {
@@ -173,7 +173,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
             .expect("params should be stored in database"))
     }
 
-    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn try_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: Params,

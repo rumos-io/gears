@@ -402,7 +402,7 @@ impl<
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
-        let params = self.staking_params_keeper.get_with_gas(ctx)?;
+        let params = self.staking_params_keeper.try_get(ctx)?;
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
@@ -532,7 +532,7 @@ impl<
         // TODO: original routine is unfailable, it means that the amount is a valid number.
         // The method is called from failable methods. Consider to provide correct solution taking
         // into account additional analisis.
-        let params = self.staking_params_keeper.get_with_gas(ctx)?;
+        let params = self.staking_params_keeper.try_get(ctx)?;
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,

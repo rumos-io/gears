@@ -149,7 +149,7 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
         store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
-    pub fn get_with_gas<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Result<AuthsParams, StoreErrors> {
@@ -168,7 +168,7 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
         store.params_set(&params)
     }
 
-    pub fn set_with_gas<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
+    pub fn try_set<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut KV,
         params: AuthsParams,

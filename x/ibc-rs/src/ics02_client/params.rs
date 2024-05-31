@@ -92,7 +92,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         store.params_set(&params)
     }
 
-    pub fn get_with_gas<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
+    pub fn try_get<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
         &self,
         ctx: &KV,
     ) -> Result<ClientParams, StoreErrors> {
@@ -101,7 +101,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         Ok(store.params()?.unwrap()) // TODO: Add default
     }
 
-    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn try_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ClientParams,

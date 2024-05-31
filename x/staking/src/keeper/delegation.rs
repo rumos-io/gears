@@ -62,7 +62,7 @@ impl<
                 }
             };
 
-            let denom = self.staking_params_keeper.get_with_gas(ctx)?.bond_denom;
+            let denom = self.staking_params_keeper.try_get(ctx)?.bond_denom;
             let coins = SendCoins::new(vec![Coin {
                 denom,
                 amount: bond_amount,

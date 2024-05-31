@@ -23,7 +23,7 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &CreateValidator,
     ) -> Result<(), AppError> {
-        let params = self.staking_params_keeper.get_with_gas(ctx)?;
+        let params = self.staking_params_keeper.try_get(ctx)?;
 
         if self.validator(ctx, &msg.validator_address)?.is_some() {
             return Err(AppError::Custom(format!(
