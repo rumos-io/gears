@@ -1,6 +1,11 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use gears::context::ImmutableContext;
+use gears::context::ImmutableGasContext;
+use gears::context::MutableContext;
+use gears::context::MutableGasContext;
+use gears::params::gas;
 use gears::params::subspace;
 use gears::params::subspace_mut;
 use gears::params::ParamKind;
@@ -11,12 +16,13 @@ use gears::store::QueryableMultiKVStore;
 use gears::store::ReadPrefixStore;
 use gears::store::TransactionalMultiKVStore;
 use gears::store::WritePrefixStore;
+use gears::types::store::errors::StoreErrors;
 use gears::{
+    context::{QueryableContext, TransactionalContext},
     store::{
         database::{prefix::PrefixDB, Database},
         StoreKey,
     },
-    types::context::{QueryableContext, TransactionalContext},
 };
 use serde::{Deserialize, Serialize};
 
@@ -69,7 +75,7 @@ pub struct ClientParamsKeeper<PSK> {
 }
 
 impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, KV: ImmutableContext<DB, SK>>(
         &self,
         ctx: &KV,
     ) -> ClientParams {
@@ -78,7 +84,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         store.params().unwrap() // TODO: Add default
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ClientParams,
@@ -86,5 +92,26 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
+    }
+
+    pub fn get_with_gas<DB: Database, SK: StoreKey, KV: ImmutableGasContext<DB, SK>>(
+        &self,
+        ctx: &KV,
+    ) -> Result<ClientParams, StoreErrors> {
+        let store = gas::subspace(ctx, &self.params_subspace_key);
+
+        Ok(store.params()?.unwrap()) // TODO: Add default
+    }
+
+    pub fn set_with_gas<DB: Database, SK: StoreKey, CTX: MutableGasContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: ClientParams,
+    ) -> Result<(), StoreErrors> {
+        let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
+
+        store.params_set(&params)?;
+
+        Ok(())
     }
 }

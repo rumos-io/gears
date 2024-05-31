@@ -15,7 +15,7 @@ pub trait QueryableContext<DB, SK> {
     // fn chain_id(&self) -> &ChainId;
 }
 
-pub trait ImmutableContext<DB, SK>: QueryableContext<DB, SK> {
+pub trait ImmutableContext<DB, SK>: QueryableContext<DB, SK> + ImmutableGasContext<DB, SK> {
     /// Fetches an immutable ref to a KVStore from the MultiStore.
     fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>>;
 }
@@ -35,7 +35,9 @@ pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
     fn get_time(&self) -> Option<Timestamp>;
 }
 
-pub trait MutableContext<DB, SK>: TransactionalContext<DB, SK> + ImmutableContext<DB, SK> {
+pub trait MutableContext<DB, SK>:
+    TransactionalContext<DB, SK> + ImmutableContext<DB, SK> + MutableGasContext<DB, SK>
+{
     ///  Fetches an mutable ref to a KVStore from the MultiStore.
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
 }

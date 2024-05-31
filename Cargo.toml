@@ -16,9 +16,9 @@ members = [
   # "gaia-rs",
 
   # xmodules
-  # "x/ibc-rs",
-  "x/bank",
   "x/auth",
+  "x/bank",
+  "x/ibc-rs",
   # "x/staking",
 
   # new unsorted

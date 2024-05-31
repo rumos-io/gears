@@ -1,12 +1,14 @@
+use gears::context::init::InitContext;
+use gears::context::query::QueryContext;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
 use gears::store::WritePrefixStore;
-use gears::types::context::init::InitContext;
-use gears::types::context::query::QueryContext;
+use gears::types::store::errors::StoreErrors;
+use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::{
+    context::QueryableContext,
     store::{database::Database, QueryableKVStore, StoreKey},
-    types::context::QueryableContext,
 };
 use ibc::primitives::ToVec;
 use ibc::{core::host::types::path::ClientStatePath, primitives::proto::Protobuf};
@@ -15,8 +17,8 @@ use crate::ics02_client::types::{client_state::ClientState, query::IdentifiedCli
 use crate::types::context::CLIENT_STATE_KEY;
 
 use super::{params::ClientParamsKeeper, types::query::QueryClientStatesResponse, GenesisState};
+use gears::context::{MutableContext, MutableGasContext, TransactionalContext};
 use gears::store::TransactionalKVStore;
-use gears::types::context::TransactionalContext;
 use ibc::core::{
     client::types::proto::v1::QueryClientStatesRequest, host::types::identifiers::ClientId,
 };
@@ -89,7 +91,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         sequence: u64,
     ) {
         let mut ibc_store = ctx.kv_store_mut(&self.store_key);
-        ibc_store.set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes());
+        ibc_store
+            .set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes())
+            .expect("Init ctx doesn't have any gas");
     }
 
     /// Query all client states
@@ -144,23 +148,23 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     }
 
     /// Writes the client state to the store
-    pub fn client_state_set<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn client_state_set<DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         client_state_path: ClientStatePath,
         client_state: ClientState,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let mut store = Self::client_store_mut(self, ctx, &client_state_path.0);
-        store.set(CLIENT_STATE_KEY.bytes(), client_state.encode_vec());
+        store.set(CLIENT_STATE_KEY.bytes(), client_state.encode_vec())
     }
 
     /// Returns an isolated mutable prefix store for each client so they can read/write in separate
     /// namespaces without being able to read/write other client's data
-    fn client_store_mut<'a, DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn client_store_mut<'a, DB: Database, CTX: MutableGasContext<DB, SK>>(
         &self,
         ctx: &'a mut CTX,
         client_id: &ClientId,
-    ) -> MutablePrefixStore<'a, PrefixDB<DB>> {
+    ) -> PrefixStoreMut<'a, PrefixDB<DB>> {
         let prefix = format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_id).into_bytes();
         ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix)
     }

@@ -8,7 +8,12 @@ use kv_store::{
 };
 use tendermint::types::proto::event::Event;
 
-use super::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
+use crate::types::store::kv::{mutable::StoreMut, Store};
+
+use super::{
+    ImmutableContext, ImmutableGasContext, MutableContext, MutableGasContext, QueryableContext,
+    TransactionalContext,
+};
 
 #[derive(Debug)]
 pub struct SimpleContext<'a, DB, SK> {
@@ -37,9 +42,21 @@ impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for SimpleContext<'_, 
     }
 }
 
+impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for SimpleContext<'_, DB, SK> {
+    fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
+        KVStore::from(self.multi_store.kv_store(store_key)).into()
+    }
+}
+
 impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for SimpleContext<'_, DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         KVStoreMut::from(self.multi_store.kv_store_mut(store_key))
+    }
+}
+
+impl<DB: Database, SK: StoreKey> MutableGasContext<DB, SK> for SimpleContext<'_, DB, SK> {
+    fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
+        KVStoreMut::from(self.multi_store.kv_store_mut(store_key)).into()
     }
 }
 

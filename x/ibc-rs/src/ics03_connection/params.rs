@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use gears::context::ImmutableContext;
+use gears::context::MutableContext;
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::subspace;
 use gears::params::subspace_mut;
@@ -14,11 +16,11 @@ use gears::store::ReadPrefixStore;
 use gears::store::TransactionalMultiKVStore;
 use gears::store::WritePrefixStore;
 use gears::{
+    context::{QueryableContext, TransactionalContext},
     store::{
         database::{prefix::PrefixDB, Database},
         StoreKey,
     },
-    types::context::{QueryableContext, TransactionalContext},
 };
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
@@ -74,7 +76,7 @@ pub struct ConnectionParamsKeeper<PSK> {
 }
 
 impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
-    pub fn _get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn _get<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> ConnectionParams {
@@ -83,7 +85,7 @@ impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
         store.params().unwrap() // TODO: Add default
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConnectionParams,
