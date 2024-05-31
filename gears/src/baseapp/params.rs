@@ -7,7 +7,9 @@ use serde_with::serde_as;
 
 use crate::{
     context::{InfallibleContext, InfallibleContextMut},
-    params::{infallible_subspace, infallible_subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
+    params::{
+        infallible_subspace, infallible_subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey,
+    },
 };
 
 mod inner {

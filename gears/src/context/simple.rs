@@ -6,7 +6,7 @@ use kv_store::{
     },
     ApplicationStore, StoreKey,
 };
-use tendermint::types::proto::event::Event;
+use tendermint::types::{proto::event::Event, time::Timestamp};
 
 use crate::types::store::kv::{mutable::StoreMut, Store};
 
@@ -62,7 +62,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for SimpleContext<
         std::mem::take(&mut self.events)
     }
 
-    fn get_time(&self) -> Option<tendermint::types::time::Timestamp> {
+    fn get_time(&self) -> Timestamp {
         unreachable!("inner type that is not supposed to provide external interfaces")
     }
 

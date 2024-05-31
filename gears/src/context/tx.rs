@@ -21,7 +21,6 @@ use crate::{
             kind::{BlockKind, TxKind},
             GasMeter,
         },
-        header::Header,
         store::{
             gas::{
                 guard::GasGuard,
@@ -29,11 +28,6 @@ use crate::{
             },
             kv::{mutable::StoreMut, Store},
         },
-    baseapp::options::NodeOptions,
-    baseapp::ConsensusParams,
-    types::gas::{
-        kind::{BlockKind, TxKind},
-        GasMeter,
     },
 };
 

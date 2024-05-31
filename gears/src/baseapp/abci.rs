@@ -3,7 +3,7 @@ use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
 use crate::context::{block::BlockContext, init::InitContext};
-use crate::error::{AppError, POISONED_LOCK};
+use crate::error::POISONED_LOCK;
 use crate::params::ParamsSubspaceKey;
 use crate::types::gas::Gas;
 use bytes::Bytes;

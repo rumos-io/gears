@@ -7,10 +7,7 @@ use kv_store::{
     ApplicationStore, StoreKey,
 };
 
-use crate::types::{
-    header::Header,
-    store::kv::{mutable::StoreMut, Store},
-};
+use crate::types::store::kv::{mutable::StoreMut, Store};
 use tendermint::types::{
     chain_id::ChainId,
     proto::{event::Event, header::Header},
