@@ -7,7 +7,7 @@ use serde_with::serde_as;
 
 use crate::{
     context::{InfallibleContext, InfallibleContextMut},
-    params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
+    params::{infallible_subspace, infallible_subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
 };
 
 mod inner {
@@ -139,7 +139,7 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
         ctx: &mut CTX,
         params: inner::ConsensusParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params);
     }
@@ -148,7 +148,7 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
         &self,
         store: &CTX,
     ) -> ConsensusParams {
-        let sub_store = subspace(store, &self.params_subspace_key);
+        let sub_store = infallible_subspace(store, &self.params_subspace_key);
 
         let block_params = self.block_params(store).unwrap_or_default();
         let evidence_params = sub_store
@@ -178,7 +178,7 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
         &self,
         store: &CTX,
     ) -> Option<BlockParams> {
-        let sub_store = subspace(store, &self.params_subspace_key);
+        let sub_store = infallible_subspace(store, &self.params_subspace_key);
 
         serde_json::from_slice(
             &sub_store

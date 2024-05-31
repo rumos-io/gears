@@ -4,7 +4,8 @@ use gears::context::{
     InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext,
 };
 use gears::params::{
-    gas, subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
+    gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
+    ParamsSerialize, ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -70,7 +71,7 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
         &self,
         ctx: &CTX,
     ) -> BankParams {
-        let store = subspace(ctx, &self.params_subspace_key);
+        let store = infallible_subspace(ctx, &self.params_subspace_key);
 
         store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
@@ -80,7 +81,7 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
         ctx: &mut CTX,
         params: BankParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
     }

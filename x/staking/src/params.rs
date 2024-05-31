@@ -150,7 +150,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
         &self,
         ctx: &CTX,
     ) -> Params {
-        let store = gears::params::subspace(ctx, &self.params_subspace_key);
+        let store = gears::params::infallible_subspace(ctx, &self.params_subspace_key);
         store.params().expect("params should be stored in database")
     }
 
@@ -159,7 +159,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
         ctx: &mut CTX,
         params: Params,
     ) {
-        let mut store = gears::params::subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = gears::params::infallible_subspace_mut(ctx, &self.params_subspace_key);
         store.params_set(&params);
     }
 

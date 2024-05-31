@@ -4,8 +4,8 @@ use std::collections::HashSet;
 use gears::context::InfallibleContext;
 use gears::context::InfallibleContextMut;
 use gears::params::gas;
-use gears::params::subspace;
-use gears::params::subspace_mut;
+use gears::params::infallible_subspace;
+use gears::params::infallible_subspace_mut;
 use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
@@ -77,7 +77,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         &self,
         ctx: &KV,
     ) -> ClientParams {
-        let store = subspace(ctx, &self.params_subspace_key);
+        let store = infallible_subspace(ctx, &self.params_subspace_key);
 
         store.params().unwrap() // TODO: Add default
     }
@@ -87,7 +87,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         ctx: &mut CTX,
         params: ClientParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
     }

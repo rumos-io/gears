@@ -12,7 +12,7 @@ pub mod parsed;
 pub mod space;
 pub mod space_mut;
 
-pub fn subspace<
+pub fn infallible_subspace<
     'a,
     DB: Database,
     SK: StoreKey,
@@ -28,7 +28,7 @@ pub fn subspace<
     }
 }
 
-pub fn subspace_mut<
+pub fn infallible_subspace_mut<
     'a,
     DB: Database,
     SK: StoreKey,
