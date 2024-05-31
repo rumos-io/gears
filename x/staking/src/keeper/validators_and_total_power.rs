@@ -19,7 +19,7 @@ impl<
         &self,
         ctx: &CTX,
     ) -> Option<Uint256> {
-        let store = ImmutableContext::kv_store(ctx, &self.store_key);
+        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
         store
             .get(&LAST_TOTAL_POWER_KEY)
             .unwrap_infallible()

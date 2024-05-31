@@ -61,13 +61,13 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'_, DB
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for InitContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+    fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.kv_store(store_key)
     }
 }
 
 impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for InitContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
+    fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.kv_store_mut(store_key)
     }
 }

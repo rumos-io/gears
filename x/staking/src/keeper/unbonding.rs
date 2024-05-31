@@ -21,7 +21,7 @@ impl<
         del_addr: AccAddress,
         val_addr: ValAddress,
     ) -> Option<UnbondingDelegation> {
-        let store = ImmutableContext::kv_store(ctx, &self.store_key);
+        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
         let delegations_store = store.prefix_store(DELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_addr.to_string().as_bytes());
@@ -38,7 +38,7 @@ impl<
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
     ) {
-        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_address.to_string().as_bytes());
@@ -55,7 +55,7 @@ impl<
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
     ) -> Option<Vec<u8>> {
-        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_address.to_string().as_bytes());
@@ -70,7 +70,7 @@ impl<
         time: chrono::DateTime<Utc>,
     ) -> Vec<DvPair> {
         let (keys, mature_unbonds) = {
-            let storage = ImmutableContext::kv_store(ctx, &self.store_key);
+            let storage = ImmutableContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
             let end = unbonding_delegation_time_key(time).to_vec();
             let mut mature_unbonds = vec![];
@@ -89,7 +89,7 @@ impl<
             }
             (keys, mature_unbonds)
         };
-        let storage = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let storage = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);
@@ -141,7 +141,7 @@ impl<
         ctx: &mut CTX,
         time: &Timestamp,
     ) -> Option<Vec<DvPair>> {
-        let store = ImmutableContext::kv_store(ctx, &self.store_key);
+        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
         let store = store.prefix_store(UBD_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
@@ -159,7 +159,7 @@ impl<
         time: Timestamp,
         time_slice: Vec<DvPair>,
     ) {
-        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(UBD_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.

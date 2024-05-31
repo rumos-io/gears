@@ -48,7 +48,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, S
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for QueryContext<DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+    fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.kv_store(store_key)
     }
 }

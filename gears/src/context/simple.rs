@@ -37,7 +37,7 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, 
 }
 
 impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for SimpleContext<'_, DB, SK> {
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+    fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         KVStore::from(self.multi_store.kv_store(store_key))
     }
 }
@@ -49,7 +49,7 @@ impl<DB: Database, SK: StoreKey> ImmutableGasContext<DB, SK> for SimpleContext<'
 }
 
 impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for SimpleContext<'_, DB, SK> {
-    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
+    fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         KVStoreMut::from(self.multi_store.kv_store_mut(store_key))
     }
 }

@@ -20,7 +20,7 @@ impl<
         val_src_addr: ValAddress,
         val_dst_addr: ValAddress,
     ) -> anyhow::Result<Redelegation> {
-        let store = ImmutableContext::kv_store(ctx, &self.store_key);
+        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
         let store = store.prefix_store(REDELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_src_addr.to_string().as_bytes());
@@ -39,7 +39,7 @@ impl<
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) {
-        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
@@ -57,7 +57,7 @@ impl<
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) -> Option<Vec<u8>> {
-        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
@@ -135,7 +135,7 @@ impl<
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
     ) -> Vec<DvvTriplet> {
-        let store = ImmutableContext::kv_store(ctx, &self.store_key);
+        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
@@ -155,7 +155,7 @@ impl<
         completion_time: chrono::DateTime<Utc>,
         redelegations: Vec<DvvTriplet>,
     ) {
-        let store = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
@@ -174,7 +174,7 @@ impl<
         time: chrono::DateTime<Utc>,
     ) -> Vec<DvvTriplet> {
         let (keys, mature_redelegations) = {
-            let storage = ImmutableContext::kv_store(ctx, &self.store_key);
+            let storage = ImmutableContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
@@ -196,7 +196,7 @@ impl<
             (keys, mature_redelegations)
         };
 
-        let storage = MutableContext::kv_store_mut(ctx, &self.store_key);
+        let storage = MutableContext::infallible_store_mut(ctx, &self.store_key);
         let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);

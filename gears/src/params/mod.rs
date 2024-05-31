@@ -23,7 +23,7 @@ pub fn subspace<
     params_subspace_key: &PSK,
 ) -> ParamsSpace<'a, PrefixDB<DB>> {
     ParamsSpace {
-        inner: ImmutableContext::kv_store(ctx, SK::params())
+        inner: ImmutableContext::infallible_store(ctx, SK::params())
             .prefix_store(params_subspace_key.name().as_bytes().to_vec()),
     }
 }
@@ -39,7 +39,7 @@ pub fn subspace_mut<
     params_subspace_key: &PSK,
 ) -> ParamsSpaceMut<'a, PrefixDB<DB>> {
     ParamsSpaceMut {
-        inner: MutableContext::kv_store_mut(ctx, SK::params())
+        inner: MutableContext::infallible_store_mut(ctx, SK::params())
             .prefix_store_mut(params_subspace_key.name().as_bytes().to_vec()),
     }
 }
