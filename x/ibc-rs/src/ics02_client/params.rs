@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use gears::context::ImmutableContext;
-use gears::context::MutableContext;
+use gears::context::InfallibleContext;
+use gears::context::InfallibleContextMut;
 use gears::params::gas;
 use gears::params::subspace;
 use gears::params::subspace_mut;
@@ -73,7 +73,7 @@ pub struct ClientParamsKeeper<PSK> {
 }
 
 impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, KV: ImmutableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, KV: InfallibleContext<DB, SK>>(
         &self,
         ctx: &KV,
     ) -> ClientParams {
@@ -82,7 +82,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         store.params().unwrap() // TODO: Add default
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ClientParams,

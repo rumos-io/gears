@@ -1,5 +1,5 @@
 use gears::{
-    context::MutableContext,
+    context::InfallibleContextMut,
     types::{
         account::{Account, ModuleAccount},
         address::{AccAddress, ConsAddress},
@@ -60,7 +60,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn undelegate_coins_from_module_to_account<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: MutableContext<DB, SK>,
+        CTX: InfallibleContextMut<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,

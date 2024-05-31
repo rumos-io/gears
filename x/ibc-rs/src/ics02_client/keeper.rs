@@ -17,7 +17,7 @@ use crate::ics02_client::types::{client_state::ClientState, query::IdentifiedCli
 use crate::types::context::CLIENT_STATE_KEY;
 
 use super::{params::ClientParamsKeeper, types::query::QueryClientStatesResponse, GenesisState};
-use gears::context::{MutableContext, TransactionalContext};
+use gears::context::{InfallibleContextMut, TransactionalContext};
 use gears::store::TransactionalKVStore;
 use ibc::core::{
     client::types::proto::v1::QueryClientStatesRequest, host::types::identifiers::ClientId,

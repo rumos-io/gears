@@ -1,7 +1,7 @@
 pub use super::*;
 use crate::consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
 use gears::{
-    context::{ImmutableContext, MutableContext},
+    context::{InfallibleContext, InfallibleContextMut},
     store::{database::ext::UnwrapCorrupt, ext::UnwrapInfallible},
     tendermint::types::time::Timestamp,
     types::store::errors::StoreErrors,
@@ -15,13 +15,13 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    pub fn unbonding_delegation<DB: Database, CTX: ImmutableContext<DB, SK>>(
+    pub fn unbonding_delegation<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
         val_addr: ValAddress,
     ) -> Option<UnbondingDelegation> {
-        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
+        let store = InfallibleContext::infallible_store(ctx, &self.store_key);
         let delegations_store = store.prefix_store(DELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_addr.to_string().as_bytes());
@@ -33,12 +33,12 @@ impl<
         None
     }
 
-    pub fn set_unbonding_delegation<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn set_unbonding_delegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
     ) {
-        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_address.to_string().as_bytes());
@@ -50,12 +50,12 @@ impl<
             .unwrap_infallible();
     }
 
-    pub fn remove_unbonding_delegation<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn remove_unbonding_delegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
     ) -> Option<Vec<u8>> {
-        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_address.to_string().as_bytes());
@@ -64,13 +64,13 @@ impl<
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
     /// currTime, and deletes the timeslices from the queue
-    pub fn dequeue_all_mature_ubd_queue<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn dequeue_all_mature_ubd_queue<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
     ) -> Vec<DvPair> {
         let (keys, mature_unbonds) = {
-            let storage = ImmutableContext::infallible_store(ctx, &self.store_key);
+            let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
             let end = unbonding_delegation_time_key(time).to_vec();
             let mut mature_unbonds = vec![];
@@ -89,7 +89,7 @@ impl<
             }
             (keys, mature_unbonds)
         };
-        let storage = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let storage = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);
@@ -98,7 +98,7 @@ impl<
     }
 
     /// Insert an unbonding delegation to the appropriate timeslice in the unbonding queue
-    pub fn insert_ubd_queue<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn insert_ubd_queue<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
@@ -136,12 +136,12 @@ impl<
         Ok(())
     }
 
-    pub fn ubd_queue_time_slice<DB: Database, CTX: ImmutableContext<DB, SK>>(
+    pub fn ubd_queue_time_slice<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: &Timestamp,
     ) -> Option<Vec<DvPair>> {
-        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
+        let store = InfallibleContext::infallible_store(ctx, &self.store_key);
         let store = store.prefix_store(UBD_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
@@ -153,13 +153,13 @@ impl<
         }
     }
 
-    pub fn set_ubd_queue_time_slice<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn set_ubd_queue_time_slice<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: Timestamp,
         time_slice: Vec<DvPair>,
     ) {
-        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(UBD_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.

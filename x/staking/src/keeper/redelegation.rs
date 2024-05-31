@@ -1,7 +1,7 @@
 pub use super::*;
 use crate::consts::error::TIMESTAMP_NANOS_EXPECT;
 use gears::{
-    context::{ImmutableContext, MutableContext},
+    context::{InfallibleContext, InfallibleContextMut},
     store::{database::ext::UnwrapCorrupt, ext::UnwrapInfallible},
 };
 
@@ -13,14 +13,14 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    pub fn redelegation<DB: Database, CTX: ImmutableContext<DB, SK>>(
+    pub fn redelegation<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
         val_src_addr: ValAddress,
         val_dst_addr: ValAddress,
     ) -> anyhow::Result<Redelegation> {
-        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
+        let store = InfallibleContext::infallible_store(ctx, &self.store_key);
         let store = store.prefix_store(REDELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_src_addr.to_string().as_bytes());
@@ -34,12 +34,12 @@ impl<
         }
     }
 
-    pub fn set_redelegation<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn set_redelegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) {
-        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
@@ -52,12 +52,12 @@ impl<
             .unwrap_infallible();
     }
 
-    pub fn remove_redelegation<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn remove_redelegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) -> Option<Vec<u8>> {
-        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
@@ -110,7 +110,7 @@ impl<
         Ok(balances)
     }
 
-    pub fn insert_redelegation_queue<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn insert_redelegation_queue<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         redelegation: &Redelegation,
@@ -130,12 +130,12 @@ impl<
         }
     }
 
-    pub fn redelegation_queue_time_slice<DB: Database, CTX: ImmutableContext<DB, SK>>(
+    pub fn redelegation_queue_time_slice<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
     ) -> Vec<DvvTriplet> {
-        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
+        let store = InfallibleContext::infallible_store(ctx, &self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
@@ -149,13 +149,13 @@ impl<
         }
     }
 
-    pub fn set_redelegation_queue_time_slice<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn set_redelegation_queue_time_slice<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
         redelegations: Vec<DvvTriplet>,
     ) {
-        let store = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
         let key = completion_time
@@ -168,13 +168,16 @@ impl<
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
     /// currTime, and deletes the timeslices from the queue
-    pub fn dequeue_all_mature_redelegation_queue<DB: Database, CTX: MutableContext<DB, SK>>(
+    pub fn dequeue_all_mature_redelegation_queue<
+        DB: Database,
+        CTX: InfallibleContextMut<DB, SK>,
+    >(
         &self,
         ctx: &mut CTX,
         time: chrono::DateTime<Utc>,
     ) -> Vec<DvvTriplet> {
         let (keys, mature_redelegations) = {
-            let storage = ImmutableContext::infallible_store(ctx, &self.store_key);
+            let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
@@ -196,7 +199,7 @@ impl<
             (keys, mature_redelegations)
         };
 
-        let storage = MutableContext::infallible_store_mut(ctx, &self.store_key);
+        let storage = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);

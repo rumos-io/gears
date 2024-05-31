@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use gears::context::ImmutableContext;
-use gears::context::MutableContext;
+use gears::context::InfallibleContext;
+use gears::context::InfallibleContextMut;
 use gears::core::serializers::serialize_number_to_string;
 use gears::params::subspace;
 use gears::params::subspace_mut;
@@ -76,7 +76,7 @@ pub struct ConnectionParamsKeeper<PSK> {
 }
 
 impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
-    pub fn _get<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
+    pub fn _get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> ConnectionParams {
@@ -85,7 +85,7 @@ impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
         store.params().unwrap() // TODO: Add default
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConnectionParams,

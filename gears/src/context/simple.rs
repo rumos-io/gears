@@ -10,7 +10,7 @@ use tendermint::types::proto::event::Event;
 
 use crate::types::store::kv::{mutable::StoreMut, Store};
 
-use super::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
+use super::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct SimpleContext<'a, DB, SK> {
@@ -37,13 +37,13 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, 
     }
 }
 
-impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for SimpleContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> InfallibleContext<DB, SK> for SimpleContext<'_, DB, SK> {
     fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         KVStore::from(self.multi_store.kv_store(store_key))
     }
 }
 
-impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for SimpleContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> InfallibleContextMut<DB, SK> for SimpleContext<'_, DB, SK> {
     fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         KVStoreMut::from(self.multi_store.kv_store_mut(store_key))
     }

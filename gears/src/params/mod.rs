@@ -4,7 +4,7 @@ use std::{collections::HashMap, hash::Hash, str::FromStr};
 use database::{prefix::PrefixDB, Database};
 use kv_store::{QueryableKVStore, StoreKey, TransactionalKVStore};
 
-use crate::context::{ImmutableContext, MutableContext};
+use crate::context::{InfallibleContext, InfallibleContextMut};
 
 use self::{parsed::Params, space::ParamsSpace, space_mut::ParamsSpaceMut};
 
@@ -16,14 +16,14 @@ pub fn subspace<
     'a,
     DB: Database,
     SK: StoreKey,
-    CTX: ImmutableContext<DB, SK>,
+    CTX: InfallibleContext<DB, SK>,
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a CTX,
     params_subspace_key: &PSK,
 ) -> ParamsSpace<'a, PrefixDB<DB>> {
     ParamsSpace {
-        inner: ImmutableContext::infallible_store(ctx, SK::params())
+        inner: InfallibleContext::infallible_store(ctx, SK::params())
             .prefix_store(params_subspace_key.name().as_bytes().to_vec()),
     }
 }
@@ -32,14 +32,14 @@ pub fn subspace_mut<
     'a,
     DB: Database,
     SK: StoreKey,
-    CTX: MutableContext<DB, SK>,
+    CTX: InfallibleContextMut<DB, SK>,
     PSK: ParamsSubspaceKey,
 >(
     ctx: &'a mut CTX,
     params_subspace_key: &PSK,
 ) -> ParamsSpaceMut<'a, PrefixDB<DB>> {
     ParamsSpaceMut {
-        inner: MutableContext::infallible_store_mut(ctx, SK::params())
+        inner: InfallibleContextMut::infallible_store_mut(ctx, SK::params())
             .prefix_store_mut(params_subspace_key.name().as_bytes().to_vec()),
     }
 }

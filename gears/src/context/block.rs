@@ -13,7 +13,7 @@ use crate::types::{
     store::kv::{mutable::StoreMut, Store},
 };
 
-use super::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
+use super::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
 pub struct BlockContext<'a, DB, SK> {
@@ -62,13 +62,13 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, D
     }
 }
 
-impl<DB: Database, SK: StoreKey> ImmutableContext<DB, SK> for BlockContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> InfallibleContext<DB, SK> for BlockContext<'_, DB, SK> {
     fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         self.kv_store(store_key)
     }
 }
 
-impl<DB: Database, SK: StoreKey> MutableContext<DB, SK> for BlockContext<'_, DB, SK> {
+impl<DB: Database, SK: StoreKey> InfallibleContextMut<DB, SK> for BlockContext<'_, DB, SK> {
     fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         self.kv_store_mut(store_key)
     }

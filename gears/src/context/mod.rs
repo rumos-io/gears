@@ -18,7 +18,7 @@ pub trait QueryableContext<DB, SK> {
     // fn chain_id(&self) -> &ChainId;
 }
 
-pub trait ImmutableContext<DB, SK>: QueryableContext<DB, SK> {
+pub trait InfallibleContext<DB, SK>: QueryableContext<DB, SK> {
     /// Fetches an immutable ref to a KVStore from the MultiStore.
     fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>>;
 }
@@ -35,7 +35,9 @@ pub trait TransactionalContext<DB, SK>: QueryableContext<DB, SK> {
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>>;
 }
 
-pub trait MutableContext<DB, SK>: TransactionalContext<DB, SK> + ImmutableContext<DB, SK> {
+pub trait InfallibleContextMut<DB, SK>:
+    TransactionalContext<DB, SK> + InfallibleContext<DB, SK>
+{
     ///  Fetches an mutable ref to a KVStore from the MultiStore.
     fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>>;
 }

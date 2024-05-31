@@ -1,5 +1,5 @@
 use gears::{
-    context::ImmutableContext, store::ext::UnwrapInfallible, types::store::errors::StoreErrors,
+    context::InfallibleContext, store::ext::UnwrapInfallible, types::store::errors::StoreErrors,
 };
 
 pub use super::*;
@@ -13,11 +13,11 @@ impl<
     > Keeper<SK, PSK, AK, BK, KH>
 {
     /// Load the last total validator power.
-    pub fn last_total_power<DB: Database, CTX: ImmutableContext<DB, SK>>(
+    pub fn last_total_power<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> Option<Uint256> {
-        let store = ImmutableContext::infallible_store(ctx, &self.store_key);
+        let store = InfallibleContext::infallible_store(ctx, &self.store_key);
         store
             .get(&LAST_TOTAL_POWER_KEY)
             .unwrap_infallible()

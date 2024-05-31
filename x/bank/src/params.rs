@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use gears::context::{ImmutableContext, MutableContext, QueryableContext, TransactionalContext};
+use gears::context::{
+    InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext,
+};
 use gears::params::{
     gas, subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
 };
@@ -64,7 +66,7 @@ pub struct BankParamsKeeper<PSK: ParamsSubspaceKey> {
 }
 
 impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: ImmutableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> BankParams {
@@ -73,7 +75,7 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
         store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: MutableContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: BankParams,
