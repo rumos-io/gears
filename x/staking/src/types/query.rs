@@ -1,4 +1,7 @@
-use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Validator};
+use crate::{
+    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Redelegation, RedelegationEntry,
+    Validator,
+};
 use gears::{
     core::{errors::Error, Protobuf},
     error::IBC_ENCODE_UNWRAP,
@@ -6,6 +9,8 @@ use gears::{
     types::{
         address::{AccAddress, ValAddress},
         base::coin::Coin,
+        response::PageResponse,
+        uint::Uint256,
     },
 };
 use prost::Message;
@@ -93,6 +98,73 @@ impl From<QueryDelegationRequest> for QueryDelegationRequestRaw {
 
 impl Protobuf<QueryDelegationRequestRaw> for QueryDelegationRequest {}
 
+/// QueryRedelegationRequest is request type for the Query/Redelegation RPC method.
+#[derive(Clone, Debug, PartialEq)]
+pub struct QueryRedelegationRequest {
+    /// delegator_addr defines the delegator address to query for.
+    pub delegator_address: Option<AccAddress>,
+    /// src_validator_addr defines the validator address to redelegate from.
+    pub src_validator_address: Option<ValAddress>,
+    /// dst_validator_addr defines the validator address to redelegate to.
+    pub dst_validator_address: Option<ValAddress>,
+    /// pagination defines an optional pagination for the request.
+    pub pagination: Option<PageResponse>,
+}
+
+impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
+    type Error = Error;
+
+    fn try_from(raw: QueryRedelegationRequestRaw) -> Result<Self, Self::Error> {
+        let delegator_address = if let Some(addr) = raw.delegator_address {
+            Some(AccAddress::from_bech32(&addr).map_err(|e| Error::DecodeAddress(e.to_string()))?)
+        } else {
+            None
+        };
+        let src_validator_address = if let Some(addr) = raw.src_validator_address {
+            Some(ValAddress::from_bech32(&addr).map_err(|e| Error::DecodeAddress(e.to_string()))?)
+        } else {
+            None
+        };
+        let dst_validator_address = if let Some(addr) = raw.dst_validator_address {
+            Some(ValAddress::from_bech32(&addr).map_err(|e| Error::DecodeAddress(e.to_string()))?)
+        } else {
+            None
+        };
+
+        Ok(QueryRedelegationRequest {
+            delegator_address,
+            src_validator_address,
+            dst_validator_address,
+            pagination: raw.pagination.map(|p| p.into()),
+        })
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QueryRedelegationRequestRaw {
+    #[prost(string, optional)]
+    pub delegator_address: Option<String>,
+    #[prost(string, optional)]
+    pub src_validator_address: Option<String>,
+    #[prost(string, optional)]
+    pub dst_validator_address: Option<String>,
+    #[prost(message, optional)]
+    pub pagination: Option<gears::core::query::response::PageResponse>,
+}
+
+impl From<QueryRedelegationRequest> for QueryRedelegationRequestRaw {
+    fn from(query: QueryRedelegationRequest) -> QueryRedelegationRequestRaw {
+        Self {
+            delegator_address: query.delegator_address.map(|a| a.to_string()),
+            src_validator_address: query.src_validator_address.map(|a| a.to_string()),
+            dst_validator_address: query.dst_validator_address.map(|a| a.to_string()),
+            pagination: query.pagination.map(|p| p.into()),
+        }
+    }
+}
+
+impl Protobuf<QueryRedelegationRequestRaw> for QueryRedelegationRequest {}
+
 // ===
 // responses
 // ===
@@ -166,7 +238,6 @@ pub struct DelegationResponseRaw {
 impl From<DelegationResponse> for DelegationResponseRaw {
     fn from(query: DelegationResponse) -> DelegationResponseRaw {
         Self {
-            // TODO: consider implement Protobuf for Validator
             delegation: serde_json::to_vec(&query.delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
             balance: query.balance.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
@@ -213,3 +284,137 @@ impl From<QueryDelegationResponse> for QueryDelegationResponseRaw {
 }
 
 impl Protobuf<QueryDelegationResponseRaw> for QueryDelegationResponse {}
+
+/// RedelegationEntryResponse is equivalent to a RedelegationEntry except that it
+/// contains a balance in addition to shares which is more suitable for client
+/// responses.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct RedelegationEntryResponse {
+    pub redelegation_entry: RedelegationEntry,
+    pub balance: Uint256,
+}
+
+impl TryFrom<RedelegationEntryResponseRaw> for RedelegationEntryResponse {
+    type Error = Error;
+
+    fn try_from(raw: RedelegationEntryResponseRaw) -> Result<Self, Self::Error> {
+        let redelegation_entry: RedelegationEntry = serde_json::from_slice(&raw.redelegation_entry)
+            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+        let balance = serde_json::from_slice(&raw.balance)
+            .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+
+        Ok(RedelegationEntryResponse {
+            redelegation_entry,
+            balance,
+        })
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct RedelegationEntryResponseRaw {
+    #[prost(bytes)]
+    pub redelegation_entry: Vec<u8>,
+    #[prost(bytes)]
+    pub balance: Vec<u8>,
+}
+
+impl From<RedelegationEntryResponse> for RedelegationEntryResponseRaw {
+    fn from(query: RedelegationEntryResponse) -> RedelegationEntryResponseRaw {
+        Self {
+            redelegation_entry: serde_json::to_vec(&query.redelegation_entry)
+                .expect(SERDE_ENCODING_DOMAIN_TYPE),
+            balance: serde_json::to_vec(&query.balance).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        }
+    }
+}
+
+/// RedelegationResponse is equivalent to a Redelegation except that its entries
+/// contain a balance in addition to shares which is more suitable for client responses.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct RedelegationResponse {
+    pub redelegation: Redelegation,
+    pub entries: Vec<RedelegationEntryResponse>,
+}
+
+impl TryFrom<RedelegationResponseRaw> for RedelegationResponse {
+    type Error = Error;
+
+    fn try_from(raw: RedelegationResponseRaw) -> Result<Self, Self::Error> {
+        let redelegation: Redelegation = serde_json::from_slice(&raw.redelegation)
+            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+        let entries = serde_json::from_slice(&raw.entries)
+            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+
+        Ok(RedelegationResponse {
+            redelegation,
+            entries,
+        })
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct RedelegationResponseRaw {
+    #[prost(bytes)]
+    pub redelegation: Vec<u8>,
+    #[prost(bytes)]
+    pub entries: Vec<u8>,
+}
+
+impl From<RedelegationResponse> for RedelegationResponseRaw {
+    fn from(query: RedelegationResponse) -> RedelegationResponseRaw {
+        Self {
+            redelegation: serde_json::to_vec(&query.redelegation)
+                .expect(SERDE_ENCODING_DOMAIN_TYPE),
+            entries: serde_json::to_vec(&query.entries).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        }
+    }
+}
+
+/// QueryRedelegationResponse is the response type for the Query/Redelegation RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct QueryRedelegationResponse {
+    /// Redelegation with balance.
+    pub redelegation_responses: Vec<RedelegationResponse>,
+    pub pagination: Option<PageResponse>,
+}
+
+impl TryFrom<QueryRedelegationResponseRaw> for QueryRedelegationResponse {
+    type Error = Error;
+
+    fn try_from(raw: QueryRedelegationResponseRaw) -> Result<Self, Self::Error> {
+        let redelegation_responses: Vec<RedelegationResponse> = {
+            let mut redelegations = Vec::with_capacity(raw.redelegation_responses.len());
+            for red in raw.redelegation_responses {
+                redelegations.push(red.try_into()?)
+            }
+            redelegations
+        };
+        Ok(QueryRedelegationResponse {
+            redelegation_responses,
+            pagination: raw.pagination.map(|p| p.into()),
+        })
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QueryRedelegationResponseRaw {
+    #[prost(message, repeated)]
+    pub redelegation_responses: Vec<RedelegationResponseRaw>,
+    #[prost(message, optional)]
+    pub pagination: Option<gears::core::query::response::PageResponse>,
+}
+
+impl From<QueryRedelegationResponse> for QueryRedelegationResponseRaw {
+    fn from(query: QueryRedelegationResponse) -> Self {
+        Self {
+            redelegation_responses: query
+                .redelegation_responses
+                .into_iter()
+                .map(|red| red.into())
+                .collect(),
+            pagination: query.pagination.map(|p| p.into()),
+        }
+    }
+}
+
+impl Protobuf<QueryRedelegationResponseRaw> for QueryRedelegationResponse {}

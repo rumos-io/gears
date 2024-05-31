@@ -156,7 +156,7 @@ impl<
 
     pub fn redelegation<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         del_addr: &AccAddress,
         val_src_addr: &ValAddress,
         val_dst_addr: &ValAddress,

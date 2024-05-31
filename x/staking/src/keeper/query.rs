@@ -1,7 +1,8 @@
 pub use super::*;
 use crate::{
-    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryValidatorRequest,
-    QueryValidatorResponse,
+    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
+    QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    RedelegationEntryResponse, RedelegationResponse,
 };
 use gears::types::context::query::QueryContext;
 
@@ -59,5 +60,78 @@ impl<
             delegation,
             balance,
         })
+    }
+
+    pub fn query_redelegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryRedelegationRequest,
+    ) -> Result<QueryRedelegationResponse, AppError> {
+        let redelegations = match &query {
+            QueryRedelegationRequest {
+                delegator_address: Some(a),
+                src_validator_address: Some(v1),
+                dst_validator_address: Some(v2),
+                pagination: _,
+            } => {
+                let redelegation = self
+                    .redelegation(ctx, a, v1, v2)
+                    .ok_or(AppError::Custom("no redelegation found".to_string()))?;
+                vec![redelegation]
+            }
+            QueryRedelegationRequest {
+                delegator_address: None,
+                src_validator_address: Some(_v1),
+                dst_validator_address: None,
+                pagination: _,
+            } => {
+                //     redels = k.GetRedelegationsFromSrcValidator(ctx, params.SrcValidatorAddr)
+                todo!()
+            }
+            _ => {
+                //     redels = k.GetAllRedelegations(ctx, params.DelegatorAddr, params.SrcValidatorAddr, params.DstValidatorAddr)
+                todo!()
+            }
+        };
+
+        let redelegation_responses =
+            self.redelegations_to_redelegations_response(ctx, redelegations)?;
+
+        Ok(QueryRedelegationResponse {
+            redelegation_responses,
+            pagination: query.pagination,
+        })
+    }
+
+    pub fn redelegations_to_redelegations_response<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        redelegations: Vec<Redelegation>,
+    ) -> Result<Vec<RedelegationResponse>, AppError> {
+        let mut resp = Vec::with_capacity(redelegations.len());
+        for red in redelegations.into_iter() {
+            let validator = self
+                .validator(ctx, &red.validator_dst_address)
+                .ok_or(AppError::AccountNotFound)?;
+
+            let mut entries = Vec::with_capacity(red.entries.len());
+            for entry in red.entries.clone().into_iter() {
+                let balance = validator
+                    .tokens_from_shares(entry.share_dst)
+                    .map_err(|e| AppError::Custom(e.to_string()))?
+                    .to_uint_floor();
+                entries.push(RedelegationEntryResponse {
+                    redelegation_entry: entry,
+                    balance,
+                });
+            }
+
+            resp.push(RedelegationResponse {
+                redelegation: red,
+                entries,
+            });
+        }
+
+        Ok(resp)
     }
 }
