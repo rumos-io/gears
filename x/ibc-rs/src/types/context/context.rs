@@ -5,7 +5,6 @@ use derive_more::{From, TryInto};
 use gears::context::tx::TxContext;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
-use gears::store::QueryableKVStore;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::event::Event;
 use gears::tendermint::types::proto::event::EventAttribute;
@@ -18,8 +17,6 @@ use ibc::clients::tendermint::types::{
 //use ibc::core::client::context::client_state::ClientStateValidation;
 use gears::context::QueryableContext;
 use gears::context::TransactionalContext;
-use gears::store::TransactionalKVStore;
-use gears::store::WritePrefixStore;
 use ibc::core::client::context::{
     ClientExecutionContext, ClientValidationContext, ExtClientValidationContext,
 };

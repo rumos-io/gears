@@ -6,9 +6,7 @@ use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
-use gears::store::ext::UnwrapInfallible;
-use gears::store::TransactionalKVStore;
-use gears::store::{QueryableKVStore, StoreKey};
+use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::address::AccAddress;
 use gears::types::query::account::QueryAccountRequest;
@@ -168,7 +166,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
     ) -> QueryAccountResponse {
         let auth_store = ctx.kv_store(&self.store_key);
         let key = create_auth_store_key(req.address);
-        let account = auth_store.get(&key).unwrap_infallible();
+        let account = auth_store.get(&key);
 
         if let Some(buf) = account {
             let account = Some(

@@ -1,5 +1,5 @@
 use database::Database;
-use kv_store::{types::multi::MultiBank, TransactionStore, TransactionalMultiKVStore};
+use kv_store::{types::multi::MultiBank, TransactionStore};
 use tendermint::types::proto::{event::Event, header::Header};
 
 use super::{build_tx_gas_meter, ExecutionMode};

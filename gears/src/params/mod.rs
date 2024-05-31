@@ -2,7 +2,7 @@ pub mod gas;
 use std::{collections::HashMap, hash::Hash, str::FromStr};
 
 use database::{prefix::PrefixDB, Database};
-use kv_store::{QueryableKVStore, StoreKey, TransactionalKVStore};
+use kv_store::StoreKey;
 
 use crate::context::{InfallibleContext, InfallibleContextMut};
 

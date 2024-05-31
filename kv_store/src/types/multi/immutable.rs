@@ -5,7 +5,7 @@ use crate::{
         kv::immutable::{KVStore, KVStoreBackend},
         query::QueryMultiStore,
     },
-    ApplicationStore, QueryableMultiKVStore, StoreKey, TransactionStore,
+    ApplicationStore, StoreKey, TransactionStore,
 };
 
 use super::MultiBank;
@@ -20,10 +20,8 @@ pub(crate) enum MultiStoreBackend<'a, DB, SK> {
 #[derive(Debug)]
 pub struct MultiStore<'a, DB, SK>(pub(crate) MultiStoreBackend<'a, DB, SK>);
 
-impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
-    for MultiStore<'_, DB, SK>
-{
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+impl<DB: Database, SK: StoreKey> MultiStore<'_, DB, SK> {
+    pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         match self.0 {
             MultiStoreBackend::Commit(var) => {
                 KVStore(KVStoreBackend::Commit(var.kv_store(store_key)))
@@ -35,7 +33,7 @@ impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
         }
     }
 
-    fn head_version(&self) -> u32 {
+    pub fn head_version(&self) -> u32 {
         match self.0 {
             MultiStoreBackend::Commit(var) => var.head_version,
             MultiStoreBackend::Cache(var) => var.head_version,
@@ -43,7 +41,7 @@ impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
         }
     }
 
-    fn head_commit_hash(&self) -> [u8; 32] {
+    pub fn head_commit_hash(&self) -> [u8; 32] {
         match self.0 {
             MultiStoreBackend::Commit(var) => var.head_commit_hash,
             MultiStoreBackend::Cache(var) => var.head_commit_hash,

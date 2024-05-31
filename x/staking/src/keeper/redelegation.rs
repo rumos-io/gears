@@ -2,7 +2,7 @@ pub use super::*;
 use crate::consts::error::TIMESTAMP_NANOS_EXPECT;
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
-    store::{database::ext::UnwrapCorrupt, ext::UnwrapInfallible},
+    store::database::ext::UnwrapCorrupt,
 };
 
 impl<
@@ -25,7 +25,7 @@ impl<
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_src_addr.to_string().as_bytes());
         key.put(val_dst_addr.to_string().as_bytes());
-        if let Some(e) = store.get(&key).unwrap_infallible() {
+        if let Some(e) = store.get(&key) {
             Ok(serde_json::from_slice(&e)?)
         } else {
             Err(anyhow::Error::from(serde_json::Error::custom(
@@ -44,12 +44,10 @@ impl<
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
         key.put(delegation.validator_dst_address.to_string().as_bytes());
-        delegations_store
-            .set(
-                key,
-                serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-            )
-            .unwrap_infallible();
+        delegations_store.set(
+            key,
+            serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        );
     }
 
     pub fn remove_redelegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
@@ -138,7 +136,7 @@ impl<
             .timestamp_nanos_opt()
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
-        if let Some(bytes) = store.get(&key).unwrap_infallible() {
+        if let Some(bytes) = store.get(&key) {
             serde_json::from_slice(&bytes).unwrap_or_corrupt()
         } else {
             vec![]
@@ -159,7 +157,7 @@ impl<
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_ne_bytes();
         let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
-        store.set(key, value).unwrap_infallible();
+        store.set(key, value);
     }
 
     /// Returns a concatenated list of all the timeslices inclusively previous to

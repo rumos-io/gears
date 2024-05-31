@@ -1,11 +1,8 @@
-use std::{
-    convert::Infallible,
-    ops::{Bound, RangeBounds},
-};
+use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 
-use crate::{types::kv::immutable::KVStore, QueryableKVStore, ReadPrefixStore};
+use crate::types::kv::immutable::KVStore;
 
 use super::{prefix_end_bound, range::PrefixRange};
 
@@ -34,12 +31,8 @@ impl<'a, DB: Database> ImmutablePrefixStore<'a, DB> {
             prefix_length: self.prefix.len(),
         }
     }
-}
 
-impl<DB: Database> ReadPrefixStore for ImmutablePrefixStore<'_, DB> {
-    type Err = Infallible;
-
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
+    pub fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Option<Vec<u8>> {
         let full_key = [&self.prefix, k.as_ref()].concat();
         self.store.get(&full_key)
     }

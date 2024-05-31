@@ -1,5 +1,4 @@
 use gears::context::TransactionalContext;
-use gears::store::TransactionalKVStore;
 use gears::{
     context::init::InitContext,
     params::ParamsSubspaceKey,
@@ -52,11 +51,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         sequence: u64,
     ) {
         let mut ibc_store = ctx.kv_store_mut(&self.store_key);
-        ibc_store
-            .set(
-                KEY_NEXT_CONNECTION_SEQUENCE.to_owned(),
-                sequence.to_be_bytes(),
-            )
-            .expect("Init ctx doesn't have any gas");
+        ibc_store.set(
+            KEY_NEXT_CONNECTION_SEQUENCE.to_owned(),
+            sequence.to_be_bytes(),
+        );
     }
 }

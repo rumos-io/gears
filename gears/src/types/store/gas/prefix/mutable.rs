@@ -1,8 +1,5 @@
 use database::Database;
-use kv_store::{
-    ext::UnwrapInfallible, types::prefix::mutable::MutablePrefixStore, ReadPrefixStore,
-    WritePrefixStore,
-};
+use kv_store::types::prefix::mutable::MutablePrefixStore;
 
 use crate::types::store::gas::{errors::GasStoreErrors, guard::GasGuard};
 
@@ -26,37 +23,31 @@ impl<'a, DB> GasPrefixStoreMut<'a, DB> {
     }
 }
 
-impl<DB: Database> ReadPrefixStore for GasPrefixStoreMut<'_, DB> {
-    type Err = GasStoreErrors;
-
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
-        let value = self.inner.get(&k).unwrap_infallible();
+impl<DB: Database> GasPrefixStoreMut<'_, DB> {
+    pub fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, GasStoreErrors> {
+        let value = self.inner.get(&k);
 
         self.guard
             .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
 
         Ok(value)
     }
-}
 
-impl<DB: Database> WritePrefixStore for GasPrefixStoreMut<'_, DB> {
-    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         k: KI,
         v: VI,
-    ) -> Result<(), Self::Err> {
+    ) -> Result<(), GasStoreErrors> {
         let key = k.into_iter().collect::<Vec<_>>();
         let value = v.into_iter().collect::<Vec<_>>();
 
         self.guard.set(key.len(), value.len())?;
 
-        self.inner.set(key, value).unwrap_infallible();
+        self.inner.set(key, value);
 
         Ok(())
     }
-}
 
-impl<'a, DB: Database> GasPrefixStoreMut<'a, DB> {
     pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         self.guard.delete()?;
         Ok(self.inner.delete(k))

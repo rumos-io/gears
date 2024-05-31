@@ -1,7 +1,5 @@
 use database::Database;
-use kv_store::{
-    ext::UnwrapInfallible, types::prefix::mutable::MutablePrefixStore, WritePrefixStore,
-};
+use kv_store::types::prefix::mutable::MutablePrefixStore;
 
 use super::{parsed::Params, space::ParamsSpace, ParamKind, ParamsDeserialize, ParamsSerialize};
 
@@ -32,9 +30,7 @@ impl<DB: Database> ParamsSpaceMut<'_, DB> {
         let params = params.to_raw();
 
         for (key, value) in params {
-            self.inner
-                .set(key.as_bytes().iter().cloned(), value)
-                .unwrap_infallible()
+            self.inner.set(key.as_bytes().iter().cloned(), value)
         }
     }
 }

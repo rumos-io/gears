@@ -1,11 +1,11 @@
-use std::{convert::Infallible, ops::Bound};
+use std::ops::Bound;
 
 use database::Database;
 
 use crate::{
     range::Range,
     types::{prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore},
-    ApplicationStore, QueryableKVStore, TransactionStore,
+    ApplicationStore, TransactionStore,
 };
 
 use super::KVBank;
@@ -33,26 +33,25 @@ impl<'a, DB: Database> KVStore<'a, DB> {
             KVStoreBackend::Query(var) => var.range(range),
         }
     }
-}
 
-impl<'a, DB: Database> QueryableKVStore for KVStore<'a, DB> {
-    type Prefix = ImmutablePrefixStore<'a, DB>;
-
-    type Err = Infallible;
-
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
-        Ok(match self.0 {
-            KVStoreBackend::Commit(var) => var.get(k),
-            KVStoreBackend::Cache(var) => var.get(k),
-            KVStoreBackend::Query(var) => var.get(k),
-        })
-    }
-
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+        self,
+        prefix: I,
+    ) -> ImmutablePrefixStore<'a, DB> {
         match self.0 {
             KVStoreBackend::Commit(var) => var.prefix_store(prefix),
             KVStoreBackend::Cache(var) => var.prefix_store(prefix),
             KVStoreBackend::Query(var) => var.prefix_store(prefix),
+        }
+    }
+}
+
+impl<DB: Database> KVStore<'_, DB> {
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+        match self.0 {
+            KVStoreBackend::Commit(var) => var.get(k),
+            KVStoreBackend::Cache(var) => var.get(k),
+            KVStoreBackend::Query(var) => var.get(k),
         }
     }
 }

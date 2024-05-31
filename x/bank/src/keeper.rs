@@ -11,10 +11,7 @@ use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::database::Database;
-use gears::store::ext::UnwrapInfallible;
-use gears::store::{
-    QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
-};
+use gears::store::StoreKey;
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
 use gears::types::address::AccAddress;
@@ -112,12 +109,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
                 ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix);
 
             for coin in balance.coins {
-                denom_balance_store
-                    .set(
-                        coin.denom.to_string().into_bytes(),
-                        coin.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-                    )
-                    .expect("Init ctx doesn't have any gas");
+                denom_balance_store.set(
+                    coin.denom.to_string().into_bytes(),
+                    coin.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                );
                 let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount + current_balance);
@@ -149,9 +144,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         let prefix = create_denom_balance_prefix(req.address);
 
         let account_store = bank_store.prefix_store(prefix);
-        let bal = account_store
-            .get(req.denom.to_string().as_bytes())
-            .unwrap_infallible();
+        let bal = account_store.get(req.denom.to_string().as_bytes());
 
         match bal {
             Some(amount) => QueryBalanceResponse {
@@ -321,12 +314,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
-        supply_store
-            .set(
-                coin.denom.to_string().into_bytes(),
-                coin.amount.to_string().into_bytes(),
-            )
-            .expect("Init ctx doesn't have any gas");
+        supply_store.set(
+            coin.denom.to_string().into_bytes(),
+            coin.amount.to_string().into_bytes(),
+        );
     }
 
     fn get_address_balances_store<'a, DB: Database>(
@@ -351,12 +342,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
         let mut denom_metadata_store =
             bank_store.prefix_store_mut(denom_metadata_key(denom_metadata.base.clone()));
 
-        denom_metadata_store
-            .set(
-                denom_metadata.base.clone().into_bytes(),
-                denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-            )
-            .expect("Init ctx doesn't have any gas");
+        denom_metadata_store.set(
+            denom_metadata.base.clone().into_bytes(),
+            denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+        );
     }
 
     pub fn query_denoms_metadata<DB: Database>(

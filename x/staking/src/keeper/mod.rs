@@ -8,10 +8,7 @@ use gears::{
     context::{block::BlockContext, init::InitContext, QueryableContext, TransactionalContext},
     error::AppError,
     params::ParamsSubspaceKey,
-    store::{
-        database::Database, QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore,
-        WritePrefixStore,
-    },
+    store::{database::Database, StoreKey},
     tendermint::types::proto::{
         event::{Event, EventAttribute},
         validator::ValidatorUpdate,
@@ -267,7 +264,7 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut pool_store = store.prefix_store_mut(POOL_KEY);
         let pool = serde_json::to_vec(&pool).expect(SERDE_ENCODING_DOMAIN_TYPE);
-        pool_store.set(pool.clone(), pool).expect(CTX_NO_GAS_UNWRAP);
+        pool_store.set(pool.clone(), pool);
     }
 
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block

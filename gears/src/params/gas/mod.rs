@@ -1,5 +1,5 @@
 use database::{prefix::PrefixDB, Database};
-use kv_store::{QueryableKVStore, StoreKey, TransactionalKVStore};
+use kv_store::StoreKey;
 use space::GasParamsSpace;
 use space_mut::GasParamsSpaceMut;
 

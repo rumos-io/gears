@@ -2,7 +2,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use crate::types::{
     auth::gas::Gas,
-    gas::{config::GasConfig, kind::TxKind, GasMeter},
+    gas::{config::GasConfig, kind::TxKind, GasMeter, GasMeteringErrors},
 };
 
 use super::{
@@ -12,6 +12,8 @@ use super::{
     },
     errors::GasStoreErrors,
 };
+
+const GUARD_DESC: &str = "GasGuard";
 
 #[derive(Debug, Clone)]
 pub struct GasGuard(pub(super) Arc<RefCell<GasMeter<TxKind>>>);
@@ -31,7 +33,7 @@ impl GasGuard {
         gas_meter.consume_gas(
             read_cost_per_byte
                 .checked_mul(Gas::try_from(key as u64)?)
-                .ok_or(GasStoreErrors::GasOverflow)?,
+                .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))?,
             READ_PER_BYTE_DESC,
         )?;
 
@@ -40,7 +42,7 @@ impl GasGuard {
             gas_meter.consume_gas(
                 read_cost_per_byte
                     .checked_mul(Gas::try_from(value as u64)?)
-                    .ok_or(GasStoreErrors::GasOverflow)?,
+                    .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))?,
                 READ_PER_BYTE_DESC,
             )?;
         }
@@ -57,14 +59,14 @@ impl GasGuard {
         gas_meter.consume_gas(
             write_cost_per_byte
                 .checked_mul(Gas::try_from(key as u64)?)
-                .ok_or(GasStoreErrors::GasOverflow)?,
+                .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))?,
             WRITE_PER_BYTE_DESC,
         )?;
 
         gas_meter.consume_gas(
             write_cost_per_byte
                 .checked_mul(Gas::try_from(value as u64)?)
-                .ok_or(GasStoreErrors::GasOverflow)?,
+                .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))?,
             WRITE_PER_BYTE_DESC,
         )?;
 
@@ -88,14 +90,14 @@ impl GasGuard {
             gas_meter.consume_gas(
                 read_cost_per_byte
                     .checked_mul(Gas::try_from(key as u64)?)
-                    .ok_or(GasStoreErrors::GasOverflow)?,
+                    .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))?,
                 VALUE_PER_BYTE_DESC,
             )?;
 
             gas_meter.consume_gas(
                 read_cost_per_byte
                     .checked_mul(Gas::try_from(value as u64)?)
-                    .ok_or(GasStoreErrors::GasOverflow)?,
+                    .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))?,
                 VALUE_PER_BYTE_DESC,
             )?;
         }

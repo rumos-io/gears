@@ -1,7 +1,7 @@
 use std::ops::Bound;
 
 use database::Database;
-use kv_store::{ext::UnwrapInfallible, types::kv::immutable::KVStore, QueryableKVStore};
+use kv_store::types::kv::immutable::KVStore;
 
 use super::{errors::StoreErrors, gas::kv::GasKVStore, prefix::PrefixStore, range::StoreRange};
 
@@ -33,24 +33,20 @@ impl<'a, DB: Database> Store<'a, DB> {
             StoreBackend::Kv(var) => StoreRange::from(var.range(range)),
         }
     }
-}
 
-impl<'a, DB: Database> QueryableKVStore for Store<'a, DB> {
-    type Prefix = PrefixStore<'a, DB>;
-
-    type Err = StoreErrors;
-
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
-        match &self.0 {
-            StoreBackend::Gas(var) => Ok(var.get(k)?),
-            StoreBackend::Kv(var) => Ok(var.get(k).unwrap_infallible()),
-        }
-    }
-
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> PrefixStore<'a, DB> {
         match self.0 {
             StoreBackend::Gas(var) => var.prefix_store(prefix).into(),
             StoreBackend::Kv(var) => var.prefix_store(prefix).into(),
+        }
+    }
+}
+
+impl<DB: Database> Store<'_, DB> {
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, StoreErrors> {
+        match &self.0 {
+            StoreBackend::Gas(var) => Ok(var.get(k)?),
+            StoreBackend::Kv(var) => Ok(var.get(k)),
         }
     }
 }

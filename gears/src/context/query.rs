@@ -3,7 +3,6 @@ use database::Database;
 
 use kv_store::types::kv::immutable::KVStore;
 use kv_store::types::query::QueryMultiStore;
-use kv_store::QueryableMultiKVStore;
 use kv_store::{error::KVStoreError, StoreKey};
 use tendermint::types::chain_id::ChainId;
 

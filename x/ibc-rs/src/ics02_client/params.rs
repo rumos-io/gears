@@ -10,10 +10,6 @@ use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
-use gears::store::QueryableMultiKVStore;
-use gears::store::ReadPrefixStore;
-use gears::store::TransactionalMultiKVStore;
-use gears::store::WritePrefixStore;
 use gears::types::store::errors::StoreErrors;
 use gears::{
     context::{QueryableContext, TransactionalContext},

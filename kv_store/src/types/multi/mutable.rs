@@ -5,7 +5,7 @@ use crate::{
         immutable::{KVStore, KVStoreBackend},
         mutable::{KVStoreBackendMut, KVStoreMut},
     },
-    ApplicationStore, QueryableMultiKVStore, StoreKey, TransactionStore, TransactionalMultiKVStore,
+    ApplicationStore, StoreKey, TransactionStore,
 };
 
 use super::{
@@ -31,10 +31,8 @@ impl<DB, SK> MultiStoreMut<'_, DB, SK> {
     }
 }
 
-impl<'a, DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
-    for MultiStoreMut<'a, DB, SK>
-{
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+impl<DB: Database, SK: StoreKey> MultiStoreMut<'_, DB, SK> {
+    pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         match &self.0 {
             MultiStoreBackendMut::Commit(var) => {
                 KVStore(KVStoreBackend::Commit(var.kv_store(store_key)))
@@ -45,25 +43,21 @@ impl<'a, DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
         }
     }
 
-    fn head_version(&self) -> u32 {
+    pub fn head_version(&self) -> u32 {
         match &self.0 {
             MultiStoreBackendMut::Commit(var) => var.head_version,
             MultiStoreBackendMut::Cache(var) => var.head_version,
         }
     }
 
-    fn head_commit_hash(&self) -> [u8; 32] {
+    pub fn head_commit_hash(&self) -> [u8; 32] {
         match &self.0 {
             MultiStoreBackendMut::Commit(var) => var.head_commit_hash,
             MultiStoreBackendMut::Cache(var) => var.head_commit_hash,
         }
     }
-}
 
-impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
-    for MultiStoreMut<'_, DB, SK>
-{
-    fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
+    pub fn kv_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
         match &mut self.0 {
             MultiStoreBackendMut::Commit(var) => {
                 KVStoreMut(KVStoreBackendMut::Commit(var.kv_store_mut(store_key)))
@@ -74,7 +68,7 @@ impl<DB: Database, SK: StoreKey> TransactionalMultiKVStore<PrefixDB<DB>, SK>
         }
     }
 
-    fn caches_clear(&mut self) {
+    pub fn caches_clear(&mut self) {
         match &mut self.0 {
             MultiStoreBackendMut::Commit(var) => var.caches_clear(),
             MultiStoreBackendMut::Cache(var) => var.caches_clear(),

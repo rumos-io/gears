@@ -1,6 +1,6 @@
 use database::Database;
 use kv_store::types::multi::MultiBank;
-use kv_store::{TransactionStore, TransactionalMultiKVStore};
+use kv_store::TransactionStore;
 use tendermint::types::proto::event::Event;
 use tendermint::types::proto::header::Header;
 

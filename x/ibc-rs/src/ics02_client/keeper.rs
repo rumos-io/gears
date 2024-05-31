@@ -3,12 +3,11 @@ use gears::context::query::QueryContext;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
-use gears::store::WritePrefixStore;
 use gears::types::store::errors::StoreErrors;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::{
     context::QueryableContext,
-    store::{database::Database, QueryableKVStore, StoreKey},
+    store::{database::Database, StoreKey},
 };
 use ibc::primitives::ToVec;
 use ibc::{core::host::types::path::ClientStatePath, primitives::proto::Protobuf};
@@ -18,7 +17,6 @@ use crate::types::context::CLIENT_STATE_KEY;
 
 use super::{params::ClientParamsKeeper, types::query::QueryClientStatesResponse, GenesisState};
 use gears::context::{InfallibleContextMut, TransactionalContext};
-use gears::store::TransactionalKVStore;
 use ibc::core::{
     client::types::proto::v1::QueryClientStatesRequest, host::types::identifiers::ClientId,
 };
@@ -91,9 +89,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         sequence: u64,
     ) {
         let mut ibc_store = ctx.kv_store_mut(&self.store_key);
-        ibc_store
-            .set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes())
-            .expect("Init ctx doesn't have any gas");
+        ibc_store.set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes())
     }
 
     /// Query all client states

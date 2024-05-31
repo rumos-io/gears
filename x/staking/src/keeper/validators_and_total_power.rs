@@ -1,6 +1,4 @@
-use gears::{
-    context::InfallibleContext, store::ext::UnwrapInfallible, types::store::errors::StoreErrors,
-};
+use gears::{context::InfallibleContext, types::store::errors::StoreErrors};
 
 pub use super::*;
 
@@ -18,17 +16,14 @@ impl<
         ctx: &CTX,
     ) -> Option<Uint256> {
         let store = InfallibleContext::infallible_store(ctx, &self.store_key);
-        store
-            .get(&LAST_TOTAL_POWER_KEY)
-            .unwrap_infallible()
-            .map(|bytes| {
-                Uint256::from_be_bytes(bytes.try_into().expect(
-                    "The method from_be_bytes accepts array of bytes.
+        store.get(&LAST_TOTAL_POWER_KEY).map(|bytes| {
+            Uint256::from_be_bytes(bytes.try_into().expect(
+                "The method from_be_bytes accepts array of bytes.
                 The store returns owned value of stored array.
                 Error can happen when vector has invalid length.
                 Please, check the store methods",
-                ))
-            })
+            ))
+        })
     }
 
     pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<DB, SK>>(

@@ -1,9 +1,7 @@
 use std::ops::RangeBounds;
 
 use database::Database;
-use kv_store::{
-    ext::UnwrapInfallible, types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore,
-};
+use kv_store::types::prefix::immutable::ImmutablePrefixStore;
 
 use super::{errors::GasStoreErrors, guard::GasGuard, range::GasRange};
 
@@ -20,11 +18,9 @@ impl<'a, DB> GasPrefixStore<'a, DB> {
     }
 }
 
-impl<DB: Database> ReadPrefixStore for GasPrefixStore<'_, DB> {
-    type Err = GasStoreErrors;
-
-    fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, Self::Err> {
-        let value = self.inner.get(&k).unwrap_infallible();
+impl<DB: Database> GasPrefixStore<'_, DB> {
+    pub fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, GasStoreErrors> {
+        let value = self.inner.get(&k);
 
         self.guard
             .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;

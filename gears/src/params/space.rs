@@ -1,7 +1,5 @@
 use database::Database;
-use kv_store::{
-    ext::UnwrapInfallible, types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore,
-};
+use kv_store::types::prefix::immutable::ImmutablePrefixStore;
 
 use super::{parsed::Params, ParamKind, ParamsDeserialize};
 
@@ -16,7 +14,7 @@ impl<DB: Database> ParamsSpace<'_, DB> {
         let mut params_fields = Vec::with_capacity(keys.len());
 
         for (key, _) in keys {
-            params_fields.push((key, self.inner.get(key).unwrap_infallible()?));
+            params_fields.push((key, self.inner.get(key)?));
         }
 
         Some(T::from_raw(params_fields.into_iter().collect()))
@@ -24,6 +22,6 @@ impl<DB: Database> ParamsSpace<'_, DB> {
 
     /// Return only field from structure.
     pub fn params_field(&self, path: &str, kind: ParamKind) -> Option<Params> {
-        Some(kind.parse_param(self.inner.get(path).unwrap_infallible()?))
+        Some(kind.parse_param(self.inner.get(path)?))
     }
 }

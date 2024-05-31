@@ -2,7 +2,7 @@ pub use super::*;
 use crate::consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
-    store::{database::ext::UnwrapCorrupt, ext::UnwrapInfallible},
+    store::database::ext::UnwrapCorrupt,
     tendermint::types::time::Timestamp,
     types::store::errors::StoreErrors,
 };
@@ -25,7 +25,7 @@ impl<
         let delegations_store = store.prefix_store(DELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_addr.to_string().as_bytes());
-        if let Some(bytes) = delegations_store.get(&key).unwrap_infallible() {
+        if let Some(bytes) = delegations_store.get(&key) {
             if let Ok(delegation) = serde_json::from_slice(&bytes) {
                 return Some(delegation);
             }
@@ -42,12 +42,10 @@ impl<
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_address.to_string().as_bytes());
-        delegations_store
-            .set(
-                key,
-                serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-            )
-            .unwrap_infallible();
+        delegations_store.set(
+            key,
+            serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        );
     }
 
     pub fn remove_unbonding_delegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
@@ -146,7 +144,7 @@ impl<
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        if let Some(bz) = store.get(time.to_string().as_bytes()).unwrap_infallible() {
+        if let Some(bz) = store.get(time.to_string().as_bytes()) {
             serde_json::from_slice(&bz).unwrap_or_default()
         } else {
             None
@@ -165,12 +163,10 @@ impl<
         // The timestamp is provided by context and conversion won't fail.
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let key = time.to_string().as_bytes().to_vec();
-        store
-            .set(
-                key,
-                serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),
-            )
-            .unwrap_infallible();
+        store.set(
+            key,
+            serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        );
     }
 
     pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(

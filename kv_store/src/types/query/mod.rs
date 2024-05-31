@@ -5,7 +5,7 @@ use trees::iavl::QueryTree;
 
 use crate::{
     error::{KVStoreError, KEY_EXISTS_MSG, POISONED_LOCK},
-    ApplicationStore, QueryableMultiKVStore, StoreKey,
+    ApplicationStore, StoreKey,
 };
 
 use self::kv::QueryKVStore;
@@ -54,20 +54,18 @@ impl<DB: Database + Clone, SK: StoreKey> QueryMultiStore<DB, SK> {
     }
 }
 
-impl<DB: Database, SK: StoreKey> QueryableMultiKVStore<PrefixDB<DB>, SK>
-    for QueryMultiStore<DB, SK>
-{
-    fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
+impl<DB: Database, SK: StoreKey> QueryMultiStore<DB, SK> {
+    pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         KVStore(KVStoreBackend::Query(
             self.0.get(store_key).expect(KEY_EXISTS_MSG),
         ))
     }
 
-    fn head_version(&self) -> u32 {
+    pub fn head_version(&self) -> u32 {
         unimplemented!() // TODO:NOW
     }
 
-    fn head_commit_hash(&self) -> [u8; 32] {
+    pub fn head_commit_hash(&self) -> [u8; 32] {
         unimplemented!() // TODO:NOW
     }
 }

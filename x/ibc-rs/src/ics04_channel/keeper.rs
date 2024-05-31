@@ -1,6 +1,5 @@
 use gears::context::init::InitContext;
 use gears::context::TransactionalContext;
-use gears::store::TransactionalKVStore;
 use gears::store::{database::Database, StoreKey};
 
 use super::GenesisState;
@@ -55,8 +54,6 @@ impl<SK: StoreKey> Keeper<SK> {
         sequence: u64,
     ) {
         let mut ibc_store = ctx.kv_store_mut(&self.store_key);
-        ibc_store
-            .set(KEY_NEXT_CHANNEL_SEQUENCE.to_owned(), sequence.to_be_bytes())
-            .expect("Init ctx doesn't have any gas");
+        ibc_store.set(KEY_NEXT_CHANNEL_SEQUENCE.to_owned(), sequence.to_be_bytes());
     }
 }

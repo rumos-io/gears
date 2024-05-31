@@ -1,11 +1,11 @@
-use std::{convert::Infallible, ops::Bound};
+use std::ops::Bound;
 
 use database::Database;
 
 use crate::{
     range::Range,
     types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
-    ApplicationStore, QueryableKVStore, TransactionStore, TransactionalKVStore,
+    ApplicationStore, TransactionStore,
 };
 
 use super::{
@@ -41,6 +41,26 @@ impl<'a, DB: Database> KVStoreMut<'a, DB> {
             KVStoreBackendMut::Cache(var) => var.range(range),
         }
     }
+
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+        self,
+        prefix: I,
+    ) -> ImmutablePrefixStore<'a, DB> {
+        match self.0 {
+            KVStoreBackendMut::Commit(var) => var.prefix_store(prefix),
+            KVStoreBackendMut::Cache(var) => var.prefix_store(prefix),
+        }
+    }
+
+    pub fn prefix_store_mut(
+        self,
+        prefix: impl IntoIterator<Item = u8>,
+    ) -> MutablePrefixStore<'a, DB> {
+        MutablePrefixStore {
+            store: self,
+            prefix: prefix.into_iter().collect(),
+        }
+    }
 }
 
 impl<'a, DB> KVStoreMut<'a, DB> {
@@ -52,57 +72,23 @@ impl<'a, DB> KVStoreMut<'a, DB> {
     }
 }
 
-impl<'a, DB: Database> QueryableKVStore for KVStoreMut<'a, DB> {
-    type Prefix = ImmutablePrefixStore<'a, DB>;
-
-    // type Range = Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>;
-
-    type Err = Infallible;
-
-    fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, Self::Err> {
-        Ok(match &self.0 {
+impl<DB: Database> KVStoreMut<'_, DB> {
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+        match &self.0 {
             KVStoreBackendMut::Commit(var) => var.get(k),
             KVStoreBackendMut::Cache(var) => var.get(k),
-        })
-    }
-
-    fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> Self::Prefix {
-        match self.0 {
-            KVStoreBackendMut::Commit(var) => var.prefix_store(prefix),
-            KVStoreBackendMut::Cache(var) => var.prefix_store(prefix),
         }
     }
 
-    // fn range(&self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> Self::Range {
-    //     // match self.0 {
-    //     //     KVStoreBackendMut::Commit(ref var) => var.range(range),
-    //     //     KVStoreBackendMut::Cache(ref var) => var.range(range),
-    //     // }
-    //     todo!()
-    // }
-}
-
-impl<'a, DB: Database> TransactionalKVStore for KVStoreMut<'a, DB> {
-    type PrefixMut = MutablePrefixStore<'a, DB>;
-
-    fn prefix_store_mut(self, prefix: impl IntoIterator<Item = u8>) -> Self::PrefixMut {
-        MutablePrefixStore {
-            store: self,
-            prefix: prefix.into_iter().collect(),
-        }
-    }
-
-    fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         key: KI,
         value: VI,
-    ) -> Result<(), Self::Err> {
+    ) {
         match &mut self.0 {
             KVStoreBackendMut::Commit(var) => var.set(key, value),
             KVStoreBackendMut::Cache(var) => var.set(key, value),
         };
-
-        Ok(())
     }
 }
 

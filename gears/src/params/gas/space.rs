@@ -1,5 +1,4 @@
 use database::Database;
-use kv_store::ReadPrefixStore;
 
 use crate::{
     params::{parsed::Params, ParamKind, ParamsDeserialize},

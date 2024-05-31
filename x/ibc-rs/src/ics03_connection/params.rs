@@ -11,10 +11,6 @@ use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
 use gears::store::types::prefix::immutable::ImmutablePrefixStore;
-use gears::store::QueryableMultiKVStore;
-use gears::store::ReadPrefixStore;
-use gears::store::TransactionalMultiKVStore;
-use gears::store::WritePrefixStore;
 use gears::{
     context::{QueryableContext, TransactionalContext},
     store::{
