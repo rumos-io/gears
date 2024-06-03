@@ -1,9 +1,12 @@
 use std::{borrow::Cow, ops::Bound};
 
 use database::Database;
+use infallible::RangeIter;
 use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
 use super::{errors::GasStoreErrors, guard::GasGuard};
+
+pub mod infallible;
 
 #[derive(Debug)]
 enum RangeBackend<'a, DB> {
@@ -15,7 +18,6 @@ enum RangeBackend<'a, DB> {
 pub struct GasRange<'a, DB> {
     inner: RangeBackend<'a, DB>,
     guard: GasGuard,
-    err: Option<GasStoreErrors>,
 }
 
 impl<'a, DB> GasRange<'a, DB> {
@@ -26,7 +28,6 @@ impl<'a, DB> GasRange<'a, DB> {
         Self {
             inner: RangeBackend::Kv(inner),
             guard,
-            err: None,
         }
     }
 
@@ -34,17 +35,16 @@ impl<'a, DB> GasRange<'a, DB> {
         Self {
             inner: RangeBackend::Prefix(inner),
             guard,
-            err: None,
         }
     }
 
-    pub fn error(&self) -> Option<&GasStoreErrors> {
-        self.err.as_ref()
+    pub fn to_infallible_iter(self) -> RangeIter<'a, DB> {
+        RangeIter::from(self)
     }
 }
 
 impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
-    type Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>);
+    type Item = Result<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next = match &mut self.inner {
@@ -56,12 +56,12 @@ impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
             .guard
             .range(next.as_ref().map(|(key, val)| (key.len(), val.len())));
 
-        if let Err(err) = err {
-            self.err = Some(err);
-
-            None
-        } else {
-            next
+        match err {
+            Ok(_) => match next {
+                Some(var) => Some(Ok(var)),
+                None => None,
+            },
+            Err(err) => Some(Err(err)),
         }
     }
 }

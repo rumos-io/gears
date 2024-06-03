@@ -219,12 +219,17 @@ impl<
         let mut res = HashMap::new();
 
         let mut previous_was_end = false;
-        for (k, v) in iterator.range(..).take_while(|(k, _)| {
-            let is_not_end = **k != end;
-            let ret_res = is_not_end && !previous_was_end;
-            previous_was_end = !is_not_end;
-            ret_res
-        }) {
+        // TODO:D Handle error if you need
+        for (k, v) in iterator
+            .range(..)
+            .to_infallible_iter()
+            .take_while(|(k, _)| {
+                let is_not_end = **k != end;
+                let ret_res = is_not_end && !previous_was_end;
+                previous_was_end = !is_not_end;
+                ret_res
+            })
+        {
             // TODO
             res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
         }
@@ -269,7 +274,8 @@ impl<
         let mut last = HashMap::new();
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
-        for (k, v) in store.range(..) {
+        // TODO:D Handle error if you need
+        for (k, v) in store.range(..).to_infallible_iter() {
             let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
             last.insert(k.to_string(), v.to_vec());
         }

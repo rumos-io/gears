@@ -43,7 +43,8 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
         let mut res = HashMap::new();
-        for (k, v) in iterator.range(..) {
+        // TODO:D Handle error if you need
+        for (k, v) in iterator.range(..).to_infallible_iter() {
             res.insert(k.to_vec(), serde_json::from_slice(&v)?);
         }
         Ok(res)
