@@ -69,7 +69,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             params_subspace_key,
         };
 
-        let ctx = SimpleContext::new(&mut multi_store);
+        let ctx = SimpleContext::new(&mut multi_store, 0);
 
         let max_gas = baseapp_params_keeper
             .block_params(&ctx)
@@ -165,7 +165,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
 
         let consensus_params = {
             let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
-            let ctx = SimpleContext::new(multi_store);
+            let ctx = SimpleContext::new(multi_store, height);
             self.baseapp_params_keeper.consensus_params(&ctx)
         };
 
