@@ -20,8 +20,8 @@ use crate::{
 #[derive(Debug)]
 pub struct CheckTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) unpersisted_multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
-    pub(crate) persisted_multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
+    pub(crate) tx_multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
+    pub(crate) block_multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
 }
 
 impl<DB, AH: ABCIHandler> CheckTxMode<DB, AH> {
@@ -31,8 +31,8 @@ impl<DB, AH: ABCIHandler> CheckTxMode<DB, AH> {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
                 Gas::Finite(max_gas) => Box::new(BasicGasMeter::new(max_gas)),
             }),
-            unpersisted_multi_store: multi_store.to_cache_kind(),
-            persisted_multi_store: multi_store.to_cache_kind(),
+            tx_multi_store: multi_store.to_cache_kind(),
+            block_multi_store: multi_store.to_cache_kind(),
         }
     }
 }
@@ -41,7 +41,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     fn multi_store(
         &mut self,
     ) -> &mut MultiBank<DB, <AH as ABCIHandler>::StoreKey, TransactionStore> {
-        &mut self.persisted_multi_store
+        &mut self.block_multi_store
     }
 
     fn build_ctx(
@@ -53,7 +53,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         options: NodeOptions,
     ) -> TxContext<'_, DB, AH::StoreKey> {
         TxContext::new(
-            &mut self.unpersisted_multi_store,
+            &mut self.tx_multi_store,
             height,
             header,
             consensus_params,
@@ -96,7 +96,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
             but it would delete cache not only for one call but for other calls leading
             to inconsistent state. So for this we need 2 stores in `CheckTxMode`
         */
-        self.persisted_multi_store
-            .caches_update(self.unpersisted_multi_store.caches_copy());
+        self.block_multi_store
+            .caches_update(self.tx_multi_store.caches_copy());
     }
 }
