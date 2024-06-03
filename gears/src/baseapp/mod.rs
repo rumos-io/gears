@@ -69,7 +69,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             params_subspace_key,
         };
 
-        let ctx = SimpleContext::new(&mut multi_store);
+        let ctx = SimpleContext::from(&mut multi_store);
 
         let max_gas = baseapp_params_keeper
             .block_params(&ctx)
@@ -164,8 +164,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         let height = self.block_height();
 
         let consensus_params = {
-            let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
-            let ctx = SimpleContext::new(multi_store);
+            let ctx: SimpleContext<RocksDB, <H as ABCIHandler>::StoreKey> =
+                SimpleContext::from(mode.multi_store());
             self.baseapp_params_keeper.consensus_params(&ctx)
         };
 
@@ -177,8 +177,6 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             Some(&tx_with_raw.tx.auth_info.fee),
             self.options.clone(),
         );
-
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
@@ -195,6 +193,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         ctx.block_gas_meter
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
         MD::commit(ctx, &mut multi_store);
 
         Ok(RunTxInfo {

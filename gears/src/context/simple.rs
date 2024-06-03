@@ -4,7 +4,7 @@ use kv_store::{
         kv::{immutable::KVStore, mutable::KVStoreMut},
         multi::MultiBank,
     },
-    ApplicationStore, StoreKey,
+    ApplicationStore, StoreKey, TransactionStore,
 };
 use tendermint::types::{proto::event::Event, time::Timestamp};
 
@@ -13,19 +13,36 @@ use crate::types::store::kv::{mutable::StoreMut, Store};
 use super::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext};
 
 #[derive(Debug)]
+enum SimpleBackend<'a, DB, SK> {
+    Application(&'a mut MultiBank<DB, SK, ApplicationStore>),
+    Transactional(&'a mut MultiBank<DB, SK, TransactionStore>),
+}
+
+#[derive(Debug)]
 pub struct SimpleContext<'a, DB, SK> {
-    multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
+    multi_store: SimpleBackend<'a, DB, SK>,
     pub events: Vec<Event>,
 }
 
-impl<'a, DB, SK> SimpleContext<'a, DB, SK> {
-    pub fn new(multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>) -> Self {
+impl<'a, DB, SK> From<&'a mut MultiBank<DB, SK, ApplicationStore>> for SimpleContext<'a, DB, SK> {
+    fn from(value: &'a mut MultiBank<DB, SK, ApplicationStore>) -> Self {
         Self {
-            multi_store,
+            multi_store: SimpleBackend::Application(value),
             events: Vec::new(),
         }
     }
 }
+
+impl<'a, DB, SK> From<&'a mut MultiBank<DB, SK, TransactionStore>> for SimpleContext<'a, DB, SK> {
+    fn from(value: &'a mut MultiBank<DB, SK, TransactionStore>) -> Self {
+        Self {
+            multi_store: SimpleBackend::Transactional(value),
+            events: Vec::new(),
+        }
+    }
+}
+
+impl<'a, DB, SK> SimpleContext<'a, DB, SK> {}
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, DB, SK> {
     fn height(&self) -> u64 {
@@ -33,19 +50,28 @@ impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, 
     }
 
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
-        KVStore::from(self.multi_store.kv_store(store_key)).into()
+        match &self.multi_store {
+            SimpleBackend::Application(var) => KVStore::from(var.kv_store(store_key)).into(),
+            SimpleBackend::Transactional(var) => KVStore::from(var.kv_store(store_key)).into(),
+        }
     }
 }
 
 impl<DB: Database, SK: StoreKey> InfallibleContext<DB, SK> for SimpleContext<'_, DB, SK> {
     fn infallible_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
-        KVStore::from(self.multi_store.kv_store(store_key))
+        match &self.multi_store {
+            SimpleBackend::Application(var) => KVStore::from(var.kv_store(store_key)),
+            SimpleBackend::Transactional(var) => KVStore::from(var.kv_store(store_key)),
+        }
     }
 }
 
 impl<DB: Database, SK: StoreKey> InfallibleContextMut<DB, SK> for SimpleContext<'_, DB, SK> {
     fn infallible_store_mut(&mut self, store_key: &SK) -> KVStoreMut<'_, PrefixDB<DB>> {
-        KVStoreMut::from(self.multi_store.kv_store_mut(store_key))
+        match &mut self.multi_store {
+            SimpleBackend::Application(var) => KVStoreMut::from(var.kv_store_mut(store_key)),
+            SimpleBackend::Transactional(var) => KVStoreMut::from(var.kv_store_mut(store_key)),
+        }
     }
 }
 
@@ -67,6 +93,11 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for SimpleContext<
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {
-        KVStoreMut::from(self.multi_store.kv_store_mut(store_key)).into()
+        match &mut self.multi_store {
+            SimpleBackend::Application(var) => KVStoreMut::from(var.kv_store_mut(store_key)).into(),
+            SimpleBackend::Transactional(var) => {
+                KVStoreMut::from(var.kv_store_mut(store_key)).into()
+            }
+        }
     }
 }
