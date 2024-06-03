@@ -10,11 +10,13 @@ use crate::types::store::{
     range::StoreRange,
 };
 
+#[derive(Debug)]
 pub enum StoreMutBackend<'a, DB> {
     Gas(GasKVStoreMut<'a, DB>),
     Kv(KVStoreMut<'a, DB>),
 }
 
+#[derive(Debug)]
 pub struct StoreMut<'a, DB>(StoreMutBackend<'a, DB>);
 
 impl<'a, DB> From<GasKVStoreMut<'a, DB>> for StoreMut<'a, DB> {

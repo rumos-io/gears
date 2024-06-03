@@ -6,7 +6,7 @@ use crate::types::kv::immutable::KVStore;
 
 use super::{prefix_end_bound, range::PrefixRange};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ImmutablePrefixStore<'a, DB> {
     pub(crate) store: KVStore<'a, DB>,
     pub(crate) prefix: Vec<u8>,

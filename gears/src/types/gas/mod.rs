@@ -21,7 +21,7 @@ use tracing::debug;
 
 pub type FiniteGas = super::auth::gas::Gas;
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 pub enum GasMeteringErrors {
     #[error("Out of gas: {0}")]
     ErrorOutOfGas(String),

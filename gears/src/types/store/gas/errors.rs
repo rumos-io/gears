@@ -1,6 +1,6 @@
 use crate::types::{auth::gas::GasError, gas::GasMeteringErrors};
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 pub enum GasStoreErrors {
     #[error("Metering error: {0}")]
     Metering(#[from] GasMeteringErrors),

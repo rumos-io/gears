@@ -7,11 +7,13 @@ use super::{errors::StoreErrors, gas::prefix::GasPrefixStore, range::StoreRange}
 
 pub mod mutable;
 
+#[derive(Debug)]
 enum PrefixStoreBackend<'a, DB> {
     Gas(GasPrefixStore<'a, DB>),
     Kv(ImmutablePrefixStore<'a, DB>),
 }
 
+#[derive(Debug)]
 pub struct PrefixStore<'a, DB>(pub(self) PrefixStoreBackend<'a, DB>);
 
 impl<'a, DB> From<GasPrefixStore<'a, DB>> for PrefixStore<'a, DB> {

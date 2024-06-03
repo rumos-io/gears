@@ -7,7 +7,7 @@ use kv_store::types::kv::immutable::KVStore;
 
 use super::{errors::GasStoreErrors, guard::GasGuard, prefix::GasPrefixStore, range::GasRange};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct GasKVStore<'a, DB> {
     pub(super) guard: GasGuard,
     pub(super) inner: KVStore<'a, DB>,

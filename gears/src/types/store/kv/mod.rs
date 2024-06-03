@@ -7,11 +7,13 @@ use super::{errors::StoreErrors, gas::kv::GasKVStore, prefix::PrefixStore, range
 
 pub mod mutable;
 
+#[derive(Debug)]
 pub enum StoreBackend<'a, DB> {
     Gas(GasKVStore<'a, DB>),
     Kv(KVStore<'a, DB>),
 }
 
+#[derive(Debug)]
 pub struct Store<'a, DB>(StoreBackend<'a, DB>);
 
 impl<'a, DB> From<GasKVStore<'a, DB>> for Store<'a, DB> {

@@ -7,6 +7,7 @@ use super::{errors::GasStoreErrors, guard::GasGuard, range::GasRange};
 
 pub mod mutable;
 
+#[derive(Debug, Clone)]
 pub struct GasPrefixStore<'a, DB> {
     inner: ImmutablePrefixStore<'a, DB>,
     guard: GasGuard,

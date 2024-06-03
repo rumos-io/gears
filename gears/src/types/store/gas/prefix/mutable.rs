@@ -5,6 +5,7 @@ use crate::types::store::gas::{errors::GasStoreErrors, guard::GasGuard};
 
 use super::GasPrefixStore;
 
+#[derive(Debug)]
 pub struct GasPrefixStoreMut<'a, DB> {
     inner: MutablePrefixStore<'a, DB>,
     guard: GasGuard,

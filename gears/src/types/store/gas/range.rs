@@ -11,6 +11,7 @@ enum RangeBackend<'a, DB> {
     Prefix(PrefixRange<'a, DB>),
 }
 
+#[derive(Debug)]
 pub struct GasRange<'a, DB> {
     inner: RangeBackend<'a, DB>,
     guard: GasGuard,

@@ -143,7 +143,7 @@ impl From<Gas> for Uint256 {
     }
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 pub enum GasError {
     #[error("invalid gas amount {0} > max = {}", Gas::MAX)]
     Limit(u64),

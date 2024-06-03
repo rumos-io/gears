@@ -5,12 +5,14 @@ use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
 use super::gas::{errors::GasStoreErrors, range::GasRange};
 
+#[derive(Debug)]
 enum StoreRangeBackend<'a, DB> {
     Gas(GasRange<'a, DB>),
     Kv(Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>),
     Prefix(PrefixRange<'a, DB>),
 }
 
+#[derive(Debug)]
 pub struct StoreRange<'a, DB>(StoreRangeBackend<'a, DB>);
 
 impl<DB> StoreRange<'_, DB> {

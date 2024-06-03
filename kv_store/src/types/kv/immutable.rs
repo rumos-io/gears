@@ -11,7 +11,7 @@ use crate::{
 use super::KVBank;
 
 /// Internal structure which holds different stores
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) enum KVStoreBackend<'a, DB> {
     Commit(&'a KVBank<DB, ApplicationStore>),
     Cache(&'a KVBank<DB, TransactionStore>),
@@ -19,7 +19,7 @@ pub(crate) enum KVStoreBackend<'a, DB> {
 }
 
 /// Non mutable kv store
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
 impl<'a, DB: Database> KVStore<'a, DB> {

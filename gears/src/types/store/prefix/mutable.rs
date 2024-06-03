@@ -5,11 +5,13 @@ use crate::types::store::{errors::StoreErrors, gas::prefix::mutable::GasPrefixSt
 
 use super::PrefixStore;
 
+#[derive(Debug)]
 enum PrefixStoreMutBackend<'a, DB> {
     Gas(GasPrefixStoreMut<'a, DB>),
     Kv(MutablePrefixStore<'a, DB>),
 }
 
+#[derive(Debug)]
 pub struct PrefixStoreMut<'a, DB>(PrefixStoreMutBackend<'a, DB>);
 
 impl<'a, DB: Database> PrefixStoreMut<'a, DB> {
