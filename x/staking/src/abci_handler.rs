@@ -3,6 +3,7 @@ use crate::{
     QueryRedelegationRequest, QueryValidatorRequest,
 };
 use gears::{
+    context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::{errors::Error, Protobuf},
     error::AppError,
     params::ParamsSubspaceKey,
@@ -11,7 +12,6 @@ use gears::{
         proto::validator::ValidatorUpdate,
         request::{end_block::RequestEndBlock, query::RequestQuery},
     },
-    types::context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
 };
 
 #[derive(Debug, Clone)]

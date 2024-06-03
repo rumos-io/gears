@@ -1,11 +1,15 @@
 use std::collections::HashMap;
 
+use gears::context::{
+    InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext,
+};
 use gears::params::{
-    subspace, subspace_mut, ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey,
+    gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
+    ParamsSerialize, ParamsSubspaceKey,
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::types::context::{QueryableContext, TransactionalContext};
+use gears::types::store::errors::StoreErrors;
 use serde::{Deserialize, Serialize};
 
 const KEY_SEND_ENABLED: &str = "SendEnabled";
@@ -63,22 +67,43 @@ pub struct BankParamsKeeper<PSK: ParamsSubspaceKey> {
 }
 
 impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> BankParams {
-        let store = subspace(ctx, &self.params_subspace_key);
+        let store = infallible_subspace(ctx, &self.params_subspace_key);
 
         store.params().unwrap_or(DEFAULT_PARAMS.clone())
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: BankParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
+    }
+
+    pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<BankParams, StoreErrors> {
+        let store = gas::subspace(ctx, &self.params_subspace_key);
+
+        Ok(store.params()?.unwrap_or(DEFAULT_PARAMS.clone()))
+    }
+
+    pub fn try_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: BankParams,
+    ) -> Result<(), StoreErrors> {
+        let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
+
+        store.params_set(&params)?;
+
+        Ok(())
     }
 }

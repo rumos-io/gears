@@ -1,6 +1,8 @@
 use std::fmt::{Display, Formatter, Result};
 
-use store_crate::error::StoreError;
+use kv_store::error::KVStoreError;
+
+use crate::types::store::errors::StoreErrors;
 
 pub const IBC_ENCODE_UNWRAP: &str = "Should be okay. In future versions of IBC they removed Result";
 pub const POISONED_LOCK: &str = "poisoned lock";
@@ -17,7 +19,7 @@ pub enum AppError {
     Timeout { timeout: u64, current: u64 },
     Memo(u64),
     InvalidPublicKey,
-    Store(StoreError),
+    Store(KVStoreError),
     IBC(String),
     Genesis(String),
     Query(String),
@@ -65,8 +67,8 @@ impl From<bech32::Error> for AppError {
     }
 }
 
-impl From<StoreError> for AppError {
-    fn from(err: StoreError) -> AppError {
+impl From<KVStoreError> for AppError {
+    fn from(err: KVStoreError) -> AppError {
         AppError::Store(err)
     }
 }
@@ -74,5 +76,11 @@ impl From<StoreError> for AppError {
 impl From<core_types::errors::Error> for AppError {
     fn from(value: core_types::errors::Error) -> Self {
         Self::IBC(value.to_string())
+    }
+}
+
+impl From<StoreErrors> for AppError {
+    fn from(value: StoreErrors) -> Self {
+        Self::Custom(value.to_string())
     }
 }

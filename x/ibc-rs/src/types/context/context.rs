@@ -2,13 +2,12 @@
 #[allow(unused_variables)] // TODO: remove
 #[allow(unused_imports)] //TODO: remove
 use derive_more::{From, TryInto};
+use gears::context::tx::TxContext;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
-use gears::store::QueryableKVStore;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::event::Event;
 use gears::tendermint::types::proto::event::EventAttribute;
-use gears::types::context::tx::TxContext;
 use ibc::clients::tendermint::client_state::ClientState as TmClientState;
 use ibc::clients::tendermint::consensus_state::ConsensusState as TmConsensusState;
 use ibc::clients::tendermint::types::{
@@ -16,10 +15,8 @@ use ibc::clients::tendermint::types::{
     TENDERMINT_CLIENT_STATE_TYPE_URL, TENDERMINT_CONSENSUS_STATE_TYPE_URL,
 };
 //use ibc::core::client::context::client_state::ClientStateValidation;
-use gears::store::TransactionalKVStore;
-use gears::store::WritePrefixStore;
-use gears::types::context::QueryableContext;
-use gears::types::context::TransactionalContext;
+use gears::context::QueryableContext;
+use gears::context::TransactionalContext;
 use ibc::core::client::context::{
     ClientExecutionContext, ClientValidationContext, ExtClientValidationContext,
 };
@@ -177,6 +174,11 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ValidationConte
         let ibc_store = self.gears_ctx.kv_store(&self.store_key);
         let raw = ibc_store
             .get(KEY_NEXT_CLIENT_SEQUENCE)
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::Other {
+                    description: e.to_string(),
+                })
+            })?
             .unwrap()
             .try_into()
             .unwrap();
@@ -314,7 +316,13 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExecutionContex
         let sequence = self.client_counter()? + 1;
 
         let mut ibc_store = self.gears_ctx.kv_store_mut(&self.store_key);
-        ibc_store.set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes());
+        ibc_store
+            .set(KEY_NEXT_CLIENT_SEQUENCE.to_owned(), sequence.to_be_bytes())
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::Other {
+                    description: e.to_string(),
+                })
+            })?;
 
         Ok(())
     }
@@ -494,7 +502,12 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         client_state: Self::ClientStateRef,
     ) -> Result<(), ibc::core::handler::types::error::ContextError> {
         self.client_keeper
-            .client_state_set(self.gears_ctx, client_state_path, client_state);
+            .client_state_set(self.gears_ctx, client_state_path, client_state)
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::Other {
+                    description: e.to_string(),
+                })
+            })?;
         Ok(())
     }
 
@@ -546,7 +559,12 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
                 )
                 .into_bytes(),
                 encoded_bytes,
-            );
+            )
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::Other {
+                    description: e.to_string(),
+                })
+            })?;
 
         Ok(())
     }
@@ -578,7 +596,14 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         .into_bytes();
         let value = processed_time.to_be_bytes();
         let prefix = format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_id).into_bytes();
-        store.prefix_store_mut(prefix).set(key, value);
+        store
+            .prefix_store_mut(prefix)
+            .set(key, value)
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::Other {
+                    description: e.to_string(),
+                })
+            })?;
 
         // set processed height
         let store = self.gears_ctx.kv_store_mut(&self.store_key);
@@ -595,7 +620,14 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         )
         .into_bytes();
         let prefix = format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_id).into_bytes();
-        store.prefix_store_mut(prefix).set(key, value);
+        store
+            .prefix_store_mut(prefix)
+            .set(key, value)
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::Other {
+                    description: e.to_string(),
+                })
+            })?;
 
         // set iteration key
         let store = self.gears_ctx.kv_store_mut(&self.store_key);
@@ -608,7 +640,14 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ClientExecution
         .into_bytes();
         let prefix = format!("{KEY_CLIENT_STORE_PREFIX}/{}/", client_id).into_bytes();
 
-        store.prefix_store_mut(prefix).set(key, value);
+        store
+            .prefix_store_mut(prefix)
+            .set(key, value)
+            .map_err(|e| {
+                ContextError::ClientError(ClientError::Other {
+                    description: e.to_string(),
+                })
+            })?;
 
         Ok(())
     }

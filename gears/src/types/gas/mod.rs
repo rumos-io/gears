@@ -21,8 +21,8 @@ use tracing::debug;
 
 pub type FiniteGas = super::auth::gas::Gas;
 
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum GasErrors {
+#[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
+pub enum GasMeteringErrors {
     #[error("Out of gas: {0}")]
     ErrorOutOfGas(String),
     #[error("Gas overflow: {0}")]
@@ -75,7 +75,8 @@ pub trait PlainGasMeter: Send + Sync + Debug {
     /// Consumes the amount of gas provided.
     /// If the gas overflows, it returns error with the descriptor message.
     /// If the gas meter is not infinite, it returns error  if gas consumed goes above the limit.
-    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors>;
+    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str)
+        -> Result<(), GasMeteringErrors>;
     // TODO: add refund_gas back in
     /// Deducts the given amount from the gas consumed.
     /// This functionality enables refunding gas to the transaction
@@ -112,11 +113,15 @@ impl<DS: MeterKind> GasMeter<DS> {
         let _ = std::mem::replace(&mut self.meter, meter);
     }
 
-    pub fn consumed_or_limit(&mut self) -> FiniteGas {
+    pub fn consumed_or_limit(&self) -> FiniteGas {
         self.meter.gas_consumed_or_limit()
     }
 
-    pub fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
+    pub fn consume_gas(
+        &mut self,
+        amount: FiniteGas,
+        descriptor: &str,
+    ) -> Result<(), GasMeteringErrors> {
         debug!(
             "Consumed {} gas for {} with {}",
             amount,

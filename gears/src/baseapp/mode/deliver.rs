@@ -1,13 +1,12 @@
 use database::Database;
-use store_crate::types::multi::MultiBank;
-use store_crate::{TransactionStore, TransactionalMultiKVStore};
+use kv_store::types::multi::MultiBank;
+use kv_store::TransactionStore;
 use tendermint::types::proto::event::Event;
 use tendermint::types::proto::header::Header;
 
 use crate::baseapp::options::NodeOptions;
 use crate::baseapp::ConsensusParams;
 use crate::types::auth::fee::Fee;
-use crate::types::context::tx::TxContext;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
@@ -15,7 +14,8 @@ use crate::types::gas::{Gas, GasMeter};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
-    types::{context::TransactionalContext, tx::raw::TxWithRaw},
+    context::{tx::TxContext, TransactionalContext},
+    types::tx::raw::TxWithRaw,
 };
 
 use super::{build_tx_gas_meter, ExecutionMode};
@@ -100,7 +100,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
 
     fn commit(
         mut ctx: TxContext<'_, DB, AH::StoreKey>,
-        global_ms: &mut MultiBank<DB, AH::StoreKey, store_crate::ApplicationStore>,
+        global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
     ) {
         global_ms.sync(ctx.commit());
     }

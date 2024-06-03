@@ -1,8 +1,7 @@
 pub use super::*;
 use crate::{Commission, CreateValidator, DelegateMsg, RedelegateMsg};
 use gears::{
-    store::database::ext::UnwrapCorrupt,
-    types::{address::ConsAddress, context::tx::TxContext},
+    context::tx::TxContext, store::database::ext::UnwrapCorrupt, types::address::ConsAddress,
 };
 
 impl<
@@ -19,9 +18,9 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &CreateValidator,
     ) -> Result<(), AppError> {
-        let params = self.staking_params_keeper.get(ctx);
+        let params = self.staking_params_keeper.try_get(ctx)?;
 
-        if self.validator(ctx, &msg.validator_address).is_some() {
+        if self.validator(ctx, &msg.validator_address)?.is_some() {
             return Err(AppError::Custom(format!(
                 "Account {} exists",
                 msg.validator_address
@@ -29,7 +28,7 @@ impl<
         };
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
-        if self.validator_by_cons_addr(ctx, &cons_addr).is_some() {
+        if self.validator_by_cons_addr(ctx, &cons_addr)?.is_some() {
             return Err(AppError::Custom(format!(
                 "Public key {} exists",
                 ConsAddress::from(msg.pub_key.clone())
@@ -67,9 +66,9 @@ impl<
         validator.set_initial_commission(commission);
         validator.min_self_delegation = msg.min_self_delegation;
 
-        self.set_validator(ctx, &validator);
-        self.set_validator_by_cons_addr(ctx, &validator);
-        self.set_new_validator_by_power_index(ctx, &validator);
+        self.set_validator(ctx, &validator)?;
+        self.set_validator_by_cons_addr(ctx, &validator)?;
+        self.set_new_validator_by_power_index(ctx, &validator)?;
 
         // call the after-creation hook
         self.after_validator_created(ctx, &validator);
@@ -130,12 +129,12 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &DelegateMsg,
     ) -> Result<(), AppError> {
-        let mut validator = if let Some(validator) = self.validator(ctx, &msg.validator_address) {
+        let mut validator = if let Some(validator) = self.validator(ctx, &msg.validator_address)? {
             validator
         } else {
             return Err(AppError::AccountNotFound);
         };
-        let params = self.staking_params_keeper.get(ctx);
+        let params = self.staking_params_keeper.try_get(ctx)?;
         let delegator_address = msg.delegator_address.clone();
 
         if msg.amount.denom != params.bond_denom {
@@ -225,7 +224,7 @@ impl<
             )
             .map_err(|e| AppError::Coins(e.to_string()))?;
 
-        let params = self.staking_params_keeper.get(ctx);
+        let params = self.staking_params_keeper.try_get(ctx)?;
 
         if msg.amount.denom != params.bond_denom {
             return Err(AppError::InvalidRequest(format!(

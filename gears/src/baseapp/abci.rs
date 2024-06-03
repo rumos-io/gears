@@ -1,11 +1,11 @@
 use super::BaseApp;
+use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
+use crate::context::{block::BlockContext, init::InitContext};
 use crate::error::POISONED_LOCK;
 use crate::params::ParamsSubspaceKey;
-use crate::types::context::block::BlockContext;
 use crate::types::gas::Gas;
-use crate::{application::handlers::node::ABCIHandler, types::context::init::InitContext};
 use bytes::Bytes;
 use tendermint::{
     application::ABCIApplication,

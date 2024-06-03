@@ -1,7 +1,7 @@
 use gears::{
+    context::{init::InitContext, query::QueryContext, tx::TxContext},
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::{init::InitContext, query::QueryContext, tx::TxContext},
 };
 
 use crate::{

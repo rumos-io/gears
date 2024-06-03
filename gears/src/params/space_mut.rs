@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::prefix::mutable::MutablePrefixStore, WritePrefixStore};
+use kv_store::types::prefix::mutable::MutablePrefixStore;
 
 use super::{parsed::Params, space::ParamsSpace, ParamKind, ParamsDeserialize, ParamsSerialize};
 

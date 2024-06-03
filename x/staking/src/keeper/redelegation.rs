@@ -2,7 +2,10 @@ pub use super::*;
 use crate::{
     consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_val_del_addrs_key, RedelegationEntry,
 };
-use gears::store::database::ext::UnwrapCorrupt;
+use gears::{
+    context::{InfallibleContext, InfallibleContextMut},
+    store::database::ext::UnwrapCorrupt,
+};
 
 impl<
         SK: StoreKey,
@@ -25,24 +28,24 @@ impl<
             return Err(AppError::Custom("self redelegation".to_string()).into());
         }
 
-        let mut dst_validator = if let Some(validator) = self.validator(ctx, val_dst_addr) {
+        let mut dst_validator = if let Some(validator) = self.validator(ctx, val_dst_addr)? {
             validator
         } else {
             return Err(AppError::Custom(format!("bad redelegation dst: {}", val_dst_addr)).into());
         };
 
-        let src_validator = if let Some(validator) = self.validator(ctx, val_src_addr) {
+        let src_validator = if let Some(validator) = self.validator(ctx, val_src_addr)? {
             validator
         } else {
             return Err(AppError::Custom(format!("bad redelegation src: {}", val_dst_addr)).into());
         };
 
         // check if this is a transitive redelegation
-        if self.has_receiving_redelegation(ctx, del_addr, val_src_addr) {
+        if self.has_receiving_redelegation(ctx, del_addr, val_src_addr)? {
             return Err(AppError::Custom("transitive redelegation".to_string()).into());
         }
 
-        if self.has_max_redelegation_entries(ctx, del_addr, val_src_addr, val_dst_addr) {
+        if self.has_max_redelegation_entries(ctx, del_addr, val_src_addr, val_dst_addr)? {
             return Err(AppError::Custom("max redelegation entries".to_string()).into());
         }
 
@@ -62,7 +65,7 @@ impl<
         )?;
 
         // create the unbonding delegation
-        let (completion_time, height, complete_now) = self.begin_info(ctx, val_src_addr);
+        let (completion_time, height, complete_now) = self.begin_info(ctx, val_src_addr)?;
         if complete_now {
             // no need to create the redelegation object
             return Ok(completion_time);
@@ -77,9 +80,9 @@ impl<
             completion_time.clone(),
             return_amount,
             shares_created,
-        );
+        )?;
 
-        self.insert_redelegation_queue(ctx, &redelegation, completion_time.clone());
+        self.insert_redelegation_queue(ctx, &redelegation, completion_time.clone())?;
         Ok(completion_time)
     }
 
@@ -88,7 +91,7 @@ impl<
         ctx: &mut CTX,
         del_addr: &AccAddress,
         val_src_addr: &ValAddress,
-    ) -> bool {
+    ) -> Result<bool, StoreErrors> {
         let store = ctx.kv_store(&self.store_key);
 
         let mut prefix = REDELEGATION_BY_VAL_DST_INDEX_KEY.to_vec();
@@ -96,7 +99,7 @@ impl<
         prefix.extend_from_slice(&postfix);
 
         // TODO: check logic
-        store.get(&prefix).is_some()
+        store.get(&prefix).map(|red| red.is_some())
     }
 
     pub fn has_max_redelegation_entries<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -105,13 +108,13 @@ impl<
         del_addr: &AccAddress,
         val_src_addr: &ValAddress,
         val_dst_addr: &ValAddress,
-    ) -> bool {
-        let params = self.staking_params_keeper.get(ctx);
+    ) -> Result<bool, StoreErrors> {
+        let params = self.staking_params_keeper.try_get(ctx)?;
 
-        if let Some(redelegation) = self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr) {
-            redelegation.entries.len() >= params.max_entries as usize
+        if let Some(redelegation) = self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)? {
+            Ok(redelegation.entries.len() >= params.max_entries as usize)
         } else {
-            false
+            Ok(false)
         }
     }
 
@@ -129,7 +132,7 @@ impl<
         min_time: Timestamp,
         balance: Uint256,
         shares_dst: Decimal256,
-    ) -> Redelegation {
+    ) -> Result<Redelegation, StoreErrors> {
         let entry = RedelegationEntry {
             creation_height,
             completion_time: min_time,
@@ -137,7 +140,7 @@ impl<
             share_dst: shares_dst,
         };
         let redelegation = if let Some(mut redelegation) =
-            self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)
+            self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?
         {
             redelegation.add_entry(entry);
             redelegation
@@ -150,8 +153,8 @@ impl<
             }
         };
 
-        self.set_redelegation(ctx, &redelegation);
-        redelegation
+        self.set_redelegation(ctx, &redelegation)?;
+        Ok(redelegation)
     }
 
     pub fn redelegation<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -160,22 +163,22 @@ impl<
         del_addr: &AccAddress,
         val_src_addr: &ValAddress,
         val_dst_addr: &ValAddress,
-    ) -> Option<Redelegation> {
+    ) -> Result<Option<Redelegation>, StoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_src_addr.to_string().as_bytes());
         key.put(val_dst_addr.to_string().as_bytes());
-        store
-            .get(&key)
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
+        Ok(store
+            .get(&key)?
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
     }
 
     pub fn set_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
@@ -184,15 +187,15 @@ impl<
         delegations_store.set(
             key,
             serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        )
     }
 
-    pub fn remove_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn remove_redelegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) -> Option<Vec<u8>> {
-        let store = ctx.kv_store_mut(&self.store_key);
+        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
@@ -209,6 +212,7 @@ impl<
     ) -> anyhow::Result<Vec<Coin>> {
         let redelegation = self
             .redelegation(ctx, &del_addr, &val_src_addr, &val_dst_addr)
+            .map_err(|e| AppError::Custom(e.to_string()))?
             .ok_or(AppError::Custom("no redelegation found".to_string()))?;
 
         let mut balances = vec![];
@@ -238,7 +242,7 @@ impl<
         if new_redelegations.is_empty() {
             self.remove_redelegation(ctx, &redelegation);
         } else {
-            self.set_redelegation(ctx, &redelegation);
+            self.set_redelegation(ctx, &redelegation)?;
         }
         Ok(balances)
     }
@@ -248,31 +252,32 @@ impl<
         ctx: &mut CTX,
         redelegation: &Redelegation,
         completion_time: Timestamp,
-    ) {
+    ) -> Result<(), StoreErrors> {
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let completion_time =
             chrono::DateTime::from_timestamp(completion_time.seconds, completion_time.nanos as u32)
                 .unwrap();
-        let mut time_slice = self.redelegation_queue_time_slice(ctx, completion_time);
+        let mut time_slice = self.redelegation_queue_time_slice(ctx, completion_time)?;
         let dvv_triplet = DvvTriplet {
             del_addr: redelegation.delegator_address.clone(),
             val_src_addr: redelegation.validator_src_address.clone(),
             val_dst_addr: redelegation.validator_dst_address.clone(),
         };
         if time_slice.is_empty() {
-            self.set_redelegation_queue_time_slice(ctx, completion_time, vec![dvv_triplet]);
+            self.set_redelegation_queue_time_slice(ctx, completion_time, vec![dvv_triplet])?;
         } else {
             time_slice.push(dvv_triplet);
-            self.set_redelegation_queue_time_slice(ctx, completion_time, time_slice);
+            self.set_redelegation_queue_time_slice(ctx, completion_time, time_slice)?;
         }
+        Ok(())
     }
 
-    pub fn redelegation_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn redelegation_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
-    ) -> Vec<DvvTriplet> {
+    ) -> Result<Vec<DvvTriplet>, StoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
@@ -280,10 +285,10 @@ impl<
             .timestamp_nanos_opt()
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_le_bytes();
-        if let Some(bytes) = store.get(&key) {
-            serde_json::from_slice(&bytes).unwrap_or_corrupt()
+        if let Some(bytes) = store.get(&key)? {
+            Ok(serde_json::from_slice(&bytes).unwrap_or_corrupt())
         } else {
-            vec![]
+            Ok(vec![])
         }
     }
 
@@ -292,7 +297,7 @@ impl<
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
         redelegations: Vec<DvvTriplet>,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
@@ -301,21 +306,21 @@ impl<
             .expect(TIMESTAMP_NANOS_EXPECT)
             .to_le_bytes();
         let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
-        store.set(key, value);
+        store.set(key, value)
     }
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
     /// currTime, and deletes the timeslices from the queue
     pub fn dequeue_all_mature_redelegation_queue<
         DB: Database,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: InfallibleContextMut<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
         time: Timestamp,
     ) -> Vec<DvvTriplet> {
         let (keys, mature_redelegations) = {
-            let storage = ctx.kv_store(&self.store_key);
+            let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
             // TODO: consider to move the DataTime type and work with timestamps into Gears
@@ -340,7 +345,7 @@ impl<
             (keys, mature_redelegations)
         };
 
-        let storage = ctx.kv_store_mut(&self.store_key);
+        let storage = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);

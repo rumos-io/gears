@@ -14,7 +14,7 @@ use crate::types::base::errors::CoinsError;
 use crate::types::base::errors::SendCoinsError;
 use crate::types::base::send::SendCoins;
 
-use super::gas::{Error as GasError, Gas};
+use super::gas::{Gas, GasError};
 
 pub mod inner {
     pub use core_types::auth::fee::Fee;

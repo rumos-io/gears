@@ -1,13 +1,11 @@
 use database::Database;
-use store_crate::StoreKey;
+use kv_store::StoreKey;
 
 use crate::{
+    context::{QueryableContext, TransactionalContext},
     error::AppError,
     types::{
-        address::AccAddress,
-        base::send::SendCoins,
-        context::{QueryableContext, TransactionalContext},
-        denom::Denom,
+        address::AccAddress, base::send::SendCoins, denom::Denom, store::errors::StoreErrors,
         tx::metadata::Metadata,
     },
     x::module::Module,
@@ -26,5 +24,5 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         &self,
         ctx: &CTX,
         base: &Denom,
-    ) -> Option<Metadata>;
+    ) -> Result<Option<Metadata>, StoreErrors>;
 }

@@ -4,7 +4,7 @@ use crate::{
     QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
     RedelegationEntryResponse, RedelegationResponse,
 };
-use gears::types::context::query::QueryContext;
+use gears::context::query::QueryContext;
 
 impl<
         SK: StoreKey,
@@ -20,7 +20,7 @@ impl<
         query: QueryValidatorRequest,
     ) -> Result<QueryValidatorResponse, AppError> {
         let validator = self
-            .validator(ctx, &query.address)
+            .validator(ctx, &query.address)?
             .ok_or(AppError::Custom("Validator is not found".into()))?;
         Ok(QueryValidatorResponse { validator })
     }
@@ -31,7 +31,7 @@ impl<
         query: QueryDelegationRequest,
     ) -> Result<QueryDelegationResponse, AppError> {
         let delegation = self
-            .delegation(ctx, &query.delegator_address, &query.validator_address)
+            .delegation(ctx, &query.delegator_address, &query.validator_address)?
             .ok_or(AppError::Custom("Delegation doesn't exists".into()))?;
         let delegation_response = self.delegation_to_delegation_response(ctx, delegation)?;
         Ok(QueryDelegationResponse {
@@ -45,7 +45,7 @@ impl<
         delegation: Delegation,
     ) -> Result<DelegationResponse, AppError> {
         let validator = self
-            .validator(ctx, &delegation.validator_address)
+            .validator(ctx, &delegation.validator_address)?
             .ok_or(AppError::AccountNotFound)?;
 
         let params = self.staking_params_keeper.get(ctx);
@@ -75,7 +75,7 @@ impl<
                 pagination: _,
             } => {
                 let redelegation = self
-                    .redelegation(ctx, a, v1, v2)
+                    .redelegation(ctx, a, v1, v2)?
                     .ok_or(AppError::Custom("no redelegation found".to_string()))?;
                 vec![redelegation]
             }
@@ -111,7 +111,7 @@ impl<
         let mut resp = Vec::with_capacity(redelegations.len());
         for red in redelegations.into_iter() {
             let validator = self
-                .validator(ctx, &red.validator_dst_address)
+                .validator(ctx, &red.validator_dst_address)?
                 .ok_or(AppError::AccountNotFound)?;
 
             let mut entries = Vec::with_capacity(red.entries.len());
