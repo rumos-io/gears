@@ -1,19 +1,20 @@
-use gears::types::address::BaseAddress;
+use gears::types::address::{AccAddress, ValAddress};
 
-pub fn length_prefixed_addr_key<const PREFIX: u8>(addr: &BaseAddress<PREFIX>) -> Vec<u8> {
-    let addr_str = addr.to_string();
-    let bytes = addr_str.as_bytes();
+/// Converts a type to length prefixed key.
+pub fn length_prefixed_bytes_key<T: Into<Vec<u8>>>(addr: T) -> Vec<u8> {
+    let bytes = addr.into();
     let mut bytes_prefix = bytes.len().to_le_bytes().to_vec();
     bytes_prefix.extend_from_slice(&bytes);
     bytes_prefix
 }
 
-pub fn length_prefixed_addr_pair_key<const PREFIX1: u8, const PREFIX2: u8>(
-    prefix_addr: &BaseAddress<PREFIX1>,
-    postfix_addr: &BaseAddress<PREFIX2>,
+/// Create a key from validator and delegator address.
+pub fn length_prefixed_val_del_addrs_key(
+    prefix_addr: &ValAddress,
+    postfix_addr: &AccAddress,
 ) -> Vec<u8> {
-    let mut prefix = length_prefixed_addr_key(prefix_addr);
-    let postfix = length_prefixed_addr_key(postfix_addr);
+    let mut prefix = length_prefixed_bytes_key(prefix_addr.clone());
+    let postfix = length_prefixed_bytes_key(postfix_addr.clone());
     prefix.extend_from_slice(&postfix);
     prefix
 }

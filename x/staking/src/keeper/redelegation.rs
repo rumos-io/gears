@@ -1,6 +1,6 @@
 pub use super::*;
 use crate::{
-    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_addr_pair_key, RedelegationEntry,
+    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_val_del_addrs_key, RedelegationEntry,
 };
 use gears::store::database::ext::UnwrapCorrupt;
 
@@ -92,7 +92,7 @@ impl<
         let store = ctx.kv_store(&self.store_key);
 
         let mut prefix = REDELEGATION_BY_VAL_DST_INDEX_KEY.to_vec();
-        let postfix = length_prefixed_addr_pair_key(val_src_addr, del_addr);
+        let postfix = length_prefixed_val_del_addrs_key(val_src_addr, del_addr);
         prefix.extend_from_slice(&postfix);
 
         // TODO: check logic
