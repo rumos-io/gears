@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, hash::Hash, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
@@ -9,6 +9,20 @@ use crate::{
 };
 
 use super::MultiBank;
+
+impl<DB, SK: Clone + Eq + Hash> MultiBank<DB, SK, ApplicationStore> {
+    pub fn to_cache_kind(&self) -> MultiBank<DB, SK, TransactionStore> {
+        MultiBank {
+            head_version: self.head_version,
+            head_commit_hash: self.head_commit_hash,
+            stores: self
+                .stores
+                .iter()
+                .map(|(sk, store)| (sk.to_owned(), store.to_cache_kind()))
+                .collect(),
+        }
+    }
+}
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
     pub fn new(db: DB) -> Self {
@@ -37,18 +51,6 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
             head_version,
             head_commit_hash: crate::hash::hash_store_infos(store_infos),
             stores,
-        }
-    }
-
-    pub fn to_cache_kind(&self) -> MultiBank<DB, SK, TransactionStore> {
-        MultiBank {
-            head_version: self.head_version,
-            head_commit_hash: self.head_commit_hash,
-            stores: self
-                .stores
-                .iter()
-                .map(|(sk, store)| (sk.to_owned(), store.to_cache_kind()))
-                .collect(),
         }
     }
 

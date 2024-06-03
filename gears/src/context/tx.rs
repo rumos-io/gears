@@ -2,10 +2,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 use kv_store::{
-    types::{
-        kv::store_cache::CacheCommitList,
-        multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
-    },
+    types::multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     StoreKey, TransactionStore,
 };
 use tendermint::types::{
@@ -85,10 +82,6 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
-    pub(crate) fn commit(&mut self) -> CacheCommitList<SK> {
-        self.multi_store.commit()
-    }
-
     pub fn consensus_params(&self) -> &ConsensusParams {
         &self.consensus_params
     }
