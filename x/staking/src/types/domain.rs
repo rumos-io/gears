@@ -417,19 +417,19 @@ impl TryFrom<ValidatorRaw> for Validator {
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             description: value
                 .description
-                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T"),
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?,
             consensus_pubkey: serde_json::from_slice(&value.consensus_pubkey)
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             jailed: value.jailed,
             tokens: Uint256::from_str(&value.tokens)
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             unbonding_height: value.unbonding_height,
-            unbonding_time: value
-                .unbonding_time
-                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T"),
+            unbonding_time: value.unbonding_time.ok_or(Error::MissingField(
+                "Missing field 'unbonding_time'.".into(),
+            ))?,
             commission: value
                 .commission
-                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T")
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?
                 .try_into()?,
             min_self_delegation: Uint256::from_str(&value.min_self_delegation)
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,

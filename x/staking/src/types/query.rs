@@ -261,8 +261,7 @@ impl TryFrom<QueryDelegationResponseRaw> for QueryDelegationResponse {
             delegation_response: raw
                 .delegation_response
                 .ok_or(Error::MissingField(
-                    "Missing field 'delegation_response'.
-                    The field should exists because conversion forces to have field in prototype structure".into()
+                    "Missing field 'delegation_response'.".into(),
                 ))?
                 .try_into()?,
         })
