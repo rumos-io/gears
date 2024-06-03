@@ -36,6 +36,10 @@ impl<'a, DB> GasRange<'a, DB> {
             err: None,
         }
     }
+
+    pub fn error(&self) -> Option<&GasStoreErrors> {
+        self.err.as_ref()
+    }
 }
 
 impl<'a, DB: Database> Iterator for GasRange<'a, DB> {

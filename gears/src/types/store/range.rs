@@ -3,7 +3,7 @@ use std::{borrow::Cow, ops::Bound};
 use database::Database;
 use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
-use super::gas::range::GasRange;
+use super::gas::{errors::GasStoreErrors, range::GasRange};
 
 enum StoreRangeBackend<'a, DB> {
     Gas(GasRange<'a, DB>),
@@ -12,6 +12,16 @@ enum StoreRangeBackend<'a, DB> {
 }
 
 pub struct StoreRange<'a, DB>(StoreRangeBackend<'a, DB>);
+
+impl<DB> StoreRange<'_, DB> {
+    pub fn error(&self) -> Option<&GasStoreErrors> {
+        match &self.0 {
+            StoreRangeBackend::Gas(var) => var.error(),
+            StoreRangeBackend::Kv(_) => None,
+            StoreRangeBackend::Prefix(_) => None,
+        }
+    }
+}
 
 impl<'a, DB: Database> Iterator for StoreRange<'a, DB> {
     type Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>);
