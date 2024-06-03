@@ -40,6 +40,7 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
 
     pub fn cache_clear(&mut self) {
         self.check_mode.unpersisted_multi_store.caches_clear();
+        self.check_mode.persisted_multi_store.caches_clear();
         self.deliver_mode.multi_store.caches_clear();
     }
 
@@ -49,6 +50,9 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
 
         self.check_mode
             .unpersisted_multi_store
+            .caches_update(cache.clone());
+        self.check_mode
+            .persisted_multi_store
             .caches_update(cache.clone());
         self.deliver_mode.multi_store.caches_update(cache);
     }
