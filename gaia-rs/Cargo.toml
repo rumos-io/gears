@@ -12,7 +12,7 @@ workspace = true
 auth = { path = "../x/auth" }
 bank = { path = "../x/bank" }
 ibc-rs = { path = "../x/ibc-rs" }
-gears = { path = "../gears", features = ["cli", "xmods"] }
+gears = { path = "../gears", features = ["cli", "xmods", "rocksdb"] }
 gears-derive = { path = "../gears-derive" }
 
 #newtypes
