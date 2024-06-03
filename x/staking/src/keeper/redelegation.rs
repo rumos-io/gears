@@ -279,7 +279,7 @@ impl<
         let key = completion_time
             .timestamp_nanos_opt()
             .expect(TIMESTAMP_NANOS_EXPECT)
-            .to_ne_bytes();
+            .to_le_bytes();
         if let Some(bytes) = store.get(&key) {
             serde_json::from_slice(&bytes).unwrap_or_corrupt()
         } else {
@@ -299,7 +299,7 @@ impl<
         let key = completion_time
             .timestamp_nanos_opt()
             .expect(TIMESTAMP_NANOS_EXPECT)
-            .to_ne_bytes();
+            .to_le_bytes();
         let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
         store.set(key, value);
     }

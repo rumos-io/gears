@@ -80,19 +80,17 @@ impl TryFrom<CommissionRaw> for Commission {
             commission_rates: value
                 .commission_rates
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'commission_rates'.
+                    The field should exists because conversion forces to have field in prototype structure".into()
                 ))?
                 .try_into()
                 .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
             update_time: value
                 .update_time
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'update_time'.
+                    The field should exists because conversion forces to have field in prototype structure".into()
                 ))?
-                .try_into()
-                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
         })
     }
 }
@@ -272,13 +270,14 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
         Ok(CreateValidator {
             description: src.description.ok_or(Error::MissingField(
-                "Value should exists. It's the proto3 rule to have Option<T> instead of T".into(),
+                "Missing field 'description'.
+                The field should exists because conversion forces to have field in prototype structure".into()
             ))?,
             commission: src
                 .commission
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'commission'.
+                    The field should exists because conversion forces to have field in prototype structure".into()
                 ))?
                 .try_into()
                 .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
@@ -293,8 +292,8 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
             value: src
                 .value
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'value'.
+                    The field should exists because conversion forces to have field in prototype structure".into()
                 ))?
                 .try_into()
                 .map_err(|e| Error::Coin(format!("{e}")))?,
@@ -344,8 +343,8 @@ impl TryFrom<DelegateMsgRaw> for DelegateMsg {
             amount: src
                 .amount
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'amount'.
+                    The field should exists because conversion forces to have field in prototype structure".into()
                 ))?
                 .try_into()
                 .map_err(|e| Error::Coin(format!("{e}")))?,
@@ -401,8 +400,8 @@ impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
             amount: src
                 .amount
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'amount'.
+                    The field should exists because conversion forces to have field in prototype structure".into()
                 ))?
                 .try_into()
                 .map_err(|e| Error::Coin(format!("{e}")))?,

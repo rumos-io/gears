@@ -438,5 +438,5 @@ impl<
 pub(super) fn unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
     time.timestamp_nanos_opt()
         .expect(TIMESTAMP_NANOS_EXPECT)
-        .to_ne_bytes()
+        .to_le_bytes()
 }
