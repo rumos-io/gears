@@ -41,7 +41,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     fn multi_store(
         &mut self,
     ) -> &mut MultiBank<DB, <AH as ABCIHandler>::StoreKey, TransactionStore> {
-        &mut self.unpersisted_multi_store
+        &mut self.persisted_multi_store
     }
 
     fn build_ctx(
