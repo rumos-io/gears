@@ -1,5 +1,6 @@
 use crate::{AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message};
 use gears::{
+    context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -7,7 +8,6 @@ use gears::{
         proto::validator::ValidatorUpdate, request::end_block::RequestEndBlock,
         request::query::RequestQuery,
     },
-    types::context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
 };
 
 #[derive(Debug, Clone)]

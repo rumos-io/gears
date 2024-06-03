@@ -1,24 +1,22 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use gears::context::InfallibleContext;
+use gears::context::InfallibleContextMut;
 use gears::core::serializers::serialize_number_to_string;
-use gears::params::subspace;
-use gears::params::subspace_mut;
+use gears::params::infallible_subspace;
+use gears::params::infallible_subspace_mut;
 use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
 use gears::store::types::prefix::immutable::ImmutablePrefixStore;
-use gears::store::QueryableMultiKVStore;
-use gears::store::ReadPrefixStore;
-use gears::store::TransactionalMultiKVStore;
-use gears::store::WritePrefixStore;
 use gears::{
+    context::{QueryableContext, TransactionalContext},
     store::{
         database::{prefix::PrefixDB, Database},
         StoreKey,
     },
-    types::context::{QueryableContext, TransactionalContext},
 };
 use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
@@ -74,21 +72,21 @@ pub struct ConnectionParamsKeeper<PSK> {
 }
 
 impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
-    pub fn _get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn _get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> ConnectionParams {
-        let store = subspace(ctx, &self.params_subspace_key);
+        let store = infallible_subspace(ctx, &self.params_subspace_key);
 
         store.params().unwrap() // TODO: Add default
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ConnectionParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
     }

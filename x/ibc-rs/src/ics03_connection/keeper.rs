@@ -1,12 +1,11 @@
+use gears::context::TransactionalContext;
 use gears::{
+    context::init::InitContext,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::init::InitContext,
 };
 
 use super::{params::ConnectionParamsKeeper, GenesisState};
-use gears::store::TransactionalKVStore;
-use gears::types::context::TransactionalContext;
 
 const KEY_NEXT_CONNECTION_SEQUENCE: &[u8; 22] = b"nextConnectionSequence";
 

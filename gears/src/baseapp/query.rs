@@ -1,11 +1,11 @@
+use kv_store::types::query::QueryMultiStore;
 use serde::Serialize;
-use store_crate::types::query::QueryMultiStore;
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
+    context::query::QueryContext,
     error::POISONED_LOCK,
     params::ParamsSubspaceKey,
-    types::context::query::QueryContext,
 };
 
 use super::{errors::QueryError, BaseApp};

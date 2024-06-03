@@ -1,22 +1,22 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use gears::params::subspace;
-use gears::params::subspace_mut;
+use gears::context::InfallibleContext;
+use gears::context::InfallibleContextMut;
+use gears::params::gas;
+use gears::params::infallible_subspace;
+use gears::params::infallible_subspace_mut;
 use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
-use gears::store::QueryableMultiKVStore;
-use gears::store::ReadPrefixStore;
-use gears::store::TransactionalMultiKVStore;
-use gears::store::WritePrefixStore;
+use gears::types::store::errors::StoreErrors;
 use gears::{
+    context::{QueryableContext, TransactionalContext},
     store::{
         database::{prefix::PrefixDB, Database},
         StoreKey,
     },
-    types::context::{QueryableContext, TransactionalContext},
 };
 use serde::{Deserialize, Serialize};
 
@@ -69,22 +69,43 @@ pub struct ClientParamsKeeper<PSK> {
 }
 
 impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
+    pub fn get<DB: Database, SK: StoreKey, KV: InfallibleContext<DB, SK>>(
         &self,
         ctx: &KV,
     ) -> ClientParams {
-        let store = subspace(ctx, &self.params_subspace_key);
+        let store = infallible_subspace(ctx, &self.params_subspace_key);
 
         store.params().unwrap() // TODO: Add default
     }
 
-    pub fn set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: ClientParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)
+    }
+
+    pub fn try_get<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &KV,
+    ) -> Result<ClientParams, StoreErrors> {
+        let store = gas::subspace(ctx, &self.params_subspace_key);
+
+        Ok(store.params()?.unwrap()) // TODO: Add default
+    }
+
+    pub fn try_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        params: ClientParams,
+    ) -> Result<(), StoreErrors> {
+        let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
+
+        store.params_set(&params)?;
+
+        Ok(())
     }
 }

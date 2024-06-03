@@ -6,13 +6,13 @@ use crate::{
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
 use gears::config::Config;
+use gears::context::init::InitContext;
+use gears::context::query::QueryContext;
 use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::context::init::InitContext;
-use gears::types::context::query::QueryContext;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
-use gears::{error::AppError, types::context::tx::TxContext, x::ante::DefaultSignGasConsumer};
+use gears::{context::tx::TxContext, error::AppError, x::ante::DefaultSignGasConsumer};
 
 #[derive(Debug, Clone)]
 pub struct GaiaABCIHandler {

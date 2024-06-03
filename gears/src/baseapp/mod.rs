@@ -8,17 +8,17 @@ use std::{
 use crate::types::tx::TxMessage;
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
+    context::{query::QueryContext, simple::SimpleContext},
     error::{AppError, POISONED_LOCK},
     params::ParamsSubspaceKey,
     types::{
-        context::{query::QueryContext, simple::SimpleContext},
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
         tx::raw::TxWithRaw,
     },
 };
 use bytes::Bytes;
 use database::RocksDB;
-use store_crate::{
+use kv_store::{
     types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore,
 };
@@ -183,8 +183,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
 
-        let gas_wanted = ctx.gas_meter.limit(); // TODO its needed for gas recovery middleware
-        let gas_used = ctx.gas_meter.consumed_or_limit();
+        let gas_wanted = ctx.gas_meter.borrow().limit();
+        let gas_used = ctx.gas_meter.borrow().consumed_or_limit();
 
         let events = MD::run_msg(
             &mut ctx,

@@ -1,12 +1,9 @@
 use database::Database;
-use store_crate::StoreKey;
+use kv_store::StoreKey;
 
 use crate::{
-    types::{
-        account::Account,
-        address::AccAddress,
-        context::{QueryableContext, TransactionalContext},
-    },
+    context::{QueryableContext, TransactionalContext},
+    types::{account::Account, address::AccAddress, store::errors::StoreErrors},
     x::module::Module,
 };
 
@@ -22,37 +19,37 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Self::Params;
+    ) -> Result<Self::Params, StoreErrors>;
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
-    ) -> bool;
+    ) -> Result<bool, StoreErrors>;
 
     fn get_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
-    ) -> Option<Account>;
+    ) -> Result<Option<Account>, StoreErrors>;
 
     fn set_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         acct: Account,
-    );
+    ) -> Result<(), StoreErrors>;
 
     /// Overwrites existing account
     fn create_new_base_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
-    );
+    ) -> Result<(), StoreErrors>;
 
     /// Creates a new module account if it doesn't already exist
     fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         module: &Module,
-    );
+    ) -> Result<(), StoreErrors>;
 }

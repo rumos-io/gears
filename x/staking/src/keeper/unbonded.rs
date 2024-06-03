@@ -20,7 +20,7 @@ impl<
             ))
             .into());
         }
-        self.bond_validator(ctx, validator);
+        self.bond_validator(ctx, validator)?;
         Ok(())
     }
 }
