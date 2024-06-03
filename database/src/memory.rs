@@ -8,7 +8,7 @@ use crate::Database;
 
 #[derive(Debug, Clone)]
 pub struct MemDB {
-    store: Arc<RwLock<BTreeMap<Vec<u8>, Vec<u8>>>>, // we use a refcell because the set method on the DB trait doesn't take a mutable ref
+    store: Arc<RwLock<BTreeMap<Vec<u8>, Vec<u8>>>>,
 }
 
 impl Default for MemDB {
