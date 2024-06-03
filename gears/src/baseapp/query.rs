@@ -1,3 +1,4 @@
+use database::Database;
 use kv_store::types::query::QueryMultiStore;
 use serde::Serialize;
 
@@ -20,8 +21,8 @@ pub trait NodeQueryHandler<QReq, QRes>: Clone + Send + Sync + 'static {
     fn typed_query<Q: Into<QReq>>(&self, request: Q) -> Result<QRes, QueryError>;
 }
 
-impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> NodeQueryHandler<H::QReq, H::QRes>
-    for BaseApp<PSK, H, AI>
+impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
+    NodeQueryHandler<H::QReq, H::QRes> for BaseApp<DB, PSK, H, AI>
 {
     fn typed_query<Q: Into<H::QReq>>(&self, request: Q) -> Result<H::QRes, QueryError> {
         let request = request.into();

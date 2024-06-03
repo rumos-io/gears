@@ -14,7 +14,7 @@ pub struct QueryTree<DB> {
     pub(crate) node_db: NodeDB<DB>,
 }
 
-impl<DB: Database + Clone> QueryTree<DB> {
+impl<DB: Database> QueryTree<DB> {
     pub fn new(tree: &Tree<DB>, mut version: u32) -> Result<Self, Error> {
         if version == 0 {
             version = tree.loaded_version;
