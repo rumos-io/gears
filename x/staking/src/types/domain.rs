@@ -244,8 +244,8 @@ impl Validator {
         // calculate the shares to issue
         let issues_shares = if self.delegator_shares.is_zero() {
             // the first delegation to a validator sets the exchange rate to one
-            Decimal256::from_atomics(amount, 0)
-                .expect("Conversion won't fail. The number of decimal places is 0")
+            // TODO: infallible in sdk
+            Decimal256::from_atomics(amount, 0).unwrap()
         } else {
             // TODO: check the code, maybe remove unwrap
             self.shares_from_tokens(amount).unwrap()
@@ -262,14 +262,8 @@ impl Validator {
         }
         Ok(self
             .delegator_shares
-            .checked_mul(
-                Decimal256::from_atomics(amount, 0)
-                    .expect("Conversion won't fail. The number of decimal places is 0"),
-            )?
-            .checked_div(
-                Decimal256::from_atomics(self.tokens, 0)
-                    .expect("Conversion won't fail. The number of decimal places is 0"),
-            )?)
+            .checked_mul(Decimal256::from_atomics(amount, 0)?)?
+            .checked_div(Decimal256::from_atomics(self.tokens, 0)?)?)
     }
 
     pub fn shares_from_tokens_truncated(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
@@ -278,21 +272,15 @@ impl Validator {
         }
 
         // TODO: check
-        let mul = self.delegator_shares.checked_mul(
-            Decimal256::from_atomics(amount, 0)
-                .expect("Conversion won't fail. The number of decimal places is 0"),
-        )?;
+        let mul = self
+            .delegator_shares
+            .checked_mul(Decimal256::from_atomics(amount, 0)?)?;
         // TODO: check constant 18 in decimals
-        let precision_reuse = Decimal256::from_atomics(10u64, 0)
-            .expect("Conversion won't fail. The number of decimal places is 0")
-            .checked_pow(18)?;
+        let precision_reuse = Decimal256::from_atomics(10u64, 0)?.checked_pow(18)?;
         let mul2 = mul
             .checked_mul(precision_reuse)?
             .checked_mul(precision_reuse)?;
-        let div = mul2.checked_div(
-            Decimal256::from_atomics(self.tokens, 0)
-                .expect("Conversion won't fail. The number of decimal places is 0"),
-        )?;
+        let div = mul2.checked_div(Decimal256::from_atomics(self.tokens, 0)?)?;
         Ok(div.checked_div(precision_reuse)?)
     }
 
@@ -310,7 +298,7 @@ impl Validator {
         } else {
             // leave excess tokens in the validator
             // however fully use all the delegator shares
-            // TODO: unfailable + floor
+            // TODO: infallible + floor
             let tokens = self.tokens_from_shares(del_shares).unwrap().to_uint_floor();
             // TODO: check of negative result
             self.tokens -= tokens;
@@ -323,13 +311,10 @@ impl Validator {
     }
 
     /// calculate the token worth of provided shares
-    // TODO: unfailable in sdk
+    // TODO: infallible in sdk
     pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
         Ok(shares
-            .checked_mul(
-                Decimal256::from_atomics(self.tokens, 0)
-                    .expect("Conversion won't fail. The number of decimal places is 0"),
-            )?
+            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
             .checked_div(self.delegator_shares)?)
     }
 
