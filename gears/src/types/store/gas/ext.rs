@@ -1,6 +1,6 @@
 use super::errors::GasStoreErrors;
 
-pub const NO_GAS_IN_CTX: &str = "Context shouldn't have any gas so it save to unwrap";
+pub const NO_GAS_IN_CTX: &str = "Context shouldn't have any gas so it's save to unwrap";
 
 pub trait GasResultExt {
     type Output;
