@@ -5,12 +5,14 @@ use kv_store::{
         multi::MultiBank,
     },
     ApplicationStore, StoreKey, TransactionStore,
+    types::{kv::immutable::KVStore, multi::MultiBank},
+    ApplicationStore, StoreKey,
 };
-use tendermint::types::{proto::event::Event, time::Timestamp};
+use tendermint::types::proto::event::Event;
 
-use crate::types::store::kv::{mutable::StoreMut, Store};
+use crate::types::store::kv::Store;
 
-use super::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext};
+use super::{InfallibleContext, QueryableContext};
 
 #[derive(Debug)]
 enum SimpleBackend<'a, DB, SK> {
@@ -21,14 +23,27 @@ enum SimpleBackend<'a, DB, SK> {
 #[derive(Debug)]
 pub struct SimpleContext<'a, DB, SK> {
     multi_store: SimpleBackend<'a, DB, SK>,
+    height: u64,
     pub events: Vec<Event>,
 }
+
+impl<'a, DB, SK> SimpleContext<'a, DB, SK> {
+    pub fn new(multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>, height: u64) -> Self {
+        Self {
+            multi_store,
+            events: Vec::new(),
+            height,
+        }
+    }
+}
+
 
 impl<'a, DB, SK> From<&'a mut MultiBank<DB, SK, ApplicationStore>> for SimpleContext<'a, DB, SK> {
     fn from(value: &'a mut MultiBank<DB, SK, ApplicationStore>) -> Self {
         Self {
             multi_store: SimpleBackend::Application(value),
             events: Vec::new(),
+            height,
         }
     }
 }
@@ -46,7 +61,7 @@ impl<'a, DB, SK> SimpleContext<'a, DB, SK> {}
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, DB, SK> {
     fn height(&self) -> u64 {
-        unreachable!("inner type that is not supposed to provide external interfaces")
+        self.height
     }
 
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {

@@ -66,7 +66,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             params_subspace_key,
         };
 
-        let ctx = SimpleContext::from(&mut multi_store);
+        let height = multi_store.head_version() as u64;
+        let ctx = SimpleContext::new(&mut multi_store, height);
 
         let max_gas = baseapp_params_keeper
             .block_params(&ctx)
@@ -161,8 +162,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let height = self.block_height();
 
         let consensus_params = {
-            let ctx: SimpleContext<DB, <H as ABCIHandler>::StoreKey> =
-                SimpleContext::from(mode.multi_store());
+            let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
+            let ctx = SimpleContext::new(multi_store, height);
             self.baseapp_params_keeper.consensus_params(&ctx)
         };
 
