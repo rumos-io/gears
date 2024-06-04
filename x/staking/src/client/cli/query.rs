@@ -1,18 +1,18 @@
-use std::borrow::Cow;
-use std::fmt::Debug;
-
+use crate::{
+    QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
+    QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+};
 use clap::{Args, Subcommand};
-use prost::bytes::Bytes;
-
 use gears::{
     application::handlers::client::QueryHandler,
-    error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
-    types::{address::ValAddress, query::Query},
+    core::Protobuf,
+    types::{
+        address::{AccAddress, ValAddress},
+        query::Query,
+    },
 };
 use serde::{Deserialize, Serialize};
-
-use crate::query::{QueryValidatorRequest, QueryValidatorResponse};
+use std::{borrow::Cow, fmt::Debug};
 
 #[derive(Args, Debug)]
 pub struct StakingQueryCli {
@@ -23,6 +23,8 @@ pub struct StakingQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum StakingCommands {
     Validator(ValidatorCommand),
+    Delegation(DelegationCommand),
+    Redelegation(RedelegationCommand),
 }
 
 /// Query for validator account by address
@@ -30,6 +32,26 @@ pub enum StakingCommands {
 pub struct ValidatorCommand {
     /// address
     pub address: ValAddress,
+}
+
+/// Query for delegation from a delegator address to validator address
+#[derive(Args, Debug, Clone)]
+pub struct DelegationCommand {
+    /// Delegator address who sent delegation
+    pub delegator_address: AccAddress,
+    /// Validator address which is addressed to delegation
+    pub validator_address: ValAddress,
+}
+
+/// Query implements the command to query a single redelegation record.
+#[derive(Args, Debug, Clone)]
+pub struct RedelegationCommand {
+    /// Delegator address who sent delegation
+    pub delegator_address: AccAddress,
+    /// Source validator address which is addressed to delegation
+    pub src_validator_address: ValAddress,
+    /// Destination validator address which is addressed to delegation
+    pub dst_validator_address: ValAddress,
 }
 
 #[derive(Debug, Clone)]
@@ -52,6 +74,23 @@ impl QueryHandler for StakingQueryHandler {
                     address: address.clone(),
                 })
             }
+            StakingCommands::Delegation(DelegationCommand {
+                delegator_address,
+                validator_address,
+            }) => StakingQuery::Delegation(QueryDelegationRequest {
+                delegator_address: delegator_address.clone(),
+                validator_address: validator_address.clone(),
+            }),
+            StakingCommands::Redelegation(RedelegationCommand {
+                delegator_address,
+                src_validator_address,
+                dst_validator_address,
+            }) => StakingQuery::Redelegation(QueryRedelegationRequest {
+                delegator_address: delegator_address.clone().into(),
+                src_validator_address: src_validator_address.clone().into(),
+                dst_validator_address: dst_validator_address.clone().into(),
+                pagination: None,
+            }),
         };
 
         Ok(res)
@@ -63,8 +102,14 @@ impl QueryHandler for StakingQueryHandler {
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
         let res = match &command.command {
-            StakingCommands::Validator(_) => StakingQueryResponse::Validator(
-                QueryValidatorResponse::decode::<Bytes>(query_bytes.into())?,
+            StakingCommands::Validator(_) => {
+                StakingQueryResponse::Validator(QueryValidatorResponse::decode_vec(&query_bytes)?)
+            }
+            StakingCommands::Delegation(_) => {
+                StakingQueryResponse::Delegation(QueryDelegationResponse::decode_vec(&query_bytes)?)
+            }
+            StakingCommands::Redelegation(_) => StakingQueryResponse::Redelegation(
+                QueryRedelegationResponse::decode_vec(&query_bytes)?,
             ),
         };
 
@@ -75,24 +120,37 @@ impl QueryHandler for StakingQueryHandler {
 #[derive(Clone, PartialEq)]
 pub enum StakingQuery {
     Validator(QueryValidatorRequest),
+    Delegation(QueryDelegationRequest),
+    Redelegation(QueryRedelegationRequest),
 }
 
 impl Query for StakingQuery {
     fn query_url(&self) -> Cow<'static, str> {
         match self {
             StakingQuery::Validator(_) => Cow::Borrowed("/cosmos.staking.v1beta1.Query/Validator"),
+            StakingQuery::Delegation(_) => {
+                Cow::Borrowed("/cosmos.staking.v1beta1.Query/Delegation")
+            }
+            StakingQuery::Redelegation(_) => {
+                Cow::Borrowed("/cosmos.staking.v1beta1.Query/Redelegation")
+            }
         }
     }
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            StakingQuery::Validator(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+            StakingQuery::Validator(var) => var.encode_vec(),
+            StakingQuery::Delegation(var) => var.encode_vec(),
+            StakingQuery::Redelegation(var) => var.encode_vec(),
         }
     }
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum StakingQueryResponse {
     Validator(QueryValidatorResponse),
+    Delegation(QueryDelegationResponse),
+    Redelegation(QueryRedelegationResponse),
 }

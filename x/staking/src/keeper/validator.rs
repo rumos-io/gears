@@ -1,13 +1,9 @@
 pub use super::*;
 use crate::{
     consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT},
-    Commission, CreateValidator, Validator,
+    Validator,
 };
-use gears::{
-    context::tx::TxContext,
-    store::database::ext::UnwrapCorrupt,
-    types::{address::ConsAddress, store::errors::StoreErrors},
-};
+use gears::{store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
         SK: StoreKey,
@@ -17,118 +13,6 @@ impl<
         KH: KeeperHooks<SK>,
     > Keeper<SK, PSK, AK, BK, KH>
 {
-    /// CreateValidator defines a method for creating a new validator
-    pub fn create_validator<DB: Database>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        msg: &CreateValidator,
-    ) -> Result<(), AppError> {
-        let params = self.staking_params_keeper.try_get(ctx)?;
-
-        if self.validator(ctx, &msg.validator_address)?.is_some() {
-            return Err(AppError::Custom(format!(
-                "Account {} exists",
-                msg.validator_address
-            )));
-        };
-
-        let cons_addr: ConsAddress = msg.pub_key.clone().into();
-        if self.validator_by_cons_addr(ctx, &cons_addr)?.is_some() {
-            return Err(AppError::Custom(format!(
-                "Public key {} exists",
-                ConsAddress::from(msg.pub_key.clone())
-            )));
-        }
-
-        if msg.value.denom != params.bond_denom {
-            return Err(AppError::InvalidRequest(format!(
-                "invalid coin denomination: got {}, expected {}",
-                msg.value.denom, params.bond_denom
-            )));
-        }
-
-        msg.description.ensure_length()?;
-
-        let consensus_validators = &ctx.consensus_params().validator;
-        // TODO: discuss impl of `str_type`
-        let pub_key_type = msg.pub_key.str_type();
-        if !consensus_validators
-            .pub_key_types
-            .iter()
-            .any(|key_type| pub_key_type == key_type)
-        {
-            return Err(AppError::InvalidPublicKey);
-        }
-
-        let mut validator = Validator::new_with_defaults(
-            msg.validator_address.clone(),
-            msg.pub_key.clone(),
-            msg.description.clone(),
-        );
-
-        // TODO: make better api for timestamps in Gears
-        let update_time = ctx.get_time();
-        let commission = Commission::new(msg.commission.clone(), update_time)?;
-        validator.set_initial_commission(commission);
-        validator.min_self_delegation = msg.min_self_delegation;
-
-        self.set_validator(ctx, &validator)?;
-        self.set_validator_by_cons_addr(ctx, &validator)?;
-        self.set_new_validator_by_power_index(ctx, &validator)?;
-
-        // call the after-creation hook
-        self.after_validator_created(ctx, &validator);
-
-        // move coins from the msg.address account to a (self-delegation) delegator account
-        // the validator account and global shares are updated within here
-        // NOTE source will always be from a wallet which are unbonded
-        self.delegate(
-            ctx,
-            msg.delegator_address.clone(),
-            msg.value.amount,
-            BondStatus::Unbonded,
-            &mut validator,
-            true,
-        )?;
-
-        ctx.append_events(vec![
-            Event {
-                r#type: EVENT_TYPE_CREATE_VALIDATOR.to_string(),
-                attributes: vec![
-                    EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: msg.validator_address.to_string().as_bytes().to_vec().into(),
-                        index: false,
-                    },
-                    EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&msg.value)
-                            .expect(SERDE_ENCODING_DOMAIN_TYPE)
-                            .into(),
-                        index: false,
-                    },
-                ],
-            },
-            Event {
-                r#type: EVENT_TYPE_MESSAGE.to_string(),
-                attributes: vec![
-                    EventAttribute {
-                        key: ATTRIBUTE_KEY_MODULE.as_bytes().into(),
-                        value: ATTRIBUTE_VALUE_CATEGORY.as_bytes().to_vec().into(),
-                        index: false,
-                    },
-                    EventAttribute {
-                        key: ATTRIBUTE_KEY_SENDER.as_bytes().into(),
-                        value: msg.delegator_address.to_string().as_bytes().to_vec().into(),
-                        index: false,
-                    },
-                ],
-            },
-        ]);
-
-        Ok(())
-    }
-
     pub fn validator<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
@@ -152,6 +36,32 @@ impl<
             validator.operator_address.to_string().as_bytes().to_vec(),
             serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
         )
+    }
+
+    pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
+        validators_store.delete(validator.operator_address.to_string().as_bytes())
+    }
+
+    pub fn jail_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+    ) -> Result<(), StoreErrors> {
+        assert!(
+            !validator.jailed,
+            "cannot jail already jailed validator, validator: {}",
+            validator.operator_address
+        );
+        validator.jailed = true;
+        self.set_validator(ctx, validator)?;
+        self.delete_validator_by_power_index(ctx, validator)?;
+        Ok(())
     }
 
     pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -181,16 +91,6 @@ impl<
         )
     }
 
-    pub fn remove_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        addr: &[u8],
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
-        validators_store.delete(addr)
-    }
-
     /// Update the tokens of an existing validator, update the validators power index key
     pub fn add_validator_tokens_and_shares<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
@@ -205,11 +105,25 @@ impl<
         Ok(added_shares)
     }
 
+    /// Update the tokens of an existing validator, update the validators power index key
+    pub fn remove_validator_tokens_and_shares<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &mut Validator,
+        shares_to_remove: Decimal256,
+    ) -> Result<Uint256, StoreErrors> {
+        self.delete_validator_by_power_index(ctx, validator)?;
+        let removed_tokens = validator.remove_del_shares(shares_to_remove);
+        self.set_validator(ctx, validator)?;
+        self.set_validator_by_power_index(ctx, validator)?;
+        Ok(removed_tokens)
+    }
+
     pub fn validator_queue_map<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: chrono::DateTime<Utc>,
-        block_height: i64,
+        block_height: u64,
     ) -> HashMap<Vec<u8>, Vec<String>> {
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
@@ -283,15 +197,15 @@ impl<
     }
 }
 
-pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i64) -> Vec<u8> {
-    let height_bz = end_height.to_ne_bytes();
+pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: u64) -> Vec<u8> {
+    let height_bz = end_height.to_le_bytes();
     let time_bz = end_time
         .timestamp_nanos_opt()
         .expect(TIMESTAMP_NANOS_EXPECT)
-        .to_ne_bytes();
+        .to_le_bytes();
 
     let mut bz = VALIDATORS_QUEUE_KEY.to_vec();
-    bz.extend_from_slice(&(time_bz.len() as u64).to_ne_bytes());
+    bz.extend_from_slice(&(time_bz.len() as u64).to_le_bytes());
     bz.extend_from_slice(&time_bz);
     bz.extend_from_slice(&height_bz);
     bz
@@ -299,17 +213,17 @@ pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: i
 
 pub(super) fn parse_validator_queue_key(
     key: &[u8],
-) -> anyhow::Result<(chrono::DateTime<Utc>, i64)> {
+) -> anyhow::Result<(chrono::DateTime<Utc>, u64)> {
     let prefix_len = VALIDATORS_QUEUE_KEY.len();
     if key[..prefix_len] != VALIDATORS_QUEUE_KEY {
         return Err(
             AppError::Custom("Invalid validators queue key. Invalid prefix.".into()).into(),
         );
     }
-    let time_len = u64::from_ne_bytes(key[prefix_len..prefix_len + 8].try_into()?);
-    let time = chrono::DateTime::from_timestamp_nanos(i64::from_ne_bytes(
+    let time_len = u64::from_le_bytes(key[prefix_len..prefix_len + 8].try_into()?);
+    let time = chrono::DateTime::from_timestamp_nanos(i64::from_le_bytes(
         key[prefix_len + 8..prefix_len + 8 + time_len as usize].try_into()?,
     ));
-    let height = i64::from_ne_bytes(key[prefix_len + 8 + time_len as usize..].try_into()?);
+    let height = u64::from_le_bytes(key[prefix_len + 8 + time_len as usize..].try_into()?);
     Ok((time, height))
 }

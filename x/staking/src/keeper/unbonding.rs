@@ -22,9 +22,9 @@ impl<
         val_addr: ValAddress,
     ) -> Option<UnbondingDelegation> {
         let store = InfallibleContext::infallible_store(ctx, &self.store_key);
-        let delegations_store = store.prefix_store(DELEGATIONS_KEY);
-        let mut key = del_addr.to_string().as_bytes().to_vec();
-        key.put(val_addr.to_string().as_bytes());
+        let delegations_store = store.prefix_store(UNBONDING_DELEGATIONS_KEY);
+        let mut key = Vec::from(del_addr);
+        key.extend_from_slice(&Vec::from(val_addr));
         if let Some(bytes) = delegations_store.get(&key) {
             if let Ok(delegation) = serde_json::from_slice(&bytes) {
                 return Some(delegation);
@@ -39,9 +39,9 @@ impl<
         delegation: &UnbondingDelegation,
     ) {
         let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
-        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
-        key.put(delegation.validator_address.to_string().as_bytes());
+        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATIONS_KEY);
+        let mut key = Vec::from(delegation.delegator_address.clone());
+        key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.set(
             key,
             serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
@@ -54,9 +54,9 @@ impl<
         delegation: &UnbondingDelegation,
     ) -> Option<Vec<u8>> {
         let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
-        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
-        key.put(delegation.validator_address.to_string().as_bytes());
+        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATIONS_KEY);
+        let mut key = Vec::from(delegation.delegator_address.clone());
+        key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.delete(&key)
     }
 
@@ -65,11 +65,14 @@ impl<
     pub fn dequeue_all_mature_ubd_queue<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        time: chrono::DateTime<Utc>,
+        time: Timestamp,
     ) -> Vec<DvPair> {
         let (keys, mature_unbonds) = {
             let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
+            // TODO: consider to move the DataTime type and work with timestamps into Gears
+            // The timestamp is provided by context and conversion won't fail.
+            let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
             let end = unbonding_delegation_time_key(time).to_vec();
             let mut mature_unbonds = vec![];
             let mut keys = vec![];
@@ -140,7 +143,7 @@ impl<
         time: &Timestamp,
     ) -> Option<Vec<DvPair>> {
         let store = InfallibleContext::infallible_store(ctx, &self.store_key);
-        let store = store.prefix_store(UBD_QUEUE_KEY);
+        let store = store.prefix_store(UNBONDING_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
@@ -158,7 +161,7 @@ impl<
         time_slice: Vec<DvPair>,
     ) {
         let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut store = store.prefix_store_mut(UBD_QUEUE_KEY);
+        let mut store = store.prefix_store_mut(UNBONDING_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
@@ -208,7 +211,7 @@ impl<
         let block_time =
             chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
 
-        let block_height = ctx.height() as i64;
+        let block_height = ctx.height();
 
         // unbondingValIterator will contains all validator addresses indexed under
         // the ValidatorQueueKey prefix. Note, the entire index key is composed as
@@ -243,10 +246,7 @@ impl<
                     self.unbonding_to_unbonded(ctx, &mut validator)
                         .expect(CTX_NO_GAS_UNWRAP);
                     if validator.delegator_shares.is_zero() {
-                        self.remove_validator(
-                            ctx,
-                            validator.operator_address.to_string().as_bytes(),
-                        )?;
+                        self.remove_validator(ctx, &validator)?;
                     }
                 }
             }
@@ -375,7 +375,7 @@ impl<
 
         // set the unbonding completion time and completion height appropriately
         validator.unbonding_time = ctx.get_time();
-        validator.unbonding_height = ctx.height() as i64;
+        validator.unbonding_height = ctx.height();
 
         // save the now unbonded validator record and power index
         self.set_validator(ctx, validator)?;
@@ -393,7 +393,7 @@ impl<
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
-        end_height: i64,
+        end_height: u64,
         addrs: Vec<String>,
     ) -> Result<(), StoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
@@ -415,7 +415,7 @@ impl<
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
-        end_height: i64,
+        end_height: u64,
     ) -> Result<(), StoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
@@ -432,7 +432,7 @@ impl<
         &self,
         ctx: &mut CTX,
         unbonding_time: &Timestamp,
-        unbonding_height: i64,
+        unbonding_height: u64,
     ) -> Result<Vec<String>, StoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let store = store.prefix_store(VALIDATORS_QUEUE_KEY);
@@ -455,5 +455,5 @@ impl<
 pub(super) fn unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
     time.timestamp_nanos_opt()
         .expect(TIMESTAMP_NANOS_EXPECT)
-        .to_ne_bytes()
+        .to_le_bytes()
 }

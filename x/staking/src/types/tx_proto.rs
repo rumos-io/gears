@@ -1,6 +1,6 @@
 use crate::consts::proto::*;
 use gears::{
-    core::Protobuf,
+    core::{errors::Error, Protobuf},
     error::AppError,
     tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
     types::{
@@ -72,6 +72,25 @@ pub struct Commission {
     update_time: Timestamp,
 }
 
+impl TryFrom<CommissionRaw> for Commission {
+    type Error = Error;
+
+    fn try_from(value: CommissionRaw) -> Result<Self, Self::Error> {
+        Ok(Self {
+            commission_rates: value
+                .commission_rates
+                .ok_or(Error::MissingField(
+                    "Missing field 'commission_rates'.".into(),
+                ))?
+                .try_into()
+                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+            update_time: value
+                .update_time
+                .ok_or(Error::MissingField("Missing field 'update_time'.".into()))?,
+        })
+    }
+}
+
 impl Commission {
     pub fn new(
         commission_rates: CommissionRates,
@@ -108,6 +127,26 @@ impl Commission {
         Ok(())
     }
 }
+
+/// Commission defines commission parameters for a given validator.
+#[derive(Clone, PartialEq, Message)]
+pub struct CommissionRaw {
+    #[prost(message, optional)]
+    pub commission_rates: Option<CommissionRatesRaw>,
+    #[prost(message, optional)]
+    pub update_time: Option<Timestamp>,
+}
+
+impl From<Commission> for CommissionRaw {
+    fn from(value: Commission) -> Self {
+        Self {
+            commission_rates: Some(value.commission_rates.into()),
+            update_time: Some(value.update_time),
+        }
+    }
+}
+
+impl Protobuf<CommissionRaw> for Commission {}
 
 /// Description defines a validator description.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
@@ -222,33 +261,135 @@ pub struct CreateValidator {
 }
 
 impl TryFrom<CreateValidatorRaw> for CreateValidator {
-    type Error = anyhow::Error;
+    type Error = Error;
 
     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
         Ok(CreateValidator {
-            description: src.description.ok_or(AppError::Custom(
-                "Value should exists. It's the proto3 rule to have Option<T> instead of T".into(),
-            ))?,
+            description: src
+                .description
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?,
             commission: src
                 .commission
-                .ok_or(AppError::Custom(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
-                .try_into()?,
-            min_self_delegation: Uint256::from_str(&src.min_self_delegation)?,
-            delegator_address: AccAddress::from_bech32(&src.delegator_address)?,
-            validator_address: ValAddress::from_bech32(&src.validator_address)?,
-            pub_key: serde_json::from_slice(&src.pub_key)?,
+                .ok_or(Error::MissingField("Missing field 'commission'.".into()))?
+                .try_into()
+                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+            min_self_delegation: Uint256::from_str(&src.min_self_delegation)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            validator_address: ValAddress::from_bech32(&src.validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            pub_key: serde_json::from_slice(&src.pub_key)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             value: src
                 .value
-                .ok_or(AppError::Custom(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
-                .try_into()?,
+                .ok_or(Error::MissingField("Missing field 'value'.".into()))?
+                .try_into()
+                .map_err(|e| Error::Coin(format!("{e}")))?,
         })
     }
 }
 
 impl Protobuf<CreateValidatorRaw> for CreateValidator {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct DelegateMsgRaw {
+    #[prost(string)]
+    pub delegator_address: String,
+    #[prost(string)]
+    pub validator_address: String,
+    #[prost(message, optional)]
+    pub amount: Option<CoinRaw>,
+}
+
+impl From<DelegateMsg> for DelegateMsgRaw {
+    fn from(src: DelegateMsg) -> Self {
+        Self {
+            delegator_address: src.delegator_address.to_string(),
+            validator_address: src.validator_address.to_string(),
+            amount: Some(src.amount.into()),
+        }
+    }
+}
+
+/// Creates a new DelegateMsg transaction message instance.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct DelegateMsg {
+    pub delegator_address: AccAddress,
+    pub validator_address: ValAddress,
+    pub amount: Coin,
+}
+
+impl TryFrom<DelegateMsgRaw> for DelegateMsg {
+    type Error = Error;
+
+    fn try_from(src: DelegateMsgRaw) -> Result<Self, Self::Error> {
+        Ok(DelegateMsg {
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            validator_address: ValAddress::from_bech32(&src.validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            amount: src
+                .amount
+                .ok_or(Error::MissingField("Missing field 'amount'.".into()))?
+                .try_into()
+                .map_err(|e| Error::Coin(format!("{e}")))?,
+        })
+    }
+}
+
+impl Protobuf<DelegateMsgRaw> for DelegateMsg {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct RedelegateMsgRaw {
+    #[prost(string)]
+    pub delegator_address: String,
+    #[prost(string)]
+    pub src_validator_address: String,
+    #[prost(string)]
+    pub dst_validator_address: String,
+    #[prost(message, optional)]
+    pub amount: Option<CoinRaw>,
+}
+
+impl From<RedelegateMsg> for RedelegateMsgRaw {
+    fn from(src: RedelegateMsg) -> Self {
+        Self {
+            delegator_address: src.delegator_address.to_string(),
+            src_validator_address: src.src_validator_address.to_string(),
+            dst_validator_address: src.dst_validator_address.to_string(),
+            amount: Some(src.amount.into()),
+        }
+    }
+}
+
+/// Creates a new RedelegateMsg transaction message instance.
+#[derive(Clone, PartialEq, Serialize, Deserialize)]
+pub struct RedelegateMsg {
+    pub delegator_address: AccAddress,
+    pub src_validator_address: ValAddress,
+    pub dst_validator_address: ValAddress,
+    pub amount: Coin,
+}
+
+impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
+    type Error = Error;
+
+    fn try_from(src: RedelegateMsgRaw) -> Result<Self, Self::Error> {
+        Ok(RedelegateMsg {
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            src_validator_address: ValAddress::from_bech32(&src.src_validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            dst_validator_address: ValAddress::from_bech32(&src.dst_validator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            amount: src
+                .amount
+                .ok_or(Error::MissingField("Missing field 'amount'.".into()))?
+                .try_into()
+                .map_err(|e| Error::Coin(format!("{e}")))?,
+        })
+    }
+}
+
+impl Protobuf<RedelegateMsgRaw> for RedelegateMsg {}

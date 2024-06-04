@@ -1,4 +1,7 @@
-use crate::{CommissionRates, CreateValidator, Description, Message as StakingMessage};
+use crate::{
+    CommissionRates, CreateValidator, DelegateMsg, Description, Message as StakingMessage,
+    RedelegateMsg,
+};
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use gears::{
@@ -21,6 +24,7 @@ pub struct StakingTxCli {
 }
 
 #[derive(Subcommand, Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub enum StakingCommands {
     /// Create new validator initialized with a self-delegation to it
     CreateValidator {
@@ -55,6 +59,22 @@ pub enum StakingCommands {
         #[arg(long, default_value_t = Uint256::one())]
         min_self_delegation: Uint256,
     },
+    /// Delegate liquid tokens to a validator
+    Delegate {
+        /// The validator account address
+        validator_address: ValAddress,
+        /// Amount of coins to bond
+        amount: Coin,
+    },
+    /// Redelegate illiquid tokens from one validator to another
+    Redelegate {
+        /// The validator account address from which sends coins
+        src_validator_address: ValAddress,
+        /// The validator account address that receives coins
+        dst_validator_address: ValAddress,
+        /// Amount of coins to redelegate
+        amount: Coin,
+    },
 }
 
 pub fn run_staking_tx_command(
@@ -76,7 +96,7 @@ pub fn run_staking_tx_command(
             min_self_delegation,
         } => {
             let delegator_address = from_address.clone();
-            let validator_address = ValAddress::try_from(hex::decode(from_address.as_hex())?)?;
+            let validator_address = ValAddress::try_from(Vec::from(from_address))?;
             // TODO: add implementation of FromStr to TendermintPublicKey and declare type in
             // command enum
             let pub_key: TendermintPublicKey = serde_json::from_slice(pubkey.as_bytes())?;
@@ -117,5 +137,23 @@ pub fn run_staking_tx_command(
             //
             // return txf, msg, nil
         }
+        StakingCommands::Delegate {
+            validator_address,
+            amount,
+        } => Ok(StakingMessage::Delegate(DelegateMsg {
+            delegator_address: from_address.clone(),
+            validator_address: validator_address.clone(),
+            amount: amount.clone(),
+        })),
+        StakingCommands::Redelegate {
+            src_validator_address,
+            dst_validator_address,
+            amount,
+        } => Ok(StakingMessage::Redelegate(RedelegateMsg {
+            delegator_address: from_address.clone(),
+            src_validator_address: src_validator_address.clone(),
+            dst_validator_address: dst_validator_address.clone(),
+            amount: amount.clone(),
+        })),
     }
 }
