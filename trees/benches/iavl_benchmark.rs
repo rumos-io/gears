@@ -1,7 +1,7 @@
 use std::{fmt, fs, time::Instant};
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
-use database::RocksDB;
+use database::rocks::RocksDB;
 use pprof::criterion::{Output, PProfProfiler};
 use rand::{distributions::Standard, Rng};
 use trees::iavl::Tree;

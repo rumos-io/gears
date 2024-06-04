@@ -17,7 +17,7 @@ use crate::{
     },
 };
 use bytes::Bytes;
-use database::RocksDB;
+use database::Database;
 use kv_store::{
     types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore,
@@ -46,9 +46,9 @@ pub use query::*;
 static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone)]
-pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
-    state: Arc<RwLock<ApplicationState<RocksDB, H>>>,
-    multi_store: Arc<RwLock<MultiBank<RocksDB, H::StoreKey, ApplicationStore>>>,
+pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
+    state: Arc<RwLock<ApplicationState<DB, H>>>,
+    multi_store: Arc<RwLock<MultiBank<DB, H::StoreKey, ApplicationStore>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
@@ -56,20 +56,18 @@ pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> 
     _info_marker: PhantomData<AI>,
 }
 
-impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H, AI> {
-    pub fn new(
-        db: RocksDB,
-        params_subspace_key: PSK,
-        abci_handler: H,
-        options: NodeOptions,
-    ) -> Self {
+impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
+    BaseApp<DB, PSK, H, AI>
+{
+    pub fn new(db: DB, params_subspace_key: PSK, abci_handler: H, options: NodeOptions) -> Self {
         let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_subspace_key,
         };
 
-        let ctx = SimpleContext::new(&mut multi_store);
+        let height = multi_store.head_version() as u64;
+        let ctx = SimpleContext::new((&mut multi_store).into(), height);
 
         let max_gas = baseapp_params_keeper
             .block_params(&ctx)
@@ -150,7 +148,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         Ok(())
     }
 
-    fn run_tx<MD: ExecutionMode<RocksDB, H>>(
+    fn run_tx<MD: ExecutionMode<DB, H>>(
         &self,
         raw: Bytes,
         mode: &mut MD,
@@ -165,7 +163,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
 
         let consensus_params = {
             let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
-            let ctx = SimpleContext::new(multi_store);
+            let ctx = SimpleContext::new(multi_store.into(), height);
             self.baseapp_params_keeper.consensus_params(&ctx)
         };
 
@@ -177,8 +175,6 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             Some(&tx_with_raw.tx.auth_info.fee),
             self.options.clone(),
         );
-
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         MD::runnable(&mut ctx)?;
         MD::run_ante_checks(&mut ctx, &self.abci_handler, &tx_with_raw)?;
@@ -195,7 +191,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         ctx.block_gas_meter
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
-        MD::commit(ctx, &mut multi_store);
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        MD::commit(ctx, &mut *multi_store);
 
         Ok(RunTxInfo {
             events,

@@ -2,7 +2,7 @@ use database::Database;
 
 use crate::{
     params::{parsed::Params, ParamKind, ParamsDeserialize, ParamsSerialize},
-    types::store::{errors::StoreErrors, prefix::mutable::PrefixStoreMut},
+    types::store::{gas::errors::GasStoreErrors, prefix::mutable::PrefixStoreMut},
 };
 
 use super::space::GasParamsSpace;
@@ -21,16 +21,20 @@ impl<DB: Database> GasParamsSpaceMut<'_, DB> {
 
 impl<DB: Database> GasParamsSpaceMut<'_, DB> {
     /// Return whole serialized structure.
-    pub fn params<T: ParamsDeserialize>(&self) -> Result<Option<T>, StoreErrors> {
+    pub fn params<T: ParamsDeserialize>(&self) -> Result<Option<T>, GasStoreErrors> {
         self.to_immutable().params()
     }
 
     /// Return only field from structure.
-    pub fn params_field(&self, path: &str, kind: ParamKind) -> Result<Option<Params>, StoreErrors> {
+    pub fn params_field(
+        &self,
+        path: &str,
+        kind: ParamKind,
+    ) -> Result<Option<Params>, GasStoreErrors> {
         self.to_immutable().params_field(path, kind)
     }
 
-    pub fn params_set<T: ParamsSerialize>(&mut self, params: &T) -> Result<(), StoreErrors> {
+    pub fn params_set<T: ParamsSerialize>(&mut self, params: &T) -> Result<(), GasStoreErrors> {
         let params = params.to_raw();
 
         for (key, value) in params {

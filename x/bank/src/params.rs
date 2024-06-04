@@ -9,7 +9,7 @@ use gears::params::{
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::types::store::errors::StoreErrors;
+use gears::types::store::gas::errors::GasStoreErrors;
 use serde::{Deserialize, Serialize};
 
 const KEY_SEND_ENABLED: &str = "SendEnabled";
@@ -89,7 +89,7 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
     pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<BankParams, StoreErrors> {
+    ) -> Result<BankParams, GasStoreErrors> {
         let store = gas::subspace(ctx, &self.params_subspace_key);
 
         Ok(store.params()?.unwrap_or(DEFAULT_PARAMS.clone()))
@@ -99,7 +99,7 @@ impl<PSK: ParamsSubspaceKey> BankParamsKeeper<PSK> {
         &self,
         ctx: &mut CTX,
         params: BankParams,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)?;

@@ -36,6 +36,12 @@ impl<DB, AH: ABCIHandler> CheckTxMode<DB, AH> {
 }
 
 impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH> {
+    fn multi_store(
+        &mut self,
+    ) -> &mut MultiBank<DB, <AH as ABCIHandler>::StoreKey, TransactionStore> {
+        &mut self.multi_store
+    }
+
     fn build_ctx(
         &mut self,
         height: u64,

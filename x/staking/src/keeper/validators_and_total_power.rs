@@ -1,8 +1,5 @@
 use super::*;
-use gears::{
-    context::InfallibleContext, store::database::ext::UnwrapCorrupt,
-    types::store::errors::StoreErrors,
-};
+use gears::{context::InfallibleContext, store::database::ext::UnwrapCorrupt};
 
 impl<
         SK: StoreKey,
@@ -32,7 +29,7 @@ impl<
         &self,
         ctx: &mut CTX,
         last_total_power: Uint256,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes())
     }
@@ -46,7 +43,8 @@ impl<
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
         let mut res = HashMap::new();
         // TODO:D Handle error if you need
-        for (k, v) in iterator.range(..).to_infallible_iter() {
+        for next in iterator.range(..) {
+            let (k, v) = next?;
             res.insert(k.to_vec(), serde_json::from_slice(&v)?);
         }
         Ok(res)
@@ -56,7 +54,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
@@ -76,7 +74,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
@@ -91,7 +89,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+    ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
@@ -106,6 +104,7 @@ impl<
         let mut last = HashMap::new();
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
+        // TODO: check path and remove `to_infallible_iter` or change signature
         for (k, v) in store.range(..).to_infallible_iter() {
             let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
             last.insert(k.to_string(), v.to_vec());
@@ -117,14 +116,15 @@ impl<
     pub fn last_validators<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Vec<Validator>, StoreErrors> {
+    ) -> Result<Vec<Validator>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
 
         // add the actual validator power sorted store
         let max_validators = self.staking_params_keeper.try_get(ctx)?.max_validators as usize;
         let mut validators = Vec::with_capacity(max_validators);
-        for (i, (_k, v)) in validators_store.range(..).to_infallible_iter().enumerate() {
+        for (i, next) in validators_store.range(..).enumerate() {
+            let (_k, v) = next?;
             assert!(
                 i < max_validators,
                 "more validators than maxValidators found"
@@ -142,7 +142,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &LastValidatorPower,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
         let key = validator.address.to_string().as_bytes().to_vec();
@@ -156,7 +156,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &ValAddress,
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+    ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
         delegations_store.delete(validator.to_string().as_bytes())

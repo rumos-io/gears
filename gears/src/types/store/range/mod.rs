@@ -6,7 +6,7 @@ use database::Database;
 use infallible::RangeIter;
 use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
-use super::{errors::StoreErrors, gas::range::GasRange};
+use super::gas::{errors::GasStoreErrors, range::GasRange};
 
 #[derive(Debug)]
 enum StoreRangeBackend<'a, DB> {
@@ -29,13 +29,11 @@ impl<'a, DB> StoreRange<'a, DB> {
 }
 
 impl<'a, DB: Database> Iterator for StoreRange<'a, DB> {
-    type Item = Result<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>), StoreErrors>;
+    type Item = Result<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.0 {
-            StoreRangeBackend::Gas(var) => {
-                var.next().map(|this| this.map_err(|e| StoreErrors::Gas(e)))
-            }
+            StoreRangeBackend::Gas(var) => var.next(),
             StoreRangeBackend::Kv(var) => var.next().map(|e| Ok(e)),
             StoreRangeBackend::Prefix(var) => var.next().map(|e| Ok(e)),
         }

@@ -92,7 +92,7 @@ impl<
         ctx: &mut CTX,
         del_addr: &AccAddress,
         val_src_addr: &ValAddress,
-    ) -> Result<bool, StoreErrors> {
+    ) -> Result<bool, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
 
         let mut prefix = REDELEGATION_BY_VAL_DST_INDEX_KEY.to_vec();
@@ -109,7 +109,7 @@ impl<
         del_addr: &AccAddress,
         val_src_addr: &ValAddress,
         val_dst_addr: &ValAddress,
-    ) -> Result<bool, StoreErrors> {
+    ) -> Result<bool, GasStoreErrors> {
         let params = self.staking_params_keeper.try_get(ctx)?;
 
         if let Some(redelegation) = self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)? {
@@ -133,7 +133,7 @@ impl<
         min_time: Timestamp,
         balance: Uint256,
         shares_dst: Decimal256,
-    ) -> Result<Redelegation, StoreErrors> {
+    ) -> Result<Redelegation, GasStoreErrors> {
         let entry = RedelegationEntry {
             creation_height,
             completion_time: min_time,
@@ -164,7 +164,7 @@ impl<
         del_addr: &AccAddress,
         val_src_addr: &ValAddress,
         val_dst_addr: &ValAddress,
-    ) -> Result<Option<Redelegation>, StoreErrors> {
+    ) -> Result<Option<Redelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATIONS_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
@@ -179,7 +179,7 @@ impl<
         &self,
         ctx: &mut CTX,
         delegation: &Redelegation,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
@@ -253,7 +253,7 @@ impl<
         ctx: &mut CTX,
         redelegation: &Redelegation,
         completion_time: Timestamp,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let completion_time =
@@ -278,7 +278,7 @@ impl<
         &self,
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
-    ) -> Result<Vec<DvvTriplet>, StoreErrors> {
+    ) -> Result<Vec<DvvTriplet>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
@@ -298,7 +298,7 @@ impl<
         ctx: &mut CTX,
         completion_time: chrono::DateTime<Utc>,
         redelegations: Vec<DvvTriplet>,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 

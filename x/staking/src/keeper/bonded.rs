@@ -1,5 +1,5 @@
 use super::*;
-use gears::types::{account::ModuleAccount, store::errors::StoreErrors};
+use gears::types::{account::ModuleAccount, store::gas::errors::GasStoreErrors};
 
 impl<
         SK: StoreKey,
@@ -31,7 +31,7 @@ impl<
         &self,
         ctx: &mut CTX,
         amount: Uint256,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let params = self.staking_params_keeper.try_get(ctx)?;
 
         // TODO: original routine is infallible, it means that the amount is a valid number.
@@ -75,7 +75,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         // delete the validator by power index, as the key will change
         self.delete_validator_by_power_index(ctx, validator)?;
 

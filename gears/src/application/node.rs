@@ -1,3 +1,7 @@
+use std::marker::PhantomData;
+
+use database::{Database, DatabaseBuilder};
+
 use super::{
     handlers::{node::ABCIHandler, AuxHandler},
     ApplicationInfo,
@@ -23,16 +27,19 @@ pub trait Node:
     type ApplicationConfig: ApplicationConfig;
 }
 
-pub struct NodeApplication<'a, Core: Node> {
+pub struct NodeApplication<'a, Core: Node, DB: Database, DBO: DatabaseBuilder<DB>> {
     core: Core,
     abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
 
     params_subspace_key: Core::ParamsSubspaceKey,
+    db_builder: DBO,
+    _marker: PhantomData<DB>,
 }
 
-impl<'a, Core: Node> NodeApplication<'a, Core> {
+impl<'a, Core: Node, DB: Database, DBO: DatabaseBuilder<DB>> NodeApplication<'a, Core, DB, DBO> {
     pub fn new(
         core: Core,
+        db_builder: DBO,
         abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
         params_subspace_key: Core::ParamsSubspaceKey,
     ) -> Self {
@@ -40,6 +47,8 @@ impl<'a, Core: Node> NodeApplication<'a, Core> {
             core,
             abci_handler_builder,
             params_subspace_key,
+            db_builder,
+            _marker: PhantomData,
         }
     }
 
@@ -53,8 +62,9 @@ impl<'a, Core: Node> NodeApplication<'a, Core> {
                 cmd,
                 &<<Core as Node>::Handler as ABCIHandler>::Genesis::default(),
             )?,
-            AppCommands::Run(cmd) => run::<_, _, _, AI, _>(
+            AppCommands::Run(cmd) => run::<DB, DBO, _, _, _, AI, _>(
                 cmd,
+                self.db_builder,
                 self.params_subspace_key,
                 self.abci_handler_builder,
                 self.core,

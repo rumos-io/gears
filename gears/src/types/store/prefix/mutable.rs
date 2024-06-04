@@ -1,7 +1,7 @@
 use database::Database;
 use kv_store::types::prefix::mutable::MutablePrefixStore;
 
-use crate::types::store::{errors::StoreErrors, gas::prefix::mutable::GasPrefixStoreMut};
+use crate::types::store::gas::{errors::GasStoreErrors, prefix::mutable::GasPrefixStoreMut};
 
 use super::PrefixStore;
 
@@ -26,14 +26,14 @@ impl<'a, DB: Database> PrefixStoreMut<'a, DB> {
         }
     }
 
-    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, StoreErrors> {
+    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         match &mut self.0 {
             PrefixStoreMutBackend::Gas(var) => Ok(var.delete(k)?),
             PrefixStoreMutBackend::Kv(var) => Ok(var.delete(k)),
         }
     }
 
-    pub fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, StoreErrors> {
+    pub fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         match &self.0 {
             PrefixStoreMutBackend::Gas(var) => Ok(var.get(k)?),
             PrefixStoreMutBackend::Kv(var) => Ok(var.get(k)),
@@ -44,7 +44,7 @@ impl<'a, DB: Database> PrefixStoreMut<'a, DB> {
         &mut self,
         k: KI,
         v: VI,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         match &mut self.0 {
             PrefixStoreMutBackend::Gas(var) => Ok(var.set(k, v)?),
             PrefixStoreMutBackend::Kv(var) => Ok(var.set(k, v)),

@@ -8,7 +8,7 @@ use crate::params::ParamsSubspaceKey;
 use crate::rest::{run_rest_server, RestState};
 use crate::types::base::min_gas::MinGasPrices;
 use axum::Router;
-use database::RocksDB;
+use database::{Database, DatabaseBuilder};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tendermint::abci::ServerBuilder;
@@ -32,7 +32,7 @@ pub enum RunError {
     #[error("{0}")]
     HomeDirectory(String),
     #[error("{0}")]
-    Database(#[from] database::error::Error),
+    Database(String),
     #[error("{0}")]
     TendermintServer(#[from] tendermint::abci::errors::Error),
     #[error("{0}")]
@@ -78,6 +78,8 @@ pub trait RouterBuilder<QReq, QRes> {
 }
 
 pub fn run<
+    DB: Database,
+    DBO: DatabaseBuilder<DB>,
     PSK: ParamsSubspaceKey,
     H: ABCIHandler,
     AC: ApplicationConfig,
@@ -85,6 +87,7 @@ pub fn run<
     RB: RouterBuilder<H::QReq, H::QRes>,
 >(
     cmd: RunCommand,
+    db_builder: DBO,
     params_subspace_key: PSK,
     abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
     router_builder: RB,
@@ -106,7 +109,9 @@ pub fn run<
     info!("Using directory {} for config and data", home.display());
 
     let db_dir = home.join("data");
-    let db = RocksDB::new(db_dir.join("application.db"))?;
+    let db = db_builder
+        .build(db_dir.join("application.db"))
+        .map_err(|e| RunError::Database(format!("{e:?}")))?;
 
     let cfg_file_path = ConfigDirectory::ConfigFile.path_from_hone(&home);
 
@@ -117,16 +122,16 @@ pub fn run<
 
     let options = NodeOptions::new(min_gas_prices);
 
-    let app: BaseApp<PSK, H, AI> = BaseApp::new(db, params_subspace_key, abci_handler, options);
+    let app: BaseApp<DB, PSK, H, AI> = BaseApp::new(db, params_subspace_key, abci_handler, options);
 
     run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),
         rest_listen_addr,
-        router_builder.build_router::<BaseApp<PSK, H, AI>>(),
+        router_builder.build_router::<BaseApp<DB, PSK, H, AI>>(),
         config.tendermint_rpc_address,
     );
 
-    run_grpc_server(router_builder.build_grpc_router::<BaseApp<PSK, H, AI>>(app.clone()));
+    run_grpc_server(router_builder.build_grpc_router::<BaseApp<DB, PSK, H, AI>>(app.clone()));
 
     let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
 

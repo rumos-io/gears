@@ -2,11 +2,11 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use kv_store::{types::multi::MultiBank, ApplicationStore};
-use tendermint::types::proto::{event::Event, header::Header};
+use kv_store::{types::multi::MultiBank, ApplicationStore, TransactionStore};
+use tendermint::types::proto::event::Event;
+use tendermint::types::proto::header::Header;
 
 use self::sealed::Sealed;
-use super::{options::NodeOptions, params::ConsensusParams};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
@@ -20,7 +20,11 @@ use crate::{
     },
 };
 
+use super::{options::NodeOptions, ConsensusParams};
+
 pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
+    fn multi_store(&mut self) -> &mut MultiBank<DB, AH::StoreKey, TransactionStore>;
+
     fn build_ctx(
         &mut self,
         height: u64,

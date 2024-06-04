@@ -1,7 +1,6 @@
-use gears::store::database::ext::UnwrapCorrupt;
-
 use super::*;
 use crate::{historical_info_key, HistoricalInfo};
+use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::ext::GasResultExt};
 
 impl<
         SK: StoreKey,
@@ -26,8 +25,7 @@ impl<
         if !ctx.height().overflowing_sub(entry_num as u64).1 {
             // if (ctx.height() as i64 - entry_num as i64) >= 0 {
             for i in (ctx.height() - entry_num as u64)..=0 {
-                // SAFETY: the BlockContext is infallible context in context of StoreErrors
-                if let Some(_info) = self.historical_info(ctx, i).unwrap() {
+                if let Some(_info) = self.historical_info(ctx, i).unwrap_gas() {
                     self.delete_historical_info(ctx, i).unwrap();
                 } else {
                     break;
@@ -41,8 +39,7 @@ impl<
         }
 
         // Create HistoricalInfo struct
-        // SAFETY: the BlockContext is infallible context in context of StoreErrors
-        let last_validators = self.last_validators(ctx).unwrap();
+        let last_validators = self.last_validators(ctx).unwrap_gas();
         let historical_entry = HistoricalInfo::new(
             ctx.header.clone(),
             last_validators,
@@ -50,9 +47,8 @@ impl<
         );
 
         // Set latest HistoricalInfo at current height
-        // SAFETY: the BlockContext is infallible context in context of StoreErrors
         self.set_historical_info(ctx, ctx.height(), &historical_entry)
-            .unwrap();
+            .unwrap_gas();
     }
 
     /// historical_info gets the historical info at a given height
@@ -60,7 +56,7 @@ impl<
         &self,
         ctx: &CTX,
         height: u64,
-    ) -> Result<Option<HistoricalInfo>, StoreErrors> {
+    ) -> Result<Option<HistoricalInfo>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(HISTORICAL_INFO_KEY);
         let key = historical_info_key(height);
@@ -74,7 +70,7 @@ impl<
         &self,
         ctx: &mut CTX,
         height: u64,
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+    ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(HISTORICAL_INFO_KEY);
         let key = historical_info_key(height);
@@ -87,7 +83,7 @@ impl<
         ctx: &mut CTX,
         height: u64,
         info: &HistoricalInfo,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(HISTORICAL_INFO_KEY);
         let key = historical_info_key(height);
