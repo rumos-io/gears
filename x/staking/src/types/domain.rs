@@ -7,7 +7,7 @@ use gears::{
     core::{errors::Error, Protobuf},
     error::AppError,
     tendermint::types::{
-        proto::{crypto::PublicKey, validator::ValidatorUpdate},
+        proto::{crypto::PublicKey, header::Header, validator::ValidatorUpdate},
         time::Timestamp,
     },
     types::{
@@ -18,7 +18,41 @@ use gears::{
 };
 use prost::{Enumeration, Message};
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, str::FromStr};
+use std::{cmp::Ordering, fmt::Display, str::FromStr};
+
+/// HistoricalInfo contains header and validator information for a given block.
+/// It is stored as part of staking module's state, which persists the `n` most
+/// recent HistoricalInfo
+/// (`n` is set by the staking module's `historical_entries` parameter).
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+pub struct HistoricalInfo {
+    header: Header,
+    validators: Vec<Validator>,
+}
+
+impl HistoricalInfo {
+    /// Method will create a historical information struct from header and valset
+    /// it will first sort valset before inclusion into historical info
+    pub fn new(
+        header: Header,
+        mut validators: Vec<Validator>,
+        power_reduction: i64,
+    ) -> HistoricalInfo {
+        fn less(v1: &Validator, v2: &Validator, power_reduction: i64) -> Ordering {
+            let cons_power1 = v1.consensus_power(power_reduction);
+            let cons_power2 = v2.consensus_power(power_reduction);
+            if cons_power1 == cons_power2 {
+                let addr1 = Vec::from(v1.cons_addr());
+                let addr2 = Vec::from(v2.cons_addr());
+                addr1.cmp(&addr2)
+            } else {
+                cons_power1.cmp(&cons_power2)
+            }
+        }
+        validators.sort_by(|v1, v2| less(v1, v2, power_reduction));
+        HistoricalInfo { header, validators }
+    }
+}
 
 #[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
 pub struct Pool {

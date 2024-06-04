@@ -1,8 +1,5 @@
-pub use super::*;
-use crate::{
-    consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT},
-    Validator,
-};
+use super::*;
+use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, validator_queue_key, Validator};
 use gears::{store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
@@ -171,50 +168,4 @@ impl<
             );
         }
     }
-
-    /// get the last validator set
-    pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> HashMap<String, Vec<u8>> {
-        let mut last = HashMap::new();
-        let store = ctx.kv_store(&self.store_key);
-        let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
-        for (k, v) in store.range(..) {
-            let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
-            last.insert(k.to_string(), v.to_vec());
-        }
-        last
-    }
-}
-
-pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: u64) -> Vec<u8> {
-    let height_bz = end_height.to_ne_bytes();
-    let time_bz = end_time
-        .timestamp_nanos_opt()
-        .expect(TIMESTAMP_NANOS_EXPECT)
-        .to_ne_bytes();
-
-    let mut bz = VALIDATORS_QUEUE_KEY.to_vec();
-    bz.extend_from_slice(&(time_bz.len() as u64).to_ne_bytes());
-    bz.extend_from_slice(&time_bz);
-    bz.extend_from_slice(&height_bz);
-    bz
-}
-
-pub(super) fn parse_validator_queue_key(
-    key: &[u8],
-) -> anyhow::Result<(chrono::DateTime<Utc>, u64)> {
-    let prefix_len = VALIDATORS_QUEUE_KEY.len();
-    if key[..prefix_len] != VALIDATORS_QUEUE_KEY {
-        return Err(
-            AppError::Custom("Invalid validators queue key. Invalid prefix.".into()).into(),
-        );
-    }
-    let time_len = u64::from_ne_bytes(key[prefix_len..prefix_len + 8].try_into()?);
-    let time = chrono::DateTime::from_timestamp_nanos(i64::from_ne_bytes(
-        key[prefix_len + 8..prefix_len + 8 + time_len as usize].try_into()?,
-    ));
-    let height = u64::from_ne_bytes(key[prefix_len + 8 + time_len as usize..].try_into()?);
-    Ok((time, height))
 }

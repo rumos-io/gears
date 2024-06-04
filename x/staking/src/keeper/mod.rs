@@ -8,8 +8,8 @@ use gears::{
     error::AppError,
     params::ParamsSubspaceKey,
     store::{
-        database::Database, QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore,
-        WritePrefixStore,
+        database::{ext::UnwrapCorrupt, Database},
+        QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
     },
     tendermint::types::{
         proto::{
@@ -28,13 +28,14 @@ use gears::{
     x::keepers::auth::AuthKeeper,
 };
 use prost::bytes::BufMut;
-use std::{cmp::Ordering, collections::HashMap};
+use std::{cmp::Ordering, collections::HashMap, u64};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
 // validator types.
 
 mod bonded;
 mod delegation;
+mod historical_info;
 mod hooks;
 mod query;
 mod redelegation;
@@ -45,8 +46,6 @@ mod unbonding;
 mod validator;
 mod validators_and_total_power;
 pub use traits::*;
-use unbonding::*;
-use validator::*;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]

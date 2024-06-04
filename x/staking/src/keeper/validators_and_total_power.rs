@@ -1,4 +1,4 @@
-pub use super::*;
+use super::*;
 
 impl<
         SK: StoreKey,
@@ -91,6 +91,60 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
         store.delete(&validator.key_by_power_index_key(power_reduction))
+    }
+
+    /// get the last validator set
+    pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> HashMap<String, Vec<u8>> {
+        let mut last = HashMap::new();
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
+        for (k, v) in store.range(..) {
+            let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
+            last.insert(k.to_string(), v.to_vec());
+        }
+        last
+    }
+
+    /// get the group of the bonded validators
+    pub fn last_validators<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Vec<Validator> {
+        let store = ctx.kv_store(&self.store_key);
+        let validators_store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
+
+        // add the actual validator power sorted store
+        let max_validators = self.staking_params_keeper.get(ctx).max_validators as usize;
+        let mut validators = Vec::with_capacity(max_validators);
+        for (i, (_k, v)) in validators_store.range(..).enumerate() {
+            assert!(
+                i < max_validators,
+                "more validators than maxValidators found"
+            );
+            let last_validator: LastValidatorPower = serde_json::from_slice(&v).unwrap_or_corrupt();
+            let validator = self
+                .validator(ctx, &last_validator.address)
+                .expect("validator stored in last validators queue should be presented in store");
+            validators.push(validator);
+        }
+        validators
+    }
+
+    pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &LastValidatorPower,
+    ) {
+        let store = ctx.kv_store_mut(&self.store_key);
+        let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
+        let key = validator.address.to_string().as_bytes().to_vec();
+        delegations_store.set(
+            key,
+            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        );
     }
 
     pub fn delete_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(

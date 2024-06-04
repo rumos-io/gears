@@ -9,7 +9,9 @@ use gears::{
     store::{database::Database, StoreKey},
     tendermint::types::{
         proto::validator::ValidatorUpdate,
-        request::{end_block::RequestEndBlock, query::RequestQuery},
+        request::{
+            begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
+        },
     },
     types::context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
 };
@@ -87,6 +89,17 @@ impl<
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
+    }
+
+    pub fn begin_block<DB: Database>(
+        &self,
+        ctx: &mut BlockContext<'_, DB, SK>,
+        _request: RequestBeginBlock,
+    ) {
+        self.keeper.track_historical_info(ctx);
+        todo!()
+        // TODO
+        // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
     }
 
     pub fn end_block<DB: Database>(

@@ -1,5 +1,8 @@
-pub use super::*;
-use crate::consts::error::{SERDE_ENCODING_DOMAIN_TYPE, TIMESTAMP_NANOS_EXPECT};
+use super::*;
+use crate::{
+    consts::error::SERDE_ENCODING_DOMAIN_TYPE, parse_validator_queue_key,
+    unbonding_delegation_time_key, validator_queue_key,
+};
 use gears::{store::database::ext::UnwrapCorrupt, tendermint::types::time::Timestamp};
 
 impl<
@@ -162,20 +165,6 @@ impl<
         store.set(
             key,
             serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
-    }
-
-    pub fn set_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        validator: &LastValidatorPower,
-    ) {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        let key = validator.address.to_string().as_bytes().to_vec();
-        delegations_store.set(
-            key,
-            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
         );
     }
 
@@ -433,10 +422,4 @@ impl<
             vec![]
         }
     }
-}
-
-pub(super) fn unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
-    time.timestamp_nanos_opt()
-        .expect(TIMESTAMP_NANOS_EXPECT)
-        .to_ne_bytes()
 }

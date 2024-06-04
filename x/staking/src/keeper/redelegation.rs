@@ -1,6 +1,7 @@
-pub use super::*;
+use super::*;
 use crate::{
-    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_addr_pair_key, RedelegationEntry,
+    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_addr_pair_key,
+    unbonding_delegation_time_key, RedelegationEntry,
 };
 use gears::store::database::ext::UnwrapCorrupt;
 

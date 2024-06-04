@@ -1,4 +1,4 @@
-pub use super::*;
+use super::*;
 use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
     QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
