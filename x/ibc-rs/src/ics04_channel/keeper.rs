@@ -1,9 +1,8 @@
+use gears::context::init::InitContext;
+use gears::context::TransactionalContext;
 use gears::store::{database::Database, StoreKey};
-use gears::types::context::init::InitContext;
 
 use super::GenesisState;
-use gears::store::TransactionalKVStore;
-use gears::types::context::TransactionalContext;
 
 const KEY_NEXT_CHANNEL_SEQUENCE: &[u8; 19] = b"nextChannelSequence";
 

@@ -3,11 +3,11 @@ use crate::{
     message::Message, types::genesis::GenesisState,
 };
 use gears::{
+    context::{init::InitContext, query::QueryContext, tx::TxContext},
     core::errors::Error,
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::context::{init::InitContext, query::QueryContext, tx::TxContext},
 };
 use ibc::primitives::proto::Protobuf;
 //use ibc::core::client::types::{

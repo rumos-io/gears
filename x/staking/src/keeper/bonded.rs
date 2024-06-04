@@ -1,5 +1,5 @@
 use super::*;
-use gears::types::account::ModuleAccount;
+use gears::types::{account::ModuleAccount, store::errors::StoreErrors};
 
 impl<
         SK: StoreKey,
@@ -31,10 +31,10 @@ impl<
         &self,
         ctx: &mut CTX,
         amount: Uint256,
-    ) {
-        let params = self.staking_params_keeper.get(ctx);
+    ) -> Result<(), StoreErrors> {
+        let params = self.staking_params_keeper.try_get(ctx)?;
 
-        // TODO: original routine is unfailable, it means that the amount is a valid number.
+        // TODO: original routine is infallible, it means that the amount is a valid number.
         // The method is called from failable methods. Consider to provide correct solution taking
         // into account additional analisis.
         let coins = SendCoins::new(vec![Coin {
@@ -51,7 +51,9 @@ impl<
                 NOT_BONDED_POOL_NAME.into(),
                 coins,
             )
-            .unwrap()
+            .unwrap();
+
+        Ok(())
     }
 
     pub fn bonded_to_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -73,18 +75,20 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) {
+    ) -> Result<(), StoreErrors> {
         // delete the validator by power index, as the key will change
-        self.delete_validator_by_power_index(ctx, validator);
+        self.delete_validator_by_power_index(ctx, validator)?;
 
         validator.update_status(BondStatus::Bonded);
         // save the now bonded validator record to the two referenced stores
-        self.set_validator(ctx, validator);
-        self.set_validator_by_power_index(ctx, validator);
+        self.set_validator(ctx, validator)?;
+        self.set_validator_by_power_index(ctx, validator)?;
 
         // delete from queue if present
-        self.delete_validator_queue(ctx, validator);
+        self.delete_validator_queue(ctx, validator)?;
         // trigger hook
         self.after_validator_bonded(ctx, validator);
+
+        Ok(())
     }
 }

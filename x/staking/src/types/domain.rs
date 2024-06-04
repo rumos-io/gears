@@ -278,7 +278,8 @@ impl Validator {
         // calculate the shares to issue
         let issues_shares = if self.delegator_shares.is_zero() {
             // the first delegation to a validator sets the exchange rate to one
-            Decimal256::new(amount)
+            // TODO: infallible in sdk
+            Decimal256::from_atomics(amount, 0).unwrap()
         } else {
             // TODO: check the code, maybe remove unwrap
             self.shares_from_tokens(amount).unwrap()
@@ -295,8 +296,8 @@ impl Validator {
         }
         Ok(self
             .delegator_shares
-            .checked_mul(Decimal256::new(amount))?
-            .checked_div(Decimal256::new(self.tokens))?)
+            .checked_mul(Decimal256::from_atomics(amount, 0)?)?
+            .checked_div(Decimal256::from_atomics(self.tokens, 0)?)?)
     }
 
     pub fn shares_from_tokens_truncated(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
@@ -305,13 +306,15 @@ impl Validator {
         }
 
         // TODO: check
-        let mul = self.delegator_shares.checked_mul(Decimal256::new(amount))?;
+        let mul = self
+            .delegator_shares
+            .checked_mul(Decimal256::from_atomics(amount, 0)?)?;
         // TODO: check constant 18 in decimals
-        let precision_reuse = Decimal256::new(Uint256::from_u128(10u128)).checked_pow(18)?;
+        let precision_reuse = Decimal256::from_atomics(10u64, 0)?.checked_pow(18)?;
         let mul2 = mul
             .checked_mul(precision_reuse)?
             .checked_mul(precision_reuse)?;
-        let div = mul2.checked_div(Decimal256::new(self.tokens))?;
+        let div = mul2.checked_div(Decimal256::from_atomics(self.tokens, 0)?)?;
         Ok(div.checked_div(precision_reuse)?)
     }
 
@@ -329,7 +332,7 @@ impl Validator {
         } else {
             // leave excess tokens in the validator
             // however fully use all the delegator shares
-            // TODO: unfailable + floor
+            // TODO: infallible + floor
             let tokens = self.tokens_from_shares(del_shares).unwrap().to_uint_floor();
             // TODO: check of negative result
             self.tokens -= tokens;
@@ -342,10 +345,10 @@ impl Validator {
     }
 
     /// calculate the token worth of provided shares
-    // TODO: unfailable in sdk
+    // TODO: infallible in sdk
     pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
         Ok(shares
-            .checked_mul(Decimal256::new(self.tokens))?
+            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
             .checked_div(self.delegator_shares)?)
     }
 
@@ -403,7 +406,7 @@ impl Validator {
         // NOTE the address doesn't need to be stored because counter bytes must always be different
         // NOTE the larger values are of higher value
         let consensus_power = self.tokens_to_consensus_power(power_reduction);
-        let consensus_power_bytes = consensus_power.to_ne_bytes();
+        let consensus_power_bytes = consensus_power.to_le_bytes();
 
         let oper_addr_invr = self
             .operator_address
@@ -433,19 +436,19 @@ impl TryFrom<ValidatorRaw> for Validator {
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             description: value
                 .description
-                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T"),
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?,
             consensus_pubkey: serde_json::from_slice(&value.consensus_pubkey)
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             jailed: value.jailed,
             tokens: Uint256::from_str(&value.tokens)
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             unbonding_height: value.unbonding_height,
-            unbonding_time: value
-                .unbonding_time
-                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T"),
+            unbonding_time: value.unbonding_time.ok_or(Error::MissingField(
+                "Missing field 'unbonding_time'.".into(),
+            ))?,
             commission: value
                 .commission
-                .expect("Value should exists. It's the proto3 rule to have Option<T> instead of T")
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?
                 .try_into()?,
             min_self_delegation: Uint256::from_str(&value.min_self_delegation)
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,

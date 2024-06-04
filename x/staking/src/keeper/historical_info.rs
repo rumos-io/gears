@@ -1,3 +1,5 @@
+use gears::store::database::ext::UnwrapCorrupt;
+
 use super::*;
 use crate::{historical_info_key, HistoricalInfo};
 
@@ -23,8 +25,9 @@ impl<
 
         if (ctx.height() as i64 - entry_num as i64) >= 0 {
             for i in (ctx.height() - entry_num as u64)..=0 {
-                if let Some(_info) = self.historical_info(ctx, i) {
-                    self.delete_historical_info(ctx, i);
+                // SAFETY: the BlockContext is infallible context in context of StoreErrors
+                if let Some(_info) = self.historical_info(ctx, i).unwrap() {
+                    self.delete_historical_info(ctx, i).unwrap();
                 } else {
                     break;
                 }
@@ -37,7 +40,8 @@ impl<
         }
 
         // Create HistoricalInfo struct
-        let last_validators = self.last_validators(ctx);
+        // SAFETY: the BlockContext is infallible context in context of StoreErrors
+        let last_validators = self.last_validators(ctx).unwrap();
         let historical_entry = HistoricalInfo::new(
             ctx.header.clone(),
             last_validators,
@@ -45,7 +49,9 @@ impl<
         );
 
         // Set latest HistoricalInfo at current height
-        self.set_historical_info(ctx, ctx.height(), &historical_entry);
+        // SAFETY: the BlockContext is infallible context in context of StoreErrors
+        self.set_historical_info(ctx, ctx.height(), &historical_entry)
+            .unwrap();
     }
 
     /// historical_info gets the historical info at a given height
@@ -53,13 +59,13 @@ impl<
         &self,
         ctx: &CTX,
         height: u64,
-    ) -> Option<HistoricalInfo> {
+    ) -> Result<Option<HistoricalInfo>, StoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(HISTORICAL_INFO_KEY);
         let key = historical_info_key(height);
-        store
-            .get(&key)
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
+        Ok(store
+            .get(&key)?
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
     }
 
     /// delete_historical_info deletes the historical info at a given height
@@ -67,7 +73,7 @@ impl<
         &self,
         ctx: &mut CTX,
         height: u64,
-    ) -> Option<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>, StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(HISTORICAL_INFO_KEY);
         let key = historical_info_key(height);
@@ -80,7 +86,7 @@ impl<
         ctx: &mut CTX,
         height: u64,
         info: &HistoricalInfo,
-    ) {
+    ) -> Result<(), StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(HISTORICAL_INFO_KEY);
         let key = historical_info_key(height);

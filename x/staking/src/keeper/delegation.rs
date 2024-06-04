@@ -1,5 +1,5 @@
 use super::*;
-use gears::store::database::ext::UnwrapCorrupt;
+use gears::{store::database::ext::UnwrapCorrupt, types::store::errors::StoreErrors};
 
 impl<
         SK: StoreKey,
@@ -31,7 +31,7 @@ impl<
 
         // Get or create the delegation object
         let mut delegation = if let Some(delegation) =
-            self.delegation(ctx, &del_addr, &validator.operator_address)
+            self.delegation(ctx, &del_addr, &validator.operator_address)?
         {
             self.before_delegation_shares_modified(ctx, &del_addr, &validator.operator_address);
             delegation
@@ -62,7 +62,7 @@ impl<
                 }
             };
 
-            let denom = self.staking_params_keeper.get(ctx).bond_denom;
+            let denom = self.staking_params_keeper.try_get(ctx)?.bond_denom;
             let coins = SendCoins::new(vec![Coin {
                 denom,
                 amount: bond_amount,
@@ -82,21 +82,21 @@ impl<
             match (token_src, validator.status == BondStatus::Bonded) {
                 (BondStatus::Unbonded | BondStatus::Unbonding, true) => {
                     // transfer pools
-                    self.not_bonded_tokens_to_bonded(ctx, bond_amount);
+                    self.not_bonded_tokens_to_bonded(ctx, bond_amount)?;
                 }
                 (BondStatus::Bonded, false) => {
                     // transfer pools
-                    self.bonded_tokens_to_not_bonded(ctx, bond_amount);
+                    self.bonded_tokens_to_not_bonded(ctx, bond_amount)?;
                 }
                 (BondStatus::Bonded, true)
                 | (BondStatus::Unbonded | BondStatus::Unbonding, false) => {}
             }
         }
 
-        let new_shares = self.add_validator_tokens_and_shares(ctx, validator, bond_amount);
+        let new_shares = self.add_validator_tokens_and_shares(ctx, validator, bond_amount)?;
         // Update delegation
         delegation.shares += new_shares;
-        self.set_delegation(ctx, &delegation);
+        self.set_delegation(ctx, &delegation)?;
 
         // Call the after-modification hook
         self.after_delegation_modified(
@@ -113,36 +113,38 @@ impl<
         ctx: &CTX,
         del_addr: &AccAddress,
         val_addr: &ValAddress,
-    ) -> Option<Delegation> {
-        let store = ctx.kv_store(&self.store_key);
+    ) -> Result<Option<Delegation>, StoreErrors> {
+        let store = QueryableContext::kv_store(ctx, &self.store_key);
         let delegations_store = store.prefix_store(DELEGATIONS_KEY);
         let mut key = Vec::from(del_addr.clone());
         key.extend_from_slice(&Vec::from(val_addr.clone()));
-        delegations_store
-            .get(&key)
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
+        Ok(delegations_store
+            .get(&key)?
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
     }
 
     pub fn set_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
-    ) {
-        let store = ctx.kv_store_mut(&self.store_key);
+    ) -> Result<(), StoreErrors> {
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.set(
             key,
             serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        )?;
+
+        Ok(())
     }
 
     pub fn remove_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
-    ) -> Option<Vec<u8>> {
+    ) -> Result<Option<Vec<u8>>, StoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());

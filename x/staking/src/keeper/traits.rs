@@ -1,7 +1,10 @@
 use super::*;
 use gears::{
-    types::account::{Account, ModuleAccount},
-    types::address::{AccAddress, ConsAddress},
+    context::InfallibleContextMut,
+    types::{
+        account::{Account, ModuleAccount},
+        address::{AccAddress, ConsAddress},
+    },
 };
 
 /// AccountKeeper defines the expected account keeper methods (noalias)
@@ -56,7 +59,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn undelegate_coins_from_module_to_account<
         DB: Database,
         AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: InfallibleContextMut<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,

@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{FiniteGas, Gas, GasErrors, PlainGasMeter};
+use super::{FiniteGas, Gas, GasMeteringErrors, PlainGasMeter};
 
 /// Gas meter without consumption limit
 #[derive(Debug, Clone)]
@@ -40,12 +40,16 @@ impl PlainGasMeter for InfiniteGasMeter {
         Gas::Infinite
     }
 
-    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
+    fn consume_gas(
+        &mut self,
+        amount: FiniteGas,
+        descriptor: &str,
+    ) -> Result<(), GasMeteringErrors> {
         if let Some(sum) = self.consumed.checked_add(amount) {
             self.consumed = sum;
             Ok(())
         } else {
-            Err(GasErrors::ErrorGasOverflow(descriptor.to_owned()))
+            Err(GasMeteringErrors::ErrorGasOverflow(descriptor.to_owned()))
         }
     }
 

@@ -1,13 +1,15 @@
 use std::collections::HashMap;
 
 use database::Database;
+use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
-use store_crate::StoreKey;
 
 use crate::{
-    params::{subspace, subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey},
-    types::context::{QueryableContext, TransactionalContext},
+    context::{InfallibleContext, InfallibleContextMut},
+    params::{
+        infallible_subspace, infallible_subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey,
+    },
 };
 
 mod inner {
@@ -134,21 +136,21 @@ pub struct BaseAppParamsKeeper<PSK: ParamsSubspaceKey> {
 
 // TODO: add a macro to create this?
 impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
-    pub fn set_consensus_params<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    pub fn set_consensus_params<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
         params: inner::ConsensusParams,
     ) {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
+        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params);
     }
 
-    pub fn consensus_params<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn consensus_params<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
         &self,
         store: &CTX,
     ) -> ConsensusParams {
-        let sub_store = subspace(store, &self.params_subspace_key);
+        let sub_store = infallible_subspace(store, &self.params_subspace_key);
 
         let block_params = self.block_params(store).unwrap_or_default();
         let evidence_params = sub_store
@@ -174,11 +176,11 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
         }
     }
 
-    pub fn block_params<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    pub fn block_params<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
         &self,
         store: &CTX,
     ) -> Option<BlockParams> {
-        let sub_store = subspace(store, &self.params_subspace_key);
+        let sub_store = infallible_subspace(store, &self.params_subspace_key);
 
         serde_json::from_slice(
             &sub_store

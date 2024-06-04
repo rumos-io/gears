@@ -261,8 +261,7 @@ impl TryFrom<QueryDelegationResponseRaw> for QueryDelegationResponse {
             delegation_response: raw
                 .delegation_response
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'delegation_response'.".into(),
                 ))?
                 .try_into()?,
         })

@@ -2,7 +2,7 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use store_crate::{types::multi::MultiBank, ApplicationStore};
+use kv_store::{types::multi::MultiBank, ApplicationStore};
 use tendermint::types::proto::{event::Event, header::Header};
 
 use self::sealed::Sealed;
@@ -10,9 +10,9 @@ use super::{options::NodeOptions, params::ConsensusParams};
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
+    context::tx::TxContext,
     types::{
         auth::fee::Fee,
-        context::tx::TxContext,
         gas::{
             basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::TxKind, GasMeter,
         },

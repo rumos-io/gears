@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::prefix::immutable::ImmutablePrefixStore, ReadPrefixStore};
+use kv_store::types::prefix::immutable::ImmutablePrefixStore;
 
 use super::{parsed::Params, ParamKind, ParamsDeserialize};
 

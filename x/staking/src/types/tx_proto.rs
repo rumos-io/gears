@@ -80,19 +80,13 @@ impl TryFrom<CommissionRaw> for Commission {
             commission_rates: value
                 .commission_rates
                 .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
+                    "Missing field 'commission_rates'.".into(),
                 ))?
                 .try_into()
                 .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
             update_time: value
                 .update_time
-                .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
-                .try_into()
-                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+                .ok_or(Error::MissingField("Missing field 'update_time'.".into()))?,
         })
     }
 }
@@ -271,15 +265,12 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
 
     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
         Ok(CreateValidator {
-            description: src.description.ok_or(Error::MissingField(
-                "Value should exists. It's the proto3 rule to have Option<T> instead of T".into(),
-            ))?,
+            description: src
+                .description
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?,
             commission: src
                 .commission
-                .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
+                .ok_or(Error::MissingField("Missing field 'commission'.".into()))?
                 .try_into()
                 .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
             min_self_delegation: Uint256::from_str(&src.min_self_delegation)
@@ -292,10 +283,7 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
                 .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
             value: src
                 .value
-                .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
+                .ok_or(Error::MissingField("Missing field 'value'.".into()))?
                 .try_into()
                 .map_err(|e| Error::Coin(format!("{e}")))?,
         })
@@ -343,10 +331,7 @@ impl TryFrom<DelegateMsgRaw> for DelegateMsg {
                 .map_err(|e| Error::DecodeAddress(e.to_string()))?,
             amount: src
                 .amount
-                .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
+                .ok_or(Error::MissingField("Missing field 'amount'.".into()))?
                 .try_into()
                 .map_err(|e| Error::Coin(format!("{e}")))?,
         })
@@ -400,10 +385,7 @@ impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
                 .map_err(|e| Error::DecodeAddress(e.to_string()))?,
             amount: src
                 .amount
-                .ok_or(Error::MissingField(
-                    "Value should exists. It's the proto3 rule to have Option<T> instead of T"
-                        .into(),
-                ))?
+                .ok_or(Error::MissingField("Missing field 'amount'.".into()))?
                 .try_into()
                 .map_err(|e| Error::Coin(format!("{e}")))?,
         })

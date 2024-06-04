@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use super::{FiniteGas, Gas, GasErrors, PlainGasMeter};
+use super::{FiniteGas, Gas, GasMeteringErrors, PlainGasMeter};
 
 /// Basic gas meter.
 #[derive(Debug, Clone)]
@@ -44,18 +44,22 @@ impl PlainGasMeter for BasicGasMeter {
         Gas::Finite(self.limit)
     }
 
-    fn consume_gas(&mut self, amount: FiniteGas, descriptor: &str) -> Result<(), GasErrors> {
+    fn consume_gas(
+        &mut self,
+        amount: FiniteGas,
+        descriptor: &str,
+    ) -> Result<(), GasMeteringErrors> {
         if let Some(sum) = self.consumed.checked_add(amount) {
             if self.consumed > self.limit {
                 //TODO: This does not seem right - self.consumed hasn't been updated yet
-                Err(GasErrors::ErrorOutOfGas(descriptor.to_owned()))
+                Err(GasMeteringErrors::ErrorOutOfGas(descriptor.to_owned()))
             } else {
                 self.consumed = sum;
                 Ok(())
             }
         } else {
             self.consumed = FiniteGas::MAX; // TODO: it must be the case that we are out of gas
-            Err(GasErrors::ErrorGasOverflow(descriptor.to_owned()))
+            Err(GasMeteringErrors::ErrorGasOverflow(descriptor.to_owned()))
         }
     }
 

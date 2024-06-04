@@ -1766,6 +1766,7 @@ dependencies = [
  "integer-encoding",
  "k256",
  "keyring",
+ "kv_store",
  "ledger-cosmos",
  "num-bigint",
  "num-format",
@@ -1781,7 +1782,6 @@ dependencies = [
  "serde_json",
  "serde_with",
  "sha2 0.10.8",
- "store",
  "strum",
  "tendermint 0.1.0",
  "text_io",
@@ -3107,6 +3107,19 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.66",
+]
+
+[[package]]
+name = "kv_store"
+version = "0.1.0"
+dependencies = [
+ "database",
+ "hex 0.4.3",
+ "integer-encoding",
+ "sha2 0.10.8",
+ "strum",
+ "thiserror",
+ "trees",
 ]
 
 [[package]]
@@ -4697,19 +4710,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "store"
-version = "0.1.0"
-dependencies = [
- "database",
- "hex 0.4.3",
- "integer-encoding",
- "sha2 0.10.8",
- "strum",
- "thiserror",
- "trees",
-]
 
 [[package]]
 name = "str_stack"

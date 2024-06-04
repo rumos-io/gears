@@ -16,7 +16,7 @@ impl<
         shares: Decimal256,
     ) -> anyhow::Result<Uint256> {
         // check if a delegation object exists in the store
-        let mut delegation = if let Some(delegation) = self.delegation(ctx, del_addr, val_addr) {
+        let mut delegation = if let Some(delegation) = self.delegation(ctx, del_addr, val_addr)? {
             delegation
         } else {
             return Err(AppError::Custom("no delegator for address".to_string()).into());
@@ -31,7 +31,7 @@ impl<
         }
 
         // get validator
-        let mut validator = if let Some(validator) = self.validator(ctx, val_addr) {
+        let mut validator = if let Some(validator) = self.validator(ctx, val_addr)? {
             validator
         } else {
             return Err(AppError::Custom("no validator found".to_string()).into());
@@ -53,26 +53,26 @@ impl<
                 .to_uint_floor()
                 < validator.min_self_delegation
         {
-            self.jail_validator(ctx, &mut validator);
+            self.jail_validator(ctx, &mut validator)?;
             // TODO: panic in sdk
-            validator = self.validator(ctx, &validator.operator_address).unwrap()
+            validator = self.validator(ctx, &validator.operator_address)?.unwrap()
         }
 
         // remove the delegation
         if delegation.shares.is_zero() {
-            self.remove_delegation(ctx, &delegation);
+            self.remove_delegation(ctx, &delegation)?;
         } else {
-            self.set_delegation(ctx, &delegation);
+            self.set_delegation(ctx, &delegation)?;
             // call the after delegation modification hook
-            self.after_delegation_modified(ctx, &del_addr, &delegation.validator_address);
+            self.after_delegation_modified(ctx, del_addr, &delegation.validator_address);
         }
 
         // remove the shares and coins from the validator
         // NOTE that the amount is later (in keeper.Delegation) moved between staking module pools
-        let tokens_amount = self.remove_validator_tokens_and_shares(ctx, &mut validator, shares);
+        let tokens_amount = self.remove_validator_tokens_and_shares(ctx, &mut validator, shares)?;
         if validator.delegator_shares.is_zero() && validator.status == BondStatus::Unbonded {
             // if not unbonded, we must instead remove validator in EndBlocker once it finishes its unbonding period
-            self.remove_validator(ctx, &validator);
+            self.remove_validator(ctx, &validator)?;
         }
         Ok(tokens_amount)
     }
@@ -89,7 +89,7 @@ impl<
             ))
             .into());
         }
-        self.bond_validator(ctx, validator);
+        self.bond_validator(ctx, validator)?;
         Ok(())
     }
 
@@ -104,10 +104,10 @@ impl<
         amount: Uint256,
     ) -> anyhow::Result<Decimal256> {
         let validator = self
-            .validator(ctx, val_addr)
+            .validator(ctx, val_addr)?
             .ok_or(AppError::AccountNotFound)?;
         let delegation = self
-            .delegation(ctx, del_addr, val_addr)
+            .delegation(ctx, del_addr, val_addr)?
             .ok_or(AppError::Custom("Delegation is not found.".to_string()))?;
         let mut shares = validator.shares_from_tokens(amount)?;
         let truncated_shares = validator.shares_from_tokens_truncated(amount)?;

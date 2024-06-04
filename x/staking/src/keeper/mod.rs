@@ -5,12 +5,10 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
+    context::{block::BlockContext, init::InitContext, QueryableContext, TransactionalContext},
     error::AppError,
     params::ParamsSubspaceKey,
-    store::{
-        database::{ext::UnwrapCorrupt, Database},
-        QueryableKVStore, ReadPrefixStore, StoreKey, TransactionalKVStore, WritePrefixStore,
-    },
+    store::{database::Database, StoreKey},
     tendermint::types::{
         proto::{
             event::{Event, EventAttribute},
@@ -21,8 +19,8 @@ use gears::{
     types::{
         address::{AccAddress, ValAddress},
         base::{coin::Coin, send::SendCoins},
-        context::{block::BlockContext, init::InitContext, QueryableContext, TransactionalContext},
         decimal256::Decimal256,
+        store::errors::StoreErrors,
         uint::Uint256,
     },
     x::keepers::auth::AuthKeeper,
@@ -32,6 +30,8 @@ use std::{cmp::Ordering, collections::HashMap, u64};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
 // validator types.
+
+const CTX_NO_GAS_UNWRAP: &str = "Context doesn't have any gas";
 
 mod bonded;
 mod delegation;
@@ -105,21 +105,26 @@ impl<
         // ctx = ctx.WithBlockHeight(1 - sdk.ValidatorUpdateDelay)
 
         self.set_pool(ctx, genesis.pool);
-        self.set_last_total_power(ctx, genesis.last_total_power);
+        self.set_last_total_power(ctx, genesis.last_total_power)
+            .expect(CTX_NO_GAS_UNWRAP);
         self.staking_params_keeper.set(ctx, genesis.params.clone());
 
         for validator in genesis.validators {
-            self.set_validator(ctx, &validator);
+            self.set_validator(ctx, &validator)
+                .expect(CTX_NO_GAS_UNWRAP);
             // Manually set indices for the first time
-            self.set_validator_by_cons_addr(ctx, &validator);
-            self.set_validator_by_power_index(ctx, &validator);
+            self.set_validator_by_cons_addr(ctx, &validator)
+                .expect(CTX_NO_GAS_UNWRAP);
+            self.set_validator_by_power_index(ctx, &validator)
+                .expect(CTX_NO_GAS_UNWRAP);
 
             if !genesis.exported {
                 self.after_validator_created(ctx, &validator);
             }
 
             if validator.status == BondStatus::Unbonding {
-                self.insert_unbonding_validator_queue(ctx, &validator);
+                self.insert_unbonding_validator_queue(ctx, &validator)
+                    .expect(CTX_NO_GAS_UNWRAP);
             }
 
             match validator.status {
@@ -141,7 +146,8 @@ impl<
                 );
             }
 
-            self.set_delegation(ctx, &delegation);
+            self.set_delegation(ctx, &delegation)
+                .expect(CTX_NO_GAS_UNWRAP);
 
             if !genesis.exported {
                 self.after_delegation_modified(
@@ -160,9 +166,11 @@ impl<
         }
 
         for redelegation in genesis.redelegations {
-            self.set_redelegation(ctx, &redelegation);
+            self.set_redelegation(ctx, &redelegation)
+                .expect("setting of redelegation won't fail because used infallable context");
             for entry in &redelegation.entries {
-                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time.clone());
+                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time.clone())
+                    .expect("setting of redelegation won't fail because used infallable context");
             }
         }
 
@@ -233,9 +241,11 @@ impl<
         // don't need to run Tendermint updates if we exported
         if genesis.exported {
             for last_validator in genesis.last_validator_powers {
-                self.set_last_validator_power(ctx, &last_validator);
+                self.set_last_validator_power(ctx, &last_validator)
+                    .expect(CTX_NO_GAS_UNWRAP);
                 let validator = self
                     .validator(ctx, &last_validator.address)
+                    .expect("Init ctx doesn't have any gas")
                     .expect("validator in the store was not found");
                 let mut update = validator.abci_validator_update(self.power_reduction(ctx));
                 update.power = last_validator.power;
@@ -248,11 +258,7 @@ impl<
         res
     }
 
-    pub fn set_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        pool: Pool,
-    ) {
+    pub fn set_pool<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, pool: Pool) {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut pool_store = store.prefix_store_mut(POOL_KEY);
         let pool = serde_json::to_vec(&pool).expect(SERDE_ENCODING_DOMAIN_TYPE);
@@ -280,7 +286,8 @@ impl<
         };
 
         // unbond all mature validators from the unbonding queue
-        self.unbond_all_mature_validators(ctx);
+        self.unbond_all_mature_validators(ctx)
+            .expect(CTX_NO_GAS_UNWRAP);
 
         // Remove all mature unbonding delegations from the ubd queue.
         let time = ctx.get_time();
@@ -388,7 +395,7 @@ impl<
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
-        let params = self.staking_params_keeper.get(ctx);
+        let params = self.staking_params_keeper.try_get(ctx)?;
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
@@ -404,7 +411,7 @@ impl<
             // everything that is iterated in this loop is becoming or already a
             // part of the bonded validator set
             let mut validator: Validator = self
-                .validator(ctx, val_addr)
+                .validator(ctx, val_addr)?
                 .expect("validator should be presented in store");
 
             if validator.jailed {
@@ -451,7 +458,7 @@ impl<
                         address: val_addr.clone(),
                         power: new_power,
                     },
-                );
+                )?;
             }
 
             last.remove(&val_addr_str);
@@ -467,11 +474,11 @@ impl<
                     ctx,
                     &ValAddress::from_bech32(&val_addr)
                         .expect("Expected correct validator address"),
-                )
+                )?
                 .expect("validator should be presented in store");
             self.bonded_to_unbonding(ctx, &mut validator)?;
             amt_from_bonded_to_not_bonded = amt_from_not_bonded_to_bonded + validator.tokens;
-            self.delete_last_validator_power(ctx, &validator.operator_address);
+            self.delete_last_validator_power(ctx, &validator.operator_address)?;
             updates.push(validator.abci_validator_update_zero());
         }
 
@@ -487,20 +494,20 @@ impl<
                 self.not_bonded_tokens_to_bonded(
                     ctx,
                     amt_from_bonded_to_not_bonded - amt_from_not_bonded_to_bonded,
-                );
+                )?;
             }
             Ordering::Less => {
                 self.bonded_tokens_to_not_bonded(
                     ctx,
                     amt_from_bonded_to_not_bonded - amt_from_not_bonded_to_bonded,
-                );
+                )?;
             }
             Ordering::Equal => {}
         }
 
         // set total power on lookup index if there are any updates
         if !updates.is_empty() {
-            self.set_last_total_power(ctx, Uint256::from_u128(total_power as u128));
+            self.set_last_total_power(ctx, Uint256::from_u128(total_power as u128))?;
         }
         Ok(updates)
     }
@@ -514,11 +521,11 @@ impl<
         &self,
         ctx: &mut CTX,
         amount: Uint256,
-    ) {
-        // TODO: original routine is unfailable, it means that the amount is a valid number.
+    ) -> Result<(), StoreErrors> {
+        // TODO: original routine is infallible, it means that the amount is a valid number.
         // The method is called from failable methods. Consider to provide correct solution taking
         // into account additional analisis.
-        let params = self.staking_params_keeper.get(ctx);
+        let params = self.staking_params_keeper.try_get(ctx)?;
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
@@ -533,7 +540,9 @@ impl<
                 BONDED_POOL_NAME.into(),
                 coins,
             )
-            .unwrap()
+            .unwrap();
+
+        Ok(())
     }
 
     /// begin_info returns the completion time and height of a redelegation, along
@@ -543,9 +552,9 @@ impl<
         &self,
         ctx: &mut CTX,
         val_addr: &ValAddress,
-    ) -> (Timestamp, u64, bool) {
+    ) -> Result<(Timestamp, u64, bool), StoreErrors> {
         // TODO: When would the validator not be found?
-        let validator = self.validator(ctx, val_addr);
+        let validator = self.validator(ctx, val_addr)?;
         let validator_status = validator
             .as_ref()
             .map(|v| v.status.clone())
@@ -554,7 +563,7 @@ impl<
         match validator_status {
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
-                let params = self.staking_params_keeper.get(ctx);
+                let params = self.staking_params_keeper.try_get(ctx)?;
                 // TODO: consider to work with time in Gears
                 let duration = chrono::TimeDelta::new(
                     params.unbonding_time.seconds,
@@ -572,19 +581,19 @@ impl<
                     seconds: completion_time.timestamp(),
                     nanos: completion_time.timestamp_subsec_nanos() as i32,
                 };
-                (completion_time, height, false)
+                Ok((completion_time, height, false))
             }
-            BondStatus::Unbonded => (
+            BondStatus::Unbonded => Ok((
                 Timestamp {
                     seconds: 0,
                     nanos: 0,
                 },
                 0,
                 true,
-            ),
+            )),
             BondStatus::Unbonding => {
                 let validator = validator.unwrap();
-                (validator.unbonding_time, validator.unbonding_height, false)
+                Ok((validator.unbonding_time, validator.unbonding_height, false))
             }
         }
     }

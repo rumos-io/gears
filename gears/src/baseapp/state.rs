@@ -1,5 +1,5 @@
 use database::Database;
-use store_crate::{types::multi::MultiBank, ApplicationStore};
+use kv_store::{types::multi::MultiBank, ApplicationStore};
 
 use crate::{
     application::handlers::node::ABCIHandler,
