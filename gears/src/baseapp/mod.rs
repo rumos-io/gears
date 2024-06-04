@@ -161,7 +161,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let height = self.block_height();
 
         let consensus_params = {
-            let ctx: SimpleContext<RocksDB, <H as ABCIHandler>::StoreKey> =
+            let ctx: SimpleContext<DB, <H as ABCIHandler>::StoreKey> =
                 SimpleContext::from(mode.multi_store());
             self.baseapp_params_keeper.consensus_params(&ctx)
         };
