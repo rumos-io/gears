@@ -1,5 +1,5 @@
 pub use super::*;
-use gears::{store::database::ext::UnwrapCorrupt, types::store::errors::StoreErrors};
+use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasStoreErrors};
 
 impl<
         SK: StoreKey,
@@ -113,7 +113,7 @@ impl<
         ctx: &CTX,
         del_addr: &AccAddress,
         val_addr: &ValAddress,
-    ) -> Result<Option<Delegation>, StoreErrors> {
+    ) -> Result<Option<Delegation>, GasStoreErrors> {
         let store = QueryableContext::kv_store(ctx, &self.store_key);
         let delegations_store = store.prefix_store(DELEGATIONS_KEY);
         let mut key = Vec::from(del_addr.clone());
@@ -127,7 +127,7 @@ impl<
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
@@ -144,7 +144,7 @@ impl<
         &self,
         ctx: &mut CTX,
         delegation: &Delegation,
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+    ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());

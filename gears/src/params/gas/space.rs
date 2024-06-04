@@ -2,7 +2,7 @@ use database::Database;
 
 use crate::{
     params::{parsed::Params, ParamKind, ParamsDeserialize},
-    types::store::{errors::StoreErrors, prefix::PrefixStore},
+    types::store::{gas::errors::GasStoreErrors, prefix::PrefixStore},
 };
 
 pub struct GasParamsSpace<'a, DB> {
@@ -11,7 +11,7 @@ pub struct GasParamsSpace<'a, DB> {
 
 impl<DB: Database> GasParamsSpace<'_, DB> {
     /// Return whole serialized structure.
-    pub fn params<T: ParamsDeserialize>(&self) -> Result<Option<T>, StoreErrors> {
+    pub fn params<T: ParamsDeserialize>(&self) -> Result<Option<T>, GasStoreErrors> {
         let keys = T::keys();
         let mut params_fields = Vec::with_capacity(keys.len());
 
@@ -27,7 +27,11 @@ impl<DB: Database> GasParamsSpace<'_, DB> {
     }
 
     /// Return only field from structure.
-    pub fn params_field(&self, path: &str, kind: ParamKind) -> Result<Option<Params>, StoreErrors> {
+    pub fn params_field(
+        &self,
+        path: &str,
+        kind: ParamKind,
+    ) -> Result<Option<Params>, GasStoreErrors> {
         if let Some(value) = self.inner.get(path)? {
             Ok(Some(kind.parse_param(value)))
         } else {

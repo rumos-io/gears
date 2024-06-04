@@ -10,7 +10,7 @@ use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
-use gears::types::store::errors::StoreErrors;
+use gears::types::store::gas::errors::GasStoreErrors;
 use gears::{
     context::{QueryableContext, TransactionalContext},
     store::{
@@ -91,7 +91,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
     pub fn try_get<DB: Database, SK: StoreKey, KV: QueryableContext<DB, SK>>(
         &self,
         ctx: &KV,
-    ) -> Result<ClientParams, StoreErrors> {
+    ) -> Result<ClientParams, GasStoreErrors> {
         let store = gas::subspace(ctx, &self.params_subspace_key);
 
         Ok(store.params()?.unwrap()) // TODO: Add default
@@ -101,7 +101,7 @@ impl<PSK: ParamsSubspaceKey> ClientParamsKeeper<PSK> {
         &self,
         ctx: &mut CTX,
         params: ClientParams,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)?;

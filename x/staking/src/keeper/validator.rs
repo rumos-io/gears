@@ -17,7 +17,7 @@ impl<
         &self,
         ctx: &CTX,
         key: &ValAddress,
-    ) -> Result<Option<Validator>, StoreErrors> {
+    ) -> Result<Option<Validator>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_KEY);
         Ok(validators_store
@@ -29,7 +29,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.set(
@@ -42,7 +42,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+    ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.delete(validator.operator_address.to_string().as_bytes())
@@ -52,7 +52,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         assert!(
             !validator.jailed,
             "cannot jail already jailed validator, validator: {}",
@@ -68,7 +68,7 @@ impl<
         &self,
         ctx: &CTX,
         addr: &ConsAddress,
-    ) -> Result<Option<Validator>, StoreErrors> {
+    ) -> Result<Option<Validator>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_BY_CONS_ADDR_KEY);
 
@@ -81,7 +81,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_CONS_ADDR_KEY);
 
@@ -97,7 +97,7 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
         tokens_amount: Uint256,
-    ) -> Result<Decimal256, StoreErrors> {
+    ) -> Result<Decimal256, GasStoreErrors> {
         self.delete_validator_by_power_index(ctx, validator)?;
         let added_shares = validator.add_tokens_from_del(tokens_amount);
         self.set_validator(ctx, validator)?;
@@ -111,7 +111,7 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
         shares_to_remove: Decimal256,
-    ) -> Result<Uint256, StoreErrors> {
+    ) -> Result<Uint256, GasStoreErrors> {
         self.delete_validator_by_power_index(ctx, validator)?;
         let removed_tokens = validator.remove_del_shares(shares_to_remove);
         self.set_validator(ctx, validator)?;
@@ -154,7 +154,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let addrs =
             self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
         let val_addr = validator.operator_address.to_string();

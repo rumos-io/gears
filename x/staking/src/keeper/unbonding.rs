@@ -4,7 +4,6 @@ use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     store::database::ext::UnwrapCorrupt,
     tendermint::types::time::Timestamp,
-    types::store::errors::StoreErrors,
 };
 
 impl<
@@ -123,7 +122,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut addrs =
             self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height)?;
         addrs.push(validator.operator_address.to_string());
@@ -176,7 +175,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &LastValidatorPower,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
         let key = validator.address.to_string().as_bytes().to_vec();
@@ -204,7 +203,7 @@ impl<
     pub fn unbond_all_mature_validators<DB: Database>(
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let block_time = ctx.get_time();
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
@@ -281,7 +280,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         assert_eq!(
             validator.status,
             BondStatus::Unbonding,
@@ -351,7 +350,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &mut Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         validator.update_status(BondStatus::Unbonded);
         self.set_validator(ctx, validator)
     }
@@ -395,7 +394,7 @@ impl<
         end_time: Timestamp,
         end_height: u64,
         addrs: Vec<String>,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
@@ -416,7 +415,7 @@ impl<
         ctx: &mut CTX,
         end_time: Timestamp,
         end_height: u64,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
@@ -433,7 +432,7 @@ impl<
         ctx: &mut CTX,
         unbonding_time: &Timestamp,
         unbonding_height: u64,
-    ) -> Result<Vec<String>, StoreErrors> {
+    ) -> Result<Vec<String>, GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let store = store.prefix_store(VALIDATORS_QUEUE_KEY);
 

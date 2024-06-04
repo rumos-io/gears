@@ -10,7 +10,7 @@ use gears::params::{
 };
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::types::store::errors::StoreErrors;
+use gears::types::store::gas::errors::GasStoreErrors;
 use gears::x::keepers::auth::AuthParams;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -153,7 +153,7 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
     pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<AuthsParams, StoreErrors> {
+    ) -> Result<AuthsParams, GasStoreErrors> {
         let store = gas::subspace(ctx, &self.params_subspace_key);
 
         Ok(store.params()?.unwrap_or(DEFAULT_PARAMS.clone()))
@@ -173,7 +173,7 @@ impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
         &self,
         ctx: &mut KV,
         params: AuthsParams,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)

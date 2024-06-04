@@ -3,7 +3,7 @@ use gears::context::query::QueryContext;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::prefix::PrefixDB;
 use gears::store::types::prefix::mutable::MutablePrefixStore;
-use gears::types::store::errors::StoreErrors;
+use gears::types::store::gas::errors::GasStoreErrors;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::{
     context::QueryableContext,
@@ -149,7 +149,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         ctx: &mut CTX,
         client_state_path: ClientStatePath,
         client_state: ClientState,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = Self::client_store_mut(self, ctx, &client_state_path.0);
         store.set(CLIENT_STATE_KEY.bytes(), client_state.encode_vec())
     }
