@@ -9,9 +9,12 @@ use gears::{
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::proto::{
-        event::{Event, EventAttribute},
-        validator::ValidatorUpdate,
+    tendermint::types::{
+        proto::{
+            event::{Event, EventAttribute},
+            validator::ValidatorUpdate,
+        },
+        time::Timestamp,
     },
     types::{
         address::{AccAddress, ValAddress},
@@ -23,7 +26,6 @@ use gears::{
     x::keepers::auth::AuthKeeper,
 };
 use prost::bytes::BufMut;
-use serde::de::Error;
 use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
@@ -34,8 +36,10 @@ const CTX_NO_GAS_UNWRAP: &str = "Context doesn't have any gas";
 mod bonded;
 mod delegation;
 mod hooks;
+mod query;
 mod redelegation;
 mod traits;
+mod tx;
 mod unbonded;
 mod unbonding;
 mod validator;
@@ -163,16 +167,11 @@ impl<
         }
 
         for redelegation in genesis.redelegations {
-            self.set_redelegation(ctx, &redelegation);
+            self.set_redelegation(ctx, &redelegation)
+                .expect("setting of redelegation won't fail because used infallable context");
             for entry in &redelegation.entries {
-                // TODO: consider to move the DataTime type and work with timestamps into Gears
-                // The timestamp is provided by context and conversion won't fail.
-                let completion_time = chrono::DateTime::from_timestamp(
-                    entry.completion_time.seconds,
-                    entry.completion_time.nanos as u32,
-                )
-                .unwrap();
-                self.insert_redelegation_queue(ctx, &redelegation, completion_time);
+                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time.clone())
+                    .expect("setting of redelegation won't fail because used infallable context");
             }
         }
 
@@ -295,8 +294,7 @@ impl<
         let time = ctx.get_time();
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time);
+        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time.clone());
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;
             let val_addr_str = val_addr.to_string();
@@ -525,7 +523,7 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) -> Result<(), StoreErrors> {
-        // TODO: original routine is unfailable, it means that the amount is a valid number.
+        // TODO: original routine is infallible, it means that the amount is a valid number.
         // The method is called from failable methods. Consider to provide correct solution taking
         // into account additional analisis.
         let params = self.staking_params_keeper.try_get(ctx)?;
@@ -546,6 +544,59 @@ impl<
             .unwrap();
 
         Ok(())
+    }
+
+    /// begin_info returns the completion time and height of a redelegation, along
+    /// with a boolean signaling if the redelegation is complete based on the source
+    /// validator.
+    pub fn begin_info<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        val_addr: &ValAddress,
+    ) -> Result<(Timestamp, u64, bool), StoreErrors> {
+        // TODO: When would the validator not be found?
+        let validator = self.validator(ctx, val_addr)?;
+        let validator_status = validator
+            .as_ref()
+            .map(|v| v.status.clone())
+            .unwrap_or(BondStatus::Bonded);
+
+        match validator_status {
+            BondStatus::Bonded => {
+                // the longest wait - just unbonding period from now
+                let params = self.staking_params_keeper.try_get(ctx)?;
+                // TODO: consider to work with time in Gears
+                let duration = chrono::TimeDelta::new(
+                    params.unbonding_time.seconds,
+                    params.unbonding_time.nanos as u32,
+                )
+                .unwrap();
+                let time = ctx.get_time();
+                // TODO: consider to work with time in Gears
+                let time =
+                    chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
+                let completion_time = time + duration;
+                let height = ctx.height();
+                // TODO: consider to work with time in Gears
+                let completion_time = Timestamp {
+                    seconds: completion_time.timestamp(),
+                    nanos: completion_time.timestamp_subsec_nanos() as i32,
+                };
+                Ok((completion_time, height, false))
+            }
+            BondStatus::Unbonded => Ok((
+                Timestamp {
+                    seconds: 0,
+                    nanos: 0,
+                },
+                0,
+                true,
+            )),
+            BondStatus::Unbonding => {
+                let validator = validator.unwrap();
+                Ok((validator.unbonding_time, validator.unbonding_height, false))
+            }
+        }
     }
 }
 

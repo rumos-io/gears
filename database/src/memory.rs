@@ -1,10 +1,14 @@
-use std::{cell::RefCell, collections::BTreeMap, ops::Bound};
+use std::{
+    collections::BTreeMap,
+    ops::Bound,
+    sync::{Arc, RwLock},
+};
 
 use crate::Database;
 
 #[derive(Debug, Clone)]
 pub struct MemDB {
-    store: RefCell<BTreeMap<Vec<u8>, Vec<u8>>>, // we use a refcell because the set method on the DB trait doesn't take a mutable ref
+    store: Arc<RwLock<BTreeMap<Vec<u8>, Vec<u8>>>>,
 }
 
 impl Default for MemDB {
@@ -16,24 +20,28 @@ impl Default for MemDB {
 impl MemDB {
     pub fn new() -> MemDB {
         MemDB {
-            store: RefCell::new(BTreeMap::new()),
+            store: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
 }
 
 impl Database for MemDB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
-        self.store.borrow().get(key).cloned()
+        self.store.read().expect("poisoned lock").get(key).cloned()
     }
 
     fn put(&self, key: Vec<u8>, value: Vec<u8>) {
-        self.store.borrow_mut().insert(key, value);
+        self.store
+            .write()
+            .expect("poisoned lock")
+            .insert(key, value);
     }
 
     fn iterator<'a>(&'a self) -> Box<dyn Iterator<Item = (Box<[u8]>, Box<[u8]>)> + 'a> {
         Box::new(
             self.store
-                .borrow()
+                .read()
+                .expect("poisoned lock")
                 .clone()
                 .into_iter()
                 .map(|(key, value)| (key.into_boxed_slice(), value.into_boxed_slice())),
@@ -49,7 +57,12 @@ impl Database for MemDB {
 
         let mut pairs = Vec::new();
 
-        for (k, v) in self.store.borrow().range((start, end)) {
+        for (k, v) in self
+            .store
+            .read()
+            .expect("poisoned lock")
+            .range((start, end))
+        {
             //println!("Found: {}: {}", k, v);
             let pair = (k.clone().into_boxed_slice(), v.clone().into_boxed_slice());
             pairs.push(pair)

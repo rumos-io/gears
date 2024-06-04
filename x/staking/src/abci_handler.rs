@@ -1,12 +1,16 @@
-use crate::{AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message};
+use crate::{
+    AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
+    QueryRedelegationRequest, QueryValidatorRequest,
+};
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
+    core::{errors::Error, Protobuf},
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
-        proto::validator::ValidatorUpdate, request::end_block::RequestEndBlock,
-        request::query::RequestQuery,
+        proto::validator::ValidatorUpdate,
+        request::{end_block::RequestEndBlock, query::RequestQuery},
     },
 };
 
@@ -40,6 +44,8 @@ impl<
     ) -> Result<(), AppError> {
         match msg {
             Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
+            Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
         }
     }
 
@@ -53,10 +59,34 @@ impl<
 
     pub fn query<DB: Database + Send + Sync>(
         &self,
-        _ctx: &QueryContext<DB, SK>,
-        _query: RequestQuery,
+        ctx: &QueryContext<DB, SK>,
+        query: RequestQuery,
     ) -> Result<prost::bytes::Bytes, AppError> {
-        todo!()
+        match query.path.as_str() {
+            "/cosmos.staking.v1beta1.Query/Validator" => {
+                let req = QueryValidatorRequest::decode(query.data)
+                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self.keeper.query_validator(ctx, req)?.encode_vec().into())
+            }
+            "/cosmos.staking.v1beta1.Query/Delegation" => {
+                let req = QueryDelegationRequest::decode(query.data)
+                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self.keeper.query_delegation(ctx, req)?.encode_vec().into())
+            }
+            "/cosmos.staking.v1beta1.Query/Redelegation" => {
+                let req = QueryRedelegationRequest::decode(query.data)
+                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_redelegations(ctx, req)?
+                    .encode_vec()
+                    .into())
+            }
+            _ => Err(AppError::InvalidRequest("query path not found".into())),
+        }
     }
 
     pub fn end_block<DB: Database>(

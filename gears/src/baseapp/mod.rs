@@ -17,7 +17,7 @@ use crate::{
     },
 };
 use bytes::Bytes;
-use database::RocksDB;
+use database::Database;
 use kv_store::{
     types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore,
@@ -46,9 +46,9 @@ pub use query::*;
 static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Debug, Clone)]
-pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
-    state: Arc<RwLock<ApplicationState<RocksDB, H>>>,
-    multi_store: Arc<RwLock<MultiBank<RocksDB, H::StoreKey, ApplicationStore>>>,
+pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
+    state: Arc<RwLock<ApplicationState<DB, H>>>,
+    multi_store: Arc<RwLock<MultiBank<DB, H::StoreKey, ApplicationStore>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
@@ -56,13 +56,10 @@ pub struct BaseApp<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> 
     _info_marker: PhantomData<AI>,
 }
 
-impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H, AI> {
-    pub fn new(
-        db: RocksDB,
-        params_subspace_key: PSK,
-        abci_handler: H,
-        options: NodeOptions,
-    ) -> Self {
+impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
+    BaseApp<DB, PSK, H, AI>
+{
+    pub fn new(db: DB, params_subspace_key: PSK, abci_handler: H, options: NodeOptions) -> Self {
         let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
@@ -150,7 +147,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         Ok(())
     }
 
-    fn run_tx<MD: ExecutionMode<RocksDB, H>>(
+    fn run_tx<MD: ExecutionMode<DB, H>>(
         &self,
         raw: Bytes,
         mode: &mut MD,
@@ -194,7 +191,7 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
-        MD::commit(ctx, &mut multi_store);
+        MD::commit(ctx, &mut *multi_store);
 
         Ok(RunTxInfo {
             events,

@@ -1,8 +1,10 @@
 use crate::{
-    consts::keeper::VALIDATORS_BY_POWER_INDEX_KEY, Commission, CommissionRates, Description,
+    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
+    Commission, CommissionRates, CommissionRaw, Description,
 };
 use chrono::Utc;
 use gears::{
+    core::{errors::Error, Protobuf},
     error::AppError,
     tendermint::types::{
         proto::{crypto::PublicKey, validator::ValidatorUpdate},
@@ -14,17 +16,18 @@ use gears::{
         uint::Uint256,
     },
 };
+use prost::{Enumeration, Message};
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
-#[derive(Debug, Default, Clone, Deserialize, Serialize)]
+#[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
 pub struct Pool {
     pub not_bonded_tokens: Uint256,
     pub bonded_tokens: Uint256,
 }
 
 /// Last validator power, needed for validator set update logic
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct LastValidatorPower {
     pub address: ValAddress,
     pub power: i64,
@@ -33,7 +36,7 @@ pub struct LastValidatorPower {
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
 /// validator.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Delegation {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
@@ -43,7 +46,7 @@ pub struct Delegation {
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
 /// validator.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UnbondingDelegation {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
@@ -51,7 +54,7 @@ pub struct UnbondingDelegation {
 }
 
 /// UnbondingDelegationEntry - entry to an UnbondingDelegation
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UnbondingDelegationEntry {
     pub creation_height: i64,
     pub completion_time: Timestamp,
@@ -75,7 +78,7 @@ impl UnbondingDelegationEntry {
 /// Redelegation contains the list of a particular delegator's
 /// redelegating bonds from a particular source validator to a
 /// particular destination validator
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Redelegation {
     pub delegator_address: AccAddress,
     pub validator_src_address: ValAddress,
@@ -83,10 +86,16 @@ pub struct Redelegation {
     pub entries: Vec<RedelegationEntry>,
 }
 
+impl Redelegation {
+    pub fn add_entry(&mut self, redelegation_entry: RedelegationEntry) {
+        self.entries.push(redelegation_entry);
+    }
+}
+
 /// RedelegationEntry - entry to a Redelegation
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RedelegationEntry {
-    pub creation_height: i64,
+    pub creation_height: u64,
     pub completion_time: Timestamp,
     pub initial_balance: Uint256,
     pub share_dst: Decimal256,
@@ -132,7 +141,7 @@ impl DvPair {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Enumeration)]
 pub enum BondStatus {
     Unbonded = 0,
     Unbonding = 1,
@@ -172,7 +181,7 @@ pub struct Validator {
     /// tokens define the delegated tokens (incl. self-delegation).
     pub tokens: Uint256,
     /// unbonding_height defines, if unbonding, the height at which this validator has begun unbonding.
-    pub unbonding_height: i64,
+    pub unbonding_height: u64,
     /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
     pub unbonding_time: Timestamp,
     /// commission defines the commission parameters.
@@ -235,7 +244,8 @@ impl Validator {
         // calculate the shares to issue
         let issues_shares = if self.delegator_shares.is_zero() {
             // the first delegation to a validator sets the exchange rate to one
-            Decimal256::new(amount)
+            // TODO: infallible in sdk
+            Decimal256::from_atomics(amount, 0).unwrap()
         } else {
             // TODO: check the code, maybe remove unwrap
             self.shares_from_tokens(amount).unwrap()
@@ -246,14 +256,66 @@ impl Validator {
         issues_shares
     }
 
-    fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
+    pub fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
             return Err(AppError::Custom("insufficient shares".into()).into());
         }
         Ok(self
             .delegator_shares
-            .checked_mul(Decimal256::new(amount))?
-            .checked_div(Decimal256::new(self.tokens))?)
+            .checked_mul(Decimal256::from_atomics(amount, 0)?)?
+            .checked_div(Decimal256::from_atomics(self.tokens, 0)?)?)
+    }
+
+    pub fn shares_from_tokens_truncated(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
+        if self.tokens.is_zero() {
+            return Err(AppError::Custom("insufficient shares".into()).into());
+        }
+
+        // TODO: check
+        let mul = self
+            .delegator_shares
+            .checked_mul(Decimal256::from_atomics(amount, 0)?)?;
+        // TODO: check constant 18 in decimals
+        let precision_reuse = Decimal256::from_atomics(10u64, 0)?.checked_pow(18)?;
+        let mul2 = mul
+            .checked_mul(precision_reuse)?
+            .checked_mul(precision_reuse)?;
+        let div = mul2.checked_div(Decimal256::from_atomics(self.tokens, 0)?)?;
+        Ok(div.checked_div(precision_reuse)?)
+    }
+
+    /// RemoveDelShares removes delegator shares from a validator.
+    /// NOTE: because token fractions are left in the valiadator,
+    ///       the exchange rate of future shares of this validator can increase.
+    pub fn remove_del_shares(&mut self, del_shares: Decimal256) -> Uint256 {
+        let remaining_shares = self.delegator_shares - del_shares;
+
+        let issued_tokens = if remaining_shares.is_zero() {
+            // last delegation share gets any trimmings
+            let tokens = self.tokens;
+            self.tokens = Uint256::zero();
+            tokens
+        } else {
+            // leave excess tokens in the validator
+            // however fully use all the delegator shares
+            // TODO: infallible + floor
+            let tokens = self.tokens_from_shares(del_shares).unwrap().to_uint_floor();
+            // TODO: check of negative result
+            self.tokens -= tokens;
+            //         panic("attempting to remove more tokens than available in validator")
+            tokens
+        };
+
+        self.delegator_shares = remaining_shares;
+        issued_tokens
+    }
+
+    /// calculate the token worth of provided shares
+    // TODO: infallible in sdk
+    pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
+        Ok(shares
+            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
+            .checked_div(self.delegator_shares)?)
     }
 
     pub fn invalid_ex_rate(&self) -> bool {
@@ -310,7 +372,7 @@ impl Validator {
         // NOTE the address doesn't need to be stored because counter bytes must always be different
         // NOTE the larger values are of higher value
         let consensus_power = self.tokens_to_consensus_power(power_reduction);
-        let consensus_power_bytes = consensus_power.to_ne_bytes();
+        let consensus_power_bytes = consensus_power.to_le_bytes();
 
         let oper_addr_invr = self
             .operator_address
@@ -328,3 +390,82 @@ impl Validator {
         key
     }
 }
+
+impl TryFrom<ValidatorRaw> for Validator {
+    type Error = Error;
+    fn try_from(value: ValidatorRaw) -> Result<Self, Self::Error> {
+        let status = value.status();
+        Ok(Self {
+            operator_address: ValAddress::from_bech32(&value.operator_address)
+                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+            delegator_shares: Decimal256::from_str(&value.delegator_shares)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            description: value
+                .description
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?,
+            consensus_pubkey: serde_json::from_slice(&value.consensus_pubkey)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            jailed: value.jailed,
+            tokens: Uint256::from_str(&value.tokens)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            unbonding_height: value.unbonding_height,
+            unbonding_time: value.unbonding_time.ok_or(Error::MissingField(
+                "Missing field 'unbonding_time'.".into(),
+            ))?,
+            commission: value
+                .commission
+                .ok_or(Error::MissingField("Missing field 'description'.".into()))?
+                .try_into()?,
+            min_self_delegation: Uint256::from_str(&value.min_self_delegation)
+                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+            status,
+        })
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct ValidatorRaw {
+    #[prost(string)]
+    pub operator_address: String,
+    #[prost(string)]
+    pub delegator_shares: String,
+    #[prost(message, optional)]
+    pub description: Option<Description>,
+    #[prost(bytes)]
+    pub consensus_pubkey: Vec<u8>,
+    #[prost(bool)]
+    pub jailed: bool,
+    #[prost(string)]
+    pub tokens: String,
+    #[prost(uint64)]
+    pub unbonding_height: u64,
+    #[prost(message, optional)]
+    pub unbonding_time: Option<Timestamp>,
+    #[prost(message, optional)]
+    pub commission: Option<CommissionRaw>,
+    #[prost(string)]
+    pub min_self_delegation: String,
+    #[prost(enumeration = "BondStatus")]
+    pub status: i32,
+}
+
+impl From<Validator> for ValidatorRaw {
+    fn from(value: Validator) -> Self {
+        Self {
+            operator_address: value.operator_address.to_string(),
+            delegator_shares: value.delegator_shares.to_string(),
+            description: Some(value.description),
+            consensus_pubkey: serde_json::to_vec(&value.consensus_pubkey)
+                .expect(SERDE_ENCODING_DOMAIN_TYPE),
+            jailed: value.jailed,
+            tokens: value.tokens.to_string(),
+            unbonding_height: value.unbonding_height,
+            unbonding_time: Some(value.unbonding_time),
+            commission: Some(value.commission.into()),
+            min_self_delegation: value.min_self_delegation.to_string(),
+            status: value.status.into(),
+        }
+    }
+}
+
+impl Protobuf<ValidatorRaw> for Validator {}
