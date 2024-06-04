@@ -17,7 +17,7 @@ pub struct ApplicationState<DB, AH: ABCIHandler> {
 impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
     pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, AH::StoreKey, ApplicationStore>) -> Self {
         Self {
-            check_mode: CheckTxMode::new(max_gas, &global_ms),
+            check_mode: CheckTxMode::new(max_gas, global_ms.to_cache_kind()),
             deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_cache_kind()),
         }
     }
@@ -39,7 +39,7 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
     }
 
     pub fn cache_clear(&mut self) {
-        self.check_mode.unpersisted_multi_store.caches_clear();
+        self.check_mode.multi_store.caches_clear();
         self.deliver_mode.multi_store.caches_clear();
     }
 
@@ -47,9 +47,7 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
     pub fn cache_update(&mut self, store: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>) {
         let cache = store.caches_copy();
 
-        self.check_mode
-            .unpersisted_multi_store
-            .caches_update(cache.clone());
+        self.check_mode.multi_store.caches_update(cache.clone());
         self.deliver_mode.multi_store.caches_update(cache);
     }
 }

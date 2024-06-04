@@ -14,16 +14,6 @@ use crate::{
 
 use super::{immutable::KVStore, KVBank};
 
-impl<DB> KVBank<DB, ApplicationStore> {
-    pub fn to_cache_kind(&self) -> KVBank<DB, TransactionStore> {
-        KVBank {
-            persistent: Arc::clone(&self.persistent),
-            cache: self.cache.clone(),
-            _marker: std::marker::PhantomData,
-        }
-    }
-}
-
 impl<DB: Database> KVBank<DB, ApplicationStore> {
     pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, KVStoreError> {
         Ok(Self {
@@ -57,6 +47,14 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
 
         let (hash, _) = persistent.save_version().ok().unwrap_or_default(); //TODO: is it safe to assume this won't ever error?
         hash
+    }
+
+    pub fn to_cache_kind(&self) -> KVBank<DB, TransactionStore> {
+        KVBank {
+            persistent: Arc::clone(&self.persistent),
+            cache: self.cache.clone(),
+            _marker: std::marker::PhantomData,
+        }
     }
 
     pub fn prefix_store<I: IntoIterator<Item = u8>>(

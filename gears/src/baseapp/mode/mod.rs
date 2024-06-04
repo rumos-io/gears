@@ -48,7 +48,10 @@ pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
         msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError>;
 
-    fn commit(&mut self, global_ms: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>);
+    fn commit(
+        ctx: TxContext<'_, DB, AH::StoreKey>,
+        global_ms: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>,
+    );
 }
 
 mod sealed {

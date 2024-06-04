@@ -1,5 +1,5 @@
 use database::Database;
-use kv_store::{types::multi::MultiBank, ApplicationStore, TransactionStore};
+use kv_store::{types::multi::MultiBank, TransactionStore};
 use tendermint::types::proto::{event::Event, header::Header};
 
 use super::{build_tx_gas_meter, ExecutionMode};
@@ -20,19 +20,17 @@ use crate::{
 #[derive(Debug)]
 pub struct CheckTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) unpersisted_multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
-    pub(crate) persisted_multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
+    pub(crate) multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
 }
 
 impl<DB, AH: ABCIHandler> CheckTxMode<DB, AH> {
-    pub fn new(max_gas: Gas, multi_store: &MultiBank<DB, AH::StoreKey, ApplicationStore>) -> Self {
+    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
                 Gas::Finite(max_gas) => Box::new(BasicGasMeter::new(max_gas)),
             }),
-            unpersisted_multi_store: multi_store.to_cache_kind(),
-            persisted_multi_store: multi_store.to_cache_kind(),
+            multi_store,
         }
     }
 }
@@ -41,7 +39,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     fn multi_store(
         &mut self,
     ) -> &mut MultiBank<DB, <AH as ABCIHandler>::StoreKey, TransactionStore> {
-        &mut self.unpersisted_multi_store
+        &mut self.multi_store
     }
 
     fn build_ctx(
@@ -53,7 +51,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         options: NodeOptions,
     ) -> TxContext<'_, DB, AH::StoreKey> {
         TxContext::new(
-            &mut self.unpersisted_multi_store,
+            &mut self.multi_store,
             height,
             header,
             consensus_params,
@@ -90,13 +88,9 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         Ok(())
     }
 
-    fn commit(&mut self, _global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>) {
-        /*
-            This is needed for case when `check_tx` fails and need to clear all cache,
-            but it would delete cache not only for one call but for other calls leading
-            to inconsistent state. So for this we need 2 stores in `CheckTxMode`
-        */
-        self.persisted_multi_store
-            .caches_update(self.unpersisted_multi_store.caches_copy());
+    fn commit(
+        _ctx: TxContext<'_, DB, AH::StoreKey>,
+        _global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
+    ) {
     }
 }

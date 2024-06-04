@@ -193,10 +193,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
         ctx.block_gas_meter
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
-        std::mem::drop(ctx);
-
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
-        mode.commit(&mut multi_store);
+        MD::commit(ctx, &mut multi_store);
 
         Ok(RunTxInfo {
             events,
