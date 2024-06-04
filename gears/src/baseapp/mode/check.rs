@@ -44,7 +44,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
 
     fn build_ctx(
         &mut self,
-        height: u64,
+        height: u32,
         header: Header,
         consensus_params: ConsensusParams,
         fee: Option<&Fee>,

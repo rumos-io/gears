@@ -38,7 +38,7 @@ pub struct TxContext<'a, DB, SK> {
     pub gas_meter: Arc<RefCell<GasMeter<TxKind>>>,
     pub events: Vec<Event>,
     pub options: NodeOptions,
-    pub(crate) height: u64,
+    pub(crate) height: u32,
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
     pub(crate) consensus_params: ConsensusParams,
@@ -49,7 +49,7 @@ pub struct TxContext<'a, DB, SK> {
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
         multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
-        height: u64,
+        height: u32,
         header: Header,
         consensus_params: ConsensusParams,
         gas_meter: GasMeter<TxKind>,
@@ -114,7 +114,7 @@ impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for TxContext<'_, DB, SK> {
-    fn height(&self) -> u64 {
+    fn height(&self) -> u32 {
         self.height
     }
 

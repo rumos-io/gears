@@ -210,7 +210,7 @@ impl<
         let block_time =
             chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
 
-        let block_height = ctx.height();
+        let block_height = ctx.height() as u64;
 
         // unbondingValIterator will contains all validator addresses indexed under
         // the ValidatorQueueKey prefix. Note, the entire index key is composed as
@@ -374,7 +374,7 @@ impl<
 
         // set the unbonding completion time and completion height appropriately
         validator.unbonding_time = ctx.get_time();
-        validator.unbonding_height = ctx.height();
+        validator.unbonding_height = ctx.height() as u64;
 
         // save the now unbonded validator record and power index
         self.set_validator(ctx, validator)?;

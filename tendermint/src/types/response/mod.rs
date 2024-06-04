@@ -39,27 +39,11 @@ impl From<ResponseFlush> for inner::ResponseFlush {
         Self {}
     }
 }
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct ResponseCommit {
     /// reserve 1
-    #[prost(bytes = "bytes", tag = "2")]
     pub data: ::prost::bytes::Bytes,
-    #[prost(int64, tag = "3")]
-    pub retain_height: i64,
-}
-
-impl From<inner::ResponseCommit> for ResponseCommit {
-    fn from(
-        inner::ResponseCommit {
-            data,
-            retain_height,
-        }: inner::ResponseCommit,
-    ) -> Self {
-        Self {
-            data,
-            retain_height,
-        }
-    }
+    pub retain_height: u32,
 }
 
 impl From<ResponseCommit> for inner::ResponseCommit {
@@ -71,7 +55,7 @@ impl From<ResponseCommit> for inner::ResponseCommit {
     ) -> Self {
         Self {
             data,
-            retain_height,
+            retain_height: retain_height.into(),
         }
     }
 }

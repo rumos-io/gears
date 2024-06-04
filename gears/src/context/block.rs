@@ -19,7 +19,7 @@ use super::{InfallibleContext, InfallibleContextMut, QueryableContext, Transacti
 #[derive(Debug)]
 pub struct BlockContext<'a, DB, SK> {
     multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
-    pub(crate) height: u64,
+    pub(crate) height: u32,
     pub header: Header,
     pub events: Vec<Event>,
 }
@@ -27,7 +27,7 @@ pub struct BlockContext<'a, DB, SK> {
 impl<'a, DB, SK> BlockContext<'a, DB, SK> {
     pub fn new(
         multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
-        height: u64,
+        height: u32,
         header: Header,
     ) -> Self {
         BlockContext {
@@ -54,7 +54,7 @@ impl<DB: Database, SK: StoreKey> BlockContext<'_, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for BlockContext<'_, DB, SK> {
-    fn height(&self) -> u64 {
+    fn height(&self) -> u32 {
         self.height
     }
 

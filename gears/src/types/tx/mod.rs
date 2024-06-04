@@ -90,7 +90,7 @@ impl<M: TxMessage> Tx<M> {
         &self.signatures_data
     }
 
-    pub fn get_timeout_height(&self) -> u64 {
+    pub fn get_timeout_height(&self) -> u32 {
         self.body.timeout_height
     }
 
