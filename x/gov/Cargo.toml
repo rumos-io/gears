@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
 
 [lints]
 workspace = true

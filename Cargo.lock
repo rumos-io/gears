@@ -1870,6 +1870,9 @@ dependencies = [
 [[package]]
 name = "gov"
 version = "0.1.0"
+dependencies = [
+ "gears",
+]
 
 [[package]]
 name = "group"
