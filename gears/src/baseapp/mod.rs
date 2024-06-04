@@ -69,7 +69,8 @@ impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> BaseApp<PSK, H
             params_subspace_key,
         };
 
-        let ctx = SimpleContext::new(&mut multi_store, 0);
+        let height = multi_store.head_version() as u64;
+        let ctx = SimpleContext::new(&mut multi_store, height);
 
         let max_gas = baseapp_params_keeper
             .block_params(&ctx)
