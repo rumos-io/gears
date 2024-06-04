@@ -7,6 +7,7 @@ use crate::error::POISONED_LOCK;
 use crate::params::ParamsSubspaceKey;
 use crate::types::gas::Gas;
 use bytes::Bytes;
+use database::Database;
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -40,8 +41,8 @@ use tendermint::{
 };
 use tracing::{debug, error, info};
 
-impl<PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> ABCIApplication<H::Genesis>
-    for BaseApp<PSK, H, AI>
+impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
+    ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
         info!("Got init chain request");

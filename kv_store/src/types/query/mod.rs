@@ -30,7 +30,7 @@ impl<'a, DB, SK> From<&'a MultiBank<DB, SK, ApplicationStore>> for QueryStoreOpt
 #[derive(Debug)]
 pub struct QueryMultiStore<DB, SK>(pub(crate) HashMap<SK, QueryKVStore<PrefixDB<DB>>>);
 
-impl<DB: Database + Clone, SK: StoreKey> QueryMultiStore<DB, SK> {
+impl<DB: Database, SK: StoreKey> QueryMultiStore<DB, SK> {
     pub fn new<'a>(
         opt: impl Into<QueryStoreOptions<'a, DB, SK>>,
         version: u32,
