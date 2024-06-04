@@ -3,7 +3,11 @@ use std::ops::Bound;
 use database::Database;
 use kv_store::types::kv::immutable::KVStore;
 
-use super::{errors::StoreErrors, gas::kv::GasKVStore, prefix::PrefixStore, range::StoreRange};
+use super::{
+    gas::{errors::GasStoreErrors, kv::GasKVStore},
+    prefix::PrefixStore,
+    range::StoreRange,
+};
 
 pub mod mutable;
 
@@ -45,7 +49,7 @@ impl<'a, DB: Database> Store<'a, DB> {
 }
 
 impl<DB: Database> Store<'_, DB> {
-    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, StoreErrors> {
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         match &self.0 {
             StoreBackend::Gas(var) => Ok(var.get(k)?),
             StoreBackend::Kv(var) => Ok(var.get(k)),

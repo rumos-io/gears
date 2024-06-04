@@ -4,7 +4,7 @@ use gears::{
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
     tendermint::types::time::Duration,
-    types::{denom::Denom, store::errors::StoreErrors},
+    types::{denom::Denom, store::gas::errors::GasStoreErrors},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -170,7 +170,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
     pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Params, StoreErrors> {
+    ) -> Result<Params, GasStoreErrors> {
         let store = gears::params::gas::subspace(ctx, &self.params_subspace_key);
         Ok(store
             .params()?
@@ -181,7 +181,7 @@ impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
         &self,
         ctx: &mut CTX,
         params: Params,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = gears::params::gas::subspace_mut(ctx, &self.params_subspace_key);
         store.params_set(&params)
     }

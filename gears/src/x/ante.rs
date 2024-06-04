@@ -10,7 +10,7 @@ use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
 use crate::types::gas::{GasMeter, GasMeteringErrors};
-use crate::types::store::errors::StoreErrors;
+use crate::types::store::gas::errors::GasStoreErrors;
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -515,7 +515,7 @@ pub struct MetadataFromState<'a, DB, SK, BK, CTX> {
 impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: QueryableContext<DB, SK>>
     MetadataGetter for MetadataFromState<'a, DB, SK, BK, CTX>
 {
-    type Error = StoreErrors; // this is not used here
+    type Error = GasStoreErrors; // this is not used here
 
     fn metadata(
         &self,

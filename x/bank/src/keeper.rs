@@ -19,7 +19,7 @@ use gears::types::base::coin::Coin;
 use gears::types::base::send::SendCoins;
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
-use gears::types::store::errors::StoreErrors;
+use gears::types::store::gas::errors::GasStoreErrors;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
@@ -65,7 +65,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
         &self,
         ctx: &CTX,
         base: &Denom,
-    ) -> Result<Option<Metadata>, StoreErrors> {
+    ) -> Result<Option<Metadata>, GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let denom_metadata_store = bank_store.prefix_store(denom_metadata_key(base.to_string()));
 
