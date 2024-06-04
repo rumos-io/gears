@@ -1872,6 +1872,8 @@ name = "gov"
 version = "0.1.0"
 dependencies = [
  "gears",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,5 +1,5 @@
 use crate::{
-    params::{DepositParams, TallyParams, VotingParams},
+    params::GovParams,
     types::{deposit::Deposit, proposal::Proposal, vote::Vote},
 };
 
@@ -8,9 +8,7 @@ pub struct GovGenesisState {
     pub deposits: Vec<Deposit>,
     pub votes: Vec<Vote>,
     pub proposals: Vec<Proposal>,
-    pub deposit: DepositParams,
-    pub voting: VotingParams,
-    pub tally: TallyParams,
+    pub params: GovParams,
 }
 
 impl Default for GovGenesisState {
@@ -20,9 +18,13 @@ impl Default for GovGenesisState {
             deposits: Vec::new(),
             votes: Vec::new(),
             proposals: Vec::new(),
-            deposit: Default::default(),
-            voting: Default::default(),
-            tally: Default::default(),
+            params: GovParams {
+                tally: Default::default(),
+                voting: Default::default(),
+                deposit: Default::default(),
+            },
         }
     }
 }
+
+
