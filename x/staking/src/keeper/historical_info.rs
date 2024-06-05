@@ -24,7 +24,7 @@ impl<
 
         if ctx.height() >= entry_num as u64 {
             // if (ctx.height() as i64 - entry_num as i64) >= 0 {
-            for i in (ctx.height() - entry_num as u64)..=0 {
+            for i in (0..=(ctx.height() - entry_num as u64)).rev() {
                 if let Some(_info) = self.historical_info(ctx, i).unwrap_gas() {
                     self.delete_historical_info(ctx, i).unwrap();
                 } else {
