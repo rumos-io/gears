@@ -1,5 +1,7 @@
 use gears::types::base::coin::Coin;
+use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Proposal {
     pub proposal_id: u64,
     pub content: Vec<u8>, // TODO
@@ -12,6 +14,7 @@ pub struct Proposal {
     pub voting_end_time: (),
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum ProposalStatus {
     Nil,
     DepositPeriod,
