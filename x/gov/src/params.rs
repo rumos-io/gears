@@ -9,7 +9,7 @@ use gears::{
         ParamsSerialize, ParamsSubspaceKey,
     },
     store::{database::Database, StoreKey},
-    types::{base::coin::Coin, decimal256::Decimal256, store::errors::StoreErrors},
+    types::{base::coin::Coin, decimal256::Decimal256, store::gas::errors::GasStoreErrors},
 };
 use serde::{Deserialize, Serialize};
 
@@ -138,7 +138,7 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for GovParamsKeeper<PSK> {
     fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Self::Param, StoreErrors> {
+    ) -> Result<Self::Param, GasStoreErrors> {
         let store = subspace(ctx, &self.params_subspace_key);
 
         Ok(store.params()?.unwrap_or_default())
@@ -158,7 +158,7 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for GovParamsKeeper<PSK> {
         &self,
         ctx: &mut KV,
         params: Self::Param,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = subspace_mut(ctx, &self.params_subspace_key);
 
         store.params_set(&params)

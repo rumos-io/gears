@@ -4,7 +4,7 @@ use kv_store::StoreKey;
 use crate::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
-    types::store::errors::StoreErrors,
+    types::store::gas::errors::GasStoreErrors,
 };
 
 pub trait ParamsKeeper<PSK: ParamsSubspaceKey> {
@@ -18,7 +18,7 @@ pub trait ParamsKeeper<PSK: ParamsSubspaceKey> {
     fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Self::Param, StoreErrors>;
+    ) -> Result<Self::Param, GasStoreErrors>;
 
     fn set<DB: Database, SK: StoreKey, KV: InfallibleContextMut<DB, SK>>(
         &self,
@@ -30,5 +30,5 @@ pub trait ParamsKeeper<PSK: ParamsSubspaceKey> {
         &self,
         ctx: &mut KV,
         params: Self::Param,
-    ) -> Result<(), StoreErrors>;
+    ) -> Result<(), GasStoreErrors>;
 }
