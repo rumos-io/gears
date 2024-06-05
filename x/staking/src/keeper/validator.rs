@@ -116,32 +116,25 @@ impl<
         Ok(removed_tokens)
     }
 
-    pub fn validator_queue_map<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn validator_queue_map<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: chrono::DateTime<Utc>,
         block_height: u64,
     ) -> HashMap<Vec<u8>, Vec<String>> {
-        let store = ctx.kv_store(&self.store_key);
+        let store = ctx.infallible_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
-
-        let end = validator_queue_key(block_time, block_height);
 
         let mut res = HashMap::new();
 
+        let end = validator_queue_key(block_time, block_height);
         let mut previous_was_end = false;
-        // TODO:D Handle error if you need
-        // TODO: check path and remove `to_infallible_iter` or change signature
-        for (k, v) in iterator
-            .range(..)
-            .to_infallible_iter()
-            .take_while(|(k, _)| {
-                let is_not_end = **k != end;
-                let ret_res = is_not_end && !previous_was_end;
-                previous_was_end = !is_not_end;
-                ret_res
-            })
-        {
+        for (k, v) in iterator.range(..).take_while(|(k, _)| {
+            let is_not_end = **k != end;
+            let ret_res = is_not_end && !previous_was_end;
+            previous_was_end = !is_not_end;
+            ret_res
+        }) {
             // TODO
             res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
         }

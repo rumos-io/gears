@@ -5,7 +5,10 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
-    context::{block::BlockContext, init::InitContext, QueryableContext, TransactionalContext},
+    context::{
+        block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
+        TransactionalContext,
+    },
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -390,7 +393,7 @@ impl<
     /// are returned to Tendermint.
     pub fn apply_and_return_validator_set_updates<
         DB: Database,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: TransactionalContext<DB, SK> + InfallibleContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,

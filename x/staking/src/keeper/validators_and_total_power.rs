@@ -97,15 +97,14 @@ impl<
     }
 
     /// get the last validator set
-    pub fn last_validators_by_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn last_validators_by_addr<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &CTX,
     ) -> HashMap<String, Vec<u8>> {
         let mut last = HashMap::new();
-        let store = ctx.kv_store(&self.store_key);
+        let store = ctx.infallible_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
-        // TODO: check path and remove `to_infallible_iter` or change signature
-        for (k, v) in store.range(..).to_infallible_iter() {
+        for (k, v) in store.range(..) {
             let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
             last.insert(k.to_string(), v.to_vec());
         }
