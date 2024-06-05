@@ -5,8 +5,8 @@ use crate::{
     context::{QueryableContext, TransactionalContext},
     error::AppError,
     types::{
-        address::AccAddress, base::send::SendCoins, denom::Denom, store::errors::StoreErrors,
-        tx::metadata::Metadata,
+        address::AccAddress, base::send::SendCoins, denom::Denom,
+        store::gas::errors::GasStoreErrors, tx::metadata::Metadata,
     },
     x::module::Module,
 };
@@ -24,5 +24,5 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
         &self,
         ctx: &CTX,
         base: &Denom,
-    ) -> Result<Option<Metadata>, StoreErrors>;
+    ) -> Result<Option<Metadata>, GasStoreErrors>;
 }

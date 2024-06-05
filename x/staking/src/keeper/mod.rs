@@ -20,7 +20,7 @@ use gears::{
         address::{AccAddress, ValAddress},
         base::{coin::Coin, send::SendCoins},
         decimal256::Decimal256,
-        store::errors::StoreErrors,
+        store::gas::errors::GasStoreErrors,
         uint::Uint256,
     },
     x::keepers::auth::AuthKeeper,
@@ -522,7 +522,7 @@ impl<
         &self,
         ctx: &mut CTX,
         amount: Uint256,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         // TODO: original routine is infallible, it means that the amount is a valid number.
         // The method is called from failable methods. Consider to provide correct solution taking
         // into account additional analisis.
@@ -553,7 +553,7 @@ impl<
         &self,
         ctx: &mut CTX,
         val_addr: &ValAddress,
-    ) -> Result<(Timestamp, u64, bool), StoreErrors> {
+    ) -> Result<(Timestamp, u64, bool), GasStoreErrors> {
         // TODO: When would the validator not be found?
         let validator = self.validator(ctx, val_addr)?;
         let validator_status = validator

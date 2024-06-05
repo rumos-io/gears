@@ -4,8 +4,7 @@ use database::Database;
 use kv_store::types::kv::mutable::KVStoreMut;
 
 use crate::types::store::{
-    errors::StoreErrors,
-    gas::kv::mutable::GasKVStoreMut,
+    gas::{errors::GasStoreErrors, kv::mutable::GasKVStoreMut},
     prefix::{mutable::PrefixStoreMut, PrefixStore},
     range::StoreRange,
 };
@@ -55,7 +54,7 @@ impl<'a, DB: Database> StoreMut<'a, DB> {
 }
 
 impl<DB: Database> StoreMut<'_, DB> {
-    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, StoreErrors> {
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         match &self.0 {
             StoreMutBackend::Gas(var) => Ok(var.get(k)?),
             StoreMutBackend::Kv(var) => Ok(var.get(k)),
@@ -66,7 +65,7 @@ impl<DB: Database> StoreMut<'_, DB> {
         &mut self,
         key: KI,
         value: VI,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         match &mut self.0 {
             StoreMutBackend::Gas(var) => Ok(var.set(key, value)?),
             StoreMutBackend::Kv(var) => Ok(var.set(key, value)),

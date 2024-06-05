@@ -3,7 +3,7 @@ use std::{borrow::Cow, ops::Bound};
 use database::Database;
 use kv_store::{range::Range, types::prefix::range::PrefixRange};
 
-use crate::types::store::errors::StoreErrors;
+use crate::types::store::gas::errors::GasStoreErrors;
 
 #[derive(Debug)]
 enum InfallibleRangeBackend<'a, DB> {
@@ -15,9 +15,9 @@ enum InfallibleRangeBackend<'a, DB> {
 pub struct RangeIter<'a, DB>(InfallibleRangeBackend<'a, DB>);
 
 impl<DB> RangeIter<'_, DB> {
-    pub fn error(&self) -> Option<StoreErrors> {
+    pub fn error(&self) -> Option<GasStoreErrors> {
         match &self.0 {
-            InfallibleRangeBackend::Gas(var) => var.error().cloned().map(|e| StoreErrors::Gas(e)),
+            InfallibleRangeBackend::Gas(var) => var.error().cloned(),
             InfallibleRangeBackend::Kv(_) => None,
             InfallibleRangeBackend::Prefix(_) => None,
         }

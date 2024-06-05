@@ -1,4 +1,4 @@
-use gears::{context::InfallibleContext, types::store::errors::StoreErrors};
+use gears::context::InfallibleContext;
 
 pub use super::*;
 
@@ -30,7 +30,7 @@ impl<
         &self,
         ctx: &mut CTX,
         last_total_power: Uint256,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes())
     }
@@ -54,7 +54,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
@@ -74,7 +74,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<(), StoreErrors> {
+    ) -> Result<(), GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
@@ -89,7 +89,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &Validator,
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+    ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
@@ -100,7 +100,7 @@ impl<
         &self,
         ctx: &mut CTX,
         validator: &ValAddress,
-    ) -> Result<Option<Vec<u8>>, StoreErrors> {
+    ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
         delegations_store.delete(validator.to_string().as_bytes())
