@@ -1,3 +1,4 @@
+use super::*;
 use gears::{
     context::InfallibleContextMut,
     types::{
@@ -5,8 +6,6 @@ use gears::{
         address::{AccAddress, ConsAddress},
     },
 };
-
-pub use super::*;
 
 /// AccountKeeper defines the expected account keeper methods (noalias)
 pub trait AccountKeeper<SK: StoreKey>: AuthKeeper<SK> + Clone + Send + Sync + 'static {
