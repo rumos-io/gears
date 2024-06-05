@@ -1,6 +1,7 @@
-pub use super::*;
+use super::*;
 use crate::{
-    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_val_del_addrs_key, RedelegationEntry,
+    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_val_del_addrs_key,
+    unbonding_delegation_time_key, RedelegationEntry,
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},

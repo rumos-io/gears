@@ -5,7 +5,10 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
-    context::{block::BlockContext, init::InitContext, QueryableContext, TransactionalContext},
+    context::{
+        block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
+        TransactionalContext,
+    },
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -26,7 +29,7 @@ use gears::{
     x::keepers::auth::AuthKeeper,
 };
 use prost::bytes::BufMut;
-use std::{cmp::Ordering, collections::HashMap};
+use std::{cmp::Ordering, collections::HashMap, u64};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
 // validator types.
@@ -35,6 +38,7 @@ const CTX_NO_GAS_UNWRAP: &str = "Context doesn't have any gas";
 
 mod bonded;
 mod delegation;
+mod historical_info;
 mod hooks;
 mod query;
 mod redelegation;
@@ -45,8 +49,6 @@ mod unbonding;
 mod validator;
 mod validators_and_total_power;
 pub use traits::*;
-use unbonding::*;
-use validator::*;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -391,7 +393,7 @@ impl<
     /// are returned to Tendermint.
     pub fn apply_and_return_validator_set_updates<
         DB: Database,
-        CTX: TransactionalContext<DB, SK>,
+        CTX: TransactionalContext<DB, SK> + InfallibleContext<DB, SK>,
     >(
         &self,
         ctx: &mut CTX,
