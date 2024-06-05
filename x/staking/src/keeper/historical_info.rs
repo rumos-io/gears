@@ -22,7 +22,7 @@ impl<
         // over the historical entries starting from the most recent version to be pruned
         // and then return at the first empty entry.
 
-        if !ctx.height().overflowing_sub(entry_num as u64).1 {
+        if ctx.height() >= entry_num as u64 {
             // if (ctx.height() as i64 - entry_num as i64) >= 0 {
             for i in (ctx.height() - entry_num as u64)..=0 {
                 if let Some(_info) = self.historical_info(ctx, i).unwrap_gas() {
