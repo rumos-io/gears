@@ -27,7 +27,7 @@ pub fn length_prefixed_val_del_addrs_key(
     prefix
 }
 
-pub fn historical_info_key(height: u64) -> Vec<u8> {
+pub fn historical_info_key(height: u32) -> Vec<u8> {
     let mut res = Vec::with_capacity(9);
     res.extend_from_slice(&HISTORICAL_INFO_KEY);
     res.extend_from_slice(&height.to_le_bytes());
