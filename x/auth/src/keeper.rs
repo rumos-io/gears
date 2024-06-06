@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
 use gears::context::init::InitContext;
@@ -16,7 +18,7 @@ use gears::types::{
     query::account::QueryAccountResponse,
 };
 use gears::x::keepers::auth::AuthKeeper;
-use gears::x::module::Module;
+use gears::x::module::{Module, ModuleKey};
 use prost::Message;
 
 const ACCOUNT_STORE_PREFIX: [u8; 1] = [1];
@@ -25,12 +27,19 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 ]; // "globalAccountNumber"
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, MK: ModuleKey> {
     store_key: SK,
     auth_params_keeper: AuthParamsKeeper<PSK>,
+    /// Static map of modules. Module keys are declared on app level and can't be changed. The module instances can
+    /// be updated using proper keys.
+    mod_storage: HashMap<MK, Module>,
+    /// Fee collector access key.
+    fee_collector_key: MK,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, MK: ModuleKey> AuthKeeper<SK, MK>
+    for Keeper<SK, PSK, MK>
+{
     type Params = AuthsParams;
 
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -103,38 +112,59 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        module: &Module,
+        module_key: &MK,
     ) -> Result<(), GasStoreErrors> {
-        let addr = module.get_address();
+        if let Some(module) = self.mod_storage.get(module_key) {
+            let addr = module.get_address();
 
-        if self.has_account(ctx, &addr)? {
+            if !self.has_account(ctx, &addr)? {
+                let account = ModuleAccount {
+                    base_account: BaseAccount {
+                        address: addr.clone(),
+                        pub_key: None,
+                        account_number: self.get_next_account_number(ctx)?,
+                        sequence: 0,
+                    },
+                    name: module.get_name().to_string(),
+                    permissions: module.get_permissions().clone(),
+                };
+
+                self.set_account(ctx, Account::Module(account))?
+            }
+            Ok(())
         } else {
-            let account = ModuleAccount {
-                base_account: BaseAccount {
-                    address: addr.clone(),
-                    pub_key: None,
-                    account_number: self.get_next_account_number(ctx)?,
-                    sequence: 0,
-                },
-                name: module.get_name(),
-                permissions: module.get_permissions(),
-            };
-
-            self.set_account(ctx, Account::Module(account))?
+            panic!(
+                "Module with key '{}' doesn't exist. Please, build application with proper modules",
+                module_key.key()
+            );
         }
+    }
 
-        Ok(())
+    fn get_module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        module_key: &MK,
+    ) -> Result<Option<Module>, GasStoreErrors> {
+        Ok(self.mod_storage.get(module_key).cloned())
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, MK: ModuleKey> Keeper<SK, PSK, MK> {
+    pub fn new(
+        store_key: SK,
+        params_subspace_key: PSK,
+        mod_storage: HashMap<MK, Module>,
+        fee_collector_key: MK,
+    ) -> Self {
         let auth_params_keeper = AuthParamsKeeper {
             params_subspace_key,
         };
+
         Keeper {
             store_key,
             auth_params_keeper,
+            mod_storage,
+            fee_collector_key,
         }
     }
 
@@ -155,7 +185,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
 
         // Create the fee collector account
-        self.check_create_new_module_account(ctx, &Module::FeeCollector)
+        self.check_create_new_module_account(ctx, &self.fee_collector_key)
             .expect("Init context doesn't have any gas");
     }
 

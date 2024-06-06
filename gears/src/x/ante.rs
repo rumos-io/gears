@@ -14,7 +14,6 @@ use crate::types::store::gas::errors::GasStoreErrors;
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
-use crate::x::module::Module;
 use crate::{
     context::{tx::TxContext, QueryableContext},
     error::AppError,
@@ -31,6 +30,8 @@ use database::Database;
 use kv_store::StoreKey;
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
+
+use super::module::ModuleKey;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
     fn consume<AP: AuthParams>(
@@ -66,19 +67,28 @@ impl SignGasConsumer for DefaultSignGasConsumer {
 }
 
 #[derive(Debug, Clone)]
-pub struct BaseAnteHandler<BK: BankKeeper<SK>, AK: AuthKeeper<SK>, SK: StoreKey, GC> {
+pub struct BaseAnteHandler<
+    BK: BankKeeper<SK, MK>,
+    AK: AuthKeeper<SK, MK>,
+    SK: StoreKey,
+    GC,
+    MK: ModuleKey,
+> {
     bank_keeper: BK,
     auth_keeper: AK,
     sign_gas_consumer: GC,
+    fee_collector_key: MK,
     sk: PhantomData<SK>,
 }
 
-impl<SK, BK, AK, GC: SignGasConsumer> AnteHandlerTrait<SK> for BaseAnteHandler<BK, AK, SK, GC>
+impl<SK, BK, AK, GC: SignGasConsumer, MK> AnteHandlerTrait<SK>
+    for BaseAnteHandler<BK, AK, SK, GC, MK>
 where
     SK: StoreKey,
-    BK: BankKeeper<SK>,
-    AK: AuthKeeper<SK>,
+    BK: BankKeeper<SK, MK>,
+    AK: AuthKeeper<SK, MK>,
     GC: SignGasConsumer,
+    MK: ModuleKey,
 {
     fn run<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
@@ -89,18 +99,25 @@ where
     }
 }
 
-impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
-    BaseAnteHandler<BK, AK, SK, GC>
+impl<
+        AK: AuthKeeper<SK, MK>,
+        BK: BankKeeper<SK, MK>,
+        SK: StoreKey,
+        GC: SignGasConsumer,
+        MK: ModuleKey,
+    > BaseAnteHandler<BK, AK, SK, GC, MK>
 {
     pub fn new(
         auth_keeper: AK,
         bank_keeper: BK,
         sign_gas_consumer: GC,
-    ) -> BaseAnteHandler<BK, AK, SK, GC> {
+        fee_collector_key: MK,
+    ) -> BaseAnteHandler<BK, AK, SK, GC, MK> {
         BaseAnteHandler {
             bank_keeper,
             auth_keeper,
             sign_gas_consumer,
+            fee_collector_key,
             sk: PhantomData,
         }
     }
@@ -346,7 +363,7 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
             self.bank_keeper.send_coins_from_account_to_module(
                 ctx,
                 fee_payer.to_owned(),
-                Module::FeeCollector,
+                &self.fee_collector_key,
                 fee.to_owned(),
             )?;
         }
@@ -506,14 +523,20 @@ impl<AK: AuthKeeper<SK>, BK: BankKeeper<SK>, SK: StoreKey, GC: SignGasConsumer>
     }
 }
 
-pub struct MetadataFromState<'a, DB, SK, BK, CTX> {
+pub struct MetadataFromState<'a, DB, SK, BK, CTX, MK> {
     pub bank_keeper: &'a BK,
     pub ctx: &'a CTX,
-    pub _phantom: PhantomData<(DB, SK)>,
+    pub _phantom: PhantomData<(DB, SK, MK)>,
 }
 
-impl<'a, DB: Database, SK: StoreKey, BK: BankKeeper<SK>, CTX: QueryableContext<DB, SK>>
-    MetadataGetter for MetadataFromState<'a, DB, SK, BK, CTX>
+impl<
+        'a,
+        DB: Database,
+        SK: StoreKey,
+        BK: BankKeeper<SK, MK>,
+        CTX: QueryableContext<DB, SK>,
+        MK: ModuleKey,
+    > MetadataGetter for MetadataFromState<'a, DB, SK, BK, CTX, MK>
 {
     type Error = GasStoreErrors; // this is not used here
 

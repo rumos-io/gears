@@ -8,15 +8,15 @@ use crate::{
         address::AccAddress, base::send::SendCoins, denom::Denom,
         store::gas::errors::GasStoreErrors, tx::metadata::Metadata,
     },
-    x::module::Module,
+    x::module::ModuleKey,
 };
 
-pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait BankKeeper<SK: StoreKey, MK: ModuleKey>: Clone + Send + Sync + 'static {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
-        to_module: Module,
+        to_module: &MK,
         amount: SendCoins,
     ) -> Result<(), AppError>;
 

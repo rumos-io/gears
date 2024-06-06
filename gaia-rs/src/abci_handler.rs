@@ -2,6 +2,7 @@ use crate::{
     config::AppConfig,
     genesis::GenesisState,
     message::Message,
+    modules::{modules_map, GaiaModuleKey},
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
@@ -19,25 +20,34 @@ pub struct GaiaABCIHandler {
     bank_abci_handler: bank::ABCIHandler<
         GaiaStoreKey,
         GaiaParamsStoreKey,
-        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
+        GaiaModuleKey,
     >,
-    auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
+    auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
     ibc_abci_handler: ibc_rs::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
         bank::Keeper<
             GaiaStoreKey,
             GaiaParamsStoreKey,
-            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
+            GaiaModuleKey,
         >,
-        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey>,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
         GaiaStoreKey,
         DefaultSignGasConsumer,
+        GaiaModuleKey,
     >,
 }
 
 impl GaiaABCIHandler {
     pub fn new(_cfg: Config<AppConfig>) -> GaiaABCIHandler {
-        let auth_keeper = auth::Keeper::new(GaiaStoreKey::Auth, GaiaParamsStoreKey::Auth);
+        let modules_map = modules_map();
+        let auth_keeper = auth::Keeper::new(
+            GaiaStoreKey::Auth,
+            GaiaParamsStoreKey::Auth,
+            modules_map,
+            GaiaModuleKey::FeeCollector,
+        );
 
         let bank_keeper = bank::Keeper::new(
             GaiaStoreKey::Bank,
@@ -51,7 +61,12 @@ impl GaiaABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
-            ante_handler: BaseAnteHandler::new(auth_keeper, bank_keeper, DefaultSignGasConsumer),
+            ante_handler: BaseAnteHandler::new(
+                auth_keeper,
+                bank_keeper,
+                DefaultSignGasConsumer,
+                GaiaModuleKey::FeeCollector,
+            ),
         }
     }
 }

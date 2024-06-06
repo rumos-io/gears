@@ -25,7 +25,8 @@ use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
-use gears::x::module::Module;
+use gears::x::module::ModuleKey;
+use std::marker::PhantomData;
 use std::{collections::HashMap, str::FromStr};
 
 const SUPPLY_KEY: [u8; 1] = [0];
@@ -33,28 +34,33 @@ const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 const DENOM_METADATA_PREFIX: [u8; 1] = [1];
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> {
+pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, MK>, MK: ModuleKey> {
     store_key: SK,
     bank_params_keeper: BankParamsKeeper<PSK>,
     auth_keeper: AK,
+    module_key: PhantomData<MK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
-    for Keeper<SK, PSK, AK>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, MK>, MK: ModuleKey> BankKeeper<SK, MK>
+    for Keeper<SK, PSK, AK, MK>
 {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
-        to_module: Module,
+        to_module: &MK,
         amount: SendCoins,
     ) -> Result<(), AppError> {
         self.auth_keeper
             .check_create_new_module_account(ctx, &to_module)?;
 
+        let module = self.auth_keeper.get_module_account(ctx, to_module)?;
+        // SAFETY: system should have valid module keys, otherwise the blockchain is broken
+        let to_address = module.unwrap().get_address().clone();
+
         let msg = MsgSend {
             from_address,
-            to_address: to_module.get_address(),
+            to_address,
             amount,
         };
 
@@ -79,7 +85,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, AK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, MK>, MK: ModuleKey>
+    Keeper<SK, PSK, AK, MK>
+{
     pub fn new(store_key: SK, params_subspace_key: PSK, auth_keeper: AK) -> Self {
         let bank_params_keeper = BankParamsKeeper {
             params_subspace_key,
@@ -88,6 +96,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
             store_key,
             bank_params_keeper,
             auth_keeper,
+            module_key: PhantomData,
         }
     }
 

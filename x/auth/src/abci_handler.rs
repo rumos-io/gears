@@ -6,6 +6,7 @@ use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::query::account::{QueryAccountRequest, QueryAccountResponse};
+use gears::x::module::ModuleKey;
 use gears::{error::AppError, params::ParamsSubspaceKey};
 use serde::Serialize;
 
@@ -23,12 +24,12 @@ pub enum AuthNodeQueryResponse {
 }
 
 #[derive(Debug, Clone)]
-pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey> {
-    keeper: Keeper<SK, PSK>,
+pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: ModuleKey> {
+    keeper: Keeper<SK, PSK, M>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
-    pub fn new(keeper: Keeper<SK, PSK>) -> Self {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, MK: ModuleKey> ABCIHandler<SK, PSK, MK> {
+    pub fn new(keeper: Keeper<SK, PSK, MK>) -> Self {
         ABCIHandler { keeper }
     }
 

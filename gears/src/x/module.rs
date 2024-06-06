@@ -1,34 +1,42 @@
 use crate::types::address::AccAddress;
 
-pub enum Module {
-    FeeCollector,
+/// Marks module key in application.
+pub trait ModuleKey:
+    std::fmt::Debug + Clone + PartialEq + Eq + std::hash::Hash + Send + Sync + 'static
+{
+    /// Get string representation of key.
+    fn key(&self) -> &str;
 }
 
-// //TODO: use properly typed QueryAccountResponse and QueryAccountRequest
+#[derive(Debug, Clone)]
+pub struct Module {
+    name: String,
+    address: AccAddress,
+    permissions: Vec<String>,
+}
 
 impl Module {
-    pub fn get_address(&self) -> AccAddress {
-        match self {
-            Module::FeeCollector => {
-                //TODO: construct address from Vec<u8> + make address constant
-                //TODO: where do these addresses come from?
-                AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
-                    .expect("hard coded address is valid")
-            }
+    /// Create module with a concrete account address.
+    // TODO: to keep compatibility with the first implementation added parameter `address`. It can
+    // be removed and used logic from sdk
+    pub fn new(name: String, address: AccAddress, permissions: Vec<String>) -> Self {
+        Self {
+            name,
+            address,
+            permissions,
         }
     }
 
-    pub fn get_name(&self) -> String {
-        match self {
-            Module::FeeCollector => "fee_collector".into(),
-        }
+    /// Get module name.
+    pub fn get_name(&self) -> &str {
+        &self.name
     }
-
-    pub fn get_permissions(&self) -> Vec<String> {
-        match self {
-            Module::FeeCollector => vec![],
-        }
+    /// Get module address
+    pub fn get_address(&self) -> &AccAddress {
+        &self.address
+    }
+    /// Module permissions. Default value is empty list.
+    pub fn get_permissions(&self) -> &Vec<String> {
+        &self.permissions
     }
 }
-
-//TODO: copy tests across
