@@ -25,12 +25,14 @@ const GLOBAL_ACCOUNT_NUMBER_KEY: [u8; 19] = [
 ]; // "globalAccountNumber"
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> {
     store_key: SK,
     auth_params_keeper: AuthParamsKeeper<PSK>,
+    /// Fee collector access key.
+    fee_collector_module: M,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keeper<SK, PSK, M> {
     type Params = AuthsParams;
 
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -103,15 +105,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
     fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        module: &Module,
+        module: &M,
     ) -> Result<(), GasStoreErrors> {
         let addr = module.get_address();
 
-        if self.has_account(ctx, &addr)? {
-        } else {
+        if !self.has_account(ctx, &addr)? {
             let account = ModuleAccount {
                 base_account: BaseAccount {
-                    address: addr.clone(),
+                    address: addr,
                     pub_key: None,
                     account_number: self.get_next_account_number(ctx)?,
                     sequence: 0,
@@ -122,19 +123,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> AuthKeeper<SK> for Keeper<SK, PSK> {
 
             self.set_account(ctx, Account::Module(account))?
         }
-
         Ok(())
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
-    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
+    pub fn new(store_key: SK, params_subspace_key: PSK, fee_collector_module: M) -> Self {
         let auth_params_keeper = AuthParamsKeeper {
             params_subspace_key,
         };
+
         Keeper {
             store_key,
             auth_params_keeper,
+            fee_collector_module,
         }
     }
 
@@ -155,7 +157,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
         }
 
         // Create the fee collector account
-        self.check_create_new_module_account(ctx, &Module::FeeCollector)
+        self.check_create_new_module_account(ctx, &self.fee_collector_module)
             .expect("Init context doesn't have any gas");
     }
 

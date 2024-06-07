@@ -26,6 +26,7 @@ use gears::types::uint::Uint256;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::x::module::Module;
+use std::marker::PhantomData;
 use std::{collections::HashMap, str::FromStr};
 
 const SUPPLY_KEY: [u8; 1] = [0];
@@ -33,24 +34,25 @@ const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 const DENOM_METADATA_PREFIX: [u8; 1] = [1];
 
 #[derive(Debug, Clone)]
-pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> {
+pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> {
     store_key: SK,
     bank_params_keeper: BankParamsKeeper<PSK>,
     auth_keeper: AK,
+    module_key: PhantomData<M>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
-    for Keeper<SK, PSK, AK>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> BankKeeper<SK, M>
+    for Keeper<SK, PSK, AK, M>
 {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         from_address: AccAddress,
-        to_module: Module,
+        to_module: &M,
         amount: SendCoins,
     ) -> Result<(), AppError> {
         self.auth_keeper
-            .check_create_new_module_account(ctx, &to_module)?;
+            .check_create_new_module_account(ctx, to_module)?;
 
         let msg = MsgSend {
             from_address,
@@ -79,7 +81,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> BankKeeper<SK>
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, AK> {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
+    Keeper<SK, PSK, AK, M>
+{
     pub fn new(store_key: SK, params_subspace_key: PSK, auth_keeper: AK) -> Self {
         let bank_params_keeper = BankParamsKeeper {
             params_subspace_key,
@@ -88,6 +92,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK>> Keeper<SK, PSK, A
             store_key,
             bank_params_keeper,
             auth_keeper,
+            module_key: PhantomData,
         }
     }
 

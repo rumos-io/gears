@@ -1,34 +1,13 @@
 use crate::types::address::AccAddress;
 
-pub enum Module {
-    FeeCollector,
-}
-
-// //TODO: use properly typed QueryAccountResponse and QueryAccountRequest
-
-impl Module {
-    pub fn get_address(&self) -> AccAddress {
-        match self {
-            Module::FeeCollector => {
-                //TODO: construct address from Vec<u8> + make address constant
-                //TODO: where do these addresses come from?
-                AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
-                    .expect("hard coded address is valid")
-            }
-        }
-    }
-
-    pub fn get_name(&self) -> String {
-        match self {
-            Module::FeeCollector => "fee_collector".into(),
-        }
-    }
-
-    pub fn get_permissions(&self) -> Vec<String> {
-        match self {
-            Module::FeeCollector => vec![],
-        }
+/// For declaring modules on app level.
+pub trait Module: std::fmt::Debug + Clone + Send + Sync + 'static {
+    /// Get module name.
+    fn get_name(&self) -> String;
+    /// Get module address.
+    fn get_address(&self) -> AccAddress;
+    /// Module permissions. Default value is empty list.
+    fn get_permissions(&self) -> Vec<String> {
+        vec![]
     }
 }
-
-//TODO: copy tests across

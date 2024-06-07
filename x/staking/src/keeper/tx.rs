@@ -7,10 +7,11 @@ use gears::{
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AccountKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// CreateValidator defines a method for creating a new validator
     pub fn create_validator<DB: Database>(
