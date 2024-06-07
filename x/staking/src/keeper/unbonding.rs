@@ -12,10 +12,11 @@ use gears::{
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AccountKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     pub fn unbonding_delegation<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,

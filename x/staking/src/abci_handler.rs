@@ -14,28 +14,31 @@ use gears::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },
     },
+    x::module::Module,
 };
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    AK: AccountKeeper<SK>,
-    BK: BankKeeper<SK>,
-    KH: KeeperHooks<SK>,
+    AK: AccountKeeper<SK, M>,
+    BK: BankKeeper<SK, M>,
+    KH: KeeperHooks<SK, M>,
+    M: Module,
 > {
-    keeper: Keeper<SK, PSK, AK, BK, KH>,
+    keeper: Keeper<SK, PSK, AK, BK, KH, M>,
 }
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > ABCIHandler<SK, PSK, AK, BK, KH>
+        AK: AccountKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > ABCIHandler<SK, PSK, AK, BK, KH, M>
 {
-    pub fn new(keeper: Keeper<SK, PSK, AK, BK, KH>) -> Self {
+    pub fn new(keeper: Keeper<SK, PSK, AK, BK, KH, M>) -> Self {
         ABCIHandler { keeper }
     }
 

@@ -4,10 +4,11 @@ use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasS
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AccountKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// Delegate performs a delegation, set/update everything necessary within the store.
     /// token_src indicates the bond status of the incoming funds.

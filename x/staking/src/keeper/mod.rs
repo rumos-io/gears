@@ -26,7 +26,7 @@ use gears::{
         store::gas::errors::GasStoreErrors,
         uint::Uint256,
     },
-    x::keepers::auth::AuthKeeper,
+    x::{keepers::auth::AuthKeeper, module::Module},
 };
 use prost::bytes::BufMut;
 use std::{cmp::Ordering, collections::HashMap, u64};
@@ -55,9 +55,10 @@ pub use traits::*;
 pub struct Keeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    AK: AccountKeeper<SK>,
-    BK: BankKeeper<SK>,
-    KH: KeeperHooks<SK>,
+    AK: AccountKeeper<SK, M>,
+    BK: BankKeeper<SK, M>,
+    KH: KeeperHooks<SK, M>,
+    M: Module,
 > {
     store_key: SK,
     auth_keeper: AK,
@@ -65,15 +66,18 @@ pub struct Keeper<
     staking_params_keeper: StakingParamsKeeper<PSK>,
     codespace: String,
     hooks_keeper: Option<KH>,
+    bonded_module: M,
+    unbonded_module: M,
 }
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AccountKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     pub fn new(
         store_key: SK,
@@ -81,6 +85,8 @@ impl<
         auth_keeper: AK,
         bank_keeper: BK,
         codespace: String,
+        bonded_module: M,
+        unbonded_module: M,
     ) -> Self {
         let staking_params_keeper = StakingParamsKeeper {
             params_subspace_key,
@@ -93,6 +99,8 @@ impl<
             staking_params_keeper,
             codespace,
             hooks_keeper: None,
+            bonded_module,
+            unbonded_module,
         }
     }
 

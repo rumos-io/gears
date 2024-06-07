@@ -5,10 +5,13 @@ use gears::{
         account::{Account, ModuleAccount},
         address::{AccAddress, ConsAddress},
     },
+    x::module::Module,
 };
 
 /// AccountKeeper defines the expected account keeper methods (noalias)
-pub trait AccountKeeper<SK: StoreKey>: AuthKeeper<SK> + Clone + Send + Sync + 'static {
+pub trait AccountKeeper<SK: StoreKey, M: Module>:
+    AuthKeeper<SK, M> + Clone + Send + Sync + 'static
+{
     fn account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: CTX,
@@ -29,7 +32,7 @@ pub trait AccountKeeper<SK: StoreKey>: AuthKeeper<SK> + Clone + Send + Sync + 's
 }
 
 /// BankKeeper defines the expected interface needed to retrieve account balances.
-pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
     // SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
@@ -38,7 +41,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 
-    fn all_balances<DB: Database, AK: AccountKeeper<SK>, CTX: TransactionalContext<DB, SK>>(
+    fn all_balances<DB: Database, AK: AccountKeeper<SK, M>, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: AccAddress,
@@ -46,7 +49,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn send_coins_from_module_to_module<
         DB: Database,
-        AK: AccountKeeper<SK>,
+        AK: AccountKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,
@@ -58,7 +61,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn undelegate_coins_from_module_to_account<
         DB: Database,
-        AK: AccountKeeper<SK>,
+        AK: AccountKeeper<SK, M>,
         CTX: InfallibleContextMut<DB, SK>,
     >(
         &self,
@@ -70,7 +73,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn delegate_coins_from_account_to_module<
         DB: Database,
-        AK: AccountKeeper<SK>,
+        AK: AccountKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,
@@ -86,7 +89,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 /// keeper which must take particular actions when validators/delegators change
 /// state. The second keeper must implement this interface, which then the
 /// staking keeper can call.
-pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait KeeperHooks<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -129,7 +132,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn before_delegation_shares_modified<
         DB: Database,
-        AK: AuthKeeper<SK>,
+        AK: AuthKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,
@@ -140,7 +143,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn before_delegation_removed<
         DB: Database,
-        AK: AuthKeeper<SK>,
+        AK: AuthKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,
@@ -158,7 +161,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn before_validator_slashed<
         DB: Database,
-        AK: AuthKeeper<SK>,
+        AK: AuthKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,

@@ -4,10 +4,11 @@ use gears::{context::InfallibleContext, store::database::ext::UnwrapCorrupt};
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AccountKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// Load the last total validator power.
     pub fn last_total_power<DB: Database, CTX: InfallibleContext<DB, SK>>(

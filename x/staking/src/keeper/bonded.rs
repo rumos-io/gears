@@ -4,10 +4,11 @@ use gears::types::{account::ModuleAccount, store::gas::errors::GasStoreErrors};
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AccountKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// bonded_pool returns the bonded tokens pool's module account
     pub fn bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
