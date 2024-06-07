@@ -4,7 +4,7 @@ use kv_store::StoreKey;
 use crate::{
     context::{QueryableContext, TransactionalContext},
     types::{account::Account, address::AccAddress, store::gas::errors::GasStoreErrors},
-    x::module::{Module, ModuleKey},
+    x::module::Module,
 };
 
 pub trait AuthParams {
@@ -13,7 +13,7 @@ pub trait AuthParams {
     fn tx_cost_per_byte(&self) -> u64;
 }
 
-pub trait AuthKeeper<SK: StoreKey, MK: ModuleKey>: Clone + Send + Sync + 'static {
+pub trait AuthKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     type Params: AuthParams;
 
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -50,13 +50,6 @@ pub trait AuthKeeper<SK: StoreKey, MK: ModuleKey>: Clone + Send + Sync + 'static
     fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        module_key: &MK,
+        module: &M,
     ) -> Result<(), GasStoreErrors>;
-
-    /// Creates a new module account if it doesn't already exist
-    fn get_module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        module_key: &MK,
-    ) -> Result<Option<Module>, GasStoreErrors>;
 }

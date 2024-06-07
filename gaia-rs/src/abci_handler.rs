@@ -2,7 +2,7 @@ use crate::{
     config::AppConfig,
     genesis::GenesisState,
     message::Message,
-    modules::{modules_map, GaiaModuleKey},
+    modules::GaiaModules,
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
@@ -20,33 +20,31 @@ pub struct GaiaABCIHandler {
     bank_abci_handler: bank::ABCIHandler<
         GaiaStoreKey,
         GaiaParamsStoreKey,
-        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
-        GaiaModuleKey,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+        GaiaModules,
     >,
-    auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
+    auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
     ibc_abci_handler: ibc_rs::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
         bank::Keeper<
             GaiaStoreKey,
             GaiaParamsStoreKey,
-            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
-            GaiaModuleKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+            GaiaModules,
         >,
-        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModuleKey>,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
         GaiaStoreKey,
         DefaultSignGasConsumer,
-        GaiaModuleKey,
+        GaiaModules,
     >,
 }
 
 impl GaiaABCIHandler {
     pub fn new(_cfg: Config<AppConfig>) -> GaiaABCIHandler {
-        let modules_map = modules_map();
         let auth_keeper = auth::Keeper::new(
             GaiaStoreKey::Auth,
             GaiaParamsStoreKey::Auth,
-            modules_map,
-            GaiaModuleKey::FeeCollector,
+            GaiaModules::FeeCollector,
         );
 
         let bank_keeper = bank::Keeper::new(
@@ -65,7 +63,7 @@ impl GaiaABCIHandler {
                 auth_keeper,
                 bank_keeper,
                 DefaultSignGasConsumer,
-                GaiaModuleKey::FeeCollector,
+                GaiaModules::FeeCollector,
             ),
         }
     }

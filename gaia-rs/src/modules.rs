@@ -1,33 +1,32 @@
 use gears::types::address::AccAddress;
-use gears::x::module::{Module, ModuleKey};
-use std::collections::HashMap;
-use std::hash::Hash;
+use gears::x::module::Module;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum GaiaModuleKey {
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GaiaModules {
     FeeCollector,
 }
 
-impl ModuleKey for GaiaModuleKey {
-    fn key(&self) -> &str {
+impl Module for GaiaModules {
+    fn get_name(&self) -> String {
         match self {
-            GaiaModuleKey::FeeCollector => "fee_collector",
+            GaiaModules::FeeCollector => "fee_collector".into(),
         }
     }
-}
 
-pub fn modules_map() -> HashMap<GaiaModuleKey, Module> {
-    //TODO: construct address from Vec<u8> + make address constant
-    //TODO: where do these addresses come from?
-    let fee_collector_address =
-        AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
-            .expect("hard coded address is valid");
-    let fee_collector_module = Module::new(
-        GaiaModuleKey::FeeCollector.key().to_string(),
-        fee_collector_address,
-        vec![],
-    );
-    let mut res = HashMap::with_capacity(1);
-    res.insert(GaiaModuleKey::FeeCollector, fee_collector_module);
-    res
+    fn get_address(&self) -> AccAddress {
+        match self {
+            GaiaModules::FeeCollector => {
+                //TODO: construct address from Vec<u8> + make address constant
+                //TODO: where do these addresses come from?
+                AccAddress::from_bech32("cosmos17xpfvakm2amg962yls6f84z3kell8c5lserqta")
+                    .expect("hard coded address is valid")
+            }
+        }
+    }
+
+    fn get_permissions(&self) -> Vec<String> {
+        match self {
+            GaiaModules::FeeCollector => vec![],
+        }
+    }
 }

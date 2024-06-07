@@ -10,7 +10,7 @@ use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadataResponse};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
-use gears::x::module::ModuleKey;
+use gears::x::module::Module;
 use serde::Serialize;
 
 use crate::types::query::{
@@ -20,9 +20,8 @@ use crate::types::query::{
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
-pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, MK>, MK: ModuleKey>
-{
-    keeper: Keeper<SK, PSK, AK, MK>,
+pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> {
+    keeper: Keeper<SK, PSK, AK, M>,
 }
 
 #[derive(Clone)]
@@ -44,10 +43,10 @@ pub enum BankNodeQueryResponse {
     DenomMetadata(QueryDenomMetadataResponse),
 }
 
-impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, MK>, MK: ModuleKey>
-    ABCIHandler<SK, PSK, AK, MK>
+impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
+    ABCIHandler<SK, PSK, AK, M>
 {
-    pub fn new(keeper: Keeper<SK, PSK, AK, MK>) -> Self {
+    pub fn new(keeper: Keeper<SK, PSK, AK, M>) -> Self {
         ABCIHandler { keeper }
     }
 
