@@ -12,7 +12,7 @@ use gears::{
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
         KH: KeeperHooks<SK, M>,
         M: Module,
@@ -313,9 +313,9 @@ impl<
                     };
                     let amount = SendCoins::new(vec![coin.clone()])?;
                     self.bank_keeper
-                        .undelegate_coins_from_module_to_account::<DB, AK, BlockContext<'_, DB, SK>>(
+                        .undelegate_coins_from_module_to_account::<DB, BlockContext<'_, DB, SK>>(
                             ctx,
-                            NOT_BONDED_POOL_NAME.to_string(),
+                            &self.not_bonded_module,
                             ubd.delegator_address.clone(),
                             amount,
                         )?;

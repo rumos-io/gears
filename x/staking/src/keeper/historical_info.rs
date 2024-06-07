@@ -5,7 +5,7 @@ use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::ext::GasResu
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
         KH: KeeperHooks<SK, M>,
         M: Module,

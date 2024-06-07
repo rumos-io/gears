@@ -1,38 +1,19 @@
-use super::*;
 use gears::{
-    context::InfallibleContextMut,
+    context::{InfallibleContextMut, TransactionalContext},
+    error::AppError,
+    store::{database::Database, StoreKey},
     types::{
-        account::{Account, ModuleAccount},
-        address::{AccAddress, ConsAddress},
+        address::{AccAddress, ConsAddress, ValAddress},
+        base::send::SendCoins,
+        decimal256::Decimal256,
     },
-    x::module::Module,
+    x::{keepers::auth::AuthKeeper, module::Module},
 };
 
-/// AccountKeeper defines the expected account keeper methods (noalias)
-pub trait AccountKeeper<SK: StoreKey, M: Module>:
+/// BankKeeper defines the expected interface needed to retrieve account balances.
+pub trait BankKeeper<SK: StoreKey, M: Module>:
     AuthKeeper<SK, M> + Clone + Send + Sync + 'static
 {
-    fn account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: CTX,
-        addr: ValAddress,
-    ) -> Account;
-
-    fn module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        module_name: String,
-    ) -> Option<ModuleAccount>;
-
-    fn set_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        context: &mut CTX,
-        acc: ModuleAccount,
-    );
-}
-
-/// BankKeeper defines the expected interface needed to retrieve account balances.
-pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
     // SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
@@ -41,45 +22,33 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 
-    fn all_balances<DB: Database, AK: AccountKeeper<SK, M>, CTX: TransactionalContext<DB, SK>>(
+    fn all_balances<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: AccAddress,
     ) -> SendCoins;
 
-    fn send_coins_from_module_to_module<
-        DB: Database,
-        AK: AccountKeeper<SK, M>,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        sender_pool: String,
-        recepient_pool: String,
+        sender_pool: &M,
+        recepient_pool: &M,
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn undelegate_coins_from_module_to_account<
-        DB: Database,
-        AK: AccountKeeper<SK, M>,
-        CTX: InfallibleContextMut<DB, SK>,
-    >(
+    fn undelegate_coins_from_module_to_account<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        sender_module: String,
+        sender_module: &M,
         addr: AccAddress,
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn delegate_coins_from_account_to_module<
-        DB: Database,
-        AK: AccountKeeper<SK, M>,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         sender_addr: AccAddress,
-        recepient_module: String,
+        recepient_module: &M,
         amount: SendCoins,
     ) -> Result<(), AppError>;
 }
