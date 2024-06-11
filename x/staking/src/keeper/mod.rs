@@ -41,6 +41,7 @@ mod bonded;
 mod delegation;
 mod historical_info;
 mod hooks;
+mod mock_hook_keeper;
 mod query;
 mod redelegation;
 mod tx;
@@ -49,14 +50,15 @@ mod unbonding;
 mod validator;
 mod validators_and_total_power;
 
-#[allow(dead_code)]
+pub use mock_hook_keeper::*;
+
 #[derive(Debug, Clone)]
 pub struct Keeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
     BK: BankKeeper<SK, M>,
-    KH: KeeperHooks<SK, M>,
+    KH: KeeperHooks<SK, AK, M>,
     M: Module,
 > {
     store_key: SK,
@@ -73,7 +75,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -82,6 +84,7 @@ impl<
         params_subspace_key: PSK,
         auth_keeper: AK,
         bank_keeper: BK,
+        hooks_keeper: Option<KH>,
         bonded_module: M,
         not_bonded_module: M,
     ) -> Self {
@@ -94,7 +97,7 @@ impl<
             auth_keeper,
             bank_keeper,
             staking_params_keeper,
-            hooks_keeper: None,
+            hooks_keeper,
             bonded_module,
             not_bonded_module,
         }
@@ -181,14 +184,22 @@ impl<
             }
         }
 
-        let bonded_coins = vec![Coin {
-            denom: genesis.params.bond_denom.clone(),
-            amount: bonded_tokens,
-        }];
-        let not_bonded_coins = vec![Coin {
-            denom: genesis.params.bond_denom,
-            amount: not_bonded_tokens,
-        }];
+        let bonded_coins = if !bonded_tokens.is_zero() {
+            vec![Coin {
+                denom: genesis.params.bond_denom.clone(),
+                amount: bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
+        let not_bonded_coins = if !not_bonded_tokens.is_zero() {
+            vec![Coin {
+                denom: genesis.params.bond_denom,
+                amount: not_bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
 
         let bonded_balance = self
             .bank_keeper

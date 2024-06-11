@@ -38,7 +38,7 @@ impl Default for Params {
             },
             max_validators: 100,
             max_entries: 7,
-            bond_denom: bond_denom.clone(),
+            bond_denom,
             historical_entries: 0,
             min_commission_rate: Coin::default(),
         }
@@ -68,20 +68,17 @@ impl ParamsSerialize for Params {
             ),
             (
                 KEY_MAX_VALIDATORS,
-                self.max_validators.to_string().as_bytes().to_vec(),
+                format!("\"{}\"", self.max_validators).into_bytes(),
             ),
             (
                 KEY_MAX_ENTRIES,
-                self.max_entries.to_string().as_bytes().to_vec(),
+                format!("\"{}\"", self.max_entries).into_bytes(),
             ),
             (
                 KEY_HISTORICAL_ENTRIES,
-                self.historical_entries.to_string().as_bytes().to_vec(),
+                format!("\"{}\"", self.historical_entries).into_bytes(),
             ),
-            (
-                KEY_BOND_DENOM,
-                self.max_validators.to_string().as_bytes().to_vec(),
-            ),
+            (KEY_BOND_DENOM, self.bond_denom.to_string().into_bytes()),
             // TODO: remove unwrap
             (
                 KEY_MIN_COMMISSION_RATE,
@@ -103,16 +100,16 @@ impl ParamsDeserialize for Params {
         .unwrap();
         let max_validators = ParamKind::U32
             .parse_param(fields.remove(KEY_MAX_VALIDATORS).unwrap())
-            .unsigned_64()
-            .unwrap() as u32;
+            .unsigned_32()
+            .unwrap();
         let max_entries = ParamKind::U32
             .parse_param(fields.remove(KEY_MAX_ENTRIES).unwrap())
-            .unsigned_64()
-            .unwrap() as u32;
+            .unsigned_32()
+            .unwrap();
         let historical_entries = ParamKind::U32
             .parse_param(fields.remove(KEY_HISTORICAL_ENTRIES).unwrap())
-            .unsigned_64()
-            .unwrap() as u32;
+            .unsigned_32()
+            .unwrap();
         let bond_denom = ParamKind::String
             .parse_param(fields.remove(KEY_BOND_DENOM).unwrap())
             .string()

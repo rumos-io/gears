@@ -43,6 +43,27 @@ impl Params {
         }
     }
 
+    pub fn unsigned_32(self) -> Option<u32> {
+        match self {
+            Params::U32(var) => Some(var),
+            _ => None,
+        }
+    }
+
+    pub fn unsigned_16(self) -> Option<u16> {
+        match self {
+            Params::U16(var) => Some(var),
+            _ => None,
+        }
+    }
+
+    pub fn unsigned_8(self) -> Option<u8> {
+        match self {
+            Params::U8(var) => Some(var),
+            _ => None,
+        }
+    }
+
     pub fn signed_64(self) -> Option<u64> {
         match self {
             Params::U64(var) => Some(var),

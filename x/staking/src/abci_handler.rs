@@ -23,7 +23,7 @@ pub struct ABCIHandler<
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
     BK: BankKeeper<SK, M>,
-    KH: KeeperHooks<SK, M>,
+    KH: KeeperHooks<SK, AK, M>,
     M: Module,
 > {
     keeper: Keeper<SK, PSK, AK, BK, KH, M>,
@@ -34,7 +34,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > ABCIHandler<SK, PSK, AK, BK, KH, M>
 {
@@ -54,11 +54,7 @@ impl<
         }
     }
 
-    pub fn init_genesis<DB: Database>(
-        &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
-    ) {
+    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis);
     }
 
@@ -100,7 +96,6 @@ impl<
         _request: RequestBeginBlock,
     ) {
         self.keeper.track_historical_info(ctx);
-        todo!()
         // TODO
         // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
     }
