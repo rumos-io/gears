@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 #local
 gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
+staking = { path = "../staking/" }
 
 #newtypes
 bytes = { workspace = true }

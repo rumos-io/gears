@@ -1,19 +1,18 @@
 use gears::{
-    context::{InfallibleContextMut, TransactionalContext},
+    context::{QueryableContext, TransactionalContext},
     error::AppError,
     store::{database::Database, StoreKey},
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
-        base::send::SendCoins,
+        base::{coin::Coin, send::SendCoins},
         decimal256::Decimal256,
+        store::gas::errors::GasStoreErrors,
     },
     x::{keepers::auth::AuthKeeper, module::Module},
 };
 
 /// BankKeeper defines the expected interface needed to retrieve account balances.
-pub trait BankKeeper<SK: StoreKey, M: Module>:
-    AuthKeeper<SK, M> + Clone + Send + Sync + 'static
-{
+pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
     // SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
@@ -22,11 +21,11 @@ pub trait BankKeeper<SK: StoreKey, M: Module>:
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 
-    fn all_balances<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: AccAddress,
-    ) -> SendCoins;
+    ) -> Result<Vec<Coin>, GasStoreErrors>;
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
@@ -36,7 +35,7 @@ pub trait BankKeeper<SK: StoreKey, M: Module>:
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn undelegate_coins_from_module_to_account<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+    fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         sender_module: &M,

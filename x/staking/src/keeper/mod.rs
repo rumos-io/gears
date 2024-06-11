@@ -181,22 +181,19 @@ impl<
             }
         }
 
-        // TODO: check
-        let bonded_coins = SendCoins::new(vec![Coin {
+        let bonded_coins = vec![Coin {
             denom: genesis.params.bond_denom.clone(),
             amount: bonded_tokens,
-        }])
-        .unwrap();
-        // TODO: check
-        let not_bonded_coins = SendCoins::new(vec![Coin {
+        }];
+        let not_bonded_coins = vec![Coin {
             denom: genesis.params.bond_denom,
             amount: not_bonded_tokens,
-        }])
-        .unwrap();
+        }];
 
         let bonded_balance = self
             .bank_keeper
-            .all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address());
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
+            .unwrap_gas();
         if bonded_balance
             .clone()
             .into_iter()
@@ -215,7 +212,11 @@ impl<
 
         let not_bonded_balance = self
             .bank_keeper
-            .all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.not_bonded_module.get_address());
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(
+                ctx,
+                self.not_bonded_module.get_address(),
+            )
+            .unwrap_gas();
         if not_bonded_balance
             .clone()
             .into_iter()
