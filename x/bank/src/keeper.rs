@@ -106,8 +106,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     }
 
     /// send_coins_from_module_to_module delegates coins and transfers them from a
-    /// delegator account to a module account. It will panic if the module account
-    /// does not exist or is unauthorized.
+    /// delegator account to a module account. It creates the module accounts if it don't exist.
+    /// It's safe operation because the modules are app generic parameter 
+    /// which cannot be added in runtime.
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -650,8 +651,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     }
 
     /// sub_unlocked_coins removes the unlocked amt coins of the given account. An error is
-    /// returned if the resulting balance is negative or the initial amount is invalid.
-    /// A coin_spent event is emitted after.
+    /// returned if the resulting balance is negative. A coin_spent event is emitted after.
     fn sub_unlocked_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -681,8 +681,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 self.set_balance(ctx, addr, balance)?;
             } else {
                 return Err(AppError::Coins(format!(
-                    "Cannot get balance of account {}",
-                    addr
+                    "Account {} doesn't have sufficient funds {}",
+                    addr, &coin.denom
                 )));
             }
         }
