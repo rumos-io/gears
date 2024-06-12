@@ -75,9 +75,9 @@ impl GaiaABCIHandler {
             GaiaParamsStoreKey::Staking,
             auth_keeper.clone(),
             bank_keeper.clone(),
-            // NOTE: The variant with instance should have less performance. The compiler require type
-            // for option `None`
+            // NOTE: The variant with instance should have less performance.
             // Some(staking::MockHookKeeper::new()),
+            // The compiler require type for option `None`
             None::<
                 staking::MockHookKeeper<
                     GaiaStoreKey,
@@ -190,6 +190,9 @@ impl ABCIHandler for GaiaABCIHandler {
             }
             GaiaNodeQueryRequest::Auth(req) => {
                 GaiaNodeQueryResponse::Auth(self.auth_abci_handler.typed_query(ctx, req))
+            }
+            GaiaNodeQueryRequest::Staking(req) => {
+                GaiaNodeQueryResponse::Staking(self.staking_abci_handler.typed_query(ctx, req))
             }
         }
     }

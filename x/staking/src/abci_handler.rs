@@ -1,6 +1,7 @@
 use crate::{
     BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
-    QueryRedelegationRequest, QueryValidatorRequest,
+    QueryDelegationResponse, QueryRedelegationRequest, QueryRedelegationResponse,
+    QueryValidatorRequest, QueryValidatorResponse,
 };
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
@@ -16,6 +17,7 @@ use gears::{
     },
     x::{keepers::auth::AuthKeeper, module::Module},
 };
+use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
@@ -27,6 +29,21 @@ pub struct ABCIHandler<
     M: Module,
 > {
     keeper: Keeper<SK, PSK, AK, BK, KH, M>,
+}
+
+#[derive(Clone)]
+pub enum StakingNodeQueryRequest {
+    Validator(QueryValidatorRequest),
+    Delegation(QueryDelegationRequest),
+    Redelegation(QueryRedelegationRequest),
+}
+
+#[derive(Clone, Serialize)]
+#[serde(untagged)]
+pub enum StakingNodeQueryResponse {
+    Validator(QueryValidatorResponse),
+    Delegation(QueryDelegationResponse),
+    Redelegation(QueryRedelegationResponse),
 }
 
 impl<
@@ -87,6 +104,24 @@ impl<
                     .into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
+        }
+    }
+
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: StakingNodeQueryRequest,
+    ) -> StakingNodeQueryResponse {
+        match query {
+            StakingNodeQueryRequest::Validator(req) => {
+                StakingNodeQueryResponse::Validator(self.keeper.query_validator(ctx, req))
+            }
+            StakingNodeQueryRequest::Delegation(req) => {
+                StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
+            }
+            StakingNodeQueryRequest::Redelegation(req) => {
+                StakingNodeQueryResponse::Redelegation(self.keeper.query_redelegations(ctx, req))
+            }
         }
     }
 

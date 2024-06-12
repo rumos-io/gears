@@ -31,6 +31,8 @@ use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
 use staking::cli::query::StakingQueryHandler;
+use staking::StakingNodeQueryRequest;
+use staking::StakingNodeQueryResponse;
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;
@@ -140,6 +142,7 @@ impl Client for GaiaCoreClient {}
 pub enum GaiaNodeQueryRequest {
     Bank(BankNodeQueryRequest),
     Auth(AuthNodeQueryRequest),
+    Staking(StakingNodeQueryRequest),
 }
 
 impl QueryRequest for GaiaNodeQueryRequest {
@@ -160,11 +163,18 @@ impl From<AuthNodeQueryRequest> for GaiaNodeQueryRequest {
     }
 }
 
+impl From<StakingNodeQueryRequest> for GaiaNodeQueryRequest {
+    fn from(req: StakingNodeQueryRequest) -> Self {
+        GaiaNodeQueryRequest::Staking(req)
+    }
+}
+
 #[derive(Clone, Serialize)]
 #[serde(untagged)]
 pub enum GaiaNodeQueryResponse {
     Bank(BankNodeQueryResponse),
     Auth(AuthNodeQueryResponse),
+    Staking(StakingNodeQueryResponse),
 }
 
 impl TryFrom<GaiaNodeQueryResponse> for BankNodeQueryResponse {
@@ -186,6 +196,19 @@ impl TryFrom<GaiaNodeQueryResponse> for AuthNodeQueryResponse {
     fn try_from(res: GaiaNodeQueryResponse) -> Result<Self, Status> {
         match res {
             GaiaNodeQueryResponse::Auth(res) => Ok(res),
+            _ => Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            )),
+        }
+    }
+}
+
+impl TryFrom<GaiaNodeQueryResponse> for StakingNodeQueryResponse {
+    type Error = Status;
+
+    fn try_from(res: GaiaNodeQueryResponse) -> Result<Self, Status> {
+        match res {
+            GaiaNodeQueryResponse::Staking(res) => Ok(res),
             _ => Err(Status::internal(
                 "An internal error occurred while querying the application state.",
             )),
