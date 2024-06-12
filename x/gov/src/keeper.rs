@@ -7,11 +7,13 @@ use gears::{
 
 use crate::{
     errors::SERDE_JSON_CONVERSION, genesis::GovGenesisState, params::GovParamsKeeper,
-    types::deposit::Deposit,
+    types::proposal::ProposalStatus,
 };
 
 const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
+pub(crate) const KEY_PROPOSAL_PREFIX: [u8; 1] = [0x00];
 pub(crate) const KEY_DEPOSIT_PREFIX: [u8; 1] = [0x10];
+pub(crate) const KEY_VOTES_PREFIX: [u8; 1] = [0x20];
 
 #[allow(dead_code)]
 pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
@@ -29,6 +31,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> GovKeeper<SK, PSK> {
         }
     }
 
+    // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/genesis.go#L12
     pub fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
@@ -53,22 +56,41 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> GovKeeper<SK, PSK> {
         // 	panic(fmt.Sprintf("%s module account has not been set", types.ModuleName))
         // }
 
-        let _total_deposits = {
-            let mut total_deposits = Vec::with_capacity(deposits.len());
-            for deposit in deposits {
-                self.deposit_set(ctx, &deposit);
-                total_deposits.push(deposit.amount);
+        {
+            let mut store_mut = ctx.kv_store_mut(&self.store_key);
+
+            let _total_deposits = {
+                let mut total_deposits = Vec::with_capacity(deposits.len());
+                for deposit in deposits {
+                    store_mut.set(
+                        deposit.key(),
+                        serde_json::to_vec(&deposit).expect(SERDE_JSON_CONVERSION),
+                    ); // TODO:NOW IS THIS CORRECT SERIALIZATION?
+                    total_deposits.push(deposit.amount);
+                }
+
+                total_deposits.into_iter().flatten().collect::<Vec<_>>()
+            };
+
+            for vote in votes {
+                store_mut.set(
+                    vote.key(),
+                    serde_json::to_vec(&vote).expect(SERDE_JSON_CONVERSION),
+                )
             }
 
-            total_deposits.into_iter().flatten().collect::<Vec<_>>()
-        };
-    }
+            for proposal in proposals {
+                match proposal.status {
+                    ProposalStatus::DepositPeriod => todo!(),
+                    ProposalStatus::VotingPeriod => todo!(),
+                    _ => (),
+                }
 
-    fn deposit_set<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, deposit: &Deposit) {
-        let mut store = ctx.kv_store_mut(&self.store_key);
-        store.set(
-            deposit.key(),
-            serde_json::to_vec(deposit).expect(SERDE_JSON_CONVERSION),
-        ) // TODO:NOW CORRECT SERIALIZATION
+                store_mut.set(
+                    proposal.key(),
+                    serde_json::to_vec(&proposal).expect(SERDE_JSON_CONVERSION),
+                );
+            }
+        }
     }
 }
