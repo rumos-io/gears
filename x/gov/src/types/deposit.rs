@@ -15,7 +15,7 @@ impl Deposit {
         [
             KEY_DEPOSIT_PREFIX.as_slice(),
             &self.proposal_id.to_be_bytes(),
-            &[self.depositor.len() as u8], // We save 'cause `AccAddress` len shoudn't be bigger than 255
+            &[self.depositor.len()],
             self.depositor.as_ref(),
         ]
         .concat()
