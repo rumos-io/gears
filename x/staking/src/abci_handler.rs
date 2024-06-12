@@ -68,13 +68,13 @@ impl<
                 let req = QueryValidatorRequest::decode(query.data)
                     .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_validator(ctx, req)?.encode_vec().into())
+                Ok(self.keeper.query_validator(ctx, req).encode_vec().into())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
                     .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_delegation(ctx, req)?.encode_vec().into())
+                Ok(self.keeper.query_delegation(ctx, req).encode_vec().into())
             }
             "/cosmos.staking.v1beta1.Query/Redelegation" => {
                 let req = QueryRedelegationRequest::decode(query.data)
@@ -82,7 +82,7 @@ impl<
 
                 Ok(self
                     .keeper
-                    .query_redelegations(ctx, req)?
+                    .query_redelegations(ctx, req)
                     .encode_vec()
                     .into())
             }

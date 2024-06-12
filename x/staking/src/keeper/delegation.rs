@@ -32,12 +32,12 @@ impl<
 
         // Get or create the delegation object
         let mut delegation = if let Some(delegation) =
-            self.delegation(ctx, &del_addr, &validator.operator_address)?
+            self.delegation(ctx, del_addr, &validator.operator_address)?
         {
-            self.before_delegation_shares_modified(ctx, &del_addr, &validator.operator_address);
+            self.before_delegation_shares_modified(ctx, del_addr, &validator.operator_address);
             delegation
         } else {
-            self.before_delegation_created(ctx, &del_addr, &validator.operator_address);
+            self.before_delegation_created(ctx, del_addr, &validator.operator_address);
             Delegation {
                 delegator_address: del_addr.clone(),
                 validator_address: validator.operator_address.clone(),
