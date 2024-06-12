@@ -49,7 +49,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BM: Module, BK: BankKeeper
         }
     }
 
-    // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/genesis.go#L12
     pub fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
@@ -118,9 +117,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BM: Module, BK: BankKeeper
             .bank_keeper
             .balance_all(ctx, &self.gov_mod.get_address())
             .unwrap_gas();
-        if balance.is_empty() || balance.iter().any(|this| this.amount.is_zero()) {
-            // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/genesis.go#L47
-        }
+        /*
+           Okay. I think that in our implementation there is no need to create account if it.
+
+           So I should omit this lines...
+           if balance.is_empty() || balance.iter().any(|this| this.amount.is_zero()) {
+               https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/genesis.go#L47
+           }
+        */
 
         if !(balance == total_deposits) {
             panic!(
