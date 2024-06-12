@@ -19,7 +19,8 @@ members = [
   "x/auth",
   "x/bank",
   "x/ibc-rs",
-  "x/staking",
+  "x/staking", 
+  "x/gov",
 
   # new unsorted
 ]
@@ -42,6 +43,7 @@ nutype = { version = "0.4.0" }
 url = { version = "2.5.0" }
 time = "0.3.34"
 ux = "0.1.6"
+chrono = "0.4.38"
 
 # serialization
 serde = { version = "1.0", default-features = false }
@@ -106,4 +108,8 @@ rpassword = { version = "7.2.0" }
 
 [workspace.lints.clippy]
 unused_async = "deny"
-# large_enum_variant = "deny"
+rust_2018_idioms = "deny"
+missing_docs = "deny"
+missing_debug_implementations = "deny" # opt out where Debug is really redundant
+future_incompatible = "deny"
+unsafe-code = "deny"

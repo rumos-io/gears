@@ -98,6 +98,12 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
     }
 }
 
+impl<const PREFIX: u8> AsRef<[u8]> for BaseAddress<PREFIX> {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl<const PREFIX: u8> Serialize for BaseAddress<PREFIX> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
