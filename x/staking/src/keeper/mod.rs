@@ -1,5 +1,6 @@
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
+    traits::*,
     BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool,
     Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
 };
@@ -23,7 +24,7 @@ use gears::{
         address::{AccAddress, ValAddress},
         base::{coin::Coin, send::SendCoins},
         decimal256::Decimal256,
-        store::gas::errors::GasStoreErrors,
+        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
         uint::Uint256,
     },
     x::{keepers::auth::AuthKeeper, module::Module},
@@ -42,20 +43,18 @@ mod historical_info;
 mod hooks;
 mod query;
 mod redelegation;
-mod traits;
 mod tx;
 mod unbonded;
 mod unbonding;
 mod validator;
 mod validators_and_total_power;
-pub use traits::*;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct Keeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    AK: AccountKeeper<SK, M>,
+    AK: AuthKeeper<SK, M>,
     BK: BankKeeper<SK, M>,
     KH: KeeperHooks<SK, M>,
     M: Module,
@@ -64,16 +63,15 @@ pub struct Keeper<
     auth_keeper: AK,
     bank_keeper: BK,
     staking_params_keeper: StakingParamsKeeper<PSK>,
-    codespace: String,
     hooks_keeper: Option<KH>,
     bonded_module: M,
-    unbonded_module: M,
+    not_bonded_module: M,
 }
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
         KH: KeeperHooks<SK, M>,
         M: Module,
@@ -84,9 +82,8 @@ impl<
         params_subspace_key: PSK,
         auth_keeper: AK,
         bank_keeper: BK,
-        codespace: String,
         bonded_module: M,
-        unbonded_module: M,
+        not_bonded_module: M,
     ) -> Self {
         let staking_params_keeper = StakingParamsKeeper {
             params_subspace_key,
@@ -97,10 +94,9 @@ impl<
             auth_keeper,
             bank_keeper,
             staking_params_keeper,
-            codespace,
             hooks_keeper: None,
             bonded_module,
-            unbonded_module,
+            not_bonded_module,
         }
     }
 
@@ -185,37 +181,27 @@ impl<
             }
         }
 
-        // TODO: check
-        let bonded_coins = SendCoins::new(vec![Coin {
+        let bonded_coins = vec![Coin {
             denom: genesis.params.bond_denom.clone(),
             amount: bonded_tokens,
-        }])
-        .unwrap();
-        // TODO: check
-        let not_bonded_coins = SendCoins::new(vec![Coin {
+        }];
+        let not_bonded_coins = vec![Coin {
             denom: genesis.params.bond_denom,
             amount: not_bonded_tokens,
-        }])
-        .unwrap();
+        }];
 
-        // check if the unbonded and bonded pools accounts exists
-        let bonded_pool = self
-            .bonded_pool(ctx)
-            .expect("bonded module account has not been set");
-
-        // TODO: check cosmos issue
         let bonded_balance = self
             .bank_keeper
-            .all_balances::<DB, AK, InitContext<'_, DB, SK>>(
-                ctx,
-                bonded_pool.base_account.address.clone(),
-            );
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
+            .unwrap_gas();
         if bonded_balance
             .clone()
             .into_iter()
             .any(|e| e.amount.is_zero())
         {
-            self.auth_keeper.set_module_account(ctx, bonded_pool);
+            self.auth_keeper
+                .check_create_new_module_account(ctx, &self.bonded_module)
+                .unwrap_gas();
         }
         // if balance is different from bonded coins panic because genesis is most likely malformed
         assert_eq!(
@@ -224,21 +210,21 @@ impl<
             bonded_balance, bonded_coins
         );
 
-        let not_bonded_pool = self
-            .not_bonded_pool(ctx)
-            .expect("not bonded module account has not been set");
         let not_bonded_balance = self
             .bank_keeper
-            .all_balances::<DB, AK, InitContext<'_, DB, SK>>(
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(
                 ctx,
-                not_bonded_pool.base_account.address.clone(),
-            );
+                self.not_bonded_module.get_address(),
+            )
+            .unwrap_gas();
         if not_bonded_balance
             .clone()
             .into_iter()
             .any(|e| e.amount.is_zero())
         {
-            self.auth_keeper.set_module_account(ctx, not_bonded_pool);
+            self.auth_keeper
+                .check_create_new_module_account(ctx, &self.not_bonded_module)
+                .unwrap_gas();
         }
 
         // if balance is different from non bonded coins panic because genesis is most likely malformed
@@ -545,10 +531,10 @@ impl<
 
         // TODO: check and maybe remove unwrap
         self.bank_keeper
-            .send_coins_from_module_to_module::<DB, AK, CTX>(
+            .send_coins_from_module_to_module::<DB, CTX>(
                 ctx,
-                NOT_BONDED_POOL_NAME.into(),
-                BONDED_POOL_NAME.into(),
+                &self.not_bonded_module,
+                &self.bonded_module,
                 coins,
             )
             .unwrap();

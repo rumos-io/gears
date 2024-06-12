@@ -1,33 +1,15 @@
 use super::*;
-use gears::types::{account::ModuleAccount, store::gas::errors::GasStoreErrors};
+use gears::types::store::gas::errors::GasStoreErrors;
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
         KH: KeeperHooks<SK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
-    /// bonded_pool returns the bonded tokens pool's module account
-    pub fn bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-    ) -> Option<ModuleAccount> {
-        self.auth_keeper
-            .module_account(ctx, BONDED_POOL_NAME.to_string())
-    }
-
-    /// bonded_pool returns the bonded tokens pool's module account
-    pub fn not_bonded_pool<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-    ) -> Option<ModuleAccount> {
-        self.auth_keeper
-            .module_account(ctx, NOT_BONDED_POOL_NAME.to_string())
-    }
-
     pub fn bonded_tokens_to_not_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -46,10 +28,10 @@ impl<
 
         // TODO: check and maybe remove unwrap
         self.bank_keeper
-            .send_coins_from_module_to_module::<DB, AK, CTX>(
+            .send_coins_from_module_to_module::<DB, CTX>(
                 ctx,
-                BONDED_POOL_NAME.into(),
-                NOT_BONDED_POOL_NAME.into(),
+                &self.bonded_module,
+                &self.not_bonded_module,
                 coins,
             )
             .unwrap();

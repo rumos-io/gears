@@ -163,6 +163,83 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
     }
 
+    // TODO: can we reuse with unwrap from `query_balance`?
+    pub fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: &AccAddress,
+        denom: &Denom,
+    ) -> Result<Option<Coin>, GasStoreErrors> {
+        let bank_store = ctx.kv_store(&self.store_key);
+        let prefix = create_denom_balance_prefix(address.clone());
+
+        let account_store = bank_store.prefix_store(prefix);
+        let bal = account_store.get(denom.to_string().as_bytes())?;
+        let res = bal.map(|bytes| {
+            Coin::decode::<Bytes>(bytes.to_owned().into())
+                .ok()
+                .unwrap_or_corrupt()
+        });
+        Ok(res)
+    }
+
+    /// set_balance sets the coin balance for an account by address.
+    pub fn set_balance<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        address: &AccAddress,
+        amount: Coin,
+    ) -> Result<(), GasStoreErrors> {
+        let bank_store = ctx.kv_store_mut(&self.store_key);
+        let prefix = create_denom_balance_prefix(address.clone());
+
+        let mut account_store = bank_store.prefix_store_mut(prefix);
+        if amount.amount.is_zero() {
+            account_store.delete(amount.denom.to_string().as_bytes())?;
+            Ok(())
+        } else {
+            account_store.set(
+                amount.denom.to_string().as_bytes().to_vec(),
+                amount.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            )
+        }
+    }
+
+    /// add_coins increase the addr balance by the given amt. Fails if the provided amt is invalid.
+    /// It emits a coin received event.
+    pub fn add_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        address: &AccAddress,
+        amount: Vec<Coin>,
+    ) -> Result<(), GasStoreErrors> {
+        for coin in &amount {
+            if let Some(mut balance) = self.balance(ctx, address, &coin.denom)? {
+                balance.amount += coin.amount;
+                self.set_balance(ctx, address, balance)?;
+            } else {
+                self.set_balance(ctx, address, coin.clone())?;
+            }
+        }
+
+        // emit coin received event
+        ctx.push_event(Event::new(
+            "coin_received",
+            [
+                EventAttribute::new("receiver".into(), Vec::from(address.clone()).into(), true),
+                // TODO: serialization of vector of coins
+                EventAttribute::new(
+                    "amount".into(),
+                    serde_json::to_vec(&amount)
+                        .unwrap_or(amount[0].encode_vec().expect(IBC_ENCODE_UNWRAP))
+                        .into(),
+                    true,
+                ),
+            ],
+        ));
+        Ok(())
+    }
+
     pub fn query_all_balances<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
@@ -185,6 +262,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             balances,
             pagination: None,
         }
+    }
+
+    pub fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        addr: AccAddress,
+    ) -> Result<Vec<Coin>, GasStoreErrors> {
+        let bank_store = ctx.kv_store(&self.store_key);
+        let prefix = create_denom_balance_prefix(addr);
+        let account_store = bank_store.prefix_store(prefix);
+
+        let mut balances = vec![];
+        for rcoin in account_store.range(..) {
+            let (_, coin) = rcoin?;
+            let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
+                .ok()
+                .unwrap_or_corrupt();
+            balances.push(coin);
+        }
+        Ok(balances)
     }
 
     /// Gets the total supply of every denom
@@ -227,6 +324,31 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         };
 
         Ok(())
+    }
+
+    /// send_coins_from_module_to_module delegates coins and transfers them from a
+    /// delegator account to a module account. It creates the module accounts if it don't exist.
+    /// It's safe operation because the modules are app generic parameter
+    /// which cannot be added in runtime.
+    pub fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        sender_pool: &M,
+        recepient_pool: &M,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        self.auth_keeper
+            .check_create_new_module_account(ctx, sender_pool)?;
+        self.auth_keeper
+            .check_create_new_module_account(ctx, recepient_pool)?;
+
+        let msg = MsgSend {
+            from_address: sender_pool.get_address(),
+            to_address: recepient_pool.get_address(),
+            amount,
+        };
+
+        self.send_coins(ctx, msg)
     }
 
     fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -370,6 +492,272 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         QueryDenomsMetadataResponse {
             metadatas: denoms_metadata,
             pagination: None,
+        }
+    }
+
+    pub fn delegate_coins_from_account_to_module<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        sender_addr: AccAddress,
+        recepient_module: &M,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        let recepient_module_addr = recepient_module.get_address();
+        self.auth_keeper
+            .check_create_new_module_account(ctx, recepient_module)?;
+
+        if !recepient_module
+            .get_permissions()
+            .iter()
+            .any(|p| p == "staking")
+        {
+            return Err(AppError::Custom(format!(
+                "module account {} does not have permissions to receive delegated coins",
+                recepient_module.get_name()
+            )));
+        }
+        self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
+    }
+
+    /// delegate_coins performs delegation by deducting amt coins from an account with
+    /// address addr. For vesting accounts, delegations amounts are tracked for both
+    /// vesting and vested coins. The coins are then transferred from the delegator
+    /// address to a ModuleAccount address. If any of the delegation amounts are negative,
+    /// an error is returned.
+    fn delegate_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        delegator_addr: AccAddress,
+        module_acc_addr: AccAddress,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        if self
+            .auth_keeper
+            .get_account(ctx, &module_acc_addr)?
+            .is_none()
+        {
+            return Err(AppError::AccountNotFound);
+        };
+
+        let mut balances = vec![];
+        for coin in amount.inner() {
+            if let Some(mut balance) = self.balance(ctx, &delegator_addr, &coin.denom)? {
+                if balance.amount < coin.amount {
+                    return Err(AppError::Custom(format!(
+                        "failed to delegate; {} is smaller than {}",
+                        balance.amount, coin.amount
+                    )));
+                }
+                balances.push(balance.clone());
+                balance.amount -= coin.amount;
+                self.set_balance(ctx, &delegator_addr, balance)?;
+            } else {
+                return Err(AppError::Custom(format!(
+                    "failed to delegate; 0 is smaller than {}",
+                    coin.amount
+                )));
+            }
+        }
+
+        self.track_delegation(
+            ctx,
+            &delegator_addr,
+            &SendCoins::new(balances.clone()).map_err(|e| AppError::Coins(e.to_string()))?,
+            &amount,
+        )?;
+
+        // emit coin spent event
+        ctx.push_event(Event::new(
+            "coin_spent",
+            [
+                EventAttribute::new("spender".into(), Vec::from(delegator_addr).into(), true),
+                // TODO: serialization of vector of coins
+                EventAttribute::new(
+                    "amount".into(),
+                    serde_json::to_vec(&amount)
+                        .unwrap_or(amount.inner()[0].encode_vec().expect(IBC_ENCODE_UNWRAP))
+                        .into(),
+                    true,
+                ),
+            ],
+        ));
+
+        Ok(self.add_coins(ctx, &module_acc_addr, balances)?)
+    }
+
+    /// undelegate_coins_from_module_to_account undelegates the unbonding coins and transfers
+    /// them from a module account to the delegator account. It will panic if the
+    /// module account does not exist or is unauthorized.
+    pub fn undelegate_coins_from_module_to_account<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        sender_module: &M,
+        addr: AccAddress,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        let sender_module_addr = sender_module.get_address();
+        self.auth_keeper
+            .check_create_new_module_account(ctx, sender_module)?;
+
+        if !sender_module
+            .get_permissions()
+            .iter()
+            .any(|p| p == "staking")
+        {
+            return Err(AppError::Custom(format!(
+                "module account {} does not have permissions to receive undelegate coins",
+                sender_module.get_name()
+            )));
+        }
+        self.undelegate_coins(ctx, sender_module_addr, addr, amount)
+    }
+
+    /// undelegate_coins performs undelegation by crediting amt coins to an account with
+    /// address addr. For vesting accounts, undelegation amounts are tracked for both
+    /// vesting and vested coins. The coins are then transferred from a ModuleAccount
+    /// address to the delegator address. If any of the undelegation amounts are
+    /// negative, an error is returned.
+    fn undelegate_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        module_acc_addr: AccAddress,
+        delegator_addr: AccAddress,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        if self
+            .auth_keeper
+            .get_account(ctx, &module_acc_addr)?
+            .is_none()
+        {
+            return Err(AppError::AccountNotFound);
+        };
+
+        self.sub_unlocked_coins(ctx, &module_acc_addr, &amount)?;
+        self.track_undelegation(ctx, &delegator_addr, &amount)?;
+        Ok(self.add_coins(ctx, &delegator_addr, amount.into_inner())?)
+    }
+
+    /// sub_unlocked_coins removes the unlocked amt coins of the given account. An error is
+    /// returned if the resulting balance is negative. A coin_spent event is emitted after.
+    fn sub_unlocked_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        addr: &AccAddress,
+        amount: &SendCoins,
+    ) -> Result<(), AppError> {
+        let locked_coins = self.locked_coins(ctx, addr)?;
+
+        let amount_of = |coins: &Vec<Coin>, denom: &Denom| -> Uint256 {
+            let coins = coins.iter().find(|c| c.denom == *denom);
+            coins.map(|c| c.amount).unwrap_or(Uint256::zero())
+        };
+
+        for coin in amount.inner() {
+            if let Some(mut balance) = self.balance(ctx, addr, &coin.denom)? {
+                let locked_amount = amount_of(&locked_coins, &coin.denom);
+                let spendable = balance.amount - locked_amount;
+
+                if spendable.checked_sub(coin.amount).is_err() {
+                    return Err(AppError::Coins(format!(
+                        "{} is smaller than {}",
+                        spendable, coin.amount
+                    )));
+                }
+
+                balance.amount -= coin.amount;
+                self.set_balance(ctx, addr, balance)?;
+            } else {
+                return Err(AppError::Coins(format!(
+                    "Account {} doesn't have sufficient funds {}",
+                    addr, &coin.denom
+                )));
+            }
+        }
+
+        // emit coin spent event
+        ctx.push_event(Event::new(
+            "coin_spent",
+            [
+                EventAttribute::new("spender".into(), Vec::from(addr.clone()).into(), true),
+                // TODO: serialization of vector of coins
+                EventAttribute::new(
+                    "amount".into(),
+                    serde_json::to_vec(&amount)
+                        .unwrap_or(amount.inner()[0].encode_vec().expect(IBC_ENCODE_UNWRAP))
+                        .into(),
+                    true,
+                ),
+            ],
+        ));
+        Ok(())
+    }
+
+    /// locked_coins returns all the coins that are not spendable (i.e. locked) for an
+    /// account by address. For standard accounts, the result will always be no coins.
+    /// For vesting accounts, locked_coins is delegated to the concrete vesting account
+    /// type.
+    fn locked_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        addr: &AccAddress,
+        // TODO: consider to add struct Coins that can have empty coins list
+    ) -> Result<Vec<Coin>, AppError> {
+        if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
+            //     vacc, ok := acc.(vestexported.VestingAccount)
+            //     if ok {
+            //         return vacc.LockedCoins(ctx.BlockTime())
+            //     }
+            // TODO: logic with vesting accounts
+            Ok(vec![])
+        } else {
+            Ok(vec![])
+        }
+    }
+
+    /// track_delegation tracks the delegation of the given account if it is a vesting account
+    fn track_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        addr: &AccAddress,
+        _balance: &SendCoins,
+        _amount: &SendCoins,
+    ) -> Result<(), AppError> {
+        if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
+            // TODO: logic with vesting accounts
+            //     vacc, ok := acc.(vestexported.VestingAccount)
+            //     if ok {
+            //         vacc.TrackDelegation(ctx.BlockHeader().Time, balance, amt)
+            //         k.ak.SetAccount(ctx, acc)
+            //     }
+            Ok(())
+        } else {
+            Err(AppError::AccountNotFound)
+        }
+    }
+
+    /// track_undelegation trakcs undelegation of the given account if it is a vesting account
+    fn track_undelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        addr: &AccAddress,
+        _amount: &SendCoins,
+    ) -> Result<(), AppError> {
+        if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
+            // TODO: logic with vesting accounts
+            //     vacc, ok := acc.(vestexported.VestingAccount)
+            //     if ok {
+            //         vacc.TrackUndelegation(amt)
+            //         k.ak.SetAccount(ctx, acc)
+            //     }
+            Ok(())
+        } else {
+            Err(AppError::AccountNotFound)
         }
     }
 }

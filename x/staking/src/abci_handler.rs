@@ -1,5 +1,5 @@
 use crate::{
-    AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
+    BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
     QueryRedelegationRequest, QueryValidatorRequest,
 };
 use gears::{
@@ -14,14 +14,14 @@ use gears::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },
     },
-    x::module::Module,
+    x::{keepers::auth::AuthKeeper, module::Module},
 };
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    AK: AccountKeeper<SK, M>,
+    AK: AuthKeeper<SK, M>,
     BK: BankKeeper<SK, M>,
     KH: KeeperHooks<SK, M>,
     M: Module,
@@ -32,7 +32,7 @@ pub struct ABCIHandler<
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK, M>,
+        AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
         KH: KeeperHooks<SK, M>,
         M: Module,

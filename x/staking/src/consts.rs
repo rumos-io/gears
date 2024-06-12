@@ -18,8 +18,9 @@ pub(crate) mod keeper {
 
     pub(crate) const HISTORICAL_INFO_KEY: [u8; 1] = [50];
 
-    pub(crate) const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
-    pub(crate) const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
+    /// Constants to refer name in module declaration
+    pub const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
+    pub const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
 
     pub(crate) const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
     pub(crate) const ATTRIBUTE_KEY_MODULE: &str = "module";
