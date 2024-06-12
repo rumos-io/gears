@@ -81,8 +81,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> GovKeeper<SK, PSK> {
 
             for proposal in proposals {
                 match proposal.status {
-                    ProposalStatus::DepositPeriod => todo!(),
-                    ProposalStatus::VotingPeriod => todo!(),
+                    ProposalStatus::DepositPeriod => {
+                        store_mut.set(
+                            proposal.inactive_queue_key(),
+                            proposal.proposal_id.to_be_bytes(),
+                        );
+                    }
+                    ProposalStatus::VotingPeriod => store_mut.set(
+                        proposal.active_queue_key(),
+                        proposal.proposal_id.to_be_bytes(),
+                    ),
                     _ => (),
                 }
 
