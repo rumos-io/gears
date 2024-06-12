@@ -1,8 +1,12 @@
+use std::marker::PhantomData;
+
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::init::InitContext,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
+    types::store::gas::ext::{GasResultExt, NO_GAS_IN_CTX},
+    x::{keepers::bank::BankKeeper, module::Module},
 };
 
 use crate::{
@@ -16,18 +20,32 @@ pub(crate) const KEY_DEPOSIT_PREFIX: [u8; 1] = [0x10];
 pub(crate) const KEY_VOTES_PREFIX: [u8; 1] = [0x20];
 
 #[allow(dead_code)]
-pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey> {
+pub struct GovKeeper<
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BM: Module,
+    BK: BankKeeper<SK, BM>,
+> {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
+    gov_mod: M,
+    bank_keeper: BK,
+    _bank_marker: PhantomData<BM>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey> GovKeeper<SK, PSK> {
-    pub fn new(store_key: SK, params_subspace_key: PSK) -> Self {
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BM: Module, BK: BankKeeper<SK, BM>>
+    GovKeeper<SK, PSK, M, BM, BK>
+{
+    pub fn new(store_key: SK, params_subspace_key: PSK, gov_mod: M, bank_keeper: BK) -> Self {
         Self {
             store_key,
             gov_params_keeper: GovParamsKeeper {
                 params_subspace_key,
             },
+            gov_mod,
+            bank_keeper,
+            _bank_marker: PhantomData,
         }
     }
 
@@ -49,17 +67,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> GovKeeper<SK, PSK> {
         }
         self.gov_params_keeper.set(ctx, params);
 
-        // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/genesis.go#L18
-        //     // check if the deposits pool account exists
-        // moduleAcc := k.GetGovernanceAccount(ctx)
-        // if moduleAcc == nil {
-        // 	panic(fmt.Sprintf("%s module account has not been set", types.ModuleName))
-        // }
-
-        {
+        let total_deposits = {
             let mut store_mut = ctx.kv_store_mut(&self.store_key);
 
-            let _total_deposits = {
+            let total_deposits = {
                 let mut total_deposits = Vec::with_capacity(deposits.len());
                 for deposit in deposits {
                     store_mut.set(
@@ -99,6 +110,23 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> GovKeeper<SK, PSK> {
                     serde_json::to_vec(&proposal).expect(SERDE_JSON_CONVERSION),
                 );
             }
+
+            total_deposits
+        };
+
+        let balance = self
+            .bank_keeper
+            .balance_all(ctx, &self.gov_mod.get_address())
+            .unwrap_gas();
+        if balance.is_empty() || balance.iter().any(|this| this.amount.is_zero()) {
+            // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/genesis.go#L47
+        }
+
+        if !(balance == total_deposits) {
+            panic!(
+                "expected module account was {:?} but we got {:?}",
+                balance, total_deposits
+            )
         }
     }
 }

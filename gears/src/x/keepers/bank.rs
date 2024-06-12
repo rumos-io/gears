@@ -5,8 +5,11 @@ use crate::{
     context::{QueryableContext, TransactionalContext},
     error::AppError,
     types::{
-        address::AccAddress, base::send::SendCoins, denom::Denom,
-        store::gas::errors::GasStoreErrors, tx::metadata::Metadata,
+        address::AccAddress,
+        base::{coin::Coin, send::SendCoins},
+        denom::Denom,
+        store::gas::errors::GasStoreErrors,
+        tx::metadata::Metadata,
     },
     x::module::Module,
 };
@@ -25,4 +28,10 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         ctx: &CTX,
         base: &Denom,
     ) -> Result<Option<Metadata>, GasStoreErrors>;
+
+    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: &AccAddress,
+    ) -> Result<Vec<Coin>, GasStoreErrors>;
 }
