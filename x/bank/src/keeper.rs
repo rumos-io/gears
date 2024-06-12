@@ -26,7 +26,6 @@ use gears::types::uint::Uint256;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::x::module::Module;
-use staking::BankKeeper as StakingBankKeeper;
 use std::marker::PhantomData;
 use std::{collections::HashMap, str::FromStr};
 
@@ -79,113 +78,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
                     .ok()
                     .unwrap_or_corrupt()
             }))
-    }
-}
-
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
-    StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
-{
-    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        addr: AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors> {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(addr);
-        let account_store = bank_store.prefix_store(prefix);
-
-        let mut balances = vec![];
-        for rcoin in account_store.range(..) {
-            let (_, coin) = rcoin?;
-            let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-            balances.push(coin);
-        }
-        Ok(balances)
-    }
-
-    /// send_coins_from_module_to_module delegates coins and transfers them from a
-    /// delegator account to a module account. It will panic if the module account
-    /// does not exist or is unauthorized.
-    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_pool: &M,
-        recepient_pool: &M,
-        amount: SendCoins,
-    ) -> Result<(), AppError> {
-        self.auth_keeper
-            .check_create_new_module_account(ctx, sender_pool)?;
-        self.auth_keeper
-            .check_create_new_module_account(ctx, recepient_pool)?;
-
-        let msg = MsgSend {
-            from_address: sender_pool.get_address(),
-            to_address: recepient_pool.get_address(),
-            amount,
-        };
-
-        self.send_coins(ctx, msg)
-    }
-
-    /// undelegate_coins_from_module_to_account undelegates the unbonding coins and transfers
-    /// them from a module account to the delegator account. It will panic if the
-    /// module account does not exist or is unauthorized.
-    fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_module: &M,
-        addr: AccAddress,
-        amount: SendCoins,
-    ) -> Result<(), AppError> {
-        let sender_module_addr = sender_module.get_address();
-        if self
-            .auth_keeper
-            .get_account(ctx, &sender_module_addr)?
-            .is_none()
-        {
-            return Err(AppError::AccountNotFound);
-        };
-        if !sender_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
-            return Err(AppError::Custom(format!(
-                "module account {} does not have permissions to receive undelegate coins",
-                sender_module.get_name()
-            )));
-        }
-        self.undelegate_coins(ctx, sender_module_addr, addr, amount)
-    }
-
-    fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        sender_addr: AccAddress,
-        recepient_module: &M,
-        amount: SendCoins,
-    ) -> Result<(), AppError> {
-        let recepient_module_addr = recepient_module.get_address();
-        if self
-            .auth_keeper
-            .get_account(ctx, &recepient_module_addr)?
-            .is_none()
-        {
-            return Err(AppError::AccountNotFound);
-        };
-        if !recepient_module
-            .get_permissions()
-            .iter()
-            .any(|p| p == "staking")
-        {
-            return Err(AppError::Custom(format!(
-                "module account {} does not have permissions to receive delegated coins",
-                recepient_module.get_name()
-            )));
-        }
-        self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
     }
 }
 
@@ -372,6 +264,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
     }
 
+    pub fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        addr: AccAddress,
+    ) -> Result<Vec<Coin>, GasStoreErrors> {
+        let bank_store = ctx.kv_store(&self.store_key);
+        let prefix = create_denom_balance_prefix(addr);
+        let account_store = bank_store.prefix_store(prefix);
+
+        let mut balances = vec![];
+        for rcoin in account_store.range(..) {
+            let (_, coin) = rcoin?;
+            let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
+                .ok()
+                .unwrap_or_corrupt();
+            balances.push(coin);
+        }
+        Ok(balances)
+    }
+
     /// Gets the total supply of every denom
     // TODO: should be paginated
     // TODO: should ignore coins with zero balance
@@ -412,6 +324,31 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         };
 
         Ok(())
+    }
+
+    /// send_coins_from_module_to_module delegates coins and transfers them from a
+    /// delegator account to a module account. It creates the module accounts if it don't exist.
+    /// It's safe operation because the modules are app generic parameter
+    /// which cannot be added in runtime.
+    pub fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        sender_pool: &M,
+        recepient_pool: &M,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        self.auth_keeper
+            .check_create_new_module_account(ctx, sender_pool)?;
+        self.auth_keeper
+            .check_create_new_module_account(ctx, recepient_pool)?;
+
+        let msg = MsgSend {
+            from_address: sender_pool.get_address(),
+            to_address: recepient_pool.get_address(),
+            amount,
+        };
+
+        self.send_coins(ctx, msg)
     }
 
     fn send_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -558,6 +495,33 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
     }
 
+    pub fn delegate_coins_from_account_to_module<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        sender_addr: AccAddress,
+        recepient_module: &M,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        let recepient_module_addr = recepient_module.get_address();
+        self.auth_keeper
+            .check_create_new_module_account(ctx, recepient_module)?;
+
+        if !recepient_module
+            .get_permissions()
+            .iter()
+            .any(|p| p == "staking")
+        {
+            return Err(AppError::Custom(format!(
+                "module account {} does not have permissions to receive delegated coins",
+                recepient_module.get_name()
+            )));
+        }
+        self.delegate_coins(ctx, sender_addr, recepient_module_addr, amount)
+    }
+
     /// delegate_coins performs delegation by deducting amt coins from an account with
     /// address addr. For vesting accounts, delegations amounts are tracked for both
     /// vesting and vested coins. The coins are then transferred from the delegator
@@ -624,6 +588,36 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         Ok(self.add_coins(ctx, &module_acc_addr, balances)?)
     }
 
+    /// undelegate_coins_from_module_to_account undelegates the unbonding coins and transfers
+    /// them from a module account to the delegator account. It will panic if the
+    /// module account does not exist or is unauthorized.
+    pub fn undelegate_coins_from_module_to_account<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+        sender_module: &M,
+        addr: AccAddress,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        let sender_module_addr = sender_module.get_address();
+        self.auth_keeper
+            .check_create_new_module_account(ctx, sender_module)?;
+
+        if !sender_module
+            .get_permissions()
+            .iter()
+            .any(|p| p == "staking")
+        {
+            return Err(AppError::Custom(format!(
+                "module account {} does not have permissions to receive undelegate coins",
+                sender_module.get_name()
+            )));
+        }
+        self.undelegate_coins(ctx, sender_module_addr, addr, amount)
+    }
+
     /// undelegate_coins performs undelegation by crediting amt coins to an account with
     /// address addr. For vesting accounts, undelegation amounts are tracked for both
     /// vesting and vested coins. The coins are then transferred from a ModuleAccount
@@ -650,8 +644,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     }
 
     /// sub_unlocked_coins removes the unlocked amt coins of the given account. An error is
-    /// returned if the resulting balance is negative or the initial amount is invalid.
-    /// A coin_spent event is emitted after.
+    /// returned if the resulting balance is negative. A coin_spent event is emitted after.
     fn sub_unlocked_coins<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -681,8 +674,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 self.set_balance(ctx, addr, balance)?;
             } else {
                 return Err(AppError::Coins(format!(
-                    "Cannot get balance of account {}",
-                    addr
+                    "Account {} doesn't have sufficient funds {}",
+                    addr, &coin.denom
                 )));
             }
         }
