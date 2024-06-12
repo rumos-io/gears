@@ -26,5 +26,3 @@ impl Default for GovGenesisState {
         }
     }
 }
-
-

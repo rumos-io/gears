@@ -1,5 +1,5 @@
 pub mod errors;
-pub mod keeper;
-pub mod types;
 pub mod genesis;
+pub mod keeper;
 pub mod params;
+pub mod types;

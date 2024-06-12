@@ -1,6 +1,6 @@
-pub mod keepers;
 pub mod client;
 pub mod handlers;
+pub mod keepers;
 pub mod node;
 
 pub trait ApplicationInfo: Clone + Sync + Send + 'static {

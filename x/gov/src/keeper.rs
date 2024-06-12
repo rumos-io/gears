@@ -5,7 +5,7 @@ use gears::{
     context::init::InitContext,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::store::gas::ext::{GasResultExt, NO_GAS_IN_CTX},
+    types::store::gas::ext::GasResultExt,
     x::{keepers::bank::BankKeeper, module::Module},
 };
 
