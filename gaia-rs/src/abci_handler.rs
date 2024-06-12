@@ -121,6 +121,7 @@ impl ABCIHandler for GaiaABCIHandler {
     ) -> Result<(), AppError> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
+            Message::Staking(msg) => self.staking_abci_handler.tx(ctx, msg),
             Message::IBC(msg) => self.ibc_abci_handler.tx(ctx, msg.clone()),
         }
     }
@@ -161,6 +162,8 @@ impl ABCIHandler for GaiaABCIHandler {
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
             self.bank_abci_handler.query(ctx, query)
+        } else if query.path.starts_with("/cosmos.staking") {
+            self.staking_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/ibc.core.client") {
             self.ibc_abci_handler.query(ctx, query)
         } else {

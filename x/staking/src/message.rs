@@ -6,7 +6,7 @@ use gears::{
 use prost::bytes::Bytes;
 use serde::Serialize;
 
-#[derive(Clone, Serialize)]
+#[derive(Debug, Clone, Serialize)]
 #[serde(tag = "@type")]
 #[allow(clippy::large_enum_variant)]
 pub enum Message {

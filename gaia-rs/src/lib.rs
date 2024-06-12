@@ -30,6 +30,7 @@ use gears::types::address::AccAddress;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
+use staking::cli::query::StakingQueryHandler;
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;
@@ -88,6 +89,9 @@ impl QueryHandler for GaiaCoreClient {
             GaiaQueryCommands::Auth(command) => {
                 Self::QueryRequest::Auth(AuthQueryHandler.prepare_query_request(command)?)
             }
+            GaiaQueryCommands::Staking(command) => {
+                Self::QueryRequest::Staking(StakingQueryHandler.prepare_query_request(command)?)
+            }
             GaiaQueryCommands::Ibc(command) => {
                 Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
             }
@@ -107,6 +111,9 @@ impl QueryHandler for GaiaCoreClient {
             ),
             GaiaQueryCommands::Auth(command) => Self::QueryResponse::Auth(
                 AuthQueryHandler.handle_raw_response(query_bytes, command)?,
+            ),
+            GaiaQueryCommands::Staking(command) => Self::QueryResponse::Staking(
+                StakingQueryHandler.handle_raw_response(query_bytes, command)?,
             ),
             GaiaQueryCommands::Ibc(command) => {
                 Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
