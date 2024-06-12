@@ -1,13 +1,14 @@
-pub use super::*;
+use super::*;
 use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasStoreErrors};
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AuthKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// Delegate performs a delegation, set/update everything necessary within the store.
     /// token_src indicates the bond status of the incoming funds.
@@ -54,9 +55,9 @@ impl<
                 ));
             }
 
-            let send_name = match validator.status {
-                BondStatus::Bonded => BONDED_POOL_NAME,
-                BondStatus::Unbonding => NOT_BONDED_POOL_NAME,
+            let send_module = match validator.status {
+                BondStatus::Bonded => &self.bonded_module,
+                BondStatus::Unbonding => &self.not_bonded_module,
                 BondStatus::Unbonded => {
                     return Err(AppError::Custom("invalid validator status".to_string()))
                 }
@@ -70,10 +71,10 @@ impl<
             .map_err(|e| AppError::Coins(e.to_string()))?;
 
             self.bank_keeper
-                .delegate_coins_from_account_to_module::<DB, AK, CTX>(
+                .delegate_coins_from_account_to_module::<DB, CTX>(
                     ctx,
                     delegation.delegator_address.clone(),
-                    send_name.to_string(),
+                    send_module,
                     coins,
                 )?;
         } else {

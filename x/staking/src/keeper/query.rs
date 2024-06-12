@@ -1,4 +1,4 @@
-pub use super::*;
+use super::*;
 use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
     QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
@@ -9,10 +9,11 @@ use gears::context::query::QueryContext;
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AuthKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     pub fn query_validator<DB: Database>(
         &self,

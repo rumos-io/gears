@@ -1,36 +1,18 @@
 use gears::{
-    context::InfallibleContextMut,
+    context::{QueryableContext, TransactionalContext},
+    error::AppError,
+    store::{database::Database, StoreKey},
     types::{
-        account::{Account, ModuleAccount},
-        address::{AccAddress, ConsAddress},
+        address::{AccAddress, ConsAddress, ValAddress},
+        base::{coin::Coin, send::SendCoins},
+        decimal256::Decimal256,
+        store::gas::errors::GasStoreErrors,
     },
+    x::{keepers::auth::AuthKeeper, module::Module},
 };
 
-pub use super::*;
-
-/// AccountKeeper defines the expected account keeper methods (noalias)
-pub trait AccountKeeper<SK: StoreKey>: AuthKeeper<SK> + Clone + Send + Sync + 'static {
-    fn account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: CTX,
-        addr: ValAddress,
-    ) -> Account;
-
-    fn module_account<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-        module_name: String,
-    ) -> Option<ModuleAccount>;
-
-    fn set_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        context: &mut CTX,
-        acc: ModuleAccount,
-    );
-}
-
 /// BankKeeper defines the expected interface needed to retrieve account balances.
-pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
     // SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
@@ -39,45 +21,33 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     //
     // BurnCoins(ctx sdk.Context, name string, amt sdk.Coins) error
 
-    fn all_balances<DB: Database, AK: AccountKeeper<SK>, CTX: TransactionalContext<DB, SK>>(
+    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: AccAddress,
-    ) -> SendCoins;
+    ) -> Result<Vec<Coin>, GasStoreErrors>;
 
-    fn send_coins_from_module_to_module<
-        DB: Database,
-        AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        sender_pool: String,
-        recepient_pool: String,
+        sender_pool: &M,
+        recepient_pool: &M,
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn undelegate_coins_from_module_to_account<
-        DB: Database,
-        AK: AccountKeeper<SK>,
-        CTX: InfallibleContextMut<DB, SK>,
-    >(
+    fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        sender_module: String,
+        sender_module: &M,
         addr: AccAddress,
         amount: SendCoins,
     ) -> Result<(), AppError>;
 
-    fn delegate_coins_from_account_to_module<
-        DB: Database,
-        AK: AccountKeeper<SK>,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         sender_addr: AccAddress,
-        recepient_module: String,
+        recepient_module: &M,
         amount: SendCoins,
     ) -> Result<(), AppError>;
 }
@@ -87,7 +57,7 @@ pub trait BankKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
 /// keeper which must take particular actions when validators/delegators change
 /// state. The second keeper must implement this interface, which then the
 /// staking keeper can call.
-pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait KeeperHooks<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -130,7 +100,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn before_delegation_shares_modified<
         DB: Database,
-        AK: AuthKeeper<SK>,
+        AK: AuthKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,
@@ -141,7 +111,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn before_delegation_removed<
         DB: Database,
-        AK: AuthKeeper<SK>,
+        AK: AuthKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,
@@ -159,7 +129,7 @@ pub trait KeeperHooks<SK: StoreKey>: Clone + Send + Sync + 'static {
 
     fn before_validator_slashed<
         DB: Database,
-        AK: AuthKeeper<SK>,
+        AK: AuthKeeper<SK, M>,
         CTX: TransactionalContext<DB, SK>,
     >(
         &self,

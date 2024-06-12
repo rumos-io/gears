@@ -13,7 +13,7 @@ pub trait AuthParams {
     fn tx_cost_per_byte(&self) -> u64;
 }
 
-pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
+pub trait AuthKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     type Params: AuthParams;
 
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -50,6 +50,6 @@ pub trait AuthKeeper<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn check_create_new_module_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        module: &Module,
+        module: &M,
     ) -> Result<(), GasStoreErrors>;
 }

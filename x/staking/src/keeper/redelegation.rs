@@ -1,6 +1,7 @@
-pub use super::*;
+use super::*;
 use crate::{
-    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_val_del_addrs_key, RedelegationEntry,
+    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_val_del_addrs_key,
+    unbonding_delegation_time_key, RedelegationEntry,
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
@@ -10,10 +11,11 @@ use gears::{
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > Keeper<SK, PSK, AK, BK, KH>
+        AK: AuthKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > Keeper<SK, PSK, AK, BK, KH, M>
 {
     /// begin unbonding / redelegation; create a redelegation record
     pub fn begin_redelegation<DB: Database, CTX: TransactionalContext<DB, SK>>(

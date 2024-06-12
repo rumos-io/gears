@@ -1,5 +1,5 @@
 use crate::{
-    AccountKeeper, BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
+    BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
     QueryRedelegationRequest, QueryValidatorRequest,
 };
 use gears::{
@@ -10,30 +10,35 @@ use gears::{
     store::{database::Database, StoreKey},
     tendermint::types::{
         proto::validator::ValidatorUpdate,
-        request::{end_block::RequestEndBlock, query::RequestQuery},
+        request::{
+            begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
+        },
     },
+    x::{keepers::auth::AuthKeeper, module::Module},
 };
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    AK: AccountKeeper<SK>,
-    BK: BankKeeper<SK>,
-    KH: KeeperHooks<SK>,
+    AK: AuthKeeper<SK, M>,
+    BK: BankKeeper<SK, M>,
+    KH: KeeperHooks<SK, M>,
+    M: Module,
 > {
-    keeper: Keeper<SK, PSK, AK, BK, KH>,
+    keeper: Keeper<SK, PSK, AK, BK, KH, M>,
 }
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AccountKeeper<SK>,
-        BK: BankKeeper<SK>,
-        KH: KeeperHooks<SK>,
-    > ABCIHandler<SK, PSK, AK, BK, KH>
+        AK: AuthKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, M>,
+        M: Module,
+    > ABCIHandler<SK, PSK, AK, BK, KH, M>
 {
-    pub fn new(keeper: Keeper<SK, PSK, AK, BK, KH>) -> Self {
+    pub fn new(keeper: Keeper<SK, PSK, AK, BK, KH, M>) -> Self {
         ABCIHandler { keeper }
     }
 
@@ -87,6 +92,17 @@ impl<
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
+    }
+
+    pub fn begin_block<DB: Database>(
+        &self,
+        ctx: &mut BlockContext<'_, DB, SK>,
+        _request: RequestBeginBlock,
+    ) {
+        self.keeper.track_historical_info(ctx);
+        todo!()
+        // TODO
+        // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
     }
 
     pub fn end_block<DB: Database>(

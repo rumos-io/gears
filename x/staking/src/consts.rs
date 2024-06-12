@@ -16,8 +16,11 @@ pub(crate) mod keeper {
     pub(crate) const REDELEGATION_QUEUE_KEY: [u8; 1] = [11];
     pub(crate) const REDELEGATION_BY_VAL_DST_INDEX_KEY: [u8; 1] = [12];
 
-    pub(crate) const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
-    pub(crate) const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
+    pub(crate) const HISTORICAL_INFO_KEY: [u8; 1] = [50];
+
+    /// Constants to refer name in module declaration
+    pub const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
+    pub const BONDED_POOL_NAME: &str = "bonded_tokens_pool";
 
     pub(crate) const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
     pub(crate) const ATTRIBUTE_KEY_MODULE: &str = "module";
