@@ -91,13 +91,13 @@ impl<
                 r#type: EVENT_TYPE_CREATE_VALIDATOR.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: msg.validator_address.to_string().as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: msg.validator_address.to_string().into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&msg.value)
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&msg.value)
                             .expect(SERDE_ENCODING_DOMAIN_TYPE)
                             .into(),
                         index: false,
@@ -108,13 +108,13 @@ impl<
                 r#type: EVENT_TYPE_MESSAGE.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_MODULE.as_bytes().into(),
-                        value: ATTRIBUTE_VALUE_CATEGORY.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_MODULE.into(),
+                        value: ATTRIBUTE_VALUE_CATEGORY.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_SENDER.as_bytes().into(),
-                        value: msg.delegator_address.to_string().as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_SENDER.into(),
+                        value: msg.delegator_address.to_string().into(),
                         index: false,
                     },
                 ],
@@ -172,20 +172,20 @@ impl<
                 r#type: EVENT_TYPE_DELEGATE.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: msg.validator_address.to_string().as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: msg.validator_address.to_string().into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&msg.amount)
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&msg.amount)
                             .expect(SERDE_ENCODING_DOMAIN_TYPE)
                             .into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_NEW_SHARES.as_bytes().into(),
-                        value: new_shares.to_string().as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_NEW_SHARES.into(),
+                        value: new_shares.to_string().into(),
                         index: false,
                     },
                 ],
@@ -194,13 +194,13 @@ impl<
                 r#type: EVENT_TYPE_MESSAGE.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_MODULE.as_bytes().into(),
-                        value: ATTRIBUTE_VALUE_CATEGORY.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_MODULE.into(),
+                        value: ATTRIBUTE_VALUE_CATEGORY.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_SENDER.as_bytes().into(),
-                        value: msg.delegator_address.to_string().as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_SENDER.into(),
+                        value: msg.delegator_address.to_string().into(),
                         index: false,
                     },
                 ],
@@ -261,35 +261,25 @@ impl<
                 r#type: EVENT_TYPE_REDELEGATE.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_SRC_VALIDATOR.as_bytes().into(),
-                        value: msg
-                            .src_validator_address
-                            .to_string()
-                            .as_bytes()
-                            .to_vec()
-                            .into(),
+                        key: ATTRIBUTE_KEY_SRC_VALIDATOR.into(),
+                        value: msg.src_validator_address.to_string().into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_DST_VALIDATOR.as_bytes().into(),
-                        value: msg
-                            .dst_validator_address
-                            .to_string()
-                            .as_bytes()
-                            .to_vec()
-                            .into(),
+                        key: ATTRIBUTE_KEY_DST_VALIDATOR.into(),
+                        value: msg.dst_validator_address.to_string().into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&msg.amount)
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&msg.amount)
                             .expect(SERDE_ENCODING_DOMAIN_TYPE)
                             .into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_COMPLETION_TIME.as_bytes().into(),
-                        value: serde_json::to_vec(&completion_time)
+                        key: ATTRIBUTE_KEY_COMPLETION_TIME.into(),
+                        value: serde_json::to_string(&completion_time)
                             .unwrap_or_corrupt()
                             .into(),
                         index: false,
@@ -300,13 +290,13 @@ impl<
                 r#type: EVENT_TYPE_MESSAGE.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_MODULE.as_bytes().into(),
-                        value: ATTRIBUTE_VALUE_CATEGORY.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_MODULE.into(),
+                        value: ATTRIBUTE_VALUE_CATEGORY.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_SENDER.as_bytes().into(),
-                        value: msg.delegator_address.to_string().as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_SENDER.into(),
+                        value: msg.delegator_address.to_string().into(),
                         index: false,
                     },
                 ],

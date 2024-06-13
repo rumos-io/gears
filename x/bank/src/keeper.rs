@@ -226,12 +226,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx.push_event(Event::new(
             "coin_received",
             [
-                EventAttribute::new("receiver".into(), Vec::from(address.clone()).into(), true),
+                EventAttribute::new(
+                    "receiver".into(),
+                    String::from(address.clone()).into(),
+                    true,
+                ),
                 // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_vec(&amount)
-                        .unwrap_or(amount[0].encode_vec().expect(IBC_ENCODE_UNWRAP))
+                    serde_json::to_string(&amount)
+                        .unwrap_or(amount[0].amount.to_string())
                         .into(),
                     true,
                 ),
@@ -573,12 +577,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx.push_event(Event::new(
             "coin_spent",
             [
-                EventAttribute::new("spender".into(), Vec::from(delegator_addr).into(), true),
+                EventAttribute::new("spender".into(), String::from(delegator_addr).into(), true),
                 // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_vec(&amount)
-                        .unwrap_or(amount.inner()[0].encode_vec().expect(IBC_ENCODE_UNWRAP))
+                    serde_json::to_string(&amount)
+                        .unwrap_or(amount.inner()[0].amount.to_string())
                         .into(),
                     true,
                 ),
@@ -684,12 +688,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx.push_event(Event::new(
             "coin_spent",
             [
-                EventAttribute::new("spender".into(), Vec::from(addr.clone()).into(), true),
+                EventAttribute::new("spender".into(), String::from(addr.clone()).into(), true),
                 // TODO: serialization of vector of coins
                 EventAttribute::new(
                     "amount".into(),
-                    serde_json::to_vec(&amount)
-                        .unwrap_or(amount.inner()[0].encode_vec().expect(IBC_ENCODE_UNWRAP))
+                    serde_json::to_string(&amount)
+                        .unwrap_or(amount.inner()[0].amount.to_string())
                         .into(),
                     true,
                 ),

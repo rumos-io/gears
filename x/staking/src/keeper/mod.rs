@@ -309,20 +309,20 @@ impl<
                 r#type: EVENT_TYPE_COMPLETE_UNBONDING.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&balances)
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&balances)
                             .expect(SERDE_ENCODING_DOMAIN_TYPE)
                             .into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: val_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: val_addr_str.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_DELEGATOR.as_bytes().into(),
-                        value: del_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_DELEGATOR.into(),
+                        value: del_addr_str.into(),
                         index: false,
                     },
                 ],
@@ -349,25 +349,25 @@ impl<
                 r#type: EVENT_TYPE_COMPLETE_REDELEGATION.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&balances)
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&balances)
                             .expect(SERDE_ENCODING_DOMAIN_TYPE)
                             .into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_DELEGATOR.as_bytes().into(),
-                        value: del_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_DELEGATOR.into(),
+                        value: del_addr_str.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: val_src_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: val_src_addr_str.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: val_dst_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: val_dst_addr_str.into(),
                         index: false,
                     },
                 ],
@@ -509,6 +509,7 @@ impl<
         if !updates.is_empty() {
             self.set_last_total_power(ctx, Uint256::from_u128(total_power as u128))?;
         }
+
         Ok(updates)
     }
 
