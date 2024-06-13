@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use anyhow::anyhow;
+use chrono::{DateTime, Utc};
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{init::InitContext, tx::TxContext, TransactionalContext},
@@ -248,6 +249,64 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
 
         Ok(())
     }
+
+    pub fn submit_proposal<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+    ) -> anyhow::Result<Proposal> {
+        let proposal_id = proposal_id_get(ctx.kv_store(&self.store_key))?;
+        let submit_time = ctx.header().time.clone();
+        let _deposit_period = self
+            .gov_params_keeper
+            .try_get(ctx)?
+            .deposit
+            .max_deposit_period;
+
+        let proposal = Proposal {
+            proposal_id,
+            content: vec![], // TODO:
+            status: ProposalStatus::DepositPeriod,
+            final_tally_result: (),
+            submit_time,
+            deposit_end_time: Utc::now(), // TODO: submit_time + deposit_period
+            total_deposit: todo!(),
+            voting_start_time: (),
+            voting_end_time: (),
+        };
+
+        proposal_set(ctx.kv_store_mut(&self.store_key), &proposal)?;
+        let mut store = ctx.kv_store_mut(&self.store_key);
+
+        store.set(
+            proposal.inactive_queue_key(),
+            proposal.proposal_id.to_be_bytes(),
+        )?;
+
+        store.set(PROPOSAL_ID_KEY, (proposal_id + 1).to_be_bytes())?;
+
+        // TODO:NOW HOOK https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/proposal.go#L45
+
+        ctx.push_event(Event::new(
+            "submit_proposal",
+            vec![EventAttribute::new(
+                "proposal_id".into(),
+                proposal_id.to_string().into(),
+                false,
+            )],
+        ));
+
+        Ok(proposal)
+    }
+}
+
+fn proposal_id_get<DB: Database>(store: GasKVStore<'_, DB>) -> Result<u64, GasStoreErrors> {
+    let bytes = store
+        .get(PROPOSAL_ID_KEY.as_slice())?
+        .expect("Invalid genesis, initial proposal ID hasn't been set");
+
+    Ok(u64::from_be_bytes(
+        bytes.try_into().expect("we know it serialized correctly"),
+    ))
 }
 
 fn proposal_get<DB: Database>(
