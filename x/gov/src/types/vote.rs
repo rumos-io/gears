@@ -1,4 +1,4 @@
-use gears::types::address::AccAddress;
+use gears::types::{address::AccAddress, decimal256::Decimal256};
 use serde::{Deserialize, Serialize};
 
 use crate::keeper::KEY_VOTES_PREFIX;
@@ -7,7 +7,7 @@ use crate::keeper::KEY_VOTES_PREFIX;
 pub struct Vote {
     pub proposal_id: u64,
     pub voter: AccAddress,
-    pub options: (), // TODO:
+    pub options: Vec<VoteOption>,
 }
 
 impl Vote {
@@ -20,4 +20,19 @@ impl Vote {
         ]
         .concat()
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VoteOption {
+    option: VoteOptions,
+    weight: Decimal256,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum VoteOptions {
+    Empty = 0,
+    Yes,
+    Abstain,
+    No,
+    NoWithVeto,
 }
