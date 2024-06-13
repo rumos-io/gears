@@ -57,10 +57,7 @@ impl<
 
             let send_module = match validator.status {
                 BondStatus::Bonded => &self.bonded_module,
-                BondStatus::Unbonding => &self.not_bonded_module,
-                BondStatus::Unbonded => {
-                    return Err(AppError::Custom("invalid validator status".to_string()))
-                }
+                BondStatus::Unbonded | BondStatus::Unbonding => &self.not_bonded_module,
             };
 
             let denom = self.staking_params_keeper.try_get(ctx)?.bond_denom;

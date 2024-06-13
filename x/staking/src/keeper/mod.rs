@@ -1,8 +1,8 @@
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
     traits::*,
-    BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool,
-    Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
+    BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
+    StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use chrono::Utc;
 use gears::{
@@ -114,7 +114,6 @@ impl<
         // TODO
         // ctx = ctx.WithBlockHeight(1 - sdk.ValidatorUpdateDelay)
 
-        self.set_pool(ctx, genesis.pool);
         self.set_last_total_power(ctx, genesis.last_total_power)
             .expect(CTX_NO_GAS_UNWRAP);
         self.staking_params_keeper.set(ctx, genesis.params.clone());
@@ -266,13 +265,6 @@ impl<
         res
     }
 
-    pub fn set_pool<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, pool: Pool) {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut pool_store = store.prefix_store_mut(POOL_KEY);
-        let pool = serde_json::to_vec(&pool).expect(SERDE_ENCODING_DOMAIN_TYPE);
-        pool_store.set(pool.clone(), pool);
-    }
-
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block
     /// Called in each EndBlock
     pub fn block_validator_updates<DB: Database>(
@@ -403,7 +395,7 @@ impl<
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
-        let params = self.staking_params_keeper.try_get(ctx)?;
+        let params = self.staking_params_keeper.get(ctx);
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;

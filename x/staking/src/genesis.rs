@@ -1,6 +1,4 @@
-use crate::{
-    Delegation, LastValidatorPower, Params, Pool, Redelegation, UnbondingDelegation, Validator,
-};
+use crate::{Delegation, LastValidatorPower, Params, Redelegation, UnbondingDelegation, Validator};
 use gears::types::uint::Uint256;
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +8,6 @@ pub struct GenesisState {
     pub params: Params,
     /// validators defines the validator set at genesis.
     pub validators: Vec<Validator>,
-    pub pool: Pool,
     pub last_total_power: Uint256,
     pub exported: bool,
     pub last_validator_powers: Vec<LastValidatorPower>,

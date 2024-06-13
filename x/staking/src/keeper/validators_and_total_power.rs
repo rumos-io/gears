@@ -46,7 +46,7 @@ impl<
         // TODO:D Handle error if you need
         for next in iterator.range(..) {
             let (k, v) = next?;
-            res.insert(k.to_vec(), serde_json::from_slice(&v)?);
+            res.insert(k.to_vec(), ValAddress::try_from(v.to_vec())?);
         }
         Ok(res)
     }
@@ -67,7 +67,7 @@ impl<
 
         validators_store.set(
             validator.key_by_power_index_key(power_reduction),
-            validator.operator_address.to_string().as_bytes().to_vec(),
+            Vec::from(validator.operator_address.clone()),
         )
     }
 
