@@ -1,17 +1,27 @@
 use std::marker::PhantomData;
 
+use anyhow::anyhow;
 use gears::{
     application::keepers::params::ParamsKeeper,
-    context::init::InitContext,
+    context::{init::InitContext, tx::TxContext},
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    types::store::gas::ext::GasResultExt,
+    types::store::gas::{
+        errors::GasStoreErrors,
+        ext::GasResultExt,
+        kv::{mutable::GasKVStoreMut, GasKVStore},
+    },
     x::{keepers::bank::BankKeeper, module::Module},
 };
 
 use crate::{
-    errors::SERDE_JSON_CONVERSION, genesis::GovGenesisState, params::GovParamsKeeper,
-    types::proposal::ProposalStatus,
+    errors::SERDE_JSON_CONVERSION,
+    genesis::GovGenesisState,
+    params::GovParamsKeeper,
+    types::{
+        deposit::Deposit,
+        proposal::{Proposal, ProposalStatus},
+    },
 };
 
 const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
@@ -20,24 +30,18 @@ pub(crate) const KEY_DEPOSIT_PREFIX: [u8; 1] = [0x10];
 pub(crate) const KEY_VOTES_PREFIX: [u8; 1] = [0x20];
 
 #[allow(dead_code)]
-pub struct GovKeeper<
-    SK: StoreKey,
-    PSK: ParamsSubspaceKey,
-    M: Module,
-    BM: Module,
-    BK: BankKeeper<SK, BM>,
-> {
+pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>> {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
-    gov_mod: M,
+    gov_mod: BM,
     bank_keeper: BK,
     _bank_marker: PhantomData<BM>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BM: Module, BK: BankKeeper<SK, BM>>
-    GovKeeper<SK, PSK, M, BM, BK>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
+    GovKeeper<SK, PSK, BM, BK>
 {
-    pub fn new(store_key: SK, params_subspace_key: PSK, gov_mod: M, bank_keeper: BK) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK, gov_mod: BM, bank_keeper: BK) -> Self {
         Self {
             store_key,
             gov_params_keeper: GovParamsKeeper {
@@ -133,4 +137,73 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BM: Module, BK: BankKeeper
             )
         }
     }
+
+    pub fn deposit_add<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        Deposit {
+            proposal_id,
+            depositor,
+            amount,
+        }: Deposit,
+    ) -> anyhow::Result<bool> {
+        let mut proposal = proposal_get(ctx.kv_store(&self.store_key), proposal_id)?
+            .ok_or(anyhow!("unknown proposal {proposal_id}"))?;
+
+        match proposal.status {
+            ProposalStatus::DepositPeriod | ProposalStatus::VotingPeriod => Ok(()),
+            _ => Err(anyhow!("inactive proposal {proposal_id}")),
+        }?;
+
+        self.bank_keeper.send_coins_from_account_to_module(
+            ctx,
+            depositor,
+            &self.gov_mod,
+            amount.clone(),
+        )?;
+
+        proposal.total_deposit = proposal.total_deposit.checked_add(amount)?;
+        proposal_set(ctx.kv_store_mut(&self.store_key), &proposal)?;
+
+        let deposit_params = self.gov_params_keeper.try_get(ctx)?.deposit;
+        let activated_voting_period = match proposal.status {
+            ProposalStatus::DepositPeriod
+                if proposal
+                    .total_deposit
+                    .is_all_gte(&deposit_params.min_deposit) =>
+            {
+                true
+            }
+            _ => false,
+        };
+
+        Ok(activated_voting_period)
+    }
+}
+
+fn proposal_get<DB: Database>(
+    store: GasKVStore<'_, DB>,
+    proposal_id: u64,
+) -> Result<Option<Proposal>, GasStoreErrors> {
+    let key = [KEY_PROPOSAL_PREFIX.as_slice(), &proposal_id.to_be_bytes()].concat();
+
+    let bytes = store.get(&key)?;
+    match bytes {
+        Some(var) => Ok(Some(
+            serde_json::from_slice(&var).expect(SERDE_JSON_CONVERSION),
+        )),
+        None => Ok(None),
+    }
+}
+
+fn proposal_set<DB: Database>(
+    mut store: GasKVStoreMut<'_, DB>,
+    proposal: &Proposal,
+) -> Result<(), GasStoreErrors> {
+    store.set(
+        proposal.key(),
+        serde_json::to_vec(proposal).expect(SERDE_JSON_CONVERSION),
+    )?;
+
+    Ok(())
 }

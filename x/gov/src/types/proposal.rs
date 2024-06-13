@@ -1,5 +1,5 @@
 use chrono::{DateTime, SubsecRound, Utc};
-use gears::types::base::coin::Coin;
+use gears::types::base::send::SendCoins;
 use serde::{Deserialize, Serialize};
 
 use crate::keeper::KEY_PROPOSAL_PREFIX;
@@ -18,7 +18,7 @@ pub struct Proposal {
     pub final_tally_result: (), // TODO: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/types/gov.pb.go#L289
     pub submit_time: (),
     pub deposit_end_time: DateTime<Utc>,
-    pub total_deposit: Vec<Coin>,
+    pub total_deposit: SendCoins,
     pub voting_start_time: (),
     pub voting_end_time: DateTime<Utc>,
 }

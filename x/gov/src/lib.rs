@@ -1,3 +1,4 @@
+pub mod message;
 pub mod errors;
 pub mod genesis;
 pub mod keeper;

@@ -1,4 +1,4 @@
-use gears::types::{address::AccAddress, base::coin::Coin};
+use gears::types::{address::AccAddress, base::send::SendCoins};
 use serde::{Deserialize, Serialize};
 
 use crate::keeper::KEY_DEPOSIT_PREFIX;
@@ -7,7 +7,7 @@ use crate::keeper::KEY_DEPOSIT_PREFIX;
 pub struct Deposit {
     pub proposal_id: u64,
     pub depositor: AccAddress,
-    pub amount: Vec<Coin>,
+    pub amount: SendCoins,
 }
 
 impl Deposit {
