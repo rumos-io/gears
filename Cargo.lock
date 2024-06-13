@@ -1877,6 +1877,7 @@ dependencies = [
  "gears",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]

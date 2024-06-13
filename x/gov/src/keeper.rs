@@ -25,6 +25,7 @@ use crate::{
     types::{
         deposit::Deposit,
         proposal::{Proposal, ProposalStatus},
+        vote::Vote,
     },
 };
 
@@ -215,6 +216,38 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
 
         Ok(activated_voting_period)
     }
+
+    pub fn vote_add<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        vote: Vote,
+    ) -> anyhow::Result<()> {
+        let proposal = proposal_get(ctx.kv_store(&self.store_key), vote.proposal_id)?
+            .ok_or(anyhow!("unknown proposal {}", vote.proposal_id))?;
+
+        match proposal.status {
+            ProposalStatus::VotingPeriod => Ok(()),
+            _ => Err(anyhow!("inactive proposal {}", vote.proposal_id)),
+        }?;
+
+        vote_set(ctx.kv_store_mut(&self.store_key), &vote)?;
+
+        // TODO:NOW HOOK https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/vote.go#L31
+
+        ctx.push_event(Event::new(
+            "proposal_vote",
+            vec![
+                EventAttribute::new("option".into(), format!("{:?}", vote.options).into(), false),
+                EventAttribute::new(
+                    "proposal_id".into(),
+                    format!("{}", vote.proposal_id).into(),
+                    false,
+                ),
+            ],
+        ));
+
+        Ok(())
+    }
 }
 
 fn proposal_get<DB: Database>(
@@ -271,5 +304,37 @@ fn deposit_set<DB: Database>(
     store.set(
         deposit.key(),
         serde_json::to_vec(deposit).expect(SERDE_JSON_CONVERSION),
+    )
+}
+
+fn _vote_get<DB: Database>(
+    store: GasKVStore<'_, DB>,
+    proposal_id: u64,
+    voter: &AccAddress,
+) -> Result<Option<Vote>, GasStoreErrors> {
+    let key = [
+        KEY_VOTES_PREFIX.as_slice(),
+        &proposal_id.to_be_bytes(),
+        &[voter.len()],
+        voter.as_ref(),
+    ]
+    .concat();
+
+    let bytes = store.get(&key)?;
+    match bytes {
+        Some(var) => Ok(Some(
+            serde_json::from_slice(&var).expect(SERDE_JSON_CONVERSION),
+        )),
+        None => Ok(None),
+    }
+}
+
+fn vote_set<DB: Database>(
+    mut store: GasKVStoreMut<'_, DB>,
+    vote: &Vote,
+) -> Result<(), GasStoreErrors> {
+    store.set(
+        vote.key(),
+        serde_json::to_vec(vote).expect(SERDE_JSON_CONVERSION),
     )
 }

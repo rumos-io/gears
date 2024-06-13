@@ -36,3 +36,22 @@ pub enum VoteOptions {
     No,
     NoWithVeto,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct VoteWeight(Decimal256);
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, thiserror::Error)]
+#[error("parse error: Invalid weight for vote. Required to be positive and not greater than 1")]
+pub struct VoteWeightError;
+
+impl TryFrom<Decimal256> for VoteWeight {
+    type Error = VoteWeightError;
+
+    fn try_from(value: Decimal256) -> Result<Self, Self::Error> {
+        if value < Decimal256::zero() || value > Decimal256::zero() {
+            return Err(VoteWeightError);
+        }
+
+        Ok(Self(value))
+    }
+}
