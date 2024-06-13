@@ -5,12 +5,15 @@ edition = "2021"
 
 [dependencies]
 gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
+
+# unsorted
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 bytes = { workspace = true }
+prost = { workspace = true }
 
 [lints]
 workspace = true

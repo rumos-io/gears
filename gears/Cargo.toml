@@ -13,6 +13,7 @@ core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
 kv_store = { path = "../kv_store" }
 database = { path = "../database" }
+gears-derive = { path = "../gears-derive" }
 
 #newtypes
 # vec1 = "1.12.0"
