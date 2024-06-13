@@ -1,12 +1,12 @@
 use crate::{
     params::GovParams,
-    types::{deposit::Deposit, proposal::Proposal, vote::Vote},
+    types::{deposit::Deposit, proposal::Proposal, vote_weighted::VoteWeighted},
 };
 
 pub struct GovGenesisState {
     pub starting_proposal_id: u64,
     pub deposits: Vec<Deposit>,
-    pub votes: Vec<Vote>,
+    pub votes: Vec<VoteWeighted>,
     pub proposals: Vec<Proposal>,
     pub params: GovParams,
 }

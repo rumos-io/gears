@@ -25,7 +25,7 @@ use crate::{
     types::{
         deposit::Deposit,
         proposal::{Proposal, ProposalStatus},
-        vote::Vote,
+        vote_weighted::VoteWeighted,
     },
 };
 
@@ -220,7 +220,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
     pub fn vote_add<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
-        vote: Vote,
+        vote: VoteWeighted,
     ) -> anyhow::Result<()> {
         let proposal = proposal_get(ctx.kv_store(&self.store_key), vote.proposal_id)?
             .ok_or(anyhow!("unknown proposal {}", vote.proposal_id))?;
@@ -311,7 +311,7 @@ fn _vote_get<DB: Database>(
     store: GasKVStore<'_, DB>,
     proposal_id: u64,
     voter: &AccAddress,
-) -> Result<Option<Vote>, GasStoreErrors> {
+) -> Result<Option<VoteWeighted>, GasStoreErrors> {
     let key = [
         KEY_VOTES_PREFIX.as_slice(),
         &proposal_id.to_be_bytes(),
@@ -331,7 +331,7 @@ fn _vote_get<DB: Database>(
 
 fn vote_set<DB: Database>(
     mut store: GasKVStoreMut<'_, DB>,
-    vote: &Vote,
+    vote: &VoteWeighted,
 ) -> Result<(), GasStoreErrors> {
     store.set(
         vote.key(),

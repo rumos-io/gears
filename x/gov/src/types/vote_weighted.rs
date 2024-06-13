@@ -3,14 +3,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::keeper::KEY_VOTES_PREFIX;
 
+use super::votes::{Vote, VoteOption};
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Vote {
+pub struct VoteWeighted {
     pub proposal_id: u64,
     pub voter: AccAddress,
-    pub options: Vec<VoteOption>,
+    pub options: Vec<VoteOptionWeighted>,
 }
 
-impl Vote {
+impl VoteWeighted {
     pub fn key(&self) -> Vec<u8> {
         [
             KEY_VOTES_PREFIX.as_slice(),
@@ -22,19 +24,35 @@ impl Vote {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct VoteOption {
-    option: VoteOptions,
-    weight: Decimal256,
+impl From<Vote> for VoteWeighted {
+    fn from(
+        Vote {
+            proposal_id,
+            voter,
+            option: options,
+        }: Vote,
+    ) -> Self {
+        Self {
+            proposal_id,
+            voter,
+            options: vec![VoteOptionWeighted::non_split(options)],
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum VoteOptions {
-    Empty = 0,
-    Yes,
-    Abstain,
-    No,
-    NoWithVeto,
+pub struct VoteOptionWeighted {
+    option: VoteOption,
+    weight: VoteWeight,
+}
+
+impl VoteOptionWeighted {
+    pub fn non_split(option: VoteOption) -> Self {
+        Self {
+            option,
+            weight: VoteWeight::try_from(Decimal256::zero()).expect("default is valid"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
