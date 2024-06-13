@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::keeper::KEY_PROPOSAL_PREFIX;
 
 // Slight modification of the RFC3339Nano but it right pads all zeros and drops the time zone info
-const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT&H:%M:%S.000000000"; // TODO:NOW Is %S for seconds?
+const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT&H:%M:%S.000000000";
 
 const KEY_ACTIVE_PROPOSAL_QUEUE_PREFIX: [u8; 1] = [0x01];
 const KEY_INACTIVE_PROPOSAL_QUEUE_PREFIX: [u8; 1] = [0x02];
