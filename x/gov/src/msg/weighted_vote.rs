@@ -1,9 +1,7 @@
 use gears::types::{address::AccAddress, decimal256::Decimal256};
 use serde::{Deserialize, Serialize};
 
-use crate::keeper::KEY_VOTES_PREFIX;
-
-use super::votes::{Vote, VoteOption};
+use super::vote::{Vote, VoteOption};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VoteWeighted {
@@ -13,12 +11,15 @@ pub struct VoteWeighted {
 }
 
 impl VoteWeighted {
-    pub fn key(&self) -> Vec<u8> {
+    /// We always store vote with weight
+    pub(crate) const KEY_PREFIX: [u8; 1] = [0x20];
+
+    pub fn key(proposal_id: u64, voter: &AccAddress) -> Vec<u8> {
         [
-            KEY_VOTES_PREFIX.as_slice(),
-            &self.proposal_id.to_be_bytes(),
-            &[self.voter.len()],
-            self.voter.as_ref(),
+            Self::KEY_PREFIX.as_slice(),
+            &proposal_id.to_be_bytes(),
+            &[voter.len()],
+            voter.as_ref(),
         ]
         .concat()
     }

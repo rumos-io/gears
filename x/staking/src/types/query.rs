@@ -3,7 +3,7 @@ use crate::{
     Validator,
 };
 use gears::{
-    core::{errors::Error, Protobuf},
+    core::{errors::CoreError, Protobuf},
     error::IBC_ENCODE_UNWRAP,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
@@ -28,11 +28,11 @@ pub struct QueryValidatorRequest {
 }
 
 impl TryFrom<QueryValidatorRequestRaw> for QueryValidatorRequest {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: QueryValidatorRequestRaw) -> Result<Self, Self::Error> {
         let address = ValAddress::from_bech32(&raw.address)
-            .map_err(|e| Error::DecodeAddress(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
 
         Ok(QueryValidatorRequest { address })
     }
@@ -64,13 +64,13 @@ pub struct QueryDelegationRequest {
 }
 
 impl TryFrom<QueryDelegationRequestRaw> for QueryDelegationRequest {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: QueryDelegationRequestRaw) -> Result<Self, Self::Error> {
         let delegator_address = AccAddress::from_bech32(&raw.delegator_address)
-            .map_err(|e| Error::DecodeAddress(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
         let validator_address = ValAddress::from_bech32(&raw.validator_address)
-            .map_err(|e| Error::DecodeAddress(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
 
         Ok(QueryDelegationRequest {
             delegator_address,
@@ -112,21 +112,21 @@ pub struct QueryRedelegationRequest {
 }
 
 impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: QueryRedelegationRequestRaw) -> Result<Self, Self::Error> {
         let delegator_address = if let Some(addr) = raw.delegator_address {
-            Some(AccAddress::from_bech32(&addr).map_err(|e| Error::DecodeAddress(e.to_string()))?)
+            Some(AccAddress::from_bech32(&addr).map_err(|e| CoreError::DecodeAddress(e.to_string()))?)
         } else {
             None
         };
         let src_validator_address = if let Some(addr) = raw.src_validator_address {
-            Some(ValAddress::from_bech32(&addr).map_err(|e| Error::DecodeAddress(e.to_string()))?)
+            Some(ValAddress::from_bech32(&addr).map_err(|e| CoreError::DecodeAddress(e.to_string()))?)
         } else {
             None
         };
         let dst_validator_address = if let Some(addr) = raw.dst_validator_address {
-            Some(ValAddress::from_bech32(&addr).map_err(|e| Error::DecodeAddress(e.to_string()))?)
+            Some(ValAddress::from_bech32(&addr).map_err(|e| CoreError::DecodeAddress(e.to_string()))?)
         } else {
             None
         };
@@ -177,11 +177,11 @@ pub struct QueryValidatorResponse {
 }
 
 impl TryFrom<QueryValidatorResponseRaw> for QueryValidatorResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: QueryValidatorResponseRaw) -> Result<Self, Self::Error> {
         let validator: Validator = Validator::decode_vec(&raw.validator)
-            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
 
         Ok(QueryValidatorResponse { validator })
     }
@@ -212,13 +212,13 @@ pub struct DelegationResponse {
 }
 
 impl TryFrom<DelegationResponseRaw> for DelegationResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: DelegationResponseRaw) -> Result<Self, Self::Error> {
         let delegation: Delegation = serde_json::from_slice(&raw.delegation)
-            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
         let balance =
-            Coin::decode_vec(&raw.balance).map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+            Coin::decode_vec(&raw.balance).map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
         Ok(DelegationResponse {
             delegation,
@@ -254,13 +254,13 @@ pub struct QueryDelegationResponse {
 }
 
 impl TryFrom<QueryDelegationResponseRaw> for QueryDelegationResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: QueryDelegationResponseRaw) -> Result<Self, Self::Error> {
         Ok(QueryDelegationResponse {
             delegation_response: raw
                 .delegation_response
-                .ok_or(Error::MissingField(
+                .ok_or(CoreError::MissingField(
                     "Missing field 'delegation_response'.".into(),
                 ))?
                 .try_into()?,
@@ -294,13 +294,13 @@ pub struct RedelegationEntryResponse {
 }
 
 impl TryFrom<RedelegationEntryResponseRaw> for RedelegationEntryResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: RedelegationEntryResponseRaw) -> Result<Self, Self::Error> {
         let redelegation_entry: RedelegationEntry = serde_json::from_slice(&raw.redelegation_entry)
-            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
         let balance = serde_json::from_slice(&raw.balance)
-            .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
         Ok(RedelegationEntryResponse {
             redelegation_entry,
@@ -336,13 +336,13 @@ pub struct RedelegationResponse {
 }
 
 impl TryFrom<RedelegationResponseRaw> for RedelegationResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: RedelegationResponseRaw) -> Result<Self, Self::Error> {
         let redelegation: Redelegation = serde_json::from_slice(&raw.redelegation)
-            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
         let entries = serde_json::from_slice(&raw.entries)
-            .map_err(|e| Error::DecodeGeneral(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
 
         Ok(RedelegationResponse {
             redelegation,
@@ -378,7 +378,7 @@ pub struct QueryRedelegationResponse {
 }
 
 impl TryFrom<QueryRedelegationResponseRaw> for QueryRedelegationResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: QueryRedelegationResponseRaw) -> Result<Self, Self::Error> {
         let redelegation_responses: Vec<RedelegationResponse> = {

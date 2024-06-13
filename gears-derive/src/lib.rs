@@ -98,14 +98,14 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                 }
 
                 impl TryFrom<::gears::core::any::google::Any> for #name {
-                    type Error = ::gears::core::errors::Error;
+                    type Error = ::gears::core::errors::CoreError;
 
                     fn try_from(value: ::gears::core::any::google::Any) -> Result<Self, Self::Error> {
 
                         #(#from_any) else*
 
                          else {
-                            Err(::gears::core::errors::Error::DecodeGeneral(
+                            Err(::gears::core::errors::CoreError::DecodeGeneral(
                                 "message type not recognized".into(),
                             ))
                         }

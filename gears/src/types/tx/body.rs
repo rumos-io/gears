@@ -1,6 +1,6 @@
 use super::TxMessage;
 use core_types::any::google::Any;
-use core_types::errors::Error;
+use core_types::errors::CoreError;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
@@ -41,7 +41,7 @@ pub struct TxBody<M> {
 }
 
 impl<M: TxMessage> TryFrom<inner::TxBody> for TxBody<M> {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::TxBody) -> Result<Self, Self::Error> {
         let mut messages: Vec<M> = vec![];

@@ -1,5 +1,5 @@
 use gears::{
-    core::{errors::Error, query::request::PageRequest},
+    core::{errors::CoreError, query::request::PageRequest},
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
@@ -32,16 +32,16 @@ pub struct QueryBalanceRequest {
 }
 
 impl TryFrom<inner::QueryBalanceRequest> for QueryBalanceRequest {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::QueryBalanceRequest) -> Result<Self, Self::Error> {
         let address = AccAddress::from_bech32(&raw.address)
-            .map_err(|e| Error::DecodeAddress(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
 
         let denom = raw
             .denom
             .try_into()
-            .map_err(|_| Error::Coin(String::from("invalid denom")))?;
+            .map_err(|_| CoreError::Coin(String::from("invalid denom")))?;
 
         Ok(QueryBalanceRequest { address, denom })
     }
@@ -68,11 +68,11 @@ pub struct QueryAllBalancesRequest {
 }
 
 impl TryFrom<inner::QueryAllBalancesRequest> for QueryAllBalancesRequest {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::QueryAllBalancesRequest) -> Result<Self, Self::Error> {
         let address = AccAddress::from_bech32(&raw.address)
-            .map_err(|e| Error::DecodeAddress(e.to_string()))?;
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
 
         Ok(Self {
             address,
@@ -103,7 +103,7 @@ pub struct QueryAllBalancesResponse {
 }
 
 impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::QueryAllBalancesResponse) -> Result<Self, Self::Error> {
         let balances = raw
@@ -111,7 +111,7 @@ impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
             .into_iter()
             .map(Coin::try_from)
             .collect::<Result<Vec<Coin>, CoinsError>>()
-            .map_err(|e| Error::Coin(e.to_string()))?;
+            .map_err(|e| CoreError::Coin(e.to_string()))?;
 
         Ok(QueryAllBalancesResponse {
             balances,
@@ -142,14 +142,14 @@ pub struct QueryBalanceResponse {
 }
 
 impl TryFrom<inner::QueryBalanceResponse> for QueryBalanceResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::QueryBalanceResponse) -> Result<Self, Self::Error> {
         let balance = raw
             .balance
             .map(|coin| coin.try_into())
             .transpose()
-            .map_err(|e: CoinsError| Error::Coin(e.to_string()))?;
+            .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?;
         Ok(QueryBalanceResponse { balance })
     }
 }
@@ -176,7 +176,7 @@ pub struct QueryTotalSupplyResponse {
 }
 
 impl TryFrom<inner::QueryTotalSupplyResponse> for QueryTotalSupplyResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::QueryTotalSupplyResponse) -> Result<Self, Self::Error> {
         let supply = raw
@@ -184,7 +184,7 @@ impl TryFrom<inner::QueryTotalSupplyResponse> for QueryTotalSupplyResponse {
             .into_iter()
             .map(Coin::try_from)
             .collect::<Result<Vec<Coin>, CoinsError>>()
-            .map_err(|e| Error::Coin(e.to_string()))?;
+            .map_err(|e| CoreError::Coin(e.to_string()))?;
 
         Ok(Self {
             supply,
@@ -231,7 +231,7 @@ pub struct QueryDenomsMetadataResponse {
 }
 
 impl TryFrom<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: RawQueryDenomsMetadataResponse) -> Result<Self, Self::Error> {
         let metadatas = raw
@@ -239,7 +239,7 @@ impl TryFrom<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse {
             .into_iter()
             .map(Metadata::try_from)
             .collect::<Result<Vec<Metadata>, MetadataParseError>>()
-            .map_err(|e| Error::Custom(e.to_string()));
+            .map_err(|e| CoreError::Custom(e.to_string()));
 
         Ok(QueryDenomsMetadataResponse {
             metadatas: metadatas?,

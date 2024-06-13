@@ -31,10 +31,10 @@ impl From<Message> for Any {
 }
 
 impl TryFrom<Any> for Message {
-    type Error = gears::core::errors::Error;
+    type Error = gears::core::errors::CoreError;
 
     fn try_from(_value: Any) -> Result<Self, Self::Error> {
-        Err(gears::core::errors::Error::DecodeGeneral(
+        Err(gears::core::errors::CoreError::DecodeGeneral(
             "message type not recognized".into(),
         ))
     }

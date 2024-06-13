@@ -66,7 +66,7 @@ impl Default for TallyParams {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct GovParams {
     pub deposit: DepositParams,
     pub voting: VotingParams,
@@ -119,6 +119,7 @@ impl ParamsDeserialize for GovParams {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct GovParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }

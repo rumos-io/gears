@@ -1,8 +1,6 @@
 use gears::types::{address::AccAddress, base::send::SendCoins};
 use serde::{Deserialize, Serialize};
 
-use crate::keeper::KEY_DEPOSIT_PREFIX;
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Deposit {
     pub proposal_id: u64,
@@ -11,12 +9,14 @@ pub struct Deposit {
 }
 
 impl Deposit {
-    pub(crate) fn key(&self) -> Vec<u8> {
+    pub(crate) const KEY_PREFIX: [u8; 1] = [0x10];
+
+    pub(crate) fn key(proposal_id: u64, depositor: &AccAddress) -> Vec<u8> {
         [
-            KEY_DEPOSIT_PREFIX.as_slice(),
-            &self.proposal_id.to_be_bytes(),
-            &[self.depositor.len()],
-            self.depositor.as_ref(),
+            Self::KEY_PREFIX.as_slice(),
+            &proposal_id.to_be_bytes(),
+            &[depositor.len()],
+            depositor.as_ref(),
         ]
         .concat()
     }

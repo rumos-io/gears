@@ -73,8 +73,8 @@ impl From<KVStoreError> for AppError {
     }
 }
 
-impl From<core_types::errors::Error> for AppError {
-    fn from(value: core_types::errors::Error) -> Self {
+impl From<core_types::errors::CoreError> for AppError {
+    fn from(value: core_types::errors::CoreError) -> Self {
         Self::IBC(value.to_string())
     }
 }

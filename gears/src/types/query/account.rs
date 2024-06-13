@@ -16,7 +16,7 @@ pub struct QueryAccountResponse {
 }
 
 impl TryFrom<inner::QueryAccountResponse> for QueryAccountResponse {
-    type Error = core_types::errors::Error;
+    type Error = core_types::errors::CoreError;
 
     fn try_from(raw: inner::QueryAccountResponse) -> Result<Self, Self::Error> {
         let account = raw.account.map(|a| a.try_into()).transpose()?;
@@ -42,7 +42,7 @@ pub struct QueryAccountRequest {
 }
 
 impl TryFrom<inner::QueryAccountRequest> for QueryAccountRequest {
-    type Error = core_types::errors::Error;
+    type Error = core_types::errors::CoreError;
 
     fn try_from(raw: inner::QueryAccountRequest) -> Result<Self, Self::Error> {
         let address = AccAddress::from_bech32(&raw.address)

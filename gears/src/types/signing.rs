@@ -1,5 +1,5 @@
 use core_types::any::google::Any;
-use core_types::errors::Error as IbcError;
+use core_types::errors::CoreError as IbcError;
 use core_types::tx::mode_info::ModeInfo;
 use keyring::error::DecodeError;
 use serde::{Deserialize, Serialize};
@@ -53,7 +53,7 @@ impl TryFrom<inner::SignerInfo> for SignerInfo {
             public_key: key,
             mode_info: raw
                 .mode_info
-                .ok_or(core_types::errors::Error::MissingField(String::from(
+                .ok_or(core_types::errors::CoreError::MissingField(String::from(
                     "mode_info",
                 )))?
                 .try_into()?,

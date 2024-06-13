@@ -15,7 +15,7 @@ pub struct QueryDenomMetadataRequest {
 }
 
 impl TryFrom<inner::QueryDenomMetadataRequest> for QueryDenomMetadataRequest {
-    type Error = core_types::errors::Error;
+    type Error = core_types::errors::CoreError;
 
     fn try_from(raw: inner::QueryDenomMetadataRequest) -> Result<Self, Self::Error> {
         let denom = raw
@@ -54,14 +54,14 @@ pub struct QueryDenomMetadataResponse {
 }
 
 impl TryFrom<RawQueryDenomMetadataResponse> for QueryDenomMetadataResponse {
-    type Error = core_types::errors::Error;
+    type Error = core_types::errors::CoreError;
 
     fn try_from(raw: RawQueryDenomMetadataResponse) -> Result<Self, Self::Error> {
         let metadata = raw
             .metadata
             .map(Metadata::try_from)
             .transpose()
-            .map_err(|_| core_types::errors::Error::Coin(String::from("invalid metadata")))?;
+            .map_err(|_| core_types::errors::CoreError::Coin(String::from("invalid metadata")))?;
 
         Ok(QueryDenomMetadataResponse { metadata })
     }

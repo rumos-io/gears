@@ -1,4 +1,4 @@
-use core_types::errors::Error;
+use core_types::errors::CoreError;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
@@ -52,7 +52,7 @@ impl TryFrom<inner::AuthInfo> for AuthInfo {
     type Error = AuthError;
 
     fn try_from(raw: inner::AuthInfo) -> Result<Self, Self::Error> {
-        let signer_infos: Result<Vec<SignerInfo>, Error> = raw
+        let signer_infos: Result<Vec<SignerInfo>, CoreError> = raw
             .signer_infos
             .into_iter()
             .map(|info| info.try_into())

@@ -1,6 +1,6 @@
 use crate::consts::proto::*;
 use gears::{
-    core::{errors::Error, Protobuf},
+    core::{errors::CoreError, Protobuf},
     error::AppError,
     tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
     types::{
@@ -73,20 +73,20 @@ pub struct Commission {
 }
 
 impl TryFrom<CommissionRaw> for Commission {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(value: CommissionRaw) -> Result<Self, Self::Error> {
         Ok(Self {
             commission_rates: value
                 .commission_rates
-                .ok_or(Error::MissingField(
+                .ok_or(CoreError::MissingField(
                     "Missing field 'commission_rates'.".into(),
                 ))?
                 .try_into()
-                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+                .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
             update_time: value
                 .update_time
-                .ok_or(Error::MissingField("Missing field 'update_time'.".into()))?,
+                .ok_or(CoreError::MissingField("Missing field 'update_time'.".into()))?,
         })
     }
 }
@@ -261,31 +261,31 @@ pub struct CreateValidator {
 }
 
 impl TryFrom<CreateValidatorRaw> for CreateValidator {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
         Ok(CreateValidator {
             description: src
                 .description
-                .ok_or(Error::MissingField("Missing field 'description'.".into()))?,
+                .ok_or(CoreError::MissingField("Missing field 'description'.".into()))?,
             commission: src
                 .commission
-                .ok_or(Error::MissingField("Missing field 'commission'.".into()))?
+                .ok_or(CoreError::MissingField("Missing field 'commission'.".into()))?
                 .try_into()
-                .map_err(|e| Error::DecodeProtobuf(format!("{e}")))?,
+                .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
             min_self_delegation: Uint256::from_str(&src.min_self_delegation)
-                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             delegator_address: AccAddress::from_bech32(&src.delegator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             validator_address: ValAddress::from_bech32(&src.validator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             pub_key: serde_json::from_slice(&src.pub_key)
-                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             value: src
                 .value
-                .ok_or(Error::MissingField("Missing field 'value'.".into()))?
+                .ok_or(CoreError::MissingField("Missing field 'value'.".into()))?
                 .try_into()
-                .map_err(|e| Error::Coin(format!("{e}")))?,
+                .map_err(|e| CoreError::Coin(format!("{e}")))?,
         })
     }
 }
@@ -321,19 +321,19 @@ pub struct DelegateMsg {
 }
 
 impl TryFrom<DelegateMsgRaw> for DelegateMsg {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(src: DelegateMsgRaw) -> Result<Self, Self::Error> {
         Ok(DelegateMsg {
             delegator_address: AccAddress::from_bech32(&src.delegator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             validator_address: ValAddress::from_bech32(&src.validator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             amount: src
                 .amount
-                .ok_or(Error::MissingField("Missing field 'amount'.".into()))?
+                .ok_or(CoreError::MissingField("Missing field 'amount'.".into()))?
                 .try_into()
-                .map_err(|e| Error::Coin(format!("{e}")))?,
+                .map_err(|e| CoreError::Coin(format!("{e}")))?,
         })
     }
 }
@@ -373,21 +373,21 @@ pub struct RedelegateMsg {
 }
 
 impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(src: RedelegateMsgRaw) -> Result<Self, Self::Error> {
         Ok(RedelegateMsg {
             delegator_address: AccAddress::from_bech32(&src.delegator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             src_validator_address: ValAddress::from_bech32(&src.src_validator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             dst_validator_address: ValAddress::from_bech32(&src.dst_validator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             amount: src
                 .amount
-                .ok_or(Error::MissingField("Missing field 'amount'.".into()))?
+                .ok_or(CoreError::MissingField("Missing field 'amount'.".into()))?
                 .try_into()
-                .map_err(|e| Error::Coin(format!("{e}")))?,
+                .map_err(|e| CoreError::Coin(format!("{e}")))?,
         })
     }
 }

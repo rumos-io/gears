@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use anyhow::anyhow;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{init::InitContext, tx::TxContext, TransactionalContext},
@@ -22,32 +22,30 @@ use gears::{
 use crate::{
     errors::SERDE_JSON_CONVERSION,
     genesis::GovGenesisState,
-    params::GovParamsKeeper,
-    types::{
+    msg::{
         deposit::Deposit,
         proposal::{Proposal, ProposalStatus},
-        vote_weighted::VoteWeighted,
+        weighted_vote::VoteWeighted,
     },
+    params::GovParamsKeeper,
 };
 
 const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
 pub(crate) const KEY_PROPOSAL_PREFIX: [u8; 1] = [0x00];
-pub(crate) const KEY_DEPOSIT_PREFIX: [u8; 1] = [0x10];
-pub(crate) const KEY_VOTES_PREFIX: [u8; 1] = [0x20];
 
-#[allow(dead_code)]
-pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>> {
+#[derive(Debug, Clone)]
+pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
-    gov_mod: BM,
+    gov_mod: M,
     bank_keeper: BK,
-    _bank_marker: PhantomData<BM>,
+    _bank_marker: PhantomData<M>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
-    GovKeeper<SK, PSK, BM, BK>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
+    GovKeeper<SK, PSK, M, BK>
 {
-    pub fn new(store_key: SK, params_subspace_key: PSK, gov_mod: BM, bank_keeper: BK) -> Self {
+    pub fn new(store_key: SK, params_subspace_key: PSK, gov_mod: M, bank_keeper: BK) -> Self {
         Self {
             store_key,
             gov_params_keeper: GovParamsKeeper {
@@ -83,7 +81,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
                 let mut total_deposits = Vec::with_capacity(deposits.len());
                 for deposit in deposits {
                     store_mut.set(
-                        deposit.key(),
+                        Deposit::key(deposit.proposal_id, &deposit.depositor),
                         serde_json::to_vec(&deposit).expect(SERDE_JSON_CONVERSION),
                     ); // TODO:NOW IS THIS CORRECT SERIALIZATION?
                     total_deposits.push(deposit.amount);
@@ -94,7 +92,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
 
             for vote in votes {
                 store_mut.set(
-                    vote.key(),
+                    VoteWeighted::key(vote.proposal_id, &vote.voter),
                     serde_json::to_vec(&vote).expect(SERDE_JSON_CONVERSION),
                 )
             }
@@ -250,7 +248,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, BM: Module, BK: BankKeeper<SK, BM>>
         Ok(())
     }
 
-    pub fn submit_proposal<DB: Database>(
+    #[allow(unused_variables, unreachable_code)]
+    pub fn _submit_proposal<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
     ) -> anyhow::Result<Proposal> {
@@ -340,7 +339,7 @@ fn deposit_get<DB: Database>(
     depositor: &AccAddress,
 ) -> Result<Option<Deposit>, GasStoreErrors> {
     let key = [
-        KEY_DEPOSIT_PREFIX.as_slice(),
+        Deposit::KEY_PREFIX.as_slice(),
         &proposal_id.to_be_bytes(),
         &[depositor.len()],
         depositor.as_ref(),
@@ -361,7 +360,7 @@ fn deposit_set<DB: Database>(
     deposit: &Deposit,
 ) -> Result<(), GasStoreErrors> {
     store.set(
-        deposit.key(),
+        Deposit::key(deposit.proposal_id, &deposit.depositor),
         serde_json::to_vec(deposit).expect(SERDE_JSON_CONVERSION),
     )
 }
@@ -372,7 +371,7 @@ fn _vote_get<DB: Database>(
     voter: &AccAddress,
 ) -> Result<Option<VoteWeighted>, GasStoreErrors> {
     let key = [
-        KEY_VOTES_PREFIX.as_slice(),
+        VoteWeighted::KEY_PREFIX.as_slice(),
         &proposal_id.to_be_bytes(),
         &[voter.len()],
         voter.as_ref(),
@@ -393,7 +392,7 @@ fn vote_set<DB: Database>(
     vote: &VoteWeighted,
 ) -> Result<(), GasStoreErrors> {
     store.set(
-        vote.key(),
+        VoteWeighted::key(vote.proposal_id, &vote.voter),
         serde_json::to_vec(vote).expect(SERDE_JSON_CONVERSION),
     )
 }

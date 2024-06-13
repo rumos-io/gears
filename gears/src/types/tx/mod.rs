@@ -2,7 +2,7 @@ pub mod data;
 pub mod errors;
 pub mod metadata;
 pub mod signer;
-use core_types::{any::google::Any, errors::Error, tx::signature::SignatureData};
+use core_types::{any::google::Any, errors::CoreError, tx::signature::SignatureData};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tendermint::types::proto::Protobuf;
@@ -17,7 +17,7 @@ pub mod body;
 pub mod raw;
 
 pub trait TxMessage:
-    serde::Serialize + Clone + Send + Sync + 'static + Into<Any> + TryFrom<Any, Error = Error>
+    serde::Serialize + Clone + Send + Sync + 'static + Into<Any> + TryFrom<Any, Error = CoreError>
 {
     fn get_signers(&self) -> Vec<&AccAddress>;
 

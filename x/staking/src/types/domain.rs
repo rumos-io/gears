@@ -4,7 +4,7 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
-    core::{errors::Error, Protobuf},
+    core::{errors::CoreError, Protobuf},
     error::AppError,
     tendermint::types::{
         proto::{crypto::PublicKey, header::Header, validator::ValidatorUpdate},
@@ -426,32 +426,32 @@ impl Validator {
 }
 
 impl TryFrom<ValidatorRaw> for Validator {
-    type Error = Error;
+    type Error = CoreError;
     fn try_from(value: ValidatorRaw) -> Result<Self, Self::Error> {
         let status = value.status();
         Ok(Self {
             operator_address: ValAddress::from_bech32(&value.operator_address)
-                .map_err(|e| Error::DecodeAddress(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             delegator_shares: Decimal256::from_str(&value.delegator_shares)
-                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             description: value
                 .description
-                .ok_or(Error::MissingField("Missing field 'description'.".into()))?,
+                .ok_or(CoreError::MissingField("Missing field 'description'.".into()))?,
             consensus_pubkey: serde_json::from_slice(&value.consensus_pubkey)
-                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             jailed: value.jailed,
             tokens: Uint256::from_str(&value.tokens)
-                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             unbonding_height: value.unbonding_height,
-            unbonding_time: value.unbonding_time.ok_or(Error::MissingField(
+            unbonding_time: value.unbonding_time.ok_or(CoreError::MissingField(
                 "Missing field 'unbonding_time'.".into(),
             ))?,
             commission: value
                 .commission
-                .ok_or(Error::MissingField("Missing field 'description'.".into()))?
+                .ok_or(CoreError::MissingField("Missing field 'description'.".into()))?
                 .try_into()?,
             min_self_delegation: Uint256::from_str(&value.min_self_delegation)
-                .map_err(|e| Error::DecodeGeneral(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             status,
         })
     }

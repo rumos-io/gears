@@ -4,7 +4,7 @@ use crate::{
 };
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    core::{errors::Error, Protobuf},
+    core::{errors::CoreError, Protobuf},
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -70,19 +70,19 @@ impl<
         match query.path.as_str() {
             "/cosmos.staking.v1beta1.Query/Validator" => {
                 let req = QueryValidatorRequest::decode(query.data)
-                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
                 Ok(self.keeper.query_validator(ctx, req)?.encode_vec().into())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
-                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
                 Ok(self.keeper.query_delegation(ctx, req)?.encode_vec().into())
             }
             "/cosmos.staking.v1beta1.Query/Redelegation" => {
                 let req = QueryRedelegationRequest::decode(query.data)
-                    .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
                 Ok(self
                     .keeper

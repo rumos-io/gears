@@ -1,5 +1,5 @@
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum CoreError {
     #[error("invalid coins: `{0}`")]
     Coins(String),
     #[error("invalid coin: `{0}`")]
@@ -26,8 +26,8 @@ pub enum Error {
     InvalidSignMode(i32),
 }
 
-impl From<Error> for tonic::Status {
-    fn from(e: Error) -> Self {
+impl From<CoreError> for tonic::Status {
+    fn from(e: CoreError) -> Self {
         tonic::Status::invalid_argument(format!("{:?}", e))
     }
 }

@@ -1,4 +1,4 @@
-use core_types::errors::Error;
+use core_types::errors::CoreError;
 use prost::{bytes::Bytes, Message as ProstMessage};
 
 use serde::{Deserialize, Serialize};
@@ -58,12 +58,12 @@ pub struct TxWithRaw<M> {
 }
 
 impl<M: TxMessage> TxWithRaw<M> {
-    pub fn from_bytes(raw: Bytes) -> Result<Self, Error> {
+    pub fn from_bytes(raw: Bytes) -> Result<Self, CoreError> {
         let tx_len = raw.len();
 
-        let tx = Tx::decode(raw.clone()).map_err(|e| Error::DecodeGeneral(format!("{}", e)))?;
+        let tx = Tx::decode(raw.clone()).map_err(|e| CoreError::DecodeGeneral(format!("{}", e)))?;
 
-        let raw = inner::TxRaw::decode(raw).map_err(|e| Error::DecodeGeneral(format!("{}", e)))?;
+        let raw = inner::TxRaw::decode(raw).map_err(|e| CoreError::DecodeGeneral(format!("{}", e)))?;
         Ok(TxWithRaw {
             tx,
             raw: raw.into(),
