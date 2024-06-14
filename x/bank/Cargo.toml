@@ -9,7 +9,7 @@ gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
 
 #newtypes
 bytes = { workspace = true }
-ibc-proto = { workspace = true } # TODO: should we import through gears via core-types?
+ibc-proto = { workspace = true }
 
 #utils
 clap = { workspace = true }
