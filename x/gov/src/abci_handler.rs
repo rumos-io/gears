@@ -99,7 +99,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
 
                 Ok(())
             }
-            GovMsg::Vote(_msg) => todo!(),
+            GovMsg::Vote(msg) => {
+                self.keeper
+                    .vote_add(ctx, msg.clone().into())
+                    .map_err(|e| AppError::Custom(e.to_string()))?;
+
+                ctx.push_event(Event::new(
+                    "message",
+                    vec![
+                        EventAttribute::new("module".into(), "governance".into(), false),
+                        EventAttribute::new("sender".into(), msg.voter.to_string().into(), false),
+                    ],
+                ));
+
+                Ok(())
+            }
             GovMsg::Weighted(_msg) => todo!(),
         }
     }
