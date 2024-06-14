@@ -79,6 +79,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
                     .unwrap_or_corrupt()
             }))
     }
+
+    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        _address: &AccAddress,
+    ) -> Result<Vec<Coin>, GasStoreErrors> {
+        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+    }
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
@@ -164,6 +172,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     }
 
     // TODO: can we reuse with unwrap from `query_balance`?
+    // See no issue with it. Except new expect
     pub fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
