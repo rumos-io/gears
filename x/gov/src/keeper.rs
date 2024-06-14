@@ -25,7 +25,7 @@ use crate::{
     msg::{
         deposit::MsgDeposit,
         proposal::{Proposal, ProposalStatus},
-        weighted_vote::VoteWeighted,
+        weighted_vote::MsgVoteWeighted,
     },
     params::GovParamsKeeper,
 };
@@ -92,7 +92,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
 
             for vote in votes {
                 store_mut.set(
-                    VoteWeighted::key(vote.proposal_id, &vote.voter),
+                    MsgVoteWeighted::key(vote.proposal_id, &vote.voter),
                     serde_json::to_vec(&vote).expect(SERDE_JSON_CONVERSION),
                 )
             }
@@ -219,7 +219,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
     pub fn vote_add<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
-        vote: VoteWeighted,
+        vote: MsgVoteWeighted,
     ) -> anyhow::Result<()> {
         let proposal = proposal_get(ctx.kv_store(&self.store_key), vote.proposal_id)?
             .ok_or(anyhow!("unknown proposal {}", vote.proposal_id))?;
@@ -369,9 +369,9 @@ fn _vote_get<DB: Database>(
     store: GasKVStore<'_, DB>,
     proposal_id: u64,
     voter: &AccAddress,
-) -> Result<Option<VoteWeighted>, GasStoreErrors> {
+) -> Result<Option<MsgVoteWeighted>, GasStoreErrors> {
     let key = [
-        VoteWeighted::KEY_PREFIX.as_slice(),
+        MsgVoteWeighted::KEY_PREFIX.as_slice(),
         &proposal_id.to_be_bytes(),
         &[voter.len()],
         voter.as_ref(),
@@ -389,10 +389,10 @@ fn _vote_get<DB: Database>(
 
 fn vote_set<DB: Database>(
     mut store: GasKVStoreMut<'_, DB>,
-    vote: &VoteWeighted,
+    vote: &MsgVoteWeighted,
 ) -> Result<(), GasStoreErrors> {
     store.set(
-        VoteWeighted::key(vote.proposal_id, &vote.voter),
+        MsgVoteWeighted::key(vote.proposal_id, &vote.voter),
         serde_json::to_vec(vote).expect(SERDE_JSON_CONVERSION),
     )
 }

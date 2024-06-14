@@ -5,7 +5,7 @@ use gears::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    msg::{deposit::MsgDeposit, proposal::Proposal, weighted_vote::VoteWeighted},
+    msg::{deposit::MsgDeposit, proposal::Proposal, weighted_vote::MsgVoteWeighted},
     params::GovParams,
 };
 
@@ -13,7 +13,7 @@ use crate::{
 pub struct GovGenesisState {
     pub starting_proposal_id: u64,
     pub deposits: Vec<MsgDeposit>,
-    pub votes: Vec<VoteWeighted>,
+    pub votes: Vec<MsgVoteWeighted>,
     pub proposals: Vec<Proposal>,
     pub params: GovParams,
 }

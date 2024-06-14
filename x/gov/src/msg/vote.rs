@@ -30,6 +30,23 @@ pub enum VoteOption {
     NoWithVeto,
 }
 
+impl TryFrom<i32> for VoteOption {
+    type Error = CoreError;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => VoteOption::Empty,
+            1 => VoteOption::Yes,
+            2 => VoteOption::Abstain,
+            3 => VoteOption::No,
+            4 => VoteOption::NoWithVeto,
+            _ => Err(CoreError::DecodeGeneral(
+                "Vote option bigger than possible value".to_owned(),
+            ))?,
+        })
+    }
+}
+
 impl MsgVote {
     pub const TYPE_URL: &'static str = "/cosmos.gov.v1beta1/MsgVote";
 }
@@ -64,16 +81,7 @@ impl TryFrom<inner::MsgVote> for MsgVote {
             proposal_id,
             voter: AccAddress::from_bech32(&voter)
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            option: match option {
-                0 => VoteOption::Empty,
-                1 => VoteOption::Yes,
-                2 => VoteOption::Abstain,
-                3 => VoteOption::No,
-                4 => VoteOption::NoWithVeto,
-                _ => Err(CoreError::DecodeGeneral(
-                    "Vote option bigger than possible value".to_owned(),
-                ))?,
-            },
+            option: option.try_into()?,
         })
     }
 }
