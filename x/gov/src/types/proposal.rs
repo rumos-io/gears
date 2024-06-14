@@ -7,9 +7,6 @@ use crate::keeper::KEY_PROPOSAL_PREFIX;
 // Slight modification of the RFC3339Nano but it right pads all zeros and drops the time zone info
 const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT&H:%M:%S.000000000";
 
-const KEY_ACTIVE_PROPOSAL_QUEUE_PREFIX: [u8; 1] = [0x01];
-const KEY_INACTIVE_PROPOSAL_QUEUE_PREFIX: [u8; 1] = [0x02];
-
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Proposal {
     pub proposal_id: u64,
@@ -24,6 +21,9 @@ pub struct Proposal {
 }
 
 impl Proposal {
+    const KEY_ACTIVE_QUEUE_PREFIX: [u8; 1] = [0x01];
+    const KEY_INACTIVE_QUEUE_PREFIX: [u8; 1] = [0x02];
+
     pub fn key(&self) -> Vec<u8> {
         [
             KEY_PROPOSAL_PREFIX.as_slice(),
@@ -32,22 +32,29 @@ impl Proposal {
         .concat()
     }
 
-    pub fn inactive_queue_key(&self) -> Vec<u8> {
-        self.queue_key(&KEY_INACTIVE_PROPOSAL_QUEUE_PREFIX)
+    pub fn inactive_queue_key(proposal_id: u64, deposit_end_time: &DateTime<Utc>) -> Vec<u8> {
+        Self::queue_key(
+            &Self::KEY_INACTIVE_QUEUE_PREFIX,
+            proposal_id,
+            deposit_end_time,
+        )
     }
 
-    pub fn active_queue_key(&self) -> Vec<u8> {
-        self.queue_key(&KEY_ACTIVE_PROPOSAL_QUEUE_PREFIX)
+    pub fn active_queue_key(proposal_id: u64, deposit_end_time: &DateTime<Utc>) -> Vec<u8> {
+        Self::queue_key(
+            &Self::KEY_ACTIVE_QUEUE_PREFIX,
+            proposal_id,
+            deposit_end_time,
+        )
     }
 
-    fn queue_key(&self, prefix: &[u8]) -> Vec<u8> {
-        let date_key = self
-            .deposit_end_time
+    fn queue_key(prefix: &[u8], proposal_id: u64, deposit_end_time: &DateTime<Utc>) -> Vec<u8> {
+        let date_key = deposit_end_time
             .round_subsecs(0)
             .format(SORTABLE_DATE_TIME_FORMAT)
             .to_string();
 
-        [prefix, date_key.as_bytes(), &self.proposal_id.to_be_bytes()].concat()
+        [prefix, date_key.as_bytes(), &proposal_id.to_be_bytes()].concat()
     }
 }
 

@@ -98,12 +98,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
                 match proposal.status {
                     ProposalStatus::DepositPeriod => {
                         store_mut.set(
-                            proposal.inactive_queue_key(),
+                            Proposal::inactive_queue_key(
+                                proposal.proposal_id,
+                                &proposal.deposit_end_time,
+                            ),
                             proposal.proposal_id.to_be_bytes(),
                         );
                     }
                     ProposalStatus::VotingPeriod => store_mut.set(
-                        proposal.active_queue_key(),
+                        Proposal::active_queue_key(
+                            proposal.proposal_id,
+                            &proposal.deposit_end_time,
+                        ),
                         proposal.proposal_id.to_be_bytes(),
                     ),
                     _ => (),
@@ -274,7 +280,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         let mut store = ctx.kv_store_mut(&self.store_key);
 
         store.set(
-            proposal.inactive_queue_key(),
+            Proposal::inactive_queue_key(proposal.proposal_id, &proposal.deposit_end_time),
             proposal.proposal_id.to_be_bytes(),
         )?;
 
