@@ -149,9 +149,9 @@ impl ABCIHandler for GaiaABCIHandler {
         genesis: GenesisState,
     ) {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
-        self.auth_abci_handler.genesis(ctx, genesis.auth);
         self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
+        self.auth_abci_handler.genesis(ctx, genesis.auth);
     }
 
     fn query<DB: Database + Send + Sync>(

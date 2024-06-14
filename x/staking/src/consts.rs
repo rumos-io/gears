@@ -1,22 +1,22 @@
 /// keeper consts
 pub(crate) mod keeper {
-    pub(crate) const LAST_VALIDATOR_POWER_KEY: [u8; 1] = [11];
-    pub(crate) const LAST_TOTAL_POWER_KEY: [u8; 1] = [12];
+    pub(crate) const LAST_VALIDATOR_POWER_KEY: [u8; 1] = [17];
+    pub(crate) const LAST_TOTAL_POWER_KEY: [u8; 1] = [18];
 
-    pub(crate) const VALIDATORS_KEY: [u8; 1] = [21];
-    pub(crate) const VALIDATORS_BY_CONS_ADDR_KEY: [u8; 1] = [22];
-    pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [23];
+    pub(crate) const VALIDATORS_KEY: [u8; 1] = [33];
+    pub(crate) const VALIDATORS_BY_CONS_ADDR_KEY: [u8; 1] = [34];
+    pub(crate) const VALIDATORS_BY_POWER_INDEX_KEY: [u8; 1] = [35];
 
-    pub(crate) const DELEGATION_KEY: [u8; 1] = [31];
-    pub(crate) const UNBONDING_DELEGATION_KEY: [u8; 1] = [32];
-    pub(crate) const REDELEGATION_KEY: [u8; 1] = [34];
-    pub(crate) const REDELEGATION_BY_VAL_DST_INDEX_KEY: [u8; 1] = [36];
+    pub(crate) const DELEGATION_KEY: [u8; 1] = [49];
+    pub(crate) const UNBONDING_DELEGATION_KEY: [u8; 1] = [50];
+    pub(crate) const REDELEGATION_KEY: [u8; 1] = [52];
+    pub(crate) const REDELEGATION_BY_VAL_DST_INDEX_KEY: [u8; 1] = [54];
 
-    pub(crate) const UNBONDING_QUEUE_KEY: [u8; 1] = [41];
-    pub(crate) const REDELEGATION_QUEUE_KEY: [u8; 1] = [42];
-    pub(crate) const VALIDATOR_QUEUE_KEY: [u8; 1] = [43];
+    pub(crate) const UNBONDING_QUEUE_KEY: [u8; 1] = [65];
+    pub(crate) const REDELEGATION_QUEUE_KEY: [u8; 1] = [66];
+    pub(crate) const VALIDATOR_QUEUE_KEY: [u8; 1] = [67];
 
-    pub(crate) const HISTORICAL_INFO_KEY: [u8; 1] = [50];
+    pub(crate) const HISTORICAL_INFO_KEY: [u8; 1] = [80];
 
     /// Constants to refer name in module declaration
     pub const NOT_BONDED_POOL_NAME: &str = "not_bonded_tokens_pool";
