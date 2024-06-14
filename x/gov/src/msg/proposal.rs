@@ -18,7 +18,7 @@ mod inner {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MsgSubmitProposal {
-    pub content: Option<Any>,
+    pub content: Any,
     pub initial_deposit: SendCoins,
     pub proposer: AccAddress,
 }
@@ -54,7 +54,9 @@ impl TryFrom<inner::MsgSubmitProposal> for MsgSubmitProposal {
         }: inner::MsgSubmitProposal,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            content,
+            content: content.ok_or(CoreError::MissingField(
+                "MsgSubmitProposal missing content".to_owned(),
+            ))?,
             initial_deposit: SendCoins::new({
                 let mut coins = Vec::with_capacity(initial_deposit.len());
                 for coin in initial_deposit {
@@ -82,7 +84,7 @@ impl From<MsgSubmitProposal> for inner::MsgSubmitProposal {
         }: MsgSubmitProposal,
     ) -> Self {
         Self {
-            content,
+            content: Some(content),
             initial_deposit: initial_deposit
                 .into_inner()
                 .into_iter()
