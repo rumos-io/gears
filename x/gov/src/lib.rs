@@ -1,3 +1,4 @@
+pub mod submission;
 pub mod abci_handler;
 pub mod errors;
 pub mod genesis;

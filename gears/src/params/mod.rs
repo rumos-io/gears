@@ -44,7 +44,13 @@ pub fn infallible_subspace_mut<
     }
 }
 
-pub trait ParamsSubspaceKey: Hash + Eq + Clone + Send + Sync + 'static {
+#[derive(Debug, Clone, Hash, PartialEq, Eq, PartialOrd, Ord, thiserror::Error)]
+#[error("error parsing subpsace: {0}")]
+pub struct SubspaceParseError(pub String);
+
+pub trait ParamsSubspaceKey:
+    FromStr<Err = SubspaceParseError> + Hash + Eq + Clone + Send + Sync + 'static
+{
     fn name(&self) -> &'static str;
 }
 
