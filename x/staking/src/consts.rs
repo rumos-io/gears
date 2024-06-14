@@ -1,6 +1,6 @@
 /// keeper consts
 pub(crate) mod keeper {
-    pub(crate) const LAST_TOTAL_POWER_KEY: [u8; 1] = [1];
+    pub(crate) const LAST_TOTAL_POWER_KEY: [u8; 1] = [18];
     pub(crate) const VALIDATORS_KEY: [u8; 1] = [2];
     pub(crate) const LAST_VALIDATOR_POWER_KEY: [u8; 1] = [3];
 
