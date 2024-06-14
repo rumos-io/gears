@@ -113,7 +113,7 @@ impl<
         val_addr: &ValAddress,
     ) -> Result<Option<Delegation>, GasStoreErrors> {
         let store = QueryableContext::kv_store(ctx, &self.store_key);
-        let delegations_store = store.prefix_store(DELEGATIONS_KEY);
+        let delegations_store = store.prefix_store(DELEGATION_KEY);
         let mut key = Vec::from(del_addr.clone());
         key.extend_from_slice(&Vec::from(val_addr.clone()));
         Ok(delegations_store
@@ -127,7 +127,7 @@ impl<
         delegation: &Delegation,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(DELEGATION_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.set(
@@ -144,7 +144,7 @@ impl<
         delegation: &Delegation,
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(DELEGATION_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.delete(&key)
