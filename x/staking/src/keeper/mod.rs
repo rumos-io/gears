@@ -565,12 +565,7 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.try_get(ctx)?;
-                // TODO: consider to work with time in Gears
-                let duration = chrono::TimeDelta::new(
-                    params.unbonding_time.seconds,
-                    params.unbonding_time.nanos as u32,
-                )
-                .unwrap();
+                let duration = chrono::TimeDelta::nanoseconds(params.unbonding_time);
                 let time = ctx.get_time();
                 // TODO: consider to work with time in Gears
                 let time =

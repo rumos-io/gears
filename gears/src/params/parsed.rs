@@ -64,9 +64,9 @@ impl Params {
         }
     }
 
-    pub fn signed_64(self) -> Option<u64> {
+    pub fn signed_64(self) -> Option<i64> {
         match self {
-            Params::U64(var) => Some(var),
+            Params::I64(var) => Some(var),
             _ => None,
         }
     }
