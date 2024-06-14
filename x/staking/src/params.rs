@@ -1,6 +1,5 @@
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
-    core::base::coin::Coin,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
     types::{denom::Denom, store::gas::errors::GasStoreErrors},
@@ -13,7 +12,6 @@ const KEY_MAX_VALIDATORS: &str = "MaxValidators";
 const KEY_MAX_ENTRIES: &str = "MaxEntries";
 const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
 const KEY_BOND_DENOM: &str = "BondDenom";
-const KEY_MIN_COMMISSION_RATE: &str = "MinCommissionRate";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Params {
@@ -24,7 +22,6 @@ pub struct Params {
     pub max_entries: u32,
     pub historical_entries: u32,
     pub bond_denom: Denom,
-    pub min_commission_rate: Coin,
 }
 
 impl Default for Params {
@@ -38,7 +35,6 @@ impl Default for Params {
             max_entries: 7,
             bond_denom,
             historical_entries: 10_000,
-            min_commission_rate: Coin::default(),
         }
     }
 }
@@ -51,7 +47,6 @@ impl ParamsSerialize for Params {
             (KEY_MAX_ENTRIES, ParamKind::U32),
             (KEY_HISTORICAL_ENTRIES, ParamKind::U32),
             (KEY_BOND_DENOM, ParamKind::String),
-            (KEY_MIN_COMMISSION_RATE, ParamKind::Bytes),
         ]
         .into_iter()
         .collect()
@@ -76,11 +71,6 @@ impl ParamsSerialize for Params {
             (
                 KEY_BOND_DENOM,
                 format!("\"{}\"", self.bond_denom).into_bytes(),
-            ),
-            // TODO: remove unwrap
-            (
-                KEY_MIN_COMMISSION_RATE,
-                serde_json::to_vec(&self.min_commission_rate).unwrap(),
             ),
         ]
     }
@@ -115,13 +105,6 @@ impl ParamsDeserialize for Params {
             .unwrap()
             .try_into()
             .unwrap();
-        let min_commission_rate: Coin = serde_json::from_slice(
-            &ParamKind::Bytes
-                .parse_param(fields.remove(KEY_MIN_COMMISSION_RATE).unwrap())
-                .bytes()
-                .unwrap(),
-        )
-        .unwrap();
 
         Params {
             unbonding_time,
@@ -129,7 +112,6 @@ impl ParamsDeserialize for Params {
             max_entries,
             bond_denom,
             historical_entries,
-            min_commission_rate,
         }
     }
 }
