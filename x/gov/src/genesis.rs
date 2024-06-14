@@ -5,8 +5,9 @@ use gears::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    msg::{deposit::MsgDeposit, proposal::Proposal, weighted_vote::MsgVoteWeighted},
+    msg::{deposit::MsgDeposit, weighted_vote::MsgVoteWeighted},
     params::GovParams,
+    types::proposal::Proposal,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

@@ -62,7 +62,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
         Ok(())
     }
 
-    fn tx<DB: Database + Sync + Send>(
+    fn tx<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,

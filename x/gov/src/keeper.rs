@@ -22,12 +22,9 @@ use gears::{
 use crate::{
     errors::SERDE_JSON_CONVERSION,
     genesis::GovGenesisState,
-    msg::{
-        deposit::MsgDeposit,
-        proposal::{Proposal, ProposalStatus},
-        weighted_vote::MsgVoteWeighted,
-    },
+    msg::{deposit::MsgDeposit, weighted_vote::MsgVoteWeighted},
     params::GovParamsKeeper,
+    types::proposal::{Proposal, ProposalStatus},
 };
 
 const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
