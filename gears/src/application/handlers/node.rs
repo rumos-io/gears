@@ -28,7 +28,7 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
     type QReq: QueryRequest;
     type QRes: QueryResponse;
 
-    fn typed_query<DB: Database + Send + Sync>(
+    fn typed_query<DB: Database>(
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: Self::QReq,
@@ -40,7 +40,7 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         tx: &TxWithRaw<Self::Message>,
     ) -> Result<(), AppError>;
 
-    fn tx<DB: Database + Sync + Send>(
+    fn tx<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,

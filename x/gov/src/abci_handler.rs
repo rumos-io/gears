@@ -1,10 +1,14 @@
 use bytes::Bytes;
 use gears::{
     application::handlers::node::ABCIHandler,
-    context::{init::InitContext, query::QueryContext, tx::TxContext},
+    context::{init::InitContext, query::QueryContext, tx::TxContext, TransactionalContext},
+    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::request::query::RequestQuery,
+    tendermint::types::{
+        proto::event::{Event, EventAttribute},
+        request::query::RequestQuery,
+    },
     types::tx::raw::TxWithRaw,
     x::{keepers::bank::BankKeeper, module::Module},
 };
@@ -18,14 +22,14 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct GovAbciHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> {
-    _keeper: GovKeeper<SK, PSK, M, BK>,
+    keeper: GovKeeper<SK, PSK, M, BK>,
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
     GovAbciHandler<SK, PSK, M, BK>
 {
-    pub fn new(_keeper: GovKeeper<SK, PSK, M, BK>) -> Self {
-        Self { _keeper }
+    pub fn new(keeper: GovKeeper<SK, PSK, M, BK>) -> Self {
+        Self { keeper }
     }
 }
 
@@ -42,7 +46,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
 
     type QRes = GovQueryResponse;
 
-    fn typed_query<DB: Database + Send + Sync>(
+    fn typed_query<DB: Database>(
         &self,
         _ctx: &QueryContext<DB, Self::StoreKey>,
         _query: Self::QReq,
@@ -50,35 +54,69 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
         todo!()
     }
 
-    fn run_ante_checks<DB: gears::store::database::Database>(
+    fn run_ante_checks<DB: Database>(
         &self,
         _ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         _tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), gears::error::AppError> {
-        todo!()
+    ) -> Result<(), AppError> {
+        Ok(())
     }
 
-    fn tx<DB: gears::store::database::Database + Sync + Send>(
+    fn tx<DB: Database + Sync + Send>(
         &self,
-        _ctx: &mut TxContext<'_, DB, Self::StoreKey>,
-        _msg: &Self::Message,
-    ) -> Result<(), gears::error::AppError> {
-        todo!()
+        ctx: &mut TxContext<'_, DB, Self::StoreKey>,
+        msg: &Self::Message,
+    ) -> Result<(), AppError> {
+        match msg {
+            GovMsg::Deposit(msg) => {
+                let is_voting_started = self
+                    .keeper
+                    .deposit_add(ctx, msg.clone())
+                    .map_err(|e| AppError::Custom(e.to_string()))?;
+
+                ctx.push_event(Event::new(
+                    "message",
+                    vec![
+                        EventAttribute::new("module".into(), "governance".into(), false),
+                        EventAttribute::new(
+                            "sender".into(),
+                            msg.depositor.to_string().into(),
+                            false,
+                        ),
+                    ],
+                ));
+
+                if is_voting_started {
+                    ctx.push_event(Event::new(
+                        "proposal_deposit",
+                        vec![EventAttribute::new(
+                            "voting_period_start".into(),
+                            msg.proposal_id.to_string().into(),
+                            false,
+                        )],
+                    ));
+                }
+
+                Ok(())
+            }
+            GovMsg::Vote(_msg) => todo!(),
+            GovMsg::Weighted(_msg) => todo!(),
+        }
     }
 
-    fn init_genesis<DB: gears::store::database::Database>(
+    fn init_genesis<DB: Database>(
         &self,
-        _ctx: &mut InitContext<'_, DB, Self::StoreKey>,
-        _genesis: Self::Genesis,
+        ctx: &mut InitContext<'_, DB, Self::StoreKey>,
+        genesis: Self::Genesis,
     ) {
-        todo!()
+        self.keeper.init_genesis(ctx, genesis)
     }
 
-    fn query<DB: gears::store::database::Database + Send + Sync>(
+    fn query<DB: Database>(
         &self,
         _ctx: &QueryContext<DB, Self::StoreKey>,
         _query: RequestQuery,
-    ) -> Result<Bytes, gears::error::AppError> {
+    ) -> Result<Bytes, AppError> {
         todo!()
     }
 }
