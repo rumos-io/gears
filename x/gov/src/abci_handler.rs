@@ -67,69 +67,54 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
     ) -> Result<(), AppError> {
-        match msg {
+        let (address_str, proposal) = match msg {
             GovMsg::Deposit(msg) => {
                 let is_voting_started = self
                     .keeper
                     .deposit_add(ctx, msg.clone())
                     .map_err(|e| AppError::Custom(e.to_string()))?;
 
-                ctx.push_event(Event::new(
-                    "message",
-                    vec![
-                        EventAttribute::new("module".into(), "governance".into(), false),
-                        EventAttribute::new(
-                            "sender".into(),
-                            msg.depositor.to_string().into(),
-                            false,
-                        ),
-                    ],
-                ));
-
-                if is_voting_started {
-                    ctx.push_event(Event::new(
-                        "proposal_deposit",
-                        vec![EventAttribute::new(
-                            "voting_period_start".into(),
-                            msg.proposal_id.to_string().into(),
-                            false,
-                        )],
-                    ));
+                match is_voting_started {
+                    true => (msg.depositor.to_string(), Some(msg.proposal_id)),
+                    false => (msg.depositor.to_string(), None),
                 }
-
-                Ok(())
             }
             GovMsg::Vote(msg) => {
                 self.keeper
                     .vote_add(ctx, msg.clone().into())
                     .map_err(|e| AppError::Custom(e.to_string()))?;
 
-                ctx.push_event(Event::new(
-                    "message",
-                    vec![
-                        EventAttribute::new("module".into(), "governance".into(), false),
-                        EventAttribute::new("sender".into(), msg.voter.to_string().into(), false),
-                    ],
-                ));
-
-                Ok(())
+                (msg.voter.to_string(), None)
             }
             GovMsg::Weighted(msg) => {
                 self.keeper
                     .vote_add(ctx, msg.clone())
                     .map_err(|e| AppError::Custom(e.to_string()))?;
 
-                ctx.push_event(Event::new(
-                    "message",
-                    vec![
-                        EventAttribute::new("module".into(), "governance".into(), false),
-                        EventAttribute::new("sender".into(), msg.voter.to_string().into(), false),
-                    ],
-                ));
-
-                Ok(())
+                (msg.voter.to_string(), None)
             }
+        };
+
+        ctx.push_event(Event::new(
+            "message",
+            vec![
+                EventAttribute::new("module".into(), "governance".into(), false),
+                EventAttribute::new("sender".into(), address_str.into(), false),
+            ],
+        ));
+
+        if let Some(proposal) = proposal {
+            ctx.push_event(Event::new(
+                "proposal_deposit",
+                vec![EventAttribute::new(
+                    "voting_period_start".into(),
+                    proposal.to_string().into(),
+                    false,
+                )],
+            ));
         }
+
+        Ok(())
     }
 
     fn init_genesis<DB: Database>(
