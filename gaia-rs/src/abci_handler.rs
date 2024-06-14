@@ -131,7 +131,7 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
     ) {
-        self.staking_abci_handler.begin_block(ctx, request);
+        //self.staking_abci_handler.begin_block(ctx, request);
     }
 
     fn end_block<'a, DB: Database>(
@@ -139,7 +139,8 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::types::request::end_block::RequestEndBlock,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.staking_abci_handler.end_block(ctx, request)
+        //self.staking_abci_handler.end_block(ctx, request)
+        vec![]
     }
 
     fn init_genesis<DB: Database>(
