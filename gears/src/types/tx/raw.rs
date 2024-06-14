@@ -63,7 +63,8 @@ impl<M: TxMessage> TxWithRaw<M> {
 
         let tx = Tx::decode(raw.clone()).map_err(|e| CoreError::DecodeGeneral(format!("{}", e)))?;
 
-        let raw = inner::TxRaw::decode(raw).map_err(|e| CoreError::DecodeGeneral(format!("{}", e)))?;
+        let raw =
+            inner::TxRaw::decode(raw).map_err(|e| CoreError::DecodeGeneral(format!("{}", e)))?;
         Ok(TxWithRaw {
             tx,
             raw: raw.into(),

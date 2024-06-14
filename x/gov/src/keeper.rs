@@ -23,7 +23,7 @@ use crate::{
     errors::SERDE_JSON_CONVERSION,
     genesis::GovGenesisState,
     msg::{
-        deposit::Deposit,
+        deposit::MsgDeposit,
         proposal::{Proposal, ProposalStatus},
         weighted_vote::VoteWeighted,
     },
@@ -81,7 +81,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
                 let mut total_deposits = Vec::with_capacity(deposits.len());
                 for deposit in deposits {
                     store_mut.set(
-                        Deposit::key(deposit.proposal_id, &deposit.depositor),
+                        MsgDeposit::key(deposit.proposal_id, &deposit.depositor),
                         serde_json::to_vec(&deposit).expect(SERDE_JSON_CONVERSION),
                     ); // TODO:NOW IS THIS CORRECT SERIALIZATION?
                     total_deposits.push(deposit.amount);
@@ -145,11 +145,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
     pub fn deposit_add<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
-        Deposit {
+        MsgDeposit {
             proposal_id,
             depositor,
             amount,
-        }: Deposit,
+        }: MsgDeposit,
     ) -> anyhow::Result<bool> {
         let mut proposal = proposal_get(ctx.kv_store(&self.store_key), proposal_id)?
             .ok_or(anyhow!("unknown proposal {proposal_id}"))?;
@@ -186,7 +186,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
                 deposit.amount = deposit.amount.checked_add(amount)?;
                 deposit
             }
-            None => Deposit {
+            None => MsgDeposit {
                 proposal_id,
                 depositor,
                 amount,
@@ -337,9 +337,9 @@ fn deposit_get<DB: Database>(
     store: GasKVStore<'_, DB>,
     proposal_id: u64,
     depositor: &AccAddress,
-) -> Result<Option<Deposit>, GasStoreErrors> {
+) -> Result<Option<MsgDeposit>, GasStoreErrors> {
     let key = [
-        Deposit::KEY_PREFIX.as_slice(),
+        MsgDeposit::KEY_PREFIX.as_slice(),
         &proposal_id.to_be_bytes(),
         &[depositor.len()],
         depositor.as_ref(),
@@ -357,10 +357,10 @@ fn deposit_get<DB: Database>(
 
 fn deposit_set<DB: Database>(
     mut store: GasKVStoreMut<'_, DB>,
-    deposit: &Deposit,
+    deposit: &MsgDeposit,
 ) -> Result<(), GasStoreErrors> {
     store.set(
-        Deposit::key(deposit.proposal_id, &deposit.depositor),
+        MsgDeposit::key(deposit.proposal_id, &deposit.depositor),
         serde_json::to_vec(deposit).expect(SERDE_JSON_CONVERSION),
     )
 }

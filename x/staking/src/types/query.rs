@@ -116,17 +116,26 @@ impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
 
     fn try_from(raw: QueryRedelegationRequestRaw) -> Result<Self, Self::Error> {
         let delegator_address = if let Some(addr) = raw.delegator_address {
-            Some(AccAddress::from_bech32(&addr).map_err(|e| CoreError::DecodeAddress(e.to_string()))?)
+            Some(
+                AccAddress::from_bech32(&addr)
+                    .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            )
         } else {
             None
         };
         let src_validator_address = if let Some(addr) = raw.src_validator_address {
-            Some(ValAddress::from_bech32(&addr).map_err(|e| CoreError::DecodeAddress(e.to_string()))?)
+            Some(
+                ValAddress::from_bech32(&addr)
+                    .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            )
         } else {
             None
         };
         let dst_validator_address = if let Some(addr) = raw.dst_validator_address {
-            Some(ValAddress::from_bech32(&addr).map_err(|e| CoreError::DecodeAddress(e.to_string()))?)
+            Some(
+                ValAddress::from_bech32(&addr)
+                    .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            )
         } else {
             None
         };

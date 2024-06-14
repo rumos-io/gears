@@ -84,9 +84,9 @@ impl TryFrom<CommissionRaw> for Commission {
                 ))?
                 .try_into()
                 .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
-            update_time: value
-                .update_time
-                .ok_or(CoreError::MissingField("Missing field 'update_time'.".into()))?,
+            update_time: value.update_time.ok_or(CoreError::MissingField(
+                "Missing field 'update_time'.".into(),
+            ))?,
         })
     }
 }
@@ -265,12 +265,14 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
 
     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
         Ok(CreateValidator {
-            description: src
-                .description
-                .ok_or(CoreError::MissingField("Missing field 'description'.".into()))?,
+            description: src.description.ok_or(CoreError::MissingField(
+                "Missing field 'description'.".into(),
+            ))?,
             commission: src
                 .commission
-                .ok_or(CoreError::MissingField("Missing field 'commission'.".into()))?
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'commission'.".into(),
+                ))?
                 .try_into()
                 .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
             min_self_delegation: Uint256::from_str(&src.min_self_delegation)

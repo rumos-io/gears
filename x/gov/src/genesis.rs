@@ -5,14 +5,14 @@ use gears::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    msg::{deposit::Deposit, proposal::Proposal, weighted_vote::VoteWeighted},
+    msg::{deposit::MsgDeposit, proposal::Proposal, weighted_vote::VoteWeighted},
     params::GovParams,
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct GovGenesisState {
     pub starting_proposal_id: u64,
-    pub deposits: Vec<Deposit>,
+    pub deposits: Vec<MsgDeposit>,
     pub votes: Vec<VoteWeighted>,
     pub proposals: Vec<Proposal>,
     pub params: GovParams,

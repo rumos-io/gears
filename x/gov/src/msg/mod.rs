@@ -1,6 +1,5 @@
-pub mod proto;
+use deposit::MsgDeposit;
 use gears::derive::RoutingMessage;
-use proto::deposit::MsgDeposit;
 use serde::Serialize;
 
 pub mod deposit;

@@ -434,9 +434,9 @@ impl TryFrom<ValidatorRaw> for Validator {
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             delegator_shares: Decimal256::from_str(&value.delegator_shares)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            description: value
-                .description
-                .ok_or(CoreError::MissingField("Missing field 'description'.".into()))?,
+            description: value.description.ok_or(CoreError::MissingField(
+                "Missing field 'description'.".into(),
+            ))?,
             consensus_pubkey: serde_json::from_slice(&value.consensus_pubkey)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             jailed: value.jailed,
@@ -448,7 +448,9 @@ impl TryFrom<ValidatorRaw> for Validator {
             ))?,
             commission: value
                 .commission
-                .ok_or(CoreError::MissingField("Missing field 'description'.".into()))?
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'description'.".into(),
+                ))?
                 .try_into()?,
             min_self_delegation: Uint256::from_str(&value.min_self_delegation)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
