@@ -1,5 +1,6 @@
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::{tendermint::types::time::Timestamp, types::base::send::SendCoins};
+use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
 
 use crate::keeper::KEY_PROPOSAL_PREFIX;
@@ -10,7 +11,7 @@ const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT&H:%M:%S.000000000";
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Proposal {
     pub proposal_id: u64,
-    pub content: Vec<u8>, // TODO
+    pub content: Any,
     pub status: ProposalStatus,
     pub final_tally_result: (), // TODO: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/types/gov.pb.go#L289
     pub submit_time: Timestamp,

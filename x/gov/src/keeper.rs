@@ -22,7 +22,7 @@ use gears::{
 use crate::{
     errors::SERDE_JSON_CONVERSION,
     genesis::GovGenesisState,
-    msg::{deposit::MsgDeposit, weighted_vote::MsgVoteWeighted},
+    msg::{deposit::MsgDeposit, proposal::MsgSubmitProposal, weighted_vote::MsgVoteWeighted},
     params::GovParamsKeeper,
     types::proposal::{Proposal, ProposalStatus},
 };
@@ -251,10 +251,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         Ok(())
     }
 
-    #[allow(unused_variables, unreachable_code)]
-    pub fn _submit_proposal<DB: Database>(
+    pub fn submit_proposal<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
+        MsgSubmitProposal {
+            content,
+            initial_deposit,
+            proposer: _proposer,
+        }: MsgSubmitProposal,
     ) -> anyhow::Result<Proposal> {
         let proposal_id = proposal_id_get(ctx.kv_store(&self.store_key))?;
         let submit_time = ctx.header().time.clone();
@@ -266,12 +270,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
 
         let proposal = Proposal {
             proposal_id,
-            content: vec![], // TODO:
+            content,
             status: ProposalStatus::DepositPeriod,
             final_tally_result: (),
             submit_time,
             deposit_end_time: Utc::now(), // TODO: submit_time + deposit_period
-            total_deposit: todo!(),
+            total_deposit: initial_deposit,
             voting_start_time: (),
             voting_end_time: (),
         };
