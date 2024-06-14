@@ -40,7 +40,7 @@ impl Protobuf<inner::MsgDeposit> for MsgDeposit {}
 
 impl TxMessage for MsgDeposit {
     fn get_signers(&self) -> Vec<&AccAddress> {
-        Vec::new() // Todo:NOT what and how?
+        vec![&self.depositor]
     }
 
     fn validate_basic(&self) -> Result<(), String> {
@@ -65,7 +65,7 @@ impl TryFrom<inner::MsgDeposit> for MsgDeposit {
         Ok(Self {
             proposal_id,
             depositor: AccAddress::from_bech32(&depositor)
-                .map_err(|e| CoreError::Coins(e.to_string()))?,
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             amount: {
                 let mut coins = Vec::with_capacity(amount.len());
                 for coin in amount {

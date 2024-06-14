@@ -1,7 +1,7 @@
 use gears::types::{address::AccAddress, decimal256::Decimal256};
 use serde::{Deserialize, Serialize};
 
-use super::vote::{Vote, VoteOption};
+use super::vote::{MsgVote, VoteOption};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VoteWeighted {
@@ -25,13 +25,13 @@ impl VoteWeighted {
     }
 }
 
-impl From<Vote> for VoteWeighted {
+impl From<MsgVote> for VoteWeighted {
     fn from(
-        Vote {
+        MsgVote {
             proposal_id,
             voter,
             option: options,
-        }: Vote,
+        }: MsgVote,
     ) -> Self {
         Self {
             proposal_id,
