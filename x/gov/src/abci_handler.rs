@@ -1,13 +1,19 @@
 use bytes::Bytes;
 use gears::{
     application::handlers::node::ABCIHandler,
-    context::{init::InitContext, query::QueryContext, tx::TxContext, TransactionalContext},
+    context::{
+        block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
+        TransactionalContext,
+    },
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
-        proto::event::{Event, EventAttribute},
-        request::query::RequestQuery,
+        proto::{
+            event::{Event, EventAttribute},
+            validator::ValidatorUpdate,
+        },
+        request::{end_block::RequestEndBlock, query::RequestQuery},
     },
     types::tx::raw::TxWithRaw,
     x::{keepers::bank::BankKeeper, module::Module},
@@ -131,5 +137,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
         _query: RequestQuery,
     ) -> Result<Bytes, AppError> {
         todo!()
+    }
+
+    fn end_block<'a, DB: Database>(
+        &self,
+        _ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
+        _request: RequestEndBlock,
+    ) -> Vec<ValidatorUpdate> {
+        Vec::new()
     }
 }

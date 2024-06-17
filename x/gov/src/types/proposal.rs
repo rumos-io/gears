@@ -13,12 +13,20 @@ pub struct Proposal {
     pub proposal_id: u64,
     pub content: Any,
     pub status: ProposalStatus,
-    pub final_tally_result: (), // TODO: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/types/gov.pb.go#L289
+    pub final_tally_result: TallyResult,
     pub submit_time: Timestamp,
     pub deposit_end_time: DateTime<Utc>,
     pub total_deposit: SendCoins,
     pub voting_start_time: (),
     pub voting_end_time: (),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct TallyResult {
+    yes: i32,
+    abstain: i32,
+    no: i32,
+    no_with_veto: i32,
 }
 
 impl Proposal {

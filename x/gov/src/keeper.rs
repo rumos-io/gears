@@ -260,6 +260,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             proposer: _proposer,
         }: MsgSubmitProposal,
     ) -> anyhow::Result<Proposal> {
+        /*
+           in go they perform check is it possible to handle
+           proposal somehow, but not sure we need it and instead
+           handle manually
+        */
+
         let proposal_id = proposal_id_get(ctx.kv_store(&self.store_key))?;
         let submit_time = ctx.header().time.clone();
         let _deposit_period = self
@@ -268,11 +274,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             .deposit
             .max_deposit_period;
 
+        // let submit_time = Duration::new(submit_time.seconds, submit_time.nanos as u32)
+        //     .ok_or(anyhow!("invalid time. out of bounds"))?;
+
         let proposal = Proposal {
             proposal_id,
             content,
             status: ProposalStatus::DepositPeriod,
-            final_tally_result: (),
+            final_tally_result: Default::default(),
             submit_time,
             deposit_end_time: Utc::now(), // TODO: submit_time + deposit_period
             total_deposit: initial_deposit,
