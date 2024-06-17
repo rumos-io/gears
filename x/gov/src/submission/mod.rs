@@ -7,6 +7,7 @@ use gears::{
 };
 
 pub mod param;
+pub mod text;
 
 // : TryFrom<Any, Error = CoreError>
 pub trait ProposalSubmission {
