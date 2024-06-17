@@ -27,7 +27,7 @@ pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
 
     fn build_ctx(
         &mut self,
-        height: u64,
+        height: u32,
         header: Header,
         consensus_params: ConsensusParams,
         fee: Option<&Fee>,
@@ -66,7 +66,7 @@ mod sealed {
     impl<DB, AH: ABCIHandler> Sealed for DeliverTxMode<DB, AH> {}
 }
 
-fn build_tx_gas_meter(block_height: u64, fee: Option<&Fee>) -> GasMeter<TxKind> {
+fn build_tx_gas_meter(block_height: u32, fee: Option<&Fee>) -> GasMeter<TxKind> {
     if block_height == 0 {
         GasMeter::new(Box::<InfiniteGasMeter>::default())
     } else {

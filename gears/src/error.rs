@@ -16,7 +16,7 @@ pub enum AppError {
     TxParseError(String),
     Coins(String),
     TxValidation(String),
-    Timeout { timeout: u64, current: u64 },
+    Timeout { timeout: u32, current: u32 },
     Memo(u64),
     InvalidPublicKey,
     Store(KVStoreError),
