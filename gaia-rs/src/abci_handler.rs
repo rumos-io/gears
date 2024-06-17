@@ -128,18 +128,19 @@ impl ABCIHandler for GaiaABCIHandler {
 
     fn begin_block<'a, DB: Database>(
         &self,
-        ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
+        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
+        _request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
     ) {
-        self.staking_abci_handler.begin_block(ctx, request);
+        //self.staking_abci_handler.begin_block(ctx, request);
     }
 
     fn end_block<'a, DB: Database>(
         &self,
-        ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        request: gears::tendermint::types::request::end_block::RequestEndBlock,
+        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
+        _request: gears::tendermint::types::request::end_block::RequestEndBlock,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.staking_abci_handler.end_block(ctx, request)
+        //self.staking_abci_handler.end_block(ctx, request)
+        vec![]
     }
 
     fn init_genesis<DB: Database>(
@@ -148,9 +149,9 @@ impl ABCIHandler for GaiaABCIHandler {
         genesis: GenesisState,
     ) {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
-        self.auth_abci_handler.genesis(ctx, genesis.auth);
         self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
+        self.auth_abci_handler.genesis(ctx, genesis.auth);
     }
 
     fn query<DB: Database + Send + Sync>(

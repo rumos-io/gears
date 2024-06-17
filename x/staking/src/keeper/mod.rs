@@ -207,7 +207,7 @@ impl<
         if bonded_balance
             .clone()
             .into_iter()
-            .any(|e| e.amount.is_zero())
+            .all(|e| e.amount.is_zero())
         {
             self.auth_keeper
                 .check_create_new_module_account(ctx, &self.bonded_module)
@@ -230,7 +230,7 @@ impl<
         if not_bonded_balance
             .clone()
             .into_iter()
-            .any(|e| e.amount.is_zero())
+            .all(|e| e.amount.is_zero())
         {
             self.auth_keeper
                 .check_create_new_module_account(ctx, &self.not_bonded_module)
