@@ -249,7 +249,7 @@ impl From<CreateValidator> for CreateValidatorRaw {
 }
 
 /// CreateValidator defines a SDK message for creating a new validator.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreateValidator {
     pub description: Description,
     pub commission: CommissionRates,
@@ -313,7 +313,7 @@ impl From<DelegateMsg> for DelegateMsgRaw {
 }
 
 /// Creates a new DelegateMsg transaction message instance.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DelegateMsg {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
@@ -364,7 +364,7 @@ impl From<RedelegateMsg> for RedelegateMsgRaw {
 }
 
 /// Creates a new RedelegateMsg transaction message instance.
-#[derive(Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RedelegateMsg {
     pub delegator_address: AccAddress,
     pub src_validator_address: ValAddress,

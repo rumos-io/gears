@@ -13,7 +13,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -167,7 +167,7 @@ impl<
         val_dst_addr: &ValAddress,
     ) -> Result<Option<Redelegation>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let store = store.prefix_store(REDELEGATIONS_KEY);
+        let store = store.prefix_store(REDELEGATION_KEY);
         let mut key = del_addr.to_string().as_bytes().to_vec();
         key.put(val_src_addr.to_string().as_bytes());
         key.put(val_dst_addr.to_string().as_bytes());
@@ -182,7 +182,7 @@ impl<
         delegation: &Redelegation,
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(REDELEGATION_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
         key.put(delegation.validator_dst_address.to_string().as_bytes());
@@ -198,7 +198,7 @@ impl<
         delegation: &Redelegation,
     ) -> Option<Vec<u8>> {
         let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(REDELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(REDELEGATION_KEY);
         let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
         key.put(delegation.validator_src_address.to_string().as_bytes());
         key.put(delegation.validator_dst_address.to_string().as_bytes());

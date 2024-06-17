@@ -1728,6 +1728,7 @@ dependencies = [
  "rayon",
  "serde",
  "serde_json",
+ "staking",
  "strum",
  "tonic",
  "tonic-reflection",

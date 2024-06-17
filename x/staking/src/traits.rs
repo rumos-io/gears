@@ -23,7 +23,7 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
 
     fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &mut CTX, //TODO: why is this mutable?
         addr: AccAddress,
     ) -> Result<Vec<Coin>, GasStoreErrors>;
 
@@ -57,7 +57,9 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
 /// keeper which must take particular actions when validators/delegators change
 /// state. The second keeper must implement this interface, which then the
 /// staking keeper can call.
-pub trait KeeperHooks<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
+pub trait KeeperHooks<SK: StoreKey, AK: AuthKeeper<SK, M>, M: Module>:
+    Clone + Send + Sync + 'static
+{
     fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -98,22 +100,14 @@ pub trait KeeperHooks<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn before_delegation_shares_modified<
-        DB: Database,
-        AK: AuthKeeper<SK, M>,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    fn before_delegation_shares_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
         val_addr: ValAddress,
     );
 
-    fn before_delegation_removed<
-        DB: Database,
-        AK: AuthKeeper<SK, M>,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    fn before_delegation_removed<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         del_addr: AccAddress,
@@ -127,11 +121,7 @@ pub trait KeeperHooks<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         val_addr: ValAddress,
     );
 
-    fn before_validator_slashed<
-        DB: Database,
-        AK: AuthKeeper<SK, M>,
-        CTX: TransactionalContext<DB, SK>,
-    >(
+    fn before_validator_slashed<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         val_addr: ValAddress,

@@ -24,6 +24,23 @@ pub struct GaiaABCIHandler {
         GaiaModules,
     >,
     auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+    staking_abci_handler: staking::ABCIHandler<
+        GaiaStoreKey,
+        GaiaParamsStoreKey,
+        auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+        bank::Keeper<
+            GaiaStoreKey,
+            GaiaParamsStoreKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+            GaiaModules,
+        >,
+        staking::MockHookKeeper<
+            GaiaStoreKey,
+            auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+            GaiaModules,
+        >,
+        GaiaModules,
+    >,
     ibc_abci_handler: ibc_rs::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
         bank::Keeper<
@@ -53,11 +70,31 @@ impl GaiaABCIHandler {
             auth_keeper.clone(),
         );
 
+        let staking_keeper = staking::Keeper::new(
+            GaiaStoreKey::Staking,
+            GaiaParamsStoreKey::Staking,
+            auth_keeper.clone(),
+            bank_keeper.clone(),
+            // NOTE: The variant with instance should have less performance.
+            // Some(staking::MockHookKeeper::new()),
+            // The compiler require type for option `None`
+            None::<
+                staking::MockHookKeeper<
+                    GaiaStoreKey,
+                    auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+                    GaiaModules,
+                >,
+            >,
+            GaiaModules::BondedPool,
+            GaiaModules::NotBondedPool,
+        );
+
         let ibc_keeper = ibc_rs::keeper::Keeper::new(GaiaStoreKey::IBC, GaiaParamsStoreKey::IBC);
 
         GaiaABCIHandler {
             bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
+            staking_abci_handler: staking::ABCIHandler::new(staking_keeper),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
             ante_handler: BaseAnteHandler::new(
                 auth_keeper,
@@ -84,8 +121,26 @@ impl ABCIHandler for GaiaABCIHandler {
     ) -> Result<(), AppError> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
+            Message::Staking(msg) => self.staking_abci_handler.tx(ctx, msg),
             Message::IBC(msg) => self.ibc_abci_handler.tx(ctx, msg.clone()),
         }
+    }
+
+    fn begin_block<'a, DB: Database>(
+        &self,
+        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
+        _request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
+    ) {
+        //self.staking_abci_handler.begin_block(ctx, request);
+    }
+
+    fn end_block<'a, DB: Database>(
+        &self,
+        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
+        _request: gears::tendermint::types::request::end_block::RequestEndBlock,
+    ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
+        //self.staking_abci_handler.end_block(ctx, request)
+        vec![]
     }
 
     fn init_genesis<DB: Database>(
@@ -94,8 +149,9 @@ impl ABCIHandler for GaiaABCIHandler {
         genesis: GenesisState,
     ) {
         self.bank_abci_handler.genesis(ctx, genesis.bank);
-        self.auth_abci_handler.genesis(ctx, genesis.auth);
+        self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
+        self.auth_abci_handler.genesis(ctx, genesis.auth);
     }
 
     fn query<DB: Database + Send + Sync>(
@@ -107,6 +163,8 @@ impl ABCIHandler for GaiaABCIHandler {
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
             self.bank_abci_handler.query(ctx, query)
+        } else if query.path.starts_with("/cosmos.staking") {
+            self.staking_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/ibc.core.client") {
             self.ibc_abci_handler.query(ctx, query)
         } else {
@@ -133,6 +191,9 @@ impl ABCIHandler for GaiaABCIHandler {
             }
             GaiaNodeQueryRequest::Auth(req) => {
                 GaiaNodeQueryResponse::Auth(self.auth_abci_handler.typed_query(ctx, req))
+            }
+            GaiaNodeQueryRequest::Staking(req) => {
+                GaiaNodeQueryResponse::Staking(self.staking_abci_handler.typed_query(ctx, req))
             }
         }
     }

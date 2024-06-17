@@ -1,6 +1,7 @@
 use crate::{
     BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
-    QueryRedelegationRequest, QueryValidatorRequest,
+    QueryDelegationResponse, QueryRedelegationRequest, QueryRedelegationResponse,
+    QueryValidatorRequest, QueryValidatorResponse,
 };
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
@@ -16,6 +17,7 @@ use gears::{
     },
     x::{keepers::auth::AuthKeeper, module::Module},
 };
+use serde::Serialize;
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
@@ -23,10 +25,25 @@ pub struct ABCIHandler<
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
     BK: BankKeeper<SK, M>,
-    KH: KeeperHooks<SK, M>,
+    KH: KeeperHooks<SK, AK, M>,
     M: Module,
 > {
     keeper: Keeper<SK, PSK, AK, BK, KH, M>,
+}
+
+#[derive(Clone)]
+pub enum StakingNodeQueryRequest {
+    Validator(QueryValidatorRequest),
+    Delegation(QueryDelegationRequest),
+    Redelegation(QueryRedelegationRequest),
+}
+
+#[derive(Clone, Serialize)]
+#[serde(untagged)]
+pub enum StakingNodeQueryResponse {
+    Validator(QueryValidatorResponse),
+    Delegation(QueryDelegationResponse),
+    Redelegation(QueryRedelegationResponse),
 }
 
 impl<
@@ -34,7 +51,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > ABCIHandler<SK, PSK, AK, BK, KH, M>
 {
@@ -54,11 +71,7 @@ impl<
         }
     }
 
-    pub fn init_genesis<DB: Database>(
-        &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
-    ) {
+    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis);
     }
 
@@ -72,13 +85,13 @@ impl<
                 let req = QueryValidatorRequest::decode(query.data)
                     .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_validator(ctx, req)?.encode_vec().into())
+                Ok(self.keeper.query_validator(ctx, req).encode_vec().into())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
                     .map_err(|e| Error::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_delegation(ctx, req)?.encode_vec().into())
+                Ok(self.keeper.query_delegation(ctx, req).encode_vec().into())
             }
             "/cosmos.staking.v1beta1.Query/Redelegation" => {
                 let req = QueryRedelegationRequest::decode(query.data)
@@ -86,11 +99,29 @@ impl<
 
                 Ok(self
                     .keeper
-                    .query_redelegations(ctx, req)?
+                    .query_redelegations(ctx, req)
                     .encode_vec()
                     .into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
+        }
+    }
+
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: StakingNodeQueryRequest,
+    ) -> StakingNodeQueryResponse {
+        match query {
+            StakingNodeQueryRequest::Validator(req) => {
+                StakingNodeQueryResponse::Validator(self.keeper.query_validator(ctx, req))
+            }
+            StakingNodeQueryRequest::Delegation(req) => {
+                StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
+            }
+            StakingNodeQueryRequest::Redelegation(req) => {
+                StakingNodeQueryResponse::Redelegation(self.keeper.query_redelegations(ctx, req))
+            }
         }
     }
 
@@ -100,7 +131,6 @@ impl<
         _request: RequestBeginBlock,
     ) {
         self.keeper.track_historical_info(ctx);
-        todo!()
         // TODO
         // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
     }

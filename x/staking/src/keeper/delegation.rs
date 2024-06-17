@@ -6,7 +6,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -32,12 +32,12 @@ impl<
 
         // Get or create the delegation object
         let mut delegation = if let Some(delegation) =
-            self.delegation(ctx, &del_addr, &validator.operator_address)?
+            self.delegation(ctx, del_addr, &validator.operator_address)?
         {
-            self.before_delegation_shares_modified(ctx, &del_addr, &validator.operator_address);
+            self.before_delegation_shares_modified(ctx, del_addr, &validator.operator_address);
             delegation
         } else {
-            self.before_delegation_created(ctx, &del_addr, &validator.operator_address);
+            self.before_delegation_created(ctx, del_addr, &validator.operator_address);
             Delegation {
                 delegator_address: del_addr.clone(),
                 validator_address: validator.operator_address.clone(),
@@ -57,10 +57,7 @@ impl<
 
             let send_module = match validator.status {
                 BondStatus::Bonded => &self.bonded_module,
-                BondStatus::Unbonding => &self.not_bonded_module,
-                BondStatus::Unbonded => {
-                    return Err(AppError::Custom("invalid validator status".to_string()))
-                }
+                BondStatus::Unbonded | BondStatus::Unbonding => &self.not_bonded_module,
             };
 
             let denom = self.staking_params_keeper.try_get(ctx)?.bond_denom;
@@ -116,7 +113,7 @@ impl<
         val_addr: &ValAddress,
     ) -> Result<Option<Delegation>, GasStoreErrors> {
         let store = QueryableContext::kv_store(ctx, &self.store_key);
-        let delegations_store = store.prefix_store(DELEGATIONS_KEY);
+        let delegations_store = store.prefix_store(DELEGATION_KEY);
         let mut key = Vec::from(del_addr.clone());
         key.extend_from_slice(&Vec::from(val_addr.clone()));
         Ok(delegations_store
@@ -130,7 +127,7 @@ impl<
         delegation: &Delegation,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(DELEGATION_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.set(
@@ -147,7 +144,7 @@ impl<
         delegation: &Delegation,
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(DELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(DELEGATION_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.delete(&key)

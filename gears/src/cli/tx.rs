@@ -63,7 +63,7 @@ pub struct Local<T: ApplicationInfo> {
     from_key: String,
 
     /// select keyring's backend
-    #[arg(long = "keyring-backend", short = 'k',  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
+    #[arg(long = "keyring-backend", short = 'b',  global = true, action = ArgAction::Set, default_value_t = KeyringBackend::File )]
     #[arg(help_heading = "Local signing options")]
     keyring_backend: KeyringBackend,
 

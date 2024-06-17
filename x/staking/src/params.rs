@@ -1,9 +1,7 @@
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
-    core::base::coin::Coin,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
-    tendermint::types::time::Duration,
     types::{denom::Denom, store::gas::errors::GasStoreErrors},
 };
 use serde::{Deserialize, Serialize};
@@ -14,16 +12,16 @@ const KEY_MAX_VALIDATORS: &str = "MaxValidators";
 const KEY_MAX_ENTRIES: &str = "MaxEntries";
 const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
 const KEY_BOND_DENOM: &str = "BondDenom";
-const KEY_MIN_COMMISSION_RATE: &str = "MinCommissionRate";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Params {
-    pub unbonding_time: Duration,
+    // sdk counts duration as simple i64 type that represents difference
+    // between two instants
+    pub unbonding_time: i64,
     pub max_validators: u32,
     pub max_entries: u32,
     pub historical_entries: u32,
     pub bond_denom: Denom,
-    pub min_commission_rate: Coin,
 }
 
 impl Default for Params {
@@ -32,15 +30,11 @@ impl Default for Params {
         let bond_denom = Denom::try_from("uatom".to_string()).unwrap();
         Params {
             // 3 weeks
-            unbonding_time: Duration {
-                seconds: 60 * 60 * 24 * 7 * 3,
-                nanos: 0,
-            },
+            unbonding_time: 60_000_000_000 * 60 * 24 * 7 * 3,
             max_validators: 100,
             max_entries: 7,
-            bond_denom: bond_denom.clone(),
-            historical_entries: 0,
-            min_commission_rate: Coin::default(),
+            bond_denom,
+            historical_entries: 10_000,
         }
     }
 }
@@ -48,12 +42,11 @@ impl Default for Params {
 impl ParamsSerialize for Params {
     fn keys() -> HashMap<&'static str, ParamKind> {
         [
-            (KEY_UNBONDING_TIME, ParamKind::Bytes),
+            (KEY_UNBONDING_TIME, ParamKind::I64),
             (KEY_MAX_VALIDATORS, ParamKind::U32),
             (KEY_MAX_ENTRIES, ParamKind::U32),
             (KEY_HISTORICAL_ENTRIES, ParamKind::U32),
             (KEY_BOND_DENOM, ParamKind::String),
-            (KEY_MIN_COMMISSION_RATE, ParamKind::Bytes),
         ]
         .into_iter()
         .collect()
@@ -64,28 +57,20 @@ impl ParamsSerialize for Params {
             // TODO: remove unwrap
             (
                 KEY_UNBONDING_TIME,
-                serde_json::to_vec(&self.unbonding_time).unwrap(),
+                format!("\"{}\"", self.unbonding_time).into_bytes(),
             ),
             (
                 KEY_MAX_VALIDATORS,
-                self.max_validators.to_string().as_bytes().to_vec(),
+                self.max_validators.to_string().into_bytes(),
             ),
-            (
-                KEY_MAX_ENTRIES,
-                self.max_entries.to_string().as_bytes().to_vec(),
-            ),
+            (KEY_MAX_ENTRIES, self.max_entries.to_string().into_bytes()),
             (
                 KEY_HISTORICAL_ENTRIES,
-                self.historical_entries.to_string().as_bytes().to_vec(),
+                self.historical_entries.to_string().into_bytes(),
             ),
             (
                 KEY_BOND_DENOM,
-                self.max_validators.to_string().as_bytes().to_vec(),
-            ),
-            // TODO: remove unwrap
-            (
-                KEY_MIN_COMMISSION_RATE,
-                serde_json::to_vec(&self.min_commission_rate).unwrap(),
+                format!("\"{}\"", self.bond_denom).into_bytes(),
             ),
         ]
     }
@@ -94,38 +79,32 @@ impl ParamsSerialize for Params {
 impl ParamsDeserialize for Params {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         // TODO: check unwraps
-        let unbonding_time: Duration = serde_json::from_slice(
-            &ParamKind::Bytes
-                .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
-                .bytes()
-                .unwrap(),
-        )
-        .unwrap();
-        let max_validators = ParamKind::U32
-            .parse_param(fields.remove(KEY_MAX_VALIDATORS).unwrap())
-            .unsigned_64()
-            .unwrap() as u32;
-        let max_entries = ParamKind::U32
-            .parse_param(fields.remove(KEY_MAX_ENTRIES).unwrap())
-            .unsigned_64()
-            .unwrap() as u32;
-        let historical_entries = ParamKind::U32
-            .parse_param(fields.remove(KEY_HISTORICAL_ENTRIES).unwrap())
-            .unsigned_64()
-            .unwrap() as u32;
+        let unbonding_time = ParamKind::I64
+            .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
+            .signed_64()
+            .unwrap();
+        let max_validators = String::from_utf8(fields.remove(KEY_MAX_VALIDATORS).unwrap())
+            .expect("should be valid utf-8")
+            .parse::<u32>()
+            .expect("should be valid u32");
+        let max_entries = String::from_utf8(fields.remove(KEY_MAX_ENTRIES).unwrap())
+            .expect("should be valid utf-8")
+            .parse::<u32>()
+            .expect("should be valid u32");
+        let historical_entries = String::from_utf8(fields.remove(KEY_HISTORICAL_ENTRIES).unwrap())
+            .expect("should be valid utf-8")
+            .parse::<u32>()
+            .expect("should be valid u32");
         let bond_denom = ParamKind::String
             .parse_param(fields.remove(KEY_BOND_DENOM).unwrap())
             .string()
             .unwrap()
+            .strip_prefix('\"')
+            .unwrap()
+            .strip_suffix('\"')
+            .unwrap()
             .try_into()
             .unwrap();
-        let min_commission_rate: Coin = serde_json::from_slice(
-            &ParamKind::Bytes
-                .parse_param(fields.remove(KEY_MIN_COMMISSION_RATE).unwrap())
-                .bytes()
-                .unwrap(),
-        )
-        .unwrap();
 
         Params {
             unbonding_time,
@@ -133,7 +112,6 @@ impl ParamsDeserialize for Params {
             max_entries,
             bond_denom,
             historical_entries,
-            min_commission_rate,
         }
     }
 }
