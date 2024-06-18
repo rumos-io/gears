@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::keeper::KEY_PROPOSAL_PREFIX;
 
+pub mod active_iter;
+pub mod inactive_iter;
+
 // Slight modification of the RFC3339Nano but it right pads all zeros and drops the time zone info
 const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT&H:%M:%S.000000000";
 

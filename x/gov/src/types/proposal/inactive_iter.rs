@@ -1,0 +1,45 @@
+use std::{borrow::Cow, ops::Bound};
+
+use chrono::{DateTime, SubsecRound, Utc};
+use gears::{
+    store::database::Database,
+    types::store::gas::{errors::GasStoreErrors, kv::GasKVStore, range::GasRange},
+};
+
+use super::{Proposal, SORTABLE_DATE_TIME_FORMAT};
+
+#[derive(Debug)]
+pub struct InactiveProposalIterator<'a, DB>(pub GasRange<'a, DB>);
+
+impl<'a, DB: Database> InactiveProposalIterator<'a, DB> {
+    pub fn new(
+        store: &'a GasKVStore<'a, DB>,
+        end_time: &DateTime<Utc>,
+    ) -> InactiveProposalIterator<'a, DB> {
+        Self(
+            store.range((
+                Bound::Included(Proposal::KEY_INACTIVE_QUEUE_PREFIX.to_vec()),
+                Bound::Excluded(
+                    [
+                        Proposal::KEY_INACTIVE_QUEUE_PREFIX.as_slice(),
+                        end_time
+                            .round_subsecs(0)
+                            .format(SORTABLE_DATE_TIME_FORMAT)
+                            .to_string()
+                            .as_bytes(),
+                    ]
+                    .concat()
+                    .to_vec(),
+                ),
+            )),
+        )
+    }
+}
+
+impl<'a, DB: Database> Iterator for InactiveProposalIterator<'a, DB> {
+    type Item = Result<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>), GasStoreErrors>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.0.next()
+    }
+}
