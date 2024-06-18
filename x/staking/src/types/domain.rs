@@ -299,15 +299,12 @@ impl Validator {
             return Err(AppError::Custom("insufficient shares".into()).into());
         }
 
-        // TODO: check
         let mul = self
             .delegator_shares
             .checked_mul(Decimal256::from_atomics(amount, 0)?)?;
         // TODO: check constant 18 in decimals
         let precision_reuse = Decimal256::from_atomics(10u64, 0)?.checked_pow(18)?;
-        let mul2 = mul
-            .checked_mul(precision_reuse)?
-            .checked_mul(precision_reuse)?;
+        let mul2 = mul.checked_mul(precision_reuse)?;
         let div = mul2.checked_div(Decimal256::from_atomics(self.tokens, 0)?)?;
         Ok(div.checked_div(precision_reuse)?)
     }

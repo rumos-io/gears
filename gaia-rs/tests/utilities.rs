@@ -48,7 +48,7 @@ pub fn run_gaia_and_tendermint(
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.to_path_buf();
 
-    key_add(tmp_dir.to_path_buf())?;
+    key_add(tmp_dir.to_path_buf(), KEY_NAME, BIP39_MNEMONIC)?;
 
     let tendermint = TmpChild::run_tendermint::<_, AppConfig>(
         tmp_dir,
@@ -100,13 +100,13 @@ impl Genesis for MockGenesis {
 
 pub const KEY_NAME: &str = "alice";
 
-fn key_add(home: impl Into<PathBuf>) -> anyhow::Result<()> {
+pub fn key_add(home: impl Into<PathBuf>, name: &str, mnemonic: &str) -> anyhow::Result<()> {
     let cmd = AddKeyCommand {
-        name: KEY_NAME.to_owned(),
+        name: name.to_owned(),
         recover: true,
         home: home.into(),
         keyring_backend: KeyringBackend::Test,
-        bip39_mnemonic: Some(BIP39_MNEMONIC.to_owned()),
+        bip39_mnemonic: Some(mnemonic.to_owned()),
     };
 
     keys(KeyCommand::Add(cmd))?;
