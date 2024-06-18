@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::types::base::send::SendCoins;
 use ibc_proto::google::protobuf::Any;
@@ -78,4 +80,28 @@ pub enum ProposalStatus {
     Passed,
     Rejected,
     Failed,
+}
+
+fn parse_proposal_key_bytes(bytes: impl AsRef<[u8]>) -> (u64, DateTime<Utc>) {
+    static KEY_LENGTH: OnceLock<usize> = OnceLock::new();
+
+    let length_time = *KEY_LENGTH.get_or_init(|| {
+        Utc::now()
+            .round_subsecs(0)
+            .format(SORTABLE_DATE_TIME_FORMAT)
+            .to_string()
+            .bytes()
+            .len()
+    });
+
+    let time = DateTime::parse_from_rfc3339(
+        &String::from_utf8(bytes.as_ref()[1..1 + length_time].to_vec())
+            .expect("We serialize date as String so conversion is save"),
+    )
+    .unwrap()
+    .to_utc();
+    let proposal = u64::from_be_bytes(bytes.as_ref()[1 + length_time..].try_into().unwrap());
+    // TODO
+
+    (proposal, time)
 }
