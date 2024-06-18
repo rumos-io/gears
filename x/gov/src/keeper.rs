@@ -263,7 +263,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         /*
            in go they perform check is it possible to handle
            proposal somehow, but not sure we need it and instead
-           handle manually
+           handle manually. at least this is such concept at moment
+
+           https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/proposal.go#L14-L16
         */
 
         let proposal_id = proposal_id_get(ctx.kv_store(&self.store_key))?;
