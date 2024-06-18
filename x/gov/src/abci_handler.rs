@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use chrono::DateTime;
 use gears::{
     application::handlers::node::ABCIHandler,
     context::{
@@ -15,7 +16,7 @@ use gears::{
         },
         request::{end_block::RequestEndBlock, query::RequestQuery},
     },
-    types::tx::raw::TxWithRaw,
+    types::{store::gas::ext::GasResultExt, tx::raw::TxWithRaw},
     x::{keepers::bank::BankKeeper, module::Module},
 };
 
@@ -24,6 +25,9 @@ use crate::{
     keeper::GovKeeper,
     msg::{deposit::MsgDeposit, GovMsg},
     query::{GovQueryRequest, GovQueryResponse},
+    types::proposal::{
+        active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -206,9 +210,28 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
 
     fn end_block<'a, DB: Database>(
         &self,
-        _ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
+        ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
+        let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
+            .unwrap(); // TODO
+        let store = ctx.kv_store(&self.keeper.store_key).into();
+        {
+            let inactive_iter = InactiveProposalIterator::new(&store, &time);
+
+            for var in inactive_iter {
+                let ((_proposal_id, _date), _val) = var.unwrap_gas();
+            }
+        }
+
+        {
+            let active_iter = ActiveProposalIterator::new(&store, &time);
+
+            for var in active_iter {
+                let ((_proposal_id, _date), _val) = var.unwrap_gas();
+            }
+        }
+
         Vec::new()
     }
 }

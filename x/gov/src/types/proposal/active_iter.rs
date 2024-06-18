@@ -3,17 +3,17 @@ use std::{borrow::Cow, ops::Bound};
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     store::database::Database,
-    types::store::gas::{errors::GasStoreErrors, kv::GasKVStore, range::GasRange},
+    types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
 };
 
 use super::{parse_proposal_key_bytes, Proposal, SORTABLE_DATE_TIME_FORMAT};
 
 #[derive(Debug)]
-pub struct ActiveProposalIterator<'a, DB>(pub GasRange<'a, DB>);
+pub struct ActiveProposalIterator<'a, DB>(StoreRange<'a, DB>);
 
 impl<'a, DB: Database> ActiveProposalIterator<'a, DB> {
     pub fn new(
-        store: &'a GasKVStore<'a, DB>,
+        store: &'a Store<'a, DB>,
         end_time: &DateTime<Utc>,
     ) -> ActiveProposalIterator<'a, DB> {
         Self(

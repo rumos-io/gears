@@ -32,7 +32,7 @@ pub(crate) const KEY_PROPOSAL_PREFIX: [u8; 1] = [0x00];
 
 #[derive(Debug, Clone)]
 pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> {
-    store_key: SK,
+    pub store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
     gov_mod: M,
     bank_keeper: BK,
