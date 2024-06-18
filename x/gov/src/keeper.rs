@@ -259,7 +259,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             initial_deposit,
             proposer: _proposer,
         }: MsgSubmitProposal,
-    ) -> anyhow::Result<Proposal> {
+    ) -> anyhow::Result<u64> {
         /*
            in go they perform check is it possible to handle
            proposal somehow, but not sure we need it and instead
@@ -310,7 +310,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             )],
         ));
 
-        Ok(proposal)
+        Ok(proposal.proposal_id)
     }
 }
 

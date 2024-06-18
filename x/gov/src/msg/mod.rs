@@ -1,5 +1,6 @@
 use deposit::MsgDeposit;
 use gears::derive::RoutingMessage;
+use proposal::MsgSubmitProposal;
 use serde::Serialize;
 use vote::MsgVote;
 use weighted_vote::MsgVoteWeighted;
@@ -17,4 +18,6 @@ pub enum GovMsg {
     Vote(MsgVote),
     #[gears(url = "/cosmos.gov.v1beta1/MsgVoteWeighted")]
     Weighted(MsgVoteWeighted),
+    #[gears(url = "/cosmos.gov.v1beta1/MsgSubmitProposal")]
+    Proposal(MsgSubmitProposal),
 }
