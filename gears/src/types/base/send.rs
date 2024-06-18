@@ -88,6 +88,33 @@ impl SendCoins {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub fn checked_add(&self, other: SendCoins) -> Result<Self, SendCoinsError> {
+        let result = self
+            .inner()
+            .into_iter()
+            .cloned()
+            .chain(other.0)
+            .collect::<Vec<_>>();
+
+        Self::new(result)
+    }
+
+    pub fn is_all_gte<'a>(&self, other: impl IntoIterator<Item = &'a Coin>) -> bool {
+        let other = other.into_iter().collect::<Vec<_>>();
+
+        if other.is_empty() {
+            return true;
+        }
+
+        for coin in other {
+            if coin.amount >= self.amount_of(&coin.denom) {
+                return false;
+            }
+        }
+
+        true
+    }
 }
 
 impl From<SendCoins> for Vec<Coin> {

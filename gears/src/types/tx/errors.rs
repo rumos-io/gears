@@ -11,5 +11,5 @@ pub enum TxError {
     #[error("{0}")]
     Auth(#[from] AuthError),
     #[error("{0}")]
-    Ibc(#[from] core_types::errors::Error),
+    Ibc(#[from] core_types::errors::CoreError),
 }

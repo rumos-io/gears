@@ -1,5 +1,5 @@
 use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
-use gears::core::errors::Error as IbcError;
+use gears::core::errors::CoreError as IbcError;
 use gears::error::AppError;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::params::ParamsSubspaceKey;

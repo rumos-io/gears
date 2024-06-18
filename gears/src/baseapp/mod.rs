@@ -154,7 +154,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         mode: &mut MD,
     ) -> Result<RunTxInfo, RunTxError> {
         let tx_with_raw: TxWithRaw<H::Message> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e: core_types::errors::Error| RunTxError::TxParseError(e.to_string()))?;
+            .map_err(|e: core_types::errors::CoreError| RunTxError::TxParseError(e.to_string()))?;
 
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
             .map_err(|e| RunTxError::Validation(e.to_string()))?;

@@ -4,7 +4,7 @@ use crate::{
 };
 use gears::{
     context::{init::InitContext, query::QueryContext, tx::TxContext},
-    core::errors::Error,
+    core::errors::CoreError,
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -123,7 +123,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                 .client_states(
                     ctx,
                     ProstMessage::decode(query.data)
-                        .map_err(|e| Error::DecodeProtobuf(e.to_string()))?,
+                        .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?,
                 )
                 .encode_vec()
                 .into()),

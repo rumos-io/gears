@@ -1,4 +1,9 @@
-use gears::{params::ParamsSubspaceKey, store::StoreKey};
+use std::str::FromStr;
+
+use gears::{
+    params::{ParamsSubspaceKey, SubspaceParseError},
+    store::StoreKey,
+};
 use strum::EnumIter;
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
@@ -54,5 +59,23 @@ impl ParamsSubspaceKey for GaiaParamsStoreKey {
             Self::IBC => "ibc/",
             Self::Capability => "capability/",
         }
+    }
+}
+
+// TODO: for future params change
+impl FromStr for GaiaParamsStoreKey {
+    type Err = SubspaceParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "bank/" => Self::Bank,
+            "auth/" => Self::Auth,
+            "baseapp/" => Self::BaseApp,
+            "ibc/" => Self::IBC,
+            "capability/" => Self::Capability,
+            _ => Err(SubspaceParseError(
+                "missing valid key: {s} not found".to_string(),
+            ))?,
+        })
     }
 }

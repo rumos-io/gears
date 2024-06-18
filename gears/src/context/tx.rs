@@ -82,6 +82,10 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn chain_id(&self) -> &ChainId {
         &self.header.chain_id
     }
+
+    pub fn header(&self) -> &Header {
+        &self.header
+    }
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {

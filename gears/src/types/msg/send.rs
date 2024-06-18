@@ -91,10 +91,10 @@ impl TxMessage for MsgSend {
 }
 
 impl TryFrom<Any> for MsgSend {
-    type Error = core_types::errors::Error;
+    type Error = core_types::errors::CoreError;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         MsgSend::decode::<Bytes>(value.value.clone().into())
-            .map_err(|e| core_types::errors::Error::DecodeAny(e.to_string()))
+            .map_err(|e| core_types::errors::CoreError::DecodeAny(e.to_string()))
     }
 }

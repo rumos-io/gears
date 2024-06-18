@@ -64,26 +64,26 @@ impl From<Message> for Any {
 }
 
 impl TryFrom<Any> for Message {
-    type Error = gears::core::errors::Error;
+    type Error = gears::core::errors::CoreError;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
             "/cosmos.staking.v1beta1.CreateValidator" => {
                 let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
-                    .map_err(|e| gears::core::errors::Error::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::CreateValidator(msg))
             }
             "/cosmos.staking.v1beta1.Delegate" => {
                 let msg = DelegateMsg::decode::<Bytes>(value.value.clone().into())
-                    .map_err(|e| gears::core::errors::Error::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Delegate(msg))
             }
             "/cosmos.staking.v1beta1.Redelegate" => {
                 let msg = RedelegateMsg::decode::<Bytes>(value.value.clone().into())
-                    .map_err(|e| gears::core::errors::Error::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Redelegate(msg))
             }
-            _ => Err(gears::core::errors::Error::DecodeGeneral(
+            _ => Err(gears::core::errors::CoreError::DecodeGeneral(
                 "message type not recognized".into(),
             )),
         }

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use ibc_proto::cosmos::crypto::multisig::v1beta1::CompactBitArray as RawCompactBitArray;
 
-use crate::errors::Error;
+use crate::errors::CoreError;
 
 mod inner {
     pub use ibc_proto::cosmos::tx::v1beta1::mode_info::Sum;
@@ -19,11 +19,14 @@ pub enum ModeInfo {
 }
 
 impl TryFrom<inner::ModeInfo> for ModeInfo {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::ModeInfo) -> Result<Self, Self::Error> {
         Ok(
-            match raw.sum.ok_or(Error::MissingField(String::from("sum")))? {
+            match raw
+                .sum
+                .ok_or(CoreError::MissingField(String::from("sum")))?
+            {
                 inner::Sum::Single(s) => Self::Single(s.try_into()?),
                 inner::Sum::Multi(m) => Self::Multi(m.try_into()?),
             },
@@ -87,7 +90,7 @@ impl From<SignMode> for inner::Single {
 }
 
 impl TryFrom<inner::Single> for SignMode {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::Single) -> Result<Self, Self::Error> {
         Ok(match raw.mode {
@@ -97,7 +100,7 @@ impl TryFrom<inner::Single> for SignMode {
             3 => SignMode::DirectAux,
             127 => SignMode::LegacyAminoJson,
             191 => SignMode::Eip191,
-            _ => return Err(Error::InvalidSignMode(raw.mode)),
+            _ => return Err(CoreError::InvalidSignMode(raw.mode)),
         })
     }
 }
@@ -147,7 +150,7 @@ pub struct Multi {
 }
 
 impl TryFrom<inner::Multi> for Multi {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::Multi) -> Result<Self, Self::Error> {
         Ok(Multi {
@@ -156,7 +159,7 @@ impl TryFrom<inner::Multi> for Multi {
                 .mode_infos
                 .into_iter()
                 .map(|mi| mi.try_into())
-                .collect::<Result<Vec<ModeInfo>, Error>>()?,
+                .collect::<Result<Vec<ModeInfo>, CoreError>>()?,
         })
     }
 }

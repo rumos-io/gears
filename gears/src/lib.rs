@@ -36,3 +36,7 @@ pub mod store {
         pub use database::*;
     }
 }
+
+pub mod derive {
+    pub use gears_derive::*;
+}

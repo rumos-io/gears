@@ -72,15 +72,15 @@ impl From<MsgCreateClient> for Any {
 }
 
 impl TryFrom<Any> for MsgCreateClient {
-    type Error = gears::core::errors::Error;
+    type Error = gears::core::errors::CoreError;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
             "/ibc.core.client.v1.MsgCreateClient" => {
                 MsgCreateClient::decode::<Bytes>(value.value.clone().into())
-                    .map_err(|e| gears::core::errors::Error::DecodeProtobuf(e.to_string()))
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))
             }
-            _ => Err(gears::core::errors::Error::DecodeGeneral(
+            _ => Err(gears::core::errors::CoreError::DecodeGeneral(
                 "message type not recognized".into(),
             )),
         }

@@ -1,6 +1,6 @@
 use super::TxMessage;
 use core_types::any::google::Any;
-use core_types::errors::Error;
+use core_types::errors::CoreError;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
@@ -41,7 +41,7 @@ pub struct TxBody<M> {
 }
 
 impl<M: TxMessage> TryFrom<inner::TxBody> for TxBody<M> {
-    type Error = Error;
+    type Error = CoreError;
 
     fn try_from(raw: inner::TxBody) -> Result<Self, Self::Error> {
         let mut messages: Vec<M> = vec![];
@@ -54,7 +54,7 @@ impl<M: TxMessage> TryFrom<inner::TxBody> for TxBody<M> {
             messages,
             memo: raw.memo,
             timeout_height: raw.timeout_height.try_into().map_err(|_| {
-                Error::DecodeGeneral(format!(
+                CoreError::DecodeGeneral(format!(
                     "Timeout height {}, is greater than allowed maximum {}",
                     raw.timeout_height,
                     u32::MAX

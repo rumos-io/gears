@@ -1,4 +1,4 @@
-use core_types::errors::Error as IbcError;
+use core_types::errors::CoreError as IbcError;
 use core_types::{any::google::Any, serializers::serialize_number_to_string};
 use keyring::error::DecodeError;
 use prost::bytes::Bytes;
@@ -37,7 +37,7 @@ impl TryFrom<inner::BaseAccount> for BaseAccount {
 
     fn try_from(raw: inner::BaseAccount) -> Result<Self, Self::Error> {
         let address = AccAddress::from_bech32(&raw.address)
-            .map_err(|e| core_types::errors::Error::DecodeAddress(e.to_string()))?;
+            .map_err(|e| core_types::errors::CoreError::DecodeAddress(e.to_string()))?;
 
         let pub_key: Option<Secp256k1PubKey> = match raw.pub_key {
             Some(key) => {
@@ -92,13 +92,13 @@ pub struct ModuleAccount {
 }
 
 impl TryFrom<inner::ModuleAccount> for ModuleAccount {
-    type Error = core_types::errors::Error;
+    type Error = core_types::errors::CoreError;
 
     fn try_from(raw: inner::ModuleAccount) -> Result<Self, Self::Error> {
         let base_account = match raw.base_account {
             Some(base) => base.try_into()?,
             None => {
-                return Err(core_types::errors::Error::DecodeGeneral(
+                return Err(core_types::errors::CoreError::DecodeGeneral(
                     "missing base account field".into(),
                 ))
             }
@@ -175,21 +175,21 @@ impl Account {
 }
 
 impl TryFrom<Any> for Account {
-    type Error = core_types::errors::Error;
+    type Error = core_types::errors::CoreError;
 
     fn try_from(any: Any) -> Result<Self, Self::Error> {
         match any.type_url.as_str() {
             "/cosmos.auth.v1beta1.BaseAccount" => {
                 let base = BaseAccount::decode::<Bytes>(any.value.into())
-                    .map_err(|e| core_types::errors::Error::DecodeGeneral(e.to_string()))?;
+                    .map_err(|e| core_types::errors::CoreError::DecodeGeneral(e.to_string()))?;
                 Ok(Account::Base(base))
             }
             "/cosmos.auth.v1beta1.ModuleAccount" => {
                 let module = ModuleAccount::decode::<Bytes>(any.value.into())
-                    .map_err(|e| core_types::errors::Error::DecodeGeneral(e.to_string()))?;
+                    .map_err(|e| core_types::errors::CoreError::DecodeGeneral(e.to_string()))?;
                 Ok(Account::Module(module))
             }
-            _ => Err(core_types::errors::Error::DecodeAny(format!(
+            _ => Err(core_types::errors::CoreError::DecodeAny(format!(
                 "account type not recognized: {}",
                 any.type_url
             ))),
