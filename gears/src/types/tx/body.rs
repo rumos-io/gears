@@ -54,7 +54,7 @@ impl<M: TxMessage> TryFrom<inner::TxBody> for TxBody<M> {
             messages,
             memo: raw.memo,
             timeout_height: raw.timeout_height.try_into().map_err(|_| {
-                Error::DecodeGeneral(format!(
+                CoreError::DecodeGeneral(format!(
                     "Timeout height {}, is greater than allowed maximum {}",
                     raw.timeout_height,
                     u32::MAX
