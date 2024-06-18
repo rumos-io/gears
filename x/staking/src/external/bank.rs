@@ -18,7 +18,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
 {
     fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         addr: AccAddress,
     ) -> Result<Vec<Coin>, GasStoreErrors> {
         self.get_all_balances(ctx, addr)
