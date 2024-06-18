@@ -23,12 +23,13 @@ use gears::{
 use staking::{
     cli::{
         query::{
-            DelegationCommand, StakingCommands as QueryStakingCommands, StakingQueryCli,
-            ValidatorCommand,
+            DelegationCommand, RedelegationCommand, StakingCommands as QueryStakingCommands,
+            StakingQueryCli, ValidatorCommand,
         },
         tx::{StakingCommands, StakingTxCli},
     },
-    BondStatus, CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
+    BondStatus, CommissionRatesRaw, CommissionRaw, DelegationResponse, Description,
+    RedelegationResponse, Validator,
 };
 use std::{path::PathBuf, str::FromStr};
 use utilities::ACC_ADDRESS;
@@ -179,19 +180,14 @@ fn delegate() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
-#[ignore = "rust usually run test in || while this tests be started ony by one"]
-fn redelegate() -> anyhow::Result<()> {
-    let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
-
+fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
     // create source validator
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
-    new_validator(KEY_NAME, tendermint.1.to_path_buf(), pubkey, amount, "test")?;
+    new_validator(KEY_NAME, home.clone(), pubkey, amount, "test")?;
 
     // send coins to another account to register it in the chain
     let tx_cmd = BankCommands::Send {
@@ -199,12 +195,12 @@ fn redelegate() -> anyhow::Result<()> {
         amount: Coin::from_str("30uatom")?,
     };
     let command = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
-    run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
+    run_tx_local(KEY_NAME, home.clone(), command)?;
 
     // create local keypair for second account
     let mnemonic = "utility radio trust maid picture hold palace heart craft fruit recycle void embrace gospel write what soccer resemble yellow decade rug knock control celery";
     let name = "foo";
-    key_add(tendermint.1.to_path_buf(), name, mnemonic)?;
+    key_add(home.clone(), name, mnemonic)?;
 
     // create destination validator
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
@@ -212,7 +208,7 @@ fn redelegate() -> anyhow::Result<()> {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
-    new_validator(KEY_NAME, tendermint.1.to_path_buf(), pubkey, amount, name)?;
+    new_validator(name, home.clone(), pubkey, amount, name)?;
 
     // create delegation to source validator
     let amount = Coin {
@@ -221,7 +217,7 @@ fn redelegate() -> anyhow::Result<()> {
     };
     new_delegation(
         KEY_NAME,
-        tendermint.1.to_path_buf(),
+        home.clone(),
         "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
         amount,
     )?;
@@ -243,12 +239,21 @@ fn redelegate() -> anyhow::Result<()> {
     };
 
     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
+    run_tx_local(KEY_NAME, home, command)
+}
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn redelegate() -> anyhow::Result<()> {
+    let coins = 200_000_000_u32;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+
     let Response {
         check_tx,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
+    } = redelegate_tx(tendermint.1.to_path_buf())?;
 
     assert!(check_tx.code.is_ok());
     assert_eq!(check_tx.events.len(), 0);
@@ -442,6 +447,43 @@ fn query_delegation() -> anyhow::Result<()> {
             }),
         }),
     );
+    assert_eq!(result, expected);
+
+    Ok(())
+}
+
+// TODO: consider to create tests where validator has another bond status
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn query_redelegation() -> anyhow::Result<()> {
+    let coins = 200_000_000_u32;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    redelegate_tx(tendermint.1.to_path_buf())?;
+
+    let delegator_address = AccAddress::from_bech32(ACC_ADDRESS)?;
+    let src_validator_address =
+        ValAddress::from_bech32("cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk")?;
+    let dst_validator_address =
+        ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")?;
+    let query = RedelegationCommand {
+        delegator_address: delegator_address.clone(),
+        dst_validator_address: dst_validator_address.clone(),
+        src_validator_address: src_validator_address.clone(),
+    };
+    let command = GaiaQueryCommands::Staking(StakingQueryCli {
+        command: QueryStakingCommands::Redelegation(query),
+    });
+
+    let result = run_query_local(command)?;
+    // since validator status is BondStatus::Unbonded, the system doesn't store redelegation
+    // entries in the queue
+    let expected =
+        GaiaQueryResponse::Staking(staking::cli::query::StakingQueryResponse::Redelegation(
+            staking::QueryRedelegationResponse {
+                redelegation_responses: vec![],
+                pagination: None,
+            },
+        ));
     assert_eq!(result, expected);
 
     Ok(())
