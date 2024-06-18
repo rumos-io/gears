@@ -24,10 +24,10 @@ pub struct MsgVote {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum VoteOption {
     Empty = 0,
-    Yes,
-    Abstain,
-    No,
-    NoWithVeto,
+    Yes = 1,
+    Abstain = 2,
+    No = 3,
+    NoWithVeto = 4,
 }
 
 impl TryFrom<i32> for VoteOption {

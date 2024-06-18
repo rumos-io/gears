@@ -190,8 +190,8 @@ impl TryFrom<QueryValidatorResponseRaw> for QueryValidatorResponse {
 
     fn try_from(raw: QueryValidatorResponseRaw) -> Result<Self, Self::Error> {
         if let Some(bytes) = raw.validator {
-            let validator: Validator =
-                Validator::decode_vec(&bytes).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
+            let validator: Validator = Validator::decode_vec(&bytes)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
 
             Ok(QueryValidatorResponse {
                 validator: Some(validator),
