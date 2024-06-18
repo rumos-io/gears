@@ -16,27 +16,46 @@ use gears::{
         base::coin::Coin,
         uint::Uint256,
     },
+    utils::TmpChild,
 };
 use staking::cli::tx::{StakingCommands, StakingTxCli};
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 
 #[path = "./utilities.rs"]
 mod utilities;
 
-#[test]
-#[ignore = "rust usually run test in || while this tests be started ony by one"]
-fn create_validator() -> anyhow::Result<()> {
-    let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
-    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}".to_string();
-    let amount = Coin {
-        denom: "uatom".try_into()?,
-        amount: Uint256::from(100u64),
-    };
+fn run_tx_local(
+    from_key: &str,
+    home: PathBuf,
+    command: GaiaTxCommands,
+) -> anyhow::Result<Response> {
+    run_tx(
+        TxCommand {
+            keyring: Keyring::Local(LocalInfo {
+                keyring_backend: KeyringBackend::Test,
+                from_key: from_key.to_owned(),
+                home,
+            }),
+            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
+            chain_id: ChainId::from_str("test-chain")?,
+            fee: None,
+            inner: WrappedGaiaTxCommands(command),
+        },
+        &GaiaCoreClient,
+    )
+}
+
+fn new_validator(
+    tendermint: &TmpChild,
+    pubkey: &str,
+    from_key: &str,
+    amount: Coin,
+    moniker: &str,
+) -> anyhow::Result<Response> {
     let tx_cmd = StakingCommands::CreateValidator {
-        pubkey,
+        pubkey: pubkey.to_string(),
         amount,
-        moniker: "test".to_string(),
+        moniker: moniker.to_string(),
         identity: "".to_string(),
         website: "".to_string(),
         security_contact: "".to_string(),
@@ -46,26 +65,40 @@ fn create_validator() -> anyhow::Result<()> {
         commission_max_change_rate: "0.01".to_string(),
         min_self_delegation: Uint256::one(),
     };
+    let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
+    run_tx_local(from_key, tendermint.1.to_path_buf(), command)
+}
 
+fn new_delegation(
+    tendermint: &TmpChild,
+    from_key: &str,
+    validator_address: &str,
+    amount: Coin,
+) -> anyhow::Result<Response> {
+    let tx_cmd = StakingCommands::Delegate {
+        validator_address: ValAddress::from_bech32(validator_address)?,
+        amount,
+    };
+    let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
+    run_tx_local(from_key, tendermint.1.to_path_buf(), command)
+}
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn create_validator() -> anyhow::Result<()> {
+    let coins = 200_000_000_u32;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
+    let amount = Coin {
+        denom: "uatom".try_into()?,
+        amount: Uint256::from(100u64),
+    };
     let Response {
         check_tx,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = new_validator(&tendermint, pubkey, KEY_NAME, amount, "test")?;
 
     assert!(check_tx.code.is_ok());
     assert_eq!(check_tx.events.len(), 0);
@@ -86,77 +119,35 @@ fn create_validator() -> anyhow::Result<()> {
 fn delegate() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
     let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
-    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}".to_string();
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
-    let tx_cmd = StakingCommands::CreateValidator {
-        pubkey,
-        amount,
-        moniker: "test".to_string(),
-        identity: "".to_string(),
-        website: "".to_string(),
-        security_contact: "".to_string(),
-        details: "".to_string(),
-        commission_rate: "0.1".to_string(),
-        commission_max_rate: "0.2".to_string(),
-        commission_max_change_rate: "0.01".to_string(),
-        min_self_delegation: Uint256::one(),
-    };
-
     let Response {
-        check_tx,
+        check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
-    assert!(check_tx.code.is_ok());
+    } = new_validator(&tendermint, pubkey, KEY_NAME, amount, "test")?;
     assert!(deliver_tx.code.is_ok());
 
-    /* */
+    /* test */
 
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
-    let tx_cmd = StakingCommands::Delegate {
-        validator_address: ValAddress::from_bech32(
-            "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
-        )?,
-        amount,
-    };
     let Response {
         check_tx,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
+    } = new_delegation(
+        &tendermint,
+        KEY_NAME,
+        "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
+        amount,
     )?;
 
     assert!(check_tx.code.is_ok());
@@ -177,44 +168,17 @@ fn redelegate() -> anyhow::Result<()> {
     let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
 
     // create source validator
-    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}".to_string();
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
-    let tx_cmd = StakingCommands::CreateValidator {
-        pubkey,
-        amount,
-        moniker: "test".to_string(),
-        identity: "".to_string(),
-        website: "".to_string(),
-        security_contact: "".to_string(),
-        details: "".to_string(),
-        commission_rate: "0.1".to_string(),
-        commission_max_rate: "0.2".to_string(),
-        commission_max_change_rate: "0.01".to_string(),
-        min_self_delegation: Uint256::one(),
-    };
-
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = new_validator(&tendermint, pubkey, KEY_NAME, amount, "test")?;
     assert!(deliver_tx.code.is_ok());
 
     // send coins to another account to register it in the chain
@@ -222,25 +186,13 @@ fn redelegate() -> anyhow::Result<()> {
         to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
         amount: Coin::from_str("30uatom")?,
     };
+    let command = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
     assert!(deliver_tx.code.is_ok());
 
     // create local keypair for second account
@@ -249,44 +201,17 @@ fn redelegate() -> anyhow::Result<()> {
     key_add(tendermint.1.to_path_buf(), name, mnemonic)?;
 
     // create destination validator
-    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}".to_string();
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
-    let tx_cmd = StakingCommands::CreateValidator {
-        pubkey,
-        amount,
-        moniker: "foo".to_string(),
-        identity: "".to_string(),
-        website: "".to_string(),
-        security_contact: "".to_string(),
-        details: "".to_string(),
-        commission_rate: "0.1".to_string(),
-        commission_max_rate: "0.2".to_string(),
-        commission_max_change_rate: "0.01".to_string(),
-        min_self_delegation: Uint256::one(),
-    };
-
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: name.to_string(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = new_validator(&tendermint, pubkey, name, amount, name)?;
     assert!(deliver_tx.code.is_ok());
 
     // create delegation to source validator
@@ -294,34 +219,20 @@ fn redelegate() -> anyhow::Result<()> {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
-    let tx_cmd = StakingCommands::Delegate {
-        validator_address: ValAddress::from_bech32(
-            "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
-        )?,
-        amount,
-    };
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
+    } = new_delegation(
+        &tendermint,
+        KEY_NAME,
+        "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
+        amount,
     )?;
     assert!(deliver_tx.code.is_ok());
 
-    /* */
+    /* test */
 
     let amount = Coin {
         denom: "uatom".try_into()?,
@@ -337,25 +248,14 @@ fn redelegate() -> anyhow::Result<()> {
         amount,
     };
 
+    let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
     let Response {
         check_tx,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_string(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
+
     assert!(check_tx.code.is_ok());
     assert_eq!(check_tx.events.len(), 0);
     assert!(deliver_tx.code.is_ok());
@@ -382,44 +282,17 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
     let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
 
     // create source validator
-    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}".to_string();
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
-    let tx_cmd = StakingCommands::CreateValidator {
-        pubkey,
-        amount,
-        moniker: "test".to_string(),
-        identity: "".to_string(),
-        website: "".to_string(),
-        security_contact: "".to_string(),
-        details: "".to_string(),
-        commission_rate: "0.1".to_string(),
-        commission_max_rate: "0.2".to_string(),
-        commission_max_change_rate: "0.01".to_string(),
-        min_self_delegation: Uint256::one(),
-    };
-
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = new_validator(&tendermint, pubkey, KEY_NAME, amount, "test")?;
     assert!(deliver_tx.code.is_ok());
 
     // send coins to another account to register it in the chain
@@ -427,25 +300,13 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
         to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
         amount: Coin::from_str("30uatom")?,
     };
+    let command = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
     assert!(deliver_tx.code.is_ok());
 
     // create local keypair for second account
@@ -454,44 +315,17 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
     key_add(tendermint.1.to_path_buf(), name, mnemonic)?;
 
     // create destination validator
-    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}".to_string();
+    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
-    let tx_cmd = StakingCommands::CreateValidator {
-        pubkey,
-        amount,
-        moniker: "foo".to_string(),
-        identity: "".to_string(),
-        website: "".to_string(),
-        security_contact: "".to_string(),
-        details: "".to_string(),
-        commission_rate: "0.1".to_string(),
-        commission_max_rate: "0.2".to_string(),
-        commission_max_change_rate: "0.01".to_string(),
-        min_self_delegation: Uint256::one(),
-    };
-
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: name.to_string(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = new_validator(&tendermint, pubkey, name, amount, name)?;
     assert!(deliver_tx.code.is_ok());
 
     // create delegation to source validator
@@ -499,34 +333,20 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
-    let tx_cmd = StakingCommands::Delegate {
-        validator_address: ValAddress::from_bech32(
-            "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
-        )?,
-        amount,
-    };
     let Response {
         check_tx: _,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_owned(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
+    } = new_delegation(
+        &tendermint,
+        KEY_NAME,
+        "cosmosvaloper15jlqmacda2pzerhw48gvvxskweg8sz2scfexfk",
+        amount,
     )?;
     assert!(deliver_tx.code.is_ok());
 
-    /* */
+    /* test */
 
     let amount = Coin {
         denom: "uatom".try_into()?,
@@ -541,26 +361,14 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
         )?,
         amount,
     };
-
+    let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
     let Response {
         check_tx,
         deliver_tx,
         hash: _,
         height: _,
-    } = run_tx(
-        TxCommand {
-            keyring: Keyring::Local(LocalInfo {
-                keyring_backend: KeyringBackend::Test,
-                from_key: KEY_NAME.to_string(),
-                home: tendermint.1.to_path_buf(),
-            }),
-            node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
-            chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
-            inner: WrappedGaiaTxCommands(GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd })),
-        },
-        &GaiaCoreClient,
-    )?;
+    } = run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
+
     assert!(check_tx.code.is_ok());
     assert!(deliver_tx.code.is_err());
     assert!(deliver_tx.log.contains("invalid shares amount"));
