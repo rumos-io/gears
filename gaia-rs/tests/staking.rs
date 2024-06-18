@@ -22,12 +22,16 @@ use gears::{
 };
 use staking::{
     cli::{
-        query::{StakingCommands as QueryStakingCommands, StakingQueryCli, ValidatorCommand},
+        query::{
+            DelegationCommand, StakingCommands as QueryStakingCommands, StakingQueryCli,
+            ValidatorCommand,
+        },
         tx::{StakingCommands, StakingTxCli},
     },
-    BondStatus, CommissionRatesRaw, CommissionRaw, Description, Validator,
+    BondStatus, CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
 };
 use std::{path::PathBuf, str::FromStr};
+use utilities::ACC_ADDRESS;
 
 #[path = "./utilities.rs"]
 mod utilities;
@@ -136,35 +140,33 @@ fn create_validator() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[test]
-#[ignore = "rust usually run test in || while this tests be started ony by one"]
-fn delegate() -> anyhow::Result<()> {
-    let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
-    let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
-    let amount = Coin {
-        denom: "uatom".try_into()?,
-        amount: Uint256::from(100u64),
-    };
-    new_validator(KEY_NAME, tendermint.1.to_path_buf(), pubkey, amount, "test")?;
-
-    /* test */
+fn delegate_tx(home: PathBuf) -> anyhow::Result<Response> {
+    create_validator_tx(home.clone())?;
 
     let amount = Coin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
+    new_delegation(
+        KEY_NAME,
+        home,
+        "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
+        amount,
+    )
+}
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn delegate() -> anyhow::Result<()> {
+    let coins = 200_000_000_u32;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+
     let Response {
         check_tx,
         deliver_tx,
         hash: _,
         height: _,
-    } = new_delegation(
-        KEY_NAME,
-        tendermint.1.to_path_buf(),
-        "cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4",
-        amount,
-    )?;
+    } = delegate_tx(tendermint.1.to_path_buf())?;
 
     assert!(check_tx.code.is_ok());
     assert_eq!(check_tx.events.len(), 0);
@@ -351,8 +353,7 @@ fn query_validator() -> anyhow::Result<()> {
     create_validator_tx(tendermint.1.to_path_buf())?;
 
     let query = ValidatorCommand {
-        address: ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")
-            .unwrap(),
+        address: ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")?,
     };
     let command = GaiaQueryCommands::Staking(StakingQueryCli {
         command: QueryStakingCommands::Validator(query),
@@ -404,5 +405,44 @@ fn query_validator() -> anyhow::Result<()> {
     );
     assert_eq!(min_self_delegation, Uint256::one());
     assert_eq!(status, BondStatus::Unbonded);
+    Ok(())
+}
+
+#[test]
+#[ignore = "rust usually run test in || while this tests be started ony by one"]
+fn query_delegation() -> anyhow::Result<()> {
+    let coins = 200_000_000_u32;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    delegate_tx(tendermint.1.to_path_buf())?;
+
+    let delegator_address = AccAddress::from_bech32(ACC_ADDRESS)?;
+    let validator_address =
+        ValAddress::from_bech32("cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4")?;
+    let query = DelegationCommand {
+        delegator_address: delegator_address.clone(),
+        validator_address: validator_address.clone(),
+    };
+    let command = GaiaQueryCommands::Staking(StakingQueryCli {
+        command: QueryStakingCommands::Delegation(query),
+    });
+
+    let result = run_query_local(command)?;
+    let expected = GaiaQueryResponse::Staking(
+        staking::cli::query::StakingQueryResponse::Delegation(staking::QueryDelegationResponse {
+            delegation_response: Some(DelegationResponse {
+                delegation: staking::Delegation {
+                    delegator_address,
+                    validator_address,
+                    shares: Decimal256::from_atomics(10u64, 0).unwrap(),
+                },
+                balance: Coin {
+                    denom: "uatom".try_into().unwrap(),
+                    amount: Uint256::from(10u64),
+                },
+            }),
+        }),
+    );
+    assert_eq!(result, expected);
+
     Ok(())
 }
