@@ -14,7 +14,7 @@ pub trait QueryableContext<DB, SK> {
     /// Fetches an immutable ref to a KVStore from the MultiStore.
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>>;
 
-    fn height(&self) -> u64;
+    fn height(&self) -> u32;
     // fn chain_id(&self) -> &ChainId;
 }
 

@@ -29,11 +29,11 @@ impl<'a, DB, SK> From<&'a mut MultiBank<DB, SK, TransactionStore>> for SimpleBac
 #[derive(Debug)]
 pub struct SimpleContext<'a, DB, SK> {
     multi_store: SimpleBackend<'a, DB, SK>,
-    height: u64,
+    height: u32,
 }
 
 impl<'a, DB, SK> SimpleContext<'a, DB, SK> {
-    pub fn new(multi_store: SimpleBackend<'a, DB, SK>, height: u64) -> Self {
+    pub fn new(multi_store: SimpleBackend<'a, DB, SK>, height: u32) -> Self {
         Self {
             multi_store,
             height,
@@ -44,7 +44,7 @@ impl<'a, DB, SK> SimpleContext<'a, DB, SK> {
 impl<'a, DB, SK> SimpleContext<'a, DB, SK> {}
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for SimpleContext<'_, DB, SK> {
-    fn height(&self) -> u64 {
+    fn height(&self) -> u32 {
         self.height
     }
 
