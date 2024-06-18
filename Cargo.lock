@@ -1710,6 +1710,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "gaia-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "auth",
+ "axum 0.7.5",
+ "bank",
+ "bytes",
+ "clap",
+ "data-encoding",
+ "gears",
+ "gears-derive",
+ "ibc-proto 0.33.0",
+ "ibc-rs",
+ "prost 0.11.9",
+ "rayon",
+ "serde",
+ "serde_json",
+ "staking",
+ "strum",
+ "tonic",
+ "tonic-reflection",
+ "tower-layer",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "gears"
 version = "0.1.0"
 dependencies = [
