@@ -15,7 +15,7 @@ pub struct GovGenesisState {
     pub starting_proposal_id: u64,
     pub deposits: Vec<MsgDeposit>,
     pub votes: Vec<MsgVoteWeighted>,
-    pub proposals: Vec<Proposal>,
+    pub proposals: Vec<Proposal>, 
     pub params: GovParams,
 }
 
