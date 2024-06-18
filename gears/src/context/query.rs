@@ -12,7 +12,7 @@ use super::{InfallibleContext, QueryableContext};
 
 pub struct QueryContext<DB, SK> {
     multi_store: QueryMultiStore<DB, SK>,
-    pub(crate) height: u64,
+    pub(crate) height: u32,
     pub(crate) chain_id: ChainId,
 }
 
@@ -24,7 +24,7 @@ impl<DB: Database, SK: StoreKey> QueryContext<DB, SK> {
     ) -> Result<Self, KVStoreError> {
         Ok(QueryContext {
             multi_store,
-            height: version as u64, // TODO:
+            height: version,
             chain_id: ChainId::new("todo-900").expect("default should be valid"),
         })
     }
@@ -41,7 +41,7 @@ impl<DB: Database, SK: StoreKey> QueryContext<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for QueryContext<DB, SK> {
-    fn height(&self) -> u64 {
+    fn height(&self) -> u32 {
         self.height
     }
 

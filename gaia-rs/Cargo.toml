@@ -14,6 +14,7 @@ bank = { path = "../x/bank" }
 ibc-rs = { path = "../x/ibc-rs" }
 gears = { path = "../gears", features = ["cli", "xmods", "rocksdb"] }
 gears-derive = { path = "../gears-derive" }
+staking = { path = "../x/staking" }
 
 #newtypes
 bytes = { workspace = true }

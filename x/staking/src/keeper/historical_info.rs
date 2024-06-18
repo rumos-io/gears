@@ -7,7 +7,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -23,9 +23,9 @@ impl<
         // over the historical entries starting from the most recent version to be pruned
         // and then return at the first empty entry.
 
-        if ctx.height() >= entry_num as u64 {
+        if ctx.height() >= entry_num {
             // if (ctx.height() as i64 - entry_num as i64) >= 0 {
-            for i in (0..=(ctx.height() - entry_num as u64)).rev() {
+            for i in (0..=(ctx.height() - entry_num)).rev() {
                 if let Some(_info) = self.historical_info(ctx, i).unwrap_gas() {
                     self.delete_historical_info(ctx, i).unwrap();
                 } else {
@@ -56,7 +56,7 @@ impl<
     pub fn historical_info<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-        height: u64,
+        height: u32,
     ) -> Result<Option<HistoricalInfo>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(HISTORICAL_INFO_KEY);
@@ -70,7 +70,7 @@ impl<
     pub fn delete_historical_info<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        height: u64,
+        height: u32,
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(HISTORICAL_INFO_KEY);
@@ -82,7 +82,7 @@ impl<
     pub fn set_historical_info<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        height: u64,
+        height: u32,
         info: &HistoricalInfo,
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);

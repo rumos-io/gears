@@ -81,10 +81,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             data: AI::APP_NAME.to_owned(),
             version: AI::APP_VERSION.to_owned(),
             app_version: 1,
-            last_block_height: self
-                .block_height()
-                .try_into()
-                .expect("can't believe we made it this far"),
+            last_block_height: self.block_height(),
             last_block_app_hash: self.get_last_commit_hash().to_vec().into(),
         }
     }
@@ -101,10 +98,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
                 key: request.data,
                 value: res,
                 proof_ops: None,
-                height: self
-                    .block_height()
-                    .try_into()
-                    .expect("can't believe we made it this far"),
+                height: self.block_height(),
                 codespace: "".to_string(),
             },
             Err(e) => ResponseQuery {
@@ -226,9 +220,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         ResponseCommit {
             data: hash.to_vec().into(),
-            retain_height: (height - 1)
-                .try_into()
-                .expect("can't believe we made it this far"),
+            retain_height: (height - 1), // TODO: check if this is correct - why -1?
         }
     }
 

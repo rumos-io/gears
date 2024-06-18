@@ -36,7 +36,7 @@ pub struct Envelope<M> {
     tip: Option<SendCoins>,
     tipper: Option<AccAddress>,
     gas_limit: u64,
-    timeout_height: u64,
+    timeout_height: u32,
     // TODO: need to add the fields below in:
     //other_signer: Vec<SignerInfo>,
     //extension_options: Vec<>,

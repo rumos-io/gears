@@ -47,7 +47,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
 
     fn build_ctx(
         &mut self,
-        height: u64,
+        height: u32,
         header: Header,
         consensus_params: ConsensusParams,
         fee: Option<&Fee>,

@@ -2,7 +2,7 @@ pub mod options;
 use std::{
     fmt::Debug,
     marker::PhantomData,
-    sync::{atomic::AtomicU64, Arc, RwLock},
+    sync::{atomic::AtomicU32, Arc, RwLock},
 };
 
 use crate::types::tx::TxMessage;
@@ -43,7 +43,7 @@ pub use params::{BlockParams, ConsensusParams, EvidenceParams, ValidatorParams};
 
 pub use query::*;
 
-static APP_HEIGHT: AtomicU64 = AtomicU64::new(0);
+static APP_HEIGHT: AtomicU32 = AtomicU32::new(0);
 
 #[derive(Debug, Clone)]
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
@@ -66,7 +66,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             params_subspace_key,
         };
 
-        let height = multi_store.head_version() as u64;
+        let height = multi_store.head_version();
         let ctx = SimpleContext::new((&mut multi_store).into(), height);
 
         let max_gas = baseapp_params_keeper
@@ -74,10 +74,10 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .map(|e| e.max_gas)
             .unwrap_or_default();
 
-        block_height_set(multi_store.head_version() as u64);
+        block_height_set(multi_store.head_version());
 
         // For now let this func to exists only in new method
-        fn block_height_set(height: u64) {
+        fn block_height_set(height: u32) {
             let _ = APP_HEIGHT.swap(height, std::sync::atomic::Ordering::Relaxed);
         }
 
@@ -95,12 +95,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         }
     }
 
-    fn block_height(&self) -> u64 {
+    fn block_height(&self) -> u32 {
         APP_HEIGHT.load(std::sync::atomic::Ordering::Relaxed)
     }
 
-    fn block_height_increment(&self) -> u64 {
-        APP_HEIGHT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1 //TODO: wraps on overflow
+    fn block_height_increment(&self) -> u32 {
+        APP_HEIGHT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1 //TODO: wraps on overflow - should halt the chain (panic)
     }
 
     fn get_block_header(&self) -> Option<Header> {

@@ -676,7 +676,7 @@ impl<'a, 'b, DB: Database, SK: StoreKey, PSK: ParamsSubspaceKey> ExtClientValida
     ) -> Result<ibc::core::client::types::Height, ibc::core::handler::types::error::ContextError>
     {
         // TODO: check impl
-        Ok(Height::new(0, self.gears_ctx.height()).unwrap()) //TODO: unwrap
+        Ok(Height::new(0, self.gears_ctx.height().into()).unwrap()) //TODO: unwrap
     }
 
     fn consensus_state_heights(

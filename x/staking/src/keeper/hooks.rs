@@ -5,7 +5,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -51,7 +51,7 @@ impl<
         val_addr: &ValAddress,
     ) {
         if let Some(ref hooks) = self.hooks_keeper {
-            hooks.before_delegation_shares_modified::<DB, AK, CTX>(
+            hooks.before_delegation_shares_modified::<DB, CTX>(
                 ctx,
                 del_addr.clone(),
                 val_addr.clone(),

@@ -11,6 +11,7 @@ pub enum GaiaStoreKey {
     Bank,
     Auth,
     Params,
+    Staking,
     IBC,
     Capability,
 }
@@ -23,6 +24,7 @@ impl StoreKey for GaiaStoreKey {
             GaiaStoreKey::Bank => "bank",
             GaiaStoreKey::Auth => "acc",
             GaiaStoreKey::Params => "params",
+            GaiaStoreKey::Staking => "staking",
             GaiaStoreKey::IBC => "ibc",
             GaiaStoreKey::Capability => "capability",
         }
@@ -40,6 +42,7 @@ pub enum GaiaParamsStoreKey {
     Bank,
     Auth,
     BaseApp,
+    Staking,
     IBC,
     Capability,
 }
@@ -52,6 +55,7 @@ impl ParamsSubspaceKey for GaiaParamsStoreKey {
             Self::Bank => "bank/",
             Self::Auth => "auth/",
             Self::BaseApp => "baseapp/",
+            Self::Staking => "staking/",
             Self::IBC => "ibc/",
             Self::Capability => "capability/",
         }

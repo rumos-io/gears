@@ -10,6 +10,10 @@ use ibc_rs::client::cli::{
     query::IbcQueryCli,
     tx::{run_ibc_tx_command, IbcTxCli},
 };
+use staking::cli::{
+    query::StakingQueryCli,
+    tx::{run_staking_tx_command, StakingTxCli},
+};
 
 use crate::message::Message;
 
@@ -17,6 +21,8 @@ use crate::message::Message;
 pub enum GaiaTxCommands {
     /// Bank transaction subcommands
     Bank(BankTxCli),
+    /// Staking transaction subcommands
+    Staking(StakingTxCli),
     /// IBC transaction subcommands
     IBC(IbcTxCli),
 }
@@ -24,6 +30,9 @@ pub enum GaiaTxCommands {
 pub fn tx_command_handler(command: GaiaTxCommands, from_address: AccAddress) -> Result<Message> {
     match command {
         GaiaTxCommands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
+        GaiaTxCommands::Staking(args) => {
+            run_staking_tx_command(args, from_address).map(Message::Staking)
+        }
         GaiaTxCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::IBC),
     }
 }
@@ -34,6 +43,8 @@ pub enum GaiaQueryCommands {
     Bank(BankQueryCli),
     /// Querying commands for the auth module
     Auth(AuthQueryCli),
+    /// Querying commands for the auth module
+    Staking(StakingQueryCli),
     /// Querying commands for the ibc module
     Ibc(IbcQueryCli),
 }

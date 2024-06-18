@@ -9,6 +9,7 @@ use super::errors::CoinsError;
 
 mod inner {
     pub use core_types::base::coin::Coin;
+    pub use core_types::base::coin::IntProto;
 }
 
 /// Coin defines a token with a denomination and an amount.
@@ -62,3 +63,28 @@ impl FromStr for Coin {
         Ok(Coin { denom, amount })
     }
 }
+
+/// Uint256Proto is a proto wrapper around Uint256 to allow for proto serialization.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Uint256Proto {
+    pub uint: Uint256,
+}
+
+impl TryFrom<inner::IntProto> for Uint256Proto {
+    type Error = CoinsError;
+
+    fn try_from(value: inner::IntProto) -> Result<Self, Self::Error> {
+        let uint = Uint256::from_str(&value.int).map_err(|e| CoinsError::Uint(e.to_string()))?;
+        Ok(Uint256Proto { uint })
+    }
+}
+
+impl From<Uint256Proto> for inner::IntProto {
+    fn from(value: Uint256Proto) -> inner::IntProto {
+        Self {
+            int: value.uint.to_string(),
+        }
+    }
+}
+
+impl Protobuf<inner::IntProto> for Uint256Proto {}

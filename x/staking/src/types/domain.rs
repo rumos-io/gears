@@ -54,12 +54,6 @@ impl HistoricalInfo {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Clone, Deserialize, Serialize)]
-pub struct Pool {
-    pub not_bonded_tokens: Uint256,
-    pub bonded_tokens: Uint256,
-}
-
 /// Last validator power, needed for validator set update logic
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct LastValidatorPower {

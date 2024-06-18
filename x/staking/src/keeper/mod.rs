@@ -1,8 +1,8 @@
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
     traits::*,
-    BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool,
-    Redelegation, StakingParamsKeeper, UnbondingDelegation, Validator,
+    BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
+    StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use chrono::Utc;
 use gears::{
@@ -41,6 +41,7 @@ mod bonded;
 mod delegation;
 mod historical_info;
 mod hooks;
+mod mock_hook_keeper;
 mod query;
 mod redelegation;
 mod tx;
@@ -49,14 +50,15 @@ mod unbonding;
 mod validator;
 mod validators_and_total_power;
 
-#[allow(dead_code)]
+pub use mock_hook_keeper::*;
+
 #[derive(Debug, Clone)]
 pub struct Keeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
     BK: BankKeeper<SK, M>,
-    KH: KeeperHooks<SK, M>,
+    KH: KeeperHooks<SK, AK, M>,
     M: Module,
 > {
     store_key: SK,
@@ -73,7 +75,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -82,6 +84,7 @@ impl<
         params_subspace_key: PSK,
         auth_keeper: AK,
         bank_keeper: BK,
+        hooks_keeper: Option<KH>,
         bonded_module: M,
         not_bonded_module: M,
     ) -> Self {
@@ -94,7 +97,7 @@ impl<
             auth_keeper,
             bank_keeper,
             staking_params_keeper,
-            hooks_keeper: None,
+            hooks_keeper,
             bonded_module,
             not_bonded_module,
         }
@@ -111,7 +114,6 @@ impl<
         // TODO
         // ctx = ctx.WithBlockHeight(1 - sdk.ValidatorUpdateDelay)
 
-        self.set_pool(ctx, genesis.pool);
         self.set_last_total_power(ctx, genesis.last_total_power)
             .expect(CTX_NO_GAS_UNWRAP);
         self.staking_params_keeper.set(ctx, genesis.params.clone());
@@ -181,14 +183,22 @@ impl<
             }
         }
 
-        let bonded_coins = vec![Coin {
-            denom: genesis.params.bond_denom.clone(),
-            amount: bonded_tokens,
-        }];
-        let not_bonded_coins = vec![Coin {
-            denom: genesis.params.bond_denom,
-            amount: not_bonded_tokens,
-        }];
+        let bonded_coins = if !bonded_tokens.is_zero() {
+            vec![Coin {
+                denom: genesis.params.bond_denom.clone(),
+                amount: bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
+        let not_bonded_coins = if !not_bonded_tokens.is_zero() {
+            vec![Coin {
+                denom: genesis.params.bond_denom,
+                amount: not_bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
 
         let bonded_balance = self
             .bank_keeper
@@ -197,7 +207,7 @@ impl<
         if bonded_balance
             .clone()
             .into_iter()
-            .any(|e| e.amount.is_zero())
+            .all(|e| e.amount.is_zero())
         {
             self.auth_keeper
                 .check_create_new_module_account(ctx, &self.bonded_module)
@@ -220,7 +230,7 @@ impl<
         if not_bonded_balance
             .clone()
             .into_iter()
-            .any(|e| e.amount.is_zero())
+            .all(|e| e.amount.is_zero())
         {
             self.auth_keeper
                 .check_create_new_module_account(ctx, &self.not_bonded_module)
@@ -253,13 +263,6 @@ impl<
             res = self.apply_and_return_validator_set_updates(ctx).unwrap();
         }
         res
-    }
-
-    pub fn set_pool<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, pool: Pool) {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut pool_store = store.prefix_store_mut(POOL_KEY);
-        let pool = serde_json::to_vec(&pool).expect(SERDE_ENCODING_DOMAIN_TYPE);
-        pool_store.set(pool.clone(), pool);
     }
 
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block
@@ -306,20 +309,20 @@ impl<
                 r#type: EVENT_TYPE_COMPLETE_UNBONDING.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&balances)
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&balances)
                             .expect(SERDE_ENCODING_DOMAIN_TYPE)
                             .into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: val_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: val_addr_str.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_DELEGATOR.as_bytes().into(),
-                        value: del_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_DELEGATOR.into(),
+                        value: del_addr_str.into(),
                         index: false,
                     },
                 ],
@@ -346,25 +349,25 @@ impl<
                 r#type: EVENT_TYPE_COMPLETE_REDELEGATION.to_string(),
                 attributes: vec![
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_AMOUNT.as_bytes().into(),
-                        value: serde_json::to_vec(&balances)
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&balances)
                             .expect(SERDE_ENCODING_DOMAIN_TYPE)
                             .into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_DELEGATOR.as_bytes().into(),
-                        value: del_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_DELEGATOR.into(),
+                        value: del_addr_str.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: val_src_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: val_src_addr_str.into(),
                         index: false,
                     },
                     EventAttribute {
-                        key: ATTRIBUTE_KEY_VALIDATOR.as_bytes().into(),
-                        value: val_dst_addr_str.as_bytes().to_vec().into(),
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: val_dst_addr_str.into(),
                         index: false,
                     },
                 ],
@@ -392,7 +395,7 @@ impl<
         &self,
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
-        let params = self.staking_params_keeper.try_get(ctx)?;
+        let params = self.staking_params_keeper.get(ctx);
         let max_validators = params.max_validators;
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
@@ -506,6 +509,7 @@ impl<
         if !updates.is_empty() {
             self.set_last_total_power(ctx, Uint256::from_u128(total_power as u128))?;
         }
+
         Ok(updates)
     }
 
@@ -561,18 +565,13 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.try_get(ctx)?;
-                // TODO: consider to work with time in Gears
-                let duration = chrono::TimeDelta::new(
-                    params.unbonding_time.seconds,
-                    params.unbonding_time.nanos as u32,
-                )
-                .unwrap();
+                let duration = chrono::TimeDelta::nanoseconds(params.unbonding_time);
                 let time = ctx.get_time();
                 // TODO: consider to work with time in Gears
                 let time =
                     chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
                 let completion_time = time + duration;
-                let height = ctx.height();
+                let height = ctx.height() as u64;
                 // TODO: consider to work with time in Gears
                 let completion_time = Timestamp {
                     seconds: completion_time.timestamp(),

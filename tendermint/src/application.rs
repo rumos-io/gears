@@ -47,9 +47,7 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
     }
 
     /// Provide information about the ABCI application.
-    fn info(&self, _request: RequestInfo) -> ResponseInfo {
-        Default::default()
-    }
+    fn info(&self, _request: RequestInfo) -> ResponseInfo;
 
     /// Called once upon genesis.
     fn init_chain(&self, _request: RequestInitChain<G>) -> ResponseInitChain {
@@ -57,9 +55,7 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
     }
 
     /// Query the application for data at the current or past height.
-    fn query(&self, _request: RequestQuery) -> ResponseQuery {
-        Default::default()
-    }
+    fn query(&self, _request: RequestQuery) -> ResponseQuery;
 
     /// Check the given transaction before putting it into the local mempool.
     fn check_tx(&self, _request: RequestCheckTx) -> ResponseCheckTx {
@@ -87,9 +83,7 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
     }
 
     /// Commit the current state at the current height.
-    fn commit(&self) -> ResponseCommit {
-        Default::default()
-    }
+    fn commit(&self) -> ResponseCommit;
 
     /// Used during state sync to discover available snapshots on peers.
     fn list_snapshots(&self) -> ResponseListSnapshots {

@@ -1,6 +1,6 @@
 use crate::consts::{
     error::TIMESTAMP_NANOS_EXPECT,
-    keeper::{HISTORICAL_INFO_KEY, VALIDATORS_QUEUE_KEY},
+    keeper::{HISTORICAL_INFO_KEY, VALIDATOR_QUEUE_KEY},
 };
 use chrono::Utc;
 use gears::{
@@ -27,7 +27,7 @@ pub fn length_prefixed_val_del_addrs_key(
     prefix
 }
 
-pub fn historical_info_key(height: u64) -> Vec<u8> {
+pub fn historical_info_key(height: u32) -> Vec<u8> {
     let mut res = Vec::with_capacity(9);
     res.extend_from_slice(&HISTORICAL_INFO_KEY);
     res.extend_from_slice(&height.to_le_bytes());
@@ -41,7 +41,7 @@ pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: u
         .expect(TIMESTAMP_NANOS_EXPECT)
         .to_le_bytes();
 
-    let mut bz = VALIDATORS_QUEUE_KEY.to_vec();
+    let mut bz = VALIDATOR_QUEUE_KEY.to_vec();
     bz.extend_from_slice(&(time_bz.len() as u64).to_le_bytes());
     bz.extend_from_slice(&time_bz);
     bz.extend_from_slice(&height_bz);
@@ -51,8 +51,8 @@ pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: u
 pub(super) fn parse_validator_queue_key(
     key: &[u8],
 ) -> anyhow::Result<(chrono::DateTime<Utc>, u64)> {
-    let prefix_len = VALIDATORS_QUEUE_KEY.len();
-    if key[..prefix_len] != VALIDATORS_QUEUE_KEY {
+    let prefix_len = VALIDATOR_QUEUE_KEY.len();
+    if key[..prefix_len] != VALIDATOR_QUEUE_KEY {
         return Err(
             AppError::Custom("Invalid validators queue key. Invalid prefix.".into()).into(),
         );

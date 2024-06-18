@@ -7,7 +7,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -124,7 +124,7 @@ impl<
         block_height: u64,
     ) -> HashMap<Vec<u8>, Vec<String>> {
         let store = ctx.infallible_store(&self.store_key);
-        let iterator = store.prefix_store(VALIDATORS_QUEUE_KEY);
+        let iterator = store.prefix_store(VALIDATOR_QUEUE_KEY);
 
         let mut res = HashMap::new();
 

@@ -14,7 +14,7 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -25,7 +25,7 @@ impl<
         val_addr: ValAddress,
     ) -> Option<UnbondingDelegation> {
         let store = InfallibleContext::infallible_store(ctx, &self.store_key);
-        let delegations_store = store.prefix_store(UNBONDING_DELEGATIONS_KEY);
+        let delegations_store = store.prefix_store(UNBONDING_DELEGATION_KEY);
         let mut key = Vec::from(del_addr);
         key.extend_from_slice(&Vec::from(val_addr));
         if let Some(bytes) = delegations_store.get(&key) {
@@ -42,7 +42,7 @@ impl<
         delegation: &UnbondingDelegation,
     ) {
         let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATION_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.set(
@@ -57,7 +57,7 @@ impl<
         delegation: &UnbondingDelegation,
     ) -> Option<Vec<u8>> {
         let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATIONS_KEY);
+        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATION_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.delete(&key)
@@ -200,7 +200,7 @@ impl<
         let block_time =
             chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
 
-        let block_height = ctx.height();
+        let block_height = ctx.height() as u64;
 
         // unbondingValIterator will contains all validator addresses indexed under
         // the ValidatorQueueKey prefix. Note, the entire index key is composed as
@@ -241,7 +241,7 @@ impl<
             }
 
             let store = ctx.kv_store_mut(&self.store_key);
-            let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
+            let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
             unbonding_val_map.keys().for_each(|k| {
                 store.delete(k);
             });
@@ -364,7 +364,7 @@ impl<
 
         // set the unbonding completion time and completion height appropriately
         validator.unbonding_time = ctx.get_time();
-        validator.unbonding_height = ctx.height();
+        validator.unbonding_height = ctx.height() as u64;
 
         // save the now unbonded validator record and power index
         self.set_validator(ctx, validator)?;
@@ -386,7 +386,7 @@ impl<
         addrs: Vec<String>,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
+        let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let end_time =
@@ -407,7 +407,7 @@ impl<
         end_height: u64,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut store = store.prefix_store_mut(VALIDATORS_QUEUE_KEY);
+        let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let end_time =
@@ -424,7 +424,7 @@ impl<
         unbonding_height: u64,
     ) -> Result<Vec<String>, GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let store = store.prefix_store(VALIDATORS_QUEUE_KEY);
+        let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
 
         if let Some(bz) = store.get(&validator_queue_key(
             // TODO: consider to move the DataTime type and work with timestamps into Gears

@@ -182,30 +182,36 @@ impl Protobuf<QueryRedelegationRequestRaw> for QueryRedelegationRequest {}
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct QueryValidatorResponse {
     /// Full data about validator.
-    pub validator: Validator,
+    pub validator: Option<Validator>,
 }
 
 impl TryFrom<QueryValidatorResponseRaw> for QueryValidatorResponse {
     type Error = CoreError;
 
     fn try_from(raw: QueryValidatorResponseRaw) -> Result<Self, Self::Error> {
-        let validator: Validator = Validator::decode_vec(&raw.validator)
-            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
+        if let Some(bytes) = raw.validator {
+            let validator: Validator =
+                Validator::decode_vec(&bytes).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
 
-        Ok(QueryValidatorResponse { validator })
+            Ok(QueryValidatorResponse {
+                validator: Some(validator),
+            })
+        } else {
+            Ok(QueryValidatorResponse { validator: None })
+        }
     }
 }
 
 #[derive(Clone, PartialEq, Message)]
 pub struct QueryValidatorResponseRaw {
-    #[prost(bytes)]
-    pub validator: Vec<u8>,
+    #[prost(bytes, optional)]
+    pub validator: Option<Vec<u8>>,
 }
 
 impl From<QueryValidatorResponse> for QueryValidatorResponseRaw {
     fn from(query: QueryValidatorResponse) -> QueryValidatorResponseRaw {
         Self {
-            validator: query.validator.encode_vec(),
+            validator: query.validator.map(|v| v.encode_vec()),
         }
     }
 }
@@ -259,21 +265,22 @@ impl Protobuf<DelegationResponseRaw> for DelegationResponse {}
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct QueryDelegationResponse {
     /// Delegation with balance.
-    pub delegation_response: DelegationResponse,
+    pub delegation_response: Option<DelegationResponse>,
 }
 
 impl TryFrom<QueryDelegationResponseRaw> for QueryDelegationResponse {
     type Error = CoreError;
 
     fn try_from(raw: QueryDelegationResponseRaw) -> Result<Self, Self::Error> {
-        Ok(QueryDelegationResponse {
-            delegation_response: raw
-                .delegation_response
-                .ok_or(CoreError::MissingField(
-                    "Missing field 'delegation_response'.".into(),
-                ))?
-                .try_into()?,
-        })
+        if let Some(delegation_response) = raw.delegation_response {
+            Ok(QueryDelegationResponse {
+                delegation_response: Some(delegation_response.try_into()?),
+            })
+        } else {
+            Ok(QueryDelegationResponse {
+                delegation_response: None,
+            })
+        }
     }
 }
 
@@ -286,7 +293,7 @@ pub struct QueryDelegationResponseRaw {
 impl From<QueryDelegationResponse> for QueryDelegationResponseRaw {
     fn from(query: QueryDelegationResponse) -> Self {
         Self {
-            delegation_response: Some(query.delegation_response.into()),
+            delegation_response: query.delegation_response.map(Into::into),
         }
     }
 }

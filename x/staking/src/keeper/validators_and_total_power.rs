@@ -1,12 +1,17 @@
 use super::*;
-use gears::{context::InfallibleContext, store::database::ext::UnwrapCorrupt};
+use gears::error::IBC_ENCODE_UNWRAP;
+use gears::tendermint::types::proto::Protobuf;
+use gears::{
+    context::InfallibleContext, store::database::ext::UnwrapCorrupt,
+    types::base::coin::Uint256Proto,
+};
 
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        KH: KeeperHooks<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
@@ -32,7 +37,12 @@ impl<
         last_total_power: Uint256,
     ) -> Result<(), GasStoreErrors> {
         let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        store.set(LAST_TOTAL_POWER_KEY, last_total_power.to_be_bytes())
+        let val = Uint256Proto {
+            uint: last_total_power,
+        }
+        .encode_vec()
+        .expect(IBC_ENCODE_UNWRAP); // TODO:IBC;
+        store.set(LAST_TOTAL_POWER_KEY, val)
     }
 
     /// get the last validator set
@@ -46,7 +56,7 @@ impl<
         // TODO:D Handle error if you need
         for next in iterator.range(..) {
             let (k, v) = next?;
-            res.insert(k.to_vec(), serde_json::from_slice(&v)?);
+            res.insert(k.to_vec(), ValAddress::try_from(v.to_vec())?);
         }
         Ok(res)
     }
@@ -67,7 +77,7 @@ impl<
 
         validators_store.set(
             validator.key_by_power_index_key(power_reduction),
-            validator.operator_address.to_string().as_bytes().to_vec(),
+            Vec::from(validator.operator_address.clone()),
         )
     }
 
