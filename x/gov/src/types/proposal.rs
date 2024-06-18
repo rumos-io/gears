@@ -1,5 +1,5 @@
 use chrono::{DateTime, SubsecRound, Utc};
-use gears::{tendermint::types::time::Timestamp, types::base::send::SendCoins};
+use gears::types::base::send::SendCoins;
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
 
@@ -14,11 +14,11 @@ pub struct Proposal {
     pub content: Any,
     pub status: ProposalStatus,
     pub final_tally_result: TallyResult,
-    pub submit_time: Timestamp,
+    pub submit_time: DateTime<Utc>,
     pub deposit_end_time: DateTime<Utc>,
     pub total_deposit: SendCoins,
-    pub voting_start_time: (),
-    pub voting_end_time: (),
+    pub voting_start_time: Option<DateTime<Utc>>,
+    pub voting_end_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
