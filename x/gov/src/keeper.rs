@@ -462,6 +462,15 @@ fn deposit_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
     )
 }
 
+fn deposit_del<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
+    proposal_id: u64,
+) -> Result<bool, GasStoreErrors> 
+{
+todo!()
+}
+
 fn _vote_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
     ctx: &CTX,
     store_key: &SK,
