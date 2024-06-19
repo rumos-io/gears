@@ -130,7 +130,7 @@ impl<
 
         let end = validator_queue_key(block_time, block_height);
         let mut previous_was_end = false;
-        for (k, v) in iterator.range(..).take_while(|(k, _)| {
+        for (k, v) in iterator.into_range(..).take_while(|(k, _)| {
             let is_not_end = **k != end;
             let ret_res = is_not_end && !previous_was_end;
             previous_was_end = !is_not_end;

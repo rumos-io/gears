@@ -31,10 +31,10 @@ impl<'a, DB> From<KVStoreMut<'a, DB>> for StoreMut<'a, DB> {
 }
 
 impl<'a, DB: Database> StoreMut<'a, DB> {
-    pub fn range(&'a self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> StoreRange<'a, DB> {
-        match &self.0 {
-            StoreMutBackend::Gas(var) => StoreRange::from(var.range(range)),
-            StoreMutBackend::Kv(var) => StoreRange::from(var.range(range)),
+    pub fn into_range(self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> StoreRange<'a, DB> {
+        match self.0 {
+            StoreMutBackend::Gas(var) => StoreRange::from(var.into_range(range)),
+            StoreMutBackend::Kv(var) => StoreRange::from(var.into_range(range)),
         }
     }
 

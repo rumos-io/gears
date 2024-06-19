@@ -23,7 +23,7 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
 
     fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX, //TODO: why is this mutable?
+        ctx: &CTX,
         addr: AccAddress,
     ) -> Result<Vec<Coin>, GasStoreErrors>;
 
