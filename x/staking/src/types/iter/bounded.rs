@@ -7,7 +7,7 @@ use gears::{
 
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
-    Validator,
+    BondStatus, Validator,
 };
 
 #[derive(Debug)]
@@ -40,12 +40,15 @@ impl<'a, DB: Database> Iterator for BoundedValidatorsIterator<'a, DB> {
         if let Some(var) = self.inner.next() {
             match var {
                 Ok((key, value)) => {
-                    self.position += 1;
+                    let validator: Validator =
+                        serde_json::from_slice(&value).expect(SERDE_ENCODING_DOMAIN_TYPE);
 
-                    Some(Ok((
-                        key,
-                        serde_json::from_slice(&value).expect(SERDE_ENCODING_DOMAIN_TYPE),
-                    )))
+                    if validator.status == BondStatus::Bonded {
+                        self.position += 1;
+                        Some(Ok((key, validator)))
+                    } else {
+                        self.next()
+                    }
                 }
                 Err(err) => Some(Err(err)),
             }
