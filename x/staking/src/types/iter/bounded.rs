@@ -1,24 +1,25 @@
 use gears::{
     store::database::Database,
     types::store::{gas::errors::GasStoreErrors, kv::Store},
+    x::types::validator::BondStatus,
 };
 
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
-    BondStatus, Validator,
+    Validator,
 };
 
 #[derive(Debug)]
 pub struct BoundedValidatorsIterator {
     inner: Vec<Result<Validator, GasStoreErrors>>, // TODO: we missing double ended iterator implementation currently so instead load all validators and read from end...
     position: usize,
-    max_validator: usize,
+    max_validator: u32,
 }
 
 impl BoundedValidatorsIterator {
     pub fn new<DB: Database>(
         store: Store<'_, DB>,
-        max_validator: usize,
+        max_validator: u32,
     ) -> BoundedValidatorsIterator {
         BoundedValidatorsIterator {
             inner: store
@@ -40,7 +41,7 @@ impl Iterator for BoundedValidatorsIterator {
     type Item = Result<Validator, GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.position >= self.max_validator {
+        if self.position >= self.max_validator as usize {
             return None; // TODO:NOW Option or Error?
         }
 

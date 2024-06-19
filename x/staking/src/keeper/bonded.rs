@@ -1,5 +1,29 @@
+use crate::iter::bounded::BoundedValidatorsIterator;
+
 use super::*;
-use gears::types::store::gas::errors::GasStoreErrors;
+use gears::{types::store::gas::errors::GasStoreErrors, x::keepers::staking::StakingKeeper};
+
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M>,
+        BK: BankKeeper<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
+        M: Module,
+    > StakingKeeper<SK, M> for Keeper<SK, PSK, AK, BK, KH, M>
+{
+    type Validator = Validator;
+
+    fn bonded_validators_by_power<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+    ) -> Result<impl Iterator<Item = Result<Validator, GasStoreErrors>>, GasStoreErrors> {
+        Ok(BoundedValidatorsIterator::new(
+            ctx.kv_store(&self.store_key),
+            self.staking_params_keeper.try_get(ctx)?.max_validators,
+        ))
+    }
+}
 
 impl<
         SK: StoreKey,
