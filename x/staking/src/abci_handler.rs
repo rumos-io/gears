@@ -72,6 +72,10 @@ impl<
     }
 
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+        // TODO: should it be a part of gears genesis handler?
+        if let Err(e) = genesis.validate() {
+            panic!("Something went wrong with staking genesis state.\n{}", e);
+        }
         self.keeper.init_genesis(ctx, genesis);
     }
 

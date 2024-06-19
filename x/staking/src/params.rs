@@ -1,5 +1,6 @@
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
+    error::AppError,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
     types::{denom::Denom, store::gas::errors::GasStoreErrors},
@@ -117,8 +118,41 @@ impl ParamsDeserialize for Params {
 }
 
 impl Params {
-    pub fn validate(&self) -> Result<(), String> {
-        todo!()
+    /// validate a set of params
+    pub fn validate(&self) -> Result<(), AppError> {
+        self.validate_unbonding_time()?;
+        self.validate_max_validators()?;
+        self.validate_max_entries()
+    }
+
+    fn validate_unbonding_time(&self) -> Result<(), AppError> {
+        if self.unbonding_time < 0 {
+            return Err(AppError::Custom(format!(
+                "unbonding time must be positive: {}",
+                self.unbonding_time
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_max_validators(&self) -> Result<(), AppError> {
+        if self.max_validators == 0 {
+            return Err(AppError::Custom(format!(
+                "max validators must be positive: {}",
+                self.max_validators
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_max_entries(&self) -> Result<(), AppError> {
+        if self.max_entries == 0 {
+            return Err(AppError::Custom(format!(
+                "max entries must be positive: {}",
+                self.max_entries
+            )));
+        }
+        Ok(())
     }
 }
 
