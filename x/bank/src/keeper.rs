@@ -87,6 +87,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
     ) -> Result<Vec<Coin>, GasStoreErrors> {
         unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
     }
+
+    fn coins_burn<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        _module: &M,
+        _deposit: &SendCoins,
+    ) -> Result<(), AppError> {
+        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+    }
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
