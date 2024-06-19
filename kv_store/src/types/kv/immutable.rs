@@ -24,7 +24,7 @@ pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
 impl<'a, DB: Database> KVStore<'a, DB> {
     pub fn range(
-        &self,
+        self,
         range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
     ) -> Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
         match self.0 {

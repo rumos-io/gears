@@ -31,14 +31,16 @@ impl<'a, DB> From<ImmutablePrefixStore<'a, DB>> for PrefixStore<'a, DB> {
     }
 }
 
-impl<DB: Database> PrefixStore<'_, DB> {
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> StoreRange<'_, DB> {
-        match &self.0 {
+impl<'a, DB: Database> PrefixStore<'a, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> StoreRange<'a, DB> {
+        match self.0 {
             PrefixStoreBackend::Gas(var) => var.range(range).into(),
             PrefixStoreBackend::Kv(var) => var.range(range).into(),
         }
     }
+}
 
+impl<DB: Database> PrefixStore<'_, DB> {
     pub fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         match &self.0 {
             PrefixStoreBackend::Gas(var) => Ok(var.get(k)?),

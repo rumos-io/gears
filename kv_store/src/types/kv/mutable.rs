@@ -33,10 +33,10 @@ impl<'a, DB: Database> KVStoreMut<'a, DB> {
     }
 
     pub fn range(
-        &'a self,
+        self,
         range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
     ) -> Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
-        match &self.0 {
+        match self.0 {
             KVStoreBackendMut::Commit(var) => var.range(range),
             KVStoreBackendMut::Cache(var) => var.range(range),
         }

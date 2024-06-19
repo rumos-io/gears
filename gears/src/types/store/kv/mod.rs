@@ -33,8 +33,8 @@ impl<'a, DB> From<KVStore<'a, DB>> for Store<'a, DB> {
 }
 
 impl<'a, DB: Database> Store<'a, DB> {
-    pub fn range(&'a self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> StoreRange<'a, DB> {
-        match &self.0 {
+    pub fn range(self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> StoreRange<'a, DB> {
+        match self.0 {
             StoreBackend::Gas(var) => StoreRange::from(var.range(range)),
             StoreBackend::Kv(var) => StoreRange::from(var.range(range)),
         }
