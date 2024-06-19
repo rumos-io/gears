@@ -1,8 +1,6 @@
-use std::borrow::Cow;
-
 use gears::{
     store::database::Database,
-    types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
+    types::store::{gas::errors::GasStoreErrors, kv::Store},
 };
 
 use crate::{
@@ -11,41 +9,47 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct BoundedValidatorsIterator<'a, DB> {
-    inner: StoreRange<'a, DB>,
+pub struct BoundedValidatorsIterator {
+    inner: Vec<Result<Validator, GasStoreErrors>>,
     position: usize,
     max_validator: usize,
 }
 
-impl<'a, DB: Database> BoundedValidatorsIterator<'a, DB> {
-    pub fn new(store: Store<'a, DB>, max_validator: usize) -> BoundedValidatorsIterator<'a, DB> {
+impl BoundedValidatorsIterator {
+    pub fn new<DB: Database>(
+        store: Store<'_, DB>,
+        max_validator: usize,
+    ) -> BoundedValidatorsIterator {
         BoundedValidatorsIterator {
             inner: store
                 .prefix_store(VALIDATORS_BY_POWER_INDEX_KEY)
-                .into_range(..),
+                .into_range(..)
+                .map(|this| {
+                    this.map(|(_, value)| {
+                        serde_json::from_slice(&value).expect(SERDE_ENCODING_DOMAIN_TYPE)
+                    })
+                })
+                .collect(),
             position: 0,
             max_validator,
         }
     }
 }
 
-impl<'a, DB: Database> Iterator for BoundedValidatorsIterator<'a, DB> {
-    type Item = Result<(Cow<'a, Vec<u8>>, Validator), GasStoreErrors>;
+impl Iterator for BoundedValidatorsIterator {
+    type Item = Result<Validator, GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.position >= self.max_validator {
             return None; // TODO: Option or Error?
         }
 
-        if let Some(var) = self.inner.next() {
+        if let Some(var) = self.inner.pop() {
             match var {
-                Ok((key, value)) => {
-                    let validator: Validator =
-                        serde_json::from_slice(&value).expect(SERDE_ENCODING_DOMAIN_TYPE);
-
+                Ok(validator) => {
                     if validator.status == BondStatus::Bonded {
                         self.position += 1;
-                        Some(Ok((key, validator)))
+                        Some(Ok(validator))
                     } else {
                         self.next()
                     }
