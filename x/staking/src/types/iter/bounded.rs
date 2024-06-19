@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct BoundedValidatorsIterator {
-    inner: Vec<Result<Validator, GasStoreErrors>>,
+    inner: Vec<Result<Validator, GasStoreErrors>>, // TODO: we missing double ended iterator implementation currently so instead load all validators and read from end...
     position: usize,
     max_validator: usize,
 }
@@ -41,7 +41,7 @@ impl Iterator for BoundedValidatorsIterator {
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.position >= self.max_validator {
-            return None; // TODO: Option or Error?
+            return None; // TODO:NOW Option or Error?
         }
 
         if let Some(var) = self.inner.pop() {
