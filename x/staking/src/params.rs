@@ -55,7 +55,6 @@ impl ParamsSerialize for Params {
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
         vec![
-            // TODO: remove unwrap
             (
                 KEY_UNBONDING_TIME,
                 format!("\"{}\"", self.unbonding_time).into_bytes(),
@@ -79,11 +78,10 @@ impl ParamsSerialize for Params {
 
 impl ParamsDeserialize for Params {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
-        // TODO: check unwraps
         let unbonding_time = ParamKind::I64
             .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
             .signed_64()
-            .unwrap();
+            .expect("param serialized as i64 should be deserialized without errors");
         let max_validators = String::from_utf8(fields.remove(KEY_MAX_VALIDATORS).unwrap())
             .expect("should be valid utf-8")
             .parse::<u32>()
@@ -99,7 +97,7 @@ impl ParamsDeserialize for Params {
         let bond_denom = ParamKind::String
             .parse_param(fields.remove(KEY_BOND_DENOM).unwrap())
             .string()
-            .unwrap()
+            .expect("param serialized as string should be deserialized without errors")
             .strip_prefix('\"')
             .unwrap()
             .strip_suffix('\"')

@@ -91,11 +91,13 @@ impl<
                 dst_validator_address: None,
                 pagination: _,
             } => {
+                // TODO: add logic for a query with only src validator
                 //     redels = k.GetRedelegationsFromSrcValidator(ctx, params.SrcValidatorAddr)
                 todo!()
             }
             /* */
             _ => {
+                // TODO: add logic for a query to get all redelegations
                 //     redels = k.GetAllRedelegations(ctx, params.DelegatorAddr, params.SrcValidatorAddr, params.DstValidatorAddr)
                 todo!()
             }

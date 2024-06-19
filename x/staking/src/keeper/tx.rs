@@ -46,7 +46,6 @@ impl<
         msg.description.ensure_length()?;
 
         let consensus_validators = &ctx.consensus_params().validator;
-        // TODO: discuss impl of `str_type`
         let pub_key_type = msg.pub_key.str_type();
         if !consensus_validators
             .pub_key_types

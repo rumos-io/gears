@@ -68,7 +68,7 @@ impl<
         self.set_validator_by_power_index(ctx, validator)?;
 
         // delete from queue if present
-        self.delete_validator_queue(ctx, validator)?;
+        self.delete_unbonding_validators_queue(ctx, validator)?;
         // trigger hook
         self.after_validator_bonded(ctx, validator);
 

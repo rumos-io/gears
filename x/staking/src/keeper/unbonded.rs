@@ -46,7 +46,6 @@ impl<
 
         // If the delegation is the operator of the validator and undelegating will decrease the validator's
         // self-delegation below their minimum, we jail the validator.
-        // TODO: check code `.to_uint_floor()`
         if is_validator_operator
             && !validator.jailed
             && validator
@@ -55,8 +54,9 @@ impl<
                 < validator.min_self_delegation
         {
             self.jail_validator(ctx, &mut validator)?;
-            // TODO: panic in sdk
-            validator = self.validator(ctx, &validator.operator_address)?.unwrap()
+            validator = self.validator(ctx, &validator.operator_address)?.expect(
+                "validator record must exists.\nPrevious step setup validator with the address.",
+            )
         }
 
         // remove the delegation

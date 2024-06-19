@@ -1,5 +1,8 @@
 use crate::{
-    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
+    consts::{
+        error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY,
+        proto::PRECISION_REUSE,
+    },
     Commission, CommissionRates, CommissionRaw, Description,
 };
 use chrono::Utc;
@@ -298,15 +301,12 @@ impl Validator {
         if self.tokens.is_zero() {
             return Err(AppError::Custom("insufficient shares".into()).into());
         }
-
         let mul = self
             .delegator_shares
             .checked_mul(Decimal256::from_atomics(amount, 0)?)?;
-        // TODO: check constant 18 in decimals
-        let precision_reuse = Decimal256::from_atomics(10u64, 0)?.checked_pow(18)?;
-        let mul2 = mul.checked_mul(precision_reuse)?;
+        let mul2 = mul.checked_mul(PRECISION_REUSE)?;
         let div = mul2.checked_div(Decimal256::from_atomics(self.tokens, 0)?)?;
-        Ok(div.checked_div(precision_reuse)?)
+        Ok(div.checked_div(PRECISION_REUSE)?)
     }
 
     /// RemoveDelShares removes delegator shares from a validator.
@@ -323,11 +323,9 @@ impl Validator {
         } else {
             // leave excess tokens in the validator
             // however fully use all the delegator shares
-            // TODO: infallible + floor
             let tokens = self.tokens_from_shares(del_shares).unwrap().to_uint_floor();
-            // TODO: check of negative result
+            // the library panics on substruct with overflow and this behavior is identical to sdk
             self.tokens -= tokens;
-            //         panic("attempting to remove more tokens than available in validator")
             tokens
         };
 

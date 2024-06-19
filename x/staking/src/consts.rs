@@ -44,15 +44,17 @@ pub(crate) mod keeper {
 }
 
 pub(crate) mod proto {
-    use gears::types::decimal256::Decimal256;
+    use gears::types::{decimal256::Decimal256, uint::Uint256};
 
     pub(crate) const MAX_MONIKER_LENGTH: usize = 70;
     pub(crate) const MAX_IDENTITY_LENGTH: usize = 3000;
     pub(crate) const MAX_WEBSITE_LENGTH: usize = 140;
     pub(crate) const MAX_SECURITY_CONTACT_LENGTH: usize = 140;
     pub(crate) const MAX_DETAILS_LENGTH: usize = 280;
-    // TODO: check
+    // TODO: maybe move to gears next constants
     pub(crate) const ONE_DEC: Decimal256 = Decimal256::one();
+    pub(crate) const PRECISION_REUSE: Decimal256 =
+        Decimal256::new(Uint256::from_u128(1_000_000_000_000_000_000));
 }
 
 pub(crate) mod error {

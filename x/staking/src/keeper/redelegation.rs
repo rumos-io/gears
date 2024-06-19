@@ -75,9 +75,11 @@ impl<
 
         let redelegation = self.set_redelegation_entry(
             ctx,
-            del_addr,
-            val_src_addr,
-            val_dst_addr,
+            DvvTriplet {
+                del_addr: del_addr.clone(),
+                val_src_addr: val_src_addr.clone(),
+                val_dst_addr: val_dst_addr.clone(),
+            },
             height,
             completion_time.clone(),
             return_amount,
@@ -122,14 +124,14 @@ impl<
 
     /// set_redelegation_entry adds an entry to the unbonding delegation at
     /// the given addresses. It creates the unbonding delegation if it does not exist
-    // TODO: consider to change signature
-    #[allow(clippy::too_many_arguments)]
     pub fn set_redelegation_entry<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        del_addr: &AccAddress,
-        val_src_addr: &ValAddress,
-        val_dst_addr: &ValAddress,
+        DvvTriplet {
+            del_addr,
+            val_src_addr,
+            val_dst_addr,
+        }: DvvTriplet,
         creation_height: u64,
         min_time: Timestamp,
         balance: Uint256,
@@ -142,15 +144,15 @@ impl<
             share_dst: shares_dst,
         };
         let redelegation = if let Some(mut redelegation) =
-            self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?
+            self.redelegation(ctx, &del_addr, &val_src_addr, &val_dst_addr)?
         {
             redelegation.add_entry(entry);
             redelegation
         } else {
             Redelegation {
-                delegator_address: del_addr.clone(),
-                validator_src_address: val_src_addr.clone(),
-                validator_dst_address: val_dst_addr.clone(),
+                delegator_address: del_addr,
+                validator_src_address: val_src_addr,
+                validator_dst_address: val_dst_addr,
                 entries: vec![entry],
             }
         };

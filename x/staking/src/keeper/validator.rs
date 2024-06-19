@@ -1,5 +1,5 @@
 use super::*;
-use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, validator_queue_key, Validator};
+use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Validator};
 use gears::{store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
@@ -115,60 +115,5 @@ impl<
         self.set_validator(ctx, validator)?;
         self.set_validator_by_power_index(ctx, validator)?;
         Ok(removed_tokens)
-    }
-
-    pub fn validator_queue_map<DB: Database, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        block_time: chrono::DateTime<Utc>,
-        block_height: u64,
-    ) -> HashMap<Vec<u8>, Vec<String>> {
-        let store = ctx.infallible_store(&self.store_key);
-        let iterator = store.prefix_store(VALIDATOR_QUEUE_KEY);
-
-        let mut res = HashMap::new();
-
-        let end = validator_queue_key(block_time, block_height);
-        let mut previous_was_end = false;
-        for (k, v) in iterator.into_range(..).take_while(|(k, _)| {
-            let is_not_end = **k != end;
-            let ret_res = is_not_end && !previous_was_end;
-            previous_was_end = !is_not_end;
-            ret_res
-        }) {
-            // TODO
-            res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
-        }
-        res
-    }
-
-    pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        validator: &mut Validator,
-    ) -> Result<(), GasStoreErrors> {
-        let addrs =
-            self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
-        let val_addr = validator.operator_address.to_string();
-        let new_addrs = addrs?
-            .into_iter()
-            .filter(|addr| val_addr != **addr)
-            .collect::<Vec<_>>();
-        if new_addrs.is_empty() {
-            self.delete_validator_queue_time_slice(
-                ctx,
-                validator.unbonding_time.clone(),
-                validator.unbonding_height,
-            )?;
-        } else {
-            self.set_unbonding_validators_queue(
-                ctx,
-                validator.unbonding_time.clone(),
-                validator.unbonding_height,
-                new_addrs,
-            )?;
-        }
-
-        Ok(())
     }
 }
