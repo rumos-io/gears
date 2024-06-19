@@ -318,24 +318,31 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
     }
 
     pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
-        let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
+        let _time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
             .unwrap(); // TODO
-        let store = ctx.kv_store(&self.store_key).into();
-        {
-            let inactive_iter = InactiveProposalIterator::new(&store, &time);
 
-            for var in inactive_iter {
-                let ((_proposal_id, _date), _val) = var.unwrap_gas();
-            }
-        }
+        // {
+        //     let inactive_iter = {
+        //         let store = ctx.kv_store(&self.store_key).into();
+        //         InactiveProposalIterator::new(&store, &time).collect::<Vec<_>>()
+        //     };
 
-        {
-            let active_iter = ActiveProposalIterator::new(&store, &time);
+        //     for var in inactive_iter {
+        //         let ((proposal_id, _date), _val) = var.unwrap_gas();
+        //         // proposal_del(ctx, &self.store_key, proposal_id).unwrap_gas();
+        //     }
+        // }
 
-            for var in active_iter {
-                let ((_proposal_id, _date), _val) = var.unwrap_gas();
-            }
-        }
+        // {
+        //     let active_iter = {
+        //         let store = ctx.kv_store(&self.store_key).into();
+        //         ActiveProposalIterator::new(&store, &time).collect::<Vec<_>>()
+        //     };
+
+        //     for var in active_iter {
+        //         let ((_proposal_id, _date), _val) = var.unwrap_gas();
+        //     }
+        // }
     }
 }
 
@@ -383,6 +390,34 @@ fn proposal_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         proposal.key(),
         serde_json::to_vec(proposal).expect(SERDE_JSON_CONVERSION),
     )
+}
+
+fn proposal_del<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
+    proposal_id: u64,
+) -> Result<bool, GasStoreErrors> {
+    let proposal = proposal_get(ctx, store_key, proposal_id)?;
+
+    if let Some(proposal) = proposal {
+        let mut store = ctx.kv_store_mut(store_key);
+
+        store.delete(&Proposal::inactive_queue_key(
+            proposal_id,
+            &proposal.deposit_end_time,
+        ))?;
+
+        store.delete(&Proposal::active_queue_key(
+            proposal_id,
+            &proposal.deposit_end_time,
+        ))?;
+
+        store.delete(&proposal.key())?;
+
+        Ok(true)
+    } else {
+        Ok(false)
+    }
 }
 
 fn deposit_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
