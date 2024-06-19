@@ -4,17 +4,16 @@ use anyhow::anyhow;
 use chrono::DateTime;
 use gears::{
     application::keepers::params::ParamsKeeper,
-    context::{init::InitContext, tx::TxContext, TransactionalContext},
+    context::{
+        block::BlockContext, init::InitContext, tx::TxContext, QueryableContext,
+        TransactionalContext,
+    },
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::proto::event::{Event, EventAttribute},
     types::{
         address::AccAddress,
-        store::gas::{
-            errors::GasStoreErrors,
-            ext::GasResultExt,
-            kv::{mutable::GasKVStoreMut, GasKVStore},
-        },
+        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{keepers::bank::BankKeeper, module::Module},
 };
@@ -24,7 +23,10 @@ use crate::{
     genesis::GovGenesisState,
     msg::{deposit::MsgDeposit, proposal::MsgSubmitProposal, weighted_vote::MsgVoteWeighted},
     params::GovParamsKeeper,
-    types::proposal::{Proposal, ProposalStatus},
+    types::proposal::{
+        active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
+        ProposalStatus,
+    },
 };
 
 const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
@@ -32,7 +34,7 @@ pub(crate) const KEY_PROPOSAL_PREFIX: [u8; 1] = [0x00];
 
 #[derive(Debug, Clone)]
 pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> {
-    pub store_key: SK,
+    store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
     gov_mod: M,
     bank_keeper: BK,
@@ -154,7 +156,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             amount,
         }: MsgDeposit,
     ) -> anyhow::Result<bool> {
-        let mut proposal = proposal_get(ctx.kv_store(&self.store_key), proposal_id)?
+        let mut proposal = proposal_get(ctx, &self.store_key, proposal_id)?
             .ok_or(anyhow!("unknown proposal {proposal_id}"))?;
 
         match proposal.status {
@@ -170,7 +172,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         )?;
 
         proposal.total_deposit = proposal.total_deposit.checked_add(amount.clone())?;
-        proposal_set(ctx.kv_store_mut(&self.store_key), &proposal)?;
+        proposal_set(ctx, &self.store_key, &proposal)?;
 
         let deposit_params = self.gov_params_keeper.try_get(ctx)?.deposit;
         let activated_voting_period = match proposal.status {
@@ -184,7 +186,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             _ => false,
         };
 
-        let deposit = match deposit_get(ctx.kv_store(&self.store_key), proposal_id, &depositor)? {
+        let deposit = match deposit_get(ctx, &self.store_key, proposal_id, &depositor)? {
             Some(mut deposit) => {
                 deposit.amount = deposit.amount.checked_add(amount)?;
                 deposit
@@ -214,7 +216,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             ],
         ));
 
-        deposit_set(ctx.kv_store_mut(&self.store_key), &deposit)?;
+        deposit_set(ctx, &self.store_key, &deposit)?;
 
         Ok(activated_voting_period)
     }
@@ -224,7 +226,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         ctx: &mut TxContext<'_, DB, SK>,
         vote: MsgVoteWeighted,
     ) -> anyhow::Result<()> {
-        let proposal = proposal_get(ctx.kv_store(&self.store_key), vote.proposal_id)?
+        let proposal = proposal_get(ctx, &self.store_key, vote.proposal_id)?
             .ok_or(anyhow!("unknown proposal {}", vote.proposal_id))?;
 
         match proposal.status {
@@ -232,7 +234,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             _ => Err(anyhow!("inactive proposal {}", vote.proposal_id)),
         }?;
 
-        vote_set(ctx.kv_store_mut(&self.store_key), &vote)?;
+        vote_set(ctx, &self.store_key, &vote)?;
 
         // TODO:NOW HOOK https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/vote.go#L31
 
@@ -268,7 +270,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
            https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/proposal.go#L14-L16
         */
 
-        let proposal_id = proposal_id_get(ctx.kv_store(&self.store_key))?;
+        let proposal_id = proposal_id_get(ctx, &self.store_key)?;
         let submit_time = ctx.header().time.clone();
         let deposit_period = self
             .gov_params_keeper
@@ -291,7 +293,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             voting_end_time: None,
         };
 
-        proposal_set(ctx.kv_store_mut(&self.store_key), &proposal)?;
+        proposal_set(ctx, &self.store_key, &proposal)?;
         let mut store = ctx.kv_store_mut(&self.store_key);
 
         store.set(
@@ -314,9 +316,35 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
 
         Ok(proposal.proposal_id)
     }
+
+    pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
+        let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
+            .unwrap(); // TODO
+        let store = ctx.kv_store(&self.store_key).into();
+        {
+            let inactive_iter = InactiveProposalIterator::new(&store, &time);
+
+            for var in inactive_iter {
+                let ((_proposal_id, _date), _val) = var.unwrap_gas();
+            }
+        }
+
+        {
+            let active_iter = ActiveProposalIterator::new(&store, &time);
+
+            for var in active_iter {
+                let ((_proposal_id, _date), _val) = var.unwrap_gas();
+            }
+        }
+    }
 }
 
-fn proposal_id_get<DB: Database>(store: GasKVStore<'_, DB>) -> Result<u64, GasStoreErrors> {
+fn proposal_id_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
+) -> Result<u64, GasStoreErrors> {
+    let store = ctx.kv_store(store_key);
+
     let bytes = store
         .get(PROPOSAL_ID_KEY.as_slice())?
         .expect("Invalid genesis, initial proposal ID hasn't been set");
@@ -326,11 +354,14 @@ fn proposal_id_get<DB: Database>(store: GasKVStore<'_, DB>) -> Result<u64, GasSt
     ))
 }
 
-fn proposal_get<DB: Database>(
-    store: GasKVStore<'_, DB>,
+fn proposal_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
     proposal_id: u64,
 ) -> Result<Option<Proposal>, GasStoreErrors> {
     let key = [KEY_PROPOSAL_PREFIX.as_slice(), &proposal_id.to_be_bytes()].concat();
+
+    let store = ctx.kv_store(store_key);
 
     let bytes = store.get(&key)?;
     match bytes {
@@ -341,18 +372,22 @@ fn proposal_get<DB: Database>(
     }
 }
 
-fn proposal_set<DB: Database>(
-    mut store: GasKVStoreMut<'_, DB>,
+fn proposal_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
     proposal: &Proposal,
 ) -> Result<(), GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
     store.set(
         proposal.key(),
         serde_json::to_vec(proposal).expect(SERDE_JSON_CONVERSION),
     )
 }
 
-fn deposit_get<DB: Database>(
-    store: GasKVStore<'_, DB>,
+fn deposit_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
     proposal_id: u64,
     depositor: &AccAddress,
 ) -> Result<Option<MsgDeposit>, GasStoreErrors> {
@@ -364,6 +399,8 @@ fn deposit_get<DB: Database>(
     ]
     .concat();
 
+    let store = ctx.kv_store(store_key);
+
     let bytes = store.get(&key)?;
     match bytes {
         Some(var) => Ok(Some(
@@ -373,18 +410,22 @@ fn deposit_get<DB: Database>(
     }
 }
 
-fn deposit_set<DB: Database>(
-    mut store: GasKVStoreMut<'_, DB>,
+fn deposit_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
     deposit: &MsgDeposit,
 ) -> Result<(), GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
     store.set(
         MsgDeposit::key(deposit.proposal_id, &deposit.depositor),
         serde_json::to_vec(deposit).expect(SERDE_JSON_CONVERSION),
     )
 }
 
-fn _vote_get<DB: Database>(
-    store: GasKVStore<'_, DB>,
+fn _vote_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
     proposal_id: u64,
     voter: &AccAddress,
 ) -> Result<Option<MsgVoteWeighted>, GasStoreErrors> {
@@ -396,6 +437,8 @@ fn _vote_get<DB: Database>(
     ]
     .concat();
 
+    let store = ctx.kv_store(store_key);
+
     let bytes = store.get(&key)?;
     match bytes {
         Some(var) => Ok(Some(
@@ -405,10 +448,13 @@ fn _vote_get<DB: Database>(
     }
 }
 
-fn vote_set<DB: Database>(
-    mut store: GasKVStoreMut<'_, DB>,
+fn vote_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
     vote: &MsgVoteWeighted,
 ) -> Result<(), GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
     store.set(
         MsgVoteWeighted::key(vote.proposal_id, &vote.voter),
         serde_json::to_vec(vote).expect(SERDE_JSON_CONVERSION),
