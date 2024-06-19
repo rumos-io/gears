@@ -1,7 +1,7 @@
 use crate::{
     BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
-    QueryDelegationResponse, QueryRedelegationRequest, QueryRedelegationResponse,
-    QueryValidatorRequest, QueryValidatorResponse,
+    QueryDelegationResponse, QueryParamsResponse, QueryRedelegationRequest,
+    QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
 };
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
@@ -36,14 +36,17 @@ pub enum StakingNodeQueryRequest {
     Validator(QueryValidatorRequest),
     Delegation(QueryDelegationRequest),
     Redelegation(QueryRedelegationRequest),
+    Params,
 }
 
 #[derive(Clone, Serialize)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum StakingNodeQueryResponse {
     Validator(QueryValidatorResponse),
     Delegation(QueryDelegationResponse),
     Redelegation(QueryRedelegationResponse),
+    Params(QueryParamsResponse),
 }
 
 impl<
@@ -107,6 +110,11 @@ impl<
                     .encode_vec()
                     .into())
             }
+
+            // TODO: original path is "/cosmos/staking/v1beta1/params". Do we need to use it?
+            "/cosmos.staking.v1beta1.Query/Params" => {
+                Ok(self.keeper.query_params(ctx).encode_vec().into())
+            }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
     }
@@ -125,6 +133,9 @@ impl<
             }
             StakingNodeQueryRequest::Redelegation(req) => {
                 StakingNodeQueryResponse::Redelegation(self.keeper.query_redelegations(ctx, req))
+            }
+            StakingNodeQueryRequest::Params => {
+                StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
             }
         }
     }

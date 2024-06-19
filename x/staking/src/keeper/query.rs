@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
-    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
-    QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
-    RedelegationEntryResponse, RedelegationResponse,
+    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryParamsResponse,
+    QueryRedelegationRequest, QueryRedelegationResponse, QueryValidatorRequest,
+    QueryValidatorResponse, RedelegationEntryResponse, RedelegationResponse,
 };
 use gears::context::query::QueryContext;
 
@@ -143,5 +143,10 @@ impl<
         }
 
         Ok(resp)
+    }
+
+    pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {
+        let params = self.staking_params_keeper.get(ctx);
+        QueryParamsResponse { params }
     }
 }

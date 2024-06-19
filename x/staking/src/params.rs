@@ -14,7 +14,7 @@ const KEY_MAX_ENTRIES: &str = "MaxEntries";
 const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
 const KEY_BOND_DENOM: &str = "BondDenom";
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Params {
     // sdk counts duration as simple i64 type that represents difference
     // between two instants
@@ -27,8 +27,8 @@ pub struct Params {
 
 impl Default for Params {
     fn default() -> Self {
-        // TODO: remove unwrap, maybe propose default value
-        let bond_denom = Denom::try_from("uatom".to_string()).unwrap();
+        let bond_denom =
+            Denom::try_from("uatom".to_string()).expect("default denom should be valid");
         Params {
             // 3 weeks
             unbonding_time: 60_000_000_000 * 60 * 24 * 7 * 3,
