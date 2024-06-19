@@ -54,7 +54,7 @@ impl<
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
         let mut res = HashMap::new();
         // TODO:D Handle error if you need
-        for next in iterator.range(..) {
+        for next in iterator.into_range(..) {
             let (k, v) = next?;
             res.insert(k.to_vec(), ValAddress::try_from(v.to_vec())?);
         }
@@ -115,7 +115,7 @@ impl<
         let mut last = HashMap::new();
         let store = ctx.infallible_store(&self.store_key);
         let store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
-        for (k, v) in store.range(..) {
+        for (k, v) in store.into_range(..) {
             let k: ValAddress = serde_json::from_slice(&k).unwrap_or_corrupt();
             last.insert(k.to_string(), v.to_vec());
         }
@@ -133,7 +133,7 @@ impl<
         // add the actual validator power sorted store
         let max_validators = self.staking_params_keeper.try_get(ctx)?.max_validators as usize;
         let mut validators = Vec::with_capacity(max_validators);
-        for (i, next) in validators_store.range(..).enumerate() {
+        for (i, next) in validators_store.into_range(..).enumerate() {
             let (_k, v) = next?;
             assert!(
                 i < max_validators,
