@@ -318,31 +318,35 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
     }
 
     pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
-        let _time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
+        let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
             .unwrap(); // TODO
 
-        // {
-        //     let inactive_iter = {
-        //         let store = ctx.kv_store(&self.store_key).into();
-        //         InactiveProposalIterator::new(&store, &time).collect::<Vec<_>>()
-        //     };
+        {
+            let inactive_iter = {
+                let store = ctx.kv_store(&self.store_key);
+                InactiveProposalIterator::new(&store.into(), &time)
+                    .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
+                    .collect::<Vec<_>>()
+            };
 
-        //     for var in inactive_iter {
-        //         let ((proposal_id, _date), _val) = var.unwrap_gas();
-        //         // proposal_del(ctx, &self.store_key, proposal_id).unwrap_gas();
-        //     }
-        // }
+            for var in inactive_iter {
+                let proposal_id = var.unwrap_gas();
+                proposal_del(ctx, &self.store_key, proposal_id).unwrap_gas();
+            }
+        }
 
-        // {
-        //     let active_iter = {
-        //         let store = ctx.kv_store(&self.store_key).into();
-        //         ActiveProposalIterator::new(&store, &time).collect::<Vec<_>>()
-        //     };
+        {
+            let active_iter = {
+                let store = ctx.kv_store(&self.store_key).into();
+                ActiveProposalIterator::new(&store, &time)
+                    .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
+                    .collect::<Vec<_>>()
+            };
 
-        //     for var in active_iter {
-        //         let ((_proposal_id, _date), _val) = var.unwrap_gas();
-        //     }
-        // }
+            for var in active_iter {
+                let _proposal_id = var.unwrap_gas();
+            }
+        }
     }
 }
 
