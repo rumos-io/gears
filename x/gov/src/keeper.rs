@@ -13,9 +13,14 @@ use gears::{
     tendermint::types::proto::event::{Event, EventAttribute},
     types::{
         address::AccAddress,
+        decimal256::Decimal256,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
-    x::{keepers::bank::BankKeeper, module::Module},
+    x::{
+        keepers::{bank::BankKeeper, staking::StakingKeeper},
+        module::Module,
+        types::validator::StakingValidator,
+    },
 };
 
 use crate::{
@@ -29,6 +34,7 @@ use crate::{
             active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
             ProposalStatus,
         },
+        validator::ValidatorGovInfo,
     },
 };
 
@@ -36,18 +42,36 @@ const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
 pub(crate) const KEY_PROPOSAL_PREFIX: [u8; 1] = [0x00];
 
 #[derive(Debug, Clone)]
-pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> {
+pub struct GovKeeper<
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BK: BankKeeper<SK, M>,
+    STK: StakingKeeper<SK, M>,
+> {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
     gov_mod: M,
     bank_keeper: BK,
+    staking_keeper: STK,
     _bank_marker: PhantomData<M>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
-    GovKeeper<SK, PSK, M, BK>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Module,
+        BK: BankKeeper<SK, M>,
+        STK: StakingKeeper<SK, M>,
+    > GovKeeper<SK, PSK, M, BK, STK>
 {
-    pub fn new(store_key: SK, params_subspace_key: PSK, gov_mod: M, bank_keeper: BK) -> Self {
+    pub fn new(
+        store_key: SK,
+        params_subspace_key: PSK,
+        gov_mod: M,
+        bank_keeper: BK,
+        staking_keeper: STK,
+    ) -> Self {
         Self {
             store_key,
             gov_params_keeper: GovParamsKeeper {
@@ -55,6 +79,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             },
             gov_mod,
             bank_keeper,
+            staking_keeper,
             _bank_marker: PhantomData,
         }
     }
@@ -352,6 +377,28 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             }
         }
     }
+
+    fn _tally<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<(), GasStoreErrors> {
+        // struct TallyBalance {}
+        let mut curr_validators = Vec::<ValidatorGovInfo>::new();
+
+        for validator in self.staking_keeper.bonded_validators_by_power(ctx)? {
+            let validator = validator?;
+
+            curr_validators.push(ValidatorGovInfo {
+                address: validator.operator().clone(),
+                bounded_tokens: validator.bonded_tokens().clone(),
+                delegator_shares: validator.delegator_shares().clone(),
+                delegator_deduction: Decimal256::zero(),
+                vote: Vec::new(),
+            });
+        }
+
+        Ok(())
+    }
 }
 
 fn proposal_id_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
@@ -472,10 +519,11 @@ fn deposit_del<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: BankKeeper<SK, M>,
+    STK: StakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
 >(
     ctx: &mut CTX,
-    keeper: &GovKeeper<SK, PSK, M, BK>,
+    keeper: &GovKeeper<SK, PSK, M, BK, STK>,
     proposal_id: u64,
 ) -> Result<(), GasStoreErrors> {
     let deposits = DepositIterator::new(ctx.kv_store(&keeper.store_key))

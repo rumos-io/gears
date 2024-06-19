@@ -16,7 +16,7 @@ impl<
 
     fn bonded_validators_by_power<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
     ) -> Result<impl Iterator<Item = Result<Validator, GasStoreErrors>>, GasStoreErrors> {
         Ok(BoundedValidatorsIterator::new(
             ctx.kv_store(&self.store_key),

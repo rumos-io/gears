@@ -12,6 +12,6 @@ pub trait StakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static 
 
     fn bonded_validators_by_power<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
     ) -> Result<impl Iterator<Item = Result<Self::Validator, GasStoreErrors>>, GasStoreErrors>;
 }
