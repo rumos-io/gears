@@ -334,7 +334,7 @@ impl<
             let mut keys = vec![];
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
             let mut previous_was_end = false;
-            for (k, v) in store.range(..).take_while(|(k, _)| {
+            for (k, v) in store.into_range(..).take_while(|(k, _)| {
                 let is_not_end = **k != end;
                 let res = is_not_end && !previous_was_end;
                 previous_was_end = !is_not_end;
