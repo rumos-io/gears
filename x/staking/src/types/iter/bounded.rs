@@ -53,5 +53,4 @@ impl<'a, DB: Database> Iterator for BoundedValidatorsIterator<'a, DB> {
             None
         }
     }
-    // type Item = Result<(Cow<'a, Vec<u8>>, MsgDeposit), GasStoreErrors>;
 }
