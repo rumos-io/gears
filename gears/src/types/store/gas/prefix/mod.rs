@@ -31,7 +31,7 @@ impl<DB: Database> GasPrefixStore<'_, DB> {
 }
 
 impl<'a, DB: Database> GasPrefixStore<'a, DB> {
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> GasRange<'a, DB> {
-        GasRange::new_prefix(self.inner.range(range), self.guard.clone())
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> GasRange<'a, DB> {
+        GasRange::new_prefix(self.inner.into_range(range), self.guard.clone())
     }
 }

@@ -264,7 +264,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         let mut balances = vec![];
 
-        for (_, coin) in account_store.range(..) {
+        for (_, coin) in account_store.into_range(..) {
             let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
@@ -287,7 +287,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let account_store = bank_store.prefix_store(prefix);
 
         let mut balances = vec![];
-        for rcoin in account_store.range(..) {
+        for rcoin in account_store.into_range(..) {
             let (_, coin) = rcoin?;
             let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
@@ -309,7 +309,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
         supply_store
-            .range(..)
+            .into_range(..)
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
                     .ok()
@@ -495,7 +495,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
-        for (_, metadata) in bank_store.prefix_store(DENOM_METADATA_PREFIX).range(..) {
+        for (_, metadata) in bank_store
+            .prefix_store(DENOM_METADATA_PREFIX)
+            .into_range(..)
+        {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();

@@ -104,7 +104,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> Keeper<SK, PSK> {
 
         let mut client_states = vec![];
 
-        for (key, raw_state) in store.range(..) {
+        for (key, raw_state) in store.into_range(..) {
             let Ok(key) = String::from_utf8(key.to_vec()) else {
                 continue;
             };

@@ -18,8 +18,8 @@ impl<'a, DB: Database> GasKVStore<'a, DB> {
         Self { guard, inner }
     }
 
-    pub fn range(self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> GasRange<'a, DB> {
-        GasRange::new_kv(self.inner.range(range), self.guard.clone())
+    pub fn into_range(self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> GasRange<'a, DB> {
+        GasRange::new_kv(self.inner.into_range(range), self.guard.clone())
     }
 
     pub fn prefix_store<I: IntoIterator<Item = u8>>(self, prefix: I) -> GasPrefixStore<'a, DB> {

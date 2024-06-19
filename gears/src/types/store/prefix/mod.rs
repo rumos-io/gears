@@ -32,10 +32,10 @@ impl<'a, DB> From<ImmutablePrefixStore<'a, DB>> for PrefixStore<'a, DB> {
 }
 
 impl<'a, DB: Database> PrefixStore<'a, DB> {
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> StoreRange<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> StoreRange<'a, DB> {
         match self.0 {
-            PrefixStoreBackend::Gas(var) => var.range(range).into(),
-            PrefixStoreBackend::Kv(var) => var.range(range).into(),
+            PrefixStoreBackend::Gas(var) => var.into_range(range).into(),
+            PrefixStoreBackend::Kv(var) => var.into_range(range).into(),
         }
     }
 }

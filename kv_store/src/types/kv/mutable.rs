@@ -32,7 +32,7 @@ impl<'a, DB: Database> KVStoreMut<'a, DB> {
         }
     }
 
-    pub fn range(
+    pub fn into_range(
         self,
         range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
     ) -> Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
