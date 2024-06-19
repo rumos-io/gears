@@ -12,12 +12,9 @@ use super::{parse_proposal_key_bytes, Proposal, SORTABLE_DATE_TIME_FORMAT};
 pub struct InactiveProposalIterator<'a, DB>(StoreRange<'a, DB>);
 
 impl<'a, DB: Database> InactiveProposalIterator<'a, DB> {
-    pub fn new(
-        store: &'a Store<'a, DB>,
-        end_time: &DateTime<Utc>,
-    ) -> InactiveProposalIterator<'a, DB> {
+    pub fn new(store: Store<'a, DB>, end_time: &DateTime<Utc>) -> InactiveProposalIterator<'a, DB> {
         Self(
-            store.range((
+            store.into_range((
                 Bound::Included(Proposal::KEY_INACTIVE_QUEUE_PREFIX.to_vec()),
                 Bound::Excluded(
                     [

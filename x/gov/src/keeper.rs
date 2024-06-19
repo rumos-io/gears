@@ -23,9 +23,12 @@ use crate::{
     genesis::GovGenesisState,
     msg::{deposit::MsgDeposit, proposal::MsgSubmitProposal, weighted_vote::MsgVoteWeighted},
     params::GovParamsKeeper,
-    types::proposal::{
-        active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
-        ProposalStatus,
+    types::{
+        deposit_iter::DepositIterator,
+        proposal::{
+            active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
+            ProposalStatus,
+        },
     },
 };
 
@@ -324,7 +327,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         {
             let inactive_iter = {
                 let store = ctx.kv_store(&self.store_key);
-                InactiveProposalIterator::new(&store.into(), &time)
+                InactiveProposalIterator::new(store.into(), &time)
                     .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
                     .collect::<Vec<_>>()
             };
@@ -332,13 +335,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             for var in inactive_iter {
                 let proposal_id = var.unwrap_gas();
                 proposal_del(ctx, &self.store_key, proposal_id).unwrap_gas();
+                deposit_del(ctx, self, proposal_id).unwrap_gas();
             }
         }
 
         {
             let active_iter = {
                 let store = ctx.kv_store(&self.store_key).into();
-                ActiveProposalIterator::new(&store, &time)
+                ActiveProposalIterator::new(store, &time)
                     .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
                     .collect::<Vec<_>>()
             };
@@ -462,13 +466,35 @@ fn deposit_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
     )
 }
 
-fn deposit_del<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+fn deposit_del<
+    DB: Database,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BK: BankKeeper<SK, M>,
+    CTX: TransactionalContext<DB, SK>,
+>(
     ctx: &mut CTX,
-    store_key: &SK,
+    keeper: &GovKeeper<SK, PSK, M, BK>,
     proposal_id: u64,
-) -> Result<bool, GasStoreErrors> 
-{
-todo!()
+) -> Result<(), GasStoreErrors> {
+    let deposits = DepositIterator::new(ctx.kv_store(&keeper.store_key))
+        .map(|this| this.map(|(_, value)| value))
+        .collect::<Vec<_>>();
+
+    for deposit in deposits {
+        let deposit = deposit?;
+
+        keeper
+            .bank_keeper
+            .coins_burn(ctx, &keeper.gov_mod, &deposit.amount)
+            .expect("Failed to burn coins for gov xmod"); // TODO: how to do this better?
+
+        ctx.kv_store_mut(&keeper.store_key)
+            .delete(&MsgDeposit::key(proposal_id, &deposit.depositor))?;
+    }
+
+    Ok(())
 }
 
 fn _vote_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
