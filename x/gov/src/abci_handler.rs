@@ -17,7 +17,7 @@ use gears::{
     },
     types::tx::raw::TxWithRaw,
     x::{
-        keepers::{bank::BankKeeper, staking::StakingKeeper},
+        keepers::{bank::BankKeeper, staking::GovStakingKeeper},
         module::Module,
     },
 };
@@ -35,7 +35,7 @@ pub struct GovAbciHandler<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: BankKeeper<SK, M>,
-    STK: StakingKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
 > {
     keeper: GovKeeper<SK, PSK, M, BK, STK>,
 }
@@ -45,7 +45,7 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: BankKeeper<SK, M>,
-        STK: StakingKeeper<SK, M>,
+        STK: GovStakingKeeper<SK, M>,
     > GovAbciHandler<SK, PSK, M, BK, STK>
 {
     pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK>) -> Self {
@@ -58,7 +58,7 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: BankKeeper<SK, M>,
-        STK: StakingKeeper<SK, M>,
+        STK: GovStakingKeeper<SK, M>,
     > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK>
 {
     type Message = GovMsg;

@@ -3,14 +3,16 @@ use kv_store::StoreKey;
 
 use crate::{
     context::QueryableContext,
-    types::{address::AccAddress, store::gas::errors::GasStoreErrors},
+    error::AppError,
+    types::{address::AccAddress, base::coin::Coin, store::gas::errors::GasStoreErrors},
     x::{
         module::Module,
         types::{delegation::StakingDelegation, validator::StakingValidator},
     },
 };
 
-pub trait StakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
+/// Staking keeper which used in gov xmod
+pub trait GovStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     type Validator: StakingValidator;
     type Delegation: StakingDelegation;
 
@@ -24,4 +26,9 @@ pub trait StakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static 
         ctx: &CTX,
         voter: &AccAddress,
     ) -> impl Iterator<Item = Result<Self::Delegation, GasStoreErrors>>;
+
+    fn total_bonded_tokens<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<Coin, AppError>;
 }

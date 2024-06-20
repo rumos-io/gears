@@ -1,4 +1,4 @@
-use gears::x::keepers::staking::StakingKeeper;
+use gears::x::keepers::staking::GovStakingKeeper;
 
 use crate::iter::{bounded::BoundedValidatorsIterator, delegation::DelegationIterator};
 
@@ -11,7 +11,7 @@ impl<
         BK: BankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
-    > StakingKeeper<SK, M> for Keeper<SK, PSK, AK, BK, KH, M>
+    > GovStakingKeeper<SK, M> for Keeper<SK, PSK, AK, BK, KH, M>
 {
     type Validator = Validator;
     type Delegation = Delegation;
@@ -33,5 +33,21 @@ impl<
     ) -> impl Iterator<Item = Result<Self::Delegation, GasStoreErrors>> {
         DelegationIterator::new(ctx.kv_store(&self.store_key), voter)
             .map(|this| this.map(|(_, value)| value))
+    }
+
+    fn total_bonded_tokens<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<Coin, AppError> {
+        let account = self
+            .auth_keeper
+            .get_account(ctx, &self.bonded_module.get_address())?
+            .unwrap(); // TODO: Unsure what to do in this case
+
+        self.bank_keeper.balance(
+            ctx,
+            account.get_address(),
+            &self.staking_params_keeper.try_get(ctx)?.bond_denom,
+        )
     }
 }

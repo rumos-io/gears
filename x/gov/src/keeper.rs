@@ -21,7 +21,7 @@ use gears::{
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
-        keepers::{bank::BankKeeper, staking::StakingKeeper},
+        keepers::{bank::BankKeeper, staking::GovStakingKeeper},
         module::Module,
         types::{delegation::StakingDelegation, validator::StakingValidator},
     },
@@ -58,7 +58,7 @@ pub struct GovKeeper<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: BankKeeper<SK, M>,
-    STK: StakingKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
 > {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
@@ -73,7 +73,7 @@ impl<
         PSK: ParamsSubspaceKey,
         M: Module,
         BK: BankKeeper<SK, M>,
-        STK: StakingKeeper<SK, M>,
+        STK: GovStakingKeeper<SK, M>,
     > GovKeeper<SK, PSK, M, BK, STK>
 {
     pub fn new(
@@ -515,8 +515,6 @@ impl<
         let tally_params = self.gov_params_keeper.try_get(ctx)?.tally;
         let tally_result = tally_results.result();
 
-        
-
         Ok(())
     }
 }
@@ -685,7 +683,7 @@ fn deposit_del<
     PSK: ParamsSubspaceKey,
     M: Module,
     BK: BankKeeper<SK, M>,
-    STK: StakingKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
 >(
     ctx: &mut CTX,

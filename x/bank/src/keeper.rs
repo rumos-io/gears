@@ -96,6 +96,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
     ) -> Result<(), AppError> {
         unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
     }
+
+    fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        _address: &AccAddress,
+        _denom: &Denom,
+    ) -> Result<Coin, AppError> {
+        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+    }
 }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>

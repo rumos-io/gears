@@ -41,4 +41,11 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         module: &M,
         deposit: &SendCoins,
     ) -> Result<(), AppError>;
+
+    fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: &AccAddress,
+        denom: &Denom,
+    ) -> Result<Coin, AppError>;
 }
