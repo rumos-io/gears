@@ -42,7 +42,7 @@ use crate::{
         deposit_iter::DepositIterator,
         proposal::{
             active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
-            ProposalStatus,
+            ProposalStatus, TallyResult,
         },
         validator::ValidatorGovInfo,
         vote_iters::WeightedVoteIterator,
@@ -434,7 +434,7 @@ impl<
             );
         }
 
-        let mut tally_results = TallyResult::new();
+        let mut tally_results = TallyResultMap::new();
         let mut total_voting_power = Decimal256::zero();
 
         for vote in WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id)
@@ -485,13 +485,47 @@ impl<
             }
         }
 
+        for (
+            _,
+            ValidatorGovInfo {
+                address: _,
+                bounded_tokens,
+                delegator_shares,
+                delegator_deduction,
+                vote,
+            },
+        ) in &curr_validators
+        {
+            if vote.is_empty() {
+                continue;
+            }
+
+            let voting_power = (delegator_shares - delegator_deduction)
+                * Decimal256::new(bounded_tokens.clone())
+                / delegator_shares;
+
+            for VoteOptionWeighted { option, weight } in vote {
+                let result = tally_results.get_mut(option);
+                *result += voting_power * Decimal256::from(weight.clone());
+            }
+
+            total_voting_power += voting_power;
+        }
+
+        let tally_params = self.gov_params_keeper.try_get(ctx)?.tally;
+        let tally_result = tally_results.result();
+
+        
+
         Ok(())
     }
 }
 
-struct TallyResult(HashMap<VoteOption, Decimal256>);
+struct TallyResultMap(HashMap<VoteOption, Decimal256>);
 
-impl TallyResult {
+impl TallyResultMap {
+    const EXISTS_MSG: &str = "guarated to exists";
+
     pub fn new() -> Self {
         let mut hashmap = HashMap::with_capacity(VoteOption::iter().count());
 
@@ -503,7 +537,33 @@ impl TallyResult {
     }
 
     pub fn get_mut(&mut self, k: &VoteOption) -> &mut Decimal256 {
-        self.0.get_mut(k).expect("guarated to exists")
+        self.0.get_mut(k).expect(Self::EXISTS_MSG)
+    }
+
+    pub fn result(mut self) -> TallyResult {
+        TallyResult {
+            // TODO: is it correct?
+            yes: self
+                .0
+                .remove(&VoteOption::Yes)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+            abstain: self
+                .0
+                .remove(&VoteOption::Abstain)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+            no: self
+                .0
+                .remove(&VoteOption::No)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+            no_with_veto: self
+                .0
+                .remove(&VoteOption::NoWithVeto)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+        }
     }
 }
 

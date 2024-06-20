@@ -1,7 +1,7 @@
 use std::sync::OnceLock;
 
 use chrono::{DateTime, SubsecRound, Utc};
-use gears::types::base::send::SendCoins;
+use gears::types::{base::send::SendCoins, uint::Uint256};
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
 
@@ -28,10 +28,10 @@ pub struct Proposal {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TallyResult {
-    yes: i32,
-    abstain: i32,
-    no: i32,
-    no_with_veto: i32,
+    pub yes: Uint256,
+    pub abstain: Uint256,
+    pub no: Uint256,
+    pub no_with_veto: Uint256,
 }
 
 impl Proposal {
