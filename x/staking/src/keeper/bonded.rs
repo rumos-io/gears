@@ -17,16 +17,14 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let params = self.staking_params_keeper.try_get(ctx)?;
 
-        // TODO: original routine is infallible, it means that the amount is a valid number.
-        // The method is called from failable methods. Consider to provide correct solution taking
-        // into account additional analisis.
+        // original routine is infallible, it means that the amount should be a valid number.
+        // All errors in sdk panics in this method
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
             amount,
         }])
         .unwrap();
 
-        // TODO: check and maybe remove unwrap
         self.bank_keeper
             .send_coins_from_module_to_module::<DB, CTX>(
                 ctx,

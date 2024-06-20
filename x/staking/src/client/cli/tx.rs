@@ -29,7 +29,7 @@ pub enum StakingCommands {
     /// Create new validator initialized with a self-delegation to it
     CreateValidator {
         /// The validator's Protobuf JSON encoded public key
-        pubkey: String,
+        pubkey: TendermintPublicKey,
         /// Amount of coins to bond
         amount: Coin,
         /// The validator's name
@@ -97,9 +97,6 @@ pub fn run_staking_tx_command(
         } => {
             let delegator_address = from_address.clone();
             let validator_address = ValAddress::try_from(Vec::from(from_address))?;
-            // TODO: add implementation of FromStr to TendermintPublicKey and declare type in
-            // command enum
-            let pub_key: TendermintPublicKey = serde_json::from_slice(pubkey.as_bytes())?;
             let description = Description {
                 moniker: moniker.to_string(),
                 identity: identity.to_string(),
@@ -119,7 +116,7 @@ pub fn run_staking_tx_command(
                 min_self_delegation: *min_self_delegation,
                 delegator_address,
                 validator_address,
-                pub_key,
+                pub_key: pubkey.clone(),
                 value: amount.clone(),
             });
             msg.validate_basic().map_err(AppError::TxValidation)?;

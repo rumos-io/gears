@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::error::Error;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -53,6 +55,14 @@ impl TryFrom<inner::PublicKey> for PublicKey {
             inner::Sum::Ed25519(value) => Ok(PublicKey::Ed25519(value)),
             inner::Sum::Secp256k1(value) => Ok(PublicKey::Secp256k1(value)),
         }
+    }
+}
+
+impl FromStr for PublicKey {
+    type Err = serde_json::error::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(s)
     }
 }
 
