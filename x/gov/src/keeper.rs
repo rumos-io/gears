@@ -1,4 +1,8 @@
-use std::{collections::HashMap, marker::PhantomData, ops::Add};
+use std::{
+    collections::HashMap,
+    marker::PhantomData,
+    ops::{Add, Div, Mul},
+};
 
 use anyhow::anyhow;
 use chrono::DateTime;
@@ -19,14 +23,20 @@ use gears::{
     x::{
         keepers::{bank::BankKeeper, staking::StakingKeeper},
         module::Module,
-        types::validator::StakingValidator,
+        types::{delegation::StakingDelegation, validator::StakingValidator},
     },
 };
+use strum::IntoEnumIterator;
 
 use crate::{
     errors::SERDE_JSON_CONVERSION,
     genesis::GovGenesisState,
-    msg::{deposit::MsgDeposit, proposal::MsgSubmitProposal, weighted_vote::MsgVoteWeighted},
+    msg::{
+        deposit::MsgDeposit,
+        proposal::MsgSubmitProposal,
+        vote::VoteOption,
+        weighted_vote::{MsgVoteWeighted, VoteOptionWeighted},
+    },
     params::GovParamsKeeper,
     types::{
         deposit_iter::DepositIterator,
@@ -401,12 +411,12 @@ impl<
         events
     }
 
-    fn _tally<DB: Database, CTX: QueryableContext<DB, SK>>(
+    #[allow(dead_code)]
+    fn tally<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &CTX,
+        ctx: &mut CTX,
         proposal_id: u64,
     ) -> Result<(), GasStoreErrors> {
-        // struct TallyBalance {}
         let mut curr_validators = HashMap::<ValAddress, ValidatorGovInfo>::new();
 
         for validator in self.staking_keeper.bonded_validators_by_power_iter(ctx)? {
@@ -424,18 +434,76 @@ impl<
             );
         }
 
-        for vote in WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id) {
-            let (_, vote) = vote?;
+        let mut tally_results = TallyResult::new();
+        let mut total_voting_power = Decimal256::zero();
 
-            let val_addr = ValAddress::from(vote.voter);
+        for vote in WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id)
+            .map(|this| this.map(|(_, value)| value))
+            .collect::<Vec<_>>()
+        {
+            let MsgVoteWeighted {
+                proposal_id: _,
+                voter,
+                options: vote_options,
+            } = vote?;
+
+            let val_addr = ValAddress::from(voter.clone());
             if let Some(validator) = curr_validators.get_mut(&val_addr) {
-                validator.vote = vote.options;
+                validator.vote = vote_options.clone();
             }
 
-            //
+            for delegation in self
+                .staking_keeper
+                .delegations_iter(ctx, &voter)
+                .collect::<Vec<_>>()
+            {
+                let delegation = delegation?;
+
+                if let Some(validator) = curr_validators.get_mut(delegation.validator()) {
+                    // from cosmos: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/tally.go#L51
+                    // There is no need to handle the special case that validator address equal to voter address.
+                    // Because voter's voting power will tally again even if there will deduct voter's voting power from validator.
+
+                    validator.delegator_deduction += delegation.shares(); // TODO: handle overflow?
+
+                    // delegation shares * bonded / total shares
+                    let voting_power = delegation
+                        .shares()
+                        .mul(Decimal256::new(validator.bounded_tokens))
+                        .div(validator.delegator_shares);
+
+                    for VoteOptionWeighted { option, weight } in &vote_options {
+                        let result_option = tally_results.get_mut(option);
+
+                        *result_option += voting_power * Decimal256::from(weight.clone());
+                    }
+
+                    total_voting_power += voting_power;
+                }
+
+                vote_del(ctx, &self.store_key, proposal_id, &voter)?;
+            }
         }
 
         Ok(())
+    }
+}
+
+struct TallyResult(HashMap<VoteOption, Decimal256>);
+
+impl TallyResult {
+    pub fn new() -> Self {
+        let mut hashmap = HashMap::with_capacity(VoteOption::iter().count());
+
+        for variant in VoteOption::iter() {
+            hashmap.insert(variant, Decimal256::zero());
+        }
+
+        Self(hashmap)
+    }
+
+    pub fn get_mut(&mut self, k: &VoteOption) -> &mut Decimal256 {
+        self.0.get_mut(k).expect("guarated to exists")
     }
 }
 
@@ -619,4 +687,17 @@ fn vote_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
         MsgVoteWeighted::key(vote.proposal_id, &vote.voter),
         serde_json::to_vec(vote).expect(SERDE_JSON_CONVERSION),
     )
+}
+
+fn vote_del<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
+    proposal_id: u64,
+    voter: &AccAddress,
+) -> Result<bool, GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
+    let is_deleted = store.delete(&MsgVoteWeighted::key(proposal_id, &voter))?;
+
+    Ok(is_deleted.is_some())
 }
