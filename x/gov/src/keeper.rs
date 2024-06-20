@@ -12,6 +12,7 @@ use gears::{
         block::BlockContext, init::InitContext, tx::TxContext, QueryableContext,
         TransactionalContext,
     },
+    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::proto::event::{Event, EventAttribute},
@@ -411,12 +412,11 @@ impl<
         events
     }
 
-    #[allow(dead_code)]
     fn tally<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         proposal_id: u64,
-    ) -> Result<(), GasStoreErrors> {
+    ) -> Result<(bool, bool, TallyResult), AppError> {
         let mut curr_validators = HashMap::<ValAddress, ValidatorGovInfo>::new();
 
         for validator in self.staking_keeper.bonded_validators_by_power_iter(ctx)? {
@@ -513,16 +513,51 @@ impl<
         }
 
         let tally_params = self.gov_params_keeper.try_get(ctx)?.tally;
-        let tally_result = tally_results.result();
 
-        Ok(())
+        let total_bonded_tokens = self.staking_keeper.total_bonded_tokens(ctx)?;
+
+        // If there is no staked coins, the proposal fails
+        if total_bonded_tokens.amount.is_zero() {
+            return Ok((false, false, tally_results.result()));
+        }
+
+        // If there is not enough quorum of votes, the proposal fails
+        let percent_voting = total_voting_power / Decimal256::new(total_bonded_tokens.amount);
+        if percent_voting < tally_params.quorum {
+            return Ok((false, true, tally_results.result()));
+        }
+
+        // If no one votes (everyone abstains), proposal fails
+        // Why they sub and check to is_zero in cosmos?
+        if total_voting_power == *tally_results.get_mut(&VoteOption::Abstain) {
+            return Ok((false, false, tally_results.result()));
+        }
+
+        // If more than 1/3 of voters veto, proposal fails
+        if *tally_results.get_mut(&VoteOption::NoWithVeto) / total_voting_power
+            > tally_params.veto_threshold
+        {
+            return Ok((false, true, tally_results.result()));
+        }
+
+        // If more than 1/2 of non-abstaining voters vote Yes, proposal passes
+        if *tally_results.get_mut(&VoteOption::Yes)
+            / (total_voting_power - *tally_results.get_mut(&VoteOption::Abstain))
+            > tally_params.threshold
+        {
+            return Ok((true, false, tally_results.result()));
+        }
+
+        // If more than 1/2 of non-abstaining voters vote No, proposal fails
+        Ok((false, false, tally_results.result()))
     }
 }
 
+#[derive(Debug, Clone)]
 struct TallyResultMap(HashMap<VoteOption, Decimal256>);
 
 impl TallyResultMap {
-    const EXISTS_MSG: &str = "guarated to exists";
+    const EXISTS_MSG: &'static str = "guarated to exists";
 
     pub fn new() -> Self {
         let mut hashmap = HashMap::with_capacity(VoteOption::iter().count());
