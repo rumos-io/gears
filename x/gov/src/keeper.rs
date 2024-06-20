@@ -1,4 +1,4 @@
-use std::{marker::PhantomData, ops::Add};
+use std::{collections::HashMap, marker::PhantomData, ops::Add};
 
 use anyhow::anyhow;
 use chrono::DateTime;
@@ -12,7 +12,7 @@ use gears::{
     store::{database::Database, StoreKey},
     tendermint::types::proto::event::{Event, EventAttribute},
     types::{
-        address::AccAddress,
+        address::{AccAddress, ValAddress},
         decimal256::Decimal256,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
@@ -407,22 +407,32 @@ impl<
         proposal_id: u64,
     ) -> Result<(), GasStoreErrors> {
         // struct TallyBalance {}
-        let mut curr_validators = Vec::<ValidatorGovInfo>::new();
+        let mut curr_validators = HashMap::<ValAddress, ValidatorGovInfo>::new();
 
         for validator in self.staking_keeper.bonded_validators_by_power_iter(ctx)? {
             let validator = validator?;
 
-            curr_validators.push(ValidatorGovInfo {
-                address: validator.operator().clone(),
-                bounded_tokens: validator.bonded_tokens().clone(),
-                delegator_shares: validator.delegator_shares().clone(),
-                delegator_deduction: Decimal256::zero(),
-                vote: Vec::new(),
-            });
+            curr_validators.insert(
+                validator.operator().clone(),
+                ValidatorGovInfo {
+                    address: validator.operator().clone(),
+                    bounded_tokens: validator.bonded_tokens().clone(),
+                    delegator_shares: validator.delegator_shares().clone(),
+                    delegator_deduction: Decimal256::zero(),
+                    vote: Vec::new(),
+                },
+            );
         }
 
         for vote in WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id) {
             let (_, vote) = vote?;
+
+            let val_addr = ValAddress::from(vote.voter);
+            if let Some(validator) = curr_validators.get_mut(&val_addr) {
+                validator.vote = vote.options;
+            }
+
+            //
         }
 
         Ok(())

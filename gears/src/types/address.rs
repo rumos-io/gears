@@ -34,7 +34,7 @@ pub type ConsAddress = BaseAddress<2>;
 
 // TODO: when more complex const parameter types arrive, replace u8 with &'static str
 // https://github.com/rust-lang/rust/issues/95174
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
 pub struct BaseAddress<const PREFIX: u8>(Vec<u8>);
 
 impl<const PREFIX: u8> BaseAddress<PREFIX> {
@@ -207,6 +207,13 @@ impl From<tendermint::types::proto::crypto::PublicKey> for ConsAddress {
         let hash = hasher.finalize();
 
         hash.as_slice().try_into().expect(SIZE_ERR_MSG)
+    }
+}
+
+// TODO: CHECK IS IT SAFE TO CONVERT ONE KEY TO OTHER
+impl From<AccAddress> for ValAddress {
+    fn from(value: AccAddress) -> Self {
+        Self(value.0)
     }
 }
 
