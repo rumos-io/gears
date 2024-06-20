@@ -409,7 +409,7 @@ impl<
         // struct TallyBalance {}
         let mut curr_validators = Vec::<ValidatorGovInfo>::new();
 
-        for validator in self.staking_keeper.bonded_validators_by_power(ctx)? {
+        for validator in self.staking_keeper.bonded_validators_by_power_iter(ctx)? {
             let validator = validator?;
 
             curr_validators.push(ValidatorGovInfo {
