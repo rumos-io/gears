@@ -35,6 +35,7 @@ use crate::{
             ProposalStatus,
         },
         validator::ValidatorGovInfo,
+        vote_iters::WeightedVoteIterator,
     },
 };
 
@@ -403,6 +404,7 @@ impl<
     fn _tally<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
+        proposal_id: u64,
     ) -> Result<(), GasStoreErrors> {
         // struct TallyBalance {}
         let mut curr_validators = Vec::<ValidatorGovInfo>::new();
@@ -417,6 +419,10 @@ impl<
                 delegator_deduction: Decimal256::zero(),
                 vote: Vec::new(),
             });
+        }
+
+        for vote in WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id) {
+            let (_, vote) = vote?;
         }
 
         Ok(())
