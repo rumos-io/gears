@@ -39,6 +39,7 @@ const CTX_NO_GAS_UNWRAP: &str = "Context doesn't have any gas";
 
 mod bonded;
 mod delegation;
+mod gov;
 mod historical_info;
 mod hooks;
 mod mock_hook_keeper;

@@ -15,7 +15,10 @@ use gears::{
         decimal256::Decimal256,
         uint::Uint256,
     },
-    x::types::validator::{BondStatus, StakingValidator},
+    x::types::{
+        delegation::StakingDelegation,
+        validator::{BondStatus, StakingValidator},
+    },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -70,6 +73,20 @@ pub struct Delegation {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
     pub shares: Decimal256,
+}
+
+impl StakingDelegation for Delegation {
+    fn delegator(&self) -> &AccAddress {
+        &self.delegator_address
+    }
+
+    fn validator(&self) -> &ValAddress {
+        &self.validator_address
+    }
+
+    fn shares(&self) -> &Decimal256 {
+        &self.shares
+    }
 }
 
 /// Delegation represents the bond with tokens held by an account. It is
