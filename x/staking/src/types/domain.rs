@@ -5,7 +5,6 @@ use crate::{
     },
     Commission, CommissionRates, CommissionRaw, Description,
 };
-use chrono::Utc;
 use gears::{
     core::{errors::CoreError, Protobuf},
     error::AppError,
@@ -94,9 +93,10 @@ pub struct UnbondingDelegationEntry {
 }
 
 impl UnbondingDelegationEntry {
-    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+    pub fn is_mature(&self, time: &Timestamp) -> bool {
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
@@ -133,9 +133,10 @@ pub struct RedelegationEntry {
 }
 
 impl RedelegationEntry {
-    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
+    pub fn is_mature(&self, time: &Timestamp) -> bool {
         // TODO: consider to move the DataTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,

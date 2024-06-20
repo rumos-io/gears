@@ -223,10 +223,6 @@ impl<
         let params = self.staking_params_keeper.get(ctx);
         let denom = params.bond_denom;
         let ctx_time = ctx.header.time.clone();
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let ctx_time =
-            chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32).unwrap();
 
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
@@ -235,7 +231,7 @@ impl<
                 denom: denom.clone(),
                 amount: entry.initial_balance,
             };
-            if entry.is_mature(ctx_time) && !coin.amount.is_zero() {
+            if entry.is_mature(&ctx_time) && !coin.amount.is_zero() {
                 balances.push(coin);
             } else {
                 new_redelegations.push(entry);
@@ -321,15 +317,12 @@ impl<
     >(
         &self,
         ctx: &mut CTX,
-        time: Timestamp,
+        time: &Timestamp,
     ) -> Vec<DvvTriplet> {
         let (keys, mature_redelegations) = {
             let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
-            // TODO: consider to move the DataTime type and work with timestamps into Gears
-            // The timestamp is provided by context and conversion won't fail.
-            let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
             let end = unbonding_delegation_time_key(time).to_vec();
             let mut mature_redelegations = vec![];
@@ -350,7 +343,7 @@ impl<
         };
 
         let storage = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
+        let mut store = storage.prefix_store_mut(REDELEGATION_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);
         });

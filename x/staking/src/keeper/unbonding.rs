@@ -5,8 +5,9 @@ use crate::{
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
+    error::IBC_ENCODE_UNWRAP,
     store::database::ext::UnwrapCorrupt,
-    tendermint::types::time::Timestamp,
+    tendermint::types::{proto::Protobuf, time::Timestamp},
 };
 
 impl<
@@ -68,14 +69,11 @@ impl<
     pub fn dequeue_all_mature_ubd_queue<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        time: Timestamp,
+        time: &Timestamp,
     ) -> Vec<DvPair> {
         let (keys, mature_unbonds) = {
             let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(UNBONDING_QUEUE_KEY);
-            // TODO: consider to move the DataTime type and work with timestamps into Gears
-            // The timestamp is provided by context and conversion won't fail.
-            let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
             let end = unbonding_delegation_time_key(time).to_vec();
             let mut mature_unbonds = vec![];
             let mut keys = vec![];
@@ -147,10 +145,7 @@ impl<
     ) -> Option<Vec<DvPair>> {
         let store = InfallibleContext::infallible_store(ctx, &self.store_key);
         let store = store.prefix_store(UNBONDING_QUEUE_KEY);
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        if let Some(bz) = store.get(time.to_string().as_bytes()) {
+        if let Some(bz) = store.get(&time.encode_vec().expect(IBC_ENCODE_UNWRAP)) {
             serde_json::from_slice(&bz).unwrap_or_default()
         } else {
             None
@@ -165,10 +160,7 @@ impl<
     ) {
         let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(UNBONDING_QUEUE_KEY);
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let key = time.to_string().as_bytes().to_vec();
+        let key = time.encode_vec().expect(IBC_ENCODE_UNWRAP);
         store.set(
             key,
             serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),
@@ -195,11 +187,6 @@ impl<
         ctx: &mut BlockContext<'_, DB, SK>,
     ) -> Result<(), GasStoreErrors> {
         let block_time = ctx.get_time();
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let block_time =
-            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
-
         let block_height = ctx.height() as u64;
 
         // unbonding_validators_map will contains all validator addresses indexed under
@@ -208,8 +195,12 @@ impl<
         // so it may be possible that certain validator addresses that are iterated
         // over are not ready to unbond, so an explicit check is required.
         let unbonding_val_map: HashMap<Vec<u8>, Vec<String>> =
-            self.unbonding_validator_queue_map(ctx, block_time, block_height);
+            self.unbonding_validator_queue_map(ctx, &block_time, block_height);
 
+        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let block_time =
+            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
         for (k, v) in &unbonding_val_map {
             let (time, height) =
                 parse_validator_queue_key(k).expect("failed to parse unbonding key");
@@ -295,15 +286,11 @@ impl<
         let bond_denom = params.bond_denom;
         let mut balances = vec![];
         let ctx_time = ctx.get_time();
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let ctx_time =
-            chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32).unwrap();
 
         // loop through all the entries and complete unbonding mature entries
         let mut new_ubd = vec![];
         for entry in ubd.entries.iter() {
-            if entry.is_mature(ctx_time) {
+            if entry.is_mature(&ctx_time) {
                 // track undelegation only when remaining or truncated shares are non-zero
                 let amount = entry.balance;
                 if amount.is_zero() {
@@ -387,11 +374,7 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let end_time =
-            chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32).unwrap();
-        let key = validator_queue_key(end_time, end_height);
+        let key = validator_queue_key(&end_time, end_height);
         let value = serde_json::to_vec(&addrs).expect(SERDE_ENCODING_DOMAIN_TYPE);
         store.set(key, value)?;
 
@@ -408,12 +391,7 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let end_time =
-            chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32).unwrap();
-        store.delete(&validator_queue_key(end_time, end_height))?;
-
+        store.delete(&validator_queue_key(&end_time, end_height))?;
         Ok(())
     }
 
@@ -426,13 +404,7 @@ impl<
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
 
-        if let Some(bz) = store.get(&validator_queue_key(
-            // TODO: consider to move the DataTime type and work with timestamps into Gears
-            // The timestamp is provided by context and conversion won't fail.
-            chrono::DateTime::from_timestamp(unbonding_time.seconds, unbonding_time.nanos as u32)
-                .unwrap(),
-            unbonding_height,
-        ))? {
+        if let Some(bz) = store.get(&validator_queue_key(unbonding_time, unbonding_height))? {
             let res: Vec<String> = serde_json::from_slice(&bz).unwrap_or_corrupt();
             Ok(res)
         } else {
@@ -443,7 +415,7 @@ impl<
     pub fn unbonding_validator_queue_map<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        block_time: chrono::DateTime<Utc>,
+        block_time: &Timestamp,
         block_height: u64,
     ) -> HashMap<Vec<u8>, Vec<String>> {
         let store = ctx.infallible_store(&self.store_key);

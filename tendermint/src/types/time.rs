@@ -3,6 +3,8 @@
 // Prost does not seem to have a way yet to remove documentations defined in protobuf files.
 // These structs are defined in gogoproto v1.3.1 at https://github.com/gogo/protobuf/tree/v1.3.1/protobuf/google/protobuf
 
+use tendermint_proto::Protobuf;
+
 /// A Timestamp represents a point in time independent of any time zone or local
 /// calendar, encoded as a count of seconds and fractions of seconds at
 /// nanosecond resolution. The count is relative to an epoch at UTC midnight on
@@ -46,6 +48,8 @@ impl From<Timestamp> for inner::Timestamp {
         Self { seconds, nanos }
     }
 }
+
+impl Protobuf<Timestamp> for Timestamp {}
 
 /// A Duration represents a signed, fixed-length span of time represented
 /// as a count of seconds and fractions of seconds at nanosecond

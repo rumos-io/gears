@@ -291,9 +291,7 @@ impl<
 
         // Remove all mature unbonding delegations from the ubd queue.
         let time = ctx.get_time();
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time.clone());
+        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, &time);
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;
             let val_addr_str = val_addr.to_string();
@@ -329,7 +327,7 @@ impl<
             });
         }
         // Remove all mature redelegations from the red queue.
-        let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, time);
+        let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, &time);
         for dvv_triplet in mature_redelegations {
             let val_src_addr = dvv_triplet.val_src_addr;
             let val_src_addr_str = val_src_addr.to_string();
