@@ -127,7 +127,7 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let mut addrs =
             self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height)?;
-        addrs.push(validator.operator_address.to_string());
+        addrs.push(validator.operator_address.clone());
         self.set_unbonding_validators_queue(
             ctx,
             validator.unbonding_time.clone(),
@@ -194,10 +194,10 @@ impl<
         // ValidatorQueueKey | timeBzLen (8-byte big endian) | timeBz | heightBz (8-byte big endian),
         // so it may be possible that certain validator addresses that are iterated
         // over are not ready to unbond, so an explicit check is required.
-        let unbonding_val_map: HashMap<Vec<u8>, Vec<String>> =
+        let unbonding_val_map: HashMap<Vec<u8>, Vec<ValAddress>> =
             self.unbonding_validator_queue_map(ctx, &block_time, block_height);
 
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let block_time =
             chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
@@ -210,11 +210,9 @@ impl<
             // and time.
 
             if height < block_height && (time <= block_time) {
-                for addr in v {
-                    let val_addr = ValAddress::from_bech32(addr)
-                        .expect("Failed to parse stored ValAddress in validators queue. Validators queue map contains vector of string addresses that could be a valid ValAddress representation.");
+                for val_addr in v {
                     let mut validator = self
-                        .validator(ctx, &val_addr)?
+                        .validator(ctx, val_addr)?
                         .expect("validator in the unbonding queue was not found");
 
                     assert_eq!(
@@ -365,19 +363,35 @@ impl<
         Ok(())
     }
 
+    pub fn unbonding_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        unbonding_time: &Timestamp,
+        unbonding_height: u64,
+    ) -> Result<Vec<ValAddress>, GasStoreErrors> {
+        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
+        let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
+
+        if let Some(bz) = store.get(&validator_queue_key(unbonding_time, unbonding_height))? {
+            let res: Vec<ValAddress> = serde_json::from_slice(&bz).unwrap_or_corrupt();
+            Ok(res)
+        } else {
+            Ok(Vec::new())
+        }
+    }
+
     pub fn set_unbonding_validators_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
         end_height: u64,
-        addrs: Vec<String>,
+        addrs: Vec<ValAddress>,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
         let key = validator_queue_key(&end_time, end_height);
         let value = serde_json::to_vec(&addrs).expect(SERDE_ENCODING_DOMAIN_TYPE);
         store.set(key, value)?;
-
         Ok(())
     }
 
@@ -395,29 +409,12 @@ impl<
         Ok(())
     }
 
-    pub fn unbonding_validators<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        unbonding_time: &Timestamp,
-        unbonding_height: u64,
-    ) -> Result<Vec<String>, GasStoreErrors> {
-        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
-
-        if let Some(bz) = store.get(&validator_queue_key(unbonding_time, unbonding_height))? {
-            let res: Vec<String> = serde_json::from_slice(&bz).unwrap_or_corrupt();
-            Ok(res)
-        } else {
-            Ok(Vec::new())
-        }
-    }
-
     pub fn unbonding_validator_queue_map<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         block_time: &Timestamp,
         block_height: u64,
-    ) -> HashMap<Vec<u8>, Vec<String>> {
+    ) -> HashMap<Vec<u8>, Vec<ValAddress>> {
         let store = ctx.infallible_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATOR_QUEUE_KEY);
 
@@ -431,7 +428,6 @@ impl<
             previous_was_end = !is_not_end;
             ret_res
         }) {
-            // TODO: consider to use addresses
             res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
         }
         res
@@ -444,10 +440,10 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let addrs =
             self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
-        let val_addr = validator.operator_address.to_string();
+        let val_addr = &validator.operator_address;
         let new_addrs = addrs?
             .into_iter()
-            .filter(|addr| val_addr != **addr)
+            .filter(|addr| val_addr != addr)
             .collect::<Vec<_>>();
         if new_addrs.is_empty() {
             self.delete_validator_queue_time_slice(

@@ -102,7 +102,7 @@ impl<
         let postfix = length_prefixed_val_del_addrs_key(val_src_addr, del_addr);
         prefix.extend_from_slice(&postfix);
 
-        // TODO: check logic
+        // TODO: check logic, can't find concrete implementation of method `Valid`
         store.get(&prefix).map(|red| red.is_some())
     }
 
@@ -253,7 +253,7 @@ impl<
         redelegation: &Redelegation,
         completion_time: Timestamp,
     ) -> Result<(), GasStoreErrors> {
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let completion_time =
             chrono::DateTime::from_timestamp(completion_time.seconds, completion_time.nanos as u32)

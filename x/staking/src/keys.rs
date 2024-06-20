@@ -36,7 +36,7 @@ pub fn historical_info_key(height: u32) -> Vec<u8> {
 }
 
 pub(super) fn validator_queue_key(end_time: &Timestamp, end_height: u64) -> Vec<u8> {
-    // TODO: consider to move the DataTime type and work with timestamps into Gears
+    // TODO: consider to move the DateTime type and work with timestamps into Gears
     // The timestamp is provided by context and conversion won't fail.
     let end_time =
         chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32).unwrap();
@@ -71,7 +71,7 @@ pub(super) fn parse_validator_queue_key(
 }
 
 pub(super) fn unbonding_delegation_time_key(time: &Timestamp) -> [u8; 8] {
-    // TODO: consider to move the DataTime type and work with timestamps into Gears
+    // TODO: consider to move the DateTime type and work with timestamps into Gears
     // The timestamp is provided by context and conversion won't fail.
     let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
     time.timestamp_nanos_opt()

@@ -568,7 +568,6 @@ impl<
                     chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
                 let completion_time = time + duration;
                 let height = ctx.height() as u64;
-                // TODO: consider to work with time in Gears
                 let completion_time = Timestamp {
                     seconds: completion_time.timestamp(),
                     nanos: completion_time.timestamp_subsec_nanos() as i32,

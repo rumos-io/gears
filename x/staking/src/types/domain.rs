@@ -94,7 +94,7 @@ pub struct UnbondingDelegationEntry {
 
 impl UnbondingDelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let completion_time = chrono::DateTime::from_timestamp(
@@ -134,7 +134,7 @@ pub struct RedelegationEntry {
 
 impl RedelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let completion_time = chrono::DateTime::from_timestamp(
@@ -279,7 +279,7 @@ impl Validator {
             // TODO: infallible in sdk
             Decimal256::from_atomics(amount, 0).unwrap()
         } else {
-            // TODO: check the code, maybe remove unwrap
+            // panics in original implementation
             self.shares_from_tokens(amount).unwrap()
         };
 
