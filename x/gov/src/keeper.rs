@@ -345,7 +345,9 @@ impl<
         Ok(proposal.proposal_id)
     }
 
-    pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
+    pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) -> Vec<Event> {
+        let mut events = Vec::new();
+
         let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
             .unwrap(); // TODO
 
@@ -361,6 +363,24 @@ impl<
                 let proposal_id = var.unwrap_gas();
                 proposal_del(ctx, &self.store_key, proposal_id).unwrap_gas();
                 deposit_del(ctx, self, proposal_id).unwrap_gas();
+
+                // TODO: HOOK https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/abci.go#L24-L25
+
+                events.push(Event::new(
+                    "inactive_proposal",
+                    vec![
+                        EventAttribute::new(
+                            "proposal_id".into(),
+                            proposal_id.to_string().into(),
+                            false,
+                        ),
+                        EventAttribute::new(
+                            "proposal_result".into(),
+                            "proposal_dropped".into(),
+                            false,
+                        ),
+                    ],
+                ))
             }
         }
 
@@ -376,6 +396,8 @@ impl<
                 let _proposal_id = var.unwrap_gas();
             }
         }
+
+        events
     }
 
     fn _tally<DB: Database, CTX: QueryableContext<DB, SK>>(
