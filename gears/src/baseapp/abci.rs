@@ -8,6 +8,7 @@ use crate::params::ParamsSubspaceKey;
 use crate::types::gas::Gas;
 use bytes::Bytes;
 use database::Database;
+use tendermint::cancellation::{CancellationToken, EmptyCtx};
 use tendermint::{
     application::ABCIApplication,
     types::{
@@ -42,9 +43,13 @@ use tendermint::{
 use tracing::{debug, error, info};
 
 impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
-    ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
+    ABCIApplication<H::Genesis, EmptyCtx> for BaseApp<DB, PSK, H, AI>
 {
-    fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
+    fn init_chain(
+        &self,
+        request: RequestInitChain<H::Genesis>,
+        _token: CancellationToken<EmptyCtx>,
+    ) -> ResponseInitChain {
         info!("Got init chain request");
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
@@ -86,7 +91,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         }
     }
 
-    fn query(&self, request: RequestQuery) -> ResponseQuery {
+    fn query(&self, request: RequestQuery, _token: CancellationToken<EmptyCtx>) -> ResponseQuery {
         info!("Got query request to: {}", request.path);
 
         match self.run_query(&request) {
@@ -115,7 +120,11 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         }
     }
 
-    fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
+    fn check_tx(
+        &self,
+        RequestCheckTx { tx, r#type }: RequestCheckTx,
+        _token: CancellationToken<EmptyCtx>,
+    ) -> ResponseCheckTx {
         info!("Got check tx request");
 
         let mut state = self.state.write().expect(POISONED_LOCK);

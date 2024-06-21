@@ -13,6 +13,7 @@ use types::chain_id::ChainId;
 
 pub mod abci;
 pub mod application;
+pub mod cancellation;
 pub mod error;
 pub(crate) mod ext;
 pub mod informal;

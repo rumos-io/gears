@@ -30,6 +30,24 @@ pub struct ResponseCheckTx {
     pub mempool_error: String,
 }
 
+impl ResponseCheckTx {
+    pub fn error_with_gas_overflow() -> Self {
+        ResponseCheckTx {
+            code: 1,
+            data: Default::default(),
+            log: "check err: GAS OVERFLOW".to_owned(),
+            info: "".to_string(),
+            gas_wanted: 1,
+            gas_used: 0,
+            events: vec![],
+            codespace: "".to_string(),
+            mempool_error: "".to_string(),
+            priority: 0,
+            sender: "".to_string(),
+        }
+    }
+}
+
 impl From<super::inner::ResponseCheckTx> for ResponseCheckTx {
     fn from(
         super::inner::ResponseCheckTx {
