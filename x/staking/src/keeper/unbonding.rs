@@ -1,3 +1,5 @@
+use std::ops::Bound;
+
 use super::*;
 use crate::{
     consts::error::SERDE_ENCODING_DOMAIN_TYPE, parse_validator_queue_key,
@@ -196,11 +198,24 @@ impl<
         // over are not ready to unbond, so an explicit check is required.
         let unbonding_val_map: HashMap<Vec<u8>, Vec<ValAddress>> =
             self.unbonding_validator_queue_map(ctx, &block_time, block_height);
+        // TODO: in context of solving issues with shared and mutable references it is need to
+        // create owned collection. It's less performant even if we update iterator to infallible
+        // version.
+        // The sdk allows to iterate over a store without resolving the
+        // possible issues with lifetimes.
+        // let unbonding_val_map: HashMap<Vec<u8>, Vec<ValAddress>> = self
+        //     .unbonding_validator_queue_iter(ctx, &block_time, block_height)
+        //     .map(|r| {
+        //         let (k, v) = r.unwrap_gas();
+        //         (k.to_vec(), v)
+        //     })
+        //     .collect();
 
         // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let block_time =
             chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
+
         for (k, v) in &unbonding_val_map {
             let (time, height) =
                 parse_validator_queue_key(k).expect("failed to parse unbonding key");
@@ -411,26 +426,34 @@ impl<
 
     pub fn unbonding_validator_queue_map<DB: Database, CTX: InfallibleContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         block_time: &Timestamp,
         block_height: u64,
     ) -> HashMap<Vec<u8>, Vec<ValAddress>> {
         let store = ctx.infallible_store(&self.store_key);
-        let iterator = store.prefix_store(VALIDATOR_QUEUE_KEY);
-
+        let start = VALIDATOR_QUEUE_KEY.to_vec();
+        let mut end = validator_queue_key(block_time, block_height);
+        end.push(0);
         let mut res = HashMap::new();
-
-        let end = validator_queue_key(block_time, block_height);
-        let mut previous_was_end = false;
-        for (k, v) in iterator.into_range(..).take_while(|(k, _)| {
-            let is_not_end = **k != end;
-            let ret_res = is_not_end && !previous_was_end;
-            previous_was_end = !is_not_end;
-            ret_res
-        }) {
+        for (k, v) in store.into_range((
+            Bound::Included(start.clone()),
+            Bound::Excluded([start, end].concat()),
+        )) {
             res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
         }
         res
+    }
+
+    pub fn unbonding_validator_queue_iter<'a, DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &'a self,
+        ctx: &'a CTX,
+        block_time: &Timestamp,
+        block_height: u64,
+    ) -> UnbondingValidatorsIterator<'a, DB> {
+        let store = ctx.kv_store(&self.store_key);
+        let start = VALIDATOR_QUEUE_KEY.to_vec();
+        let end = validator_queue_key(block_time, block_height);
+        UnbondingValidatorsIterator::new(store, start, end)
     }
 
     pub fn delete_unbonding_validators_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(

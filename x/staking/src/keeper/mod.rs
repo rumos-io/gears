@@ -44,6 +44,7 @@ mod hooks;
 mod mock_hook_keeper;
 mod query;
 mod redelegation;
+mod store_iter;
 mod tx;
 mod unbonded;
 mod unbonding;
@@ -51,6 +52,7 @@ mod validator;
 mod validators_and_total_power;
 
 pub use mock_hook_keeper::*;
+use store_iter::*;
 
 #[derive(Debug, Clone)]
 pub struct Keeper<
