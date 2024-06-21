@@ -413,7 +413,10 @@ impl<
                 if burn_deposit {
                     deposit_del(ctx, self, proposal_id).unwrap_gas();
                 } else {
+                    deposit_refund(ctx, self).unwrap_gas();
                 }
+
+                
             }
         }
 
@@ -764,12 +767,23 @@ fn deposit_refund<
     ctx: &mut CTX,
     keeper: &GovKeeper<SK, PSK, M, BK, STK>,
 ) -> Result<(), GasStoreErrors> {
-    for deposit in
-        DepositIterator::new(ctx.kv_store(&keeper.store_key)).map(|this| this.map(|(_, val)| val))
+    for deposit in DepositIterator::new(ctx.kv_store(&keeper.store_key))
+        .map(|this| this.map(|(_, val)| val))
+        .collect::<Vec<_>>()
     {
-        let deposit = deposit?;
+        let MsgDeposit {
+            proposal_id,
+            depositor,
+            amount,
+        } = deposit?;
 
-        
+        keeper
+            .bank_keeper
+            .send_coins_from_module_to_account(ctx, &depositor, &keeper.gov_mod, amount)
+            .expect("Failed to refund coins"); // TODO: how to do this better?
+
+        ctx.kv_store_mut(&keeper.store_key)
+            .delete(&MsgDeposit::key(proposal_id, &depositor))?;
     }
 
     Ok(())
