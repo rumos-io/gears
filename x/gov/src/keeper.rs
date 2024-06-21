@@ -514,7 +514,7 @@ impl<
                     // delegation shares * bonded / total shares
                     let voting_power = delegation
                         .shares()
-                        .mul(Decimal256::new(validator.bounded_tokens))
+                        .mul(Decimal256::from_atomics(validator.bounded_tokens, 0).unwrap()) // TODO: HANDLE THIS
                         .div(validator.delegator_shares);
 
                     for VoteOptionWeighted { option, weight } in &vote_options {
@@ -546,7 +546,7 @@ impl<
             }
 
             let voting_power = (delegator_shares - delegator_deduction)
-                * Decimal256::new(bounded_tokens.clone())
+                * Decimal256::from_atomics(bounded_tokens.clone(), 0).unwrap() // TODO: HANDLE THIS
                 / delegator_shares;
 
             for VoteOptionWeighted { option, weight } in vote {
@@ -567,7 +567,8 @@ impl<
         }
 
         // If there is not enough quorum of votes, the proposal fails
-        let percent_voting = total_voting_power / Decimal256::new(total_bonded_tokens.amount);
+        let percent_voting =
+            total_voting_power / Decimal256::from_atomics(total_bonded_tokens.amount, 0).unwrap(); // TODO: HANDLE THIS
         if percent_voting < tally_params.quorum {
             return Ok((false, true, tally_results.to_result()));
         }
