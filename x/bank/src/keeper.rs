@@ -102,7 +102,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         _ctx: &CTX,
         _address: &AccAddress,
         _denom: &Denom,
-    ) -> Result<Coin, AppError> {
+    ) -> Result<Coin, GasStoreErrors> {
         unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
     }
 }

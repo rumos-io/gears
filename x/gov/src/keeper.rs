@@ -404,8 +404,16 @@ impl<
                     .collect::<Vec<_>>()
             };
 
-            for var in active_iter {
-                let _proposal_id = var.unwrap_gas();
+            for proposal_id in active_iter {
+                let proposal_id = proposal_id.unwrap_gas();
+
+                let (passes, burn_deposit, tally_result) =
+                    self.tally(ctx, proposal_id).unwrap_gas();
+
+                if burn_deposit {
+                    deposit_del(ctx, self, proposal_id).unwrap_gas();
+                } else {
+                }
             }
         }
 
@@ -416,7 +424,7 @@ impl<
         &self,
         ctx: &mut CTX,
         proposal_id: u64,
-    ) -> Result<(bool, bool, TallyResult), AppError> {
+    ) -> Result<(bool, bool, TallyResult), GasStoreErrors> {
         let mut curr_validators = HashMap::<ValAddress, ValidatorGovInfo>::new();
 
         for validator in self.staking_keeper.bonded_validators_by_power_iter(ctx)? {
@@ -739,6 +747,29 @@ fn deposit_del<
 
         ctx.kv_store_mut(&keeper.store_key)
             .delete(&MsgDeposit::key(proposal_id, &deposit.depositor))?;
+    }
+
+    Ok(())
+}
+
+fn deposit_refund<
+    DB: Database,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BK: BankKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
+    CTX: TransactionalContext<DB, SK>,
+>(
+    ctx: &mut CTX,
+    keeper: &GovKeeper<SK, PSK, M, BK, STK>,
+) -> Result<(), GasStoreErrors> {
+    for deposit in
+        DepositIterator::new(ctx.kv_store(&keeper.store_key)).map(|this| this.map(|(_, val)| val))
+    {
+        let deposit = deposit?;
+
+        
     }
 
     Ok(())

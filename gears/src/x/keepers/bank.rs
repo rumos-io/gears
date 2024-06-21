@@ -47,5 +47,5 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         ctx: &CTX,
         address: &AccAddress,
         denom: &Denom,
-    ) -> Result<Coin, AppError>;
+    ) -> Result<Coin, GasStoreErrors>;
 }

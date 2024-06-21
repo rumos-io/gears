@@ -3,7 +3,6 @@ use kv_store::StoreKey;
 
 use crate::{
     context::QueryableContext,
-    error::AppError,
     types::{address::AccAddress, base::coin::Coin, store::gas::errors::GasStoreErrors},
     x::{
         module::Module,
@@ -30,5 +29,5 @@ pub trait GovStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'stat
     fn total_bonded_tokens<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Coin, AppError>;
+    ) -> Result<Coin, GasStoreErrors>;
 }
