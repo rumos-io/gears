@@ -563,26 +563,26 @@ impl<
 
         // If there is no staked coins, the proposal fails
         if total_bonded_tokens.amount.is_zero() {
-            return Ok((false, false, tally_results.result()));
+            return Ok((false, false, tally_results.to_result()));
         }
 
         // If there is not enough quorum of votes, the proposal fails
         let percent_voting = total_voting_power / Decimal256::new(total_bonded_tokens.amount);
         if percent_voting < tally_params.quorum {
-            return Ok((false, true, tally_results.result()));
+            return Ok((false, true, tally_results.to_result()));
         }
 
         // If no one votes (everyone abstains), proposal fails
         // Why they sub and check to is_zero in cosmos?
         if total_voting_power == *tally_results.get_mut(&VoteOption::Abstain) {
-            return Ok((false, false, tally_results.result()));
+            return Ok((false, false, tally_results.to_result()));
         }
 
         // If more than 1/3 of voters veto, proposal fails
         if *tally_results.get_mut(&VoteOption::NoWithVeto) / total_voting_power
             > tally_params.veto_threshold
         {
-            return Ok((false, true, tally_results.result()));
+            return Ok((false, true, tally_results.to_result()));
         }
 
         // If more than 1/2 of non-abstaining voters vote Yes, proposal passes
@@ -590,11 +590,11 @@ impl<
             / (total_voting_power - *tally_results.get_mut(&VoteOption::Abstain))
             > tally_params.threshold
         {
-            return Ok((true, false, tally_results.result()));
+            return Ok((true, false, tally_results.to_result()));
         }
 
         // If more than 1/2 of non-abstaining voters vote No, proposal fails
-        Ok((false, false, tally_results.result()))
+        Ok((false, false, tally_results.to_result()))
     }
 }
 
@@ -618,7 +618,7 @@ impl TallyResultMap {
         self.0.get_mut(k).expect(Self::EXISTS_MSG)
     }
 
-    pub fn result(mut self) -> TallyResult {
+    pub fn to_result(mut self) -> TallyResult {
         TallyResult {
             // TODO: is it correct?
             yes: self
