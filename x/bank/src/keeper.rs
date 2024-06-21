@@ -108,10 +108,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
 
     fn send_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
-        address: &AccAddress,
-        module: &M,
-        amount: SendCoins,
+        _ctx: &mut CTX,
+        _address: &AccAddress,
+        _module: &M,
+        _amount: SendCoins,
     ) -> Result<(), AppError> {
         unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
     }

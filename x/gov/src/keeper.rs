@@ -12,7 +12,6 @@ use gears::{
         block::BlockContext, init::InitContext, tx::TxContext, QueryableContext,
         TransactionalContext,
     },
-    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::proto::event::{Event, EventAttribute},
@@ -400,23 +399,58 @@ impl<
             let active_iter = {
                 let store = ctx.kv_store(&self.store_key).into();
                 ActiveProposalIterator::new(store, &time)
-                    .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
+                    .map(|this| this.map(|((_, _), proposal)| proposal))
                     .collect::<Vec<_>>()
             };
 
-            for proposal_id in active_iter {
-                let proposal_id = proposal_id.unwrap_gas();
+            for proposal in active_iter {
+                let mut proposal = proposal.unwrap_gas();
 
                 let (passes, burn_deposit, tally_result) =
-                    self.tally(ctx, proposal_id).unwrap_gas();
+                    self.tally(ctx, proposal.proposal_id).unwrap_gas();
 
                 if burn_deposit {
-                    deposit_del(ctx, self, proposal_id).unwrap_gas();
+                    deposit_del(ctx, self, proposal.proposal_id).unwrap_gas();
                 } else {
                     deposit_refund(ctx, self).unwrap_gas();
                 }
 
-                
+                if passes {
+                    // TODO: Handle proposal: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/abci.go#L65-L83
+
+                    proposal.status = ProposalStatus::Passed;
+
+                    if true
+                    // case when handling failed
+                    {
+                        proposal.status = ProposalStatus::Failed;
+                    }
+                } else {
+                    proposal.status = ProposalStatus::Rejected;
+                }
+
+                proposal.final_tally_result = tally_result;
+
+                proposal_set(ctx, &self.store_key, &proposal).unwrap_gas();
+                ctx.kv_store_mut(&self.store_key)
+                    .delete(&Proposal::active_queue_key(
+                        proposal.proposal_id,
+                        &proposal.deposit_end_time,
+                    ));
+
+                // TODO: HOOKS https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/abci.go#L97
+
+                events.push(Event::new(
+                    "active_proposal",
+                    vec![
+                        EventAttribute::new(
+                            "proposal_id".into(),
+                            proposal.proposal_id.to_string().into(),
+                            false,
+                        ),
+                        EventAttribute::new("proposal_result".into(), "TODO".into(), false),
+                    ],
+                ))
             }
         }
 

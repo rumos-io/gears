@@ -228,7 +228,9 @@ impl<
         ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
-        self.keeper.end_block(ctx);
+        let events = self.keeper.end_block(ctx);
+
+        ctx.append_events(events);
 
         Vec::new()
     }

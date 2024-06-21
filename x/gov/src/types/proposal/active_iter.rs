@@ -1,10 +1,12 @@
-use std::{borrow::Cow, ops::Bound};
+use std::ops::Bound;
 
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     store::database::Database,
     types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
 };
+
+use crate::errors::SERDE_JSON_CONVERSION;
 
 use super::{parse_proposal_key_bytes, Proposal, SORTABLE_DATE_TIME_FORMAT};
 
@@ -34,12 +36,15 @@ impl<'a, DB: Database> ActiveProposalIterator<'a, DB> {
 }
 
 impl<'a, DB: Database> Iterator for ActiveProposalIterator<'a, DB> {
-    type Item = Result<((u64, DateTime<Utc>), Cow<'a, Vec<u8>>), GasStoreErrors>;
+    type Item = Result<((u64, DateTime<Utc>), Proposal), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(var) = self.0.next() {
             match var {
-                Ok((key, value)) => Some(Ok((parse_proposal_key_bytes(key.as_ref()), value))),
+                Ok((key, value)) => Some(Ok((
+                    parse_proposal_key_bytes(key.as_ref()),
+                    serde_json::from_slice(&value).expect(SERDE_JSON_CONVERSION),
+                ))),
                 Err(err) => Some(Err(err)),
             }
         } else {
