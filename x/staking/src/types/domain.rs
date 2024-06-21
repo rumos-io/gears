@@ -15,10 +15,14 @@ use gears::{
         decimal256::Decimal256,
         uint::Uint256,
     },
+    x::types::{
+        delegation::StakingDelegation,
+        validator::{BondStatus, StakingValidator},
+    },
 };
-use prost::{Enumeration, Message};
+use prost::Message;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt::Display, str::FromStr};
+use std::{cmp::Ordering, str::FromStr};
 
 /// HistoricalInfo contains header and validator information for a given block.
 /// It is stored as part of staking module's state, which persists the `n` most
@@ -69,6 +73,20 @@ pub struct Delegation {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
     pub shares: Decimal256,
+}
+
+impl StakingDelegation for Delegation {
+    fn delegator(&self) -> &AccAddress {
+        &self.delegator_address
+    }
+
+    fn validator(&self) -> &ValAddress {
+        &self.validator_address
+    }
+
+    fn shares(&self) -> &Decimal256 {
+        &self.shares
+    }
 }
 
 /// Delegation represents the bond with tokens held by an account. It is
@@ -169,23 +187,6 @@ impl DvPair {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Enumeration)]
-pub enum BondStatus {
-    Unbonded = 0,
-    Unbonding = 1,
-    Bonded = 2,
-}
-
-impl Display for BondStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            BondStatus::Unbonded => write!(f, "Unbonded"),
-            BondStatus::Unbonding => write!(f, "Unbonding"),
-            BondStatus::Bonded => write!(f, "Bonded"),
-        }
-    }
-}
-
 /// Validator defines a validator, together with the total amount of the
 /// Validator's bond shares and their exchange rate to coins. Slashing results in
 /// a decrease in the exchange rate, allowing correct calculation of future
@@ -216,6 +217,20 @@ pub struct Validator {
     pub commission: Commission,
     pub min_self_delegation: Uint256,
     pub status: BondStatus,
+}
+
+impl StakingValidator for Validator {
+    fn operator(&self) -> &ValAddress {
+        &self.operator_address
+    }
+
+    fn bonded_tokens(&self) -> &Uint256 {
+        &self.tokens
+    }
+
+    fn delegator_shares(&self) -> &Decimal256 {
+        &self.delegator_shares
+    }
 }
 
 impl Validator {

@@ -1,7 +1,7 @@
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
     traits::*,
-    BondStatus, Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
+    Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use chrono::Utc;
@@ -27,7 +27,7 @@ use gears::{
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
         uint::Uint256,
     },
-    x::{keepers::auth::AuthKeeper, module::Module},
+    x::{keepers::auth::AuthKeeper, module::Module, types::validator::BondStatus},
 };
 use prost::bytes::BufMut;
 use std::{cmp::Ordering, collections::HashMap, u64};
@@ -39,6 +39,7 @@ const CTX_NO_GAS_UNWRAP: &str = "Context doesn't have any gas";
 
 mod bonded;
 mod delegation;
+mod gov;
 mod historical_info;
 mod hooks;
 mod mock_hook_keeper;

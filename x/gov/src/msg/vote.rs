@@ -21,7 +21,7 @@ pub struct MsgVote {
     pub option: VoteOption,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, strum::EnumIter)]
 pub enum VoteOption {
     Empty = 0,
     Yes = 1,

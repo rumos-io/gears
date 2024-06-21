@@ -8,11 +8,13 @@ use gears::{
         decimal256::Decimal256,
         store::gas::errors::GasStoreErrors,
     },
-    x::{keepers::auth::AuthKeeper, module::Module},
+    x::{self, keepers::auth::AuthKeeper, module::Module},
 };
 
 /// BankKeeper defines the expected interface needed to retrieve account balances.
-pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
+pub trait BankKeeper<SK: StoreKey, M: Module>:
+    Clone + Send + Sync + 'static + x::keepers::bank::BankKeeper<SK, M>
+{
     // GetBalance(ctx sdk.Context, addr sdk.AccAddress, denom string) sdk.Coin
     // LockedCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
     // SpendableCoins(ctx sdk.Context, addr sdk.AccAddress) sdk.Coins
