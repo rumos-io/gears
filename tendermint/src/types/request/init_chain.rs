@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct RequestInitChain<G> {
     pub time: Timestamp,
     pub chain_id: ChainId,

@@ -2,7 +2,7 @@ use crate::error::Error;
 
 use super::crypto::PublicKey;
 
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct ValidatorUpdate {
     pub pub_key: PublicKey,
     pub power: i64,

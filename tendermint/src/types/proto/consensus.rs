@@ -2,7 +2,7 @@ use super::params::{BlockParams, EvidenceParams, ValidatorParams, VersionParams}
 
 /// ConsensusParams contains all consensus-relevant parameters
 /// that can be adjusted by the abci app
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct ConsensusParams {
     pub block: BlockParams,
     pub evidence: EvidenceParams,

@@ -28,8 +28,7 @@ use staking::{
         },
         tx::{StakingCommands, StakingTxCli},
     },
-    BondStatus, CommissionRatesRaw, CommissionRaw, DelegationResponse, Description,
-    RedelegationResponse, Validator,
+    BondStatus, CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
 };
 use std::{path::PathBuf, str::FromStr};
 use utilities::ACC_ADDRESS;
