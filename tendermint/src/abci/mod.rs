@@ -45,5 +45,5 @@ pub mod response {
     }
 }
 
-pub use tendermint_abci::cancellation::CancellationToken;
+pub use tendermint_abci::cancellation::CancellationSource;
 pub use tendermint_abci::cancellation::TokenDropGuard;
