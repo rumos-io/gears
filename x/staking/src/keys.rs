@@ -5,6 +5,7 @@ use crate::consts::{
 use chrono::Utc;
 use gears::{
     error::AppError,
+    tendermint::types::time::Timestamp,
     types::address::{AccAddress, ValAddress},
 };
 
@@ -34,7 +35,11 @@ pub fn historical_info_key(height: u32) -> Vec<u8> {
     res
 }
 
-pub(super) fn validator_queue_key(end_time: chrono::DateTime<Utc>, end_height: u64) -> Vec<u8> {
+pub(super) fn validator_queue_key(end_time: &Timestamp, end_height: u64) -> Vec<u8> {
+    // TODO: consider to move the DateTime type and work with timestamps into Gears
+    // The timestamp is provided by context and conversion won't fail.
+    let end_time =
+        chrono::DateTime::from_timestamp(end_time.seconds, end_time.nanos as u32).unwrap();
     let height_bz = end_height.to_le_bytes();
     let time_bz = end_time
         .timestamp_nanos_opt()
@@ -65,7 +70,10 @@ pub(super) fn parse_validator_queue_key(
     Ok((time, height))
 }
 
-pub(super) fn unbonding_delegation_time_key(time: chrono::DateTime<Utc>) -> [u8; 8] {
+pub(super) fn unbonding_delegation_time_key(time: &Timestamp) -> [u8; 8] {
+    // TODO: consider to move the DateTime type and work with timestamps into Gears
+    // The timestamp is provided by context and conversion won't fail.
+    let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
     time.timestamp_nanos_opt()
         .expect(TIMESTAMP_NANOS_EXPECT)
         .to_le_bytes()

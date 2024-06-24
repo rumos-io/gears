@@ -1,7 +1,11 @@
 use std::str::FromStr;
 
 pub use cosmwasm_std::Decimal256;
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint256};
+
+pub const ONE_DEC: Decimal256 = Decimal256::one();
+pub const PRECISION_REUSE: Decimal256 =
+    Decimal256::new(Uint256::from_u128(1_000_000_000_000_000_000));
 
 /// Trait for converting to and from a string which is compatible with the cosmos SDK protobufs.
 /// The cosmos SDK uses a string representation of the inner `Uint256` to represent a `Decimal256`.

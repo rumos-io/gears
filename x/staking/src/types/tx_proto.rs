@@ -7,7 +7,7 @@ use gears::{
         address::{AccAddress, ValAddress},
         auth::fee::inner::Coin as CoinRaw,
         base::coin::Coin,
-        decimal256::{CosmosDecimalProtoString, Decimal256},
+        decimal256::{CosmosDecimalProtoString, Decimal256, ONE_DEC},
         errors::StdError,
         uint::Uint256,
     },
@@ -43,11 +43,48 @@ impl From<CommissionRates> for CommissionRatesRaw {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CommissionRates {
     /// rate is the commission rate charged to delegators, as a fraction.
-    pub rate: Decimal256,
+    rate: Decimal256,
     /// max_rate defines the maximum commission rate which validator can ever charge, as a fraction.
-    pub max_rate: Decimal256,
+    max_rate: Decimal256,
     /// max_change_rate defines the maximum daily increase of the validator commission, as a fraction.
-    pub max_change_rate: Decimal256,
+    max_change_rate: Decimal256,
+}
+
+impl CommissionRates {
+    pub fn new(
+        rate: Decimal256,
+        max_rate: Decimal256,
+        max_change_rate: Decimal256,
+    ) -> Result<CommissionRates, AppError> {
+        CommissionRates::validate(rate, max_rate, max_change_rate)?;
+        Ok(CommissionRates {
+            rate,
+            max_rate,
+            max_change_rate,
+        })
+    }
+
+    fn validate(
+        rate: Decimal256,
+        max_rate: Decimal256,
+        max_change_rate: Decimal256,
+    ) -> Result<(), AppError> {
+        if max_rate > ONE_DEC {
+            // max rate cannot be greater than 1
+            return Err(AppError::Send("max_rate too huge".into()));
+        }
+        if rate > max_rate {
+            // rate cannot be greater than the max rate
+            return Err(AppError::Send("rate is bigger than max_rate".into()));
+        }
+        if max_change_rate > max_rate {
+            // change rate cannot be greater than the max rate
+            return Err(AppError::Send(
+                "max_change_rate is bigger than max_rate".into(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 impl TryFrom<CommissionRatesRaw> for CommissionRates {
@@ -96,35 +133,10 @@ impl Commission {
         commission_rates: CommissionRates,
         update_time: Timestamp,
     ) -> Result<Commission, AppError> {
-        Self::validate_commission_rates(&commission_rates)?;
         Ok(Commission {
             commission_rates,
             update_time,
         })
-    }
-
-    pub fn validate_commission_rates(commission_rates: &CommissionRates) -> Result<(), AppError> {
-        let CommissionRates {
-            rate,
-            max_rate,
-            max_change_rate,
-        } = commission_rates;
-
-        if *max_rate > ONE_DEC {
-            // max rate cannot be greater than 1
-            return Err(AppError::Send("max_rate too huge".into()));
-        }
-        if *rate > *max_rate {
-            // rate cannot be greater than the max rate
-            return Err(AppError::Send("rate is bigger than max_rate".into()));
-        }
-        if *max_change_rate > *max_rate {
-            // change rate cannot be greater than the max rate
-            return Err(AppError::Send(
-                "max_change_rate is bigger than max_rate".into(),
-            ));
-        }
-        Ok(())
     }
 }
 

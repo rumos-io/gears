@@ -2,7 +2,6 @@ use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
     Commission, CommissionRates, CommissionRaw, Description,
 };
-use chrono::Utc;
 use gears::{
     core::{errors::CoreError, Protobuf},
     error::AppError,
@@ -12,7 +11,7 @@ use gears::{
     },
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
-        decimal256::Decimal256,
+        decimal256::{Decimal256, PRECISION_REUSE},
         uint::Uint256,
     },
     x::types::{
@@ -109,9 +108,10 @@ pub struct UnbondingDelegationEntry {
 }
 
 impl UnbondingDelegationEntry {
-    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
+    pub fn is_mature(&self, time: &Timestamp) -> bool {
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
@@ -148,9 +148,10 @@ pub struct RedelegationEntry {
 }
 
 impl RedelegationEntry {
-    pub fn is_mature(&self, time: chrono::DateTime<Utc>) -> bool {
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
+    pub fn is_mature(&self, time: &Timestamp) -> bool {
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
+        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
         let completion_time = chrono::DateTime::from_timestamp(
             self.completion_time.seconds,
             self.completion_time.nanos as u32,
@@ -252,11 +253,8 @@ impl Validator {
                 nanos: 0,
             },
             commission: Commission::new(
-                CommissionRates {
-                    rate: Decimal256::zero(),
-                    max_rate: Decimal256::zero(),
-                    max_change_rate: Decimal256::zero(),
-                },
+                CommissionRates::new(Decimal256::zero(), Decimal256::zero(), Decimal256::zero())
+                    .expect("creation of hardcoded commission rates won't fail"),
                 Timestamp {
                     seconds: 0,
                     nanos: 0,
@@ -282,23 +280,6 @@ impl Validator {
         self.commission = commission;
     }
 
-    /// add_tokens_from_del adds tokens to a validator
-    pub fn add_tokens_from_del(&mut self, amount: Uint256) -> Decimal256 {
-        // calculate the shares to issue
-        let issues_shares = if self.delegator_shares.is_zero() {
-            // the first delegation to a validator sets the exchange rate to one
-            // TODO: infallible in sdk
-            Decimal256::from_atomics(amount, 0).unwrap()
-        } else {
-            // TODO: check the code, maybe remove unwrap
-            self.shares_from_tokens(amount).unwrap()
-        };
-
-        self.tokens += amount;
-        self.delegator_shares += issues_shares;
-        issues_shares
-    }
-
     pub fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
             return Err(AppError::Custom("insufficient shares".into()).into());
@@ -313,22 +294,41 @@ impl Validator {
         if self.tokens.is_zero() {
             return Err(AppError::Custom("insufficient shares".into()).into());
         }
-
         let mul = self
             .delegator_shares
             .checked_mul(Decimal256::from_atomics(amount, 0)?)?;
-        // TODO: check constant 18 in decimals
-        let precision_reuse = Decimal256::from_atomics(10u64, 0)?.checked_pow(18)?;
-        let mul2 = mul.checked_mul(precision_reuse)?;
+        let mul2 = mul.checked_mul(PRECISION_REUSE)?;
         let div = mul2.checked_div(Decimal256::from_atomics(self.tokens, 0)?)?;
-        Ok(div.checked_div(precision_reuse)?)
+        Ok(div.checked_div(PRECISION_REUSE)?)
     }
 
-    /// RemoveDelShares removes delegator shares from a validator.
+    /// calculate the token worth of provided shares
+    pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
+        Ok(shares
+            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
+            .checked_div(self.delegator_shares)?)
+    }
+
+    /// add_tokens_from_del adds tokens to a validator
+    pub fn add_tokens_from_del(&mut self, amount: Uint256) -> anyhow::Result<Decimal256> {
+        // calculate the shares to issue
+        let issues_shares = if self.delegator_shares.is_zero() {
+            // the first delegation to a validator sets the exchange rate to one
+            Decimal256::from_atomics(amount, 0)?
+        } else {
+            self.shares_from_tokens(amount)?
+        };
+
+        self.tokens = self.tokens.checked_add(amount)?;
+        self.delegator_shares = self.delegator_shares.checked_add(issues_shares)?;
+        Ok(issues_shares)
+    }
+
+    /// remove_del_shares removes delegator shares from a validator.
     /// NOTE: because token fractions are left in the valiadator,
     ///       the exchange rate of future shares of this validator can increase.
-    pub fn remove_del_shares(&mut self, del_shares: Decimal256) -> Uint256 {
-        let remaining_shares = self.delegator_shares - del_shares;
+    pub fn remove_del_shares(&mut self, del_shares: Decimal256) -> anyhow::Result<Uint256> {
+        let remaining_shares = self.delegator_shares.checked_sub(del_shares)?;
 
         let issued_tokens = if remaining_shares.is_zero() {
             // last delegation share gets any trimmings
@@ -338,24 +338,14 @@ impl Validator {
         } else {
             // leave excess tokens in the validator
             // however fully use all the delegator shares
-            // TODO: infallible + floor
-            let tokens = self.tokens_from_shares(del_shares).unwrap().to_uint_floor();
-            // TODO: check of negative result
-            self.tokens -= tokens;
-            //         panic("attempting to remove more tokens than available in validator")
+            let tokens = self.tokens_from_shares(del_shares)?.to_uint_floor();
+            // the library panics on substruct with overflow and this behavior is identical to sdk
+            self.tokens = self.tokens.checked_sub(tokens)?;
             tokens
         };
 
         self.delegator_shares = remaining_shares;
-        issued_tokens
-    }
-
-    /// calculate the token worth of provided shares
-    // TODO: infallible in sdk
-    pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
-        Ok(shares
-            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
-            .checked_div(self.delegator_shares)?)
+        Ok(issued_tokens)
     }
 
     pub fn invalid_ex_rate(&self) -> bool {

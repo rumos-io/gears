@@ -45,6 +45,7 @@ mod hooks;
 mod mock_hook_keeper;
 mod query;
 mod redelegation;
+mod store_iter;
 mod tx;
 mod unbonded;
 mod unbonding;
@@ -52,6 +53,7 @@ mod validator;
 mod validators_and_total_power;
 
 pub use mock_hook_keeper::*;
+use store_iter::*;
 
 #[derive(Debug, Clone)]
 pub struct Keeper<
@@ -292,9 +294,7 @@ impl<
 
         // Remove all mature unbonding delegations from the ubd queue.
         let time = ctx.get_time();
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, time.clone());
+        let mature_unbonds = self.dequeue_all_mature_ubd_queue(ctx, &time);
         for dv_pair in mature_unbonds {
             let val_addr = dv_pair.val_addr;
             let val_addr_str = val_addr.to_string();
@@ -330,7 +330,7 @@ impl<
             });
         }
         // Remove all mature redelegations from the red queue.
-        let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, time);
+        let mature_redelegations = self.dequeue_all_mature_redelegation_queue(ctx, &time);
         for dvv_triplet in mature_redelegations {
             let val_src_addr = dvv_triplet.val_src_addr;
             let val_src_addr_str = val_src_addr.to_string();
@@ -524,9 +524,8 @@ impl<
         ctx: &mut CTX,
         amount: Uint256,
     ) -> Result<(), GasStoreErrors> {
-        // TODO: original routine is infallible, it means that the amount is a valid number.
-        // The method is called from failable methods. Consider to provide correct solution taking
-        // into account additional analisis.
+        // original routine is infallible, it means that the amount should be a valid number.
+        // All errors in sdk panics in this method
         let params = self.staking_params_keeper.try_get(ctx)?;
         let coins = SendCoins::new(vec![Coin {
             denom: params.bond_denom,
@@ -534,7 +533,6 @@ impl<
         }])
         .unwrap();
 
-        // TODO: check and maybe remove unwrap
         self.bank_keeper
             .send_coins_from_module_to_module::<DB, CTX>(
                 ctx,
@@ -573,7 +571,6 @@ impl<
                     chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
                 let completion_time = time + duration;
                 let height = ctx.height() as u64;
-                // TODO: consider to work with time in Gears
                 let completion_time = Timestamp {
                     seconds: completion_time.timestamp(),
                     nanos: completion_time.timestamp_subsec_nanos() as i32,

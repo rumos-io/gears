@@ -53,7 +53,6 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let iterator = store.prefix_store(VALIDATORS_BY_POWER_INDEX_KEY);
         let mut res = HashMap::new();
-        // TODO:D Handle error if you need
         for next in iterator.into_range(..) {
             let (k, v) = next?;
             res.insert(k.to_vec(), ValAddress::try_from(v.to_vec())?);
