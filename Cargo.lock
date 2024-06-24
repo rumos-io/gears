@@ -4913,7 +4913,7 @@ dependencies = [
 [[package]]
 name = "tendermint"
 version = "0.29.1"
-source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#3e3d6dd328038502940e25c3f91a1d6acb9ea06b"
+source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#f7b0a5a4b38dfbb51b51d051907154bc916800a2"
 dependencies = [
  "bytes",
  "digest 0.10.7",
@@ -4970,7 +4970,7 @@ dependencies = [
 [[package]]
 name = "tendermint-abci"
 version = "0.29.1"
-source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#3e3d6dd328038502940e25c3f91a1d6acb9ea06b"
+source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#f7b0a5a4b38dfbb51b51d051907154bc916800a2"
 dependencies = [
  "bytes",
  "flex-error",
@@ -4982,7 +4982,7 @@ dependencies = [
 [[package]]
 name = "tendermint-config"
 version = "0.29.1"
-source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#3e3d6dd328038502940e25c3f91a1d6acb9ea06b"
+source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#f7b0a5a4b38dfbb51b51d051907154bc916800a2"
 dependencies = [
  "flex-error",
  "serde",
@@ -5008,7 +5008,7 @@ dependencies = [
 [[package]]
 name = "tendermint-proto"
 version = "0.29.1"
-source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#3e3d6dd328038502940e25c3f91a1d6acb9ea06b"
+source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#f7b0a5a4b38dfbb51b51d051907154bc916800a2"
 dependencies = [
  "bytes",
  "flex-error",
@@ -5061,7 +5061,7 @@ dependencies = [
 [[package]]
 name = "tendermint-rpc"
 version = "0.29.1"
-source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#3e3d6dd328038502940e25c3f91a1d6acb9ea06b"
+source = "git+https://github.com/rumos-io/tendermint-rs?branch=v0.29.x#f7b0a5a4b38dfbb51b51d051907154bc916800a2"
 dependencies = [
  "async-trait",
  "bytes",
