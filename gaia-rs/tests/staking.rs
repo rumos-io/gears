@@ -19,6 +19,7 @@ use gears::{
         decimal256::Decimal256,
         uint::Uint256,
     },
+    x::types::validator::BondStatus,
 };
 use staking::{
     cli::{
@@ -28,8 +29,7 @@ use staking::{
         },
         tx::{StakingCommands, StakingTxCli},
     },
-    BondStatus, CommissionRatesRaw, CommissionRaw, DelegationResponse, Description,
-    RedelegationResponse, Validator,
+    CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
 };
 use std::{path::PathBuf, str::FromStr};
 use utilities::ACC_ADDRESS;
