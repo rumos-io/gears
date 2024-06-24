@@ -1,4 +1,5 @@
 mod domain;
+pub mod iter;
 mod query;
 mod tx_proto;
 

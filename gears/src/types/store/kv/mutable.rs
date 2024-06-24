@@ -71,4 +71,11 @@ impl<DB: Database> StoreMut<'_, DB> {
             StoreMutBackend::Kv(var) => Ok(var.set(key, value)),
         }
     }
+
+    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
+        match &mut self.0 {
+            StoreMutBackend::Gas(var) => var.delete(k),
+            StoreMutBackend::Kv(var) => Ok(var.delete(k)),
+        }
+    }
 }

@@ -1,48 +1,88 @@
-use std::{marker::PhantomData, ops::Add};
+use std::{
+    collections::HashMap,
+    marker::PhantomData,
+    ops::{Add, Div, Mul},
+};
 
 use anyhow::anyhow;
 use chrono::DateTime;
 use gears::{
     application::keepers::params::ParamsKeeper,
-    context::{init::InitContext, tx::TxContext, TransactionalContext},
+    context::{
+        block::BlockContext, init::InitContext, tx::TxContext, QueryableContext,
+        TransactionalContext,
+    },
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::proto::event::{Event, EventAttribute},
     types::{
-        address::AccAddress,
-        store::gas::{
-            errors::GasStoreErrors,
-            ext::GasResultExt,
-            kv::{mutable::GasKVStoreMut, GasKVStore},
-        },
+        address::{AccAddress, ValAddress},
+        decimal256::Decimal256,
+        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
-    x::{keepers::bank::BankKeeper, module::Module},
+    x::{
+        keepers::{bank::BankKeeper, staking::GovStakingKeeper},
+        module::Module,
+        types::{delegation::StakingDelegation, validator::StakingValidator},
+    },
 };
+use strum::IntoEnumIterator;
 
 use crate::{
     errors::SERDE_JSON_CONVERSION,
     genesis::GovGenesisState,
-    msg::{deposit::MsgDeposit, proposal::MsgSubmitProposal, weighted_vote::MsgVoteWeighted},
+    msg::{
+        deposit::MsgDeposit,
+        proposal::MsgSubmitProposal,
+        vote::VoteOption,
+        weighted_vote::{MsgVoteWeighted, VoteOptionWeighted},
+    },
     params::GovParamsKeeper,
-    types::proposal::{Proposal, ProposalStatus},
+    types::{
+        deposit_iter::DepositIterator,
+        proposal::{
+            active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
+            ProposalStatus, TallyResult,
+        },
+        validator::ValidatorGovInfo,
+        vote_iters::WeightedVoteIterator,
+    },
 };
 
 const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
 pub(crate) const KEY_PROPOSAL_PREFIX: [u8; 1] = [0x00];
 
 #[derive(Debug, Clone)]
-pub struct GovKeeper<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> {
+pub struct GovKeeper<
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BK: BankKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
+> {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
     gov_mod: M,
     bank_keeper: BK,
+    staking_keeper: STK,
     _bank_marker: PhantomData<M>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
-    GovKeeper<SK, PSK, M, BK>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Module,
+        BK: BankKeeper<SK, M>,
+        STK: GovStakingKeeper<SK, M>,
+    > GovKeeper<SK, PSK, M, BK, STK>
 {
-    pub fn new(store_key: SK, params_subspace_key: PSK, gov_mod: M, bank_keeper: BK) -> Self {
+    pub fn new(
+        store_key: SK,
+        params_subspace_key: PSK,
+        gov_mod: M,
+        bank_keeper: BK,
+        staking_keeper: STK,
+    ) -> Self {
         Self {
             store_key,
             gov_params_keeper: GovParamsKeeper {
@@ -50,6 +90,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             },
             gov_mod,
             bank_keeper,
+            staking_keeper,
             _bank_marker: PhantomData,
         }
     }
@@ -154,7 +195,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             amount,
         }: MsgDeposit,
     ) -> anyhow::Result<bool> {
-        let mut proposal = proposal_get(ctx.kv_store(&self.store_key), proposal_id)?
+        let mut proposal = proposal_get(ctx, &self.store_key, proposal_id)?
             .ok_or(anyhow!("unknown proposal {proposal_id}"))?;
 
         match proposal.status {
@@ -170,7 +211,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         )?;
 
         proposal.total_deposit = proposal.total_deposit.checked_add(amount.clone())?;
-        proposal_set(ctx.kv_store_mut(&self.store_key), &proposal)?;
+        proposal_set(ctx, &self.store_key, &proposal)?;
 
         let deposit_params = self.gov_params_keeper.try_get(ctx)?.deposit;
         let activated_voting_period = match proposal.status {
@@ -184,7 +225,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             _ => false,
         };
 
-        let deposit = match deposit_get(ctx.kv_store(&self.store_key), proposal_id, &depositor)? {
+        let deposit = match deposit_get(ctx, &self.store_key, proposal_id, &depositor)? {
             Some(mut deposit) => {
                 deposit.amount = deposit.amount.checked_add(amount)?;
                 deposit
@@ -214,7 +255,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             ],
         ));
 
-        deposit_set(ctx.kv_store_mut(&self.store_key), &deposit)?;
+        deposit_set(ctx, &self.store_key, &deposit)?;
 
         Ok(activated_voting_period)
     }
@@ -224,7 +265,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
         ctx: &mut TxContext<'_, DB, SK>,
         vote: MsgVoteWeighted,
     ) -> anyhow::Result<()> {
-        let proposal = proposal_get(ctx.kv_store(&self.store_key), vote.proposal_id)?
+        let proposal = proposal_get(ctx, &self.store_key, vote.proposal_id)?
             .ok_or(anyhow!("unknown proposal {}", vote.proposal_id))?;
 
         match proposal.status {
@@ -232,7 +273,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             _ => Err(anyhow!("inactive proposal {}", vote.proposal_id)),
         }?;
 
-        vote_set(ctx.kv_store_mut(&self.store_key), &vote)?;
+        vote_set(ctx, &self.store_key, &vote)?;
 
         // TODO:NOW HOOK https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/vote.go#L31
 
@@ -268,7 +309,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
            https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/proposal.go#L14-L16
         */
 
-        let proposal_id = proposal_id_get(ctx.kv_store(&self.store_key))?;
+        let proposal_id = proposal_id_get(ctx, &self.store_key)?;
         let submit_time = ctx.header().time.clone();
         let deposit_period = self
             .gov_params_keeper
@@ -291,7 +332,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
             voting_end_time: None,
         };
 
-        proposal_set(ctx.kv_store_mut(&self.store_key), &proposal)?;
+        proposal_set(ctx, &self.store_key, &proposal)?;
         let mut store = ctx.kv_store_mut(&self.store_key);
 
         store.set(
@@ -314,9 +355,303 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
 
         Ok(proposal.proposal_id)
     }
+
+    pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) -> Vec<Event> {
+        let mut events = Vec::new();
+
+        let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
+            .unwrap(); // TODO
+
+        {
+            let inactive_iter = {
+                let store = ctx.kv_store(&self.store_key);
+                InactiveProposalIterator::new(store.into(), &time)
+                    .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
+                    .collect::<Vec<_>>()
+            };
+
+            for var in inactive_iter {
+                let proposal_id = var.unwrap_gas();
+                proposal_del(ctx, &self.store_key, proposal_id).unwrap_gas();
+                deposit_del(ctx, self, proposal_id).unwrap_gas();
+
+                // TODO: HOOK https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/abci.go#L24-L25
+
+                events.push(Event::new(
+                    "inactive_proposal",
+                    vec![
+                        EventAttribute::new(
+                            "proposal_id".into(),
+                            proposal_id.to_string().into(),
+                            false,
+                        ),
+                        EventAttribute::new(
+                            "proposal_result".into(),
+                            "proposal_dropped".into(),
+                            false,
+                        ),
+                    ],
+                ))
+            }
+        }
+
+        {
+            let active_iter = {
+                let store = ctx.kv_store(&self.store_key).into();
+                ActiveProposalIterator::new(store, &time)
+                    .map(|this| this.map(|((_, _), proposal)| proposal))
+                    .collect::<Vec<_>>()
+            };
+
+            for proposal in active_iter {
+                let mut proposal = proposal.unwrap_gas();
+
+                let (passes, burn_deposit, tally_result) =
+                    self.tally(ctx, proposal.proposal_id).unwrap_gas();
+
+                if burn_deposit {
+                    deposit_del(ctx, self, proposal.proposal_id).unwrap_gas();
+                } else {
+                    deposit_refund(ctx, self).unwrap_gas();
+                }
+
+                if passes {
+                    // TODO: Handle proposal: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/abci.go#L65-L83
+
+                    proposal.status = ProposalStatus::Passed;
+
+                    if true
+                    // case when handling failed
+                    {
+                        proposal.status = ProposalStatus::Failed;
+                    }
+                } else {
+                    proposal.status = ProposalStatus::Rejected;
+                }
+
+                proposal.final_tally_result = tally_result;
+
+                proposal_set(ctx, &self.store_key, &proposal).unwrap_gas();
+                ctx.kv_store_mut(&self.store_key)
+                    .delete(&Proposal::active_queue_key(
+                        proposal.proposal_id,
+                        &proposal.deposit_end_time,
+                    ));
+
+                // TODO: HOOKS https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/abci.go#L97
+
+                events.push(Event::new(
+                    "active_proposal",
+                    vec![
+                        EventAttribute::new(
+                            "proposal_id".into(),
+                            proposal.proposal_id.to_string().into(),
+                            false,
+                        ),
+                        EventAttribute::new("proposal_result".into(), "TODO".into(), false),
+                    ],
+                ))
+            }
+        }
+
+        events
+    }
+
+    fn tally<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        proposal_id: u64,
+    ) -> Result<(bool, bool, TallyResult), GasStoreErrors> {
+        let mut curr_validators = HashMap::<ValAddress, ValidatorGovInfo>::new();
+
+        for validator in self.staking_keeper.bonded_validators_by_power_iter(ctx)? {
+            let validator = validator?;
+
+            curr_validators.insert(
+                validator.operator().clone(),
+                ValidatorGovInfo {
+                    address: validator.operator().clone(),
+                    bounded_tokens: validator.bonded_tokens().clone(),
+                    delegator_shares: validator.delegator_shares().clone(),
+                    delegator_deduction: Decimal256::zero(),
+                    vote: Vec::new(),
+                },
+            );
+        }
+
+        let mut tally_results = TallyResultMap::new();
+        let mut total_voting_power = Decimal256::zero();
+
+        for vote in WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id)
+            .map(|this| this.map(|(_, value)| value))
+            .collect::<Vec<_>>()
+        {
+            let MsgVoteWeighted {
+                proposal_id: _,
+                voter,
+                options: vote_options,
+            } = vote?;
+
+            let val_addr = ValAddress::from(voter.clone());
+            if let Some(validator) = curr_validators.get_mut(&val_addr) {
+                validator.vote = vote_options.clone();
+            }
+
+            for delegation in self
+                .staking_keeper
+                .delegations_iter(ctx, &voter)
+                .collect::<Vec<_>>()
+            {
+                let delegation = delegation?;
+
+                if let Some(validator) = curr_validators.get_mut(delegation.validator()) {
+                    // from cosmos: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/tally.go#L51
+                    // There is no need to handle the special case that validator address equal to voter address.
+                    // Because voter's voting power will tally again even if there will deduct voter's voting power from validator.
+
+                    validator.delegator_deduction += delegation.shares(); // TODO: handle overflow?
+
+                    // delegation shares * bonded / total shares
+                    let voting_power = delegation
+                        .shares()
+                        .mul(Decimal256::from_atomics(validator.bounded_tokens, 0).unwrap()) // TODO: HANDLE THIS
+                        .div(validator.delegator_shares);
+
+                    for VoteOptionWeighted { option, weight } in &vote_options {
+                        let result_option = tally_results.get_mut(option);
+
+                        *result_option += voting_power * Decimal256::from(weight.clone());
+                    }
+
+                    total_voting_power += voting_power;
+                }
+
+                vote_del(ctx, &self.store_key, proposal_id, &voter)?;
+            }
+        }
+
+        for (
+            _,
+            ValidatorGovInfo {
+                address: _,
+                bounded_tokens,
+                delegator_shares,
+                delegator_deduction,
+                vote,
+            },
+        ) in &curr_validators
+        {
+            if vote.is_empty() {
+                continue;
+            }
+
+            let voting_power = (delegator_shares - delegator_deduction)
+                * Decimal256::from_atomics(bounded_tokens.clone(), 0).unwrap() // TODO: HANDLE THIS
+                / delegator_shares;
+
+            for VoteOptionWeighted { option, weight } in vote {
+                let result = tally_results.get_mut(option);
+                *result += voting_power * Decimal256::from(weight.clone());
+            }
+
+            total_voting_power += voting_power;
+        }
+
+        let tally_params = self.gov_params_keeper.try_get(ctx)?.tally;
+
+        let total_bonded_tokens = self.staking_keeper.total_bonded_tokens(ctx)?;
+
+        // If there is no staked coins, the proposal fails
+        if total_bonded_tokens.amount.is_zero() {
+            return Ok((false, false, tally_results.to_result()));
+        }
+
+        // If there is not enough quorum of votes, the proposal fails
+        let percent_voting =
+            total_voting_power / Decimal256::from_atomics(total_bonded_tokens.amount, 0).unwrap(); // TODO: HANDLE THIS
+        if percent_voting < tally_params.quorum {
+            return Ok((false, true, tally_results.to_result()));
+        }
+
+        // If no one votes (everyone abstains), proposal fails
+        // Why they sub and check to is_zero in cosmos?
+        if total_voting_power == *tally_results.get_mut(&VoteOption::Abstain) {
+            return Ok((false, false, tally_results.to_result()));
+        }
+
+        // If more than 1/3 of voters veto, proposal fails
+        if *tally_results.get_mut(&VoteOption::NoWithVeto) / total_voting_power
+            > tally_params.veto_threshold
+        {
+            return Ok((false, true, tally_results.to_result()));
+        }
+
+        // If more than 1/2 of non-abstaining voters vote Yes, proposal passes
+        if *tally_results.get_mut(&VoteOption::Yes)
+            / (total_voting_power - *tally_results.get_mut(&VoteOption::Abstain))
+            > tally_params.threshold
+        {
+            return Ok((true, false, tally_results.to_result()));
+        }
+
+        // If more than 1/2 of non-abstaining voters vote No, proposal fails
+        Ok((false, false, tally_results.to_result()))
+    }
 }
 
-fn proposal_id_get<DB: Database>(store: GasKVStore<'_, DB>) -> Result<u64, GasStoreErrors> {
+#[derive(Debug, Clone)]
+struct TallyResultMap(HashMap<VoteOption, Decimal256>);
+
+impl TallyResultMap {
+    const EXISTS_MSG: &'static str = "guarated to exists";
+
+    pub fn new() -> Self {
+        let mut hashmap = HashMap::with_capacity(VoteOption::iter().count());
+
+        for variant in VoteOption::iter() {
+            hashmap.insert(variant, Decimal256::zero());
+        }
+
+        Self(hashmap)
+    }
+
+    pub fn get_mut(&mut self, k: &VoteOption) -> &mut Decimal256 {
+        self.0.get_mut(k).expect(Self::EXISTS_MSG)
+    }
+
+    pub fn to_result(mut self) -> TallyResult {
+        TallyResult {
+            // TODO: is it correct?
+            yes: self
+                .0
+                .remove(&VoteOption::Yes)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+            abstain: self
+                .0
+                .remove(&VoteOption::Abstain)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+            no: self
+                .0
+                .remove(&VoteOption::No)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+            no_with_veto: self
+                .0
+                .remove(&VoteOption::NoWithVeto)
+                .expect(Self::EXISTS_MSG)
+                .to_uint_floor(),
+        }
+    }
+}
+
+fn proposal_id_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
+) -> Result<u64, GasStoreErrors> {
+    let store = ctx.kv_store(store_key);
+
     let bytes = store
         .get(PROPOSAL_ID_KEY.as_slice())?
         .expect("Invalid genesis, initial proposal ID hasn't been set");
@@ -326,11 +661,14 @@ fn proposal_id_get<DB: Database>(store: GasKVStore<'_, DB>) -> Result<u64, GasSt
     ))
 }
 
-fn proposal_get<DB: Database>(
-    store: GasKVStore<'_, DB>,
+fn proposal_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
     proposal_id: u64,
 ) -> Result<Option<Proposal>, GasStoreErrors> {
     let key = [KEY_PROPOSAL_PREFIX.as_slice(), &proposal_id.to_be_bytes()].concat();
+
+    let store = ctx.kv_store(store_key);
 
     let bytes = store.get(&key)?;
     match bytes {
@@ -341,18 +679,50 @@ fn proposal_get<DB: Database>(
     }
 }
 
-fn proposal_set<DB: Database>(
-    mut store: GasKVStoreMut<'_, DB>,
+fn proposal_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
     proposal: &Proposal,
 ) -> Result<(), GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
     store.set(
         proposal.key(),
         serde_json::to_vec(proposal).expect(SERDE_JSON_CONVERSION),
     )
 }
 
-fn deposit_get<DB: Database>(
-    store: GasKVStore<'_, DB>,
+fn proposal_del<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
+    proposal_id: u64,
+) -> Result<bool, GasStoreErrors> {
+    let proposal = proposal_get(ctx, store_key, proposal_id)?;
+
+    if let Some(proposal) = proposal {
+        let mut store = ctx.kv_store_mut(store_key);
+
+        store.delete(&Proposal::inactive_queue_key(
+            proposal_id,
+            &proposal.deposit_end_time,
+        ))?;
+
+        store.delete(&Proposal::active_queue_key(
+            proposal_id,
+            &proposal.deposit_end_time,
+        ))?;
+
+        store.delete(&proposal.key())?;
+
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
+fn deposit_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
     proposal_id: u64,
     depositor: &AccAddress,
 ) -> Result<Option<MsgDeposit>, GasStoreErrors> {
@@ -364,6 +734,8 @@ fn deposit_get<DB: Database>(
     ]
     .concat();
 
+    let store = ctx.kv_store(store_key);
+
     let bytes = store.get(&key)?;
     match bytes {
         Some(var) => Ok(Some(
@@ -373,18 +745,88 @@ fn deposit_get<DB: Database>(
     }
 }
 
-fn deposit_set<DB: Database>(
-    mut store: GasKVStoreMut<'_, DB>,
+fn deposit_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
     deposit: &MsgDeposit,
 ) -> Result<(), GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
     store.set(
         MsgDeposit::key(deposit.proposal_id, &deposit.depositor),
         serde_json::to_vec(deposit).expect(SERDE_JSON_CONVERSION),
     )
 }
 
-fn _vote_get<DB: Database>(
-    store: GasKVStore<'_, DB>,
+fn deposit_del<
+    DB: Database,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BK: BankKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
+    CTX: TransactionalContext<DB, SK>,
+>(
+    ctx: &mut CTX,
+    keeper: &GovKeeper<SK, PSK, M, BK, STK>,
+    proposal_id: u64,
+) -> Result<(), GasStoreErrors> {
+    let deposits = DepositIterator::new(ctx.kv_store(&keeper.store_key))
+        .map(|this| this.map(|(_, value)| value))
+        .collect::<Vec<_>>();
+
+    for deposit in deposits {
+        let deposit = deposit?;
+
+        keeper
+            .bank_keeper
+            .coins_burn(ctx, &keeper.gov_mod, &deposit.amount)
+            .expect("Failed to burn coins for gov xmod"); // TODO: how to do this better?
+
+        ctx.kv_store_mut(&keeper.store_key)
+            .delete(&MsgDeposit::key(proposal_id, &deposit.depositor))?;
+    }
+
+    Ok(())
+}
+
+fn deposit_refund<
+    DB: Database,
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BK: BankKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
+    CTX: TransactionalContext<DB, SK>,
+>(
+    ctx: &mut CTX,
+    keeper: &GovKeeper<SK, PSK, M, BK, STK>,
+) -> Result<(), GasStoreErrors> {
+    for deposit in DepositIterator::new(ctx.kv_store(&keeper.store_key))
+        .map(|this| this.map(|(_, val)| val))
+        .collect::<Vec<_>>()
+    {
+        let MsgDeposit {
+            proposal_id,
+            depositor,
+            amount,
+        } = deposit?;
+
+        keeper
+            .bank_keeper
+            .send_coins_from_module_to_account(ctx, &depositor, &keeper.gov_mod, amount)
+            .expect("Failed to refund coins"); // TODO: how to do this better?
+
+        ctx.kv_store_mut(&keeper.store_key)
+            .delete(&MsgDeposit::key(proposal_id, &depositor))?;
+    }
+
+    Ok(())
+}
+
+fn _vote_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+    ctx: &CTX,
+    store_key: &SK,
     proposal_id: u64,
     voter: &AccAddress,
 ) -> Result<Option<MsgVoteWeighted>, GasStoreErrors> {
@@ -396,6 +838,8 @@ fn _vote_get<DB: Database>(
     ]
     .concat();
 
+    let store = ctx.kv_store(store_key);
+
     let bytes = store.get(&key)?;
     match bytes {
         Some(var) => Ok(Some(
@@ -405,12 +849,28 @@ fn _vote_get<DB: Database>(
     }
 }
 
-fn vote_set<DB: Database>(
-    mut store: GasKVStoreMut<'_, DB>,
+fn vote_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
     vote: &MsgVoteWeighted,
 ) -> Result<(), GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
     store.set(
         MsgVoteWeighted::key(vote.proposal_id, &vote.voter),
         serde_json::to_vec(vote).expect(SERDE_JSON_CONVERSION),
     )
+}
+
+fn vote_del<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
+    ctx: &mut CTX,
+    store_key: &SK,
+    proposal_id: u64,
+    voter: &AccAddress,
+) -> Result<bool, GasStoreErrors> {
+    let mut store = ctx.kv_store_mut(store_key);
+
+    let is_deleted = store.delete(&MsgVoteWeighted::key(proposal_id, &voter))?;
+
+    Ok(is_deleted.is_some())
 }

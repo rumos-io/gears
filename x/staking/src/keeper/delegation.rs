@@ -1,5 +1,5 @@
 use super::*;
-use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasStoreErrors};
+use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasStoreErrors, x::types::validator::BondStatus};
 
 impl<
         SK: StoreKey,
