@@ -7,7 +7,7 @@ use gears::{
         address::{AccAddress, ValAddress},
         auth::fee::inner::Coin as CoinRaw,
         base::coin::Coin,
-        decimal256::{CosmosDecimalProtoString, Decimal256},
+        decimal256::{CosmosDecimalProtoString, Decimal256, ONE_DEC},
         errors::StdError,
         uint::Uint256,
     },

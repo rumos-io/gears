@@ -1,10 +1,8 @@
-use crate::{
-    BondStatus, Delegation, LastValidatorPower, Params, Redelegation, UnbondingDelegation,
-    Validator,
-};
+use crate::{Delegation, LastValidatorPower, Params, Redelegation, UnbondingDelegation, Validator};
 use gears::{
     error::AppError,
     types::{address::ConsAddress, uint::Uint256},
+    x::types::validator::BondStatus,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

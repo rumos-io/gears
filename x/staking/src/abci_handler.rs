@@ -110,8 +110,7 @@ impl<
                     .encode_vec()
                     .into())
             }
-
-            // TODO: original path is "/cosmos/staking/v1beta1/params". Do we need to use it?
+            "/cosmos/staking/v1beta1/params" |
             "/cosmos.staking.v1beta1.Query/Params" => {
                 Ok(self.keeper.query_params(ctx).encode_vec().into())
             }

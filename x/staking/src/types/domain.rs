@@ -1,8 +1,5 @@
 use crate::{
-    consts::{
-        error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY,
-        proto::PRECISION_REUSE,
-    },
+    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
     Commission, CommissionRates, CommissionRaw, Description,
 };
 use gears::{
@@ -14,7 +11,7 @@ use gears::{
     },
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
-        decimal256::Decimal256,
+        decimal256::{Decimal256, PRECISION_REUSE},
         uint::Uint256,
     },
     x::types::{
