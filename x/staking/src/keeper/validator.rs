@@ -95,9 +95,9 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
         tokens_amount: Uint256,
-    ) -> Result<Decimal256, GasStoreErrors> {
+    ) -> anyhow::Result<Decimal256> {
         self.delete_validator_by_power_index(ctx, validator)?;
-        let added_shares = validator.add_tokens_from_del(tokens_amount);
+        let added_shares = validator.add_tokens_from_del(tokens_amount)?;
         self.set_validator(ctx, validator)?;
         self.set_validator_by_power_index(ctx, validator)?;
         Ok(added_shares)
@@ -109,9 +109,9 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
         shares_to_remove: Decimal256,
-    ) -> Result<Uint256, GasStoreErrors> {
+    ) -> anyhow::Result<Uint256> {
         self.delete_validator_by_power_index(ctx, validator)?;
-        let removed_tokens = validator.remove_del_shares(shares_to_remove);
+        let removed_tokens = validator.remove_del_shares(shares_to_remove)?;
         self.set_validator(ctx, validator)?;
         self.set_validator_by_power_index(ctx, validator)?;
         Ok(removed_tokens)

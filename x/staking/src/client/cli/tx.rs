@@ -104,11 +104,11 @@ pub fn run_staking_tx_command(
                 security_contact: security_contact.to_string(),
                 details: details.to_string(),
             };
-            let commission = CommissionRates {
-                rate: Decimal256::from_str(commission_rate)?,
-                max_rate: Decimal256::from_str(commission_max_rate)?,
-                max_change_rate: Decimal256::from_str(commission_max_change_rate)?,
-            };
+            let commission = CommissionRates::new (
+                Decimal256::from_str(commission_rate)?,
+                Decimal256::from_str(commission_max_rate)?,
+                Decimal256::from_str(commission_max_change_rate)?,
+            )?;
 
             let msg = StakingMessage::CreateValidator(CreateValidator {
                 description,
