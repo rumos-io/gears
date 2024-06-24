@@ -1,4 +1,5 @@
 use serde::de::DeserializeOwned;
+use tendermint_abci::cancellation::CancellationToken;
 use tendermint_abci::Application;
 
 use crate::ext::UnwrapInvalid;
@@ -50,8 +51,8 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
     fn info(&self, _request: RequestInfo) -> ResponseInfo;
 
     /// Called once upon genesis.
-    fn init_chain(&self, _request: RequestInitChain<G>) -> ResponseInitChain {
-        Default::default()
+    fn init_chain(&self, _request: RequestInitChain<G>) -> anyhow::Result<ResponseInitChain> {
+        Ok(Default::default())
     }
 
     /// Query the application for data at the current or past height.
@@ -62,19 +63,19 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
         Default::default()
     }
 
-    /// Signals the beginning of a new block, prior to any `DeliverTx` calls.
-    fn begin_block(&self, _request: RequestBeginBlock) -> ResponseBeginBlock {
-        Default::default()
-    }
-
     /// Apply a transaction to the application's state.
     fn deliver_tx(&self, _request: RequestDeliverTx) -> ResponseDeliverTx {
         Default::default()
     }
 
+    /// Signals the beginning of a new block, prior to any `DeliverTx` calls.
+    fn begin_block(&self, _request: RequestBeginBlock) -> anyhow::Result<ResponseBeginBlock> {
+        Ok(Default::default())
+    }
+
     /// Signals the end of a block.
-    fn end_block(&self, _request: RequestEndBlock) -> ResponseEndBlock {
-        Default::default()
+    fn end_block(&self, _request: RequestEndBlock) -> anyhow::Result<ResponseEndBlock> {
+        Ok(Default::default())
     }
 
     /// Signals that messages queued on the client should be flushed to the server.
@@ -131,6 +132,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestEcho,
     ) -> tendermint_proto::abci::ResponseEcho {
+        CancellationToken::new().panic_if_cancelled();
+
         T::echo(&self.handler, request.into()).into()
     }
 
@@ -138,6 +141,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestInfo,
     ) -> tendermint_proto::abci::ResponseInfo {
+        CancellationToken::new().panic_if_cancelled();
+
         T::info(&self.handler, request.into()).into()
     }
 
@@ -145,13 +150,30 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestInitChain,
     ) -> tendermint_proto::abci::ResponseInitChain {
-        T::init_chain(&self.handler, request.try_into().unwrap_or_invalid()).into()
+        let token = CancellationToken::new();
+        token.panic_if_cancelled();
+        let guard = token.drop_guard();
+
+        let result = T::init_chain(&self.handler, request.try_into().unwrap_or_invalid());
+
+        match result {
+            Ok(var) => {
+                guard.disarm();
+                var.into()
+            }
+            Err(err) => {
+                token.cancel();
+                panic!("Failed to init chain with err: {err}")
+            }
+        }
     }
 
     fn query(
         &self,
         request: tendermint_proto::abci::RequestQuery,
     ) -> tendermint_proto::abci::ResponseQuery {
+        CancellationToken::new().panic_if_cancelled();
+
         T::query(&self.handler, request.into()).into()
     }
 
@@ -159,39 +181,79 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestCheckTx,
     ) -> tendermint_proto::abci::ResponseCheckTx {
-        T::check_tx(&self.handler, request.into()).into()
-    }
+        CancellationToken::new().panic_if_cancelled();
 
-    fn begin_block(
-        &self,
-        request: tendermint_proto::abci::RequestBeginBlock,
-    ) -> tendermint_proto::abci::ResponseBeginBlock {
-        T::begin_block(&self.handler, request.try_into().unwrap_or_invalid()).into()
+        T::check_tx(&self.handler, request.into()).into()
     }
 
     fn deliver_tx(
         &self,
         request: tendermint_proto::abci::RequestDeliverTx,
     ) -> tendermint_proto::abci::ResponseDeliverTx {
+        CancellationToken::new().panic_if_cancelled();
+
         T::deliver_tx(&self.handler, request.into()).into()
+    }
+
+    fn begin_block(
+        &self,
+        request: tendermint_proto::abci::RequestBeginBlock,
+    ) -> tendermint_proto::abci::ResponseBeginBlock {
+        let token = CancellationToken::new();
+        token.panic_if_cancelled();
+        let guard = token.drop_guard();
+
+        let result = T::begin_block(&self.handler, request.try_into().unwrap_or_invalid());
+
+        match result {
+            Ok(var) => {
+                guard.disarm();
+                var.into()
+            }
+            Err(err) => {
+                token.cancel();
+                panic!("Failed to begin block with err: {err}")
+            }
+        }
     }
 
     fn end_block(
         &self,
         request: tendermint_proto::abci::RequestEndBlock,
     ) -> tendermint_proto::abci::ResponseEndBlock {
-        T::end_block(&self.handler, request.into()).into()
+        let token = CancellationToken::new();
+        token.panic_if_cancelled();
+        let guard = token.drop_guard();
+
+        let result = T::end_block(&self.handler, request.into());
+
+        match result {
+            Ok(var) => {
+                guard.disarm();
+                var.into()
+            }
+            Err(err) => {
+                token.cancel();
+                panic!("Failed to end block with err: {err}")
+            }
+        }
     }
 
     fn flush(&self) -> tendermint_proto::abci::ResponseFlush {
+        CancellationToken::new().panic_if_cancelled();
+
         T::flush(&self.handler).into()
     }
 
     fn commit(&self) -> tendermint_proto::abci::ResponseCommit {
+        CancellationToken::new().panic_if_cancelled();
+
         T::commit(&self.handler).into()
     }
 
     fn list_snapshots(&self) -> tendermint_proto::abci::ResponseListSnapshots {
+        CancellationToken::new().panic_if_cancelled();
+
         T::list_snapshots(&self.handler).into()
     }
 
@@ -199,6 +261,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestOfferSnapshot,
     ) -> tendermint_proto::abci::ResponseOfferSnapshot {
+        CancellationToken::new().panic_if_cancelled();
+
         T::offer_snapshot(&self.handler, request.into()).into()
     }
 
@@ -206,6 +270,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestLoadSnapshotChunk,
     ) -> tendermint_proto::abci::ResponseLoadSnapshotChunk {
+        CancellationToken::new().panic_if_cancelled();
+
         T::load_snapshot_chunk(&self.handler, request.into()).into()
     }
 
@@ -213,6 +279,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestApplySnapshotChunk,
     ) -> tendermint_proto::abci::ResponseApplySnapshotChunk {
+        CancellationToken::new().panic_if_cancelled();
+
         T::apply_snapshot_chunk(&self.handler, request.into()).into()
     }
 }
