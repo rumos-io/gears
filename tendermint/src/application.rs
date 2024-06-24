@@ -219,7 +219,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestEndBlock,
     ) -> tendermint_proto::abci::ResponseEndBlock {
-        CancellationSource::cancel();
         CancellationSource::panic_if_cancelled();
         let guard = CancellationSource::drop_guard();
 
