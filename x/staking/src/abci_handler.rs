@@ -1,7 +1,8 @@
 use crate::{
     BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
     QueryDelegationResponse, QueryParamsResponse, QueryRedelegationRequest,
-    QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryRedelegationResponse, QueryUnbondingDelegationResponse, QueryValidatorRequest,
+    QueryValidatorResponse,
 };
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
@@ -36,6 +37,7 @@ pub enum StakingNodeQueryRequest {
     Validator(QueryValidatorRequest),
     Delegation(QueryDelegationRequest),
     Redelegation(QueryRedelegationRequest),
+    UnbondingDelegation(QueryDelegationRequest),
     Params,
 }
 
@@ -46,6 +48,7 @@ pub enum StakingNodeQueryResponse {
     Validator(QueryValidatorResponse),
     Delegation(QueryDelegationResponse),
     Redelegation(QueryRedelegationResponse),
+    UnbondingDelegation(QueryUnbondingDelegationResponse),
     Params(QueryParamsResponse),
 }
 
@@ -112,6 +115,16 @@ impl<
                     .encode_vec()
                     .into())
             }
+            "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
+                let req = QueryDelegationRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_unbonding_delegation(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
             "/cosmos/staking/v1beta1/params" | "/cosmos.staking.v1beta1.Query/Params" => {
                 Ok(self.keeper.query_params(ctx).encode_vec().into())
             }
@@ -133,6 +146,11 @@ impl<
             }
             StakingNodeQueryRequest::Redelegation(req) => {
                 StakingNodeQueryResponse::Redelegation(self.keeper.query_redelegations(ctx, req))
+            }
+            StakingNodeQueryRequest::UnbondingDelegation(req) => {
+                StakingNodeQueryResponse::UnbondingDelegation(
+                    self.keeper.query_unbonding_delegation(ctx, req),
+                )
             }
             StakingNodeQueryRequest::Params => {
                 StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))

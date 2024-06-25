@@ -1,4 +1,3 @@
-use std::ops::Bound;
 use super::*;
 use crate::{
     consts::error::SERDE_ENCODING_DOMAIN_TYPE, parse_validator_queue_key,
@@ -10,6 +9,7 @@ use gears::{
     store::database::ext::UnwrapCorrupt,
     tendermint::types::{proto::Protobuf, time::Timestamp},
 };
+use std::ops::Bound;
 
 impl<
         SK: StoreKey,
@@ -22,7 +22,7 @@ impl<
 {
     pub fn unbonding_delegation<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         del_addr: &AccAddress,
         val_addr: &ValAddress,
     ) -> Result<Option<UnbondingDelegation>, GasStoreErrors> {
