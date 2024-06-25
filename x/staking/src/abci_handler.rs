@@ -72,6 +72,7 @@ impl<
             Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
             Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
+            Message::Undelegate(_msg) => todo!(),
         }
     }
 

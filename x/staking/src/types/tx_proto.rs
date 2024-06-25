@@ -537,3 +537,51 @@ impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
 }
 
 impl Protobuf<RedelegateMsgRaw> for RedelegateMsg {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct UndelegateMsgRaw {
+    #[prost(string)]
+    pub delegator_address: String,
+    #[prost(string)]
+    pub validator_address: String,
+    #[prost(message, optional)]
+    pub amount: Option<CoinRaw>,
+}
+
+impl From<UndelegateMsg> for UndelegateMsgRaw {
+    fn from(src: UndelegateMsg) -> Self {
+        Self {
+            delegator_address: src.delegator_address.to_string(),
+            validator_address: src.validator_address.to_string(),
+            amount: Some(src.amount.into()),
+        }
+    }
+}
+
+/// Creates a new UndelegateMsg transaction message instance.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct UndelegateMsg {
+    pub delegator_address: AccAddress,
+    pub validator_address: ValAddress,
+    pub amount: Coin,
+}
+
+impl TryFrom<UndelegateMsgRaw> for UndelegateMsg {
+    type Error = CoreError;
+
+    fn try_from(src: UndelegateMsgRaw) -> Result<Self, Self::Error> {
+        Ok(UndelegateMsg {
+            delegator_address: AccAddress::from_bech32(&src.delegator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            validator_address: ValAddress::from_bech32(&src.validator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            amount: src
+                .amount
+                .ok_or(CoreError::MissingField("Missing field 'amount'.".into()))?
+                .try_into()
+                .map_err(|e| CoreError::Coin(format!("{e}")))?,
+        })
+    }
+}
+
+impl Protobuf<UndelegateMsgRaw> for UndelegateMsg {}

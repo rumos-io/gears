@@ -1,5 +1,7 @@
 use super::*;
-use crate::{Commission, CreateValidator, DelegateMsg, EditValidator, RedelegateMsg};
+use crate::{
+    Commission, CreateValidator, DelegateMsg, EditValidator, RedelegateMsg, UndelegateMsg,
+};
 use gears::{
     context::tx::TxContext, store::database::ext::UnwrapCorrupt, types::address::ConsAddress,
 };
@@ -397,6 +399,91 @@ impl<
         //     return &types.MsgBeginRedelegateResponse{
         //         CompletionTime: completionTime,
         //     }, nil
+        Ok(())
+    }
+
+    /// undelegate_cmd_handler defines a method for performing an undelegation from a delegate and a validator
+    pub fn undelegate_cmd_handler<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &UndelegateMsg,
+    ) -> Result<(), AppError> {
+        let shares = self
+            .validate_unbond_amount(
+                ctx,
+                &msg.delegator_address,
+                &msg.validator_address,
+                msg.amount.amount,
+            )
+            .map_err(|e| AppError::Custom(e.to_string()))?;
+
+        let params = self.staking_params_keeper.try_get(ctx)?;
+        if msg.amount.denom != params.bond_denom {
+            return Err(AppError::InvalidRequest(format!(
+                "invalid coin denomination: got {}, expected {}",
+                msg.amount.denom, params.bond_denom
+            )));
+        }
+
+        let completion_time = self
+            .undelegate(ctx, &msg.delegator_address, &msg.validator_address, shares)
+            .map_err(|e| AppError::Custom(e.to_string()))?;
+
+        // TODO
+        // if msg.Amount.Amount.IsInt64() {
+        //     defer func() {
+        //         telemetry.IncrCounter(1, types.ModuleName, "undelegate")
+        //         telemetry.SetGaugeWithLabels(
+        //             []string{"tx", "msg", msg.Type()},
+        //             float32(msg.Amount.Amount.Int64()),
+        //             []metrics.Label{telemetry.NewLabel("denom", msg.Amount.Denom)},
+        //         )
+        //     }()
+        // }
+
+        ctx.append_events(vec![
+            Event {
+                r#type: EVENT_TYPE_UNBOND.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: msg.validator_address.to_string().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_AMOUNT.into(),
+                        value: serde_json::to_string(&msg.amount)
+                            .expect(SERDE_ENCODING_DOMAIN_TYPE)
+                            .into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_COMPLETION_TIME.into(),
+                        // TODO: format time
+                        value: serde_json::to_string(&completion_time)
+                            .unwrap_or_corrupt()
+                            .into(),
+                        index: false,
+                    },
+                ],
+            },
+            Event {
+                r#type: EVENT_TYPE_MESSAGE.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_MODULE.into(),
+                        value: ATTRIBUTE_VALUE_CATEGORY.into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_SENDER.into(),
+                        value: msg.delegator_address.to_string().into(),
+                        index: false,
+                    },
+                ],
+            },
+        ]);
+
         Ok(())
     }
 }

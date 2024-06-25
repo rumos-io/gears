@@ -171,9 +171,11 @@ impl<
         }
 
         for unbonding_delegation in genesis.unbonding_delegations {
-            self.set_unbonding_delegation(ctx, &unbonding_delegation);
+            self.set_unbonding_delegation(ctx, &unbonding_delegation)
+                .unwrap_gas();
             for entry in unbonding_delegation.entries.as_slice() {
-                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time.clone());
+                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time.clone())
+                    .unwrap_gas();
             }
         }
 
@@ -300,7 +302,8 @@ impl<
             let val_addr_str = val_addr.to_string();
             let del_addr = dv_pair.del_addr;
             let del_addr_str = del_addr.to_string();
-            let balances = if let Ok(balances) = self.complete_unbonding(ctx, val_addr, del_addr) {
+            let balances = if let Ok(balances) = self.complete_unbonding(ctx, &val_addr, &del_addr)
+            {
                 balances
             } else {
                 continue;

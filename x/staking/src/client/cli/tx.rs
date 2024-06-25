@@ -1,6 +1,6 @@
 use crate::{
     consts::proto::DO_NOT_MODIFY_STRING, CommissionRates, CreateValidator, DelegateMsg,
-    Description, EditValidator, Message as StakingMessage, RedelegateMsg,
+    Description, EditValidator, Message as StakingMessage, RedelegateMsg, UndelegateMsg,
 };
 use anyhow::Result;
 use clap::{Args, Subcommand};
@@ -97,6 +97,13 @@ pub enum StakingCommands {
         /// The validator account address that receives coins
         dst_validator_address: ValAddress,
         /// Amount of coins to redelegate
+        amount: Coin,
+    },
+    /// Unbond shares from a validator
+    Unbond {
+        /// The validator account address
+        validator_address: ValAddress,
+        /// Amount of coins to unbond
         amount: Coin,
     },
 }
@@ -207,6 +214,14 @@ pub fn run_staking_tx_command(
             delegator_address: from_address.clone(),
             src_validator_address: src_validator_address.clone(),
             dst_validator_address: dst_validator_address.clone(),
+            amount: amount.clone(),
+        })),
+        StakingCommands::Unbond {
+            validator_address,
+            amount,
+        } => Ok(StakingMessage::Undelegate(UndelegateMsg {
+            delegator_address: from_address.clone(),
+            validator_address: validator_address.clone(),
             amount: amount.clone(),
         })),
     }

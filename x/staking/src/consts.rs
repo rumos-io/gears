@@ -44,6 +44,7 @@ pub(crate) mod keeper {
     pub(crate) const EVENT_TYPE_MESSAGE: &str = "message";
     pub(crate) const EVENT_TYPE_DELEGATE: &str = "delegate";
     pub(crate) const EVENT_TYPE_REDELEGATE: &str = "redelegate";
+    pub(crate) const EVENT_TYPE_UNBOND: &str = "unbond";
 }
 
 pub(crate) mod proto {
