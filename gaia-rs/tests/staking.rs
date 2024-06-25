@@ -76,8 +76,9 @@ fn new_validator(
     amount: Coin,
     moniker: &str,
 ) -> anyhow::Result<Response> {
+    let pubkey = serde_json::from_str(pubkey)?;
     let tx_cmd = StakingCommands::CreateValidator {
-        pubkey: pubkey.to_string(),
+        pubkey,
         amount,
         moniker: moniker.to_string(),
         identity: "".to_string(),
