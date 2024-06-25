@@ -69,6 +69,7 @@ impl<
     ) -> Result<(), AppError> {
         match msg {
             Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
             Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
         }
@@ -110,8 +111,7 @@ impl<
                     .encode_vec()
                     .into())
             }
-            "/cosmos/staking/v1beta1/params" |
-            "/cosmos.staking.v1beta1.Query/Params" => {
+            "/cosmos/staking/v1beta1/params" | "/cosmos.staking.v1beta1.Query/Params" => {
                 Ok(self.keeper.query_params(ctx).encode_vec().into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),

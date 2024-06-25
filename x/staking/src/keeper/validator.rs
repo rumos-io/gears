@@ -1,5 +1,5 @@
 use super::*;
-use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Validator};
+use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Commission, CommissionRates, Validator};
 use gears::{store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
@@ -60,6 +60,27 @@ impl<
         self.set_validator(ctx, validator)?;
         self.delete_validator_by_power_index(ctx, validator)?;
         Ok(())
+    }
+
+    /// create_updated_validator_commission attempts to create a validator's commission rate.
+    /// An error is returned if the new commission rate is invalid.
+    pub fn create_updated_validator_commission<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+        commission_rate: Decimal256,
+    ) -> anyhow::Result<Commission> {
+        let block_time = ctx.get_time();
+
+        let commission_rates = validator.commission.commission_rates();
+        let rates = CommissionRates::new(
+            commission_rate,
+            commission_rates.max_rate(),
+            commission_rates.max_change_rate(),
+        )?;
+
+        let commission = validator.commission.new_checked(rates, block_time)?;
+        Ok(commission)
     }
 
     pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(

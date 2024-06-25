@@ -259,8 +259,7 @@ impl Validator {
                     seconds: 0,
                     nanos: 0,
                 },
-            )
-            .expect("creation of commission with zeros shouldn't fail"),
+            ),
             min_self_delegation: Uint256::one(),
             status: BondStatus::Unbonded,
         }

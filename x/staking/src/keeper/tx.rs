@@ -1,5 +1,5 @@
 use super::*;
-use crate::{Commission, CreateValidator, DelegateMsg, RedelegateMsg};
+use crate::{Commission, CreateValidator, DelegateMsg, EditValidator, RedelegateMsg};
 use gears::{
     context::tx::TxContext, store::database::ext::UnwrapCorrupt, types::address::ConsAddress,
 };
@@ -62,7 +62,7 @@ impl<
         );
 
         let update_time = ctx.get_time();
-        let commission = Commission::new(msg.commission.clone(), update_time)?;
+        let commission = Commission::new(msg.commission.clone(), update_time);
         validator.set_initial_commission(commission);
         validator.min_self_delegation = msg.min_self_delegation;
 
@@ -114,6 +114,97 @@ impl<
                     EventAttribute {
                         key: ATTRIBUTE_KEY_SENDER.into(),
                         value: msg.delegator_address.to_string().into(),
+                        index: false,
+                    },
+                ],
+            },
+        ]);
+
+        Ok(())
+    }
+
+    /// CreateValidator defines a method for creating a new validator
+    pub fn edit_validator<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &EditValidator,
+    ) -> Result<(), AppError> {
+        // validator must already be registered
+        let mut validator =
+            self.validator(ctx, &msg.validator_address)?
+                .ok_or(AppError::Custom(format!(
+                    "Account {} exists",
+                    msg.validator_address
+                )))?;
+
+        // replace all editable fields (clients should autofill existing values)
+        let mut description = msg.description.clone();
+        validator
+            .description
+            .supplement_description(&mut description)?;
+        validator.description = description;
+
+        if let Some(rate) = msg.commission_rate {
+            let commission = self
+                .create_updated_validator_commission(ctx, &validator, rate)
+                .map_err(|e| AppError::Custom(e.to_string()))?;
+            // call the before-modification hook since we're about to update the commission
+            self.before_validator_modified(ctx, &validator);
+            validator.commission = commission;
+        }
+
+        if let Some(min_self_delegation) = msg.min_self_delegation {
+            if min_self_delegation > validator.min_self_delegation {
+                return Err(AppError::Custom(
+                    "trying to decrease validator minimal self delegation".to_string(),
+                ));
+            }
+
+            if min_self_delegation > validator.tokens {
+                return Err(AppError::Custom(
+                    "validator has not enough tokens to delegate".to_string(),
+                ));
+            }
+
+            validator.min_self_delegation = min_self_delegation;
+        }
+
+        self.set_validator(ctx, &validator)?;
+
+        ctx.append_events(vec![
+            Event {
+                r#type: EVENT_TYPE_EDIT_VALIDATOR.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_VALIDATOR.into(),
+                        value: msg.validator_address.to_string().into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_COMMISSION_RATE.into(),
+                        value: serde_json::to_string(&validator.commission)
+                            .expect(SERDE_ENCODING_DOMAIN_TYPE)
+                            .into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_MIN_SELF_DELEGATION.into(),
+                        value: validator.min_self_delegation.to_string().into(),
+                        index: false,
+                    },
+                ],
+            },
+            Event {
+                r#type: EVENT_TYPE_MESSAGE.to_string(),
+                attributes: vec![
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_MODULE.into(),
+                        value: ATTRIBUTE_VALUE_CATEGORY.into(),
+                        index: false,
+                    },
+                    EventAttribute {
+                        key: ATTRIBUTE_KEY_SENDER.into(),
+                        value: msg.validator_address.to_string().into(),
                         index: false,
                     },
                 ],

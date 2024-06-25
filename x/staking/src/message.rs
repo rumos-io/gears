@@ -1,4 +1,4 @@
-use crate::{CreateValidator, DelegateMsg, RedelegateMsg};
+use crate::{CreateValidator, DelegateMsg, EditValidator, RedelegateMsg};
 use gears::{
     core::{any::google::Any, Protobuf},
     types::{address::AccAddress, tx::TxMessage},
@@ -12,6 +12,8 @@ use serde::Serialize;
 pub enum Message {
     #[serde(rename = "/cosmos.staking.v1beta1.CreateValidator")]
     CreateValidator(CreateValidator),
+    #[serde(rename = "/cosmos.staking.v1beta1.EditValidator")]
+    EditValidator(EditValidator),
     #[serde(rename = "/cosmos.staking.v1beta1.Delegate")]
     Delegate(DelegateMsg),
     #[serde(rename = "/cosmos.staking.v1beta1.Redelegate")]
@@ -22,6 +24,7 @@ impl TxMessage for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
         match &self {
             Message::CreateValidator(msg) => vec![&msg.delegator_address],
+            Message::EditValidator(msg) => vec![&msg.from_address],
             Message::Delegate(msg) => vec![&msg.delegator_address],
             Message::Redelegate(msg) => vec![&msg.delegator_address],
         }
@@ -30,6 +33,7 @@ impl TxMessage for Message {
     fn validate_basic(&self) -> Result<(), String> {
         match &self {
             Message::CreateValidator(_) => Ok(()),
+            Message::EditValidator(_) => Ok(()),
             Message::Delegate(_) => Ok(()),
             Message::Redelegate(_) => Ok(()),
         }
@@ -38,6 +42,7 @@ impl TxMessage for Message {
     fn type_url(&self) -> &'static str {
         match self {
             Message::CreateValidator(_) => "/cosmos.staking.v1beta1.CreateValidator",
+            Message::EditValidator(_) => "/cosmos.staking.v1beta1.EditValidator",
             Message::Delegate(_) => "/cosmos.staking.v1beta1.Delegate",
             Message::Redelegate(_) => "/cosmos.staking.v1beta1.Redelegate",
         }
@@ -49,6 +54,10 @@ impl From<Message> for Any {
         match msg {
             Message::CreateValidator(msg) => Any {
                 type_url: "/cosmos.staking.v1beta1.CreateValidator".to_string(),
+                value: msg.encode_vec(),
+            },
+            Message::EditValidator(msg) => Any {
+                type_url: "/cosmos.staking.v1beta1.EditValidator".to_string(),
                 value: msg.encode_vec(),
             },
             Message::Delegate(msg) => Any {
@@ -72,6 +81,11 @@ impl TryFrom<Any> for Message {
                 let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::CreateValidator(msg))
+            }
+            "/cosmos.staking.v1beta1.EditValidator" => {
+                let msg = EditValidator::decode::<Bytes>(value.value.clone().into())
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
+                Ok(Message::EditValidator(msg))
             }
             "/cosmos.staking.v1beta1.Delegate" => {
                 let msg = DelegateMsg::decode::<Bytes>(value.value.clone().into())

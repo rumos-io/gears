@@ -64,6 +64,18 @@ impl CommissionRates {
         })
     }
 
+    pub fn rate(&self) -> Decimal256 {
+        self.rate
+    }
+
+    pub fn max_rate(&self) -> Decimal256 {
+        self.max_rate
+    }
+
+    pub fn max_change_rate(&self) -> Decimal256 {
+        self.max_change_rate
+    }
+
     fn validate(
         rate: Decimal256,
         max_rate: Decimal256,
@@ -129,14 +141,41 @@ impl TryFrom<CommissionRaw> for Commission {
 }
 
 impl Commission {
-    pub fn new(
+    pub fn new(commission_rates: CommissionRates, update_time: Timestamp) -> Commission {
+        Commission {
+            commission_rates,
+            update_time,
+        }
+    }
+
+    pub fn new_checked(
+        &self,
         commission_rates: CommissionRates,
         update_time: Timestamp,
     ) -> Result<Commission, AppError> {
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let self_time = chrono::DateTime::from_timestamp(
+            self.update_time.seconds,
+            self.update_time.nanos as u32,
+        )
+        .unwrap();
+        let new_update_time =
+            chrono::DateTime::from_timestamp(update_time.seconds, update_time.nanos as u32)
+                .unwrap();
+        if (new_update_time - self_time).num_hours() < 24 {
+            return Err(AppError::Custom(
+                "new rate cannot be changed more than once within 24 hours".to_string(),
+            ));
+        }
         Ok(Commission {
             commission_rates,
             update_time,
         })
+    }
+
+    pub fn commission_rates(&self) -> &CommissionRates {
+        &self.commission_rates
     }
 }
 
@@ -183,6 +222,27 @@ pub struct Description {
 impl Protobuf<Description> for Description {}
 
 impl Description {
+    /// supplement_description updates the fields of a given description. An error is
+    /// returned if the resulting description contains an invalid length.
+    pub fn supplement_description(&self, other: &mut Description) -> Result<(), AppError> {
+        if other.moniker == DO_NOT_MODIFY_STRING {
+            other.moniker.clone_from(&self.moniker);
+        }
+        if other.identity == DO_NOT_MODIFY_STRING {
+            other.identity.clone_from(&self.identity);
+        }
+        if other.website == DO_NOT_MODIFY_STRING {
+            other.website.clone_from(&self.website);
+        }
+        if other.security_contact == DO_NOT_MODIFY_STRING {
+            other.security_contact.clone_from(&self.security_contact);
+        }
+        if other.details == DO_NOT_MODIFY_STRING {
+            other.details.clone_from(&self.details);
+        }
+        other.ensure_length()
+    }
+
     pub fn ensure_length(&self) -> Result<(), AppError> {
         if self.moniker.len() > MAX_MONIKER_LENGTH {
             return Err(self.form_ensure_length_err(
@@ -305,6 +365,76 @@ impl TryFrom<CreateValidatorRaw> for CreateValidator {
 }
 
 impl Protobuf<CreateValidatorRaw> for CreateValidator {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct EditValidatorRaw {
+    #[prost(message, optional)]
+    pub description: Option<Description>,
+    #[prost(message, optional)]
+    pub commission_rate: Option<String>,
+    #[prost(string, optional)]
+    pub min_self_delegation: Option<String>,
+    #[prost(string)]
+    pub validator_address: String,
+    #[prost(string)]
+    pub from_address: String,
+}
+
+impl From<EditValidator> for EditValidatorRaw {
+    fn from(src: EditValidator) -> Self {
+        Self {
+            description: Some(src.description),
+            commission_rate: src.commission_rate.map(|com_rate| com_rate.to_string()),
+            min_self_delegation: src.min_self_delegation.map(|msd| msd.to_string()),
+            validator_address: src.validator_address.to_string(),
+            from_address: src.from_address.to_string(),
+        }
+    }
+}
+
+/// CreateValidator defines a SDK message for creating a new validator.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EditValidator {
+    pub description: Description,
+    pub commission_rate: Option<Decimal256>,
+    pub min_self_delegation: Option<Uint256>,
+    pub validator_address: ValAddress,
+    // for method `get_signers`. The sdk converts validator_address
+    pub from_address: AccAddress,
+}
+
+impl TryFrom<EditValidatorRaw> for EditValidator {
+    type Error = CoreError;
+
+    fn try_from(src: EditValidatorRaw) -> Result<Self, Self::Error> {
+        let commission_rate = if let Some(rate) = src.commission_rate {
+            Some(Decimal256::from_str(&rate).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?)
+        } else {
+            None
+        };
+        let min_self_delegation = if let Some(min_self_delegation) = src.min_self_delegation {
+            Some(
+                Uint256::from_str(&min_self_delegation)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            )
+        } else {
+            None
+        };
+        Ok(EditValidator {
+            description: src.description.ok_or(CoreError::MissingField(
+                "Missing field 'description'.".into(),
+            ))?,
+            commission_rate,
+            min_self_delegation,
+            validator_address: ValAddress::from_bech32(&src.validator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            from_address: AccAddress::from_bech32(&src.from_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+        })
+    }
+}
+
+impl Protobuf<EditValidatorRaw> for EditValidator {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct DelegateMsgRaw {

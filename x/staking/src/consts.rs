@@ -25,6 +25,8 @@ pub(crate) mod keeper {
     pub(crate) const ATTRIBUTE_KEY_MODULE: &str = "module";
     pub(crate) const ATTRIBUTE_KEY_SENDER: &str = "sender";
     pub(crate) const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
+    pub(crate) const ATTRIBUTE_KEY_COMMISSION_RATE: &str = "commission_rate";
+    pub(crate) const ATTRIBUTE_KEY_MIN_SELF_DELEGATION: &str = "min_self_delegation";
 
     pub(crate) const ATTRIBUTE_KEY_VALIDATOR: &str = "validator";
     pub(crate) const ATTRIBUTE_KEY_SRC_VALIDATOR: &str = "source_validator";
@@ -36,6 +38,7 @@ pub(crate) mod keeper {
     pub(crate) const ATTRIBUTE_VALUE_CATEGORY: &str = "staking";
 
     pub(crate) const EVENT_TYPE_CREATE_VALIDATOR: &str = "create_validator";
+    pub(crate) const EVENT_TYPE_EDIT_VALIDATOR: &str = "edit_validator";
     pub(crate) const EVENT_TYPE_COMPLETE_UNBONDING: &str = "complete_unbonding";
     pub(crate) const EVENT_TYPE_COMPLETE_REDELEGATION: &str = "complete_redelegation";
     pub(crate) const EVENT_TYPE_MESSAGE: &str = "message";
@@ -44,6 +47,9 @@ pub(crate) mod keeper {
 }
 
 pub(crate) mod proto {
+    // TODO: is a copy from sdk, but seem like it is better to use some random string
+    pub(crate) const DO_NOT_MODIFY_STRING: &str = "[do-not-modify]";
+
     pub(crate) const MAX_MONIKER_LENGTH: usize = 70;
     pub(crate) const MAX_IDENTITY_LENGTH: usize = 3000;
     pub(crate) const MAX_WEBSITE_LENGTH: usize = 140;
