@@ -60,7 +60,7 @@ pub struct Keeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
-    BK: BankKeeper<SK, M>,
+    BK,
     KH: KeeperHooks<SK, AK, M>,
     M: Module,
 > {

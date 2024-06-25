@@ -26,6 +26,7 @@ use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
+use gears::x::keepers::gov::GovernanceBankKeeper;
 use gears::x::module::Module;
 use std::marker::PhantomData;
 use std::ops::SubAssign;
@@ -82,14 +83,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
             }))
     }
 
-    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        _ctx: &CTX,
-        _address: &AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors> {
-        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
-    }
-
     fn coins_burn<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -137,15 +130,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         Ok(())
     }
 
-    fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
-        &self,
-        _ctx: &CTX,
-        _address: &AccAddress,
-        _denom: &Denom,
-    ) -> Result<Coin, GasStoreErrors> {
-        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
-    }
-
     fn send_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
@@ -165,6 +149,27 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
                 amount,
             },
         )
+    }
+}
+
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
+    GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+{
+    fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        _address: &AccAddress,
+    ) -> Result<Vec<Coin>, GasStoreErrors> {
+        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+    }
+
+    fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        _ctx: &CTX,
+        _address: &AccAddress,
+        _denom: &Denom,
+    ) -> Result<Coin, GasStoreErrors> {
+        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
     }
 }
 

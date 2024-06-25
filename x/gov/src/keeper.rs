@@ -21,7 +21,7 @@ use gears::{
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
-        keepers::{bank::BankKeeper, staking::GovStakingKeeper},
+        keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},
         module::Module,
         types::{delegation::StakingDelegation, validator::StakingValidator},
     },
@@ -57,7 +57,7 @@ pub struct GovKeeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Module,
-    BK: BankKeeper<SK, M>,
+    BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
 > {
     store_key: SK,
@@ -72,7 +72,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         M: Module,
-        BK: BankKeeper<SK, M>,
+        BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
     > GovKeeper<SK, PSK, M, BK, STK>
 {
@@ -763,7 +763,7 @@ fn deposit_del<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Module,
-    BK: BankKeeper<SK, M>,
+    BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
 >(
@@ -795,7 +795,7 @@ fn deposit_refund<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Module,
-    BK: BankKeeper<SK, M>,
+    BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
 >(
