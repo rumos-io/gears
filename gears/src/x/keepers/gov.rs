@@ -23,5 +23,5 @@ pub trait GovernanceBankKeeper<SK: StoreKey, M: Module>: BankKeeper<SK, M> {
         ctx: &CTX,
         address: &AccAddress,
         denom: &Denom,
-    ) -> Result<Coin, GasStoreErrors>;
+    ) -> Result<Coin, GasStoreErrors>;  
 }
