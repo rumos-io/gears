@@ -132,8 +132,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestEcho,
     ) -> tendermint_proto::abci::ResponseEcho {
-        CancellationSource::panic_if_cancelled();
-
         T::echo(&self.handler, request.into()).into()
     }
 
@@ -141,8 +139,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestInfo,
     ) -> tendermint_proto::abci::ResponseInfo {
-        CancellationSource::panic_if_cancelled();
-
         T::info(&self.handler, request.into()).into()
     }
 
@@ -171,8 +167,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestQuery,
     ) -> tendermint_proto::abci::ResponseQuery {
-        CancellationSource::panic_if_cancelled();
-
         T::query(&self.handler, request.into()).into()
     }
 
@@ -180,8 +174,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestCheckTx,
     ) -> tendermint_proto::abci::ResponseCheckTx {
-        CancellationSource::panic_if_cancelled();
-
         T::check_tx(&self.handler, request.into()).into()
     }
 
@@ -189,8 +181,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestDeliverTx,
     ) -> tendermint_proto::abci::ResponseDeliverTx {
-        CancellationSource::panic_if_cancelled();
-
         T::deliver_tx(&self.handler, request.into()).into()
     }
 
@@ -198,7 +188,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestBeginBlock,
     ) -> tendermint_proto::abci::ResponseBeginBlock {
-        CancellationSource::panic_if_cancelled();
         let guard = CancellationSource::drop_guard();
 
         let result = T::begin_block(&self.handler, request.try_into().unwrap_or_invalid());
@@ -219,7 +208,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestEndBlock,
     ) -> tendermint_proto::abci::ResponseEndBlock {
-        CancellationSource::panic_if_cancelled();
         let guard = CancellationSource::drop_guard();
 
         let result = T::end_block(&self.handler, request.into());
@@ -237,20 +225,14 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
     }
 
     fn flush(&self) -> tendermint_proto::abci::ResponseFlush {
-        CancellationSource::panic_if_cancelled();
-
         T::flush(&self.handler).into()
     }
 
     fn commit(&self) -> tendermint_proto::abci::ResponseCommit {
-        CancellationSource::panic_if_cancelled();
-
         T::commit(&self.handler).into()
     }
 
     fn list_snapshots(&self) -> tendermint_proto::abci::ResponseListSnapshots {
-        CancellationSource::panic_if_cancelled();
-
         T::list_snapshots(&self.handler).into()
     }
 
@@ -258,8 +240,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestOfferSnapshot,
     ) -> tendermint_proto::abci::ResponseOfferSnapshot {
-        CancellationSource::panic_if_cancelled();
-
         T::offer_snapshot(&self.handler, request.into()).into()
     }
 
@@ -267,8 +247,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestLoadSnapshotChunk,
     ) -> tendermint_proto::abci::ResponseLoadSnapshotChunk {
-        CancellationSource::panic_if_cancelled();
-
         T::load_snapshot_chunk(&self.handler, request.into()).into()
     }
 
@@ -276,8 +254,6 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestApplySnapshotChunk,
     ) -> tendermint_proto::abci::ResponseApplySnapshotChunk {
-        CancellationSource::panic_if_cancelled();
-
         T::apply_snapshot_chunk(&self.handler, request.into()).into()
     }
 }
