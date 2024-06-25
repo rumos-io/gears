@@ -51,8 +51,8 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
     fn info(&self, _request: RequestInfo) -> ResponseInfo;
 
     /// Called once upon genesis.
-    fn init_chain(&self, _request: RequestInitChain<G>) -> anyhow::Result<ResponseInitChain> {
-        Ok(Default::default())
+    fn init_chain(&self, _request: RequestInitChain<G>) -> ResponseInitChain {
+        Default::default()
     }
 
     /// Query the application for data at the current or past height.
@@ -69,13 +69,13 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
     }
 
     /// Signals the beginning of a new block, prior to any `DeliverTx` calls.
-    fn begin_block(&self, _request: RequestBeginBlock) -> anyhow::Result<ResponseBeginBlock> {
-        Ok(Default::default())
+    fn begin_block(&self, _request: RequestBeginBlock) -> ResponseBeginBlock {
+        Default::default()
     }
 
     /// Signals the end of a block.
-    fn end_block(&self, _request: RequestEndBlock) -> anyhow::Result<ResponseEndBlock> {
-        Ok(Default::default())
+    fn end_block(&self, _request: RequestEndBlock) -> ResponseEndBlock {
+        Default::default()
     }
 
     /// Signals that messages queued on the client should be flushed to the server.
@@ -146,21 +146,12 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestInitChain,
     ) -> tendermint_proto::abci::ResponseInitChain {
-        CancellationSource::panic_if_cancelled();
         let guard = CancellationSource::drop_guard();
 
         let result = T::init_chain(&self.handler, request.try_into().unwrap_or_invalid());
 
-        match result {
-            Ok(var) => {
-                guard.disarm();
-                var.into()
-            }
-            Err(err) => {
-                CancellationSource::cancel();
-                panic!("Failed to init chain with err: {err}")
-            }
-        }
+        guard.disarm();
+        result.into()
     }
 
     fn query(
@@ -192,16 +183,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
 
         let result = T::begin_block(&self.handler, request.try_into().unwrap_or_invalid());
 
-        match result {
-            Ok(var) => {
-                guard.disarm();
-                var.into()
-            }
-            Err(err) => {
-                CancellationSource::cancel();
-                panic!("Failed to begin block with err: {err}")
-            }
-        }
+        guard.disarm();
+        result.into()
     }
 
     fn end_block(
@@ -212,16 +195,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
 
         let result = T::end_block(&self.handler, request.into());
 
-        match result {
-            Ok(var) => {
-                guard.disarm();
-                var.into()
-            }
-            Err(err) => {
-                CancellationSource::cancel();
-                panic!("Failed to end block with err: {err}")
-            }
-        }
+        guard.disarm();
+        result.into()
     }
 
     fn flush(&self) -> tendermint_proto::abci::ResponseFlush {

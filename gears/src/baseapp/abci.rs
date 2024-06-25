@@ -44,10 +44,7 @@ use tracing::{debug, error, info};
 impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
-    fn init_chain(
-        &self,
-        request: RequestInitChain<H::Genesis>,
-    ) -> anyhow::Result<ResponseInitChain> {
+    fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
         info!("Got init chain request"); // TODO: should we move logs to proxy?
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
@@ -67,11 +64,11 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.abci_handler
             .init_genesis(&mut ctx, request.app_genesis.clone());
 
-        Ok(ResponseInitChain {
+        ResponseInitChain {
             consensus_params: Some(request.consensus_params),
             validators: request.validators,
             app_hash: "hash_goes_here".into(), //TODO: set app hash
-        })
+        }
     }
 
     fn info(&self, request: RequestInfo) -> ResponseInfo {
@@ -234,7 +231,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         }
     }
 
-    fn begin_block(&self, request: RequestBeginBlock) -> anyhow::Result<ResponseBeginBlock> {
+    fn begin_block(&self, request: RequestBeginBlock) -> ResponseBeginBlock {
         info!("Got begin block request");
 
         self.block_height_increment();
@@ -266,12 +263,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         state.cache_update(&mut multi_store);
 
-        Ok(ResponseBeginBlock {
+        ResponseBeginBlock {
             events: events.into_iter().collect(),
-        })
+        }
     }
 
-    fn end_block(&self, request: RequestEndBlock) -> anyhow::Result<ResponseEndBlock> {
+    fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
         info!("Got end block request");
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
@@ -292,14 +289,14 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .expect(POISONED_LOCK)
             .cache_update(&mut multi_store);
 
-        Ok(ResponseEndBlock {
+        ResponseEndBlock {
             events: events.into_iter().collect(),
             validator_updates,
             consensus_param_updates: None,
             // TODO: there is only one call to BaseAppParamsKeeper::set_consensus_params,
             // which is made during init. This means that these params cannot change.
             // However a get method should be implemented in future.
-        })
+        }
     }
 
     /// Signals that messages queued on the client should be flushed to the server.
