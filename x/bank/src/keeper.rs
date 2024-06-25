@@ -148,12 +148,23 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
 
     fn send_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        _ctx: &mut CTX,
-        _address: &AccAddress,
-        _module: &M,
-        _amount: SendCoins,
+        ctx: &mut CTX,
+        address: &AccAddress,
+        module: &M,
+        amount: SendCoins,
     ) -> Result<(), AppError> {
-        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+        let module_address = module.get_address();
+
+        // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
+
+        self.send_coins(
+            ctx,
+            MsgSend {
+                from_address: module_address,
+                to_address: address.clone(),
+                amount,
+            },
+        )
     }
 }
 
