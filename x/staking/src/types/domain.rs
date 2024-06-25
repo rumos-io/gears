@@ -101,7 +101,7 @@ pub struct UnbondingDelegation {
 /// UnbondingDelegationEntry - entry to an UnbondingDelegation
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct UnbondingDelegationEntry {
-    pub creation_height: i64,
+    pub creation_height: u32,
     pub completion_time: Timestamp,
     pub initial_balance: Uint256,
     pub balance: Uint256,
@@ -141,7 +141,7 @@ impl Redelegation {
 /// RedelegationEntry - entry to a Redelegation
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct RedelegationEntry {
-    pub creation_height: u64,
+    pub creation_height: u32,
     pub completion_time: Timestamp,
     pub initial_balance: Uint256,
     pub share_dst: Decimal256,
@@ -211,7 +211,7 @@ pub struct Validator {
     /// tokens define the delegated tokens (incl. self-delegation).
     pub tokens: Uint256,
     /// unbonding_height defines, if unbonding, the height at which this validator has begun unbonding.
-    pub unbonding_height: u64,
+    pub unbonding_height: u32,
     /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
     pub unbonding_time: Timestamp,
     /// commission defines the commission parameters.
@@ -468,8 +468,8 @@ pub struct ValidatorRaw {
     pub jailed: bool,
     #[prost(string)]
     pub tokens: String,
-    #[prost(uint64)]
-    pub unbonding_height: u64,
+    #[prost(uint32)]
+    pub unbonding_height: u32,
     #[prost(message, optional)]
     pub unbonding_time: Option<Timestamp>,
     #[prost(message, optional)]

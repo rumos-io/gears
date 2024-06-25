@@ -127,7 +127,7 @@ impl<
         };
         let entry = UnbondingDelegationEntry {
             // TODO: update type
-            creation_height: ctx.height() as i64,
+            creation_height: ctx.height(),
             completion_time: completion_time.clone(),
             initial_balance: return_amount,
             balance: return_amount,

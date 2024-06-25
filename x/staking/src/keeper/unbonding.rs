@@ -1,5 +1,4 @@
 use std::ops::Bound;
-
 use super::*;
 use crate::{
     consts::error::SERDE_ENCODING_DOMAIN_TYPE, parse_validator_queue_key,
@@ -223,7 +222,7 @@ impl<
         ctx: &mut BlockContext<'_, DB, SK>,
     ) -> Result<(), GasStoreErrors> {
         let block_time = ctx.get_time();
-        let block_height = ctx.height() as u64;
+        let block_height = ctx.height();
 
         // unbonding_validators_map will contains all validator addresses indexed under
         // the ValidatorQueueKey prefix. Note, the entire index key is composed as
@@ -398,7 +397,7 @@ impl<
 
         // set the unbonding completion time and completion height appropriately
         validator.unbonding_time = ctx.get_time();
-        validator.unbonding_height = ctx.height() as u64;
+        validator.unbonding_height = ctx.height();
 
         // save the now unbonded validator record and power index
         self.set_validator(ctx, validator)?;
@@ -416,7 +415,7 @@ impl<
         &self,
         ctx: &mut CTX,
         unbonding_time: &Timestamp,
-        unbonding_height: u64,
+        unbonding_height: u32,
     ) -> Result<Vec<ValAddress>, GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
@@ -433,7 +432,7 @@ impl<
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
-        end_height: u64,
+        end_height: u32,
         addrs: Vec<ValAddress>,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
@@ -450,7 +449,7 @@ impl<
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
-        end_height: u64,
+        end_height: u32,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
@@ -462,7 +461,7 @@ impl<
         &self,
         ctx: &CTX,
         block_time: &Timestamp,
-        block_height: u64,
+        block_height: u32,
     ) -> HashMap<Vec<u8>, Vec<ValAddress>> {
         let store = ctx.infallible_store(&self.store_key);
         let start = VALIDATOR_QUEUE_KEY.to_vec();
@@ -482,7 +481,7 @@ impl<
         &'a self,
         ctx: &'a CTX,
         block_time: &Timestamp,
-        block_height: u64,
+        block_height: u32,
     ) -> UnbondingValidatorsIterator<'a, DB> {
         let store = ctx.kv_store(&self.store_key);
         let start = VALIDATOR_QUEUE_KEY.to_vec();
