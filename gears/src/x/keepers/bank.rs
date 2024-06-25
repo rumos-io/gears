@@ -43,9 +43,9 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         address: &AccAddress,
     ) -> Result<Vec<Coin>, GasStoreErrors>;
 
-    fn coins_burn<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn coins_burn<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &CTX,
+        ctx: &mut CTX,
         module: &M,
         deposit: &SendCoins,
     ) -> Result<(), AppError>;

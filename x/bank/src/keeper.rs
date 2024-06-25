@@ -20,6 +20,7 @@ use gears::types::base::send::SendCoins;
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::store::gas::errors::GasStoreErrors;
+use gears::types::store::gas::ext::GasResultExt;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
@@ -27,6 +28,7 @@ use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::x::module::Module;
 use std::marker::PhantomData;
+use std::ops::SubAssign;
 use std::{collections::HashMap, str::FromStr};
 
 const SUPPLY_KEY: [u8; 1] = [0];
@@ -88,13 +90,51 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
     }
 
-    fn coins_burn<DB: Database, CTX: QueryableContext<DB, SK>>(
+    fn coins_burn<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        _ctx: &CTX,
-        _module: &M,
-        _deposit: &SendCoins,
+        ctx: &mut CTX,
+        module: &M,
+        deposit: &SendCoins,
     ) -> Result<(), AppError> {
-        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+        let module_acc_addr = module.get_address();
+
+        let account = self
+            .auth_keeper
+            .get_account(ctx, &module_acc_addr)?
+            .unwrap(); // TODO:
+
+        match account.has_permissions("burner") {
+            true => Ok(()),
+            false => Err(AppError::AccountNotFound),
+        }?;
+
+        self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
+
+        for coin in deposit.inner() {
+            let supply = self.supply(ctx, &coin.denom)?; // TODO: HOW TO HANDLE OPTION::NONE
+            if let Some(mut supply) = supply {
+                supply.amount.sub_assign(coin.amount);
+                self.set_supply(ctx, supply)?;
+            }
+        }
+
+        ctx.push_event(Event::new(
+            "burn",
+            vec![
+                EventAttribute::new(
+                    "burner".as_bytes().to_owned().into(),
+                    account.get_address().as_ref().to_owned().into(),
+                    false,
+                ),
+                EventAttribute::new(
+                    "amount".as_bytes().to_owned().into(),
+                    format!("{deposit:?}").into(),
+                    false,
+                ),
+            ],
+        ));
+
+        Ok(())
     }
 
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -168,7 +208,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     denom: coin.0,
                     amount: coin.1,
                 },
-            );
+            )
+            .unwrap_gas();
         }
 
         for denom_metadata in genesis.denom_metadata {
@@ -476,7 +517,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         Ok(())
     }
 
-    pub fn set_supply<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, coin: Coin) {
+    pub fn set_supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        coin: Coin,
+    ) -> Result<(), GasStoreErrors> {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
@@ -485,7 +530,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         supply_store.set(
             coin.denom.to_string().into_bytes(),
             coin.amount.to_string().into_bytes(),
-        );
+        )
+    }
+
+    pub fn supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        denom: &Denom,
+    ) -> Result<Option<Coin>, GasStoreErrors> {
+        let store = ctx.kv_store(&self.store_key);
+        let supply_store = store.prefix_store(SUPPLY_KEY);
+
+        let amount_bytes = supply_store.get(denom.as_ref().as_bytes())?;
+
+        match amount_bytes {
+            Some(bytes) => Ok(Some(Coin {
+                denom: denom.clone(),
+                amount: Uint256::from_str(&String::from_utf8(bytes).unwrap()).unwrap(), // TODO:NOW
+            })),
+            None => Ok(None),
+        }
     }
 
     fn get_address_balances_store<'a, DB: Database>(
