@@ -9,11 +9,7 @@ use gears::{
     },
 };
 
-const BALANCES_PREFIX: [u8; 1] = [0x02];
-
-fn account_key(addr: &AccAddress) -> Vec<u8> {
-    [BALANCES_PREFIX.as_slice(), &[addr.len()], addr.as_ref()].concat()
-}
+use crate::account_key;
 
 #[derive(Debug)]
 pub struct BalanceIterator<'a, DB>(StoreRange<'a, DB>);

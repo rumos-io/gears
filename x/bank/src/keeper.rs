@@ -37,6 +37,15 @@ const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 const DENOM_METADATA_PREFIX: [u8; 1] = [1];
 
+pub(crate) fn account_key(addr: &AccAddress) -> Vec<u8> {
+    [
+        ADDRESS_BALANCES_STORE_PREFIX.as_slice(),
+        &[addr.len()],
+        addr.as_ref(),
+    ]
+    .concat()
+}
+
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> {
     store_key: SK,
@@ -176,11 +185,30 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        _ctx: &CTX,
-        _address: &AccAddress,
-        _denom: &Denom,
+        ctx: &CTX,
+        address: &AccAddress,
+        denom: &Denom,
     ) -> Result<Coin, GasStoreErrors> {
-        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+        let store = ctx
+            .kv_store(&self.store_key)
+            .prefix_store(account_key(address));
+
+        let coin_bytes = store.get(denom.as_ref().as_bytes())?;
+        let coin = if let Some(coin_bytes) = coin_bytes {
+            Coin {
+                denom: denom.to_owned(),
+                amount: Uint256::from_str(&String::from_utf8_lossy(&coin_bytes))
+                    .ok()
+                    .unwrap_or_corrupt(),
+            }
+        } else {
+            Coin {
+                denom: denom.to_owned(),
+                amount: Uint256::zero(),
+            }
+        };
+
+        Ok(coin)
     }
 }
 
