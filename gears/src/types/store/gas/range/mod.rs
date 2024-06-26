@@ -57,10 +57,7 @@ impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
             .range(next.as_ref().map(|(key, val)| (key.len(), val.len())));
 
         match err {
-            Ok(_) => match next {
-                Some(var) => Some(Ok(var)),
-                None => None,
-            },
+            Ok(_) => next.map(Ok),
             Err(err) => Some(Err(err)),
         }
     }

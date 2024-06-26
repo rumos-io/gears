@@ -104,8 +104,8 @@ impl TryFrom<Any> for MsgSubmitProposal {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(MsgSubmitProposal::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        MsgSubmitProposal::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 

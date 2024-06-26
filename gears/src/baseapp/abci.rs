@@ -45,7 +45,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
-        info!("Got init chain request");
+        info!("Got init chain request"); // TODO: should we move logs to proxy?
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 

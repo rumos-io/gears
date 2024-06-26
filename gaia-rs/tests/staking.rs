@@ -399,14 +399,14 @@ fn query_validator() -> anyhow::Result<()> {
         }
     );
     assert_eq!(consensus_pubkey, serde_json::from_str("{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}").unwrap());
-    assert_eq!(jailed, false);
+    assert!(!jailed);
     assert_eq!(tokens, Uint256::from(100u64));
     assert_eq!(
         CommissionRaw::from(commission).commission_rates,
         Some(CommissionRatesRaw {
             rate: 10u64.pow(17).to_string(),
             max_rate: (2 * 10u64.pow(17)).to_string(),
-            max_change_rate: (1 * 10u64.pow(16)).to_string(),
+            max_change_rate: 10u64.pow(16).to_string(),
         }),
     );
     assert_eq!(min_self_delegation, Uint256::one());
