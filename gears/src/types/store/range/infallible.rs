@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Bound};
+use std::borrow::Cow;
 
 use database::Database;
 use kv_store::{range::Range, types::prefix::range::PrefixRange};
@@ -8,7 +8,7 @@ use crate::types::store::gas::errors::GasStoreErrors;
 #[derive(Debug)]
 enum InfallibleRangeBackend<'a, DB> {
     Gas(crate::types::store::gas::range::infallible::RangeIter<'a, DB>),
-    Kv(Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>),
+    Kv(Range<'a, DB>),
     Prefix(PrefixRange<'a, DB>),
 }
 
@@ -44,8 +44,8 @@ impl<'a, DB> From<crate::types::store::gas::range::infallible::RangeIter<'a, DB>
     }
 }
 
-impl<'a, DB> From<Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>> for RangeIter<'a, DB> {
-    fn from(value: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>) -> Self {
+impl<'a, DB> From<Range<'a, DB>> for RangeIter<'a, DB> {
+    fn from(value: Range<'a, DB>) -> Self {
         Self(InfallibleRangeBackend::Kv(value))
     }
 }

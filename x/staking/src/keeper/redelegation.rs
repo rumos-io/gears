@@ -132,7 +132,7 @@ impl<
             val_src_addr,
             val_dst_addr,
         }: DvvTriplet,
-        creation_height: u64,
+        creation_height: u32,
         min_time: Timestamp,
         balance: Uint256,
         shares_dst: Decimal256,

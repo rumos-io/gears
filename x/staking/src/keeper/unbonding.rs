@@ -1,9 +1,7 @@
-use std::ops::Bound;
-
 use super::*;
 use crate::{
     consts::error::SERDE_ENCODING_DOMAIN_TYPE, parse_validator_queue_key,
-    unbonding_delegation_time_key, validator_queue_key,
+    unbonding_delegation_time_key, validator_queue_key, UnbondingDelegationEntry,
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
@@ -11,6 +9,7 @@ use gears::{
     store::database::ext::UnwrapCorrupt,
     tendermint::types::{proto::Protobuf, time::Timestamp},
 };
+use std::ops::Bound;
 
 impl<
         SK: StoreKey,
@@ -21,37 +20,58 @@ impl<
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
-    pub fn unbonding_delegation<DB: Database, CTX: InfallibleContext<DB, SK>>(
+    pub fn unbonding_delegation<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
-        del_addr: AccAddress,
-        val_addr: ValAddress,
-    ) -> Option<UnbondingDelegation> {
-        let store = InfallibleContext::infallible_store(ctx, &self.store_key);
+        ctx: &CTX,
+        del_addr: &AccAddress,
+        val_addr: &ValAddress,
+    ) -> Result<Option<UnbondingDelegation>, GasStoreErrors> {
+        let store = ctx.kv_store(&self.store_key);
         let delegations_store = store.prefix_store(UNBONDING_DELEGATION_KEY);
-        let mut key = Vec::from(del_addr);
-        key.extend_from_slice(&Vec::from(val_addr));
-        if let Some(bytes) = delegations_store.get(&key) {
-            if let Ok(delegation) = serde_json::from_slice(&bytes) {
-                return Some(delegation);
-            }
-        }
-        None
+        let mut key = Vec::from(del_addr.clone());
+        key.extend_from_slice(&Vec::from(val_addr.clone()));
+        let unbonding_delegation = delegations_store
+            .get(&key)?
+            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt());
+        Ok(unbonding_delegation)
     }
 
-    pub fn set_unbonding_delegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+    pub fn set_unbonding_delegation<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
-    ) {
-        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
+    ) -> Result<(), GasStoreErrors> {
+        let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATION_KEY);
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.set(
             key,
             serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        )
+    }
+
+    /// set_unbonding_delegation_entry adds an entry to the unbonding delegation at
+    /// the given addresses. It creates the unbonding delegation if it does not exist.
+    pub fn set_unbonding_delegation_entry<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: &AccAddress,
+        val_addr: &ValAddress,
+        entry: UnbondingDelegationEntry,
+    ) -> Result<UnbondingDelegation, GasStoreErrors> {
+        let ubd = if let Some(mut ubd) = self.unbonding_delegation(ctx, del_addr, val_addr)? {
+            ubd.entries.push(entry);
+            ubd
+        } else {
+            UnbondingDelegation {
+                delegator_address: del_addr.clone(),
+                validator_address: val_addr.clone(),
+                entries: vec![entry],
+            }
+        };
+        self.set_unbonding_delegation(ctx, &ubd)?;
+        Ok(ubd)
     }
 
     pub fn remove_unbonding_delegation<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
@@ -64,6 +84,19 @@ impl<
         let mut key = Vec::from(delegation.delegator_address.clone());
         key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
         delegations_store.delete(&key)
+    }
+
+    pub fn has_max_unbonding_delegation_entries<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: &AccAddress,
+        val_addr: &ValAddress,
+    ) -> Result<bool, GasStoreErrors> {
+        let params = self.staking_params_keeper.try_get(ctx)?;
+        let unbonding_delegation = self.unbonding_delegation(ctx, del_addr, val_addr)?;
+        Ok(unbonding_delegation
+            .map(|ubd| ubd.entries.len() > params.max_entries as usize)
+            .unwrap_or_default())
     }
 
     /// Returns a concatenated list of all the timeslices inclusively previous to
@@ -102,13 +135,13 @@ impl<
     }
 
     /// Insert an unbonding delegation to the appropriate timeslice in the unbonding queue
-    pub fn insert_ubd_queue<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+    pub fn insert_ubd_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
         time: Timestamp,
-    ) {
-        let time_slice = self.ubd_queue_time_slice(ctx, &time);
+    ) -> Result<(), GasStoreErrors> {
+        let time_slice = self.ubd_queue_time_slice(ctx, &time)?;
         let dv_pair = DvPair::new(
             delegation.validator_address.clone(),
             delegation.delegator_address.clone(),
@@ -116,9 +149,9 @@ impl<
 
         if let Some(mut time_slice) = time_slice {
             time_slice.push(dv_pair);
-            self.set_ubd_queue_time_slice(ctx, time, time_slice);
+            self.set_ubd_queue_time_slice(ctx, time, time_slice)
         } else {
-            self.set_ubd_queue_time_slice(ctx, time, vec![dv_pair]);
+            self.set_ubd_queue_time_slice(ctx, time, vec![dv_pair])
         }
     }
 
@@ -140,33 +173,33 @@ impl<
         Ok(())
     }
 
-    pub fn ubd_queue_time_slice<DB: Database, CTX: InfallibleContext<DB, SK>>(
+    pub fn ubd_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: &Timestamp,
-    ) -> Option<Vec<DvPair>> {
-        let store = InfallibleContext::infallible_store(ctx, &self.store_key);
+    ) -> Result<Option<Vec<DvPair>>, GasStoreErrors> {
+        let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UNBONDING_QUEUE_KEY);
-        if let Some(bz) = store.get(&time.encode_vec().expect(IBC_ENCODE_UNWRAP)) {
-            serde_json::from_slice(&bz).unwrap_or_default()
+        if let Some(bz) = store.get(&time.encode_vec().expect(IBC_ENCODE_UNWRAP))? {
+            Ok(serde_json::from_slice(&bz).unwrap_or_default())
         } else {
-            None
+            Ok(None)
         }
     }
 
-    pub fn set_ubd_queue_time_slice<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+    pub fn set_ubd_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         time: Timestamp,
         time_slice: Vec<DvPair>,
-    ) {
-        let store = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
+    ) -> Result<(), GasStoreErrors> {
+        let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(UNBONDING_QUEUE_KEY);
         let key = time.encode_vec().expect(IBC_ENCODE_UNWRAP);
         store.set(
             key,
             serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        );
+        )
     }
 
     pub fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -189,7 +222,7 @@ impl<
         ctx: &mut BlockContext<'_, DB, SK>,
     ) -> Result<(), GasStoreErrors> {
         let block_time = ctx.get_time();
-        let block_height = ctx.height() as u64;
+        let block_height = ctx.height();
 
         // unbonding_validators_map will contains all validator addresses indexed under
         // the ValidatorQueueKey prefix. Note, the entire index key is composed as
@@ -287,11 +320,11 @@ impl<
     pub fn complete_unbonding<DB: Database>(
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
-        val_addr: ValAddress,
-        del_addr: AccAddress,
+        val_addr: &ValAddress,
+        del_addr: &AccAddress,
     ) -> anyhow::Result<Vec<Coin>> {
         let params = self.staking_params_keeper.get(ctx);
-        let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr) {
+        let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr)? {
             delegation
         } else {
             return Err(AppError::Custom("No unbonding delegation".into()).into());
@@ -330,7 +363,7 @@ impl<
         if new_ubd.is_empty() {
             self.remove_unbonding_delegation(ctx, &ubd);
         } else {
-            self.set_unbonding_delegation(ctx, &ubd);
+            self.set_unbonding_delegation(ctx, &ubd)?;
         }
 
         Ok(balances)
@@ -364,7 +397,7 @@ impl<
 
         // set the unbonding completion time and completion height appropriately
         validator.unbonding_time = ctx.get_time();
-        validator.unbonding_height = ctx.height() as u64;
+        validator.unbonding_height = ctx.height();
 
         // save the now unbonded validator record and power index
         self.set_validator(ctx, validator)?;
@@ -382,7 +415,7 @@ impl<
         &self,
         ctx: &mut CTX,
         unbonding_time: &Timestamp,
-        unbonding_height: u64,
+        unbonding_height: u32,
     ) -> Result<Vec<ValAddress>, GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let store = store.prefix_store(VALIDATOR_QUEUE_KEY);
@@ -399,7 +432,7 @@ impl<
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
-        end_height: u64,
+        end_height: u32,
         addrs: Vec<ValAddress>,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
@@ -416,7 +449,7 @@ impl<
         &self,
         ctx: &mut CTX,
         end_time: Timestamp,
-        end_height: u64,
+        end_height: u32,
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut store = store.prefix_store_mut(VALIDATOR_QUEUE_KEY);
@@ -428,7 +461,7 @@ impl<
         &self,
         ctx: &CTX,
         block_time: &Timestamp,
-        block_height: u64,
+        block_height: u32,
     ) -> HashMap<Vec<u8>, Vec<ValAddress>> {
         let store = ctx.infallible_store(&self.store_key);
         let start = VALIDATOR_QUEUE_KEY.to_vec();
@@ -448,7 +481,7 @@ impl<
         &'a self,
         ctx: &'a CTX,
         block_time: &Timestamp,
-        block_height: u64,
+        block_height: u32,
     ) -> UnbondingValidatorsIterator<'a, DB> {
         let store = ctx.kv_store(&self.store_key);
         let start = VALIDATOR_QUEUE_KEY.to_vec();

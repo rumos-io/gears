@@ -1,6 +1,6 @@
 pub mod mutable;
 
-use std::ops::Bound;
+use std::ops::RangeBounds;
 
 use database::Database;
 use kv_store::types::kv::immutable::KVStore;
@@ -18,7 +18,7 @@ impl<'a, DB: Database> GasKVStore<'a, DB> {
         Self { guard, inner }
     }
 
-    pub fn into_range(self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> GasRange<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> GasRange<'a, DB> {
         GasRange::new_kv(self.inner.into_range(range), self.guard.clone())
     }
 
