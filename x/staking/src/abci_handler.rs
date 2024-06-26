@@ -110,8 +110,7 @@ impl<
                     .encode_vec()
                     .into())
             }
-            "/cosmos/staking/v1beta1/params" |
-            "/cosmos.staking.v1beta1.Query/Params" => {
+            "/cosmos/staking/v1beta1/params" | "/cosmos.staking.v1beta1.Query/Params" => {
                 Ok(self.keeper.query_params(ctx).encode_vec().into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),

@@ -33,7 +33,7 @@ impl<G: DeserializeOwned> TryFrom<super::inner::RequestInitChain> for RequestIni
         }: super::inner::RequestInitChain,
     ) -> Result<Self, Self::Error> {
         let app_genesis: G = serde_json::from_slice(&app_state_bytes)
-            .map_err(|e| Error::InvalidData(format!("invalid app_state_bytes: {e}").into()))?;
+            .map_err(|e| Error::InvalidData(format!("invalid app_state_bytes: {e}")))?;
 
         Ok(Self {
             time: time
@@ -41,7 +41,7 @@ impl<G: DeserializeOwned> TryFrom<super::inner::RequestInitChain> for RequestIni
                 .into(),
             chain_id: chain_id
                 .parse()
-                .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}").into()))?,
+                .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}")))?,
             consensus_params: consensus_params
                 .ok_or(Error::InvalidData("consensus params is empty".to_string()))?
                 .try_into()?,

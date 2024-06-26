@@ -113,11 +113,9 @@ impl TryFrom<inner::Header> for Header {
                 .into(),
             chain_id: chain_id
                 .parse()
-                .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}").into()))?,
+                .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}")))?,
             height: height.try_into().map_err(|_| {
-                Self::Error::InvalidData(
-                    format!("provided height, {height}, is less than zero").into(),
-                )
+                Self::Error::InvalidData(format!("provided height, {height}, is less than zero"))
             })?,
             time: time
                 .ok_or_else(|| Self::Error::InvalidData("time is missing".into()))?

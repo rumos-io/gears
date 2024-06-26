@@ -47,7 +47,10 @@ impl<'a, DB: Database> PrefixStoreMut<'a, DB> {
     ) -> Result<(), GasStoreErrors> {
         match &mut self.0 {
             PrefixStoreMutBackend::Gas(var) => Ok(var.set(k, v)?),
-            PrefixStoreMutBackend::Kv(var) => Ok(var.set(k, v)),
+            PrefixStoreMutBackend::Kv(var) => {
+                var.set(k, v);
+                Ok(())
+            }
         }
     }
 }
