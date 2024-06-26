@@ -601,7 +601,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         match amount_bytes {
             Some(bytes) => Ok(Some(Coin {
                 denom: denom.clone(),
-                amount: Uint256::from_str(&String::from_utf8(bytes).unwrap()).unwrap(), // TODO:NOW
+                amount: Uint256::from_str(&String::from_utf8_lossy(&bytes))
+                    .ok()
+                    .unwrap_or_corrupt(),
             })),
             None => Ok(None),
         }
