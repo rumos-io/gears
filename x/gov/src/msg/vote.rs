@@ -21,7 +21,7 @@ pub struct MsgVote {
     pub option: VoteOption,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, strum::EnumIter)]
 pub enum VoteOption {
     Empty = 0,
     Yes = 1,
@@ -111,8 +111,8 @@ impl TryFrom<Any> for MsgVote {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(MsgVote::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        MsgVote::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 

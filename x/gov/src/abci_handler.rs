@@ -16,7 +16,10 @@ use gears::{
         request::{end_block::RequestEndBlock, query::RequestQuery},
     },
     types::tx::raw::TxWithRaw,
-    x::{keepers::bank::BankKeeper, module::Module},
+    x::{
+        keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},
+        module::Module,
+    },
 };
 
 use crate::{
@@ -27,20 +30,36 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub struct GovAbciHandler<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> {
-    keeper: GovKeeper<SK, PSK, M, BK>,
+pub struct GovAbciHandler<
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    M: Module,
+    BK: GovernanceBankKeeper<SK, M>,
+    STK: GovStakingKeeper<SK, M>,
+> {
+    keeper: GovKeeper<SK, PSK, M, BK, STK>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>>
-    GovAbciHandler<SK, PSK, M, BK>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Module,
+        BK: GovernanceBankKeeper<SK, M>,
+        STK: GovStakingKeeper<SK, M>,
+    > GovAbciHandler<SK, PSK, M, BK, STK>
 {
-    pub fn new(keeper: GovKeeper<SK, PSK, M, BK>) -> Self {
+    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK>) -> Self {
         Self { keeper }
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABCIHandler
-    for GovAbciHandler<SK, PSK, M, BK>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        M: Module,
+        BK: GovernanceBankKeeper<SK, M>,
+        STK: GovStakingKeeper<SK, M>,
+    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK>
 {
     type Message = GovMsg;
 
@@ -206,9 +225,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module, BK: BankKeeper<SK, M>> ABC
 
     fn end_block<'a, DB: Database>(
         &self,
-        _ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
+        ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
+        let events = self.keeper.end_block(ctx);
+
+        ctx.append_events(events);
+
         Vec::new()
     }
 }

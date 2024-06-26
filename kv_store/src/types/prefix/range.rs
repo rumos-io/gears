@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Bound};
+use std::borrow::Cow;
 
 use database::Database;
 
@@ -6,7 +6,7 @@ use crate::range::Range;
 
 #[derive(Debug)]
 pub struct PrefixRange<'a, DB> {
-    pub(crate) parent_range: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
+    pub(crate) parent_range: Range<'a, DB>,
     pub(crate) prefix_length: usize,
 }
 

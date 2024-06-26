@@ -19,6 +19,7 @@ use gears::{
         decimal256::Decimal256,
         uint::Uint256,
     },
+    x::types::validator::BondStatus,
 };
 use staking::{
     cli::{
@@ -28,7 +29,7 @@ use staking::{
         },
         tx::{StakingCommands, StakingTxCli},
     },
-    BondStatus, CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
+    CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
 };
 use std::{path::PathBuf, str::FromStr};
 use utilities::ACC_ADDRESS;
@@ -75,17 +76,18 @@ fn new_validator(
     amount: Coin,
     moniker: &str,
 ) -> anyhow::Result<Response> {
+    let pubkey = serde_json::from_str(pubkey)?;
     let tx_cmd = StakingCommands::CreateValidator {
-        pubkey: pubkey.to_string(),
+        pubkey,
         amount,
         moniker: moniker.to_string(),
         identity: "".to_string(),
         website: "".to_string(),
         security_contact: "".to_string(),
         details: "".to_string(),
-        commission_rate: "0.1".to_string(),
-        commission_max_rate: "0.2".to_string(),
-        commission_max_change_rate: "0.01".to_string(),
+        commission_rate: Decimal256::from_atomics(1u64, 1).unwrap(),
+        commission_max_rate: Decimal256::from_atomics(2u64, 1).unwrap(),
+        commission_max_change_rate: Decimal256::from_atomics(1u64, 2).unwrap(),
         min_self_delegation: Uint256::one(),
     };
     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
@@ -397,14 +399,14 @@ fn query_validator() -> anyhow::Result<()> {
         }
     );
     assert_eq!(consensus_pubkey, serde_json::from_str("{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}").unwrap());
-    assert_eq!(jailed, false);
+    assert!(!jailed);
     assert_eq!(tokens, Uint256::from(100u64));
     assert_eq!(
         CommissionRaw::from(commission).commission_rates,
         Some(CommissionRatesRaw {
             rate: 10u64.pow(17).to_string(),
             max_rate: (2 * 10u64.pow(17)).to_string(),
-            max_change_rate: (1 * 10u64.pow(16)).to_string(),
+            max_change_rate: 10u64.pow(16).to_string(),
         }),
     );
     assert_eq!(min_self_delegation, Uint256::one());

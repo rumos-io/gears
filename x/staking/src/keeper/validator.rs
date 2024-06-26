@@ -1,5 +1,5 @@
 use super::*;
-use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, validator_queue_key, Validator};
+use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Commission, CommissionRates, Validator};
 use gears::{store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
@@ -62,6 +62,27 @@ impl<
         Ok(())
     }
 
+    /// create_updated_validator_commission attempts to create a validator's commission rate.
+    /// An error is returned if the new commission rate is invalid.
+    pub fn create_updated_validator_commission<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+        commission_rate: Decimal256,
+    ) -> anyhow::Result<Commission> {
+        let block_time = ctx.get_time();
+
+        let commission_rates = validator.commission.commission_rates();
+        let rates = CommissionRates::new(
+            commission_rate,
+            commission_rates.max_rate(),
+            commission_rates.max_change_rate(),
+        )?;
+
+        let commission = validator.commission.new_checked(rates, block_time)?;
+        Ok(commission)
+    }
+
     pub fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
@@ -95,9 +116,9 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
         tokens_amount: Uint256,
-    ) -> Result<Decimal256, GasStoreErrors> {
+    ) -> anyhow::Result<Decimal256> {
         self.delete_validator_by_power_index(ctx, validator)?;
-        let added_shares = validator.add_tokens_from_del(tokens_amount);
+        let added_shares = validator.add_tokens_from_del(tokens_amount)?;
         self.set_validator(ctx, validator)?;
         self.set_validator_by_power_index(ctx, validator)?;
         Ok(added_shares)
@@ -109,66 +130,11 @@ impl<
         ctx: &mut CTX,
         validator: &mut Validator,
         shares_to_remove: Decimal256,
-    ) -> Result<Uint256, GasStoreErrors> {
+    ) -> anyhow::Result<Uint256> {
         self.delete_validator_by_power_index(ctx, validator)?;
-        let removed_tokens = validator.remove_del_shares(shares_to_remove);
+        let removed_tokens = validator.remove_del_shares(shares_to_remove)?;
         self.set_validator(ctx, validator)?;
         self.set_validator_by_power_index(ctx, validator)?;
         Ok(removed_tokens)
-    }
-
-    pub fn validator_queue_map<DB: Database, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        block_time: chrono::DateTime<Utc>,
-        block_height: u64,
-    ) -> HashMap<Vec<u8>, Vec<String>> {
-        let store = ctx.infallible_store(&self.store_key);
-        let iterator = store.prefix_store(VALIDATOR_QUEUE_KEY);
-
-        let mut res = HashMap::new();
-
-        let end = validator_queue_key(block_time, block_height);
-        let mut previous_was_end = false;
-        for (k, v) in iterator.into_range(..).take_while(|(k, _)| {
-            let is_not_end = **k != end;
-            let ret_res = is_not_end && !previous_was_end;
-            previous_was_end = !is_not_end;
-            ret_res
-        }) {
-            // TODO
-            res.insert(k.to_vec(), serde_json::from_slice(&v).unwrap_or_corrupt());
-        }
-        res
-    }
-
-    pub fn delete_validator_queue<DB: Database, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        validator: &mut Validator,
-    ) -> Result<(), GasStoreErrors> {
-        let addrs =
-            self.unbonding_validators(ctx, &validator.unbonding_time, validator.unbonding_height);
-        let val_addr = validator.operator_address.to_string();
-        let new_addrs = addrs?
-            .into_iter()
-            .filter(|addr| val_addr != **addr)
-            .collect::<Vec<_>>();
-        if new_addrs.is_empty() {
-            self.delete_validator_queue_time_slice(
-                ctx,
-                validator.unbonding_time.clone(),
-                validator.unbonding_height,
-            )?;
-        } else {
-            self.set_unbonding_validators_queue(
-                ctx,
-                validator.unbonding_time.clone(),
-                validator.unbonding_height,
-                new_addrs,
-            )?;
-        }
-
-        Ok(())
     }
 }

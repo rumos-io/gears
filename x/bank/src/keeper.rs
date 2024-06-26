@@ -1,3 +1,4 @@
+use crate::types::iter::balances::BalanceIterator;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomsMetadataResponse,
@@ -20,18 +21,30 @@ use gears::types::base::send::SendCoins;
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::store::gas::errors::GasStoreErrors;
+use gears::types::store::gas::ext::GasResultExt;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
+use gears::x::keepers::gov::GovernanceBankKeeper;
 use gears::x::module::Module;
 use std::marker::PhantomData;
+use std::ops::SubAssign;
 use std::{collections::HashMap, str::FromStr};
 
 const SUPPLY_KEY: [u8; 1] = [0];
 const ADDRESS_BALANCES_STORE_PREFIX: [u8; 1] = [2];
 const DENOM_METADATA_PREFIX: [u8; 1] = [1];
+
+pub(crate) fn account_key(addr: &AccAddress) -> Vec<u8> {
+    [
+        ADDRESS_BALANCES_STORE_PREFIX.as_slice(),
+        &[addr.len()],
+        addr.as_ref(),
+    ]
+    .concat()
+}
 
 #[derive(Debug, Clone)]
 pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> {
@@ -80,12 +93,122 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
             }))
     }
 
+    fn coins_burn<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        module: &M,
+        deposit: &SendCoins,
+    ) -> Result<(), AppError> {
+        let module_acc_addr = module.get_address();
+
+        let account = self
+            .auth_keeper
+            .get_account(ctx, &module_acc_addr)?
+            .unwrap(); // TODO:
+
+        match account.has_permissions("burner") {
+            true => Ok(()),
+            false => Err(AppError::AccountNotFound),
+        }?;
+
+        self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
+
+        for coin in deposit.inner() {
+            let supply = self.supply(ctx, &coin.denom)?; // TODO: HOW TO HANDLE OPTION::NONE
+            if let Some(mut supply) = supply {
+                supply.amount.sub_assign(coin.amount);
+                self.set_supply(ctx, supply)?;
+            }
+        }
+
+        ctx.push_event(Event::new(
+            "burn",
+            vec![
+                EventAttribute::new(
+                    "burner".as_bytes().to_owned().into(),
+                    account.get_address().as_ref().to_owned().into(),
+                    false,
+                ),
+                EventAttribute::new(
+                    "amount".as_bytes().to_owned().into(),
+                    format!("{deposit:?}").into(),
+                    false,
+                ),
+            ],
+        ));
+
+        Ok(())
+    }
+
+    fn send_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        address: &AccAddress,
+        module: &M,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        let module_address = module.get_address();
+
+        // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
+
+        self.send_coins(
+            ctx,
+            MsgSend {
+                from_address: module_address,
+                to_address: address.clone(),
+                amount,
+            },
+        )
+    }
+}
+
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
+    GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+{
     fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        _ctx: &CTX,
-        _address: &AccAddress,
+        ctx: &CTX,
+        address: &AccAddress,
     ) -> Result<Vec<Coin>, GasStoreErrors> {
-        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+        let iterator = BalanceIterator::new(ctx.kv_store(&self.store_key), address)
+            .map(|this| this.map(|(_, val)| val));
+
+        let mut balances = Vec::<Coin>::new();
+        for coin in iterator {
+            let coin = coin?;
+
+            balances.push(coin);
+        }
+
+        Ok(balances)
+    }
+
+    fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: &AccAddress,
+        denom: &Denom,
+    ) -> Result<Coin, GasStoreErrors> {
+        let store = ctx
+            .kv_store(&self.store_key)
+            .prefix_store(account_key(address));
+
+        let coin_bytes = store.get(denom.as_ref().as_bytes())?;
+        let coin = if let Some(coin_bytes) = coin_bytes {
+            Coin {
+                denom: denom.to_owned(),
+                amount: Uint256::from_str(&String::from_utf8_lossy(&coin_bytes))
+                    .ok()
+                    .unwrap_or_corrupt(),
+            }
+        } else {
+            Coin {
+                denom: denom.to_owned(),
+                amount: Uint256::zero(),
+            }
+        };
+
+        Ok(coin)
     }
 }
 
@@ -140,7 +263,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     denom: coin.0,
                     amount: coin.1,
                 },
-            );
+            )
+            .unwrap_gas();
         }
 
         for denom_metadata in genesis.denom_metadata {
@@ -448,7 +572,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         Ok(())
     }
 
-    pub fn set_supply<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, coin: Coin) {
+    pub fn set_supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        coin: Coin,
+    ) -> Result<(), GasStoreErrors> {
         // TODO: need to delete coins with zero balance
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
@@ -457,7 +585,28 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         supply_store.set(
             coin.denom.to_string().into_bytes(),
             coin.amount.to_string().into_bytes(),
-        );
+        )
+    }
+
+    pub fn supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        denom: &Denom,
+    ) -> Result<Option<Coin>, GasStoreErrors> {
+        let store = ctx.kv_store(&self.store_key);
+        let supply_store = store.prefix_store(SUPPLY_KEY);
+
+        let amount_bytes = supply_store.get(denom.as_ref().as_bytes())?;
+
+        match amount_bytes {
+            Some(bytes) => Ok(Some(Coin {
+                denom: denom.clone(),
+                amount: Uint256::from_str(&String::from_utf8_lossy(&bytes))
+                    .ok()
+                    .unwrap_or_corrupt(),
+            })),
+            None => Ok(None),
+        }
     }
 
     fn get_address_balances_store<'a, DB: Database>(

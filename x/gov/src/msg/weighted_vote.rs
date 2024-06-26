@@ -68,8 +68,8 @@ impl From<MsgVote> for MsgVoteWeighted {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VoteOptionWeighted {
-    option: VoteOption,
-    weight: VoteWeight,
+    pub option: VoteOption,
+    pub weight: VoteWeight,
 }
 
 impl TryFrom<inner::WeightedVoteOption> for VoteOptionWeighted {
@@ -113,6 +113,12 @@ impl TryFrom<Decimal256> for VoteWeight {
         }
 
         Ok(Self(value))
+    }
+}
+
+impl From<VoteWeight> for Decimal256 {
+    fn from(value: VoteWeight) -> Self {
+        value.0
     }
 }
 
@@ -183,8 +189,8 @@ impl TryFrom<Any> for MsgVoteWeighted {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(MsgVoteWeighted::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        MsgVoteWeighted::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 

@@ -25,6 +25,8 @@ pub(crate) mod keeper {
     pub(crate) const ATTRIBUTE_KEY_MODULE: &str = "module";
     pub(crate) const ATTRIBUTE_KEY_SENDER: &str = "sender";
     pub(crate) const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
+    pub(crate) const ATTRIBUTE_KEY_COMMISSION_RATE: &str = "commission_rate";
+    pub(crate) const ATTRIBUTE_KEY_MIN_SELF_DELEGATION: &str = "min_self_delegation";
 
     pub(crate) const ATTRIBUTE_KEY_VALIDATOR: &str = "validator";
     pub(crate) const ATTRIBUTE_KEY_SRC_VALIDATOR: &str = "source_validator";
@@ -36,23 +38,21 @@ pub(crate) mod keeper {
     pub(crate) const ATTRIBUTE_VALUE_CATEGORY: &str = "staking";
 
     pub(crate) const EVENT_TYPE_CREATE_VALIDATOR: &str = "create_validator";
+    pub(crate) const EVENT_TYPE_EDIT_VALIDATOR: &str = "edit_validator";
     pub(crate) const EVENT_TYPE_COMPLETE_UNBONDING: &str = "complete_unbonding";
     pub(crate) const EVENT_TYPE_COMPLETE_REDELEGATION: &str = "complete_redelegation";
     pub(crate) const EVENT_TYPE_MESSAGE: &str = "message";
     pub(crate) const EVENT_TYPE_DELEGATE: &str = "delegate";
     pub(crate) const EVENT_TYPE_REDELEGATE: &str = "redelegate";
+    pub(crate) const EVENT_TYPE_UNBOND: &str = "unbond";
 }
 
 pub(crate) mod proto {
-    use gears::types::decimal256::Decimal256;
-
     pub(crate) const MAX_MONIKER_LENGTH: usize = 70;
     pub(crate) const MAX_IDENTITY_LENGTH: usize = 3000;
     pub(crate) const MAX_WEBSITE_LENGTH: usize = 140;
     pub(crate) const MAX_SECURITY_CONTACT_LENGTH: usize = 140;
     pub(crate) const MAX_DETAILS_LENGTH: usize = 280;
-    // TODO: check
-    pub(crate) const ONE_DEC: Decimal256 = Decimal256::one();
 }
 
 pub(crate) mod error {

@@ -1,5 +1,8 @@
 use super::*;
-use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasStoreErrors};
+use gears::{
+    store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasStoreErrors,
+    x::types::validator::BondStatus,
+};
 
 impl<
         SK: StoreKey,
@@ -91,9 +94,14 @@ impl<
             }
         }
 
-        let new_shares = self.add_validator_tokens_and_shares(ctx, validator, bond_amount)?;
+        let new_shares = self
+            .add_validator_tokens_and_shares(ctx, validator, bond_amount)
+            .map_err(|e| AppError::Custom(e.to_string()))?;
         // Update delegation
-        delegation.shares += new_shares;
+        delegation.shares = delegation
+            .shares
+            .checked_add(new_shares)
+            .map_err(|e| AppError::Custom(e.to_string()))?;
         self.set_delegation(ctx, &delegation)?;
 
         // Call the after-modification hook

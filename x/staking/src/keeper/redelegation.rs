@@ -75,9 +75,11 @@ impl<
 
         let redelegation = self.set_redelegation_entry(
             ctx,
-            del_addr,
-            val_src_addr,
-            val_dst_addr,
+            DvvTriplet {
+                del_addr: del_addr.clone(),
+                val_src_addr: val_src_addr.clone(),
+                val_dst_addr: val_dst_addr.clone(),
+            },
             height,
             completion_time.clone(),
             return_amount,
@@ -100,7 +102,7 @@ impl<
         let postfix = length_prefixed_val_del_addrs_key(val_src_addr, del_addr);
         prefix.extend_from_slice(&postfix);
 
-        // TODO: check logic
+        // TODO: check logic, can't find concrete implementation of method `Valid`
         store.get(&prefix).map(|red| red.is_some())
     }
 
@@ -122,15 +124,15 @@ impl<
 
     /// set_redelegation_entry adds an entry to the unbonding delegation at
     /// the given addresses. It creates the unbonding delegation if it does not exist
-    // TODO: consider to change signature
-    #[allow(clippy::too_many_arguments)]
     pub fn set_redelegation_entry<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        del_addr: &AccAddress,
-        val_src_addr: &ValAddress,
-        val_dst_addr: &ValAddress,
-        creation_height: u64,
+        DvvTriplet {
+            del_addr,
+            val_src_addr,
+            val_dst_addr,
+        }: DvvTriplet,
+        creation_height: u32,
         min_time: Timestamp,
         balance: Uint256,
         shares_dst: Decimal256,
@@ -142,15 +144,15 @@ impl<
             share_dst: shares_dst,
         };
         let redelegation = if let Some(mut redelegation) =
-            self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)?
+            self.redelegation(ctx, &del_addr, &val_src_addr, &val_dst_addr)?
         {
             redelegation.add_entry(entry);
             redelegation
         } else {
             Redelegation {
-                delegator_address: del_addr.clone(),
-                validator_src_address: val_src_addr.clone(),
-                validator_dst_address: val_dst_addr.clone(),
+                delegator_address: del_addr,
+                validator_src_address: val_src_addr,
+                validator_dst_address: val_dst_addr,
                 entries: vec![entry],
             }
         };
@@ -221,10 +223,6 @@ impl<
         let params = self.staking_params_keeper.get(ctx);
         let denom = params.bond_denom;
         let ctx_time = ctx.header.time.clone();
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let ctx_time =
-            chrono::DateTime::from_timestamp(ctx_time.seconds, ctx_time.nanos as u32).unwrap();
 
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
@@ -233,7 +231,7 @@ impl<
                 denom: denom.clone(),
                 amount: entry.initial_balance,
             };
-            if entry.is_mature(ctx_time) && !coin.amount.is_zero() {
+            if entry.is_mature(&ctx_time) && !coin.amount.is_zero() {
                 balances.push(coin);
             } else {
                 new_redelegations.push(entry);
@@ -255,7 +253,7 @@ impl<
         redelegation: &Redelegation,
         completion_time: Timestamp,
     ) -> Result<(), GasStoreErrors> {
-        // TODO: consider to move the DataTime type and work with timestamps into Gears
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let completion_time =
             chrono::DateTime::from_timestamp(completion_time.seconds, completion_time.nanos as u32)
@@ -319,15 +317,12 @@ impl<
     >(
         &self,
         ctx: &mut CTX,
-        time: Timestamp,
+        time: &Timestamp,
     ) -> Vec<DvvTriplet> {
         let (keys, mature_redelegations) = {
             let storage = InfallibleContext::infallible_store(ctx, &self.store_key);
             let store = storage.prefix_store(REDELEGATION_QUEUE_KEY);
 
-            // TODO: consider to move the DataTime type and work with timestamps into Gears
-            // The timestamp is provided by context and conversion won't fail.
-            let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
             // gets an iterator for all timeslices from time 0 until the current Blockheader time
             let end = unbonding_delegation_time_key(time).to_vec();
             let mut mature_redelegations = vec![];
@@ -348,7 +343,7 @@ impl<
         };
 
         let storage = InfallibleContextMut::infallible_store_mut(ctx, &self.store_key);
-        let mut store = storage.prefix_store_mut(UNBONDING_QUEUE_KEY);
+        let mut store = storage.prefix_store_mut(REDELEGATION_QUEUE_KEY);
         keys.iter().for_each(|k| {
             store.delete(k);
         });

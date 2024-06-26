@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Bound};
+use std::borrow::Cow;
 
 use database::Database;
 use infallible::RangeIter;
@@ -10,7 +10,7 @@ pub mod infallible;
 
 #[derive(Debug)]
 enum RangeBackend<'a, DB> {
-    Kv(Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>),
+    Kv(Range<'a, DB>),
     Prefix(PrefixRange<'a, DB>),
 }
 
@@ -21,10 +21,7 @@ pub struct GasRange<'a, DB> {
 }
 
 impl<'a, DB> GasRange<'a, DB> {
-    pub(super) fn new_kv(
-        inner: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>,
-        guard: GasGuard,
-    ) -> Self {
+    pub(super) fn new_kv(inner: Range<'a, DB>, guard: GasGuard) -> Self {
         Self {
             inner: RangeBackend::Kv(inner),
             guard,
@@ -57,10 +54,7 @@ impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
             .range(next.as_ref().map(|(key, val)| (key.len(), val.len())));
 
         match err {
-            Ok(_) => match next {
-                Some(var) => Some(Ok(var)),
-                None => None,
-            },
+            Ok(_) => next.map(Ok),
             Err(err) => Some(Err(err)),
         }
     }

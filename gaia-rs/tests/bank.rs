@@ -133,7 +133,7 @@ fn send_tx() -> anyhow::Result<()> {
     )?;
 
     let expected_hash = data_encoding::HEXUPPER
-        .decode("ADF35F8DCA01BD6A44F1260EDADA79C9FBED1C8C9F5431C3D192A2C1D0AF209D".as_bytes())?;
+        .decode("13BB2C6817D0EDA960EDB0C6D6D5CB752D341BB603EF4BCE990F4EA5A99500C1".as_bytes())?;
 
     assert_eq!(&expected_hash, hash.as_bytes());
     assert!(deliver_tx.code.is_ok());

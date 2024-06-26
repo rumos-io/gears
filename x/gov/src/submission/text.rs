@@ -51,8 +51,8 @@ impl TryFrom<Any> for TextProposal {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(Self::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        Self::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 

@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_aux::field_attributes::deserialize_number_from_string;
 
 /// GenesisState defines the ibc channel submodule's genesis state.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct GenesisState {
     pub channels: Vec<IdentifiedChannel>,
     pub acknowledgements: Vec<PacketState>,
@@ -22,19 +22,4 @@ pub struct GenesisState {
     #[serde(deserialize_with = "deserialize_number_from_string")]
     #[serde(serialize_with = "serialize_number_to_string")]
     pub next_channel_sequence: u64,
-}
-
-impl Default for GenesisState {
-    fn default() -> Self {
-        Self {
-            channels: vec![],
-            acknowledgements: vec![],
-            commitments: vec![],
-            receipts: vec![],
-            send_sequences: vec![],
-            recv_sequences: vec![],
-            ack_sequences: vec![],
-            next_channel_sequence: 0,
-        }
-    }
 }

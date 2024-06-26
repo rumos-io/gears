@@ -1,10 +1,11 @@
 use crate::{
-    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Redelegation, RedelegationEntry,
-    Validator,
+    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Params, Redelegation, RedelegationEntry,
+    UnbondingDelegation, Validator,
 };
 use gears::{
     core::{errors::CoreError, Protobuf},
     error::IBC_ENCODE_UNWRAP,
+    store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
@@ -433,3 +434,91 @@ impl From<QueryRedelegationResponse> for QueryRedelegationResponseRaw {
 }
 
 impl Protobuf<QueryRedelegationResponseRaw> for QueryRedelegationResponse {}
+
+/// QueryUnbondingDelegationResponse is the response type for the Query/UnbondingDelegation RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct QueryUnbondingDelegationResponse {
+    /// UnbondingDelegation with balance.
+    pub unbond: Option<UnbondingDelegation>,
+}
+
+impl TryFrom<QueryUnbondingDelegationResponseRaw> for QueryUnbondingDelegationResponse {
+    type Error = CoreError;
+
+    fn try_from(raw: QueryUnbondingDelegationResponseRaw) -> Result<Self, Self::Error> {
+        if let Some(ubd) = raw.unbond {
+            Ok(QueryUnbondingDelegationResponse {
+                unbond: Some(serde_json::from_slice(&ubd).unwrap_or_corrupt()),
+            })
+        } else {
+            Ok(QueryUnbondingDelegationResponse { unbond: None })
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QueryUnbondingDelegationResponseRaw {
+    #[prost(bytes, optional)]
+    pub unbond: Option<Vec<u8>>,
+}
+
+impl From<QueryUnbondingDelegationResponse> for QueryUnbondingDelegationResponseRaw {
+    fn from(query: QueryUnbondingDelegationResponse) -> Self {
+        Self {
+            unbond: query
+                .unbond
+                .map(|ubd| serde_json::to_vec(&ubd).expect(SERDE_ENCODING_DOMAIN_TYPE)),
+        }
+    }
+}
+
+impl Protobuf<QueryUnbondingDelegationResponseRaw> for QueryUnbondingDelegationResponse {}
+
+/// QueryParamsResponse is the response type for the Query/Params RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct QueryParamsResponse {
+    pub params: Params,
+}
+
+impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
+    type Error = gears::types::errors::Error;
+
+    fn try_from(raw: QueryParamsResponseRaw) -> Result<Self, Self::Error> {
+        let params = Params {
+            unbonding_time: raw.unbonding_time,
+            max_validators: raw.max_validators,
+            max_entries: raw.max_entries,
+            historical_entries: raw.historical_entries,
+            bond_denom: raw.bond_denom.try_into()?,
+        };
+        Ok(QueryParamsResponse { params })
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QueryParamsResponseRaw {
+    #[prost(int64)]
+    pub unbonding_time: i64,
+    #[prost(uint32)]
+    pub max_validators: u32,
+    #[prost(uint32)]
+    pub max_entries: u32,
+    #[prost(uint32)]
+    pub historical_entries: u32,
+    #[prost(string)]
+    pub bond_denom: String,
+}
+
+impl From<QueryParamsResponse> for QueryParamsResponseRaw {
+    fn from(query: QueryParamsResponse) -> Self {
+        Self {
+            unbonding_time: query.params.unbonding_time,
+            max_validators: query.params.max_validators,
+            max_entries: query.params.max_entries,
+            historical_entries: query.params.historical_entries,
+            bond_denom: query.params.bond_denom.to_string(),
+        }
+    }
+}
+
+impl Protobuf<QueryParamsResponseRaw> for QueryParamsResponse {}

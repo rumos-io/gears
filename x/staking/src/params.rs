@@ -1,5 +1,6 @@
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
+    error::AppError,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     store::{database::Database, StoreKey},
     types::{denom::Denom, store::gas::errors::GasStoreErrors},
@@ -13,7 +14,7 @@ const KEY_MAX_ENTRIES: &str = "MaxEntries";
 const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
 const KEY_BOND_DENOM: &str = "BondDenom";
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Params {
     // sdk counts duration as simple i64 type that represents difference
     // between two instants
@@ -26,8 +27,8 @@ pub struct Params {
 
 impl Default for Params {
     fn default() -> Self {
-        // TODO: remove unwrap, maybe propose default value
-        let bond_denom = Denom::try_from("uatom".to_string()).unwrap();
+        let bond_denom =
+            Denom::try_from("uatom".to_string()).expect("default denom should be valid");
         Params {
             // 3 weeks
             unbonding_time: 60_000_000_000 * 60 * 24 * 7 * 3,
@@ -54,7 +55,6 @@ impl ParamsSerialize for Params {
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
         vec![
-            // TODO: remove unwrap
             (
                 KEY_UNBONDING_TIME,
                 format!("\"{}\"", self.unbonding_time).into_bytes(),
@@ -78,11 +78,10 @@ impl ParamsSerialize for Params {
 
 impl ParamsDeserialize for Params {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
-        // TODO: check unwraps
         let unbonding_time = ParamKind::I64
             .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
             .signed_64()
-            .unwrap();
+            .expect("param serialized as i64 should be deserialized without errors");
         let max_validators = String::from_utf8(fields.remove(KEY_MAX_VALIDATORS).unwrap())
             .expect("should be valid utf-8")
             .parse::<u32>()
@@ -98,7 +97,7 @@ impl ParamsDeserialize for Params {
         let bond_denom = ParamKind::String
             .parse_param(fields.remove(KEY_BOND_DENOM).unwrap())
             .string()
-            .unwrap()
+            .expect("param serialized as string should be deserialized without errors")
             .strip_prefix('\"')
             .unwrap()
             .strip_suffix('\"')
@@ -117,8 +116,41 @@ impl ParamsDeserialize for Params {
 }
 
 impl Params {
-    pub fn validate(&self) -> Result<(), String> {
-        todo!()
+    /// validate a set of params
+    pub fn validate(&self) -> Result<(), AppError> {
+        self.validate_unbonding_time()?;
+        self.validate_max_validators()?;
+        self.validate_max_entries()
+    }
+
+    fn validate_unbonding_time(&self) -> Result<(), AppError> {
+        if self.unbonding_time < 0 {
+            return Err(AppError::Custom(format!(
+                "unbonding time must be positive: {}",
+                self.unbonding_time
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_max_validators(&self) -> Result<(), AppError> {
+        if self.max_validators == 0 {
+            return Err(AppError::Custom(format!(
+                "max validators must be positive: {}",
+                self.max_validators
+            )));
+        }
+        Ok(())
+    }
+
+    fn validate_max_entries(&self) -> Result<(), AppError> {
+        if self.max_entries == 0 {
+            return Err(AppError::Custom(format!(
+                "max entries must be positive: {}",
+                self.max_entries
+            )));
+        }
+        Ok(())
     }
 }
 

@@ -1,7 +1,8 @@
 use crate::{
     BankKeeper, GenesisState, Keeper, KeeperHooks, Message, QueryDelegationRequest,
-    QueryDelegationResponse, QueryRedelegationRequest, QueryRedelegationResponse,
-    QueryValidatorRequest, QueryValidatorResponse,
+    QueryDelegationResponse, QueryParamsResponse, QueryRedelegationRequest,
+    QueryRedelegationResponse, QueryUnbondingDelegationResponse, QueryValidatorRequest,
+    QueryValidatorResponse,
 };
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
@@ -36,14 +37,19 @@ pub enum StakingNodeQueryRequest {
     Validator(QueryValidatorRequest),
     Delegation(QueryDelegationRequest),
     Redelegation(QueryRedelegationRequest),
+    UnbondingDelegation(QueryDelegationRequest),
+    Params,
 }
 
 #[derive(Clone, Serialize)]
 #[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
 pub enum StakingNodeQueryResponse {
     Validator(QueryValidatorResponse),
     Delegation(QueryDelegationResponse),
     Redelegation(QueryRedelegationResponse),
+    UnbondingDelegation(QueryUnbondingDelegationResponse),
+    Params(QueryParamsResponse),
 }
 
 impl<
@@ -66,12 +72,18 @@ impl<
     ) -> Result<(), AppError> {
         match msg {
             Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
             Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
+            Message::Undelegate(_msg) => todo!(),
         }
     }
 
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+        // TODO: should it be a part of gears genesis handler?
+        if let Err(e) = genesis.validate() {
+            panic!("Something went wrong with staking genesis state.\n{}", e);
+        }
         self.keeper.init_genesis(ctx, genesis);
     }
 
@@ -103,6 +115,19 @@ impl<
                     .encode_vec()
                     .into())
             }
+            "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
+                let req = QueryDelegationRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_unbonding_delegation(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
+            "/cosmos/staking/v1beta1/params" | "/cosmos.staking.v1beta1.Query/Params" => {
+                Ok(self.keeper.query_params(ctx).encode_vec().into())
+            }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
     }
@@ -121,6 +146,14 @@ impl<
             }
             StakingNodeQueryRequest::Redelegation(req) => {
                 StakingNodeQueryResponse::Redelegation(self.keeper.query_redelegations(ctx, req))
+            }
+            StakingNodeQueryRequest::UnbondingDelegation(req) => {
+                StakingNodeQueryResponse::UnbondingDelegation(
+                    self.keeper.query_unbonding_delegation(ctx, req),
+                )
+            }
+            StakingNodeQueryRequest::Params => {
+                StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
             }
         }
     }

@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
-    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
-    QueryRedelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
-    RedelegationEntryResponse, RedelegationResponse,
+    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryParamsResponse,
+    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationResponse,
+    QueryValidatorRequest, QueryValidatorResponse, RedelegationEntryResponse, RedelegationResponse,
 };
 use gears::context::query::QueryContext;
 
@@ -91,11 +91,13 @@ impl<
                 dst_validator_address: None,
                 pagination: _,
             } => {
+                // TODO: add logic for a query with only src validator
                 //     redels = k.GetRedelegationsFromSrcValidator(ctx, params.SrcValidatorAddr)
                 todo!()
             }
             /* */
             _ => {
+                // TODO: add logic for a query to get all redelegations
                 //     redels = k.GetAllRedelegations(ctx, params.DelegatorAddr, params.SrcValidatorAddr, params.DstValidatorAddr)
                 todo!()
             }
@@ -143,5 +145,22 @@ impl<
         }
 
         Ok(resp)
+    }
+
+    pub fn query_unbonding_delegation<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegationRequest,
+    ) -> QueryUnbondingDelegationResponse {
+        QueryUnbondingDelegationResponse {
+            unbond: self
+                .unbonding_delegation(ctx, &query.delegator_address, &query.validator_address)
+                .unwrap_gas(),
+        }
+    }
+
+    pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {
+        let params = self.staking_params_keeper.get(ctx);
+        QueryParamsResponse { params }
     }
 }

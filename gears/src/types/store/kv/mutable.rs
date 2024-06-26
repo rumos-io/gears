@@ -1,4 +1,4 @@
-use std::ops::Bound;
+use std::ops::RangeBounds;
 
 use database::Database;
 use kv_store::types::kv::mutable::KVStoreMut;
@@ -31,7 +31,7 @@ impl<'a, DB> From<KVStoreMut<'a, DB>> for StoreMut<'a, DB> {
 }
 
 impl<'a, DB: Database> StoreMut<'a, DB> {
-    pub fn into_range(self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> StoreRange<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> StoreRange<'a, DB> {
         match self.0 {
             StoreMutBackend::Gas(var) => StoreRange::from(var.into_range(range)),
             StoreMutBackend::Kv(var) => StoreRange::from(var.into_range(range)),
@@ -68,7 +68,17 @@ impl<DB: Database> StoreMut<'_, DB> {
     ) -> Result<(), GasStoreErrors> {
         match &mut self.0 {
             StoreMutBackend::Gas(var) => Ok(var.set(key, value)?),
-            StoreMutBackend::Kv(var) => Ok(var.set(key, value)),
+            StoreMutBackend::Kv(var) => {
+                var.set(key, value);
+                Ok(())
+            }
+        }
+    }
+
+    pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
+        match &mut self.0 {
+            StoreMutBackend::Gas(var) => var.delete(k),
+            StoreMutBackend::Kv(var) => Ok(var.delete(k)),
         }
     }
 }
