@@ -34,7 +34,7 @@ impl TryFrom<RawTextProposal> for TextProposal {
     ) -> Result<Self, Self::Error> {
         Ok(Self { title, description })
     }
-}
+} 
 
 impl From<TextProposal> for RawTextProposal {
     fn from(TextProposal { title, description }: TextProposal) -> Self {
