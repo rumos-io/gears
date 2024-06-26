@@ -18,7 +18,7 @@ impl<DB: Database> QueryKVStore<DB> {
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(
         &self,
         range: R,
-    ) -> crate::range::Range<'_, R, DB> {
+    ) -> crate::range::Range<'_, DB> {
         self.0.range(range).into()
     }
 

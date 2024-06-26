@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::RangeBounds};
+use std::borrow::Cow;
 
 use database::Database;
 use trees::iavl::Range as TreeRange;
@@ -6,12 +6,12 @@ use trees::iavl::Range as TreeRange;
 use crate::utils::MergedRange;
 
 #[derive(Debug)]
-pub enum Range<'a, R: RangeBounds<Vec<u8>>, DB> {
+pub enum Range<'a, DB> {
     Merged(MergedRange<'a>),
-    Tree(TreeRange<'a, R, DB>),
+    Tree(TreeRange<'a, DB>),
 }
 
-impl<'a, R: RangeBounds<Vec<u8>>, DB: Database> Iterator for Range<'a, R, DB> {
+impl<'a, DB: Database> Iterator for Range<'a, DB> {
     type Item = (Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -24,14 +24,14 @@ impl<'a, R: RangeBounds<Vec<u8>>, DB: Database> Iterator for Range<'a, R, DB> {
     }
 }
 
-impl<'a, R: RangeBounds<Vec<u8>>, DB> From<MergedRange<'a>> for Range<'a, R, DB> {
+impl<'a, DB> From<MergedRange<'a>> for Range<'a, DB> {
     fn from(value: MergedRange<'a>) -> Self {
         Self::Merged(value)
     }
 }
 
-impl<'a, R: RangeBounds<Vec<u8>>, DB> From<TreeRange<'a, R, DB>> for Range<'a, R, DB> {
-    fn from(value: TreeRange<'a, R, DB>) -> Self {
+impl<'a, DB> From<TreeRange<'a, DB>> for Range<'a, DB> {
+    fn from(value: TreeRange<'a, DB>) -> Self {
         Self::Tree(value)
     }
 }

@@ -17,7 +17,7 @@ use gears::{
     },
     types::tx::raw::TxWithRaw,
     x::{
-        keepers::{bank::BankKeeper, staking::GovStakingKeeper},
+        keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},
         module::Module,
     },
 };
@@ -34,7 +34,7 @@ pub struct GovAbciHandler<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Module,
-    BK: BankKeeper<SK, M>,
+    BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
 > {
     keeper: GovKeeper<SK, PSK, M, BK, STK>,
@@ -44,7 +44,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         M: Module,
-        BK: BankKeeper<SK, M>,
+        BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
     > GovAbciHandler<SK, PSK, M, BK, STK>
 {
@@ -57,7 +57,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         M: Module,
-        BK: BankKeeper<SK, M>,
+        BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
     > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK>
 {
