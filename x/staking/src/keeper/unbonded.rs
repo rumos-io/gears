@@ -1,3 +1,5 @@
+use crate::UnbondingDelegationEntry;
+
 use super::*;
 
 impl<
@@ -76,6 +78,65 @@ impl<
             self.remove_validator(ctx, &validator)?;
         }
         Ok(tokens_amount)
+    }
+
+    /// undelegate unbonds an amount of delegator shares from a given validator. It
+    /// will verify that the unbonding entries between the delegator and validator
+    /// are not exceeded and unbond the staked tokens (based on shares) by creating
+    /// an unbonding object and inserting it into the unbonding queue which will be
+    /// processed during the staking end_blocker.
+    pub fn undelegate<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: &AccAddress,
+        val_addr: &ValAddress,
+        shares: Decimal256,
+    ) -> anyhow::Result<Timestamp> {
+        // get validator
+        let validator = if let Some(validator) = self.validator(ctx, val_addr)? {
+            validator
+        } else {
+            return Err(AppError::Custom("no validator found".to_string()).into());
+        };
+
+        if self.has_max_unbonding_delegation_entries(ctx, del_addr, val_addr)? {
+            return Err(AppError::Custom(
+                "unbonding delegation max entries limit exceeded".to_string(),
+            )
+            .into());
+        }
+
+        let return_amount = self.unbond(ctx, del_addr, val_addr, shares)?;
+
+        // transfer the validator tokens to the not bonded pool
+        if validator.status == BondStatus::Bonded {
+            self.bonded_tokens_to_not_bonded(ctx, return_amount)?;
+        }
+
+        let block_time = ctx.get_time();
+        let params = self.staking_params_keeper.try_get(ctx)?;
+        // TODO: consider to move the DateTime type and work with timestamps into Gears
+        // The timestamp is provided by context and conversion won't fail.
+        let completion_time =
+            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
+        let completion_time =
+            completion_time + chrono::TimeDelta::nanoseconds(params.unbonding_time);
+        let completion_time = Timestamp {
+            seconds: completion_time.timestamp(),
+            nanos: completion_time.timestamp_subsec_nanos() as i32,
+        };
+        let entry = UnbondingDelegationEntry {
+            // TODO: update type
+            creation_height: ctx.height(),
+            completion_time: completion_time.clone(),
+            initial_balance: return_amount,
+            balance: return_amount,
+        };
+        let unbonding_delegation =
+            self.set_unbonding_delegation_entry(ctx, del_addr, val_addr, entry)?;
+
+        self.insert_ubd_queue(ctx, &unbonding_delegation, completion_time.clone())?;
+        Ok(completion_time)
     }
 
     pub fn unbonded_to_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(

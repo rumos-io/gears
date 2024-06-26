@@ -30,7 +30,7 @@ use gears::{
     x::{keepers::auth::AuthKeeper, module::Module, types::validator::BondStatus},
 };
 use prost::bytes::BufMut;
-use std::{cmp::Ordering, collections::HashMap, u64};
+use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
 // validator types.
@@ -171,9 +171,11 @@ impl<
         }
 
         for unbonding_delegation in genesis.unbonding_delegations {
-            self.set_unbonding_delegation(ctx, &unbonding_delegation);
+            self.set_unbonding_delegation(ctx, &unbonding_delegation)
+                .unwrap_gas();
             for entry in unbonding_delegation.entries.as_slice() {
-                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time.clone());
+                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time.clone())
+                    .unwrap_gas();
             }
         }
 
@@ -300,7 +302,8 @@ impl<
             let val_addr_str = val_addr.to_string();
             let del_addr = dv_pair.del_addr;
             let del_addr_str = del_addr.to_string();
-            let balances = if let Ok(balances) = self.complete_unbonding(ctx, val_addr, del_addr) {
+            let balances = if let Ok(balances) = self.complete_unbonding(ctx, &val_addr, &del_addr)
+            {
                 balances
             } else {
                 continue;
@@ -552,7 +555,7 @@ impl<
         &self,
         ctx: &mut CTX,
         val_addr: &ValAddress,
-    ) -> Result<(Timestamp, u64, bool), GasStoreErrors> {
+    ) -> Result<(Timestamp, u32, bool), GasStoreErrors> {
         // TODO: When would the validator not be found?
         let validator = self.validator(ctx, val_addr)?;
         let validator_status = validator
@@ -570,7 +573,7 @@ impl<
                 let time =
                     chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
                 let completion_time = time + duration;
-                let height = ctx.height() as u64;
+                let height = ctx.height();
                 let completion_time = Timestamp {
                     seconds: completion_time.timestamp(),
                     nanos: completion_time.timestamp_subsec_nanos() as i32,
