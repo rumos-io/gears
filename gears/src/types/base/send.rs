@@ -92,7 +92,7 @@ impl SendCoins {
     pub fn checked_add(&self, other: SendCoins) -> Result<Self, SendCoinsError> {
         let result = self
             .inner()
-            .into_iter()
+            .iter()
             .cloned()
             .chain(other.0)
             .collect::<Vec<_>>();

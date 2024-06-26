@@ -68,7 +68,10 @@ impl<DB: Database> StoreMut<'_, DB> {
     ) -> Result<(), GasStoreErrors> {
         match &mut self.0 {
             StoreMutBackend::Gas(var) => Ok(var.set(key, value)?),
-            StoreMutBackend::Kv(var) => Ok(var.set(key, value)),
+            StoreMutBackend::Kv(var) => {
+                var.set(key, value);
+                Ok(())
+            }
         }
     }
 

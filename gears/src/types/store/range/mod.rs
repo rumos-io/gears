@@ -34,8 +34,8 @@ impl<'a, DB: Database> Iterator for StoreRange<'a, DB> {
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.0 {
             StoreRangeBackend::Gas(var) => var.next(),
-            StoreRangeBackend::Kv(var) => var.next().map(|e| Ok(e)),
-            StoreRangeBackend::Prefix(var) => var.next().map(|e| Ok(e)),
+            StoreRangeBackend::Kv(var) => var.next().map(Ok),
+            StoreRangeBackend::Prefix(var) => var.next().map(Ok),
         }
     }
 }
