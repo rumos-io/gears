@@ -1,3 +1,4 @@
+use crate::types::iter::balances::BalanceIterator;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomsMetadataResponse,
@@ -157,12 +158,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 {
     fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        _ctx: &CTX,
-        _address: &AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors> {
-        
+        ctx: &CTX,
+        address: &AccAddress,
+    ) -> Result<SendCoins, AppError> {
+        let iterator = BalanceIterator::new(ctx.kv_store(&self.store_key), address)
+            .map(|this| this.map(|(_, val)| val));
 
-        unimplemented!() // TODO:NOW IMPLEMENT THIS ONE
+        let mut balances = Vec::<Coin>::new();
+        for coin in iterator {
+            let coin = coin?;
+
+            balances.push(coin);
+        }
+
+        SendCoins::new(balances).map_err(|e| AppError::Coins(e.to_string()))
     }
 
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
