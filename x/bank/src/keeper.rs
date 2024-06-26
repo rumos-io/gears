@@ -160,7 +160,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         address: &AccAddress,
-    ) -> Result<SendCoins, AppError> {
+    ) -> Result<Vec<Coin>, GasStoreErrors> {
         let iterator = BalanceIterator::new(ctx.kv_store(&self.store_key), address)
             .map(|this| this.map(|(_, val)| val));
 
@@ -171,7 +171,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             balances.push(coin);
         }
 
-        SendCoins::new(balances).map_err(|e| AppError::Coins(e.to_string()))
+        Ok(balances)
     }
 
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(

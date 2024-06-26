@@ -3,9 +3,8 @@ use kv_store::StoreKey;
 
 use crate::{
     context::QueryableContext,
-    error::AppError,
     types::{
-        address::AccAddress, base::{coin::Coin, send::SendCoins}, denom::Denom, store::gas::errors::GasStoreErrors,
+        address::AccAddress, base::coin::Coin, denom::Denom, store::gas::errors::GasStoreErrors,
     },
     x::module::Module,
 };
@@ -17,7 +16,7 @@ pub trait GovernanceBankKeeper<SK: StoreKey, M: Module>: BankKeeper<SK, M> {
         &self,
         ctx: &CTX,
         address: &AccAddress,
-    ) -> Result<SendCoins, AppError>;
+    ) -> Result<Vec<Coin>, GasStoreErrors>;
 
     fn balance<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
