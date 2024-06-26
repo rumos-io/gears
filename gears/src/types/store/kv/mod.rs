@@ -1,4 +1,4 @@
-use std::ops::Bound;
+use std::ops::RangeBounds;
 
 use database::Database;
 use kv_store::types::kv::immutable::KVStore;
@@ -33,7 +33,7 @@ impl<'a, DB> From<KVStore<'a, DB>> for Store<'a, DB> {
 }
 
 impl<'a, DB: Database> Store<'a, DB> {
-    pub fn into_range(self, range: (Bound<Vec<u8>>, Bound<Vec<u8>>)) -> StoreRange<'a, DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> StoreRange<'a, DB> {
         match self.0 {
             StoreBackend::Gas(var) => StoreRange::from(var.into_range(range)),
             StoreBackend::Kv(var) => StoreRange::from(var.into_range(range)),
