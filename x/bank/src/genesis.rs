@@ -17,19 +17,6 @@ pub struct Balance {
     pub coins: SendCoins,
 }
 
-impl Balance {
-    const BALANCES_PREFIX: [u8; 1] = [0x02];
-
-    pub fn account_key(addr: &AccAddress) -> Vec<u8> {
-        [
-            Self::BALANCES_PREFIX.as_slice(),
-            &[addr.len()],
-            addr.as_ref(),
-        ]
-        .concat()
-    }
-}
-
 impl Default for GenesisState {
     fn default() -> Self {
         Self {
