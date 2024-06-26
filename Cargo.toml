@@ -19,7 +19,8 @@ members = [
   "x/auth",
   "x/bank",
   "x/ibc-rs",
-  "x/staking", 
+  "x/slashing",
+  "x/staking",
   "x/gov",
 
   # new unsorted
