@@ -109,8 +109,8 @@ impl TryFrom<Any> for MsgDeposit {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(MsgDeposit::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        MsgDeposit::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 
