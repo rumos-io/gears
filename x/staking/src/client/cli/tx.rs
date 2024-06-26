@@ -47,14 +47,17 @@ pub enum StakingCommands {
         #[arg(long)]
         details: String,
         /// The initial commission rate percentage
-        #[arg(long, default_value_t = 0.1.to_string())]
-        commission_rate: String,
+        /* 0.1 */
+        #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 1).unwrap())]
+        commission_rate: Decimal256,
         /// The maximum commission rate percentage
-        #[arg(long, default_value_t = 0.2.to_string())]
-        commission_max_rate: String,
+        /* 0.2 */
+        #[arg(long, default_value_t = Decimal256::from_atomics(2u64, 1).unwrap())]
+        commission_max_rate: Decimal256,
         /// The maximum commission change rate percentage (per day)
-        #[arg(long, default_value_t = 0.01.to_string())]
-        commission_max_change_rate: String,
+        /* 0.01 */
+        #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 2).unwrap())]
+        commission_max_change_rate: Decimal256,
         /// The minimum self delegation required on the validator
         #[arg(long, default_value_t = Uint256::one())]
         min_self_delegation: Uint256,
@@ -78,7 +81,7 @@ pub enum StakingCommands {
         details: String,
         /// The initial commission rate percentage
         #[arg(long)]
-        commission_rate: Option<String>,
+        commission_rate: Option<Decimal256>,
         /// The minimum self delegation required on the validator
         #[arg(long)]
         min_self_delegation: Option<Uint256>,
@@ -127,7 +130,7 @@ pub fn run_staking_tx_command(
             min_self_delegation,
         } => {
             let delegator_address = from_address.clone();
-            let validator_address = ValAddress::try_from(Vec::from(from_address))?;
+            let validator_address = ValAddress::from(from_address);
             let description = Description {
                 moniker: moniker.to_string(),
                 identity: identity.to_string(),
@@ -136,9 +139,9 @@ pub fn run_staking_tx_command(
                 details: details.to_string(),
             };
             let commission = CommissionRates::new(
-                Decimal256::from_str(commission_rate)?,
-                Decimal256::from_str(commission_max_rate)?,
-                Decimal256::from_str(commission_max_change_rate)?,
+                *commission_rate,
+                *commission_max_rate,
+                *commission_max_change_rate,
             )?;
 
             let msg = StakingMessage::CreateValidator(CreateValidator {
@@ -175,7 +178,7 @@ pub fn run_staking_tx_command(
             min_self_delegation,
         } => {
             let delegator_address = from_address.clone();
-            let validator_address = ValAddress::try_from(Vec::from(from_address))?;
+            let validator_address = ValAddress::from(from_address);
             let description = Description {
                 moniker: moniker.to_string(),
                 identity: identity.to_string(),
@@ -183,14 +186,9 @@ pub fn run_staking_tx_command(
                 security_contact: security_contact.to_string(),
                 details: details.to_string(),
             };
-            let commission_rate = if let Some(rate) = commission_rate {
-                Some(Decimal256::from_str(rate)?)
-            } else {
-                None
-            };
             let msg = StakingMessage::EditValidator(EditValidator {
                 description,
-                commission_rate,
+                commission_rate: *commission_rate,
                 min_self_delegation: *min_self_delegation,
                 validator_address,
                 from_address: delegator_address,

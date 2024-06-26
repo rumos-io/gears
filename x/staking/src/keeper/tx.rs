@@ -15,7 +15,7 @@ impl<
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
-    /// CreateValidator defines a method for creating a new validator
+    /// create_validator defines a method for creating a new validator
     pub fn create_validator<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
@@ -125,7 +125,7 @@ impl<
         Ok(())
     }
 
-    /// CreateValidator defines a method for creating a new validator
+    /// edit_validator defines a method for editing an existing validator
     pub fn edit_validator<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
@@ -247,18 +247,6 @@ impl<
             true,
         )?;
 
-        // TODO
-        // if msg.Amount.Amount.IsInt64() {
-        //     defer func() {
-        //         telemetry.IncrCounter(1, types.ModuleName, "delegate")
-        //         telemetry.SetGaugeWithLabels(
-        //             []string{"tx", "msg", msg.Type()},
-        //             float32(msg.Amount.Amount.Int64()),
-        //             []metrics.Label{telemetry.NewLabel("denom", msg.Amount.Denom)},
-        //         )
-        //     }()
-        // }
-
         ctx.append_events(vec![
             Event {
                 r#type: EVENT_TYPE_DELEGATE.to_string(),
@@ -336,18 +324,6 @@ impl<
             )
             .map_err(|e| AppError::Custom(e.to_string()))?;
 
-        // TODO
-        //     if msg.Amount.Amount.IsInt64() {
-        //         defer func() {
-        //             telemetry.IncrCounter(1, types.ModuleName, "redelegate")
-        //             telemetry.SetGaugeWithLabels(
-        //                 []string{"tx", "msg", msg.Type()},
-        //                 float32(msg.Amount.Amount.Int64()),
-        //                 []metrics.Label{telemetry.NewLabel("denom", msg.Amount.Denom)},
-        //             )
-        //         }()
-        //     }
-
         ctx.append_events(vec![
             Event {
                 r#type: EVENT_TYPE_REDELEGATE.to_string(),
@@ -395,10 +371,6 @@ impl<
             },
         ]);
 
-        // TODO
-        //     return &types.MsgBeginRedelegateResponse{
-        //         CompletionTime: completionTime,
-        //     }, nil
         Ok(())
     }
 
@@ -428,18 +400,6 @@ impl<
         let completion_time = self
             .undelegate(ctx, &msg.delegator_address, &msg.validator_address, shares)
             .map_err(|e| AppError::Custom(e.to_string()))?;
-
-        // TODO
-        // if msg.Amount.Amount.IsInt64() {
-        //     defer func() {
-        //         telemetry.IncrCounter(1, types.ModuleName, "undelegate")
-        //         telemetry.SetGaugeWithLabels(
-        //             []string{"tx", "msg", msg.Type()},
-        //             float32(msg.Amount.Amount.Int64()),
-        //             []metrics.Label{telemetry.NewLabel("denom", msg.Amount.Denom)},
-        //         )
-        //     }()
-        // }
 
         ctx.append_events(vec![
             Event {
