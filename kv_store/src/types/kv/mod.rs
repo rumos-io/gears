@@ -69,7 +69,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
     }
 
-    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, R, DB> {
+    pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, DB> {
         let cached_values = self
             .cache
             .storage

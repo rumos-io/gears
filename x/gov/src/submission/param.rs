@@ -74,8 +74,8 @@ impl<PSK: ParamsSubspaceKey> TryFrom<Any> for ParamChange<PSK> {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(ParamChange::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        ParamChange::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 
@@ -160,8 +160,8 @@ impl<PSK: ParamsSubspaceKey> TryFrom<Any> for ParameterChangeProposal<PSK> {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(Self::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        Self::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 

@@ -172,6 +172,13 @@ impl Account {
             Account::Module(acct) => acct.base_account.account_number,
         }
     }
+
+    pub fn has_permissions(&self, perm: impl AsRef<str>) -> bool {
+        match self {
+            Account::Base(_) => false, // TODO:NOW
+            Account::Module(var) => var.permissions.iter().any(|this| this == perm.as_ref()),
+        }
+    }
 }
 
 impl TryFrom<Any> for Account {

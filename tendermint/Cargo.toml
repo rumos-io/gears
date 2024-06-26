@@ -21,6 +21,7 @@ time = { workspace = true }
 thiserror = { workspace = true }
 rand = { workspace = true }
 tracing = { workspace = true }
+anyhow = { workspace = true }
 
 #serialization
 serde = { workspace = true }
@@ -31,11 +32,11 @@ prost = { workspace = true }
 handlebars = { workspace = true }
 
 #tendermint git
-tendermint-informal = { package = "tendermint", version = "=0.29.1" }
-tendermint-proto = { version = "=0.29.1" }
-tendermint-abci = { version = "=0.29.1" }
-tendermint-rpc = { version = "=0.29.1", features = ["http-client"] }
-tendermint-config = { version = "=0.29.1" }
+tendermint-informal = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x", package = "tendermint"}
+tendermint-proto = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
+tendermint-abci = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
+tendermint-rpc = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x", features = ["http-client"] }
+tendermint-config = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
 
 
 [dev-dependencies]

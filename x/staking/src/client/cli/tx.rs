@@ -1,6 +1,6 @@
 use crate::{
-    CommissionRates, CreateValidator, DelegateMsg, Description, Message as StakingMessage,
-    RedelegateMsg,
+    CommissionRates, CreateValidator, DelegateMsg, Description, DescriptionUpdate, EditValidator,
+    Message as StakingMessage, RedelegateMsg, UndelegateMsg,
 };
 use anyhow::Result;
 use clap::{Args, Subcommand};
@@ -15,7 +15,6 @@ use gears::{
         uint::Uint256,
     },
 };
-use std::str::FromStr;
 
 #[derive(Args, Debug, Clone)]
 pub struct StakingTxCli {
@@ -47,17 +46,43 @@ pub enum StakingCommands {
         #[arg(long)]
         details: String,
         /// The initial commission rate percentage
-        #[arg(long, default_value_t = 0.1.to_string())]
-        commission_rate: String,
+        /* 0.1 */
+        #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 1).unwrap())]
+        commission_rate: Decimal256,
         /// The maximum commission rate percentage
-        #[arg(long, default_value_t = 0.2.to_string())]
-        commission_max_rate: String,
+        /* 0.2 */
+        #[arg(long, default_value_t = Decimal256::from_atomics(2u64, 1).unwrap())]
+        commission_max_rate: Decimal256,
         /// The maximum commission change rate percentage (per day)
-        #[arg(long, default_value_t = 0.01.to_string())]
-        commission_max_change_rate: String,
+        /* 0.01 */
+        #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 2).unwrap())]
+        commission_max_change_rate: Decimal256,
         /// The minimum self delegation required on the validator
         #[arg(long, default_value_t = Uint256::one())]
         min_self_delegation: Uint256,
+    },
+    /// Edit an existing validator account
+    EditValidator {
+        /// The validator's name
+        moniker: Option<String>,
+        /// The optional identity signature (ex. UPort or Keybase)
+        #[arg(long)]
+        identity: Option<String>,
+        /// The validator's (optional) website
+        #[arg(long)]
+        website: Option<String>,
+        /// The validator's (optional) security contact email
+        #[arg(long)]
+        security_contact: Option<String>,
+        /// The validator's (optional) details
+        #[arg(long)]
+        details: Option<String>,
+        /// The initial commission rate percentage
+        #[arg(long)]
+        commission_rate: Option<Decimal256>,
+        /// The minimum self delegation required on the validator
+        #[arg(long)]
+        min_self_delegation: Option<Uint256>,
     },
     /// Delegate liquid tokens to a validator
     Delegate {
@@ -73,6 +98,13 @@ pub enum StakingCommands {
         /// The validator account address that receives coins
         dst_validator_address: ValAddress,
         /// Amount of coins to redelegate
+        amount: Coin,
+    },
+    /// Unbond shares from a validator
+    Unbond {
+        /// The validator account address
+        validator_address: ValAddress,
+        /// Amount of coins to unbond
         amount: Coin,
     },
 }
@@ -96,7 +128,7 @@ pub fn run_staking_tx_command(
             min_self_delegation,
         } => {
             let delegator_address = from_address.clone();
-            let validator_address = ValAddress::try_from(Vec::from(from_address))?;
+            let validator_address = ValAddress::from(from_address);
             let description = Description {
                 moniker: moniker.to_string(),
                 identity: identity.to_string(),
@@ -104,10 +136,10 @@ pub fn run_staking_tx_command(
                 security_contact: security_contact.to_string(),
                 details: details.to_string(),
             };
-            let commission = CommissionRates::new (
-                Decimal256::from_str(commission_rate)?,
-                Decimal256::from_str(commission_max_rate)?,
-                Decimal256::from_str(commission_max_change_rate)?,
+            let commission = CommissionRates::new(
+                *commission_rate,
+                *commission_max_rate,
+                *commission_max_change_rate,
             )?;
 
             let msg = StakingMessage::CreateValidator(CreateValidator {
@@ -134,6 +166,34 @@ pub fn run_staking_tx_command(
             //
             // return txf, msg, nil
         }
+        StakingCommands::EditValidator {
+            moniker,
+            identity,
+            website,
+            security_contact,
+            details,
+            commission_rate,
+            min_self_delegation,
+        } => {
+            let delegator_address = from_address.clone();
+            let validator_address = ValAddress::from(from_address);
+            let description = DescriptionUpdate {
+                moniker: moniker.clone(),
+                identity: identity.clone(),
+                website: website.clone(),
+                security_contact: security_contact.clone(),
+                details: details.clone(),
+            };
+            let msg = StakingMessage::EditValidator(EditValidator {
+                description,
+                commission_rate: *commission_rate,
+                min_self_delegation: *min_self_delegation,
+                validator_address,
+                from_address: delegator_address,
+            });
+            msg.validate_basic().map_err(AppError::TxValidation)?;
+            Ok(msg)
+        }
         StakingCommands::Delegate {
             validator_address,
             amount,
@@ -150,6 +210,14 @@ pub fn run_staking_tx_command(
             delegator_address: from_address.clone(),
             src_validator_address: src_validator_address.clone(),
             dst_validator_address: dst_validator_address.clone(),
+            amount: amount.clone(),
+        })),
+        StakingCommands::Unbond {
+            validator_address,
+            amount,
+        } => Ok(StakingMessage::Undelegate(UndelegateMsg {
+            delegator_address: from_address.clone(),
+            validator_address: validator_address.clone(),
             amount: amount.clone(),
         })),
     }

@@ -1,6 +1,6 @@
 pub mod infallible;
 pub mod result;
-use std::{borrow::Cow, ops::Bound};
+use std::borrow::Cow;
 
 use database::Database;
 use infallible::RangeIter;
@@ -11,7 +11,7 @@ use super::gas::{errors::GasStoreErrors, range::GasRange};
 #[derive(Debug)]
 enum StoreRangeBackend<'a, DB> {
     Gas(GasRange<'a, DB>),
-    Kv(Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>),
+    Kv(Range<'a, DB>),
     Prefix(PrefixRange<'a, DB>),
 }
 
@@ -34,8 +34,8 @@ impl<'a, DB: Database> Iterator for StoreRange<'a, DB> {
     fn next(&mut self) -> Option<Self::Item> {
         match &mut self.0 {
             StoreRangeBackend::Gas(var) => var.next(),
-            StoreRangeBackend::Kv(var) => var.next().map(|e| Ok(e)),
-            StoreRangeBackend::Prefix(var) => var.next().map(|e| Ok(e)),
+            StoreRangeBackend::Kv(var) => var.next().map(Ok),
+            StoreRangeBackend::Prefix(var) => var.next().map(Ok),
         }
     }
 }
@@ -46,8 +46,8 @@ impl<'a, DB> From<GasRange<'a, DB>> for StoreRange<'a, DB> {
     }
 }
 
-impl<'a, DB> From<Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>> for StoreRange<'a, DB> {
-    fn from(value: Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB>) -> Self {
+impl<'a, DB> From<Range<'a, DB>> for StoreRange<'a, DB> {
+    fn from(value: Range<'a, DB>) -> Self {
         Self(StoreRangeBackend::Kv(value))
     }
 }

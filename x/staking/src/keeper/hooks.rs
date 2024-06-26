@@ -9,6 +9,15 @@ impl<
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>
 {
+    pub fn before_validator_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        validator: &Validator,
+    ) {
+        if let Some(ref hooks) = self.hooks_keeper {
+            hooks.before_validator_modified(ctx, validator.operator_address.clone());
+        }
+    }
     pub fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,

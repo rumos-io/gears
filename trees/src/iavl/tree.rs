@@ -907,33 +907,44 @@ where
         }
     }
 
-    pub fn range<R>(&self, range: R) -> Range<'_, R, T>
+    pub fn range<R>(&self, range: R) -> Range<'_, T>
     where
         R: RangeBounds<Vec<u8>>,
     {
         match &self.root {
-            Some(root) => Range {
+            Some(root) => Range::new(
                 range,
-                delayed_nodes: vec![root.clone()], //TODO: remove clone
-                node_db: &self.node_db,
-            },
-            None => Range {
-                range,
-                delayed_nodes: vec![],
-                node_db: &self.node_db,
-            },
+                vec![root.clone()], //TODO: remove clone
+                &self.node_db,
+            ),
+            None => Range::new(range, vec![], &self.node_db),
         }
     }
 }
 
 #[derive(Debug)]
-pub struct Range<'a, R: RangeBounds<Vec<u8>>, DB> {
-    pub(crate) range: R,
-    pub(crate) delayed_nodes: Vec<Box<Node>>,
-    pub(crate) node_db: &'a NodeDB<DB>,
+pub struct Range<'a, DB> {
+    range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
+    delayed_nodes: Vec<Box<Node>>,
+    node_db: &'a NodeDB<DB>,
 }
 
-impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
+impl<'a, DB: Database> Range<'a, DB> {
+    pub(crate) fn new<R: RangeBounds<Vec<u8>>>(
+        range: R,
+        delayed_nodes: Vec<Box<Node>>,
+        node_db: &'a NodeDB<DB>,
+    ) -> Self {
+        Self {
+            range: (
+                range.start_bound().map(|this| this.to_owned()),
+                range.end_bound().map(|this| this.to_owned()),
+            ),
+            delayed_nodes,
+            node_db,
+        }
+    }
+
     fn traverse(&mut self) -> Option<(Vec<u8>, Vec<u8>)> {
         let node = self.delayed_nodes.pop()?;
 
@@ -995,7 +1006,7 @@ impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Range<'a, T, R> {
     }
 }
 
-impl<'a, T: RangeBounds<Vec<u8>>, R: Database> Iterator for Range<'a, T, R> {
+impl<'a, DB: Database> Iterator for Range<'a, DB> {
     type Item = (Vec<u8>, Vec<u8>);
 
     fn next(&mut self) -> Option<Self::Item> {
