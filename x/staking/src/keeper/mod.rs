@@ -188,7 +188,7 @@ impl<
 
         let bonded_coins = if !bonded_tokens.is_zero() {
             vec![Coin {
-                denom: genesis.params.bond_denom.clone(),
+                denom: genesis.params.bond_denom().clone(),
                 amount: bonded_tokens,
             }]
         } else {
@@ -196,7 +196,7 @@ impl<
         };
         let not_bonded_coins = if !not_bonded_tokens.is_zero() {
             vec![Coin {
-                denom: genesis.params.bond_denom,
+                denom: genesis.params.bond_denom().clone(),
                 amount: not_bonded_tokens,
             }]
         } else {
@@ -397,7 +397,7 @@ impl<
         ctx: &mut CTX,
     ) -> anyhow::Result<Vec<ValidatorUpdate>> {
         let params = self.staking_params_keeper.get(ctx);
-        let max_validators = params.max_validators;
+        let max_validators = params.max_validators();
         let power_reduction = self.power_reduction(ctx);
         let mut total_power = 0;
         let mut amt_from_bonded_to_not_bonded = Uint256::zero();
@@ -528,7 +528,7 @@ impl<
         // All errors in sdk panics in this method
         let params = self.staking_params_keeper.try_get(ctx)?;
         let coins = SendCoins::new(vec![Coin {
-            denom: params.bond_denom,
+            denom: params.bond_denom().clone(),
             amount,
         }])
         .unwrap();
@@ -564,7 +564,7 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.try_get(ctx)?;
-                let duration = chrono::TimeDelta::nanoseconds(params.unbonding_time);
+                let duration = chrono::TimeDelta::nanoseconds(params.unbonding_time());
                 let time = ctx.get_time();
                 // TODO: consider to work with time in Gears
                 let time =

@@ -22,7 +22,7 @@ impl<
     ) -> Result<impl Iterator<Item = Result<Validator, GasStoreErrors>>, GasStoreErrors> {
         Ok(BoundedValidatorsIterator::new(
             ctx.kv_store(&self.store_key),
-            self.staking_params_keeper.try_get(ctx)?.max_validators,
+            self.staking_params_keeper.try_get(ctx)?.max_validators(),
         ))
     }
 
@@ -47,7 +47,7 @@ impl<
         self.bank_keeper.balance(
             ctx,
             account.get_address(),
-            &self.staking_params_keeper.try_get(ctx)?.bond_denom,
+            &self.staking_params_keeper.try_get(ctx)?.bond_denom(),
         )
     }
 }

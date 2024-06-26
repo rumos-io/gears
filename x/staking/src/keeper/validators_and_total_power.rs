@@ -130,7 +130,7 @@ impl<
         let validators_store = store.prefix_store(LAST_VALIDATOR_POWER_KEY);
 
         // add the actual validator power sorted store
-        let max_validators = self.staking_params_keeper.try_get(ctx)?.max_validators as usize;
+        let max_validators = self.staking_params_keeper.try_get(ctx)?.max_validators() as usize;
         let mut validators = Vec::with_capacity(max_validators);
         for (i, next) in validators_store.into_range(..).enumerate() {
             let (_k, v) = next?;

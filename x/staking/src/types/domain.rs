@@ -21,7 +21,8 @@ use gears::{
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, str::FromStr};
+use std::{cmp::Ordering, collections::HashSet, str::FromStr};
+use thiserror::Error;
 
 /// HistoricalInfo contains header and validator information for a given block.
 /// It is stored as part of staking module's state, which persists the `n` most
@@ -501,3 +502,82 @@ impl From<Validator> for ValidatorRaw {
 }
 
 impl Protobuf<ValidatorRaw> for Validator {}
+
+/// [`Validators`] is a collection of [`Validator`] with some guarantees:
+/// - the collection cannot have duplicated validators by public key
+/// - no validator can be bonded and jailed at the same time // TODO: should this be a property of the validator itself?
+/// - no bonded/unbonded validator can have zero delegator shares // TODO: should this be a property of the validator itself?
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(try_from = "Vec<Validator>")]
+pub struct Validators(Vec<Validator>);
+
+impl IntoIterator for Validators {
+    type Item = Validator;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl TryFrom<Vec<Validator>> for Validators {
+    type Error = ValidatorsError;
+
+    fn try_from(validators: Vec<Validator>) -> Result<Self, Self::Error> {
+        Self::validate_validators(&validators)?;
+        Ok(Validators(validators))
+    }
+}
+
+impl Validators {
+    fn validate_validators(validators: &Vec<Validator>) -> Result<(), ValidatorsError> {
+        let mut addr_set: HashSet<&[u8]> = HashSet::new();
+        for v in validators.iter() {
+            let cons_pub_key_raw = v.consensus_pubkey.raw();
+            if addr_set.contains(cons_pub_key_raw) {
+                let str_pub_addr: ConsAddress = v.consensus_pubkey.clone().into();
+                return Err(ValidatorsError::Duplicate {
+                    moniker: v.description.moniker.to_string(),
+                    cons_addr: str_pub_addr,
+                });
+            }
+
+            if v.jailed && v.status == BondStatus::Bonded {
+                let str_pub_addr: ConsAddress = v.consensus_pubkey.clone().into();
+                return Err(ValidatorsError::BondedAndJailed {
+                    moniker: v.description.moniker.to_string(),
+                    cons_addr: str_pub_addr,
+                });
+            }
+
+            if v.delegator_shares.is_zero() && v.status != BondStatus::Unbonding {
+                return Err(ValidatorsError::BondedUnbondedZeroShares(
+                    v.operator_address.clone(),
+                ));
+            }
+
+            addr_set.insert(cons_pub_key_raw);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum ValidatorsError {
+    #[error("duplicate validator in genesis state: moniker {moniker}, address {cons_addr}")]
+    Duplicate {
+        moniker: String,
+        cons_addr: ConsAddress,
+    },
+
+    #[error(
+        "validator is bonded and jailed in genesis state: moniker {moniker}, address {cons_addr}"
+    )]
+    BondedAndJailed {
+        moniker: String,
+        cons_addr: ConsAddress,
+    },
+
+    #[error("bonded/unbonded genesis validator cannot have zero delegator shares, validator: {0}")]
+    BondedUnbondedZeroShares(ValAddress),
+}

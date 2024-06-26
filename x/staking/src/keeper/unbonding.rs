@@ -296,7 +296,7 @@ impl<
         } else {
             return Err(AppError::Custom("No unbonding delegation".into()).into());
         };
-        let bond_denom = params.bond_denom;
+        let bond_denom = params.bond_denom();
         let mut balances = vec![];
         let ctx_time = ctx.get_time();
 

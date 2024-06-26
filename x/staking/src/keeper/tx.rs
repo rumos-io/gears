@@ -36,10 +36,11 @@ impl<
             )));
         }
 
-        if msg.value.denom != params.bond_denom {
+        if &msg.value.denom != params.bond_denom() {
             return Err(AppError::InvalidRequest(format!(
                 "invalid coin denomination: got {}, expected {}",
-                msg.value.denom, params.bond_denom
+                msg.value.denom,
+                params.bond_denom()
             )));
         }
 
@@ -137,10 +138,11 @@ impl<
         let params = self.staking_params_keeper.try_get(ctx)?;
         let delegator_address = msg.delegator_address.clone();
 
-        if msg.amount.denom != params.bond_denom {
+        if &msg.amount.denom != params.bond_denom() {
             return Err(AppError::InvalidRequest(format!(
                 "invalid coin denomination: got {}, expected {}",
-                msg.amount.denom, params.bond_denom
+                msg.amount.denom,
+                params.bond_denom()
             )));
         }
 
@@ -226,10 +228,11 @@ impl<
 
         let params = self.staking_params_keeper.try_get(ctx)?;
 
-        if msg.amount.denom != params.bond_denom {
+        if &msg.amount.denom != params.bond_denom() {
             return Err(AppError::InvalidRequest(format!(
                 "invalid coin denomination: got {}, expected {}",
-                msg.amount.denom, params.bond_denom
+                msg.amount.denom,
+                params.bond_denom()
             )));
         }
 

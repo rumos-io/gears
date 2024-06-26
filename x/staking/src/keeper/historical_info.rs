@@ -13,7 +13,7 @@ impl<
 {
     pub fn track_historical_info<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) {
         let params = self.staking_params_keeper.get(ctx);
-        let entry_num = params.historical_entries;
+        let entry_num = params.historical_entries();
 
         // Prune store to ensure we only have parameter-defined historical entries.
         // In most cases, this will involve removing a single historical entry.

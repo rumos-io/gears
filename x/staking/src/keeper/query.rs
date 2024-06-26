@@ -59,7 +59,7 @@ impl<
             .tokens_from_shares(delegation.shares)
             .map_err(|e| AppError::Coins(e.to_string()))?;
         let balance = Coin {
-            denom: params.bond_denom,
+            denom: params.bond_denom().clone(),
             amount: tokens.to_uint_floor(),
         };
         Ok(DelegationResponse {
