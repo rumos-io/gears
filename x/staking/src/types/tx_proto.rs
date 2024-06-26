@@ -222,25 +222,31 @@ pub struct Description {
 impl Protobuf<Description> for Description {}
 
 impl Description {
-    /// supplement_description updates the fields of a given description. An error is
+    /// create_updated_description creates a description with the base of current description
+    /// supplemented by values from a given description. An error is
     /// returned if the resulting description contains an invalid length.
-    pub fn supplement_description(&self, other: &mut Description) -> Result<(), AppError> {
-        if other.moniker == DO_NOT_MODIFY_STRING {
-            other.moniker.clone_from(&self.moniker);
+    pub fn create_updated_description(
+        &self,
+        other: &DescriptionUpdate,
+    ) -> Result<Description, AppError> {
+        let mut description = self.clone();
+        if let Some(moniker) = &other.moniker {
+            description.moniker.clone_from(moniker);
         }
-        if other.identity == DO_NOT_MODIFY_STRING {
-            other.identity.clone_from(&self.identity);
+        if let Some(identity) = &other.identity {
+            description.identity.clone_from(identity);
         }
-        if other.website == DO_NOT_MODIFY_STRING {
-            other.website.clone_from(&self.website);
+        if let Some(website) = &other.website {
+            description.website.clone_from(website);
         }
-        if other.security_contact == DO_NOT_MODIFY_STRING {
-            other.security_contact.clone_from(&self.security_contact);
+        if let Some(security_contact) = &other.security_contact {
+            description.security_contact.clone_from(security_contact);
         }
-        if other.details == DO_NOT_MODIFY_STRING {
-            other.details.clone_from(&self.details);
+        if let Some(details) = &other.details {
+            description.details.clone_from(details);
         }
-        other.ensure_length()
+        description.ensure_length()?;
+        Ok(description)
     }
 
     pub fn ensure_length(&self) -> Result<(), AppError> {
@@ -286,6 +292,23 @@ impl Description {
         AppError::InvalidRequest(format!("invalid {name} length; got: {got}, max: {max}"))
     }
 }
+
+/// DescriptionUpdate defines a validator description update data.
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct DescriptionUpdate {
+    #[prost(string, optional)]
+    pub moniker: Option<String>,
+    #[prost(string, optional)]
+    pub identity: Option<String>,
+    #[prost(string, optional)]
+    pub website: Option<String>,
+    #[prost(string, optional)]
+    pub security_contact: Option<String>,
+    #[prost(string, optional)]
+    pub details: Option<String>,
+}
+
+impl Protobuf<DescriptionUpdate> for DescriptionUpdate {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct CreateValidatorRaw {
@@ -369,7 +392,7 @@ impl Protobuf<CreateValidatorRaw> for CreateValidator {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct EditValidatorRaw {
     #[prost(message, optional)]
-    pub description: Option<Description>,
+    pub description: Option<DescriptionUpdate>,
     #[prost(message, optional)]
     pub commission_rate: Option<String>,
     #[prost(string, optional)]
@@ -395,7 +418,7 @@ impl From<EditValidator> for EditValidatorRaw {
 /// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EditValidator {
-    pub description: Description,
+    pub description: DescriptionUpdate,
     pub commission_rate: Option<Decimal256>,
     pub min_self_delegation: Option<Uint256>,
     pub validator_address: ValAddress,

@@ -140,10 +140,9 @@ impl<
                 )))?;
 
         // replace all editable fields (clients should autofill existing values)
-        let mut description = msg.description.clone();
-        validator
+        let description = validator
             .description
-            .supplement_description(&mut description)?;
+            .create_updated_description(&msg.description)?;
         validator.description = description;
 
         if let Some(rate) = msg.commission_rate {

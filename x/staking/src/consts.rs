@@ -48,9 +48,6 @@ pub(crate) mod keeper {
 }
 
 pub(crate) mod proto {
-    // TODO: is a copy from sdk, but seem like it is better to use some random string
-    pub(crate) const DO_NOT_MODIFY_STRING: &str = "[do-not-modify]";
-
     pub(crate) const MAX_MONIKER_LENGTH: usize = 70;
     pub(crate) const MAX_IDENTITY_LENGTH: usize = 3000;
     pub(crate) const MAX_WEBSITE_LENGTH: usize = 140;

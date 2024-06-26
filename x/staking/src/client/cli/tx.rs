@@ -1,6 +1,6 @@
 use crate::{
-    consts::proto::DO_NOT_MODIFY_STRING, CommissionRates, CreateValidator, DelegateMsg,
-    Description, EditValidator, Message as StakingMessage, RedelegateMsg, UndelegateMsg,
+    CommissionRates, CreateValidator, DelegateMsg, Description, DescriptionUpdate, EditValidator,
+    Message as StakingMessage, RedelegateMsg, UndelegateMsg,
 };
 use anyhow::Result;
 use clap::{Args, Subcommand};
@@ -15,7 +15,6 @@ use gears::{
         uint::Uint256,
     },
 };
-use std::str::FromStr;
 
 #[derive(Args, Debug, Clone)]
 pub struct StakingTxCli {
@@ -65,20 +64,19 @@ pub enum StakingCommands {
     /// Edit an existing validator account
     EditValidator {
         /// The validator's name
-        #[arg(default_value = DO_NOT_MODIFY_STRING)]
-        moniker: String,
+        moniker: Option<String>,
         /// The optional identity signature (ex. UPort or Keybase)
-        #[arg(long, default_value = DO_NOT_MODIFY_STRING)]
-        identity: String,
+        #[arg(long)]
+        identity: Option<String>,
         /// The validator's (optional) website
-        #[arg(long, default_value = DO_NOT_MODIFY_STRING)]
-        website: String,
+        #[arg(long)]
+        website: Option<String>,
         /// The validator's (optional) security contact email
-        #[arg(long, default_value = DO_NOT_MODIFY_STRING)]
-        security_contact: String,
+        #[arg(long)]
+        security_contact: Option<String>,
         /// The validator's (optional) details
-        #[arg(long, default_value = DO_NOT_MODIFY_STRING)]
-        details: String,
+        #[arg(long)]
+        details: Option<String>,
         /// The initial commission rate percentage
         #[arg(long)]
         commission_rate: Option<Decimal256>,
@@ -179,12 +177,12 @@ pub fn run_staking_tx_command(
         } => {
             let delegator_address = from_address.clone();
             let validator_address = ValAddress::from(from_address);
-            let description = Description {
-                moniker: moniker.to_string(),
-                identity: identity.to_string(),
-                website: website.to_string(),
-                security_contact: security_contact.to_string(),
-                details: details.to_string(),
+            let description = DescriptionUpdate {
+                moniker: moniker.clone(),
+                identity: identity.clone(),
+                website: website.clone(),
+                security_contact: security_contact.clone(),
+                details: details.clone(),
             };
             let msg = StakingMessage::EditValidator(EditValidator {
                 description,
