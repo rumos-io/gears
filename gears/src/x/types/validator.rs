@@ -8,7 +8,6 @@ pub trait StakingValidator {
     fn operator(&self) -> &ValAddress;
     fn bonded_tokens(&self) -> &Uint256;
     fn delegator_shares(&self) -> &Decimal256;
-    
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Enumeration, strum::Display)]

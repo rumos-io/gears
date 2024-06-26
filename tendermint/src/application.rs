@@ -1,4 +1,5 @@
 use serde::de::DeserializeOwned;
+use tendermint_abci::cancellation::CancellationSource;
 use tendermint_abci::Application;
 
 use crate::ext::UnwrapInvalid;
@@ -62,13 +63,13 @@ pub trait ABCIApplication<G>: Send + Clone + 'static {
         Default::default()
     }
 
-    /// Signals the beginning of a new block, prior to any `DeliverTx` calls.
-    fn begin_block(&self, _request: RequestBeginBlock) -> ResponseBeginBlock {
+    /// Apply a transaction to the application's state.
+    fn deliver_tx(&self, _request: RequestDeliverTx) -> ResponseDeliverTx {
         Default::default()
     }
 
-    /// Apply a transaction to the application's state.
-    fn deliver_tx(&self, _request: RequestDeliverTx) -> ResponseDeliverTx {
+    /// Signals the beginning of a new block, prior to any `DeliverTx` calls.
+    fn begin_block(&self, _request: RequestBeginBlock) -> ResponseBeginBlock {
         Default::default()
     }
 
@@ -131,88 +132,161 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestEcho,
     ) -> tendermint_proto::abci::ResponseEcho {
-        T::echo(&self.handler, request.into()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::echo(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 
     fn info(
         &self,
         request: tendermint_proto::abci::RequestInfo,
     ) -> tendermint_proto::abci::ResponseInfo {
-        T::info(&self.handler, request.into()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::info(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 
     fn init_chain(
         &self,
         request: tendermint_proto::abci::RequestInitChain,
     ) -> tendermint_proto::abci::ResponseInitChain {
-        T::init_chain(&self.handler, request.try_into().unwrap_or_invalid()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::init_chain(&self.handler, request.try_into().unwrap_or_invalid());
+
+        guard.disarm();
+        result.into()
     }
 
     fn query(
         &self,
         request: tendermint_proto::abci::RequestQuery,
     ) -> tendermint_proto::abci::ResponseQuery {
-        T::query(&self.handler, request.into()).into()
+        /*
+           Discuss failure handling for query in future. Maybe we could clean lock poisoning after this method
+        */
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::query(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 
     fn check_tx(
         &self,
         request: tendermint_proto::abci::RequestCheckTx,
     ) -> tendermint_proto::abci::ResponseCheckTx {
-        T::check_tx(&self.handler, request.into()).into()
-    }
+        let guard = CancellationSource::drop_guard();
 
-    fn begin_block(
-        &self,
-        request: tendermint_proto::abci::RequestBeginBlock,
-    ) -> tendermint_proto::abci::ResponseBeginBlock {
-        T::begin_block(&self.handler, request.try_into().unwrap_or_invalid()).into()
+        let result = T::check_tx(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 
     fn deliver_tx(
         &self,
         request: tendermint_proto::abci::RequestDeliverTx,
     ) -> tendermint_proto::abci::ResponseDeliverTx {
-        T::deliver_tx(&self.handler, request.into()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::deliver_tx(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
+    }
+
+    fn begin_block(
+        &self,
+        request: tendermint_proto::abci::RequestBeginBlock,
+    ) -> tendermint_proto::abci::ResponseBeginBlock {
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::begin_block(&self.handler, request.try_into().unwrap_or_invalid());
+
+        guard.disarm();
+        result.into()
     }
 
     fn end_block(
         &self,
         request: tendermint_proto::abci::RequestEndBlock,
     ) -> tendermint_proto::abci::ResponseEndBlock {
-        T::end_block(&self.handler, request.into()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::end_block(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 
     fn flush(&self) -> tendermint_proto::abci::ResponseFlush {
-        T::flush(&self.handler).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::flush(&self.handler);
+
+        guard.disarm();
+        result.into()
     }
 
     fn commit(&self) -> tendermint_proto::abci::ResponseCommit {
-        T::commit(&self.handler).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::commit(&self.handler);
+
+        guard.disarm();
+        result.into()
     }
 
     fn list_snapshots(&self) -> tendermint_proto::abci::ResponseListSnapshots {
-        T::list_snapshots(&self.handler).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::list_snapshots(&self.handler);
+
+        guard.disarm();
+        result.into()
     }
 
     fn offer_snapshot(
         &self,
         request: tendermint_proto::abci::RequestOfferSnapshot,
     ) -> tendermint_proto::abci::ResponseOfferSnapshot {
-        T::offer_snapshot(&self.handler, request.into()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::offer_snapshot(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 
     fn load_snapshot_chunk(
         &self,
         request: tendermint_proto::abci::RequestLoadSnapshotChunk,
     ) -> tendermint_proto::abci::ResponseLoadSnapshotChunk {
-        T::load_snapshot_chunk(&self.handler, request.into()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::load_snapshot_chunk(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 
     fn apply_snapshot_chunk(
         &self,
         request: tendermint_proto::abci::RequestApplySnapshotChunk,
     ) -> tendermint_proto::abci::ResponseApplySnapshotChunk {
-        T::apply_snapshot_chunk(&self.handler, request.into()).into()
+        let guard = CancellationSource::drop_guard();
+
+        let result = T::apply_snapshot_chunk(&self.handler, request.into());
+
+        guard.disarm();
+        result.into()
     }
 }
