@@ -85,9 +85,9 @@ fn new_validator(
         website: "".to_string(),
         security_contact: "".to_string(),
         details: "".to_string(),
-        commission_rate: "0.1".to_string(),
-        commission_max_rate: "0.2".to_string(),
-        commission_max_change_rate: "0.01".to_string(),
+        commission_rate: Decimal256::from_atomics(1u64, 1).unwrap(),
+        commission_max_rate: Decimal256::from_atomics(2u64, 1).unwrap(),
+        commission_max_change_rate: Decimal256::from_atomics(1u64, 2).unwrap(),
         min_self_delegation: Uint256::one(),
     };
     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
