@@ -276,7 +276,7 @@ impl<
             let sig = signatures.get(i).expect("TODO");
 
             self.sign_gas_consumer.consume(
-                &mut *ctx.gas_meter.borrow_mut(),
+                &mut ctx.gas_meter.borrow_mut(),
                 pub_key,
                 sig,
                 &auth_params,

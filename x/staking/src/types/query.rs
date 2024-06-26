@@ -1,10 +1,11 @@
 use crate::{
     consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Params, Redelegation, RedelegationEntry,
-    Validator,
+    UnbondingDelegation, Validator,
 };
 use gears::{
     core::{errors::CoreError, Protobuf},
     error::{AppError, IBC_ENCODE_UNWRAP},
+    store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
@@ -433,6 +434,45 @@ impl From<QueryRedelegationResponse> for QueryRedelegationResponseRaw {
 }
 
 impl Protobuf<QueryRedelegationResponseRaw> for QueryRedelegationResponse {}
+
+/// QueryUnbondingDelegationResponse is the response type for the Query/UnbondingDelegation RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct QueryUnbondingDelegationResponse {
+    /// UnbondingDelegation with balance.
+    pub unbond: Option<UnbondingDelegation>,
+}
+
+impl TryFrom<QueryUnbondingDelegationResponseRaw> for QueryUnbondingDelegationResponse {
+    type Error = CoreError;
+
+    fn try_from(raw: QueryUnbondingDelegationResponseRaw) -> Result<Self, Self::Error> {
+        if let Some(ubd) = raw.unbond {
+            Ok(QueryUnbondingDelegationResponse {
+                unbond: Some(serde_json::from_slice(&ubd).unwrap_or_corrupt()),
+            })
+        } else {
+            Ok(QueryUnbondingDelegationResponse { unbond: None })
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QueryUnbondingDelegationResponseRaw {
+    #[prost(bytes, optional)]
+    pub unbond: Option<Vec<u8>>,
+}
+
+impl From<QueryUnbondingDelegationResponse> for QueryUnbondingDelegationResponseRaw {
+    fn from(query: QueryUnbondingDelegationResponse) -> Self {
+        Self {
+            unbond: query
+                .unbond
+                .map(|ubd| serde_json::to_vec(&ubd).expect(SERDE_ENCODING_DOMAIN_TYPE)),
+        }
+    }
+}
+
+impl Protobuf<QueryUnbondingDelegationResponseRaw> for QueryUnbondingDelegationResponse {}
 
 /// QueryParamsResponse is the response type for the Query/Params RPC method.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]

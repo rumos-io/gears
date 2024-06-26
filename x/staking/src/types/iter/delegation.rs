@@ -8,7 +8,10 @@ use gears::{
     },
 };
 
-use crate::{consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::DELEGATION_KEY}, Delegation};
+use crate::{
+    consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::DELEGATION_KEY},
+    Delegation,
+};
 
 #[derive(Debug)]
 pub struct DelegationIterator<'a, DB>(StoreRange<'a, DB>);

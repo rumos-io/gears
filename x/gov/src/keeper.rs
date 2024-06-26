@@ -21,7 +21,7 @@ use gears::{
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
-        keepers::{bank::BankKeeper, staking::GovStakingKeeper},
+        keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},
         module::Module,
         types::{delegation::StakingDelegation, validator::StakingValidator},
     },
@@ -57,7 +57,7 @@ pub struct GovKeeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Module,
-    BK: BankKeeper<SK, M>,
+    BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
 > {
     store_key: SK,
@@ -72,7 +72,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         M: Module,
-        BK: BankKeeper<SK, M>,
+        BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
     > GovKeeper<SK, PSK, M, BK, STK>
 {
@@ -471,8 +471,8 @@ impl<
                 validator.operator().clone(),
                 ValidatorGovInfo {
                     address: validator.operator().clone(),
-                    bounded_tokens: validator.bonded_tokens().clone(),
-                    delegator_shares: validator.delegator_shares().clone(),
+                    bounded_tokens: *validator.bonded_tokens(),
+                    delegator_shares: *validator.delegator_shares(),
                     delegator_deduction: Decimal256::zero(),
                     vote: Vec::new(),
                 },
@@ -546,7 +546,7 @@ impl<
             }
 
             let voting_power = (delegator_shares - delegator_deduction)
-                * Decimal256::from_atomics(bounded_tokens.clone(), 0).unwrap() // TODO: HANDLE THIS
+                * Decimal256::from_atomics(*bounded_tokens, 0).unwrap() // TODO: HANDLE THIS
                 / delegator_shares;
 
             for VoteOptionWeighted { option, weight } in vote {
@@ -763,7 +763,7 @@ fn deposit_del<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Module,
-    BK: BankKeeper<SK, M>,
+    BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
 >(
@@ -795,7 +795,7 @@ fn deposit_refund<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     M: Module,
-    BK: BankKeeper<SK, M>,
+    BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
 >(
@@ -870,7 +870,7 @@ fn vote_del<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
 ) -> Result<bool, GasStoreErrors> {
     let mut store = ctx.kv_store_mut(store_key);
 
-    let is_deleted = store.delete(&MsgVoteWeighted::key(proposal_id, &voter))?;
+    let is_deleted = store.delete(&MsgVoteWeighted::key(proposal_id, voter))?;
 
     Ok(is_deleted.is_some())
 }

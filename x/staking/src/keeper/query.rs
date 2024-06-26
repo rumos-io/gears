@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryParamsResponse,
-    QueryRedelegationRequest, QueryRedelegationResponse, QueryValidatorRequest,
-    QueryValidatorResponse, RedelegationEntryResponse, RedelegationResponse,
+    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationResponse,
+    QueryValidatorRequest, QueryValidatorResponse, RedelegationEntryResponse, RedelegationResponse,
 };
 use gears::context::query::QueryContext;
 
@@ -145,6 +145,18 @@ impl<
         }
 
         Ok(resp)
+    }
+
+    pub fn query_unbonding_delegation<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegationRequest,
+    ) -> QueryUnbondingDelegationResponse {
+        QueryUnbondingDelegationResponse {
+            unbond: self
+                .unbonding_delegation(ctx, &query.delegator_address, &query.validator_address)
+                .unwrap_gas(),
+        }
     }
 
     pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {

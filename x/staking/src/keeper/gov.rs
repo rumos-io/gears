@@ -1,4 +1,4 @@
-use gears::x::keepers::staking::GovStakingKeeper;
+use gears::x::keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper};
 
 use crate::iter::{bounded::BoundedValidatorsIterator, delegation::DelegationIterator};
 
@@ -8,7 +8,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
-        BK: BankKeeper<SK, M>,
+        BK: GovernanceBankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > GovStakingKeeper<SK, M> for Keeper<SK, PSK, AK, BK, KH, M>

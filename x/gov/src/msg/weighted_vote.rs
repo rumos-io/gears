@@ -189,8 +189,8 @@ impl TryFrom<Any> for MsgVoteWeighted {
                 "message type not recognized".into(),
             ))?
         }
-        Ok(MsgVoteWeighted::decode::<Bytes>(value.value.into())
-            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?)
+        MsgVoteWeighted::decode::<Bytes>(value.value.into())
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 

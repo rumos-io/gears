@@ -1,4 +1,4 @@
-use std::ops::Bound;
+use std::ops::RangeBounds;
 
 use database::Database;
 
@@ -23,10 +23,7 @@ pub(crate) enum KVStoreBackend<'a, DB> {
 pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 
 impl<'a, DB: Database> KVStore<'a, DB> {
-    pub fn into_range(
-        self,
-        range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
-    ) -> Range<'a, (Bound<Vec<u8>>, Bound<Vec<u8>>), DB> {
+    pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> Range<'a, DB> {
         match self.0 {
             KVStoreBackend::Commit(var) => var.range(range),
             KVStoreBackend::Cache(var) => var.range(range),
