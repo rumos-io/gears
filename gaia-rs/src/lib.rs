@@ -1,3 +1,4 @@
+pub mod params;
 use crate::abci_handler::GaiaABCIHandler;
 use crate::query::GaiaQuery;
 use crate::query::GaiaQueryResponse;

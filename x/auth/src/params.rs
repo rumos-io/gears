@@ -1,16 +1,10 @@
 use std::collections::HashMap;
 
-use gears::context::{
-    InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext,
-};
+use gears::application::keepers::params::ParamsKeeper;
+
 use gears::core::serializers::serialize_number_to_string;
-use gears::params::{
-    gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
-    ParamsSerialize, ParamsSubspaceKey,
-};
-use gears::store::database::Database;
-use gears::store::StoreKey;
-use gears::types::store::gas::errors::GasStoreErrors;
+use gears::params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey};
+
 use gears::x::keepers::auth::AuthParams;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -38,6 +32,12 @@ pub struct AuthsParams {
     #[serde(serialize_with = "serialize_number_to_string")]
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub sig_verify_cost_secp256k1: u64,
+}
+
+impl Default for AuthsParams {
+    fn default() -> Self {
+        DEFAULT_PARAMS.clone()
+    }
 }
 
 impl ParamsSerialize for AuthsParams {
@@ -140,42 +140,10 @@ pub struct AuthParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
 
-impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> AuthsParams {
-        let store = infallible_subspace(ctx, &self.params_subspace_key);
+impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
+    type Param = AuthsParams;
 
-        store.params().unwrap_or(DEFAULT_PARAMS.clone())
-    }
-
-    pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Result<AuthsParams, GasStoreErrors> {
-        let store = gas::subspace(ctx, &self.params_subspace_key);
-
-        Ok(store.params()?.unwrap_or(DEFAULT_PARAMS.clone()))
-    }
-
-    pub fn set<DB: Database, SK: StoreKey, KV: InfallibleContextMut<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: AuthsParams,
-    ) {
-        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
-    }
-
-    pub fn try_set<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: AuthsParams,
-    ) -> Result<(), GasStoreErrors> {
-        let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
+    fn psk(&self) -> &PSK {
+        &self.params_subspace_key
     }
 }

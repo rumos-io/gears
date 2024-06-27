@@ -1721,6 +1721,7 @@ dependencies = [
  "data-encoding",
  "gears",
  "gears-derive",
+ "gov",
  "ibc-proto 0.33.0",
  "ibc-rs",
  "prost 0.11.9",

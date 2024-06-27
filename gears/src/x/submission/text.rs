@@ -69,7 +69,7 @@ impl From<TextProposal> for Any {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TextSubmissionHandler;
 
 impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, TextProposal> for TextSubmissionHandler {

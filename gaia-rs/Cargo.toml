@@ -12,6 +12,7 @@ workspace = true
 auth = { path = "../x/auth" }
 bank = { path = "../x/bank" }
 ibc-rs = { path = "../x/ibc-rs" }
+gov ={ path = "../x/gov" }
 gears = { path = "../gears", features = ["cli", "xmods", "rocksdb"] }
 gears-derive = { path = "../gears-derive" }
 staking = { path = "../x/staking" }
