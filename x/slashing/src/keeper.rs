@@ -65,24 +65,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 validator.cons_pub_key().clone()
             })
             .collect();
-        for pub_key in pub_keys {
-            self.add_pub_key(ctx, &pub_key);
-        }
+        pub_keys
+            .into_iter()
+            .for_each(|pub_key| self.add_pub_key(ctx, &pub_key));
 
-        for info in genesis.signing_infos {
-            self.set_validator_signing_info(ctx, &info.address, &info.validator_signing_info);
-        }
+        genesis.signing_infos.into_iter().for_each(|info| {
+            self.set_validator_signing_info(ctx, &info.address, &info.validator_signing_info)
+        });
 
-        for block in genesis.missed_blocks {
-            for missed in block.missed_blocks {
+        genesis.missed_blocks.into_iter().for_each(|block| {
+            block.missed_blocks.into_iter().for_each(|missed| {
                 self.set_validator_missed_block_bit_array(
                     ctx,
                     &block.address,
                     missed.index,
                     missed.missed,
-                );
-            }
-        }
+                )
+            });
+        });
 
         self.slashing_params_keeper.set(ctx, genesis.params);
     }
