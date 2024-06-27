@@ -116,7 +116,7 @@ impl<
         let params = self.staking_params_keeper.try_get(ctx)?;
 
         if let Some(redelegation) = self.redelegation(ctx, del_addr, val_src_addr, val_dst_addr)? {
-            Ok(redelegation.entries.len() >= params.max_entries as usize)
+            Ok(redelegation.entries.len() >= params.max_entries() as usize)
         } else {
             Ok(false)
         }
@@ -221,7 +221,7 @@ impl<
 
         let mut balances = vec![];
         let params = self.staking_params_keeper.get(ctx);
-        let denom = params.bond_denom;
+        let denom = params.bond_denom();
         let ctx_time = ctx.header.time.clone();
 
         // loop through all the entries and complete mature redelegation entries

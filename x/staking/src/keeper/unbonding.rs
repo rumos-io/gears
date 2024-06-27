@@ -95,7 +95,7 @@ impl<
         let params = self.staking_params_keeper.try_get(ctx)?;
         let unbonding_delegation = self.unbonding_delegation(ctx, del_addr, val_addr)?;
         Ok(unbonding_delegation
-            .map(|ubd| ubd.entries.len() > params.max_entries as usize)
+            .map(|ubd| ubd.entries.len() > params.max_entries() as usize)
             .unwrap_or_default())
     }
 
@@ -329,7 +329,7 @@ impl<
         } else {
             return Err(AppError::Custom("No unbonding delegation".into()).into());
         };
-        let bond_denom = params.bond_denom;
+        let bond_denom = params.bond_denom();
         let mut balances = vec![];
         let ctx_time = ctx.get_time();
 
