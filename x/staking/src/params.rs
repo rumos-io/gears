@@ -14,15 +14,44 @@ const KEY_MAX_ENTRIES: &str = "MaxEntries";
 const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
 const KEY_BOND_DENOM: &str = "BondDenom";
 
+/// ['Params'] defines the parameters for the staking module. The params are guraanteed to be valid:
+/// - unbonding_time is non negative
+/// - max_validators is positive
+/// - max_entries is positive
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(try_from = "RawParams")]
 pub struct Params {
     // sdk counts duration as simple i64 type that represents difference
     // between two instants
-    pub unbonding_time: i64,
-    pub max_validators: u32,
-    pub max_entries: u32,
-    pub historical_entries: u32,
-    pub bond_denom: Denom,
+    unbonding_time: i64,
+    max_validators: u32,
+    max_entries: u32,
+    historical_entries: u32,
+    bond_denom: Denom,
+}
+
+/// [`RawParams`] exists to allow us to validate params when deserializing them
+#[derive(Deserialize)]
+struct RawParams {
+    unbonding_time: i64,
+    max_validators: u32,
+    max_entries: u32,
+    historical_entries: u32,
+    bond_denom: Denom,
+}
+
+impl TryFrom<RawParams> for Params {
+    type Error = AppError;
+
+    fn try_from(params: RawParams) -> Result<Self, Self::Error> {
+        Params::new(
+            params.unbonding_time,
+            params.max_validators,
+            params.max_entries,
+            params.historical_entries,
+            params.bond_denom,
+        )
+    }
 }
 
 impl Default for Params {
@@ -105,6 +134,8 @@ impl ParamsDeserialize for Params {
             .try_into()
             .unwrap();
 
+        // TODO: should we validate the params here?
+
         Params {
             unbonding_time,
             max_validators,
@@ -116,41 +147,61 @@ impl ParamsDeserialize for Params {
 }
 
 impl Params {
-    /// validate a set of params
-    pub fn validate(&self) -> Result<(), AppError> {
-        self.validate_unbonding_time()?;
-        self.validate_max_validators()?;
-        self.validate_max_entries()
-    }
-
-    fn validate_unbonding_time(&self) -> Result<(), AppError> {
-        if self.unbonding_time < 0 {
+    pub fn new(
+        unbonding_time: i64,
+        max_validators: u32,
+        max_entries: u32,
+        historical_entries: u32,
+        bond_denom: Denom,
+    ) -> Result<Self, AppError> {
+        if unbonding_time < 0 {
             return Err(AppError::Custom(format!(
-                "unbonding time must be positive: {}",
-                self.unbonding_time
+                "unbonding time must be non negative: {}",
+                unbonding_time
             )));
         }
-        Ok(())
-    }
 
-    fn validate_max_validators(&self) -> Result<(), AppError> {
-        if self.max_validators == 0 {
+        if max_validators == 0 {
             return Err(AppError::Custom(format!(
                 "max validators must be positive: {}",
-                self.max_validators
+                max_validators
             )));
         }
-        Ok(())
-    }
 
-    fn validate_max_entries(&self) -> Result<(), AppError> {
-        if self.max_entries == 0 {
+        if max_entries == 0 {
             return Err(AppError::Custom(format!(
                 "max entries must be positive: {}",
-                self.max_entries
+                max_entries
             )));
         }
-        Ok(())
+
+        Ok(Params {
+            unbonding_time,
+            max_validators,
+            max_entries,
+            bond_denom,
+            historical_entries,
+        })
+    }
+
+    pub fn unbonding_time(&self) -> i64 {
+        self.unbonding_time
+    }
+
+    pub fn max_validators(&self) -> u32 {
+        self.max_validators
+    }
+
+    pub fn max_entries(&self) -> u32 {
+        self.max_entries
+    }
+
+    pub fn historical_entries(&self) -> u32 {
+        self.historical_entries
+    }
+
+    pub fn bond_denom(&self) -> &Denom {
+        &self.bond_denom
     }
 }
 

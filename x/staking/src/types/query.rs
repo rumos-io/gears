@@ -4,7 +4,7 @@ use crate::{
 };
 use gears::{
     core::{errors::CoreError, Protobuf},
-    error::IBC_ENCODE_UNWRAP,
+    error::{AppError, IBC_ENCODE_UNWRAP},
     store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
@@ -481,16 +481,18 @@ pub struct QueryParamsResponse {
 }
 
 impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
-    type Error = gears::types::errors::Error;
+    type Error = AppError;
 
     fn try_from(raw: QueryParamsResponseRaw) -> Result<Self, Self::Error> {
-        let params = Params {
-            unbonding_time: raw.unbonding_time,
-            max_validators: raw.max_validators,
-            max_entries: raw.max_entries,
-            historical_entries: raw.historical_entries,
-            bond_denom: raw.bond_denom.try_into()?,
-        };
+        let params = Params::new(
+            raw.unbonding_time,
+            raw.max_validators,
+            raw.max_entries,
+            raw.historical_entries,
+            raw.bond_denom
+                .try_into()
+                .map_err(|e: gears::types::errors::Error| AppError::Custom(e.to_string()))?,
+        )?;
         Ok(QueryParamsResponse { params })
     }
 }
@@ -512,11 +514,11 @@ pub struct QueryParamsResponseRaw {
 impl From<QueryParamsResponse> for QueryParamsResponseRaw {
     fn from(query: QueryParamsResponse) -> Self {
         Self {
-            unbonding_time: query.params.unbonding_time,
-            max_validators: query.params.max_validators,
-            max_entries: query.params.max_entries,
-            historical_entries: query.params.historical_entries,
-            bond_denom: query.params.bond_denom.to_string(),
+            unbonding_time: query.params.unbonding_time(),
+            max_validators: query.params.max_validators(),
+            max_entries: query.params.max_entries(),
+            historical_entries: query.params.historical_entries(),
+            bond_denom: query.params.bond_denom().to_string(),
         }
     }
 }
