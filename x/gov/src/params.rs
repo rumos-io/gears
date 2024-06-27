@@ -2,14 +2,8 @@ use std::{collections::HashMap, str::FromStr, time::Duration};
 
 use gears::{
     application::keepers::params::ParamsKeeper,
-    context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
-    params::{
-        gas::{subspace, subspace_mut},
-        infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
-        ParamsSerialize, ParamsSubspaceKey,
-    },
-    store::{database::Database, StoreKey},
-    types::{base::coin::Coin, decimal256::Decimal256, store::gas::errors::GasStoreErrors},
+    params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
+    types::{base::coin::Coin, decimal256::Decimal256},
 };
 use serde::{Deserialize, Serialize};
 
@@ -127,41 +121,7 @@ pub struct GovParamsKeeper<PSK: ParamsSubspaceKey> {
 impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for GovParamsKeeper<PSK> {
     type Param = GovParams;
 
-    fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Self::Param {
-        let store = infallible_subspace(ctx, &self.params_subspace_key);
-
-        store.params().unwrap_or_default()
-    }
-
-    fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Result<Self::Param, GasStoreErrors> {
-        let store = subspace(ctx, &self.params_subspace_key);
-
-        Ok(store.params()?.unwrap_or_default())
-    }
-
-    fn set<DB: Database, SK: StoreKey, KV: InfallibleContextMut<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: Self::Param,
-    ) {
-        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
-    }
-
-    fn try_set<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: Self::Param,
-    ) -> Result<(), GasStoreErrors> {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
+    fn psk(&self) -> &PSK {
+        &self.params_subspace_key
     }
 }

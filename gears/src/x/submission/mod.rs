@@ -22,16 +22,17 @@ pub trait SubmissionHandler<PSK: ParamsSubspaceKey, P> {
 }
 
 pub trait SubmissionCheckHandler<PSK: ParamsSubspaceKey, P>: SubmissionHandler<PSK, P> {
-    fn check<PK: ParamsKeeper<PSK>>(&self, proposal: &P) -> bool;
+    fn submission_check<PK: ParamsKeeper<PSK>>(&self, proposal: &P) -> bool;
 }
 
 impl<PSK: ParamsSubspaceKey, T: SubmissionHandler<PSK, ParameterChangeProposal<PSK>>>
     SubmissionCheckHandler<PSK, ParameterChangeProposal<PSK>> for T
 {
-    fn check<PK: ParamsKeeper<PSK>>(&self, proposal: &ParameterChangeProposal<PSK>) -> bool {
-        let keys = <PK::Param as ParamsSerialize>::keys();
-
-        let set = keys
+    fn submission_check<PK: ParamsKeeper<PSK>>(
+        &self,
+        proposal: &ParameterChangeProposal<PSK>,
+    ) -> bool {
+        let set = <PK::Param as ParamsSerialize>::keys()
             .keys()
             .map(|this| this.as_bytes())
             .collect::<HashSet<_>>();
@@ -47,7 +48,7 @@ impl<PSK: ParamsSubspaceKey, T: SubmissionHandler<PSK, ParameterChangeProposal<P
 impl<PSK: ParamsSubspaceKey, T: SubmissionHandler<PSK, TextProposal>>
     SubmissionCheckHandler<PSK, TextProposal> for T
 {
-    fn check<PK: ParamsKeeper<PSK>>(&self, _proposal: &TextProposal) -> bool {
+    fn submission_check<PK: ParamsKeeper<PSK>>(&self, _proposal: &TextProposal) -> bool {
         true
     }
 }
