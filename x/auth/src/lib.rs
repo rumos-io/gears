@@ -1,3 +1,4 @@
+pub mod submission;
 mod abci_handler;
 mod client;
 mod genesis;

@@ -8,16 +8,10 @@ use core_types::{any::google::Any, errors::CoreError};
 pub mod param;
 pub mod text;
 
-pub trait SubmissionHandler {
+pub trait SubmissionHandler<PSK: ParamsSubspaceKey> {
     type Submission: TryFrom<Any, Error = CoreError>;
 
-    fn handle<
-        CTX: TransactionalContext<DB, SK>,
-        PK: ParamsKeeper<PSK>,
-        PSK: ParamsSubspaceKey,
-        DB,
-        SK,
-    >(
+    fn handle<CTX: TransactionalContext<DB, SK>, PK: ParamsKeeper<PSK>, DB, SK>(
         &self,
         proposal: Self::Submission,
         ctx: &mut CTX,
