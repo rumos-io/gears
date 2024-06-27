@@ -1,10 +1,14 @@
-use bytes::Bytes;
-use gears::{
-    core::errors::CoreError, error::IBC_ENCODE_UNWRAP, tendermint::types::proto::Protobuf,
+use crate::{
+    application::keepers::params::ParamsKeeper, context::TransactionalContext,
+    core::errors::CoreError, error::IBC_ENCODE_UNWRAP, params::ParamsSubspaceKey,
+    tendermint::types::proto::Protobuf,
 };
+use bytes::Bytes;
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
+
+use super::SubmissionHandler;
 
 #[derive(Clone, PartialEq, Message)]
 pub struct RawTextProposal {
@@ -34,7 +38,7 @@ impl TryFrom<RawTextProposal> for TextProposal {
     ) -> Result<Self, Self::Error> {
         Ok(Self { title, description })
     }
-} 
+}
 
 impl From<TextProposal> for RawTextProposal {
     fn from(TextProposal { title, description }: TextProposal) -> Self {
@@ -62,5 +66,27 @@ impl From<TextProposal> for Any {
             type_url: TextProposal::TYPE_URL.to_string(),
             value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
+    }
+}
+
+#[derive(Debug)]
+pub struct TextSubmissionHandler;
+
+impl SubmissionHandler for TextSubmissionHandler {
+    type Submission = TextProposal;
+
+    fn handle<
+        CTX: TransactionalContext<DB, SK>,
+        PK: ParamsKeeper<PSK>,
+        PSK: ParamsSubspaceKey,
+        DB,
+        SK,
+    >(
+        &self,
+        _proposal: Self::Submission,
+        _ctx: &mut CTX,
+        _keeper: &mut PK,
+    ) -> anyhow::Result<()> {
+        Ok(())
     }
 }

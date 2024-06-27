@@ -5,5 +5,4 @@ pub mod keeper;
 pub mod msg;
 pub mod params;
 pub mod query;
-pub mod submission;
 pub mod types;
