@@ -8,7 +8,7 @@ use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use super::SubmissionHandler;
+use super::{error::SubmissionError, SubmissionHandler};
 
 #[derive(Clone, PartialEq, Message)]
 pub struct RawTextProposal {
@@ -74,6 +74,20 @@ pub struct TextSubmissionHandler;
 
 impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, TextProposal> for TextSubmissionHandler {
     fn handle<CTX: TransactionalContext<DB, SK>, PK: ParamsKeeper<PSK>, DB, SK>(
+        &self,
+        _proposal: TextProposal,
+        _ctx: &mut CTX,
+        _keeper: &mut PK,
+    ) -> Result<(), SubmissionError> {
+        Ok(())
+    }
+
+    fn infallible_gas_handle<
+        CTX: crate::context::InfallibleContextMut<DB, SK>,
+        PK: ParamsKeeper<PSK>,
+        DB: database::Database,
+        SK: kv_store::StoreKey,
+    >(
         &self,
         _proposal: TextProposal,
         _ctx: &mut CTX,

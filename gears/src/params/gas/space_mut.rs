@@ -43,4 +43,13 @@ impl<DB: Database> GasParamsSpaceMut<'_, DB> {
 
         Ok(())
     }
+
+    // TODO: dangerous fn as it may break consistency
+    pub fn raw_key_set(
+        &mut self,
+        key: impl IntoIterator<Item = u8>,
+        value: impl IntoIterator<Item = u8>,
+    ) -> Result<(), GasStoreErrors> {
+        self.inner.set(key, value)
+    }
 }
