@@ -7,10 +7,7 @@ use crate::{
     application::keepers::params::ParamsKeeper,
     context::{InfallibleContextMut, TransactionalContext},
     params::{gas::subspace_mut, infallible_subspace_mut, ParamsSubspaceKey},
-    x::submission::{
-        error::SubmissionError,
-        param::{ParamChange, ParameterChangeProposal},
-    },
+    x::submission::{error::SubmissionError, param::ParamChange},
 };
 
 use super::{SubmissionCheckHandler, SubmissionHandler};
@@ -18,7 +15,7 @@ use super::{SubmissionCheckHandler, SubmissionHandler};
 #[derive(Debug, Default)]
 pub struct ParamChangeSubmissionHandler<PSK>(PhantomData<PSK>);
 
-impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, ParameterChangeProposal<PSK>>
+impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, ParamChange<PSK>>
     for ParamChangeSubmissionHandler<PSK>
 {
     fn handle<
@@ -28,7 +25,7 @@ impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, ParameterChangeProposal<PSK>
         SK: StoreKey,
     >(
         &self,
-        proposal: ParameterChangeProposal<PSK>,
+        proposal: ParamChange<PSK>,
         ctx: &mut CTX,
         keeper: &mut PK,
     ) -> Result<(), SubmissionError> {
@@ -40,14 +37,7 @@ impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, ParameterChangeProposal<PSK>
 
         let mut store = subspace_mut(ctx, keeper.psk());
 
-        for ParamChange {
-            subspace: _,
-            key,
-            value,
-        } in proposal.changes
-        {
-            store.raw_key_set(key, value)?;
-        }
+        store.raw_key_set(proposal.key, proposal.value)?;
 
         Ok(())
     }
@@ -59,7 +49,7 @@ impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, ParameterChangeProposal<PSK>
         SK: StoreKey,
     >(
         &self,
-        proposal: ParameterChangeProposal<PSK>,
+        proposal: ParamChange<PSK>,
         ctx: &mut CTX,
         keeper: &mut PK,
     ) -> anyhow::Result<()> {
@@ -71,14 +61,7 @@ impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, ParameterChangeProposal<PSK>
 
         let mut store = infallible_subspace_mut(ctx, keeper.psk());
 
-        for ParamChange {
-            subspace: _,
-            key,
-            value,
-        } in proposal.changes
-        {
-            store.raw_key_set(key, value);
-        }
+        store.raw_key_set(proposal.key, proposal.value);
 
         Ok(())
     }
