@@ -1,47 +1,28 @@
+use auth::AuthParamsKeeper;
 use bank::BankParamsKeeper;
 use gears::{
     application::keepers::params::ParamsKeeper,
-    context::{InfallibleContextMut, TransactionalContext},
+    context::InfallibleContextMut,
+    params::{ParamsDeserialize, ParamsSerialize},
     store::{database::Database, StoreKey},
     x::submission::{
-        error::SubmissionError,
-        handler::SubmissionHandler,
+        handler::{params::ParamChangeSubmissionHandler, SubmissionHandler},
         param::ParameterChangeProposal,
         text::{TextProposal, TextSubmissionHandler},
     },
 };
-use gov::{msg::proposal::MsgSubmitProposal, types::proposal::Proposal};
+use gov::{types::proposal::Proposal, ProposalHandler};
 
 use crate::store_keys::GaiaParamsStoreKey;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct GaiaGovernanceHandler;
 
-impl SubmissionHandler<GaiaParamsStoreKey, Proposal> for GaiaGovernanceHandler {
-    fn handle<
-        CTX: TransactionalContext<DB, SK>,
-        PK: ParamsKeeper<GaiaParamsStoreKey>,
-        DB: Database,
-        SK: StoreKey,
-    >(
+impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaGovernanceHandler {
+    fn handle<CTX: InfallibleContextMut<DB, SK>, DB: Database, SK: StoreKey>(
         &self,
         proposal: Proposal,
         ctx: &mut CTX,
-        keeper: &mut PK,
-    ) -> Result<(), SubmissionError> {
-        todo!()
-    }
-
-    fn infallible_gas_handle<
-        CTX: InfallibleContextMut<DB, SK>,
-        PK: ParamsKeeper<GaiaParamsStoreKey>,
-        DB: Database,
-        SK: StoreKey,
-    >(
-        &self,
-        proposal: Proposal,
-        ctx: &mut CTX,
-        keeper: &mut PK,
     ) -> anyhow::Result<()> {
         match proposal.content.type_url.as_str() {
             ParameterChangeProposal::<GaiaParamsStoreKey>::TYPE_URL => {
@@ -49,26 +30,71 @@ impl SubmissionHandler<GaiaParamsStoreKey, Proposal> for GaiaGovernanceHandler {
                     ParameterChangeProposal::try_from(proposal.content)?;
 
                 for change in msg.changes {
-                    match change.subspace {
-                        space @ GaiaParamsStoreKey::Bank => {
-                            todo!()
+                    match change.subspace.clone() {
+                        space @ GaiaParamsStoreKey::Bank => ParamChangeSubmissionHandler::<
+                            BankParamsKeeper<GaiaParamsStoreKey>,
+                        >::handle(
+                            change, ctx, &space
+                        ),
+                        space @ GaiaParamsStoreKey::Auth => ParamChangeSubmissionHandler::<
+                            AuthParamsKeeper<GaiaParamsStoreKey>,
+                        >::handle(
+                            change, ctx, &space
+                        ),
+                        GaiaParamsStoreKey::BaseApp => {
+                            Err(anyhow::anyhow!("not supported subspace"))
                         }
-                        space @ GaiaParamsStoreKey::Auth => todo!(),
-                        space @ GaiaParamsStoreKey::BaseApp => todo!(),
-                        space @ GaiaParamsStoreKey::Staking => todo!(),
-                        space @ GaiaParamsStoreKey::IBC => todo!(),
-                        space @ GaiaParamsStoreKey::Capability => todo!(),
-                    }
+                        GaiaParamsStoreKey::Staking => {
+                            Err(anyhow::anyhow!("not supported subspace"))
+                        }
+                        GaiaParamsStoreKey::IBC => Err(anyhow::anyhow!("not supported subspace")),
+                        GaiaParamsStoreKey::Capability => {
+                            Err(anyhow::anyhow!("not supported subspace"))
+                        }
+                    }?;
                 }
 
                 Ok(())
             }
-            TextProposal::TYPE_URL => TextSubmissionHandler::default().infallible_gas_handle(
+            TextProposal::TYPE_URL => TextSubmissionHandler::<DummyParamsKeeper>::handle(
                 proposal.content.try_into()?,
                 ctx,
-                keeper,
+                &DUMMY_PARAMS,
             ),
             _ => Err(anyhow::anyhow!("Invalid proposal content")),
         }
+    }
+}
+
+const DUMMY_PARAMS: GaiaParamsStoreKey = GaiaParamsStoreKey::Auth;
+
+/// We need dummy keeper for textual propose which doesn't change any value, but need to satisfy api
+#[derive(Debug, Default, Clone)]
+struct DummyParamsKeeper;
+
+impl ParamsKeeper<GaiaParamsStoreKey> for DummyParamsKeeper {
+    type Param = DummyParams;
+
+    fn psk(&self) -> &GaiaParamsStoreKey {
+        &DUMMY_PARAMS
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+struct DummyParams;
+
+impl ParamsSerialize for DummyParams {
+    fn keys() -> std::collections::HashMap<&'static str, gears::params::ParamKind> {
+        Default::default()
+    }
+
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
+        Default::default()
+    }
+}
+
+impl ParamsDeserialize for DummyParams {
+    fn from_raw(_: std::collections::HashMap<&'static str, Vec<u8>>) -> Self {
+        Self
     }
 }

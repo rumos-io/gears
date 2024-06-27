@@ -1,5 +1,7 @@
+use std::marker::PhantomData;
+
 use crate::{
-    application::keepers::params::ParamsKeeper, context::TransactionalContext,
+    application::keepers::params::ParamsKeeper, context::InfallibleContextMut,
     core::errors::CoreError, error::IBC_ENCODE_UNWRAP, params::ParamsSubspaceKey,
     tendermint::types::proto::Protobuf,
 };
@@ -8,7 +10,7 @@ use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use super::{error::SubmissionError, handler::SubmissionHandler};
+use super::handler::SubmissionHandler;
 
 #[derive(Clone, PartialEq, Message)]
 pub struct RawTextProposal {
@@ -70,28 +72,15 @@ impl From<TextProposal> for Any {
 }
 
 #[derive(Debug, Default)]
-pub struct TextSubmissionHandler;
+pub struct TextSubmissionHandler<PK>(PhantomData<PK>);
 
-impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, TextProposal> for TextSubmissionHandler {
-    fn handle<CTX: TransactionalContext<DB, SK>, PK: ParamsKeeper<PSK>, DB, SK>(
-        &self,
+impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PSK, TextProposal>
+    for TextSubmissionHandler<PK>
+{
+    fn handle<CTX: InfallibleContextMut<DB, SK>, DB: database::Database, SK: kv_store::StoreKey>(
         _proposal: TextProposal,
         _ctx: &mut CTX,
-        _keeper: &mut PK,
-    ) -> Result<(), SubmissionError> {
-        Ok(())
-    }
-
-    fn infallible_gas_handle<
-        CTX: crate::context::InfallibleContextMut<DB, SK>,
-        PK: ParamsKeeper<PSK>,
-        DB: database::Database,
-        SK: kv_store::StoreKey,
-    >(
-        &self,
-        _proposal: TextProposal,
-        _ctx: &mut CTX,
-        _keeper: &mut PK,
+        _keeper: &PSK,
     ) -> anyhow::Result<()> {
         Ok(())
     }

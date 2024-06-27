@@ -11,7 +11,7 @@ use super::{SubmissionCheckHandler, SubmissionHandler};
 impl<PSK: ParamsSubspaceKey, T: SubmissionHandler<PSK, ParamChange<PSK>>>
     SubmissionCheckHandler<PSK, ParamChange<PSK>> for T
 {
-    fn submission_check<PK: ParamsKeeper<PSK>>(&self, proposal: &ParamChange<PSK>) -> bool {
+    fn submission_check<PK: ParamsKeeper<PSK>>(proposal: &ParamChange<PSK>) -> bool {
         <PK::Param as ParamsSerialize>::keys()
             .keys()
             .map(|this| this.as_bytes())
@@ -23,7 +23,7 @@ impl<PSK: ParamsSubspaceKey, T: SubmissionHandler<PSK, ParamChange<PSK>>>
 impl<PSK: ParamsSubspaceKey, T: SubmissionHandler<PSK, TextProposal>>
     SubmissionCheckHandler<PSK, TextProposal> for T
 {
-    fn submission_check<PK: ParamsKeeper<PSK>>(&self, _proposal: &TextProposal) -> bool {
+    fn submission_check<PK: ParamsKeeper<PSK>>(_proposal: &TextProposal) -> bool {
         true
     }
 }
