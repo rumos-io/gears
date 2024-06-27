@@ -2,6 +2,7 @@ use auth::AuthParamsKeeper;
 use bank::BankParamsKeeper;
 use gears::{
     application::keepers::params::ParamsKeeper,
+    baseapp::BaseAppParamsKeeper,
     context::InfallibleContextMut,
     params::{ParamsDeserialize, ParamsSerialize},
     store::{database::Database, StoreKey},
@@ -12,6 +13,7 @@ use gears::{
     },
 };
 use gov::{types::proposal::Proposal, ProposalHandler};
+use staking::StakingParamsKeeper;
 
 use crate::store_keys::GaiaParamsStoreKey;
 
@@ -41,12 +43,16 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaGovernanceHandler {
                         >::handle(
                             change, ctx, &space
                         ),
-                        GaiaParamsStoreKey::BaseApp => {
-                            Err(anyhow::anyhow!("not supported subspace"))
-                        }
-                        GaiaParamsStoreKey::Staking => {
-                            Err(anyhow::anyhow!("not supported subspace"))
-                        }
+                        space @ GaiaParamsStoreKey::BaseApp => ParamChangeSubmissionHandler::<
+                            BaseAppParamsKeeper<GaiaParamsStoreKey>,
+                        >::handle(
+                            change, ctx, &space
+                        ),
+                        space @ GaiaParamsStoreKey::Staking => ParamChangeSubmissionHandler::<
+                            StakingParamsKeeper<GaiaParamsStoreKey>,
+                        >::handle(
+                            change, ctx, &space
+                        ),
                         GaiaParamsStoreKey::IBC => Err(anyhow::anyhow!("not supported subspace")),
                         GaiaParamsStoreKey::Capability => {
                             Err(anyhow::anyhow!("not supported subspace"))
