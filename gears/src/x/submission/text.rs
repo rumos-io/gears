@@ -8,7 +8,7 @@ use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use super::{error::SubmissionError, SubmissionHandler};
+use super::{error::SubmissionError, handler::SubmissionHandler};
 
 #[derive(Clone, PartialEq, Message)]
 pub struct RawTextProposal {
