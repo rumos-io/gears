@@ -72,12 +72,10 @@ impl From<TextProposal> for Any {
 #[derive(Debug)]
 pub struct TextSubmissionHandler;
 
-impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK> for TextSubmissionHandler {
-    type Submission = TextProposal;
-
+impl<PSK: ParamsSubspaceKey> SubmissionHandler<PSK, TextProposal> for TextSubmissionHandler {
     fn handle<CTX: TransactionalContext<DB, SK>, PK: ParamsKeeper<PSK>, DB, SK>(
         &self,
-        _proposal: Self::Submission,
+        _proposal: TextProposal,
         _ctx: &mut CTX,
         _keeper: &mut PK,
     ) -> anyhow::Result<()> {
