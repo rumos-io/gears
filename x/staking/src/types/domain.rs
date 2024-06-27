@@ -233,6 +233,10 @@ impl StakingValidator for Validator {
     fn delegator_shares(&self) -> &Decimal256 {
         &self.delegator_shares
     }
+
+    fn cons_pub_key(&self) -> &PublicKey {
+        &self.consensus_pubkey
+    }
 }
 
 impl Validator {

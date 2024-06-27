@@ -19,6 +19,7 @@ members = [
   "x/auth",
   "x/bank",
   "x/ibc-rs",
+  "x/slashing",
   "x/staking",
   "x/gov",
 
