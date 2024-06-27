@@ -6,9 +6,10 @@ use crate::{
 };
 use gears::{
     context::init::InitContext,
+    error::IBC_ENCODE_UNWRAP,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::proto::crypto::PublicKey,
+    tendermint::types::proto::{crypto::PublicKey, Protobuf},
     types::{address::ConsAddress, store::gas::ext::GasResultExt},
     x::{
         keepers::staking::SlashingStakingKeeper, module::Module, types::validator::StakingValidator,
@@ -97,6 +98,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let addr = ConsAddress::from(pub_key.clone());
         let key = addr_pubkey_relation_key(addr);
 
+        // TODO: add Protobuf for PublicKey
         let value = serde_json::to_vec(pub_key).unwrap();
         store.set(key, value)
     }
@@ -110,7 +112,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     ) {
         let mut store = ctx.kv_store_mut(&self.store_key);
         let key = validator_signing_info_key(addr.clone());
-        let value = serde_json::to_vec(signing_info).unwrap();
+        let value = signing_info.encode_vec().expect(IBC_ENCODE_UNWRAP);
         store.set(key, value)
     }
 
@@ -118,7 +120,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
         addr: &ConsAddress,
-        index: i64,
+        index: u32,
         missed: bool,
     ) {
         let mut store = ctx.kv_store_mut(&self.store_key);
