@@ -9,14 +9,15 @@ use crate::{
 mod handler_impl;
 pub mod params;
 
-pub trait SubmissionCheckHandler<PSK: ParamsSubspaceKey, P>: SubmissionHandler<PSK, P> {
+pub trait SubmissionCheckHandler<PSK: ParamsSubspaceKey, P> {
     fn submission_check<PK: ParamsKeeper<PSK>>(proposal: &P) -> bool;
 }
 
-pub trait SubmissionHandler<PSK: ParamsSubspaceKey, P> {
+pub trait SubmissionHandler<PSK: ParamsSubspaceKey, P>: SubmissionCheckHandler<PSK, P> {
     fn handle<CTX: InfallibleContextMut<DB, SK>, DB: Database, SK: StoreKey>(
+        &self,
         proposal: P,
         ctx: &mut CTX,
-        keeper: &PSK,
+        subspace: &PSK,
     ) -> anyhow::Result<()>;
 }

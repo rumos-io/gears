@@ -27,6 +27,8 @@ use crate::{
     keeper::GovKeeper,
     msg::{deposit::MsgDeposit, GovMsg},
     query::{GovQueryRequest, GovQueryResponse},
+    types::proposal::Proposal,
+    ProposalHandler,
 };
 
 #[derive(Debug, Clone)]
@@ -36,8 +38,9 @@ pub struct GovAbciHandler<
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
+    PH: ProposalHandler<PSK, Proposal>,
 > {
-    keeper: GovKeeper<SK, PSK, M, BK, STK>,
+    keeper: GovKeeper<SK, PSK, M, BK, STK, PH>,
 }
 
 impl<
@@ -46,9 +49,10 @@ impl<
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-    > GovAbciHandler<SK, PSK, M, BK, STK>
+        PH: ProposalHandler<PSK, Proposal>,
+    > GovAbciHandler<SK, PSK, M, BK, STK, PH>
 {
-    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK>) -> Self {
+    pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK, PH>) -> Self {
         Self { keeper }
     }
 }
@@ -59,7 +63,8 @@ impl<
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK>
+        PH: ProposalHandler<PSK, Proposal> + Clone + Send + Sync + 'static,
+    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, PH>
 {
     type Message = GovMsg;
 

@@ -78,6 +78,7 @@ impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PSK, TextP
     for TextSubmissionHandler<PK>
 {
     fn handle<CTX: InfallibleContextMut<DB, SK>, DB: database::Database, SK: kv_store::StoreKey>(
+        &self,
         _proposal: TextProposal,
         _ctx: &mut CTX,
         _keeper: &PSK,

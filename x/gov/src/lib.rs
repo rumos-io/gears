@@ -16,7 +16,9 @@ pub mod types;
 pub trait ProposalHandler<PSK: ParamsSubspaceKey, P> {
     fn handle<CTX: InfallibleContextMut<DB, SK>, DB: Database, SK: StoreKey>(
         &self,
-        proposal: P,
+        proposal: &P,
         ctx: &mut CTX,
     ) -> anyhow::Result<()>;
+
+    fn check(proposal: &P) -> bool;
 }

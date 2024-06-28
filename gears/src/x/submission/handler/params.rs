@@ -19,6 +19,7 @@ impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PSK, Param
     for ParamChangeSubmissionHandler<PK>
 {
     fn handle<CTX: TransactionalContext<DB, SK>, DB: Database, SK: StoreKey>(
+        &self,
         proposal: ParamChange<PSK>,
         ctx: &mut CTX,
         subspace_key: &PSK,

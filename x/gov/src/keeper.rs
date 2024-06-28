@@ -47,6 +47,7 @@ use crate::{
         validator::ValidatorGovInfo,
         vote_iters::WeightedVoteIterator,
     },
+    ProposalHandler,
 };
 
 const PROPOSAL_ID_KEY: [u8; 1] = [0x03];
@@ -59,6 +60,7 @@ pub struct GovKeeper<
     M: Module,
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
+    PH: ProposalHandler<PSK, Proposal>,
 > {
     store_key: SK,
     gov_params_keeper: GovParamsKeeper<PSK>,
@@ -66,6 +68,7 @@ pub struct GovKeeper<
     bank_keeper: BK,
     staking_keeper: STK,
     _bank_marker: PhantomData<M>,
+    proposal_handler: PH,
 }
 
 impl<
@@ -74,7 +77,8 @@ impl<
         M: Module,
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
-    > GovKeeper<SK, PSK, M, BK, STK>
+        PH: ProposalHandler<PSK, Proposal>,
+    > GovKeeper<SK, PSK, M, BK, STK, PH>
 {
     pub fn new(
         store_key: SK,
@@ -82,6 +86,7 @@ impl<
         gov_mod: M,
         bank_keeper: BK,
         staking_keeper: STK,
+        proposal_handler: PH,
     ) -> Self {
         Self {
             store_key,
@@ -92,6 +97,7 @@ impl<
             bank_keeper,
             staking_keeper,
             _bank_marker: PhantomData,
+            proposal_handler,
         }
     }
 
@@ -301,14 +307,6 @@ impl<
             proposer: _proposer,
         }: MsgSubmitProposal,
     ) -> anyhow::Result<u64> {
-        /*
-           in go they perform check is it possible to handle
-           proposal somehow, but not sure we need it and instead
-           handle manually. at least this is such concept at moment
-
-           https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/keeper/proposal.go#L14-L16
-        */
-
         let proposal_id = proposal_id_get(ctx, &self.store_key)?;
         let submit_time = ctx.header().time.clone();
         let deposit_period = self
@@ -331,6 +329,10 @@ impl<
             voting_start_time: None,
             voting_end_time: None,
         };
+
+        if !PH::check(&proposal) {
+            return Err(anyhow::anyhow!("gov: no handler exists for proposal type"));
+        }
 
         proposal_set(ctx, &self.store_key, &proposal)?;
         let mut store = ctx.kv_store_mut(&self.store_key);
@@ -415,18 +417,12 @@ impl<
                     deposit_refund(ctx, self).unwrap_gas();
                 }
 
-                if passes {
-                    // TODO: Handle proposal: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/gov/abci.go#L65-L83
-
-                    proposal.status = ProposalStatus::Passed;
-
-                    if true
-                    // case when handling failed
-                    {
-                        proposal.status = ProposalStatus::Failed;
+                match passes {
+                    true if self.proposal_handler.handle(&proposal, ctx).is_ok() => {
+                        proposal.status = ProposalStatus::Passed
                     }
-                } else {
-                    proposal.status = ProposalStatus::Rejected;
+                    true => proposal.status = ProposalStatus::Failed,
+                    false => proposal.status = ProposalStatus::Rejected,
                 }
 
                 proposal.final_tally_result = tally_result;
@@ -766,9 +762,10 @@ fn deposit_del<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
+    PH: ProposalHandler<PSK, Proposal>,
 >(
     ctx: &mut CTX,
-    keeper: &GovKeeper<SK, PSK, M, BK, STK>,
+    keeper: &GovKeeper<SK, PSK, M, BK, STK, PH>,
     proposal_id: u64,
 ) -> Result<(), GasStoreErrors> {
     let deposits = DepositIterator::new(ctx.kv_store(&keeper.store_key))
@@ -798,9 +795,10 @@ fn deposit_refund<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     CTX: TransactionalContext<DB, SK>,
+    PH: ProposalHandler<PSK, Proposal>,
 >(
     ctx: &mut CTX,
-    keeper: &GovKeeper<SK, PSK, M, BK, STK>,
+    keeper: &GovKeeper<SK, PSK, M, BK, STK, PH>,
 ) -> Result<(), GasStoreErrors> {
     for deposit in DepositIterator::new(ctx.kv_store(&keeper.store_key))
         .map(|this| this.map(|(_, val)| val))
