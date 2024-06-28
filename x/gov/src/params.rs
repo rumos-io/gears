@@ -124,4 +124,13 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for GovParamsKeeper<PSK> {
     fn psk(&self) -> &PSK {
         &self.params_subspace_key
     }
+
+    fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
+        match String::from_utf8_lossy(key.as_ref()).as_ref() {
+            KEY_DEPOSIT_PARAMS => serde_json::from_slice::<DepositParams>(value.as_ref()).is_ok(),
+            KEY_VOTING_PARAMS => serde_json::from_slice::<VotingParams>(value.as_ref()).is_ok(),
+            KEY_TALLY_PARAMS => serde_json::from_slice::<TallyParams>(value.as_ref()).is_ok(),
+            _ => false,
+        }
+    }
 }

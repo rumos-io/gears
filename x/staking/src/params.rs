@@ -214,4 +214,31 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for StakingParamsKeeper<PSK> {
     fn psk(&self) -> &PSK {
         &self.params_subspace_key
     }
+
+    fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
+        match String::from_utf8_lossy(key.as_ref()).as_ref() {
+            KEY_UNBONDING_TIME => ParamKind::I64
+                .parse_param(value.as_ref().to_vec())
+                .signed_64()
+                .is_some(),
+            KEY_MAX_VALIDATORS => ParamKind::U32
+                .parse_param(value.as_ref().to_vec())
+                .signed_64()
+                .is_some(),
+            KEY_MAX_ENTRIES => ParamKind::U32
+                .parse_param(value.as_ref().to_vec())
+                .signed_64()
+                .is_some(),
+            KEY_HISTORICAL_ENTRIES => ParamKind::U32
+                .parse_param(value.as_ref().to_vec())
+                .signed_64()
+                .is_some(),
+            KEY_BOND_DENOM => ParamKind::String
+                .parse_param(value.as_ref().to_vec())
+                .string()
+                .is_some(),
+
+            _ => false,
+        }
+    }
 }

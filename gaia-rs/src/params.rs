@@ -144,6 +144,10 @@ impl ParamsKeeper<GaiaParamsStoreKey> for DummyParamsKeeper {
     fn psk(&self) -> &GaiaParamsStoreKey {
         &DUMMY_PARAMS
     }
+
+    fn validate(_: impl AsRef<[u8]>, _: impl AsRef<[u8]>) -> bool {
+        true
+    }
 }
 
 #[derive(Debug, Default, Clone)]

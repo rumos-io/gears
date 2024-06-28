@@ -194,6 +194,18 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for BaseAppParamsKeeper<PSK> {
     fn psk(&self) -> &PSK {
         &self.params_subspace_key
     }
+
+    #[cfg(all(feature = "governance"))]
+    fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
+        match String::from_utf8_lossy(key.as_ref()).as_ref() {
+            KEY_BLOCK_PARAMS => serde_json::from_slice::<BlockParams>(value.as_ref()).is_ok(),
+            KEY_EVIDENCE_PARAMS => serde_json::from_slice::<EvidenceParams>(value.as_ref()).is_ok(),
+            KEY_VALIDATOR_PARAMS => {
+                serde_json::from_slice::<ValidatorParams>(value.as_ref()).is_ok()
+            }
+            _ => false,
+        }
+    }
 }
 
 // TODO: add a macro to create this?
