@@ -90,6 +90,7 @@ dircpy = { workspace = true, optional = true }
 default = ["cli", "export", "xmods"]
 export = []
 xmods = []
+governance = []
 utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy"]
 cli = ["dep:clap", "dep:clap_complete"]
 rocksdb = [ "database/rocksdb"]

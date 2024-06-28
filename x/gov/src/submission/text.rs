@@ -74,7 +74,7 @@ impl From<TextProposal> for Any {
 #[derive(Debug, Default)]
 pub struct TextSubmissionHandler<PK>(PhantomData<PK>);
 
-impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PSK, TextProposal>
+impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PK, PSK, TextProposal>
     for TextSubmissionHandler<PK>
 {
     fn handle<
