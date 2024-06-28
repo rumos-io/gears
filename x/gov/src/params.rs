@@ -1,8 +1,12 @@
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+    time::Duration,
+};
 
 use gears::{
     application::keepers::params::ParamsKeeper,
-    params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
+    params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     types::{base::coin::Coin, decimal256::Decimal256},
 };
 use serde::{Deserialize, Serialize};
@@ -68,14 +72,10 @@ pub struct GovParams {
 }
 
 impl ParamsSerialize for GovParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
-        [
-            (KEY_DEPOSIT_PARAMS, ParamKind::Bytes),
-            (KEY_VOTING_PARAMS, ParamKind::Bytes),
-            (KEY_TALLY_PARAMS, ParamKind::Bytes),
-        ]
-        .into_iter()
-        .collect()
+    fn keys() -> HashSet<&'static str> {
+        [KEY_DEPOSIT_PARAMS, KEY_VOTING_PARAMS, KEY_TALLY_PARAMS]
+            .into_iter()
+            .collect()
     }
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {

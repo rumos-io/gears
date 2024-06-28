@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use database::Database;
 use kv_store::StoreKey;
@@ -66,14 +66,10 @@ impl From<inner::ConsensusParams> for ConsensusParams {
 }
 
 impl ParamsSerialize for ConsensusParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
-        [
-            (KEY_BLOCK_PARAMS, ParamKind::Bytes),
-            (KEY_EVIDENCE_PARAMS, ParamKind::Bytes),
-            (KEY_VALIDATOR_PARAMS, ParamKind::Bytes),
-        ]
-        .into_iter()
-        .collect()
+    fn keys() -> HashSet<&'static str> {
+        [KEY_BLOCK_PARAMS, KEY_EVIDENCE_PARAMS, KEY_VALIDATOR_PARAMS]
+            .into_iter()
+            .collect()
     }
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {

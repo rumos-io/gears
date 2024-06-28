@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use gears::application::keepers::params::ParamsKeeper;
 
@@ -26,13 +26,10 @@ impl Default for BankParams {
 }
 
 impl ParamsSerialize for BankParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
-        [
-            (KEY_SEND_ENABLED, ParamKind::Bool),
-            (KEY_DEFAULT_SEND_ENABLED, ParamKind::Bytes),
-        ]
-        .into_iter()
-        .collect()
+    fn keys() -> HashSet<&'static str> {
+        [KEY_SEND_ENABLED, KEY_DEFAULT_SEND_ENABLED]
+            .into_iter()
+            .collect()
     }
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {

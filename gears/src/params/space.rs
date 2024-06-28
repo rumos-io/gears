@@ -13,7 +13,7 @@ impl<DB: Database> ParamsSpace<'_, DB> {
         let keys = T::keys();
         let mut params_fields = Vec::with_capacity(keys.len());
 
-        for (key, _) in keys {
+        for key in keys {
             params_fields.push((key, self.inner.get(key)?));
         }
 

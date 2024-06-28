@@ -13,7 +13,7 @@ impl<PSK: ParamsSubspaceKey, T: SubmissionHandler<PSK, ParamChange<PSK>>>
 {
     fn submission_check<PK: ParamsKeeper<PSK>>(proposal: &ParamChange<PSK>) -> bool {
         <PK::Param as ParamsSerialize>::keys()
-            .keys()
+            .iter()
             .map(|this| this.as_bytes())
             .collect::<HashSet<_>>()
             .contains(proposal.key.as_slice())

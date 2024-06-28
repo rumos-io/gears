@@ -147,7 +147,7 @@ impl ParamsKeeper<GaiaParamsStoreKey> for DummyParamsKeeper {
 struct DummyParams;
 
 impl ParamsSerialize for DummyParams {
-    fn keys() -> std::collections::HashMap<&'static str, gears::params::ParamKind> {
+    fn keys() -> std::collections::HashSet<&'static str> {
         Default::default()
     }
 

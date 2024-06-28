@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use gears::application::keepers::params::ParamsKeeper;
 
@@ -41,13 +41,13 @@ impl Default for AuthsParams {
 }
 
 impl ParamsSerialize for AuthsParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
+    fn keys() -> HashSet<&'static str> {
         [
-            (KEY_MAX_MEMO_CHARACTERS, ParamKind::U64),
-            (KEY_TX_SIG_LIMIT, ParamKind::U64),
-            (KEY_TX_SIZE_COST_PER_BYTE, ParamKind::U64),
-            (KEY_SIG_VERIFY_COST_ED25519, ParamKind::U64),
-            (KEY_SIG_VERIFY_COST_SECP256K1, ParamKind::U64),
+            KEY_MAX_MEMO_CHARACTERS,
+            KEY_TX_SIG_LIMIT,
+            KEY_TX_SIZE_COST_PER_BYTE,
+            KEY_SIG_VERIFY_COST_ED25519,
+            KEY_SIG_VERIFY_COST_SECP256K1,
         ]
         .into_iter()
         .collect()

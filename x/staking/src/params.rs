@@ -5,7 +5,7 @@ use gears::{
     types::denom::Denom,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 const KEY_UNBONDING_TIME: &str = "UnbondingTime";
 const KEY_MAX_VALIDATORS: &str = "MaxValidators";
@@ -69,13 +69,13 @@ impl Default for Params {
 }
 
 impl ParamsSerialize for Params {
-    fn keys() -> HashMap<&'static str, ParamKind> {
+    fn keys() -> HashSet<&'static str> {
         [
-            (KEY_UNBONDING_TIME, ParamKind::I64),
-            (KEY_MAX_VALIDATORS, ParamKind::U32),
-            (KEY_MAX_ENTRIES, ParamKind::U32),
-            (KEY_HISTORICAL_ENTRIES, ParamKind::U32),
-            (KEY_BOND_DENOM, ParamKind::String),
+            KEY_UNBONDING_TIME,
+            KEY_MAX_VALIDATORS,
+            KEY_MAX_ENTRIES,
+            KEY_HISTORICAL_ENTRIES,
+            KEY_BOND_DENOM,
         ]
         .into_iter()
         .collect()
