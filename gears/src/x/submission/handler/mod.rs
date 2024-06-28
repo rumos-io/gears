@@ -15,7 +15,6 @@ pub trait SubmissionCheckHandler<PSK: ParamsSubspaceKey, P> {
 
 pub trait SubmissionHandler<PSK: ParamsSubspaceKey, P>: SubmissionCheckHandler<PSK, P> {
     fn handle<CTX: InfallibleContextMut<DB, SK>, DB: Database, SK: StoreKey>(
-        &self,
         proposal: P,
         ctx: &mut CTX,
         subspace: &PSK,

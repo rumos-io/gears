@@ -7,7 +7,9 @@ use gears::{
     params::{ParamsDeserialize, ParamsSerialize},
     store::{database::Database, StoreKey},
     x::submission::{
-        handler::{params::ParamChangeSubmissionHandler, SubmissionHandler},
+        handler::{
+            params::ParamChangeSubmissionHandler, SubmissionCheckHandler, SubmissionHandler,
+        },
         param::ParameterChangeProposal,
         text::{TextProposal, TextSubmissionHandler},
     },
@@ -18,18 +20,18 @@ use staking::StakingParamsKeeper;
 use crate::store_keys::GaiaParamsStoreKey;
 
 #[derive(Debug)]
-pub struct GaiaGovernanceHandler;
+pub struct GaiaProposalHandler;
 
-impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaGovernanceHandler {
+impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
     fn handle<CTX: InfallibleContextMut<DB, SK>, DB: Database, SK: StoreKey>(
         &self,
-        proposal: Proposal,
+        proposal: &Proposal,
         ctx: &mut CTX,
     ) -> anyhow::Result<()> {
         match proposal.content.type_url.as_str() {
             ParameterChangeProposal::<GaiaParamsStoreKey>::TYPE_URL => {
                 let msg: ParameterChangeProposal<GaiaParamsStoreKey> =
-                    ParameterChangeProposal::try_from(proposal.content)?;
+                    ParameterChangeProposal::try_from(proposal.content.clone())?;
 
                 for change in msg.changes {
                     match change.subspace.clone() {
@@ -63,11 +65,66 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaGovernanceHandler {
                 Ok(())
             }
             TextProposal::TYPE_URL => TextSubmissionHandler::<DummyParamsKeeper>::handle(
-                proposal.content.try_into()?,
+                proposal.content.clone().try_into()?,
                 ctx,
                 &DUMMY_PARAMS,
             ),
             _ => Err(anyhow::anyhow!("Invalid proposal content")),
+        }
+    }
+
+    fn check(proposal: &Proposal) -> bool {
+        match proposal.content.type_url.as_str() {
+            ParameterChangeProposal::<GaiaParamsStoreKey>::TYPE_URL => {
+                let msg: Result<ParameterChangeProposal<_>, gears::core::errors::CoreError> =
+                    ParameterChangeProposal::try_from(proposal.content.clone());
+
+                match msg {
+                    Ok(msg) => {
+                        for change in msg.changes {
+                            if !match change.subspace {
+                                GaiaParamsStoreKey::Bank => {
+                                    ParamChangeSubmissionHandler::<
+                                        BankParamsKeeper<GaiaParamsStoreKey>,
+                                    >::submission_check::<BankParamsKeeper<GaiaParamsStoreKey>>(
+                                        &change,
+                                    )
+                                }
+                                GaiaParamsStoreKey::Auth => {
+                                    ParamChangeSubmissionHandler::<
+                                        AuthParamsKeeper<GaiaParamsStoreKey>,
+                                    >::submission_check::<AuthParamsKeeper<GaiaParamsStoreKey>>(
+                                        &change,
+                                    )
+                                }
+                                GaiaParamsStoreKey::BaseApp => {
+                                    ParamChangeSubmissionHandler::<
+                                        BaseAppParamsKeeper<GaiaParamsStoreKey>,
+                                    >::submission_check::<BaseAppParamsKeeper<GaiaParamsStoreKey>>(
+                                        &change,
+                                    )
+                                }
+                                GaiaParamsStoreKey::Staking => {
+                                    ParamChangeSubmissionHandler::<
+                                        StakingParamsKeeper<GaiaParamsStoreKey>,
+                                    >::submission_check::<StakingParamsKeeper<GaiaParamsStoreKey>>(
+                                        &change,
+                                    )
+                                }
+                                GaiaParamsStoreKey::IBC => false,
+                                GaiaParamsStoreKey::Capability => false,
+                            } {
+                                return false;
+                            }
+                        }
+
+                        true
+                    }
+                    Err(_) => false,
+                }
+            }
+            TextProposal::TYPE_URL => true,
+            _ => false,
         }
     }
 }
