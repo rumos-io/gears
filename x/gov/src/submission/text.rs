@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 
-use crate::{
+use bytes::Bytes;
+use gears::{
     application::keepers::params::ParamsKeeper, context::InfallibleContextMut,
     core::errors::CoreError, error::IBC_ENCODE_UNWRAP, params::ParamsSubspaceKey,
     tendermint::types::proto::Protobuf,
 };
-use bytes::Bytes;
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -77,7 +77,11 @@ pub struct TextSubmissionHandler<PK>(PhantomData<PK>);
 impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PSK, TextProposal>
     for TextSubmissionHandler<PK>
 {
-    fn handle<CTX: InfallibleContextMut<DB, SK>, DB: database::Database, SK: kv_store::StoreKey>(
+    fn handle<
+        CTX: InfallibleContextMut<DB, SK>,
+        DB: gears::store::database::Database,
+        SK: gears::store::StoreKey,
+    >(
         _proposal: TextProposal,
         _ctx: &mut CTX,
         _keeper: &PSK,

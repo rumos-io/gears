@@ -1,10 +1,11 @@
 use std::collections::HashSet;
 
-use crate::{
+use gears::{
     application::keepers::params::ParamsKeeper,
     params::{ParamsSerialize, ParamsSubspaceKey},
-    x::submission::{param::ParamChange, text::TextProposal},
 };
+
+use crate::submission::{param::ParamChange, text::TextProposal};
 
 use super::{SubmissionCheckHandler, SubmissionHandler};
 

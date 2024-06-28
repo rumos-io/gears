@@ -1,7 +1,7 @@
-use database::Database;
-use kv_store::StoreKey;
+use gears::store::database::Database;
+use gears::store::StoreKey;
 
-use crate::{
+use gears::{
     application::keepers::params::ParamsKeeper, context::InfallibleContextMut,
     params::ParamsSubspaceKey,
 };

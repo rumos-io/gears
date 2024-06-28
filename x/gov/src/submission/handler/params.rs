@@ -1,14 +1,15 @@
 use std::marker::PhantomData;
 
-use database::Database;
-use kv_store::StoreKey;
+use gears::store::database::Database;
+use gears::store::StoreKey;
 
-use crate::{
+use gears::{
     application::keepers::params::ParamsKeeper,
     context::TransactionalContext,
     params::{gas::subspace_mut, ParamsSubspaceKey},
-    x::submission::param::ParamChange,
 };
+
+use crate::submission::param::ParamChange;
 
 use super::{SubmissionCheckHandler, SubmissionHandler};
 

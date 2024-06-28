@@ -6,15 +6,18 @@ use gears::{
     context::InfallibleContextMut,
     params::{ParamsDeserialize, ParamsSerialize},
     store::{database::Database, StoreKey},
-    x::submission::{
+};
+use gov::{
+    submission::{
         handler::{
             params::ParamChangeSubmissionHandler, SubmissionCheckHandler, SubmissionHandler,
         },
         param::ParameterChangeProposal,
         text::{TextProposal, TextSubmissionHandler},
     },
+    types::proposal::Proposal,
+    ProposalHandler,
 };
-use gov::{types::proposal::Proposal, ProposalHandler};
 use staking::StakingParamsKeeper;
 
 use crate::store_keys::GaiaParamsStoreKey;
