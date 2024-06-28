@@ -5,6 +5,7 @@ use crate::types::query::{
 };
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
+use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};

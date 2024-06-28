@@ -28,8 +28,7 @@ use tendermint::types::{
 };
 
 use self::{
-    errors::RunTxError, mode::ExecutionMode, options::NodeOptions, params::BaseAppParamsKeeper,
-    state::ApplicationState,
+    errors::RunTxError, mode::ExecutionMode, options::NodeOptions, state::ApplicationState,
 };
 
 mod abci;
@@ -39,7 +38,9 @@ pub mod mode;
 mod params;
 mod query;
 pub mod state;
-pub use params::{BlockParams, ConsensusParams, EvidenceParams, ValidatorParams};
+pub use params::{
+    BaseAppParamsKeeper, BlockParams, ConsensusParams, EvidenceParams, ValidatorParams,
+};
 
 pub use query::*;
 

@@ -15,7 +15,7 @@ impl<DB: Database> GasParamsSpace<'_, DB> {
         let keys = T::keys();
         let mut params_fields = Vec::with_capacity(keys.len());
 
-        for (key, _) in keys {
+        for key in keys {
             if let Some(value) = self.inner.get(key)? {
                 params_fields.push((key, value));
             } else {

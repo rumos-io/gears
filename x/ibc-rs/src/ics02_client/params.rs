@@ -34,10 +34,8 @@ pub struct ClientParams {
 }
 
 impl ParamsSerialize for ClientParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
-        [(KEY_ALLOWED_CLIENTS, ParamKind::Bytes)]
-            .into_iter()
-            .collect()
+    fn keys() -> HashSet<&'static str> {
+        [KEY_ALLOWED_CLIENTS].into_iter().collect()
     }
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {

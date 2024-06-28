@@ -59,7 +59,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         );
 
         self.baseapp_params_keeper
-            .set_consensus_params(&mut ctx, request.consensus_params.clone());
+            .set_consensus_params(&mut ctx, request.consensus_params.clone().into());
 
         self.abci_handler
             .init_genesis(&mut ctx, request.app_genesis.clone());

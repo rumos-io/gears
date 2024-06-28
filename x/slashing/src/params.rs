@@ -10,7 +10,10 @@ use gears::{
 };
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+};
 
 const KEY_SIGNED_BLOCKS_WINDOW: &str = "SignedBlocksWindow";
 const KEY_MIN_SIGNED_PER_WINDOW: &str = "MinSignedPerWindow";
@@ -46,13 +49,13 @@ impl SlashingParams {
 }
 
 impl ParamsSerialize for SlashingParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
+    fn keys() -> HashSet<&'static str> {
         [
-            (KEY_SIGNED_BLOCKS_WINDOW, ParamKind::I64),
-            (KEY_MIN_SIGNED_PER_WINDOW, ParamKind::Bytes),
-            (KEY_DOWNTIME_JAIL_DURATION, ParamKind::I64),
-            (KEY_SLASH_FRACTION_DOUBLE_SIGN, ParamKind::Bytes),
-            (KEY_SLASH_FRACTION_DOWNTIME, ParamKind::Bytes),
+            KEY_SIGNED_BLOCKS_WINDOW,
+            KEY_MIN_SIGNED_PER_WINDOW,
+            KEY_DOWNTIME_JAIL_DURATION,
+            KEY_SLASH_FRACTION_DOUBLE_SIGN,
+            KEY_SLASH_FRACTION_DOWNTIME,
         ]
         .into_iter()
         .collect()
