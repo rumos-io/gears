@@ -9,9 +9,7 @@ use gears::{
 };
 use gov::{
     submission::{
-        handler::{
-            params::ParamChangeSubmissionHandler, SubmissionCheckHandler, SubmissionHandler,
-        },
+        handler::{ParamChangeSubmissionHandler, SubmissionHandler},
         param::ParameterChangeProposal,
         text::{TextProposal, TextSubmissionHandler},
     },
@@ -87,31 +85,33 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
                         for change in msg.changes {
                             if !match change.subspace {
                                 GaiaParamsStoreKey::Bank => {
-                                    ParamChangeSubmissionHandler::<
-                                        BankParamsKeeper<GaiaParamsStoreKey>,
-                                    >::submission_check::<BankParamsKeeper<GaiaParamsStoreKey>>(
-                                        &change,
-                                    )
+                                    BankParamsKeeper::<GaiaParamsStoreKey>::check_key(&change.key)
+                                        && BankParamsKeeper::<GaiaParamsStoreKey>::validate(
+                                            &change.key,
+                                            &change.value,
+                                        )
                                 }
                                 GaiaParamsStoreKey::Auth => {
-                                    ParamChangeSubmissionHandler::<
-                                        AuthParamsKeeper<GaiaParamsStoreKey>,
-                                    >::submission_check::<AuthParamsKeeper<GaiaParamsStoreKey>>(
-                                        &change,
-                                    )
+                                    AuthParamsKeeper::<GaiaParamsStoreKey>::check_key(&change.key)
+                                        && AuthParamsKeeper::<GaiaParamsStoreKey>::validate(
+                                            &change.key,
+                                            &change.value,
+                                        )
                                 }
                                 GaiaParamsStoreKey::BaseApp => {
-                                    ParamChangeSubmissionHandler::<
-                                        BaseAppParamsKeeper<GaiaParamsStoreKey>,
-                                    >::submission_check::<BaseAppParamsKeeper<GaiaParamsStoreKey>>(
-                                        &change,
+                                    BaseAppParamsKeeper::<GaiaParamsStoreKey>::check_key(
+                                        &change.key,
+                                    ) && BaseAppParamsKeeper::<GaiaParamsStoreKey>::validate(
+                                        &change.key,
+                                        &change.value,
                                     )
                                 }
                                 GaiaParamsStoreKey::Staking => {
-                                    ParamChangeSubmissionHandler::<
-                                        StakingParamsKeeper<GaiaParamsStoreKey>,
-                                    >::submission_check::<StakingParamsKeeper<GaiaParamsStoreKey>>(
-                                        &change,
+                                    StakingParamsKeeper::<GaiaParamsStoreKey>::check_key(
+                                        &change.key,
+                                    ) && StakingParamsKeeper::<GaiaParamsStoreKey>::validate(
+                                        &change.key,
+                                        &change.value,
                                     )
                                 }
                                 GaiaParamsStoreKey::IBC => false,
