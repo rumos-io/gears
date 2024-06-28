@@ -1,4 +1,3 @@
-pub mod params;
 use crate::abci_handler::GaiaABCIHandler;
 use crate::query::GaiaQuery;
 use crate::query::GaiaQueryResponse;
@@ -44,6 +43,7 @@ pub mod config;
 pub mod genesis;
 pub mod message;
 pub mod modules;
+pub mod params;
 pub mod query;
 pub mod rest;
 mod staking_grpc;
