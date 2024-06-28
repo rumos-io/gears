@@ -21,6 +21,12 @@ pub(crate) fn validator_missed_block_bit_array_key(addr: ConsAddress, index: u32
     [key, postfix, index_bytes].concat()
 }
 
+pub(crate) fn validator_missed_block_bit_array_prefix_key(addr: ConsAddress) -> Vec<u8> {
+    let key = VALIDATOR_MISSED_BLOCK_BIT_ARRAY_KEY_PREFIX.to_vec();
+    let postfix = must_length_prefixed(addr);
+    [key, postfix].concat()
+}
+
 fn must_length_prefixed(addr: ConsAddress) -> Vec<u8> {
     [vec![addr.len()], addr.as_ref().to_vec()].concat()
 }
