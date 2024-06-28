@@ -237,6 +237,10 @@ impl StakingValidator for Validator {
     fn cons_pub_key(&self) -> &PublicKey {
         &self.consensus_pubkey
     }
+
+    fn is_jailed(&self) -> bool {
+        self.jailed
+    }
 }
 
 impl Validator {

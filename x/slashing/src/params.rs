@@ -32,6 +32,19 @@ pub struct SlashingParams {
     pub slash_fraction_downtime: Decimal256,
 }
 
+impl SlashingParams {
+    pub fn min_signed_per_window_u32(&self) -> u32 {
+        // NOTE: RoundInt64 will never panic as minSignedPerWindow is less than 1.
+        self.min_signed_per_window
+            .checked_mul(Decimal256::from_atomics(self.signed_blocks_window as u64, 0).unwrap())
+            .unwrap()
+            .to_string()
+            .parse::<f64>()
+            .unwrap()
+            .round() as u32
+    }
+}
+
 impl ParamsSerialize for SlashingParams {
     fn keys() -> HashMap<&'static str, ParamKind> {
         [
