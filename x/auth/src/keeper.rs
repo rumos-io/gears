@@ -1,5 +1,6 @@
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
+use gears::application::keepers::params::ParamsKeeper;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
 use gears::context::{QueryableContext, TransactionalContext};

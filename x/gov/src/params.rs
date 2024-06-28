@@ -1,15 +1,13 @@
-use std::{collections::HashMap, str::FromStr, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+    time::Duration,
+};
 
 use gears::{
     application::keepers::params::ParamsKeeper,
-    context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
-    params::{
-        gas::{subspace, subspace_mut},
-        infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
-        ParamsSerialize, ParamsSubspaceKey,
-    },
-    store::{database::Database, StoreKey},
-    types::{base::coin::Coin, decimal256::Decimal256, store::gas::errors::GasStoreErrors},
+    params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
+    types::{base::coin::Coin, decimal256::Decimal256},
 };
 use serde::{Deserialize, Serialize};
 
@@ -74,14 +72,10 @@ pub struct GovParams {
 }
 
 impl ParamsSerialize for GovParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
-        [
-            (KEY_DEPOSIT_PARAMS, ParamKind::Bytes),
-            (KEY_VOTING_PARAMS, ParamKind::Bytes),
-            (KEY_TALLY_PARAMS, ParamKind::Bytes),
-        ]
-        .into_iter()
-        .collect()
+    fn keys() -> HashSet<&'static str> {
+        [KEY_DEPOSIT_PARAMS, KEY_VOTING_PARAMS, KEY_TALLY_PARAMS]
+            .into_iter()
+            .collect()
     }
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
@@ -127,41 +121,7 @@ pub struct GovParamsKeeper<PSK: ParamsSubspaceKey> {
 impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for GovParamsKeeper<PSK> {
     type Param = GovParams;
 
-    fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Self::Param {
-        let store = infallible_subspace(ctx, &self.params_subspace_key);
-
-        store.params().unwrap_or_default()
-    }
-
-    fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Result<Self::Param, GasStoreErrors> {
-        let store = subspace(ctx, &self.params_subspace_key);
-
-        Ok(store.params()?.unwrap_or_default())
-    }
-
-    fn set<DB: Database, SK: StoreKey, KV: InfallibleContextMut<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: Self::Param,
-    ) {
-        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
-    }
-
-    fn try_set<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: Self::Param,
-    ) -> Result<(), GasStoreErrors> {
-        let mut store = subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
+    fn psk(&self) -> &PSK {
+        &self.params_subspace_key
     }
 }

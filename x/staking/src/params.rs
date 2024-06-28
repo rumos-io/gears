@@ -1,12 +1,11 @@
 use gears::{
-    context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
+    application::keepers::params::ParamsKeeper,
     error::AppError,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
-    store::{database::Database, StoreKey},
-    types::{denom::Denom, store::gas::errors::GasStoreErrors},
+    types::denom::Denom,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 const KEY_UNBONDING_TIME: &str = "UnbondingTime";
 const KEY_MAX_VALIDATORS: &str = "MaxValidators";
@@ -70,13 +69,13 @@ impl Default for Params {
 }
 
 impl ParamsSerialize for Params {
-    fn keys() -> HashMap<&'static str, ParamKind> {
+    fn keys() -> HashSet<&'static str> {
         [
-            (KEY_UNBONDING_TIME, ParamKind::I64),
-            (KEY_MAX_VALIDATORS, ParamKind::U32),
-            (KEY_MAX_ENTRIES, ParamKind::U32),
-            (KEY_HISTORICAL_ENTRIES, ParamKind::U32),
-            (KEY_BOND_DENOM, ParamKind::String),
+            KEY_UNBONDING_TIME,
+            KEY_MAX_VALIDATORS,
+            KEY_MAX_ENTRIES,
+            KEY_HISTORICAL_ENTRIES,
+            KEY_BOND_DENOM,
         ]
         .into_iter()
         .collect()
@@ -209,41 +208,10 @@ impl Params {
 pub struct StakingParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
+impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for StakingParamsKeeper<PSK> {
+    type Param = Params;
 
-impl<PSK: ParamsSubspaceKey> StakingParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Params {
-        let store = gears::params::infallible_subspace(ctx, &self.params_subspace_key);
-        store.params().expect("params should be stored in database")
-    }
-
-    pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        params: Params,
-    ) {
-        let mut store = gears::params::infallible_subspace_mut(ctx, &self.params_subspace_key);
-        store.params_set(&params);
-    }
-
-    pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Result<Params, GasStoreErrors> {
-        let store = gears::params::gas::subspace(ctx, &self.params_subspace_key);
-        Ok(store
-            .params()?
-            .expect("params should be stored in database"))
-    }
-
-    pub fn try_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut CTX,
-        params: Params,
-    ) -> Result<(), GasStoreErrors> {
-        let mut store = gears::params::gas::subspace_mut(ctx, &self.params_subspace_key);
-        store.params_set(&params)
+    fn psk(&self) -> &PSK {
+        &self.params_subspace_key
     }
 }

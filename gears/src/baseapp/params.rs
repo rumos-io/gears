@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use database::Database;
 use kv_store::StoreKey;
@@ -6,9 +6,11 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 
 use crate::{
+    application::keepers::params::ParamsKeeper,
     context::{InfallibleContext, InfallibleContextMut},
     params::{
-        infallible_subspace, infallible_subspace_mut, ParamKind, ParamsSerialize, ParamsSubspaceKey,
+        infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
+        ParamsSerialize, ParamsSubspaceKey,
     },
 };
 
@@ -37,13 +39,65 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 //##################################################################################
 
 /// A domain ConsensusParams type that wraps domain consensus params types.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ConsensusParams {
     pub block: BlockParams,
     pub evidence: EvidenceParams,
     pub validator: ValidatorParams,
     // TODO: consider to check the importance and usage
     // pub version: Option<VersionParams>
+}
+
+impl From<inner::ConsensusParams> for ConsensusParams {
+    fn from(
+        inner::ConsensusParams {
+            block,
+            evidence,
+            validator,
+            version: _,
+        }: inner::ConsensusParams,
+    ) -> Self {
+        Self {
+            block: block.into(),
+            evidence: evidence.into(),
+            validator: validator.into(),
+        }
+    }
+}
+
+impl ParamsSerialize for ConsensusParams {
+    fn keys() -> HashSet<&'static str> {
+        [KEY_BLOCK_PARAMS, KEY_EVIDENCE_PARAMS, KEY_VALIDATOR_PARAMS]
+            .into_iter()
+            .collect()
+    }
+
+    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
+        let mut hash_map = Vec::with_capacity(3);
+
+        let block_params =
+            serde_json::to_string(&self.block).expect("conversion to json won't fail");
+        hash_map.push((KEY_BLOCK_PARAMS, block_params.into_bytes()));
+
+        let evidence_params =
+            serde_json::to_string(&self.evidence).expect("conversion to json won't fail");
+        hash_map.push((KEY_EVIDENCE_PARAMS, evidence_params.into_bytes()));
+
+        let params = serde_json::to_string(&self.validator).expect("conversion to json won't fail");
+        hash_map.push((KEY_VALIDATOR_PARAMS, params.into_bytes()));
+
+        hash_map
+    }
+}
+
+impl ParamsDeserialize for ConsensusParams {
+    fn from_raw(fields: HashMap<&'static str, Vec<u8>>) -> Self {
+        Self {
+            block: serde_json::from_slice(fields.get(KEY_BLOCK_PARAMS).unwrap()).unwrap(),
+            evidence: serde_json::from_slice(fields.get(KEY_EVIDENCE_PARAMS).unwrap()).unwrap(),
+            validator: serde_json::from_slice(fields.get(KEY_VALIDATOR_PARAMS).unwrap()).unwrap(),
+        }
+    }
 }
 
 #[serde_as]
@@ -134,12 +188,20 @@ pub struct BaseAppParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
 
+impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for BaseAppParamsKeeper<PSK> {
+    type Param = ConsensusParams;
+
+    fn psk(&self) -> &PSK {
+        &self.params_subspace_key
+    }
+}
+
 // TODO: add a macro to create this?
 impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
     pub fn set_consensus_params<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        params: inner::ConsensusParams,
+        params: ConsensusParams,
     ) {
         let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
 
@@ -189,36 +251,6 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
                 .expect("We sure that this is bytes"),
         )
         .ok()
-    }
-}
-
-impl ParamsSerialize for inner::ConsensusParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
-        [
-            (KEY_BLOCK_PARAMS, ParamKind::Bytes),
-            (KEY_EVIDENCE_PARAMS, ParamKind::Bytes),
-            (KEY_VALIDATOR_PARAMS, ParamKind::Bytes),
-        ]
-        .into_iter()
-        .collect()
-    }
-
-    fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
-        let mut hash_map = Vec::with_capacity(3);
-
-        let block_params = serde_json::to_string(&BlockParams::from(self.block.clone()))
-            .expect("conversion to json won't fail");
-        hash_map.push((KEY_BLOCK_PARAMS, block_params.into_bytes()));
-
-        let evidence_params = serde_json::to_string(&EvidenceParams::from(self.evidence.clone()))
-            .expect("conversion to json won't fail");
-        hash_map.push((KEY_EVIDENCE_PARAMS, evidence_params.into_bytes()));
-
-        let params = serde_json::to_string(&ValidatorParams::from(self.validator.clone()))
-            .expect("conversion to json won't fail");
-        hash_map.push((KEY_VALIDATOR_PARAMS, params.into_bytes()));
-
-        hash_map
     }
 }
 

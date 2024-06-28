@@ -6,6 +6,7 @@ use crate::{
 };
 use chrono::Utc;
 use gears::{
+    application::keepers::params::ParamsKeeper,
     context::{
         block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
         TransactionalContext,

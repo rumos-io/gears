@@ -37,10 +37,8 @@ pub struct ConnectionParams {
 }
 
 impl ParamsSerialize for ConnectionParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
-        [(KEY_MAX_EXPECTED_TIME_PER_BLOCK, ParamKind::U64)]
-            .into_iter()
-            .collect()
+    fn keys() -> HashSet<&'static str> {
+        [KEY_MAX_EXPECTED_TIME_PER_BLOCK].into_iter().collect()
     }
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {

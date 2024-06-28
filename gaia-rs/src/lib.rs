@@ -43,6 +43,7 @@ pub mod config;
 pub mod genesis;
 pub mod message;
 pub mod modules;
+pub mod params;
 pub mod query;
 pub mod rest;
 mod staking_grpc;
