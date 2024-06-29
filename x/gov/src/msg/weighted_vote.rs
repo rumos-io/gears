@@ -72,6 +72,26 @@ pub struct VoteOptionWeighted {
     pub weight: VoteWeight,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, thiserror::Error)]
+#[error("Failed to parse from string: format [vote]_[weight:decimal]")]
+pub struct VoteOptionWeightedError;
+
+impl FromStr for VoteOptionWeighted {
+    type Err = VoteOptionWeightedError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts = s.split('_').collect::<Vec<_>>();
+        if parts.len() == 2 {
+            Ok(Self {
+                option: parts[0].parse().map_err(|_| VoteOptionWeightedError)?,
+                weight: parts[1].parse().map_err(|_| VoteOptionWeightedError)?,
+            })
+        } else {
+            Err(VoteOptionWeightedError)
+        }
+    }
+}
+
 impl TryFrom<inner::WeightedVoteOption> for VoteOptionWeighted {
     type Error = CoreError;
 
@@ -98,11 +118,20 @@ impl From<VoteOptionWeighted> for inner::WeightedVoteOption {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(try_from = "Decimal256")]
 pub struct VoteWeight(Decimal256);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, thiserror::Error)]
 #[error("parse error: Invalid weight for vote. Required to be positive and not greater than 1")]
 pub struct VoteWeightError;
+
+impl FromStr for VoteWeight {
+    type Err = VoteWeightError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::try_from(Decimal256::from_str(s).map_err(|_| VoteWeightError)?)
+    }
+}
 
 impl TryFrom<Decimal256> for VoteWeight {
     type Error = VoteWeightError;

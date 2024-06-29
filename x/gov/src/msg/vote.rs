@@ -21,12 +21,19 @@ pub struct MsgVote {
     pub option: VoteOption,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, strum::EnumIter)]
+#[derive(
+    Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, strum::EnumIter, strum::EnumString,
+)]
 pub enum VoteOption {
+    #[strum(serialize = "empty", serialize = "e")]
     Empty = 0,
+    #[strum(serialize = "yes", serialize = "y")]
     Yes = 1,
+    #[strum(serialize = "abstain", serialize = "a")]
     Abstain = 2,
+    #[strum(serialize = "no", serialize = "n")]
     No = 3,
+    #[strum(serialize = "veto")]
     NoWithVeto = 4,
 }
 
