@@ -1,5 +1,12 @@
 use deposit::MsgDeposit;
-use gears::derive::RoutingMessage;
+use gears::{
+    derive::RoutingMessage,
+    signing::{
+        handler::MetadataGetter,
+        renderer::value_renderer::{RenderError, ValueRenderer},
+    },
+    types::rendering::screen::Screen,
+};
 use proposal::MsgSubmitProposal;
 use serde::Serialize;
 use vote::MsgVote;
@@ -20,4 +27,10 @@ pub enum GovMsg {
     Weighted(MsgVoteWeighted),
     #[gears(url = "/cosmos.gov.v1beta1/MsgSubmitProposal")]
     Proposal(MsgSubmitProposal),
+}
+
+impl ValueRenderer for GovMsg {
+    fn format<MG: MetadataGetter>(&self, _: &MG) -> Result<Vec<Screen>, RenderError> {
+        Err(RenderError::NotImplemented)
+    }
 }

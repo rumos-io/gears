@@ -16,7 +16,7 @@ pub enum GovTxCommands {
     Deposit(DepositCliCommand),
     Vote(VoteCliCommand),
     WeightedVote(WeightedVoteCliCommand),
-    SubmitProposal,
+    SubmitProposal(ProposalCliCommand<ProposalCliSubcommand>),
 }
 
 /// Deposit tokens for an active proposal
@@ -41,7 +41,7 @@ pub struct VoteCliCommand {
 #[derive(Args, Debug, Clone)]
 pub struct WeightedVoteCliCommand {
     pub proposal_id: u64,
-    pub option: Vec<VoteOptionWeighted>,
+    pub options: Vec<VoteOptionWeighted>,
 }
 
 /// Submit a proposal along with an initial deposit
