@@ -2,11 +2,9 @@ use crate::types::time::Timestamp;
 
 use super::validator::Validator;
 
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct LastCommitInfo {
-    #[prost(int32, tag = "1")]
     pub round: i32,
-    #[prost(message, repeated, tag = "2")]
     pub votes: Vec<VoteInfo>,
 }
 
@@ -19,35 +17,45 @@ impl From<LastCommitInfo> for inner::LastCommitInfo {
     }
 }
 
-impl From<inner::LastCommitInfo> for LastCommitInfo {
-    fn from(inner::LastCommitInfo { round, votes }: inner::LastCommitInfo) -> Self {
-        Self {
-            round,
-            votes: votes.into_iter().map(Into::into).collect(),
+impl TryFrom<inner::LastCommitInfo> for LastCommitInfo {
+    type Error = crate::error::Error;
+
+    fn try_from(
+        inner::LastCommitInfo { round, votes }: inner::LastCommitInfo,
+    ) -> Result<Self, Self::Error> {
+        let mut votes_res = vec![];
+        for v in votes {
+            votes_res.push(v.try_into()?);
         }
+        Ok(Self {
+            round,
+            votes: votes_res,
+        })
     }
 }
 
 /// VoteInfo
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct VoteInfo {
-    #[prost(message, optional, tag = "1")]
-    pub validator: Option<Validator>,
-    #[prost(bool, tag = "2")]
+    pub validator: Validator,
     pub signed_last_block: bool,
 }
 
-impl From<inner::VoteInfo> for VoteInfo {
-    fn from(
+impl TryFrom<inner::VoteInfo> for VoteInfo {
+    type Error = crate::error::Error;
+
+    fn try_from(
         inner::VoteInfo {
             validator,
             signed_last_block,
         }: inner::VoteInfo,
-    ) -> Self {
-        Self {
-            validator: validator.map(Into::into),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            validator: validator
+                .ok_or(Self::Error::InvalidData("validator is missing".into()))?
+                .into(),
             signed_last_block,
-        }
+        })
     }
 }
 
@@ -59,7 +67,7 @@ impl From<VoteInfo> for inner::VoteInfo {
         }: VoteInfo,
     ) -> Self {
         Self {
-            validator: validator.map(Into::into),
+            validator: Some(validator.into()),
             signed_last_block,
         }
     }

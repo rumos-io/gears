@@ -40,13 +40,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         // which have missed too many blocks in a row (downtime slashing)
         if let Some(vote_info) = request.last_commit_info {
             for vote in vote_info.votes {
-                // TODO: seems like tendermint type has optional value in order of using prost
-                let validator = vote.validator.unwrap();
                 self.keeper
                     .handle_validator_signature(
                         ctx,
-                        validator.address,
-                        validator.power as u32,
+                        vote.validator.address,
+                        vote.validator.power as u32,
                         vote.signed_last_block,
                     )
                     .expect(
