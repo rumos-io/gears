@@ -26,7 +26,7 @@ pub struct InitState<G> {
     pub consensus_params: ConsensusParams,
     pub validators: Vec<ValidatorUpdate>,
     pub app_genesis: G,
-    pub initial_height: i64,
+    pub initial_height: u32,
 }
 
 impl<G> From<InitState<G>> for RequestInitChain<G> {
@@ -37,12 +37,12 @@ impl<G> From<InitState<G>> for RequestInitChain<G> {
             consensus_params: init_state.consensus_params,
             validators: init_state.validators,
             app_genesis: init_state.app_genesis,
-            initial_height: init_state.initial_height,
+            initial_height: init_state.initial_height as i64,
         }
     }
 }
 
-pub struct MockTendermint<App, G> {
+pub struct MockNode<App, G> {
     app: App,
     app_hash: Bytes,
     height: u32,
@@ -53,7 +53,7 @@ pub struct MockTendermint<App, G> {
     _phantom: std::marker::PhantomData<G>,
 }
 
-impl<G: Clone, App: ABCIApplication<G>> MockTendermint<App, G> {
+impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
     pub fn new(app: App, init_state: InitState<G>) -> Self {
         let res = app.init_chain(init_state.clone().into());
 
@@ -166,5 +166,9 @@ impl<G: Clone, App: ABCIApplication<G>> MockTendermint<App, G> {
             ]
             .into(),
         }
+    }
+
+    pub fn chain_id(&self) -> &ChainId {
+        &self.chain_id
     }
 }
