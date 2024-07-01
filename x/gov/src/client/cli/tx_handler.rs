@@ -9,7 +9,7 @@ use crate::{
         WeightedVoteCliCommand,
     },
     msg::{
-        deposit::MsgDeposit, proposal::MsgSubmitProposal, vote::MsgVote,
+        deposit::Deposit, proposal::MsgSubmitProposal, vote::Vote,
         weighted_vote::MsgVoteWeighted, GovMsg,
     },
     submission::{param::RawParameterChangeProposal, text::TextProposal},
@@ -31,7 +31,7 @@ impl TxHandler for GovClientHandler {
             GovTxCommands::Deposit(DepositCliCommand {
                 proposal_id,
                 amount,
-            }) => Ok(GovMsg::Deposit(MsgDeposit {
+            }) => Ok(GovMsg::Deposit(Deposit {
                 proposal_id,
                 depositor: from_address,
                 amount,
@@ -39,7 +39,7 @@ impl TxHandler for GovClientHandler {
             GovTxCommands::Vote(VoteCliCommand {
                 proposal_id,
                 option,
-            }) => Ok(GovMsg::Vote(MsgVote {
+            }) => Ok(GovMsg::Vote(Vote {
                 proposal_id,
                 voter: from_address,
                 option,

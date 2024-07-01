@@ -15,7 +15,7 @@ use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    vote::{MsgVote, VoteOption},
+    vote::{Vote, VoteOption},
     GovMsg,
 };
 
@@ -47,13 +47,13 @@ impl MsgVoteWeighted {
     }
 }
 
-impl From<MsgVote> for MsgVoteWeighted {
+impl From<Vote> for MsgVoteWeighted {
     fn from(
-        MsgVote {
+        Vote {
             proposal_id,
             voter,
             option,
-        }: MsgVote,
+        }: Vote,
     ) -> Self {
         Self {
             proposal_id,

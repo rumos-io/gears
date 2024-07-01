@@ -3,7 +3,7 @@ use serde::Deserialize;
 const QUERY_DEFAULT_LIMIT: u8 = 100;
 
 //#[derive(FromForm, Debug)]
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct Pagination {
     offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.

@@ -15,7 +15,7 @@ mod inner {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MsgVote {
+pub struct Vote {
     pub proposal_id: u64,
     pub voter: AccAddress,
     pub option: VoteOption,
@@ -54,11 +54,11 @@ impl TryFrom<i32> for VoteOption {
     }
 }
 
-impl MsgVote {
+impl Vote {
     pub const TYPE_URL: &'static str = "/cosmos.gov.v1beta1/MsgVote";
 }
 
-impl TxMessage for MsgVote {
+impl TxMessage for Vote {
     fn get_signers(&self) -> Vec<&AccAddress> {
         vec![&self.voter]
     }
@@ -68,13 +68,13 @@ impl TxMessage for MsgVote {
     }
 
     fn type_url(&self) -> &'static str {
-        MsgVote::TYPE_URL
+        Vote::TYPE_URL
     }
 }
 
-impl Protobuf<inner::MsgVote> for MsgVote {}
+impl Protobuf<inner::MsgVote> for Vote {}
 
-impl TryFrom<inner::MsgVote> for MsgVote {
+impl TryFrom<inner::MsgVote> for Vote {
     type Error = CoreError;
 
     fn try_from(
@@ -93,13 +93,13 @@ impl TryFrom<inner::MsgVote> for MsgVote {
     }
 }
 
-impl From<MsgVote> for inner::MsgVote {
+impl From<Vote> for inner::MsgVote {
     fn from(
-        MsgVote {
+        Vote {
             proposal_id,
             voter,
             option,
-        }: MsgVote,
+        }: Vote,
     ) -> Self {
         Self {
             proposal_id,
@@ -109,7 +109,7 @@ impl From<MsgVote> for inner::MsgVote {
     }
 }
 
-impl TryFrom<Any> for MsgVote {
+impl TryFrom<Any> for Vote {
     type Error = CoreError;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
@@ -118,22 +118,22 @@ impl TryFrom<Any> for MsgVote {
                 "message type not recognized".into(),
             ))?
         }
-        MsgVote::decode::<Bytes>(value.value.into())
+        Vote::decode::<Bytes>(value.value.into())
             .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 
-impl From<MsgVote> for Any {
-    fn from(msg: MsgVote) -> Self {
+impl From<Vote> for Any {
+    fn from(msg: Vote) -> Self {
         Any {
-            type_url: MsgVote::TYPE_URL.to_string(),
+            type_url: Vote::TYPE_URL.to_string(),
             value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
 
-impl From<MsgVote> for GovMsg {
-    fn from(value: MsgVote) -> Self {
+impl From<Vote> for GovMsg {
+    fn from(value: Vote) -> Self {
         Self::Vote(value)
     }
 }

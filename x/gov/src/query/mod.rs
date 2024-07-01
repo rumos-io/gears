@@ -1,6 +1,9 @@
 use gears::baseapp::{QueryRequest, QueryResponse};
 use serde::Serialize;
 
+pub mod request;
+pub mod response;
+
 #[derive(Debug, Clone)]
 pub enum GovQueryRequest {}
 

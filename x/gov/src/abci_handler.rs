@@ -25,7 +25,7 @@ use gears::{
 use crate::{
     genesis::GovGenesisState,
     keeper::GovKeeper,
-    msg::{deposit::MsgDeposit, GovMsg},
+    msg::{deposit::Deposit, GovMsg},
     query::{GovQueryRequest, GovQueryResponse},
     types::proposal::Proposal,
     ProposalHandler,
@@ -142,7 +142,7 @@ impl<
                     .keeper
                     .deposit_add(
                         ctx,
-                        MsgDeposit {
+                        Deposit {
                             proposal_id,
                             depositor: msg.proposer.clone(),
                             amount: msg.initial_deposit.clone(),
