@@ -24,8 +24,7 @@ use crate::{
 /// This value is constant as this should not change without a hard fork.
 /// For Tendermint this should be set to 1 block, for more details see:
 /// https://tendermint.com/docs/spec/abci/apps.html#endblock
-// TODO: may it be u32?
-pub const VALIDATOR_UPDATE_DELAY: i64 = 1;
+pub const VALIDATOR_UPDATE_DELAY: u32 = 1;
 
 /// Staking keeper which used in gov xmod
 pub trait GovStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {

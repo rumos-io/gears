@@ -42,7 +42,6 @@ fn run_tx_local(
     home: PathBuf,
     command: GaiaTxCommands,
 ) -> anyhow::Result<Response> {
-    // a comment
     run_tx(
         TxCommand {
             keyring: Keyring::Local(LocalInfo {

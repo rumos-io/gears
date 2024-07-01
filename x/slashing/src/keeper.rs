@@ -208,11 +208,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 // Downtime confirmed: slash and jail the validator
                 // We need to retrieve the stake distribution which signed the block, so we subtract ValidatorUpdateDelay from the evidence height,
                 // and subtract an additional 1 since this is the LastCommit.
-                // Note that this *can* result in a negative "distributionHeight" up to -ValidatorUpdateDelay-1,
-                // i.e. at the end of the pre-genesis block (none) = at the beginning of the genesis block.
-                // That's fine since this is just used to filter unbonding delegations & redelegations.
-
-                let distribution_height = height - VALIDATOR_UPDATE_DELAY as u32 - 1;
+                let distribution_height = height
+                    .saturating_sub(VALIDATOR_UPDATE_DELAY)
+                    .saturating_sub(1);
 
                 ctx.append_events(vec![Event {
                     r#type: "slash".to_string(),
