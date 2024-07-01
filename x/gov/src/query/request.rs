@@ -162,7 +162,9 @@ impl From<QueryVotesRequest> for inner::QueryVotesRequest {
 impl Protobuf<inner::QueryVotesRequest> for QueryVotesRequest {}
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct QueryParamsRequest(pub ParamsQuery);
+pub struct QueryParamsRequest {
+    pub kind: ParamsQuery,
+}
 
 #[derive(Clone, PartialEq, Debug, strum::EnumString, strum::Display)]
 pub enum ParamsQuery {
@@ -180,16 +182,18 @@ impl TryFrom<inner::QueryParamsRequest> for QueryParamsRequest {
     fn try_from(
         inner::QueryParamsRequest { params_type }: inner::QueryParamsRequest,
     ) -> Result<Self, Self::Error> {
-        Ok(Self(params_type.parse().map_err(|_| {
-            CoreError::DecodeGeneral("failed to parse `params_type`".to_owned())
-        })?))
+        Ok(Self {
+            kind: params_type.parse().map_err(|_| {
+                CoreError::DecodeGeneral("failed to parse `params_type`".to_owned())
+            })?,
+        })
     }
 }
 
 impl From<QueryParamsRequest> for inner::QueryParamsRequest {
     fn from(value: QueryParamsRequest) -> Self {
         Self {
-            params_type: value.0.to_string(),
+            params_type: value.kind.to_string(),
         }
     }
 }

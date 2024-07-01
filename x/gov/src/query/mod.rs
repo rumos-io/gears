@@ -66,6 +66,7 @@ impl QueryRequest for GovQuery {
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum GovQueryResponse {
     Deposit(QueryDepositResponse),
     Deposits(QueryDepositsResponse),

@@ -75,13 +75,19 @@ impl Proposal {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize, strum::EnumString)]
 pub enum ProposalStatus {
+    #[strum(serialize = "nil")]
     Nil,
+    #[strum(serialize = "deposit")]
     DepositPeriod,
+    #[strum(serialize = "voting")]
     VotingPeriod,
+    #[strum(serialize = "passed")]
     Passed,
+    #[strum(serialize = "rejected")]
     Rejected,
+    #[strum(serialize = "failed")]
     Failed,
 }
 
