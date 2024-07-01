@@ -25,6 +25,23 @@ pub fn parse_pagination(pagination: Pagination) -> (u32, u8) {
     (page, limit)
 }
 
+impl From<core_types::query::request::PageRequest> for Pagination {
+    fn from(
+        core_types::query::request::PageRequest {
+            key: _,
+            offset,
+            limit,
+            count_total: _,
+            reverse: _,
+        }: core_types::query::request::PageRequest,
+    ) -> Self {
+        Self {
+            offset: Some(offset as u32),
+            limit: Some(limit as u8),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

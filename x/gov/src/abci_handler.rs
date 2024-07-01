@@ -26,7 +26,7 @@ use crate::{
     genesis::GovGenesisState,
     keeper::GovKeeper,
     msg::{deposit::Deposit, GovMsg},
-    query::{GovQueryRequest, GovQueryResponse},
+    query::{GovQuery, GovQueryResponse},
     types::proposal::Proposal,
     ProposalHandler,
 };
@@ -72,7 +72,7 @@ impl<
 
     type StoreKey = SK;
 
-    type QReq = GovQueryRequest;
+    type QReq = GovQuery;
 
     type QRes = GovQueryResponse;
 

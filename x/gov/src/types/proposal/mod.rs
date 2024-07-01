@@ -1,7 +1,10 @@
 use std::sync::OnceLock;
 
 use chrono::{DateTime, SubsecRound, Utc};
-use gears::types::{base::send::SendCoins, uint::Uint256};
+use gears::{
+    core::errors::CoreError,
+    types::{base::send::SendCoins, uint::Uint256},
+};
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
 
@@ -80,6 +83,24 @@ pub enum ProposalStatus {
     Passed,
     Rejected,
     Failed,
+}
+
+impl TryFrom<i32> for ProposalStatus {
+    type Error = CoreError;
+
+    fn try_from(value: i32) -> Result<Self, Self::Error> {
+        Ok(match value {
+            0 => ProposalStatus::Nil,
+            1 => ProposalStatus::DepositPeriod,
+            2 => ProposalStatus::VotingPeriod,
+            3 => ProposalStatus::Passed,
+            4 => ProposalStatus::Rejected,
+            5 => ProposalStatus::Failed,
+            _ => Err(CoreError::DecodeGeneral(
+                "Proposal status option bigger than possible value".to_owned(),
+            ))?,
+        })
+    }
 }
 
 fn parse_proposal_key_bytes(bytes: impl AsRef<[u8]>) -> (u64, DateTime<Utc>) {
