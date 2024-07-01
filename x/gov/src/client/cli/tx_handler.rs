@@ -3,6 +3,11 @@ use std::{fs::File, io::Read};
 use gears::{application::handlers::client::TxHandler, types::address::AccAddress};
 
 use crate::{
+    client::cli::tx::{
+        DepositCliCommand, GovTxCli, GovTxCommands, ParamChangeProposalCliCommand,
+        ProposalCliCommand, ProposalCliSubcommand, TextProposalCliCommand, VoteCliCommand,
+        WeightedVoteCliCommand,
+    },
     msg::{
         deposit::MsgDeposit, proposal::MsgSubmitProposal, vote::MsgVote,
         weighted_vote::MsgVoteWeighted, GovMsg,
@@ -10,15 +15,9 @@ use crate::{
     submission::{param::RawParameterChangeProposal, text::TextProposal},
 };
 
-use super::cli::tx::{
-    DepositCliCommand, GovTxCli, GovTxCommands, ParamChangeProposalCliCommand, ProposalCliCommand,
-    ProposalCliSubcommand, TextProposalCliCommand, VoteCliCommand, WeightedVoteCliCommand,
-};
+use super::GovClientHandler;
 
-#[derive(Debug, Clone)]
-pub struct GovTxHandler;
-
-impl TxHandler for GovTxHandler {
+impl TxHandler for GovClientHandler {
     type Message = GovMsg;
 
     type TxCommands = GovTxCli;
