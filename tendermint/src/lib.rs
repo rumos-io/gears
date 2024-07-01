@@ -1,8 +1,5 @@
-use std::{fs::File, io::Write, path::PathBuf, time::Duration};
-
-use ed25519_consensus::SigningKey;
 use error::Error;
-use rand::rngs::OsRng;
+use std::{fs::File, io::Write, path::PathBuf, time::Duration};
 use tendermint_config::{
     AbciMode, ConsensusConfig, CorsHeader, CorsMethod, DbBackend, FastsyncConfig,
     InstrumentationConfig, LogFormat, MempoolConfig, NodeKey, P2PConfig, PrivValidatorKey,
@@ -13,9 +10,11 @@ use types::chain_id::ChainId;
 
 pub mod abci;
 pub mod application;
+pub mod crypto;
 pub mod error;
 pub(crate) mod ext;
 pub mod informal;
+pub mod mock;
 pub mod rpc;
 pub mod types;
 
@@ -30,10 +29,7 @@ pub fn write_keys_and_genesis(
     chain_id: ChainId,
 ) -> Result<(), Error> {
     // write node key
-    let csprng = OsRng {};
-    let signing_key = SigningKey::new(csprng);
-    let priv_key =
-    tendermint_informal::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
+    let priv_key = crypto::new_private_key();
     let node_key = NodeKey { priv_key };
     node_key_file.write_all(
         serde_json::to_string_pretty(&node_key)
@@ -42,9 +38,7 @@ pub fn write_keys_and_genesis(
     )?;
 
     // write node private validator key
-    let signing_key = SigningKey::new(csprng);
-    let priv_key =
-    tendermint_informal::PrivateKey::Ed25519(signing_key.as_bytes()[..].try_into().expect("cannot fail since as_bytes returns a &[u8; 32] and try_into method only fails if slice.len() != 32"));
+    let priv_key = crypto::new_private_key();
     let public_key = priv_key.public_key();
     let address: tendermint_informal::account::Id = priv_key.public_key().into();
     let priv_validator_key = PrivValidatorKey {
@@ -61,6 +55,7 @@ pub fn write_keys_and_genesis(
     let validator = tendermint_informal::validator::Info::new(public_key, 10u32.into());
 
     // write genesis file
+    // TODO: create a Genesis struct in this crate and define a default
     let genesis = tendermint_informal::Genesis {
         genesis_time: tendermint_informal::Time::now(),
         chain_id: chain_id.into(),
