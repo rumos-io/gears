@@ -42,12 +42,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
             for vote in vote_info.votes {
                 // TODO: seems like tendermint type has optional value in order of using prost
                 let validator = vote.validator.unwrap();
-                self.keeper.handle_validator_signature(
-                    ctx,
-                    validator.address,
-                    validator.power as u32,
-                    vote.signed_last_block,
-                );
+                self.keeper
+                    .handle_validator_signature(
+                        ctx,
+                        validator.address,
+                        validator.power as u32,
+                        vote.signed_last_block,
+                    )
+                    .expect(
+                        "method `handle_validator_signature` is called from infallible method.
+                         Something wrong in the handler.",
+                    );
             }
         }
     }

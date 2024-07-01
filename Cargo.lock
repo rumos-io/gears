@@ -4666,6 +4666,7 @@ dependencies = [
 name = "slashing"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bytes",
  "chrono",
  "gears",

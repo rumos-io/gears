@@ -10,7 +10,7 @@ use gears::{
         block::BlockContext, init::InitContext, InfallibleContextMut, QueryableContext,
         TransactionalContext,
     },
-    error::IBC_ENCODE_UNWRAP,
+    error::{AppError, IBC_ENCODE_UNWRAP},
     params::ParamsSubspaceKey,
     store::{
         database::{ext::UnwrapCorrupt, Database},
@@ -109,18 +109,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         addr_bytes: prost::bytes::Bytes,
         power: u32,
         signed: bool,
-    ) {
+    ) -> anyhow::Result<()> {
         let height = ctx.height();
 
         // fetch the validator public key
-        let cons_addr = ConsAddress::try_from(Vec::from(addr_bytes)).unwrap();
-        self.get_pub_key(ctx, &cons_addr)
-            .expect("validator consensus address not found");
+        let cons_addr = ConsAddress::try_from(Vec::from(addr_bytes))?;
+        self.get_pub_key(ctx, &cons_addr).ok_or(AppError::Custom(
+            "validator consensus address not found".to_string(),
+        ))?;
 
         // fetch signing info
-        let mut sign_info = self
-            .get_validator_signing_info(ctx, &cons_addr)
-            .expect("Expected signing info for validator but it is not found");
+        let mut sign_info =
+            self.get_validator_signing_info(ctx, &cons_addr)
+                .ok_or(AppError::Custom(
+                    "Expected signing info for validator but it is not found".to_string(),
+                ))?;
 
         // this is a relative index, so it counts blocks the validator *should* have signed
         // will use the 0-value default signing info if not present, except for start height
@@ -149,7 +152,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
             }
         }
 
-        let min_signed_per_window = params.min_signed_per_window_u32();
+        let min_signed_per_window = params.min_signed_per_window_u32()?;
 
         if !signed {
             ctx.append_events(vec![Event {
@@ -291,6 +294,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
 
         // Set the updated signing info
         self.set_validator_signing_info(ctx, &cons_addr, &sign_info);
+
+        Ok(())
     }
 
     /// get_pub_key returns the pubkey from the adddress-pubkey relation

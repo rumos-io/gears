@@ -4,6 +4,7 @@ name = "slashing"
 version = "0.1.0"
 
 [dependencies]
+anyhow = { workspace = true }
 bytes = { workspace = true }
 chrono = { version = "0.4.38", features = ["serde"] }
 gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
