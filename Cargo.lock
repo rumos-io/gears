@@ -12,6 +12,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "address"
+version = "0.1.0"
+dependencies = [
+ "bech32",
+ "constcat",
+ "data-encoding",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "adler"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1741,6 +1753,7 @@ dependencies = [
 name = "gears"
 version = "0.1.0"
 dependencies = [
+ "address",
  "anyhow",
  "assert_fs",
  "axum 0.7.5",
@@ -1750,7 +1763,6 @@ dependencies = [
  "ciborium",
  "clap",
  "clap_complete",
- "constcat",
  "core-types",
  "cosmwasm-std",
  "data-encoding",
@@ -4667,12 +4679,15 @@ dependencies = [
 name = "slashing"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bytes",
+ "chrono",
  "gears",
  "prost 0.11.9",
  "serde",
  "serde-aux",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
@@ -4905,14 +4920,17 @@ dependencies = [
 name = "tendermint"
 version = "0.1.0"
 dependencies = [
+ "address",
  "anyhow",
  "bytes",
  "ed25519-consensus",
  "handlebars",
  "prost 0.11.9",
  "rand",
+ "ripemd",
  "serde",
  "serde_json",
+ "sha2 0.10.8",
  "subtle-encoding",
  "tendermint 0.29.1",
  "tendermint-abci",
