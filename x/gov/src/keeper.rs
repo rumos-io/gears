@@ -224,7 +224,7 @@ impl<
             ProposalStatus::DepositPeriod
                 if proposal
                     .total_deposit
-                    .is_all_gte(&deposit_params.min_deposit) =>
+                    .is_all_gte(deposit_params.min_deposit.inner()) =>
             {
                 true
             }
@@ -322,7 +322,7 @@ impl<
             proposal_id,
             content,
             status: ProposalStatus::DepositPeriod,
-            final_tally_result: Default::default(),
+            final_tally_result: None,
             submit_time: submit_date,
             deposit_end_time: submit_date.add(deposit_period),
             total_deposit: initial_deposit,
@@ -425,7 +425,7 @@ impl<
                     false => proposal.status = ProposalStatus::Rejected,
                 }
 
-                proposal.final_tally_result = tally_result;
+                proposal.final_tally_result = Some(tally_result);
 
                 proposal_set(ctx, &self.store_key, &proposal).unwrap_gas();
                 ctx.kv_store_mut(&self.store_key)

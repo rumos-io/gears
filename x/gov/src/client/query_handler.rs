@@ -7,7 +7,10 @@ use crate::query::{
         QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest, QueryProposalRequest,
         QueryProposalsRequest, QueryTallyResultRequest, QueryVoteRequest, QueryVotesRequest,
     },
-    response::QueryDepositResponse,
+    response::{
+        QueryDepositResponse, QueryParamsResponse, QueryProposalResponse, QueryProposalsResponse,
+        QueryTallyResultResponse, QueryVoteResponse, QueryVotesResponse,
+    },
     GovQuery, GovQueryResponse,
 };
 
@@ -76,28 +79,42 @@ impl QueryHandler for GovClientHandler {
 
     fn handle_raw_response(
         &self,
-        _query_bytes: Vec<u8>,
+        query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
         let result = match &command.command {
             GovQueryCliCommands::Deposit {
                 proposal_id: _,
                 depositor: _,
-            } => todo!(), // Self::QueryResponse::Deposit(QueryDepositResponse::decode::<Bytes>(  query_bytes.into(),)?)
-            GovQueryCliCommands::Deposits { proposal_id: _ } => todo!(),
-            GovQueryCliCommands::Params { kind: _ } => todo!(),
-            GovQueryCliCommands::Proposal { proposal_id: _ } => todo!(),
+            } => Self::QueryResponse::Deposit(QueryDepositResponse::decode::<Bytes>(
+                query_bytes.into(),
+            )?),
+            GovQueryCliCommands::Deposits { proposal_id: _ } => Self::QueryResponse::Deposit(
+                QueryDepositResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            GovQueryCliCommands::Params { kind: _ } => Self::QueryResponse::Params(
+                QueryParamsResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            GovQueryCliCommands::Proposal { proposal_id: _ } => Self::QueryResponse::Proposal(
+                QueryProposalResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
             GovQueryCliCommands::Proposals {
                 voter: _,
                 depositor: _,
                 status: _,
-            } => todo!(),
-            GovQueryCliCommands::Tally { proposal_id: _ } => todo!(),
+            } => Self::QueryResponse::Proposals(QueryProposalsResponse::decode::<Bytes>(
+                query_bytes.into(),
+            )?),
+            GovQueryCliCommands::Tally { proposal_id: _ } => Self::QueryResponse::Tally(
+                QueryTallyResultResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
             GovQueryCliCommands::Vote {
                 proposal_id: _,
                 voter: _,
-            } => todo!(),
-            GovQueryCliCommands::Votes { proposal_id: _ } => todo!(),
+            } => Self::QueryResponse::Vote(QueryVoteResponse::decode::<Bytes>(query_bytes.into())?),
+            GovQueryCliCommands::Votes { proposal_id: _ } => {
+                Self::QueryResponse::Votes(QueryVotesResponse::decode::<Bytes>(query_bytes.into())?)
+            }
         };
 
         Ok(result)

@@ -1,17 +1,23 @@
-use std::sync::OnceLock;
+use std::{str::FromStr, sync::OnceLock};
 
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     core::errors::CoreError,
+    tendermint::types::proto::Protobuf,
     types::{base::send::SendCoins, uint::Uint256},
 };
-use ibc_proto::google::protobuf::Any;
+use ibc_proto::google::protobuf::{Any, Timestamp};
 use serde::{Deserialize, Serialize};
 
 use crate::keeper::KEY_PROPOSAL_PREFIX;
 
 pub mod active_iter;
 pub mod inactive_iter;
+
+mod inner {
+    pub use ibc_proto::cosmos::gov::v1beta1::Proposal;
+    pub use ibc_proto::cosmos::gov::v1beta1::TallyResult;
+}
 
 // Slight modification of the RFC3339Nano but it right pads all zeros and drops the time zone info
 const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT&H:%M:%S.000000000";
@@ -21,13 +27,136 @@ pub struct Proposal {
     pub proposal_id: u64,
     pub content: Any,
     pub status: ProposalStatus,
-    pub final_tally_result: TallyResult,
+    pub final_tally_result: Option<TallyResult>,
     pub submit_time: DateTime<Utc>,
     pub deposit_end_time: DateTime<Utc>,
     pub total_deposit: SendCoins,
     pub voting_start_time: Option<DateTime<Utc>>,
     pub voting_end_time: Option<DateTime<Utc>>,
 }
+
+impl TryFrom<inner::Proposal> for Proposal {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::Proposal {
+            proposal_id,
+            content,
+            status,
+            final_tally_result,
+            submit_time,
+            deposit_end_time,
+            total_deposit,
+            voting_start_time,
+            voting_end_time,
+        }: inner::Proposal,
+    ) -> Result<Self, Self::Error> {
+        let submit_time = submit_time.ok_or(CoreError::MissingField(
+            "Proposal: field `submit_time`".to_owned(),
+        ))?;
+
+        let deposit_end_time = deposit_end_time.ok_or(CoreError::MissingField(
+            "Proposal: field `deposit_end_time`".to_owned(),
+        ))?;
+
+        Ok(Self {
+            proposal_id,
+            content: content.ok_or(CoreError::MissingField(
+                "Proposal: field `content`".to_owned(),
+            ))?,
+            status: status.try_into()?,
+            final_tally_result: match final_tally_result {
+                Some(var) => Some(var.try_into()?),
+                None => None,
+            },
+            submit_time: DateTime::from_timestamp(submit_time.seconds, submit_time.nanos as u32)
+                .ok_or(CoreError::DecodeGeneral(
+                    "Proposal: invalid `deposit_end_time`".to_owned(),
+                ))?,
+            deposit_end_time: DateTime::from_timestamp(
+                deposit_end_time.seconds,
+                deposit_end_time.nanos as u32,
+            )
+            .ok_or(CoreError::DecodeGeneral(
+                "Proposal: invalid `deposit_end_time`".to_owned(),
+            ))?,
+            total_deposit: SendCoins::new({
+                let mut result = Vec::with_capacity(total_deposit.len());
+
+                for coin in total_deposit {
+                    result.push(
+                        coin.try_into()
+                            .map_err(|e| CoreError::Coins(format!("Proposal: {e}")))?,
+                    );
+                }
+
+                result
+            })
+            .map_err(|e| CoreError::Coins(e.to_string()))?,
+            voting_start_time: match voting_start_time {
+                Some(var) => Some(
+                    DateTime::from_timestamp(var.seconds, var.nanos as u32).ok_or(
+                        CoreError::DecodeGeneral(
+                            "Proposal: invalid `voting_start_time`".to_owned(),
+                        ),
+                    )?,
+                ),
+                None => None,
+            },
+            voting_end_time: match voting_end_time {
+                Some(var) => Some(
+                    DateTime::from_timestamp(var.seconds, var.nanos as u32).ok_or(
+                        CoreError::DecodeGeneral("Proposal: invalid `voting_end_time`".to_owned()),
+                    )?,
+                ),
+                None => None,
+            },
+        })
+    }
+}
+
+// TODO:
+impl From<Proposal> for inner::Proposal {
+    fn from(
+        Proposal {
+            proposal_id,
+            content,
+            status,
+            final_tally_result,
+            submit_time,
+            deposit_end_time,
+            total_deposit,
+            voting_start_time,
+            voting_end_time,
+        }: Proposal,
+    ) -> Self {
+        Self {
+            proposal_id,
+            content: Some(content),
+            status: status as i32,
+            final_tally_result: final_tally_result.map(|e| e.into()),
+            submit_time: Some(Timestamp {
+                seconds: submit_time.timestamp(),
+                nanos: submit_time.timestamp_subsec_nanos() as i32,
+            }),
+            deposit_end_time: Some(Timestamp {
+                seconds: deposit_end_time.timestamp(),
+                nanos: deposit_end_time.timestamp_subsec_nanos() as i32,
+            }),
+            total_deposit: total_deposit.into_iter().map(|this| this.into()).collect(),
+            voting_start_time: voting_start_time.map(|this| Timestamp {
+                seconds: this.timestamp(),
+                nanos: this.timestamp_subsec_nanos() as i32,
+            }),
+            voting_end_time: voting_end_time.map(|this| Timestamp {
+                seconds: this.timestamp(),
+                nanos: this.timestamp_subsec_nanos() as i32,
+            }),
+        }
+    }
+}
+
+impl Protobuf<inner::Proposal> for Proposal {}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct TallyResult {
@@ -36,6 +165,51 @@ pub struct TallyResult {
     pub no: Uint256,
     pub no_with_veto: Uint256,
 }
+
+impl TryFrom<inner::TallyResult> for TallyResult {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::TallyResult {
+            yes,
+            abstain,
+            no,
+            no_with_veto,
+        }: inner::TallyResult,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            yes: Uint256::from_str(&yes)
+                .map_err(|e| CoreError::DecodeGeneral(format!("Yes votes parse error: {e}")))?,
+            abstain: Uint256::from_str(&abstain)
+                .map_err(|e| CoreError::DecodeGeneral(format!("Abstain votes parse error: {e}")))?,
+            no: Uint256::from_str(&no)
+                .map_err(|e| CoreError::DecodeGeneral(format!("No votes parse error: {e}")))?,
+            no_with_veto: Uint256::from_str(&no_with_veto).map_err(|e| {
+                CoreError::DecodeGeneral(format!("NoWithVeto votes parse error: {e}"))
+            })?,
+        })
+    }
+}
+
+impl From<TallyResult> for inner::TallyResult {
+    fn from(
+        TallyResult {
+            yes,
+            abstain,
+            no,
+            no_with_veto,
+        }: TallyResult,
+    ) -> Self {
+        Self {
+            yes: yes.to_string(),
+            abstain: abstain.to_string(),
+            no: no.to_string(),
+            no_with_veto: no_with_veto.to_string(),
+        }
+    }
+}
+
+impl Protobuf<inner::TallyResult> for TallyResult {}
 
 impl Proposal {
     const KEY_ACTIVE_QUEUE_PREFIX: [u8; 1] = [0x01];

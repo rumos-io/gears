@@ -6,8 +6,13 @@ use std::{
 
 use gears::{
     application::keepers::params::ParamsKeeper,
+    core::errors::CoreError,
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
-    types::{base::coin::Coin, decimal256::Decimal256},
+    tendermint::types::proto::Protobuf,
+    types::{
+        base::{coin::Coin, send::SendCoins},
+        decimal256::Decimal256,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -21,14 +26,17 @@ const DEFAULT_PERIOD: Duration = Duration::from_secs(172800); // 2 days
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
-    pub min_deposit: Vec<Coin>,       // SendCoins?
+    pub min_deposit: SendCoins,
     pub max_deposit_period: Duration, // ?
 }
 
 impl Default for DepositParams {
     fn default() -> Self {
         Self {
-            min_deposit: vec![Coin::from_str("10000000stake").expect("default is valid")],
+            min_deposit: SendCoins::new(vec![
+                Coin::from_str("10000000stake").expect("default is valid")
+            ])
+            .expect("default is valid"),
             max_deposit_period: DEFAULT_PERIOD,
         }
     }
@@ -134,3 +142,118 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for GovParamsKeeper<PSK> {
         }
     }
 }
+
+mod inner {
+    pub use ibc_proto::cosmos::gov::v1beta1::DepositParams;
+    pub use ibc_proto::cosmos::gov::v1beta1::TallyParams;
+    pub use ibc_proto::cosmos::gov::v1beta1::VotingParams;
+    pub use ibc_proto::google::protobuf::Duration;
+}
+
+impl TryFrom<inner::DepositParams> for DepositParams {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::DepositParams {
+            min_deposit,
+            max_deposit_period,
+        }: inner::DepositParams,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            min_deposit: {
+                let mut result = Vec::with_capacity(min_deposit.len());
+
+                for coin in min_deposit {
+                    result.push(coin.try_into().map_err(
+                        |e: gears::types::base::errors::CoinsError| CoreError::Coin(e.to_string()),
+                    )?)
+                }
+
+                SendCoins::new(result).map_err(|e| CoreError::Coins(e.to_string()))?
+            },
+            max_deposit_period: {
+                let duration = max_deposit_period.ok_or(CoreError::MissingField(
+                    "DepositParams: field `max_deposit_period`".to_owned(),
+                ))?;
+
+                Duration::new(duration.seconds as u64, duration.nanos as u32) // TODO:NOW
+            },
+        })
+    }
+}
+
+impl From<DepositParams> for inner::DepositParams {
+    fn from(
+        DepositParams {
+            min_deposit,
+            max_deposit_period,
+        }: DepositParams,
+    ) -> Self {
+        Self {
+            min_deposit: min_deposit.into_iter().map(|e| e.into()).collect(),
+            max_deposit_period: Some(inner::Duration {
+                seconds: max_deposit_period.as_secs() as i64,
+                nanos: max_deposit_period.subsec_nanos() as i32,
+            }), // TODO:NOW
+        }
+    }
+}
+
+impl Protobuf<inner::DepositParams> for DepositParams {}
+
+impl TryFrom<inner::TallyParams> for TallyParams {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::TallyParams {
+            quorum: _,
+            threshold: _,
+            veto_threshold: _,
+        }: inner::TallyParams,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            quorum: Decimal256::one(),
+            threshold: Decimal256::one(),
+            veto_threshold: Decimal256::one(),
+        }) // TODO:NOW
+    }
+}
+
+impl From<TallyParams> for inner::TallyParams {
+    fn from(_value: TallyParams) -> Self {
+        todo!()
+    }
+}
+
+impl Protobuf<inner::TallyParams> for TallyParams {}
+
+impl TryFrom<inner::VotingParams> for VotingParams {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::VotingParams { voting_period }: inner::VotingParams,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            voting_period: {
+                let duration = voting_period.ok_or(CoreError::MissingField(
+                    "VotingParams: field `voting_period`".to_owned(),
+                ))?;
+
+                Duration::new(duration.seconds as u64, duration.nanos as u32) // TODO:NOW
+            },
+        })
+    }
+}
+
+impl From<VotingParams> for inner::VotingParams {
+    fn from(VotingParams { voting_period }: VotingParams) -> Self {
+        Self {
+            voting_period: Some(inner::Duration {
+                seconds: voting_period.as_secs() as i64,
+                nanos: voting_period.subsec_nanos() as i32,
+            }), // TODO:NOW
+        }
+    }
+}
+
+impl Protobuf<inner::VotingParams> for VotingParams {}

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::msg::GovMsg;
 
 mod inner {
+    pub use ibc_proto::cosmos::gov::v1beta1::Deposit;
     pub use ibc_proto::cosmos::gov::v1beta1::MsgDeposit;
 }
 
@@ -126,5 +127,52 @@ impl From<Deposit> for Any {
 impl From<Deposit> for GovMsg {
     fn from(value: Deposit) -> Self {
         Self::Deposit(value)
+    }
+}
+
+impl TryFrom<inner::Deposit> for Deposit {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::Deposit {
+            proposal_id,
+            depositor,
+            amount,
+        }: inner::Deposit,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            proposal_id,
+            depositor: AccAddress::from_bech32(&depositor)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            amount: SendCoins::new({
+                let mut result = Vec::with_capacity(amount.len());
+
+                for coin in amount {
+                    result.push(
+                        coin.try_into()
+                            .map_err(|e| CoreError::Coins(format!("Deposit: {e}")))?,
+                    );
+                }
+
+                result
+            })
+            .map_err(|e| CoreError::Coins(e.to_string()))?,
+        })
+    }
+}
+
+impl From<Deposit> for inner::Deposit {
+    fn from(
+        Deposit {
+            proposal_id,
+            depositor,
+            amount,
+        }: Deposit,
+    ) -> Self {
+        Self {
+            proposal_id,
+            depositor: depositor.to_string(),
+            amount: amount.into_iter().map(|this| this.into()).collect(),
+        }
     }
 }

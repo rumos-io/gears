@@ -3,7 +3,11 @@ use gears::{
     core::errors::CoreError,
     error::IBC_ENCODE_UNWRAP,
     tendermint::types::proto::Protobuf,
-    types::{address::AccAddress, tx::TxMessage},
+    types::{
+        address::AccAddress,
+        decimal256::{CosmosDecimalProtoString, Decimal256},
+        tx::TxMessage,
+    },
 };
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
@@ -12,6 +16,8 @@ use super::GovMsg;
 
 mod inner {
     pub use ibc_proto::cosmos::gov::v1beta1::MsgVote;
+    pub use ibc_proto::cosmos::gov::v1beta1::Vote;
+    pub use ibc_proto::cosmos::gov::v1beta1::WeightedVoteOption;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -20,6 +26,50 @@ pub struct Vote {
     pub voter: AccAddress,
     pub option: VoteOption,
 }
+
+impl TryFrom<inner::Vote> for Vote {
+    type Error = CoreError;
+
+    #[allow(deprecated)] // This structure would be removed with field
+    fn try_from(
+        inner::Vote {
+            proposal_id,
+            voter,
+            option,
+            options: _,
+        }: inner::Vote,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            proposal_id,
+            voter: AccAddress::from_bech32(&voter)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            option: option.try_into()?,
+        })
+    }
+}
+
+impl From<Vote> for inner::Vote {
+    #[allow(deprecated)] // This structure would be removed with field
+    fn from(
+        Vote {
+            proposal_id,
+            voter,
+            option,
+        }: Vote,
+    ) -> Self {
+        Self {
+            proposal_id,
+            voter: voter.to_string(),
+            option: option.clone() as i32,
+            options: vec![inner::WeightedVoteOption {
+                option: option as i32,
+                weight: Decimal256::one().to_cosmos_proto_string(),
+            }],
+        }
+    }
+}
+
+impl Protobuf<inner::Vote> for Vote {}
 
 #[derive(
     Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize, strum::EnumIter, strum::EnumString,
@@ -118,7 +168,7 @@ impl TryFrom<Any> for Vote {
                 "message type not recognized".into(),
             ))?
         }
-        Vote::decode::<Bytes>(value.value.into())
+        <Vote as Protobuf<inner::Vote>>::decode::<Bytes>(value.value.into())
             .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
@@ -127,7 +177,7 @@ impl From<Vote> for Any {
     fn from(msg: Vote) -> Self {
         Any {
             type_url: Vote::TYPE_URL.to_string(),
-            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            value: <Vote as Protobuf<inner::Vote>>::encode_vec(&msg).expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
