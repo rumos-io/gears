@@ -1,13 +1,12 @@
 // Copy of https://docs.rs/ibc-core-host-types/0.51.0/src/ibc_core_host_types/identifiers/chain_id.rs.html#33
 
-use std::{
-    fmt::{Display, Formatter},
-    str::FromStr,
-};
-
 use serde::{
     de::{Error, MapAccess, Visitor},
     Deserialize, Deserializer, Serialize,
+};
+use std::{
+    fmt::{Display, Formatter},
+    str::FromStr,
 };
 
 use super::validate::{
@@ -32,6 +31,15 @@ pub enum ChainIdErrors {
 pub struct ChainId {
     id: String,
     revision_number: u64,
+}
+
+impl Default for ChainId {
+    fn default() -> Self {
+        Self {
+            id: "test-chain".to_string(),
+            revision_number: 0,
+        }
+    }
 }
 
 impl From<tendermint_informal::chain::Id> for ChainId {

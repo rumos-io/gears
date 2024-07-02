@@ -40,6 +40,18 @@ pub struct TxBody<M> {
     pub non_critical_extension_options: Vec<Any>, //TODO: use a domain type here
 }
 
+impl<M> TxBody<M> {
+    pub fn new_with_defaults(messages: Vec<M>) -> Self {
+        Self {
+            messages,
+            memo: String::new(),
+            timeout_height: 0,
+            extension_options: vec![],
+            non_critical_extension_options: vec![],
+        }
+    }
+}
+
 impl<M: TxMessage> TryFrom<inner::TxBody> for TxBody<M> {
     type Error = CoreError;
 

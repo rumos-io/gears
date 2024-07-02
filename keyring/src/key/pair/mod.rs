@@ -52,6 +52,10 @@ impl KeyPair {
             KeyPair::Secp256k1(key) => key.sign(message).into(),
         }
     }
+
+    pub fn from_mnemonic(mnemonic: &bip32::Mnemonic) -> Self {
+        Self::Secp256k1(Secp256k1KeyPair::from_mnemonic(mnemonic))
+    }
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 use crate::{
     commands::client::{query::execute_query, tx::broadcast_tx_commit},
     crypto::{
-        info::{create_signed_transaction, Mode, SigningInfo},
+        info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
     },
     error::IBC_ENCODE_UNWRAP,
@@ -74,11 +74,11 @@ pub trait TxHandler {
             .account
             .ok_or_else(|| anyhow!("account not found"))?;
 
-        let signing_info = SigningInfo {
+        let signing_infos = vec![SigningInfo {
             key,
             sequence: account.get_sequence(),
             account_number: account.get_account_number(),
-        };
+        }];
 
         let tx_body = TxBody {
             messages: vec![msg],
@@ -90,25 +90,28 @@ pub trait TxHandler {
 
         let tip = None; //TODO: remove hard coded
 
-        let mode = match mode {
-            SignMode::Direct => Mode::Direct,
-            SignMode::Textual => Mode::Textual,
+        let raw_tx = match mode {
+            SignMode::Direct => create_signed_transaction_direct(
+                signing_infos,
+                chain_id,
+                fee,
+                tip,
+                tx_body.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            )
+            .map_err(|e| anyhow!(e.to_string()))?,
+            SignMode::Textual => create_signed_transaction_textual(
+                signing_infos,
+                chain_id,
+                fee,
+                tip,
+                node.clone(),
+                tx_body,
+            )
+            .map_err(|e| anyhow!(e.to_string()))?,
             _ => return Err(anyhow!("unsupported sign mode")),
         };
 
-        let raw_tx = create_signed_transaction(
-            vec![signing_info],
-            tx_body,
-            fee,
-            tip,
-            chain_id,
-            mode,
-            node.clone(),
-        )
-        .map_err(|e| anyhow!(e))?;
-
         let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
-
         broadcast_tx_commit(client, raw_tx)
     }
 }
