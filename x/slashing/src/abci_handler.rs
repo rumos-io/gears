@@ -43,7 +43,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 self.keeper
                     .handle_validator_signature(
                         ctx,
-                        vote.validator.address,
+                        vote.validator.address.into(),
                         vote.validator.power as u32,
                         vote.signed_last_block,
                     )

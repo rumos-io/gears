@@ -53,7 +53,8 @@ impl TryFrom<inner::VoteInfo> for VoteInfo {
         Ok(Self {
             validator: validator
                 .ok_or(Self::Error::InvalidData("validator is missing".into()))?
-                .into(),
+                .try_into()
+                .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             signed_last_block,
         })
     }
@@ -73,27 +74,24 @@ impl From<VoteInfo> for inner::VoteInfo {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Evidence {
-    #[prost(enumeration = "EvidenceType", tag = "1")]
     pub r#type: i32,
     /// The offending validator
-    #[prost(message, optional, tag = "2")]
-    pub validator: Option<Validator>,
+    pub validator: Validator,
     /// The height when the offense occurred
-    #[prost(int64, tag = "3")]
     pub height: i64,
     /// The corresponding time where the offense occurred
-    #[prost(message, optional, tag = "4")]
     pub time: Option<Timestamp>,
     /// Total voting power of the validator set in case the ABCI application does
     /// not store historical validators.
-    #[prost(int64, tag = "5")]
     pub total_voting_power: i64,
 }
 
-impl From<inner::Evidence> for Evidence {
-    fn from(
+impl TryFrom<inner::Evidence> for Evidence {
+    type Error = crate::error::Error;
+
+    fn try_from(
         inner::Evidence {
             r#type,
             validator,
@@ -101,14 +99,17 @@ impl From<inner::Evidence> for Evidence {
             time,
             total_voting_power,
         }: inner::Evidence,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
             r#type,
-            validator: validator.map(Into::into),
+            validator: validator
+                .ok_or(Self::Error::InvalidData("validator is missing".into()))?
+                .try_into()
+                .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             height,
             time: time.map(Into::into),
             total_voting_power,
-        }
+        })
     }
 }
 
@@ -124,7 +125,7 @@ impl From<Evidence> for inner::Evidence {
     ) -> Self {
         Self {
             r#type,
-            validator: validator.map(Into::into),
+            validator: Some(validator.into()),
             height,
             time: time.map(Into::into),
             total_voting_power,

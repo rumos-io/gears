@@ -1,6 +1,8 @@
-use std::str::FromStr;
-
 use crate::error::Error;
+use address::ConsAddress;
+use ripemd::Ripemd160;
+use sha2::{Digest, Sha256};
+use std::str::FromStr;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", content = "value")]
@@ -55,6 +57,28 @@ impl TryFrom<inner::PublicKey> for PublicKey {
             inner::Sum::Ed25519(value) => Ok(PublicKey::Ed25519(value)),
             inner::Sum::Secp256k1(value) => Ok(PublicKey::Secp256k1(value)),
         }
+    }
+}
+
+impl From<PublicKey> for ConsAddress {
+    fn from(pk: PublicKey) -> Self {
+        //TODO: check if this is the correct implementation for Tendermint keys - I copied the method we use for Cosmos keys
+        //TODO: avoid repeating the code for Cosmos keys
+        let pub_key = pk.raw();
+
+        // sha256 hash
+        let mut hasher = Sha256::new();
+        hasher.update(pub_key);
+        let hash = hasher.finalize();
+
+        // ripemd160 hash
+        let mut hasher = Ripemd160::new();
+        hasher.update(hash);
+        let hash = hasher.finalize();
+
+        let size_err_msg: &str =
+            "ripemd160 digest size is 160 bytes which is less than AccAddress::MAX_ADDR_LEN";
+        hash.as_slice().try_into().expect(size_err_msg)
     }
 }
 

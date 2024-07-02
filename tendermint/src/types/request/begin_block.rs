@@ -45,13 +45,17 @@ impl TryFrom<super::inner::RequestBeginBlock> for RequestBeginBlock {
         } else {
             None
         };
+        let mut byzantine_validators_res = vec![];
+        for byz_validator in byzantine_validators {
+            byzantine_validators_res.push(byz_validator.try_into()?);
+        }
         Ok(Self {
             hash,
             header: header
                 .ok_or_else(|| crate::error::Error::InvalidData("header is missing".into()))?
                 .try_into()?,
             last_commit_info,
-            byzantine_validators: byzantine_validators.into_iter().map(Into::into).collect(),
+            byzantine_validators: byzantine_validators_res,
         })
     }
 }

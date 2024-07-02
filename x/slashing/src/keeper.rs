@@ -106,14 +106,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     pub fn handle_validator_signature<DB: Database>(
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
-        addr_bytes: prost::bytes::Bytes,
+        cons_addr: ConsAddress,
         power: u32,
         signed: bool,
     ) -> anyhow::Result<()> {
         let height = ctx.height();
 
         // fetch the validator public key
-        let cons_addr = ConsAddress::try_from(Vec::from(addr_bytes))?;
         self.get_pub_key(ctx, &cons_addr).ok_or(AppError::Custom(
             "validator consensus address not found".to_string(),
         ))?;
