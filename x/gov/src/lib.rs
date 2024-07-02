@@ -1,3 +1,4 @@
+pub mod client;
 use gears::{
     context::InfallibleContextMut,
     params::ParamsSubspaceKey,

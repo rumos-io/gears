@@ -11,17 +11,18 @@ use serde::{Deserialize, Serialize};
 use crate::msg::GovMsg;
 
 mod inner {
+    pub use ibc_proto::cosmos::gov::v1beta1::Deposit;
     pub use ibc_proto::cosmos::gov::v1beta1::MsgDeposit;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct MsgDeposit {
+pub struct Deposit {
     pub proposal_id: u64,
     pub depositor: AccAddress,
     pub amount: SendCoins,
 }
 
-impl MsgDeposit {
+impl Deposit {
     pub(crate) const KEY_PREFIX: [u8; 1] = [0x10];
     pub const TYPE_URL: &'static str = "/cosmos.gov.v1beta1/MsgDeposit";
 
@@ -36,9 +37,9 @@ impl MsgDeposit {
     }
 }
 
-impl Protobuf<inner::MsgDeposit> for MsgDeposit {}
+impl Protobuf<inner::MsgDeposit> for Deposit {}
 
-impl TxMessage for MsgDeposit {
+impl TxMessage for Deposit {
     fn get_signers(&self) -> Vec<&AccAddress> {
         vec![&self.depositor]
     }
@@ -48,11 +49,11 @@ impl TxMessage for MsgDeposit {
     }
 
     fn type_url(&self) -> &'static str {
-        MsgDeposit::TYPE_URL
+        Deposit::TYPE_URL
     }
 }
 
-impl TryFrom<inner::MsgDeposit> for MsgDeposit {
+impl TryFrom<inner::MsgDeposit> for Deposit {
     type Error = CoreError;
 
     fn try_from(
@@ -80,13 +81,13 @@ impl TryFrom<inner::MsgDeposit> for MsgDeposit {
     }
 }
 
-impl From<MsgDeposit> for inner::MsgDeposit {
+impl From<Deposit> for inner::MsgDeposit {
     fn from(
-        MsgDeposit {
+        Deposit {
             proposal_id,
             depositor,
             amount,
-        }: MsgDeposit,
+        }: Deposit,
     ) -> Self {
         Self {
             proposal_id,
@@ -100,7 +101,7 @@ impl From<MsgDeposit> for inner::MsgDeposit {
     }
 }
 
-impl TryFrom<Any> for MsgDeposit {
+impl TryFrom<Any> for Deposit {
     type Error = CoreError;
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
@@ -109,22 +110,69 @@ impl TryFrom<Any> for MsgDeposit {
                 "message type not recognized".into(),
             ))?
         }
-        MsgDeposit::decode::<Bytes>(value.value.into())
+        Deposit::decode::<Bytes>(value.value.into())
             .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
 
-impl From<MsgDeposit> for Any {
-    fn from(msg: MsgDeposit) -> Self {
+impl From<Deposit> for Any {
+    fn from(msg: Deposit) -> Self {
         Any {
-            type_url: MsgDeposit::TYPE_URL.to_string(),
+            type_url: Deposit::TYPE_URL.to_string(),
             value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
 
-impl From<MsgDeposit> for GovMsg {
-    fn from(value: MsgDeposit) -> Self {
+impl From<Deposit> for GovMsg {
+    fn from(value: Deposit) -> Self {
         Self::Deposit(value)
+    }
+}
+
+impl TryFrom<inner::Deposit> for Deposit {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::Deposit {
+            proposal_id,
+            depositor,
+            amount,
+        }: inner::Deposit,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            proposal_id,
+            depositor: AccAddress::from_bech32(&depositor)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            amount: SendCoins::new({
+                let mut result = Vec::with_capacity(amount.len());
+
+                for coin in amount {
+                    result.push(
+                        coin.try_into()
+                            .map_err(|e| CoreError::Coins(format!("Deposit: {e}")))?,
+                    );
+                }
+
+                result
+            })
+            .map_err(|e| CoreError::Coins(e.to_string()))?,
+        })
+    }
+}
+
+impl From<Deposit> for inner::Deposit {
+    fn from(
+        Deposit {
+            proposal_id,
+            depositor,
+            amount,
+        }: Deposit,
+    ) -> Self {
+        Self {
+            proposal_id,
+            depositor: depositor.to_string(),
+            amount: amount.into_iter().map(|this| this.into()).collect(),
+        }
     }
 }

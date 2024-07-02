@@ -25,8 +25,8 @@ use gears::{
 use crate::{
     genesis::GovGenesisState,
     keeper::GovKeeper,
-    msg::{deposit::MsgDeposit, GovMsg},
-    query::{GovQueryRequest, GovQueryResponse},
+    msg::{deposit::Deposit, GovMsg},
+    query::{GovQuery, GovQueryResponse},
     types::proposal::Proposal,
     ProposalHandler,
 };
@@ -72,7 +72,7 @@ impl<
 
     type StoreKey = SK;
 
-    type QReq = GovQueryRequest;
+    type QReq = GovQuery;
 
     type QRes = GovQueryResponse;
 
@@ -142,7 +142,7 @@ impl<
                     .keeper
                     .deposit_add(
                         ctx,
-                        MsgDeposit {
+                        Deposit {
                             proposal_id,
                             depositor: msg.proposer.clone(),
                             amount: msg.initial_deposit.clone(),
