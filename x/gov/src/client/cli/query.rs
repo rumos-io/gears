@@ -21,6 +21,7 @@ pub enum GovQueryCliCommands {
     Params {
         kind: ParamsQuery,
     },
+    AllParams,
     Proposal {
         proposal_id: u64,
     },

@@ -14,6 +14,9 @@ pub mod inner {
     pub use ibc_proto::cosmos::gov::v1beta1::QueryTallyResultRequest;
     pub use ibc_proto::cosmos::gov::v1beta1::QueryVoteRequest;
     pub use ibc_proto::cosmos::gov::v1beta1::QueryVotesRequest;
+
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct QueryAllParamsRequest {}
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -299,3 +302,24 @@ impl From<QueryTallyResultRequest> for inner::QueryTallyResultRequest {
 }
 
 impl Protobuf<inner::QueryTallyResultRequest> for QueryTallyResultRequest {}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct QueryAllParamsRequest;
+
+impl TryFrom<inner::QueryAllParamsRequest> for QueryAllParamsRequest {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryAllParamsRequest {}: inner::QueryAllParamsRequest,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self)
+    }
+}
+
+impl From<QueryAllParamsRequest> for inner::QueryAllParamsRequest {
+    fn from(_: QueryAllParamsRequest) -> Self {
+        Self {}
+    }
+}
+
+impl Protobuf<inner::QueryAllParamsRequest> for QueryAllParamsRequest {}

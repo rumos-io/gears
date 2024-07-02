@@ -7,12 +7,14 @@ use gears::{
     types::query::Query,
 };
 use request::{
-    QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest, QueryProposalRequest,
-    QueryProposalsRequest, QueryTallyResultRequest, QueryVoteRequest, QueryVotesRequest,
+    QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
+    QueryProposalRequest, QueryProposalsRequest, QueryTallyResultRequest, QueryVoteRequest,
+    QueryVotesRequest,
 };
 use response::{
-    QueryDepositResponse, QueryDepositsResponse, QueryParamsResponse, QueryProposalResponse,
-    QueryProposalsResponse, QueryTallyResultResponse, QueryVoteResponse, QueryVotesResponse,
+    QueryAllParamsResponse, QueryDepositResponse, QueryDepositsResponse, QueryParamsResponse,
+    QueryProposalResponse, QueryProposalsResponse, QueryTallyResultResponse, QueryVoteResponse,
+    QueryVotesResponse,
 };
 use serde::{Deserialize, Serialize};
 
@@ -24,6 +26,7 @@ pub enum GovQuery {
     Deposit(QueryDepositRequest),
     Deposits(QueryDepositsRequest),
     Params(QueryParamsRequest),
+    AllParams(QueryAllParamsRequest),
     Proposal(QueryProposalRequest),
     Proposals(QueryProposalsRequest),
     Tally(QueryTallyResultRequest),
@@ -36,7 +39,8 @@ impl Query for GovQuery {
         match self {
             GovQuery::Deposit(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Deposit"),
             GovQuery::Deposits(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Deposits"),
-            GovQuery::Params(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Params"),
+            GovQuery::Params(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Param"),
+            GovQuery::AllParams(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Params"),
             GovQuery::Proposal(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Proposal"),
             GovQuery::Proposals(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Proposals"),
             GovQuery::Tally(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Tally"),
@@ -50,6 +54,7 @@ impl Query for GovQuery {
             GovQuery::Deposit(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
             GovQuery::Deposits(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
             GovQuery::Params(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            GovQuery::AllParams(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
             GovQuery::Proposal(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
             GovQuery::Proposals(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
             GovQuery::Tally(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
@@ -71,6 +76,7 @@ pub enum GovQueryResponse {
     Deposit(QueryDepositResponse),
     Deposits(QueryDepositsResponse),
     Params(QueryParamsResponse),
+    AllParams(QueryAllParamsResponse),
     Proposal(QueryProposalResponse),
     Proposals(QueryProposalsResponse),
     Tally(QueryTallyResultResponse),

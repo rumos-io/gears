@@ -11,14 +11,10 @@ use crate::{
 };
 
 mod inner {
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryDepositResponse;
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryDepositsResponse;
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryParamsResponse;
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryProposalResponse;
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryProposalsResponse;
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryTallyResultResponse;
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryVoteResponse;
-    pub use ibc_proto::cosmos::gov::v1beta1::QueryVotesResponse;
+    pub use ibc_proto::cosmos::gov::v1beta1::{
+        QueryDepositResponse, QueryDepositsResponse, QueryParamsResponse, QueryProposalResponse,
+        QueryProposalsResponse, QueryTallyResultResponse, QueryVoteResponse, QueryVotesResponse,
+    };
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
@@ -310,3 +306,58 @@ impl From<QueryTallyResultResponse> for inner::QueryTallyResultResponse {
 }
 
 impl Protobuf<inner::QueryTallyResultResponse> for QueryTallyResultResponse {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+pub struct QueryAllParamsResponse {
+    pub voting_params: VotingParams,
+    pub deposit_params: DepositParams,
+    pub tally_params: TallyParams,
+}
+
+impl TryFrom<inner::QueryParamsResponse> for QueryAllParamsResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryParamsResponse {
+            voting_params,
+            deposit_params,
+            tally_params,
+        }: inner::QueryParamsResponse,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            voting_params: voting_params
+                .ok_or(CoreError::MissingField(
+                    "QueryAllParamsResponse: field `voting_params`".to_owned(),
+                ))?
+                .try_into()?,
+            deposit_params: deposit_params
+                .ok_or(CoreError::MissingField(
+                    "QueryAllParamsResponse: field `deposit_params`".to_owned(),
+                ))?
+                .try_into()?,
+            tally_params: tally_params
+                .ok_or(CoreError::MissingField(
+                    "QueryAllParamsResponse: field `tally_params`".to_owned(),
+                ))?
+                .try_into()?,
+        })
+    }
+}
+
+impl From<QueryAllParamsResponse> for inner::QueryParamsResponse {
+    fn from(
+        QueryAllParamsResponse {
+            voting_params,
+            deposit_params,
+            tally_params,
+        }: QueryAllParamsResponse,
+    ) -> Self {
+        Self {
+            voting_params: Some(voting_params.into()),
+            deposit_params: Some(deposit_params.into()),
+            tally_params: Some(tally_params.into()),
+        }
+    }
+}
+
+impl Protobuf<inner::QueryParamsResponse> for QueryAllParamsResponse {}
