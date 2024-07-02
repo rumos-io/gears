@@ -1,6 +1,7 @@
 use cosmwasm_std::{Decimal256, Uint256};
 use prost::Enumeration;
 use serde::{Deserialize, Serialize};
+use tendermint::types::proto::crypto::PublicKey;
 
 use crate::types::address::ValAddress;
 
@@ -8,6 +9,8 @@ pub trait StakingValidator {
     fn operator(&self) -> &ValAddress;
     fn bonded_tokens(&self) -> &Uint256;
     fn delegator_shares(&self) -> &Decimal256;
+    fn cons_pub_key(&self) -> &PublicKey;
+    fn is_jailed(&self) -> bool;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Enumeration, strum::Display)]

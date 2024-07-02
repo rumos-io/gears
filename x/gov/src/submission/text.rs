@@ -1,10 +1,16 @@
+use std::marker::PhantomData;
+
 use bytes::Bytes;
 use gears::{
-    core::errors::CoreError, error::IBC_ENCODE_UNWRAP, tendermint::types::proto::Protobuf,
+    application::keepers::params::ParamsKeeper, context::InfallibleContextMut,
+    core::errors::CoreError, error::IBC_ENCODE_UNWRAP, params::ParamsSubspaceKey,
+    tendermint::types::proto::Protobuf,
 };
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
+
+use super::handler::SubmissionHandler;
 
 #[derive(Clone, PartialEq, Message)]
 pub struct RawTextProposal {
@@ -62,5 +68,24 @@ impl From<TextProposal> for Any {
             type_url: TextProposal::TYPE_URL.to_string(),
             value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct TextSubmissionHandler<PK>(PhantomData<PK>);
+
+impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PK, PSK, TextProposal>
+    for TextSubmissionHandler<PK>
+{
+    fn handle<
+        CTX: InfallibleContextMut<DB, SK>,
+        DB: gears::store::database::Database,
+        SK: gears::store::StoreKey,
+    >(
+        _proposal: TextProposal,
+        _ctx: &mut CTX,
+        _keeper: &PSK,
+    ) -> anyhow::Result<()> {
+        Ok(())
     }
 }

@@ -1,16 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
-use gears::context::{
-    InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext,
-};
+use gears::application::keepers::params::ParamsKeeper;
+
 use gears::core::serializers::serialize_number_to_string;
-use gears::params::{
-    gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
-    ParamsSerialize, ParamsSubspaceKey,
-};
-use gears::store::database::Database;
-use gears::store::StoreKey;
-use gears::types::store::gas::errors::GasStoreErrors;
+use gears::params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey};
+
 use gears::x::keepers::auth::AuthParams;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -40,14 +34,20 @@ pub struct AuthsParams {
     pub sig_verify_cost_secp256k1: u64,
 }
 
+impl Default for AuthsParams {
+    fn default() -> Self {
+        DEFAULT_PARAMS.clone()
+    }
+}
+
 impl ParamsSerialize for AuthsParams {
-    fn keys() -> HashMap<&'static str, ParamKind> {
+    fn keys() -> HashSet<&'static str> {
         [
-            (KEY_MAX_MEMO_CHARACTERS, ParamKind::U64),
-            (KEY_TX_SIG_LIMIT, ParamKind::U64),
-            (KEY_TX_SIZE_COST_PER_BYTE, ParamKind::U64),
-            (KEY_SIG_VERIFY_COST_ED25519, ParamKind::U64),
-            (KEY_SIG_VERIFY_COST_SECP256K1, ParamKind::U64),
+            KEY_MAX_MEMO_CHARACTERS,
+            KEY_TX_SIG_LIMIT,
+            KEY_TX_SIZE_COST_PER_BYTE,
+            KEY_SIG_VERIFY_COST_ED25519,
+            KEY_SIG_VERIFY_COST_SECP256K1,
         ]
         .into_iter()
         .collect()
@@ -140,42 +140,36 @@ pub struct AuthParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
 
-impl<PSK: ParamsSubspaceKey> AuthParamsKeeper<PSK> {
-    pub fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> AuthsParams {
-        let store = infallible_subspace(ctx, &self.params_subspace_key);
+impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
+    type Param = AuthsParams;
 
-        store.params().unwrap_or(DEFAULT_PARAMS.clone())
+    fn psk(&self) -> &PSK {
+        &self.params_subspace_key
     }
 
-    pub fn try_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
-        &self,
-        ctx: &CTX,
-    ) -> Result<AuthsParams, GasStoreErrors> {
-        let store = gas::subspace(ctx, &self.params_subspace_key);
-
-        Ok(store.params()?.unwrap_or(DEFAULT_PARAMS.clone()))
-    }
-
-    pub fn set<DB: Database, SK: StoreKey, KV: InfallibleContextMut<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: AuthsParams,
-    ) {
-        let mut store = infallible_subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
-    }
-
-    pub fn try_set<DB: Database, SK: StoreKey, KV: TransactionalContext<DB, SK>>(
-        &self,
-        ctx: &mut KV,
-        params: AuthsParams,
-    ) -> Result<(), GasStoreErrors> {
-        let mut store = gas::subspace_mut(ctx, &self.params_subspace_key);
-
-        store.params_set(&params)
+    fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
+        match String::from_utf8_lossy(key.as_ref()).as_ref() {
+            KEY_MAX_MEMO_CHARACTERS => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_TX_SIG_LIMIT => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_TX_SIZE_COST_PER_BYTE => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_SIG_VERIFY_COST_ED25519 => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_SIG_VERIFY_COST_SECP256K1 => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            _ => false,
+        }
     }
 }

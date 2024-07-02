@@ -7,11 +7,12 @@ edition = "2021"
 anyhow = { workspace = true }
 axum = { workspace = true }
 bank = { path = "../bank/" }
-chrono = { version = "0.4.38", features = [ "serde" ] }
+chrono = { version = "0.4.38", features = ["serde"] }
 clap = { workspace = true }
-gears = { path = "../../gears", features = [ "cli", "export", "xmods" ] }
+gears = { path = "../../gears", features = [ "cli", "export", "xmods", "governance" ] }
 prost = { workspace = true }
 strum = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 tokio = { workspace = true }
+thiserror = { workspace = true }

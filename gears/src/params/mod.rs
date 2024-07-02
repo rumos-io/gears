@@ -1,5 +1,9 @@
 pub mod gas;
-use std::{collections::HashMap, hash::Hash, str::FromStr};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    str::FromStr,
+};
 
 use database::{prefix::PrefixDB, Database};
 use kv_store::StoreKey;
@@ -61,7 +65,7 @@ pub trait ParamsSubspaceKey:
 
 pub trait ParamsSerialize {
     /// Return all unique keys for this structure
-    fn keys() -> HashMap<&'static str, ParamKind>;
+    fn keys() -> HashSet<&'static str>;
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)>;
 }
 

@@ -1,3 +1,5 @@
+use address::{AddressError, ValAddress};
+
 use crate::error::Error;
 
 use super::crypto::PublicKey;
@@ -32,25 +34,32 @@ impl TryFrom<inner::ValidatorUpdate> for ValidatorUpdate {
 }
 
 /// Validator
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Validator {
     /// The first 20 bytes of SHA256(public key)
-    #[prost(bytes = "bytes", tag = "1")]
-    pub address: ::prost::bytes::Bytes,
+    pub address: ValAddress,
     /// The voting power
-    #[prost(int64, tag = "3")]
     pub power: i64,
 }
 
 impl From<Validator> for inner::Validator {
     fn from(Validator { address, power }: Validator) -> Self {
-        Self { address, power }
+        Self {
+            address: address.as_ref().to_vec().into(),
+            power,
+        }
     }
 }
 
-impl From<inner::Validator> for Validator {
-    fn from(inner::Validator { address, power }: inner::Validator) -> Self {
-        Self { address, power }
+impl TryFrom<inner::Validator> for Validator {
+    type Error = AddressError;
+    fn try_from(
+        inner::Validator { address, power }: inner::Validator,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            address: ValAddress::try_from(address.to_vec())?,
+            power,
+        })
     }
 }
 
