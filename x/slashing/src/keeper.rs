@@ -110,22 +110,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     pub fn handle_validator_signature<DB: Database>(
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
-        addr_bytes: prost::bytes::Bytes,
+        cons_addr: ConsAddress,
         power: u32,
         signed: bool,
-    ) {
+    ) -> anyhow::Result<()> {
         let height = ctx.height();
 
         // fetch the validator public key
-        let cons_addr = ConsAddress::try_from(Vec::from(addr_bytes)).unwrap();
-        self.get_pub_key(ctx, &cons_addr)
-            .expect("validator consensus address not found");
+        self.get_pub_key(ctx, &cons_addr).ok_or(AppError::Custom(
+            "validator consensus address not found".to_string(),
+        ))?;
 
         // fetch signing info
         let mut sign_info = self
             .get_validator_signing_info(ctx, &cons_addr)
             .unwrap_gas()
-            .expect("Expected signing info for validator but it is not found");
+            .ok_or(AppError::Custom(
+                "Expected signing info for validator but it is not found".to_string(),
+            ))?;
 
         // this is a relative index, so it counts blocks the validator *should* have signed
         // will use the 0-value default signing info if not present, except for start height
@@ -154,7 +156,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
             }
         }
 
-        let min_signed_per_window = params.min_signed_per_window_u32();
+        let min_signed_per_window = params.min_signed_per_window_u32()?;
 
         if !signed {
             ctx.push_event(Event {
@@ -213,11 +215,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 // Downtime confirmed: slash and jail the validator
                 // We need to retrieve the stake distribution which signed the block, so we subtract ValidatorUpdateDelay from the evidence height,
                 // and subtract an additional 1 since this is the LastCommit.
-                // Note that this *can* result in a negative "distributionHeight" up to -ValidatorUpdateDelay-1,
-                // i.e. at the end of the pre-genesis block (none) = at the beginning of the genesis block.
-                // That's fine since this is just used to filter unbonding delegations & redelegations.
-
-                let distribution_height = height - VALIDATOR_UPDATE_DELAY as u32 - 1;
+                let distribution_height = height
+                    .saturating_sub(VALIDATOR_UPDATE_DELAY)
+                    .saturating_sub(1);
 
                 ctx.append_events(vec![Event {
                     r#type: "slash".to_string(),
@@ -298,6 +298,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
 
         // Set the updated signing info
         self.set_validator_signing_info(ctx, &cons_addr, &sign_info);
+
+        Ok(())
     }
 
     //

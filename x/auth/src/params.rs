@@ -146,4 +146,30 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
     fn psk(&self) -> &PSK {
         &self.params_subspace_key
     }
+
+    fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
+        match String::from_utf8_lossy(key.as_ref()).as_ref() {
+            KEY_MAX_MEMO_CHARACTERS => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_TX_SIG_LIMIT => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_TX_SIZE_COST_PER_BYTE => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_SIG_VERIFY_COST_ED25519 => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            KEY_SIG_VERIFY_COST_SECP256K1 => ParamKind::U64
+                .parse_param(value.as_ref().to_vec())
+                .unsigned_64()
+                .is_some(),
+            _ => false,
+        }
+    }
 }

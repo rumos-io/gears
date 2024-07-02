@@ -43,7 +43,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     /// on every begin block
     pub fn begin_block<DB: Database>(
         &self,
-        _ctx: &mut BlockContext<'_, DB, SK>,
+        ctx: &mut BlockContext<'_, DB, SK>,
         request: RequestBeginBlock,
     ) {
         // Iterate over all the validators which *should* have signed this block
@@ -51,10 +51,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         // which have missed too many blocks in a row (downtime slashing)
         if let Some(vote_info) = request.last_commit_info {
             for vote in vote_info.votes {
-                // TODO: seems like tendermint type has optional value in order of using prost
-                let _validator = vote.validator.unwrap();
-                todo!()
-                // self.keeper.handle_validator_signature(ctx, validator.address, validator.power, vote.signed_last_block);
+                self.keeper
+                    .handle_validator_signature(
+                        ctx,
+                        vote.validator.address.into(),
+                        vote.validator.power as u32,
+                        vote.signed_last_block,
+                    )
+                    .expect(
+                        "method `handle_validator_signature` is called from infallible method.
+                         Something wrong in the handler.",
+                    );
             }
         }
     }

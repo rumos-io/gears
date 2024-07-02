@@ -1,5 +1,7 @@
 pub mod account;
-pub mod address;
+pub mod address {
+    pub use address::*;
+}
 pub mod auth;
 pub mod base;
 #[allow(dead_code)]

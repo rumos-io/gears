@@ -69,4 +69,15 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for BankParamsKeeper<PSK> {
     fn psk(&self) -> &PSK {
         &self.params_subspace_key
     }
+
+    fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
+        match String::from_utf8_lossy(key.as_ref()).as_ref() {
+            KEY_SEND_ENABLED => ParamKind::Bool
+                .parse_param(value.as_ref().to_vec())
+                .boolean()
+                .is_some(),
+            KEY_DEFAULT_SEND_ENABLED => false, // add logic when we start setting this key
+            _ => false,
+        }
+    }
 }

@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
     core::serializers::serialize_number_to_string,
@@ -6,7 +7,11 @@ use gears::{
         ParamsSerialize, ParamsSubspaceKey,
     },
     store::{database::Database, StoreKey},
-    types::{decimal256::Decimal256, store::gas::errors::GasStoreErrors},
+    types::{
+        decimal256::{Decimal256, PRECISION_REUSE},
+        store::gas::errors::GasStoreErrors,
+        uint::Uint256,
+    },
 };
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
@@ -36,15 +41,33 @@ pub struct SlashingParams {
 }
 
 impl SlashingParams {
-    pub fn min_signed_per_window_u32(&self) -> u32 {
+    pub fn min_signed_per_window_u32(&self) -> anyhow::Result<u32> {
         // NOTE: RoundInt64 will never panic as minSignedPerWindow is less than 1.
-        self.min_signed_per_window
-            .checked_mul(Decimal256::from_atomics(self.signed_blocks_window as u64, 0).unwrap())
-            .unwrap()
-            .to_string()
-            .parse::<f64>()
-            .unwrap()
-            .round() as u32
+        let mul = self
+            .min_signed_per_window
+            .checked_mul(Decimal256::from_atomics(self.signed_blocks_window as u64, 0).unwrap())?;
+        // get Uint256 representation and cut fractional part
+        let full = mul.atomics().div_ceil(PRECISION_REUSE);
+        if full <= Uint256::from(u32::MAX) {
+            // get fractional part that is equivalent to PRECISION_REUSE * 10^(-1), i.e. 10^17
+            let fraction_with_first_decimal = PRECISION_REUSE
+                .checked_div(Decimal256::from_atomics(10u64, 0).unwrap())
+                .unwrap();
+            let full_dec = mul.atomics().div_ceil(fraction_with_first_decimal);
+            if full
+                .mul_ceil(Decimal256::from_atomics(10u64, 0).unwrap())
+                .wrapping_sub(full_dec)
+                >= Uint256::from(5u64)
+            {
+                return Ok(full.wrapping_sub(1u64.into()).to_string().parse::<u32>()?);
+            } else {
+                return Ok(full.to_string().parse::<u32>()?);
+            }
+        }
+
+        Err(anyhow!(
+            "Cannot convert `min_signed_per_window` value to u32".to_string()
+        ))
     }
 }
 

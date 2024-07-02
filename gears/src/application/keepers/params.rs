@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use database::Database;
 use kv_store::StoreKey;
 
@@ -15,6 +17,17 @@ pub trait ParamsKeeper<PSK: ParamsSubspaceKey> {
     type Param: ParamsSerialize + ParamsDeserialize + Default;
 
     fn psk(&self) -> &PSK;
+
+    fn check_key<SL: AsRef<[u8]>>(key: SL) -> bool {
+        <Self::Param as ParamsSerialize>::keys()
+            .iter()
+            .map(|this| this.as_bytes())
+            .collect::<HashSet<_>>()
+            .contains(key.as_ref())
+    }
+
+    #[cfg(all(feature = "governance"))]
+    fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool;
 
     fn get<DB: Database, SK: StoreKey, CTX: InfallibleContext<DB, SK>>(
         &self,

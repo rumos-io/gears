@@ -8,6 +8,7 @@ workspace = true
 
 [dependencies]
 #local
+address = { path = "../address" }
 tendermint = { path = "../tendermint" }
 core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
@@ -36,7 +37,6 @@ integer-encoding = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
 derive_more = { workspace = true }
-constcat = { workspace = true }
 
 #serialization
 prost = { workspace = true }
@@ -90,6 +90,7 @@ dircpy = { workspace = true, optional = true }
 default = ["cli", "export", "xmods"]
 export = []
 xmods = []
+governance = []
 utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy"]
 cli = ["dep:clap", "dep:clap_complete"]
 rocksdb = [ "database/rocksdb"]

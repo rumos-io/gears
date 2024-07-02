@@ -1,14 +1,9 @@
+use bech32::{FromBase32, ToBase32, Variant};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::{
     fmt::{self, Display},
     str::FromStr,
 };
-
-use bech32::{FromBase32, ToBase32, Variant};
-use ripemd::Ripemd160;
-use serde::{Deserialize, Deserializer, Serialize};
-use sha2::{Digest, Sha256};
-
-use crate::crypto::keys::SIZE_ERR_MSG;
 
 const PREFIX_VALIDATOR: &str = "val";
 const PREFIX_OPERATOR: &str = "oper";
@@ -69,6 +64,7 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
         Ok(Self(address))
     }
 
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> u8 {
         self.0
             .len()
@@ -190,29 +186,14 @@ impl<const PREFIX: u8> From<BaseAddress<PREFIX>> for Vec<u8> {
     }
 }
 
-impl From<tendermint::types::proto::crypto::PublicKey> for ConsAddress {
-    fn from(pk: tendermint::types::proto::crypto::PublicKey) -> Self {
-        //TODO: check if this is the correct implementation for Tendermint keys - I copied the method we use for Cosmos keys
-        //TODO: avoid repeating the code for Cosmos keys
-        let pub_key = pk.raw();
-
-        // sha256 hash
-        let mut hasher = Sha256::new();
-        hasher.update(pub_key);
-        let hash = hasher.finalize();
-
-        // ripemd160 hash
-        let mut hasher = Ripemd160::new();
-        hasher.update(hash);
-        let hash = hasher.finalize();
-
-        hash.as_slice().try_into().expect(SIZE_ERR_MSG)
-    }
-}
-
 // TODO: CHECK IS IT SAFE TO CONVERT ONE KEY TO OTHER
 impl From<AccAddress> for ValAddress {
     fn from(value: AccAddress) -> Self {
+        Self(value.0)
+    }
+}
+impl From<ValAddress> for ConsAddress {
+    fn from(value: ValAddress) -> Self {
         Self(value.0)
     }
 }
