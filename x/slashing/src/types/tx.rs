@@ -23,8 +23,6 @@ impl From<MsgUnjail> for MsgUnjailRaw {
 }
 
 /// MsgUnjail creates a new MsgUnjail instance
-///
-///nolint:interfacer
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct MsgUnjail {
     pub validator_address: ValAddress,

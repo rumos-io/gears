@@ -3,12 +3,13 @@ use crate::{
         addr_pubkey_relation_key, validator_missed_block_bit_array_key,
         validator_missed_block_bit_array_prefix_key, validator_signing_info_key,
     },
-    GenesisState, MsgUnjail, SlashingParamsKeeper, ValidatorSigningInfo,
+    GenesisState, MsgUnjail, QuerySigningInfoRequest, QuerySigningInfoResponse,
+    SlashingParamsKeeper, ValidatorSigningInfo,
 };
 use gears::{
     context::{
-        block::BlockContext, init::InitContext, tx::TxContext, InfallibleContextMut,
-        QueryableContext, TransactionalContext,
+        block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
+        InfallibleContextMut, QueryableContext, TransactionalContext,
     },
     error::{AppError, IBC_ENCODE_UNWRAP},
     params::ParamsSubspaceKey,
@@ -123,7 +124,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
 
         // fetch signing info
         let mut sign_info = self
-            .get_validator_signing_info(ctx, &cons_addr)
+            .validator_signing_info(ctx, &cons_addr)
             .unwrap_gas()
             .ok_or(AppError::Custom(
                 "Expected signing info for validator but it is not found".to_string(),
@@ -333,6 +334,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         Ok(())
     }
 
+    pub fn query_signing_info<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QuerySigningInfoRequest,
+    ) -> Result<QuerySigningInfoResponse, AppError> {
+        self.validator_signing_info(ctx, &query.cons_address)?
+            .ok_or(AppError::Custom(format!(
+                "signing info of validator {} is not found",
+                query.cons_address
+            )))
+            .map(|val_signing_info| QuerySigningInfoResponse { val_signing_info })
+    }
+
     /// unjail calls the staking Unjail function to unjail a validator if the
     /// jailed period has concluded
     pub fn unjail<DB: Database>(
@@ -378,7 +392,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         // that the validator was never bonded and must've been jailed due to falling
         // below their minimum self-delegation. The validator can unjail at any point
         // assuming they've now bonded above their minimum self-delegation.
-        if let Some(info) = self.get_validator_signing_info(ctx, &cons_addr)? {
+        if let Some(info) = self.validator_signing_info(ctx, &cons_addr)? {
             // cannot be unjailed if tombstoned
             if info.tombstoned {
                 return Err(AppError::Custom("validator is jailed".to_string()));
@@ -436,7 +450,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     }
 
     /// set_validator_signing_info sets the validator signing info to a consensus address key
-    pub fn get_validator_signing_info<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn validator_signing_info<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &ConsAddress,

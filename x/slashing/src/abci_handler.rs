@@ -1,10 +1,11 @@
-use crate::{GenesisState, Keeper, Message};
+use crate::{GenesisState, Keeper, Message, QuerySigningInfoRequest, QuerySigningInfoResponse};
 use gears::{
-    context::{block::BlockContext, init::InitContext, tx::TxContext},
+    context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
+    core::{errors::CoreError, Protobuf},
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::request::begin_block::RequestBeginBlock,
+    tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
     x::{keepers::staking::SlashingStakingKeeper, module::Module},
 };
 
@@ -17,6 +18,16 @@ pub struct ABCIHandler<
 > {
     keeper: Keeper<SK, PSK, SSK, M>,
 }
+
+// TODO: check option to change signature of methods and implement typed queries
+// #[derive(Clone)]
+// pub enum SlashingNodeQueryRequest {
+//     SigningInfo(QuerySigningInfoRequest),
+// }
+// #[derive(Clone)]
+// pub enum SlashingNodeQueryResponse {
+//     SigningInfo(QuerySigningInfoResponse),
+// }
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M: Module>
     ABCIHandler<SK, PSK, SSK, M>
@@ -36,6 +47,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     ) -> Result<(), AppError> {
         match msg {
             Message::Unjail(msg) => self.keeper.unjail_tx_handler(ctx, msg),
+        }
+    }
+
+    pub fn query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: RequestQuery,
+    ) -> Result<prost::bytes::Bytes, AppError> {
+        match query.path.as_str() {
+            "/cosmos.slashing.v1beta1.Query/SigningInfo" => {
+                let req = QuerySigningInfoRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_signing_info(ctx, req)?
+                    .encode_vec()
+                    .into())
+            }
+            _ => Err(AppError::InvalidRequest("query path not found".into())),
         }
     }
 
