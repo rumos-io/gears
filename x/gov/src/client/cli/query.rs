@@ -40,4 +40,7 @@ pub enum GovQueryCliCommands {
     Votes {
         proposal_id: u64,
     },
+    Proposer {
+        proposal_id: u64,
+    },
 }

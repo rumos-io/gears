@@ -5,12 +5,13 @@ use gears::tendermint::types::proto::Protobuf;
 use crate::query::{
     request::{
         QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
-        QueryProposalRequest, QueryProposalsRequest, QueryTallyResultRequest, QueryVoteRequest,
-        QueryVotesRequest,
+        QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest, QueryTallyResultRequest,
+        QueryVoteRequest, QueryVotesRequest,
     },
     response::{
         QueryAllParamsResponse, QueryDepositResponse, QueryParamsResponse, QueryProposalResponse,
-        QueryProposalsResponse, QueryTallyResultResponse, QueryVoteResponse, QueryVotesResponse,
+        QueryProposalsResponse, QueryProposerResponse, QueryTallyResultResponse, QueryVoteResponse,
+        QueryVotesResponse,
     },
     GovQuery, GovQueryResponse,
 };
@@ -74,6 +75,9 @@ impl QueryHandler for GovClientHandler {
                     pagination: None,
                 })
             }
+            GovQueryCliCommands::Proposer { proposal_id } => {
+                Self::QueryRequest::Proposer(QueryProposerRequest { proposal_id })
+            }
         };
 
         Ok(result)
@@ -120,6 +124,9 @@ impl QueryHandler for GovClientHandler {
             GovQueryCliCommands::Votes { proposal_id: _ } => {
                 Self::QueryResponse::Votes(QueryVotesResponse::decode::<Bytes>(query_bytes.into())?)
             }
+            GovQueryCliCommands::Proposer { proposal_id: _ } => Self::QueryResponse::Proposer(
+                QueryProposerResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
         };
 
         Ok(result)

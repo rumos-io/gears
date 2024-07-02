@@ -1,5 +1,7 @@
 use gears::{
-    core::errors::CoreError, tendermint::types::proto::Protobuf, types::response::PageResponse,
+    core::errors::CoreError,
+    tendermint::types::proto::Protobuf,
+    types::{address::AccAddress, response::PageResponse},
     utils::FallibleMapExt,
 };
 use serde::{Deserialize, Serialize};
@@ -15,6 +17,12 @@ mod inner {
         QueryDepositResponse, QueryDepositsResponse, QueryParamsResponse, QueryProposalResponse,
         QueryProposalsResponse, QueryTallyResultResponse, QueryVoteResponse, QueryVotesResponse,
     };
+
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct QueryProposerResponse {
+        #[prost(string, tag = "1")]
+        pub proposer: String,
+    }
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
@@ -361,3 +369,31 @@ impl From<QueryAllParamsResponse> for inner::QueryParamsResponse {
 }
 
 impl Protobuf<inner::QueryParamsResponse> for QueryAllParamsResponse {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+pub struct QueryProposerResponse {
+    proposer: AccAddress,
+}
+
+impl TryFrom<inner::QueryProposerResponse> for QueryProposerResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryProposerResponse { proposer }: inner::QueryProposerResponse,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            proposer: AccAddress::from_bech32(&proposer)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+        })
+    }
+}
+
+impl From<QueryProposerResponse> for inner::QueryProposerResponse {
+    fn from(QueryProposerResponse { proposer }: QueryProposerResponse) -> Self {
+        Self {
+            proposer: proposer.to_string(),
+        }
+    }
+}
+
+impl Protobuf<inner::QueryProposerResponse> for QueryProposerResponse {}

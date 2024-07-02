@@ -17,6 +17,12 @@ pub mod inner {
 
     #[derive(Clone, PartialEq, ::prost::Message)]
     pub struct QueryAllParamsRequest {}
+
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct QueryProposerRequest {
+        #[prost(uint64, tag = "1")]
+        pub proposal_id: u64,
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -323,3 +329,26 @@ impl From<QueryAllParamsRequest> for inner::QueryAllParamsRequest {
 }
 
 impl Protobuf<inner::QueryAllParamsRequest> for QueryAllParamsRequest {}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct QueryProposerRequest {
+    pub proposal_id: u64,
+}
+
+impl TryFrom<inner::QueryProposerRequest> for QueryProposerRequest {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryProposerRequest { proposal_id }: inner::QueryProposerRequest,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self { proposal_id })
+    }
+}
+
+impl From<QueryProposerRequest> for inner::QueryProposerRequest {
+    fn from(QueryProposerRequest { proposal_id }: QueryProposerRequest) -> Self {
+        Self { proposal_id }
+    }
+}
+
+impl Protobuf<inner::QueryProposerRequest> for QueryProposerRequest {}

@@ -8,13 +8,13 @@ use gears::{
 };
 use request::{
     QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
-    QueryProposalRequest, QueryProposalsRequest, QueryTallyResultRequest, QueryVoteRequest,
-    QueryVotesRequest,
+    QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest, QueryTallyResultRequest,
+    QueryVoteRequest, QueryVotesRequest,
 };
 use response::{
     QueryAllParamsResponse, QueryDepositResponse, QueryDepositsResponse, QueryParamsResponse,
-    QueryProposalResponse, QueryProposalsResponse, QueryTallyResultResponse, QueryVoteResponse,
-    QueryVotesResponse,
+    QueryProposalResponse, QueryProposalsResponse, QueryProposerResponse, QueryTallyResultResponse,
+    QueryVoteResponse, QueryVotesResponse,
 };
 use serde::{Deserialize, Serialize};
 
@@ -32,6 +32,7 @@ pub enum GovQuery {
     Tally(QueryTallyResultRequest),
     Vote(QueryVoteRequest),
     Votes(QueryVotesRequest),
+    Proposer(QueryProposerRequest),
 }
 
 impl Query for GovQuery {
@@ -46,6 +47,7 @@ impl Query for GovQuery {
             GovQuery::Tally(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Tally"),
             GovQuery::Vote(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Vote"),
             GovQuery::Votes(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Votes"),
+            GovQuery::Proposer(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Proposer"),
         }
     }
 
@@ -60,6 +62,7 @@ impl Query for GovQuery {
             GovQuery::Tally(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
             GovQuery::Vote(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
             GovQuery::Votes(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            GovQuery::Proposer(q) => q.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
@@ -82,6 +85,7 @@ pub enum GovQueryResponse {
     Tally(QueryTallyResultResponse),
     Vote(QueryVoteResponse),
     Votes(QueryVotesResponse),
+    Proposer(QueryProposerResponse),
 }
 
 impl QueryResponse for GovQueryResponse {}
