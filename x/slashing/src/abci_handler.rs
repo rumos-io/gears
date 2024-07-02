@@ -1,6 +1,7 @@
-use crate::{GenesisState, Keeper};
+use crate::{GenesisState, Keeper, Message};
 use gears::{
-    context::{block::BlockContext, init::InitContext},
+    context::{block::BlockContext, init::InitContext, tx::TxContext},
+    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::request::begin_block::RequestBeginBlock,
@@ -26,6 +27,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
 
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
+    }
+
+    pub fn tx<DB: Database + Sync + Send>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &Message,
+    ) -> Result<(), AppError> {
+        match msg {
+            Message::Unjail(msg) => self.keeper.unjail_tx_handler(ctx, msg),
+        }
     }
 
     /// begin_block check for infraction evidence or downtime of validators

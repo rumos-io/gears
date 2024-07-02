@@ -1,15 +1,23 @@
+use bytes::Bytes;
 use gears::core::any::google::Any;
+use gears::core::Protobuf;
 use gears::types::address::AccAddress;
 use gears::types::tx::TxMessage;
 use serde::Serialize;
 
-#[derive(Debug, Clone, Serialize)]
-pub enum Message {}
+use crate::MsgUnjail;
 
-//TODO: the fact that this implements proto_messages::cosmos::tx::v1beta1::Message  is not used
+#[derive(Debug, Clone, Serialize)]
+pub enum Message {
+    #[serde(rename = "/cosmos.slashing.v1beta1.Unjail")]
+    Unjail(MsgUnjail),
+}
+
 impl TxMessage for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
-        vec![]
+        match self {
+            Message::Unjail(msg) => vec![&msg.from_address],
+        }
     }
 
     fn validate_basic(&self) -> Result<(), String> {
@@ -17,15 +25,19 @@ impl TxMessage for Message {
     }
 
     fn type_url(&self) -> &'static str {
-        "TODO"
+        match self {
+            Message::Unjail(_) => "/cosmos.slashing.v1beta1.Unjail",
+        }
     }
 }
 
 impl From<Message> for Any {
-    fn from(_msg: Message) -> Self {
-        Any {
-            type_url: "/cosmos.auth.v1beta1".to_string(),
-            value: vec![],
+    fn from(msg: Message) -> Self {
+        match msg {
+            Message::Unjail(msg) => Any {
+                type_url: "/cosmos.slashing.v1beta1.Unjail".to_string(),
+                value: msg.encode_vec(),
+            },
         }
     }
 }
@@ -33,9 +45,16 @@ impl From<Message> for Any {
 impl TryFrom<Any> for Message {
     type Error = gears::core::errors::CoreError;
 
-    fn try_from(_value: Any) -> Result<Self, Self::Error> {
-        Err(gears::core::errors::CoreError::DecodeGeneral(
-            "message type not recognized".into(),
-        ))
+    fn try_from(value: Any) -> Result<Self, Self::Error> {
+        match value.type_url.as_str() {
+            "/cosmos.slashing.v1beta1.Unjail" => {
+                let msg = MsgUnjail::decode::<Bytes>(value.value.clone().into())
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
+                Ok(Message::Unjail(msg))
+            }
+            _ => Err(gears::core::errors::CoreError::DecodeGeneral(
+                "message type not recognized".into(),
+            )),
+        }
     }
 }
