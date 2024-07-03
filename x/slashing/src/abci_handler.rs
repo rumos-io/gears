@@ -1,4 +1,7 @@
-use crate::{GenesisState, Keeper, Message, QuerySigningInfoRequest, QuerySigningInfoResponse};
+use crate::{
+    GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
+    QuerySigningInfoRequest, QuerySigningInfosRequest, QuerySigningInfosResponse,
+};
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::{errors::CoreError, Protobuf},
@@ -19,15 +22,19 @@ pub struct ABCIHandler<
     keeper: Keeper<SK, PSK, SSK, M>,
 }
 
-// TODO: check option to change signature of methods and implement typed queries
-// #[derive(Clone)]
-// pub enum SlashingNodeQueryRequest {
-//     SigningInfo(QuerySigningInfoRequest),
-// }
-// #[derive(Clone)]
-// pub enum SlashingNodeQueryResponse {
-//     SigningInfo(QuerySigningInfoResponse),
-// }
+#[derive(Clone)]
+pub enum SlashingNodeQueryRequest {
+    // TODO: check option to change signature of methods and implement typed queries
+    // SigningInfo(QuerySigningInfoRequest),
+    SigningInfos(QuerySigningInfosRequest),
+    Params(QueryParamsRequest),
+}
+#[derive(Clone)]
+pub enum SlashingNodeQueryResponse {
+    // SigningInfo(QuerySigningInfoResponse),
+    SigningInfos(QuerySigningInfosResponse),
+    Params(QueryParamsResponse),
+}
 
 impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M: Module>
     ABCIHandler<SK, PSK, SSK, M>
@@ -66,7 +73,38 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                     .encode_vec()
                     .into())
             }
+            "/cosmos.slashing.v1beta1.Query/SigningInfos" => {
+                let req = QuerySigningInfosRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_signing_infos(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
+            "/cosmos.slashing.v1beta1.Query/Params" => {
+                let req = QueryParamsRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self.keeper.query_params(ctx, req).encode_vec().into())
+            }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
+        }
+    }
+
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: SlashingNodeQueryRequest,
+    ) -> SlashingNodeQueryResponse {
+        match query {
+            SlashingNodeQueryRequest::SigningInfos(req) => {
+                SlashingNodeQueryResponse::SigningInfos(self.keeper.query_signing_infos(ctx, req))
+            }
+            SlashingNodeQueryRequest::Params(req) => {
+                SlashingNodeQueryResponse::Params(self.keeper.query_params(ctx, req))
+            }
         }
     }
 

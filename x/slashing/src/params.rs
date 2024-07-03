@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
-    core::serializers::serialize_number_to_string,
+    core::{serializers::serialize_number_to_string, Protobuf},
     params::{
         gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
         ParamsSerialize, ParamsSubspaceKey,
@@ -9,10 +9,12 @@ use gears::{
     store::{database::Database, StoreKey},
     types::{
         decimal256::{Decimal256, PRECISION_REUSE},
+        errors::StdError,
         store::gas::errors::GasStoreErrors,
         uint::Uint256,
     },
 };
+use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 use std::{
@@ -25,6 +27,32 @@ const KEY_MIN_SIGNED_PER_WINDOW: &str = "MinSignedPerWindow";
 const KEY_DOWNTIME_JAIL_DURATION: &str = "DowntimeJailDuration";
 const KEY_SLASH_FRACTION_DOUBLE_SIGN: &str = "SlashFractionDoubleSign";
 const KEY_SLASH_FRACTION_DOWNTIME: &str = "SlashFractionDowntime";
+
+#[derive(Clone, Serialize, Message)]
+pub struct SlashingParamsRaw {
+    #[prost(int64, tag = "1")]
+    pub signed_blocks_window: i64,
+    #[prost(string, tag = "2")]
+    pub min_signed_per_window: String,
+    #[prost(int64, tag = "3")]
+    pub downtime_jail_duration: i64,
+    #[prost(string, tag = "4")]
+    pub slash_fraction_double_sign: String,
+    #[prost(string, tag = "5")]
+    pub slash_fraction_downtime: String,
+}
+
+impl From<SlashingParams> for SlashingParamsRaw {
+    fn from(value: SlashingParams) -> Self {
+        Self {
+            signed_blocks_window: value.signed_blocks_window,
+            min_signed_per_window: value.min_signed_per_window.to_string(),
+            downtime_jail_duration: value.downtime_jail_duration,
+            slash_fraction_double_sign: value.slash_fraction_double_sign.to_string(),
+            slash_fraction_downtime: value.slash_fraction_downtime.to_string(),
+        }
+    }
+}
 
 /// SlashingParams represents the parameters used for by the slashing module.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -70,6 +98,22 @@ impl SlashingParams {
         ))
     }
 }
+
+impl TryFrom<SlashingParamsRaw> for SlashingParams {
+    type Error = StdError;
+
+    fn try_from(value: SlashingParamsRaw) -> Result<Self, Self::Error> {
+        Ok(Self {
+            signed_blocks_window: value.signed_blocks_window,
+            min_signed_per_window: Decimal256::from_str(&value.min_signed_per_window)?,
+            downtime_jail_duration: value.downtime_jail_duration,
+            slash_fraction_double_sign: Decimal256::from_str(&value.slash_fraction_double_sign)?,
+            slash_fraction_downtime: Decimal256::from_str(&value.slash_fraction_downtime)?,
+        })
+    }
+}
+
+impl Protobuf<SlashingParamsRaw> for SlashingParams {}
 
 impl ParamsSerialize for SlashingParams {
     fn keys() -> HashSet<&'static str> {

@@ -3,7 +3,7 @@ use crate::{
     UnbondingDelegation, Validator,
 };
 use gears::{
-    core::{errors::CoreError, Protobuf},
+    core::{errors::CoreError, query::request::PageRequest, Protobuf},
     error::{AppError, IBC_ENCODE_UNWRAP},
     store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
@@ -109,7 +109,7 @@ pub struct QueryRedelegationRequest {
     /// dst_validator_addr defines the validator address to redelegate to.
     pub dst_validator_address: Option<ValAddress>,
     /// pagination defines an optional pagination for the request.
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PageRequest>,
 }
 
 impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
@@ -159,7 +159,7 @@ pub struct QueryRedelegationRequestRaw {
     #[prost(string, optional)]
     pub dst_validator_address: Option<String>,
     #[prost(message, optional)]
-    pub pagination: Option<gears::core::query::response::PageResponse>,
+    pub pagination: Option<PageRequest>,
 }
 
 impl From<QueryRedelegationRequest> for QueryRedelegationRequestRaw {

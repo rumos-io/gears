@@ -1,11 +1,14 @@
 use gears::{
-    core::{errors::CoreError, Protobuf},
-    types::address::{AddressError, ConsAddress},
+    core::{errors::CoreError, query::request::PageRequest, Protobuf},
+    types::{
+        address::{AddressError, ConsAddress},
+        response::PageResponse,
+    },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use crate::{ValidatorSigningInfo, ValidatorSigningInfoRaw};
+use crate::{SlashingParams, SlashingParamsRaw, ValidatorSigningInfo, ValidatorSigningInfoRaw};
 
 // =====
 // Requests
@@ -44,6 +47,49 @@ impl TryFrom<QuerySigningInfoRequestRaw> for QuerySigningInfoRequest {
 }
 
 impl Protobuf<QuerySigningInfoRequestRaw> for QuerySigningInfoRequest {}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QuerySigningInfosRequestRaw {
+    /// pagination defines an optional pagination for the request.
+    #[prost(message, optional)]
+    pub pagination: Option<PageRequest>,
+}
+
+impl From<QuerySigningInfosRequest> for QuerySigningInfosRequestRaw {
+    fn from(QuerySigningInfosRequest { pagination }: QuerySigningInfosRequest) -> Self {
+        Self {
+            pagination: Some(pagination),
+        }
+    }
+}
+
+/// QuerySigningInfosRequest is the request type for the Query/SigningInfos RPC
+/// method
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct QuerySigningInfosRequest {
+    /// pagination defines an optional pagination for the request.
+    pub pagination: PageRequest,
+}
+
+impl TryFrom<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {
+    type Error = CoreError;
+
+    fn try_from(
+        QuerySigningInfosRequestRaw { pagination }: QuerySigningInfosRequestRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            pagination: pagination.ok_or(CoreError::MissingField(
+                "Missing field 'pagination'.".into(),
+            ))?,
+        })
+    }
+}
+
+impl Protobuf<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QueryParamsRequest {}
+impl Protobuf<QueryParamsRequest> for QueryParamsRequest {}
 
 // =====
 // Responses
@@ -87,3 +133,85 @@ impl TryFrom<QuerySigningInfoResponseRaw> for QuerySigningInfoResponse {
 }
 
 impl Protobuf<QuerySigningInfoResponseRaw> for QuerySigningInfoResponse {}
+
+#[derive(Clone, PartialEq, Message)]
+pub struct QuerySigningInfosResponseRaw {
+    #[prost(message, repeated)]
+    pub info: Vec<ValidatorSigningInfoRaw>,
+    #[prost(message, optional)]
+    pub pagination: Option<gears::core::query::response::PageResponse>,
+}
+
+impl From<QuerySigningInfosResponse> for QuerySigningInfosResponseRaw {
+    fn from(QuerySigningInfosResponse { info, pagination }: QuerySigningInfosResponse) -> Self {
+        Self {
+            info: info.into_iter().map(|inf| inf.into()).collect(),
+            pagination: pagination.map(|p| p.into()),
+        }
+    }
+}
+
+/// QuerySigningInfosResponse is the response type for the Query/SigningInfos RPC
+/// method
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct QuerySigningInfosResponse {
+    /// Info is the signing info of all validators
+    pub info: Vec<ValidatorSigningInfo>,
+    pub pagination: Option<PageResponse>,
+}
+
+impl TryFrom<QuerySigningInfosResponseRaw> for QuerySigningInfosResponse {
+    type Error = CoreError;
+    fn try_from(
+        QuerySigningInfosResponseRaw { info, pagination }: QuerySigningInfosResponseRaw,
+    ) -> Result<Self, Self::Error> {
+        let mut info_res = vec![];
+        for inf in info {
+            info_res.push(inf.try_into()?);
+        }
+        Ok(Self {
+            info: info_res,
+            pagination: pagination.map(|p| p.into()),
+        })
+    }
+}
+
+impl Protobuf<QuerySigningInfosResponseRaw> for QuerySigningInfosResponse {}
+
+/// QueryParamsResponse is the response type for the Query/Params RPC method
+#[derive(Clone, Serialize, Message)]
+pub struct QueryParamsResponseRaw {
+    #[prost(message, optional)]
+    pub params: Option<SlashingParamsRaw>,
+}
+
+impl From<QueryParamsResponse> for QueryParamsResponseRaw {
+    fn from(QueryParamsResponse { params }: QueryParamsResponse) -> Self {
+        Self {
+            params: Some(params.into()),
+        }
+    }
+}
+
+/// QueryParamsResponse is the response type for the Query/Params RPC method
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct QueryParamsResponse {
+    pub params: SlashingParams,
+}
+
+impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        QueryParamsResponseRaw { params }: QueryParamsResponseRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            params: params
+                .ok_or(CoreError::MissingField("Missing field 'params'.".into()))?
+                .try_into()
+                .map_err(|e| CoreError::DecodeGeneral(format!("{e}")))?,
+        })
+    }
+}
+
+impl Protobuf<QueryParamsResponseRaw> for QueryParamsResponse {}

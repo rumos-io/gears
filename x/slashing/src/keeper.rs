@@ -3,8 +3,9 @@ use crate::{
         addr_pubkey_relation_key, validator_missed_block_bit_array_key,
         validator_missed_block_bit_array_prefix_key, validator_signing_info_key,
     },
-    GenesisState, MsgUnjail, QuerySigningInfoRequest, QuerySigningInfoResponse,
-    SlashingParamsKeeper, ValidatorSigningInfo,
+    utils, GenesisState, MsgUnjail, QueryParamsRequest, QueryParamsResponse,
+    QuerySigningInfoRequest, QuerySigningInfoResponse, QuerySigningInfosRequest,
+    QuerySigningInfosResponse, SlashingParamsKeeper, ValidatorSigningInfo,
 };
 use gears::{
     context::{
@@ -28,6 +29,7 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
+        response::PageResponse,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
@@ -347,6 +349,43 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
             .map(|val_signing_info| QuerySigningInfoResponse { val_signing_info })
     }
 
+    pub fn query_signing_infos<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QuerySigningInfosRequest,
+    ) -> QuerySigningInfosResponse {
+        let signing_infos = self.validator_signing_infos(ctx);
+        let signing_infos = if let Some((start, end)) = utils::paginate(
+            signing_infos.len() as u64,
+            query.pagination.offset,
+            query.pagination.limit,
+            self.staking_keeper.max_validators(ctx).unwrap_gas() as u64,
+        ) {
+            signing_infos[start as usize..end as usize].to_vec()
+        } else {
+            vec![]
+        };
+        let total = signing_infos.len() as u64;
+        QuerySigningInfosResponse {
+            info: signing_infos,
+            // TODO: make correct pagination struct
+            pagination: Some(PageResponse {
+                next_key: vec![],
+                total,
+            }),
+        }
+    }
+
+    pub fn query_params<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        _query: QueryParamsRequest,
+    ) -> QueryParamsResponse {
+        QueryParamsResponse {
+            params: self.slashing_params_keeper.get(ctx),
+        }
+    }
+
     /// unjail calls the staking Unjail function to unjail a validator if the
     /// jailed period has concluded
     pub fn unjail<DB: Database>(
@@ -449,7 +488,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         store.set(key, value)
     }
 
-    /// set_validator_signing_info sets the validator signing info to a consensus address key
+    /// validator_signing_info gets the validator signing
     pub fn validator_signing_info<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
@@ -460,6 +499,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         store.get(&key).map(|sign_info| {
             sign_info.map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt())
         })
+    }
+
+    pub fn validator_signing_infos<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+    ) -> Vec<ValidatorSigningInfo> {
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(VALIDATOR_SIGNING_INFO_KEY_PREFIX);
+        store
+            .into_range(..)
+            .map(|(_k, v)| ValidatorSigningInfo::decode_vec(&v).unwrap_or_corrupt())
+            .collect::<Vec<_>>()
     }
 
     /// set_validator_signing_info sets the validator signing info to a consensus address key
