@@ -1,13 +1,13 @@
 use gears::{
     core::errors::CoreError,
+    ext::FallibleMapExt,
     tendermint::types::proto::Protobuf,
     types::{address::AccAddress, response::PageResponse},
-    utils::FallibleMapExt,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    msg::{deposit::Deposit, vote::Vote},
+    msg::{deposit::Deposit, weighted_vote::MsgVoteWeighted},
     params::{DepositParams, TallyParams, VotingParams},
     types::proposal::{Proposal, TallyResult},
 };
@@ -103,7 +103,7 @@ impl Protobuf<inner::QueryProposalsResponse> for QueryProposalsResponse {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryVoteResponse {
-    pub vote: Option<Vote>,
+    pub vote: Option<MsgVoteWeighted>,
 }
 
 impl TryFrom<inner::QueryVoteResponse> for QueryVoteResponse {
@@ -133,7 +133,7 @@ impl Protobuf<inner::QueryVoteResponse> for QueryVoteResponse {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryVotesResponse {
-    pub votes: Vec<Vote>,
+    pub votes: Vec<MsgVoteWeighted>,
     pub pagination: Option<PageResponse>,
 }
 
@@ -290,7 +290,7 @@ impl Protobuf<inner::QueryDepositsResponse> for QueryDepositsResponse {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryTallyResultResponse {
-    tally: Option<TallyResult>,
+    pub tally: Option<TallyResult>,
 }
 
 impl TryFrom<inner::QueryTallyResultResponse> for QueryTallyResultResponse {

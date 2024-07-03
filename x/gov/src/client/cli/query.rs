@@ -26,9 +26,9 @@ pub enum GovQueryCliCommands {
         proposal_id: u64,
     },
     Proposals {
-        voter: AccAddress,
-        depositor: AccAddress,
-        status: ProposalStatus,
+        voter: Option<AccAddress>,
+        depositor: Option<AccAddress>,
+        status: Option<ProposalStatus>,
     },
     Tally {
         proposal_id: u64,

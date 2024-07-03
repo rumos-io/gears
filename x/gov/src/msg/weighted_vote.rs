@@ -21,6 +21,7 @@ use super::{
 
 mod inner {
     pub use ibc_proto::cosmos::gov::v1beta1::MsgVoteWeighted;
+    pub use ibc_proto::cosmos::gov::v1beta1::Vote;
     pub use ibc_proto::cosmos::gov::v1beta1::WeightedVoteOption;
 }
 
@@ -218,7 +219,7 @@ impl TryFrom<Any> for MsgVoteWeighted {
                 "message type not recognized".into(),
             ))?
         }
-        MsgVoteWeighted::decode::<Bytes>(value.value.into())
+        <MsgVoteWeighted as Protobuf<inner::MsgVoteWeighted>>::decode::<Bytes>(value.value.into())
             .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
     }
 }
@@ -227,7 +228,8 @@ impl From<MsgVoteWeighted> for Any {
     fn from(msg: MsgVoteWeighted) -> Self {
         Any {
             type_url: MsgVoteWeighted::TYPE_URL.to_string(),
-            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            value: <MsgVoteWeighted as Protobuf<inner::MsgVoteWeighted>>::encode_vec(&msg)
+                .expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
@@ -237,3 +239,52 @@ impl From<MsgVoteWeighted> for GovMsg {
         Self::Weighted(value)
     }
 }
+
+impl TryFrom<inner::Vote> for MsgVoteWeighted {
+    type Error = CoreError;
+
+    #[allow(deprecated)]
+    fn try_from(
+        inner::Vote {
+            proposal_id,
+            voter,
+            option: _,
+            options,
+        }: inner::Vote,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            proposal_id,
+            voter: AccAddress::from_bech32(&voter)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            options: {
+                let mut result = Vec::with_capacity(options.len());
+
+                for option in options {
+                    result.push(option.try_into()?);
+                }
+
+                result
+            },
+        })
+    }
+}
+
+impl From<MsgVoteWeighted> for inner::Vote {
+    #[allow(deprecated)]
+    fn from(
+        MsgVoteWeighted {
+            proposal_id,
+            voter,
+            options,
+        }: MsgVoteWeighted,
+    ) -> Self {
+        Self {
+            proposal_id,
+            voter: voter.to_string(),
+            option: 0, // VOTE_OPTION_UNSPECIFIED
+            options: options.into_iter().map(|this| this.into()).collect(),
+        }
+    }
+}
+
+impl Protobuf<inner::Vote> for MsgVoteWeighted {}

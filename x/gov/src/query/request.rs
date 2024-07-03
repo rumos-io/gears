@@ -50,9 +50,9 @@ impl Protobuf<inner::QueryProposalRequest> for QueryProposalRequest {}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct QueryProposalsRequest {
-    pub voter: AccAddress,
-    pub depositor: AccAddress,
-    pub proposal_status: ProposalStatus,
+    pub voter: Option<AccAddress>,
+    pub depositor: Option<AccAddress>,
+    pub proposal_status: Option<ProposalStatus>,
     pub pagination: Option<Pagination>,
 }
 
@@ -68,11 +68,24 @@ impl TryFrom<inner::QueryProposalsRequest> for QueryProposalsRequest {
         }: inner::QueryProposalsRequest,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            voter: AccAddress::from_bech32(&voter)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            depositor: AccAddress::from_bech32(&depositor)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            proposal_status: proposal_status.try_into()?,
+            voter: match voter.is_empty() {
+                true => None,
+                false => Some(
+                    AccAddress::from_bech32(&voter)
+                        .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+                ),
+            },
+            depositor: match depositor.is_empty() {
+                true => None,
+                false => Some(
+                    AccAddress::from_bech32(&depositor)
+                        .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+                ),
+            },
+            proposal_status: match proposal_status <= -1 {
+                true => None,
+                false => Some(proposal_status.try_into()?),
+            },
             pagination: match pagination {
                 Some(var) => Some(var.into()),
                 None => None,
@@ -91,9 +104,9 @@ impl From<QueryProposalsRequest> for inner::QueryProposalsRequest {
         }: QueryProposalsRequest,
     ) -> Self {
         Self {
-            proposal_status: proposal_status as i32,
-            voter: voter.to_string(),
-            depositor: depositor.to_string(),
+            proposal_status: proposal_status.map(|this| this as i32).unwrap_or(-1),
+            voter: voter.map(|this| this.to_string()).unwrap_or_default(),
+            depositor: depositor.map(|this| this.to_string()).unwrap_or_default(),
             pagination: None,
         }
     }

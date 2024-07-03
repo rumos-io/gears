@@ -3,13 +3,18 @@ use std::{str::FromStr, sync::OnceLock};
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     core::errors::CoreError,
+    store::database::Database,
     tendermint::types::proto::Protobuf,
-    types::{base::send::SendCoins, uint::Uint256},
+    types::{
+        base::send::SendCoins,
+        store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
+        uint::Uint256,
+    },
 };
 use ibc_proto::google::protobuf::{Any, Timestamp};
 use serde::{Deserialize, Serialize};
 
-use crate::keeper::KEY_PROPOSAL_PREFIX;
+use crate::{errors::SERDE_JSON_CONVERSION, keeper::KEY_PROPOSAL_PREFIX};
 
 pub mod active_iter;
 pub mod inactive_iter;
@@ -212,6 +217,7 @@ impl From<TallyResult> for inner::TallyResult {
 impl Protobuf<inner::TallyResult> for TallyResult {}
 
 impl Proposal {
+    const KEY_PREFIX: [u8; 1] = [0x00];
     const KEY_ACTIVE_QUEUE_PREFIX: [u8; 1] = [0x01];
     const KEY_INACTIVE_QUEUE_PREFIX: [u8; 1] = [0x02];
 
@@ -305,4 +311,35 @@ fn parse_proposal_key_bytes(bytes: impl AsRef<[u8]>) -> (u64, DateTime<Utc>) {
     // TODO
 
     (proposal, time)
+}
+
+#[derive(Debug)]
+pub struct ProposalsIterator<'a, DB>(StoreRange<'a, DB>);
+
+impl<'a, DB: Database> ProposalsIterator<'a, DB> {
+    pub fn new(store: Store<'a, DB>) -> ProposalsIterator<'a, DB> {
+        let prefix = store.prefix_store(Proposal::KEY_PREFIX);
+
+        let range = prefix.into_range(..);
+
+        ProposalsIterator(range)
+    }
+}
+
+impl<'a, DB: Database> Iterator for ProposalsIterator<'a, DB> {
+    type Item = Result<((u64, DateTime<Utc>), Proposal), GasStoreErrors>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(var) = self.0.next() {
+            match var {
+                Ok((key, value)) => Some(Ok((
+                    parse_proposal_key_bytes(key.as_ref()),
+                    serde_json::from_slice(&value).expect(SERDE_JSON_CONVERSION),
+                ))),
+                Err(err) => Some(Err(err)),
+            }
+        } else {
+            None
+        }
+    }
 }

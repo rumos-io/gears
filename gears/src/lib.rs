@@ -8,6 +8,7 @@ pub mod context;
 pub mod crypto;
 pub mod defaults;
 pub mod error;
+pub mod ext;
 pub mod grpc;
 pub mod params;
 pub mod rest;
