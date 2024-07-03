@@ -68,14 +68,14 @@ pub enum ClientQuery {
 }
 
 impl Query for ClientQuery {
-    fn query_url(&self) -> Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
-            ClientQuery::ClientParams(_) => Cow::Borrowed(PARAMS_URL),
-            ClientQuery::ClientState(_) => Cow::Borrowed(STATE_URL),
-            ClientQuery::ClientStates(_) => Cow::Borrowed(STATES_URL),
-            ClientQuery::ClientStatus(_) => Cow::Borrowed(STATUS_URL),
-            ClientQuery::ConsensusState(_) => Cow::Borrowed(CONSENSUS_STATE_URL),
-            ClientQuery::ConsensusStates(_) => Cow::Borrowed(CONSENSUS_STATES_URL),
+            ClientQuery::ClientParams(_) => PARAMS_URL,
+            ClientQuery::ClientState(_) => STATE_URL,
+            ClientQuery::ClientStates(_) => STATES_URL,
+            ClientQuery::ClientStatus(_) => STATUS_URL,
+            ClientQuery::ConsensusState(_) => CONSENSUS_STATE_URL,
+            ClientQuery::ConsensusStates(_) => CONSENSUS_STATES_URL,
         }
     }
 

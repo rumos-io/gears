@@ -28,7 +28,7 @@ pub enum IbcQuery {
 }
 
 impl Query for IbcQuery {
-    fn query_url(&self) -> Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
             IbcQuery::Client(query) => query.query_url(),
         }

@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use gears::{
     baseapp::{QueryRequest, QueryResponse},
     error::IBC_ENCODE_UNWRAP,
@@ -36,18 +34,18 @@ pub enum GovQuery {
 }
 
 impl Query for GovQuery {
-    fn query_url(&self) -> Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
-            GovQuery::Deposit(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Deposit"),
-            GovQuery::Deposits(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Deposits"),
-            GovQuery::Params(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Param"),
-            GovQuery::AllParams(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Params"),
-            GovQuery::Proposal(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Proposal"),
-            GovQuery::Proposals(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Proposals"),
-            GovQuery::Tally(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Tally"),
-            GovQuery::Vote(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Vote"),
-            GovQuery::Votes(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Votes"),
-            GovQuery::Proposer(_) => Cow::Borrowed("/cosmos.gov.v1beta1.Query/Proposer"),
+            GovQuery::Deposit(_) => "/cosmos.gov.v1beta1.Query/Deposit",
+            GovQuery::Deposits(_) => "/cosmos.gov.v1beta1.Query/Deposits",
+            GovQuery::Params(_) => "/cosmos.gov.v1beta1.Query/Param",
+            GovQuery::AllParams(_) => "/cosmos.gov.v1beta1.Query/Params",
+            GovQuery::Proposal(_) => "/cosmos.gov.v1beta1.Query/Proposal",
+            GovQuery::Proposals(_) => "/cosmos.gov.v1beta1.Query/Proposals",
+            GovQuery::Tally(_) => "/cosmos.gov.v1beta1.Query/Tally",
+            GovQuery::Vote(_) => "/cosmos.gov.v1beta1.Query/Vote",
+            GovQuery::Votes(_) => "/cosmos.gov.v1beta1.Query/Votes",
+            GovQuery::Proposer(_) => "/cosmos.gov.v1beta1.Query/Proposer",
         }
     }
 

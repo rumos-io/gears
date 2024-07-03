@@ -225,6 +225,10 @@ impl<
         _ctx: &QueryContext<DB, Self::StoreKey>,
         _query: RequestQuery,
     ) -> Result<Bytes, AppError> {
+        // match query.path.as_str() {
+
+        // }
+
         todo!()
     }
 
