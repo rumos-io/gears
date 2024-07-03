@@ -34,7 +34,7 @@ impl Default for DepositParams {
     fn default() -> Self {
         Self {
             min_deposit: SendCoins::new(vec![
-                Coin::from_str("10000000stake").expect("default is valid")
+                Coin::from_str("10000000uatom").expect("default is valid")
             ])
             .expect("default is valid"),
             max_deposit_period: DEFAULT_PERIOD,
