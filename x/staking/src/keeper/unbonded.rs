@@ -126,7 +126,6 @@ impl<
             nanos: completion_time.timestamp_subsec_nanos() as i32,
         };
         let entry = UnbondingDelegationEntry {
-            // TODO: update type
             creation_height: ctx.height(),
             completion_time: completion_time.clone(),
             initial_balance: return_amount,

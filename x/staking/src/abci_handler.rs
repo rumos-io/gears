@@ -77,7 +77,7 @@ impl<
             Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
             Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
-            Message::Undelegate(_msg) => todo!(),
+            Message::Undelegate(_msg) => self.keeper.undelegate_cmd_handler(ctx, msg),
         }
     }
 
@@ -162,8 +162,6 @@ impl<
         _request: RequestBeginBlock,
     ) {
         self.keeper.track_historical_info(ctx);
-        // TODO
-        // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyBeginBlocker)
     }
 
     pub fn end_block<DB: Database>(
@@ -172,7 +170,5 @@ impl<
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
         self.keeper.block_validator_updates(ctx)
-        // TODO
-        // defer telemetry.ModuleMeasureSince(types.ModuleName, time.Now(), telemetry.MetricKeyEndBlocker)
     }
 }
