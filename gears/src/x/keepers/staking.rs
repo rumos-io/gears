@@ -15,6 +15,17 @@ use crate::{
     },
 };
 
+/// Delay, in blocks, between when validator updates are returned to the
+/// consensus-engine and when they are applied. For example, if
+/// ValidatorUpdateDelay is set to X, and if a validator set update is
+/// returned with new validators at the end of block 10, then the new
+/// validators are expected to sign blocks beginning at block 11+X.
+///
+/// This value is constant as this should not change without a hard fork.
+/// For Tendermint this should be set to 1 block, for more details see:
+/// https://tendermint.com/docs/spec/abci/apps.html#endblock
+pub const VALIDATOR_UPDATE_DELAY: u32 = 1;
+
 /// Staking keeper which used in gov xmod
 pub trait GovStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
     type Validator: StakingValidator;
@@ -53,24 +64,23 @@ pub trait SlashingStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 
         &self,
         ctx: &CTX,
         addr: &ValAddress,
-    ) -> Result<Self::Validator, GasStoreErrors>;
+    ) -> Result<Option<Self::Validator>, GasStoreErrors>;
 
     /// get a particular validator by consensus address
     fn validator_by_cons_addr<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &ConsAddress,
-    ) -> Result<Self::Validator, GasStoreErrors>;
+    ) -> Result<Option<Self::Validator>, GasStoreErrors>;
 
     /// slash the validator and delegators of the validator, specifying offence height, offence power, and slash fraction
     fn slash<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         addr: &ConsAddress,
-        // TODO: no name in original impl, add reasonable names
-        a: i64,
-        b: i64,
-        c: Decimal256,
+        height: u32,
+        power: u32,
+        slash_fraction_downtime: Decimal256,
     ) -> Result<(), GasStoreErrors>;
 
     /// jail a validator
@@ -94,7 +104,7 @@ pub trait SlashingStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 
         ctx: &CTX,
         delegator_address: &AccAddress,
         validator_address: &ValAddress,
-    ) -> Result<Self::Delegation, GasStoreErrors>;
+    ) -> Result<Option<Self::Delegation>, GasStoreErrors>;
 
     /// max_validators returns the maximum amount of bonded validators
     fn max_validators<DB: Database, CTX: QueryableContext<DB, SK>>(

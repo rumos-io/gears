@@ -6,6 +6,7 @@ mod keys;
 mod message;
 mod params;
 mod types;
+mod utils;
 
 pub use abci_handler::*;
 pub use client::*;

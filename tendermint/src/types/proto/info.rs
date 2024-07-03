@@ -2,11 +2,9 @@ use crate::types::time::Timestamp;
 
 use super::validator::Validator;
 
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct LastCommitInfo {
-    #[prost(int32, tag = "1")]
     pub round: i32,
-    #[prost(message, repeated, tag = "2")]
     pub votes: Vec<VoteInfo>,
 }
 
@@ -19,35 +17,46 @@ impl From<LastCommitInfo> for inner::LastCommitInfo {
     }
 }
 
-impl From<inner::LastCommitInfo> for LastCommitInfo {
-    fn from(inner::LastCommitInfo { round, votes }: inner::LastCommitInfo) -> Self {
-        Self {
-            round,
-            votes: votes.into_iter().map(Into::into).collect(),
+impl TryFrom<inner::LastCommitInfo> for LastCommitInfo {
+    type Error = crate::error::Error;
+
+    fn try_from(
+        inner::LastCommitInfo { round, votes }: inner::LastCommitInfo,
+    ) -> Result<Self, Self::Error> {
+        let mut votes_res = vec![];
+        for v in votes {
+            votes_res.push(v.try_into()?);
         }
+        Ok(Self {
+            round,
+            votes: votes_res,
+        })
     }
 }
 
 /// VoteInfo
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct VoteInfo {
-    #[prost(message, optional, tag = "1")]
-    pub validator: Option<Validator>,
-    #[prost(bool, tag = "2")]
+    pub validator: Validator,
     pub signed_last_block: bool,
 }
 
-impl From<inner::VoteInfo> for VoteInfo {
-    fn from(
+impl TryFrom<inner::VoteInfo> for VoteInfo {
+    type Error = crate::error::Error;
+
+    fn try_from(
         inner::VoteInfo {
             validator,
             signed_last_block,
         }: inner::VoteInfo,
-    ) -> Self {
-        Self {
-            validator: validator.map(Into::into),
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            validator: validator
+                .ok_or(Self::Error::InvalidData("validator is missing".into()))?
+                .try_into()
+                .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             signed_last_block,
-        }
+        })
     }
 }
 
@@ -59,33 +68,30 @@ impl From<VoteInfo> for inner::VoteInfo {
         }: VoteInfo,
     ) -> Self {
         Self {
-            validator: validator.map(Into::into),
+            validator: Some(validator.into()),
             signed_last_block,
         }
     }
 }
 
-#[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Evidence {
-    #[prost(enumeration = "EvidenceType", tag = "1")]
     pub r#type: i32,
     /// The offending validator
-    #[prost(message, optional, tag = "2")]
-    pub validator: Option<Validator>,
+    pub validator: Validator,
     /// The height when the offense occurred
-    #[prost(int64, tag = "3")]
     pub height: i64,
     /// The corresponding time where the offense occurred
-    #[prost(message, optional, tag = "4")]
     pub time: Option<Timestamp>,
     /// Total voting power of the validator set in case the ABCI application does
     /// not store historical validators.
-    #[prost(int64, tag = "5")]
     pub total_voting_power: i64,
 }
 
-impl From<inner::Evidence> for Evidence {
-    fn from(
+impl TryFrom<inner::Evidence> for Evidence {
+    type Error = crate::error::Error;
+
+    fn try_from(
         inner::Evidence {
             r#type,
             validator,
@@ -93,14 +99,17 @@ impl From<inner::Evidence> for Evidence {
             time,
             total_voting_power,
         }: inner::Evidence,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
             r#type,
-            validator: validator.map(Into::into),
+            validator: validator
+                .ok_or(Self::Error::InvalidData("validator is missing".into()))?
+                .try_into()
+                .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             height,
             time: time.map(Into::into),
             total_voting_power,
-        }
+        })
     }
 }
 
@@ -116,7 +125,7 @@ impl From<Evidence> for inner::Evidence {
     ) -> Self {
         Self {
             r#type,
-            validator: validator.map(Into::into),
+            validator: Some(validator.into()),
             height,
             time: time.map(Into::into),
             total_voting_power,

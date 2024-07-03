@@ -237,6 +237,19 @@ impl StakingValidator for Validator {
     fn cons_pub_key(&self) -> &PublicKey {
         &self.consensus_pubkey
     }
+
+    fn is_jailed(&self) -> bool {
+        self.jailed
+    }
+
+    fn min_self_delegation(&self) -> &Uint256 {
+        &self.min_self_delegation
+    }
+
+    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, AppError> {
+        self.tokens_from_shares(shares)
+            .map_err(|e| AppError::Custom(e.to_string()))
+    }
 }
 
 impl Validator {

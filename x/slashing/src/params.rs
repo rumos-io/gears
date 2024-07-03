@@ -1,13 +1,20 @@
+use anyhow::anyhow;
 use gears::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},
-    core::serializers::serialize_number_to_string,
+    core::{serializers::serialize_number_to_string, Protobuf},
     params::{
         gas, infallible_subspace, infallible_subspace_mut, ParamKind, ParamsDeserialize,
         ParamsSerialize, ParamsSubspaceKey,
     },
     store::{database::Database, StoreKey},
-    types::{decimal256::Decimal256, store::gas::errors::GasStoreErrors},
+    types::{
+        decimal256::{Decimal256, PRECISION_REUSE},
+        errors::StdError,
+        store::gas::errors::GasStoreErrors,
+        uint::Uint256,
+    },
 };
+use prost::Message;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 use std::{
@@ -20,6 +27,32 @@ const KEY_MIN_SIGNED_PER_WINDOW: &str = "MinSignedPerWindow";
 const KEY_DOWNTIME_JAIL_DURATION: &str = "DowntimeJailDuration";
 const KEY_SLASH_FRACTION_DOUBLE_SIGN: &str = "SlashFractionDoubleSign";
 const KEY_SLASH_FRACTION_DOWNTIME: &str = "SlashFractionDowntime";
+
+#[derive(Clone, Serialize, Message)]
+pub struct SlashingParamsRaw {
+    #[prost(int64, tag = "1")]
+    pub signed_blocks_window: i64,
+    #[prost(string, tag = "2")]
+    pub min_signed_per_window: String,
+    #[prost(int64, tag = "3")]
+    pub downtime_jail_duration: i64,
+    #[prost(string, tag = "4")]
+    pub slash_fraction_double_sign: String,
+    #[prost(string, tag = "5")]
+    pub slash_fraction_downtime: String,
+}
+
+impl From<SlashingParams> for SlashingParamsRaw {
+    fn from(value: SlashingParams) -> Self {
+        Self {
+            signed_blocks_window: value.signed_blocks_window,
+            min_signed_per_window: value.min_signed_per_window.to_string(),
+            downtime_jail_duration: value.downtime_jail_duration,
+            slash_fraction_double_sign: value.slash_fraction_double_sign.to_string(),
+            slash_fraction_downtime: value.slash_fraction_downtime.to_string(),
+        }
+    }
+}
 
 /// SlashingParams represents the parameters used for by the slashing module.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -34,6 +67,53 @@ pub struct SlashingParams {
     pub slash_fraction_double_sign: Decimal256,
     pub slash_fraction_downtime: Decimal256,
 }
+
+impl SlashingParams {
+    pub fn min_signed_per_window_u32(&self) -> anyhow::Result<u32> {
+        // NOTE: RoundInt64 will never panic as minSignedPerWindow is less than 1.
+        let mul = self
+            .min_signed_per_window
+            .checked_mul(Decimal256::from_atomics(self.signed_blocks_window as u64, 0).unwrap())?;
+        // get Uint256 representation and cut fractional part
+        let full = mul.atomics().div_ceil(PRECISION_REUSE);
+        if full <= Uint256::from(u32::MAX) {
+            // get fractional part that is equivalent to PRECISION_REUSE * 10^(-1), i.e. 10^17
+            let fraction_with_first_decimal = PRECISION_REUSE
+                .checked_div(Decimal256::from_atomics(10u64, 0).unwrap())
+                .unwrap();
+            let full_dec = mul.atomics().div_ceil(fraction_with_first_decimal);
+            if full
+                .mul_ceil(Decimal256::from_atomics(10u64, 0).unwrap())
+                .wrapping_sub(full_dec)
+                >= Uint256::from(5u64)
+            {
+                return Ok(full.wrapping_sub(1u64.into()).to_string().parse::<u32>()?);
+            } else {
+                return Ok(full.to_string().parse::<u32>()?);
+            }
+        }
+
+        Err(anyhow!(
+            "Cannot convert `min_signed_per_window` value to u32".to_string()
+        ))
+    }
+}
+
+impl TryFrom<SlashingParamsRaw> for SlashingParams {
+    type Error = StdError;
+
+    fn try_from(value: SlashingParamsRaw) -> Result<Self, Self::Error> {
+        Ok(Self {
+            signed_blocks_window: value.signed_blocks_window,
+            min_signed_per_window: Decimal256::from_str(&value.min_signed_per_window)?,
+            downtime_jail_duration: value.downtime_jail_duration,
+            slash_fraction_double_sign: Decimal256::from_str(&value.slash_fraction_double_sign)?,
+            slash_fraction_downtime: Decimal256::from_str(&value.slash_fraction_downtime)?,
+        })
+    }
+}
+
+impl Protobuf<SlashingParamsRaw> for SlashingParams {}
 
 impl ParamsSerialize for SlashingParams {
     fn keys() -> HashSet<&'static str> {
