@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use gears::{
     baseapp::{QueryRequest, QueryResponse},
     error::IBC_ENCODE_UNWRAP,
@@ -36,16 +37,16 @@ pub enum GovQuery {
 impl Query for GovQuery {
     fn query_url(&self) -> &'static str {
         match self {
-            GovQuery::Deposit(_) => "/cosmos.gov.v1beta1.Query/Deposit",
-            GovQuery::Deposits(_) => "/cosmos.gov.v1beta1.Query/Deposits",
-            GovQuery::Params(_) => "/cosmos.gov.v1beta1.Query/Param",
-            GovQuery::AllParams(_) => "/cosmos.gov.v1beta1.Query/Params",
-            GovQuery::Proposal(_) => "/cosmos.gov.v1beta1.Query/Proposal",
-            GovQuery::Proposals(_) => "/cosmos.gov.v1beta1.Query/Proposals",
-            GovQuery::Tally(_) => "/cosmos.gov.v1beta1.Query/Tally",
-            GovQuery::Vote(_) => "/cosmos.gov.v1beta1.Query/Vote",
-            GovQuery::Votes(_) => "/cosmos.gov.v1beta1.Query/Votes",
-            GovQuery::Proposer(_) => "/cosmos.gov.v1beta1.Query/Proposer",
+            GovQuery::Deposit(_) => QueryDepositRequest::QUERY_URL,
+            GovQuery::Deposits(_) => QueryDepositsRequest::QUERY_URL,
+            GovQuery::Params(_) => QueryParamsRequest::QUERY_URL,
+            GovQuery::AllParams(_) => QueryAllParamsRequest::QUERY_URL,
+            GovQuery::Proposal(_) => QueryProposalRequest::QUERY_URL,
+            GovQuery::Proposals(_) => QueryProposalsRequest::QUERY_URL,
+            GovQuery::Tally(_) => QueryTallyResultRequest::QUERY_URL,
+            GovQuery::Vote(_) => QueryVoteRequest::QUERY_URL,
+            GovQuery::Votes(_) => QueryVotesRequest::QUERY_URL,
+            GovQuery::Proposer(_) => QueryProposerRequest::QUERY_URL,
         }
     }
 
@@ -84,6 +85,25 @@ pub enum GovQueryResponse {
     Vote(QueryVoteResponse),
     Votes(QueryVotesResponse),
     Proposer(QueryProposerResponse),
+}
+
+impl GovQueryResponse {
+    pub fn encode_to_vec(&self) -> Bytes {
+        match self {
+            GovQueryResponse::Deposit(q) => q.encode_vec(),
+            GovQueryResponse::Deposits(q) => q.encode_vec(),
+            GovQueryResponse::Params(q) => q.encode_vec(),
+            GovQueryResponse::AllParams(q) => q.encode_vec(),
+            GovQueryResponse::Proposal(q) => q.encode_vec(),
+            GovQueryResponse::Proposals(q) => q.encode_vec(),
+            GovQueryResponse::Tally(q) => q.encode_vec(),
+            GovQueryResponse::Vote(q) => q.encode_vec(),
+            GovQueryResponse::Votes(q) => q.encode_vec(),
+            GovQueryResponse::Proposer(q) => q.encode_vec(),
+        }
+        .expect(IBC_ENCODE_UNWRAP)
+        .into()
+    }
 }
 
 impl QueryResponse for GovQueryResponse {}

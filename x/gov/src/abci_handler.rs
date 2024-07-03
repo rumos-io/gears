@@ -12,10 +12,11 @@ use gears::{
         proto::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
+            Protobuf,
         },
         request::{end_block::RequestEndBlock, query::RequestQuery},
     },
-    types::tx::raw::TxWithRaw,
+    types::{store::gas::ext::GasResultExt, tx::raw::TxWithRaw},
     x::{
         keepers::{gov::GovernanceBankKeeper, staking::GovStakingKeeper},
         module::Module,
@@ -26,7 +27,14 @@ use crate::{
     genesis::GovGenesisState,
     keeper::GovKeeper,
     msg::{deposit::Deposit, GovMsg},
-    query::{GovQuery, GovQueryResponse},
+    query::{
+        request::{
+            QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
+            QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest,
+            QueryTallyResultRequest, QueryVoteRequest, QueryVotesRequest,
+        },
+        GovQuery, GovQueryResponse,
+    },
     types::proposal::Proposal,
     ProposalHandler,
 };
@@ -222,14 +230,43 @@ impl<
 
     fn query<DB: Database>(
         &self,
-        _ctx: &QueryContext<DB, Self::StoreKey>,
-        _query: RequestQuery,
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        RequestQuery {
+            data,
+            path,
+            height: _,
+            prove: _,
+        }: RequestQuery,
     ) -> Result<Bytes, AppError> {
-        // match query.path.as_str() {
+        let query = match path.as_str() {
+            QueryDepositRequest::QUERY_URL => GovQuery::Deposit(QueryDepositRequest::decode(data)?),
+            QueryDepositsRequest::QUERY_URL => {
+                GovQuery::Deposits(QueryDepositsRequest::decode(data)?)
+            }
+            QueryParamsRequest::QUERY_URL => GovQuery::Params(QueryParamsRequest::decode(data)?),
+            QueryAllParamsRequest::QUERY_URL => {
+                GovQuery::AllParams(QueryAllParamsRequest::decode(data)?)
+            }
+            QueryProposalRequest::QUERY_URL => {
+                GovQuery::Proposal(QueryProposalRequest::decode(data)?)
+            }
+            QueryProposalsRequest::QUERY_URL => {
+                GovQuery::Proposals(QueryProposalsRequest::decode(data)?)
+            }
+            QueryTallyResultRequest::QUERY_URL => {
+                GovQuery::Tally(QueryTallyResultRequest::decode(data)?)
+            }
+            QueryVoteRequest::QUERY_URL => GovQuery::Vote(QueryVoteRequest::decode(data)?),
+            QueryVotesRequest::QUERY_URL => GovQuery::Votes(QueryVotesRequest::decode(data)?),
+            QueryProposerRequest::QUERY_URL => {
+                GovQuery::Proposer(QueryProposerRequest::decode(data)?)
+            }
+            _ => Err(AppError::Query("Path not found".to_string()))?,
+        };
 
-        // }
+        let result = self.keeper.query(ctx, query).unwrap_gas();
 
-        todo!()
+        Ok(result.encode_to_vec())
     }
 
     fn end_block<'a, DB: Database>(
