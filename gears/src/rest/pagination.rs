@@ -36,8 +36,8 @@ impl From<core_types::query::request::PageRequest> for Pagination {
         }: core_types::query::request::PageRequest,
     ) -> Self {
         Self {
-            offset: Some(offset as u32),
-            limit: Some(limit as u8),
+            offset: Some(offset.try_into().unwrap_or(u32::MAX)),
+            limit: Some(limit.try_into().unwrap_or(u8::MAX)),
         }
     }
 }
