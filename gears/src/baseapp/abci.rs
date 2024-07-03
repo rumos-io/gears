@@ -53,7 +53,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut ctx = InitContext::new(
             &mut multi_store,
-            self.block_height(),
+            request.initial_height as u32, // TODO: make request height u32
             request.time,
             request.chain_id,
         );
@@ -67,7 +67,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),
             validators: request.validators,
-            app_hash: "hash_goes_here".into(), //TODO: set app hash
+            app_hash: "hash_goes_here".into(), //TODO: set app hash - note this will be the hash of block 1
         }
     }
 
@@ -81,7 +81,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             data: AI::APP_NAME.to_owned(),
             version: AI::APP_VERSION.to_owned(),
             app_version: 1,
-            last_block_height: self.block_height(),
+            last_block_height: self.get_last_commit_height(),
             last_block_app_hash: self.get_last_commit_hash().to_vec().into(),
         }
     }
@@ -98,7 +98,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
                 key: request.data,
                 value: res,
                 proof_ops: None,
-                height: self.block_height(),
+                height: request.height as u32,
                 codespace: "".to_string(),
             },
             Err(e) => ResponseQuery {
@@ -206,7 +206,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn commit(&self) -> ResponseCommit {
         info!("Got commit request");
 
-        let height = self.block_height();
+        let height = self.get_block_header().unwrap().height;
 
         let hash = self.multi_store.write().expect(POISONED_LOCK).commit();
 
@@ -220,7 +220,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         ResponseCommit {
             data: hash.to_vec().into(),
-            retain_height: (height - 1), // TODO: check if this is correct - why -1?
+            retain_height: 0, // this is the height above which tendermint will retain all blocks // TODO: make this configurable as in Cosmos
         }
     }
 
@@ -234,7 +234,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn begin_block(&self, request: RequestBeginBlock) -> ResponseBeginBlock {
         info!("Got begin block request");
 
-        self.block_height_increment();
+        //TODO: Cosmos SDK validates the request height here
 
         self.set_block_header(request.header.clone());
 
@@ -243,7 +243,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut ctx = BlockContext::new(
             &mut multi_store,
-            self.block_height(),
+            request.header.height,
             request.header.clone(),
         );
 
@@ -252,7 +252,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
                 .baseapp_params_keeper
                 .block_params(&mut ctx)
                 .map(|e| e.max_gas)
-                .unwrap_or_default(); // This is how cosmos handles it  https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
+                .unwrap_or_default(); // This is how cosmos handles it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
             state.replace_meter(Gas::from(max_gas))
         }
@@ -272,13 +272,11 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         info!("Got end block request");
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let header = self
+            .get_block_header()
+            .expect("block header is set in begin block");
 
-        let mut ctx = BlockContext::new(
-            &mut multi_store,
-            self.block_height(),
-            self.get_block_header()
-                .expect("block header is set in begin block"), //TODO: return error?
-        );
+        let mut ctx = BlockContext::new(&mut multi_store, header.height, header);
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
