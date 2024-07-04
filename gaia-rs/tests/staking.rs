@@ -115,6 +115,7 @@ fn create_validator_tx(home: PathBuf) -> anyhow::Result<Response> {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
+    // creates a validator, transaction performs self delegation of 100 uatoms
     new_validator(KEY_NAME, home, pubkey, amount, "test")
 }
 
@@ -150,6 +151,9 @@ fn delegate_tx(home: PathBuf) -> anyhow::Result<Response> {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
+    // it's the self delegation because function `create_validator_tx` creates a validator with
+    // address `cosmosvaloper1syavy2npfyt9tcncdtsdzf7kny9lh777yfrfs4` that is a validator address
+    // representation of ACC_ADDRESS account address
     new_delegation(
         KEY_NAME,
         home,
@@ -309,7 +313,7 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
-    new_validator(KEY_NAME, tendermint.1.to_path_buf(), pubkey, amount, name)?;
+    new_validator(name, tendermint.1.to_path_buf(), pubkey, amount, name)?;
 
     // create delegation to source validator
     let amount = Coin {
@@ -420,6 +424,10 @@ fn query_validator() -> anyhow::Result<()> {
 fn query_delegation() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
     let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+
+    // function performs two self delegations:
+    // first is a transaction with creation of a validator: amount 100 uatoms
+    // second is delegation of 10 uatoms to self
     delegate_tx(tendermint.1.to_path_buf())?;
 
     let delegator_address = AccAddress::from_bech32(ACC_ADDRESS)?;
@@ -440,11 +448,11 @@ fn query_delegation() -> anyhow::Result<()> {
                 delegation: staking::Delegation {
                     delegator_address,
                     validator_address,
-                    shares: Decimal256::from_atomics(10u64, 0).unwrap(),
+                    shares: Decimal256::from_atomics(110u64, 0).unwrap(),
                 },
                 balance: Coin {
                     denom: "uatom".try_into().unwrap(),
-                    amount: Uint256::from(10u64),
+                    amount: Uint256::from(110u64),
                 },
             }),
         }),
