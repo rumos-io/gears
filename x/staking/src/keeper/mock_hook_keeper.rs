@@ -7,10 +7,11 @@ use gears::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
     },
-    x::{keepers::auth::AuthKeeper, module::Module},
+    x::{
+        keepers::{auth::AuthKeeper, staking::KeeperHooks},
+        module::Module,
+    },
 };
-
-use crate::KeeperHooks;
 
 /// An implementor of KeeperHooks trait. Do nothing.
 #[derive(Debug, Clone, Default)]

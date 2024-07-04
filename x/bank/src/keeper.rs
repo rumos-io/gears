@@ -27,7 +27,7 @@ use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::BankKeeper;
+use gears::x::keepers::bank::{BankKeeper, StakingBankKeeper};
 use gears::x::keepers::gov::GovernanceBankKeeper;
 use gears::x::module::Module;
 use std::marker::PhantomData;
@@ -160,6 +160,48 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
                 amount,
             },
         )
+    }
+}
+
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
+    StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+{
+    fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        addr: AccAddress,
+    ) -> Result<Vec<Coin>, GasStoreErrors> {
+        self.get_all_balances(ctx, addr)
+    }
+
+    fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        sender_pool: &M,
+        recepient_pool: &M,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        self.send_coins_from_module_to_module(ctx, sender_pool, recepient_pool, amount)
+    }
+
+    fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        sender_module: &M,
+        addr: AccAddress,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        self.undelegate_coins_from_module_to_account(ctx, sender_module, addr, amount)
+    }
+
+    fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        sender_addr: AccAddress,
+        recepient_module: &M,
+        amount: SendCoins,
+    ) -> Result<(), AppError> {
+        self.delegate_coins_from_account_to_module(ctx, sender_addr, recepient_module, amount)
     }
 }
 

@@ -3,13 +3,11 @@
 mod abci_handler;
 mod client;
 mod consts;
-mod external;
 mod genesis;
 mod keeper;
 mod keys;
 mod message;
 mod params;
-mod traits;
 mod types;
 
 pub use abci_handler::*;
@@ -20,5 +18,4 @@ pub use keeper::*;
 pub(crate) use keys::*;
 pub use message::*;
 pub use params::*;
-pub use traits::*;
 pub use types::*;

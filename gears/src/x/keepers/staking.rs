@@ -15,6 +15,8 @@ use crate::{
     },
 };
 
+use super::auth::AuthKeeper;
+
 /// Delay, in blocks, between when validator updates are returned to the
 /// consensus-engine and when they are applied. For example, if
 /// ValidatorUpdateDelay is set to X, and if a validator set update is
@@ -25,6 +27,83 @@ use crate::{
 /// For Tendermint this should be set to 1 block, for more details see:
 /// https://tendermint.com/docs/spec/abci/apps.html#endblock
 pub const VALIDATOR_UPDATE_DELAY: u32 = 1;
+
+/// Event Hooks
+/// These can be utilized to communicate between a staking keeper and another
+/// keeper which must take particular actions when validators/delegators change
+/// state. The second keeper must implement this interface, which then the
+/// staking keeper can call.
+pub trait KeeperHooks<SK: StoreKey, AK: AuthKeeper<SK, M>, M: Module>:
+    Clone + Send + Sync + 'static
+{
+    fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        val_addr: ValAddress,
+    );
+
+    fn before_validator_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        val_addr: ValAddress,
+    );
+
+    fn after_validator_removed<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        cons_addr: ConsAddress,
+        val_addr: ValAddress,
+    );
+
+    fn after_validator_bonded<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        cons_addr: ConsAddress,
+        val_addr: ValAddress,
+    );
+
+    fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        cons_addr: ConsAddress,
+        val_addr: ValAddress,
+    );
+
+    fn before_delegation_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: AccAddress,
+        val_addr: ValAddress,
+    );
+
+    fn before_delegation_shares_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: AccAddress,
+        val_addr: ValAddress,
+    );
+
+    fn before_delegation_removed<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: AccAddress,
+        val_addr: ValAddress,
+    );
+
+    fn after_delegation_modified<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        del_addr: AccAddress,
+        val_addr: ValAddress,
+    );
+
+    fn before_validator_slashed<DB: Database, CTX: TransactionalContext<DB, SK>>(
+        &self,
+        ctx: &mut CTX,
+        val_addr: ValAddress,
+        fraction: Decimal256,
+    );
+}
 
 /// Staking keeper which used in gov xmod
 pub trait GovStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {

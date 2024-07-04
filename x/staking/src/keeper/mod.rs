@@ -1,6 +1,5 @@
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
-    traits::*,
     Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
@@ -28,7 +27,11 @@ use gears::{
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
         uint::Uint256,
     },
-    x::{keepers::auth::AuthKeeper, module::Module, types::validator::BondStatus},
+    x::{
+        keepers::{auth::AuthKeeper, bank::StakingBankKeeper, staking::KeeperHooks},
+        module::Module,
+        types::validator::BondStatus,
+    },
 };
 use prost::bytes::BufMut;
 use std::{cmp::Ordering, collections::HashMap};
@@ -78,7 +81,7 @@ impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
-        BK: BankKeeper<SK, M>,
+        BK: StakingBankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
     > Keeper<SK, PSK, AK, BK, KH, M>

@@ -6,187 +6,26 @@ use gears::{
     core::{errors::CoreError, Protobuf},
     error::AppError,
     tendermint::types::{
-        proto::{crypto::PublicKey, header::Header, validator::ValidatorUpdate},
+        proto::{crypto::PublicKey, validator::ValidatorUpdate},
         time::Timestamp,
     },
     types::{
-        address::{AccAddress, ConsAddress, ValAddress},
+        address::{ConsAddress, ValAddress},
         decimal256::{Decimal256, PRECISION_REUSE},
         uint::Uint256,
     },
-    x::types::{
-        delegation::StakingDelegation,
-        validator::{BondStatus, StakingValidator},
-    },
+    x::types::validator::{BondStatus, StakingValidator},
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, collections::HashSet, str::FromStr};
+use std::{collections::HashSet, str::FromStr};
 use thiserror::Error;
-
-/// HistoricalInfo contains header and validator information for a given block.
-/// It is stored as part of staking module's state, which persists the `n` most
-/// recent HistoricalInfo
-/// (`n` is set by the staking module's `historical_entries` parameter).
-#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
-pub struct HistoricalInfo {
-    header: Header,
-    validators: Vec<Validator>,
-}
-
-impl HistoricalInfo {
-    /// Method will create a historical information struct from header and valset
-    /// it will first sort valset before inclusion into historical info
-    pub fn new(
-        header: Header,
-        mut validators: Vec<Validator>,
-        power_reduction: i64,
-    ) -> HistoricalInfo {
-        fn less(v1: &Validator, v2: &Validator, power_reduction: i64) -> Ordering {
-            let cons_power1 = v1.consensus_power(power_reduction);
-            let cons_power2 = v2.consensus_power(power_reduction);
-            if cons_power1 == cons_power2 {
-                let addr1 = Vec::from(v1.cons_addr());
-                let addr2 = Vec::from(v2.cons_addr());
-                addr1.cmp(&addr2)
-            } else {
-                cons_power1.cmp(&cons_power2)
-            }
-        }
-        validators.sort_by(|v1, v2| less(v1, v2, power_reduction));
-        HistoricalInfo { header, validators }
-    }
-}
 
 /// Last validator power, needed for validator set update logic
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct LastValidatorPower {
     pub address: ValAddress,
     pub power: i64,
-}
-
-/// Delegation represents the bond with tokens held by an account. It is
-/// owned by one delegator, and is associated with the voting power of one
-/// validator.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Delegation {
-    pub delegator_address: AccAddress,
-    pub validator_address: ValAddress,
-    pub shares: Decimal256,
-}
-
-impl StakingDelegation for Delegation {
-    fn delegator(&self) -> &AccAddress {
-        &self.delegator_address
-    }
-
-    fn validator(&self) -> &ValAddress {
-        &self.validator_address
-    }
-
-    fn shares(&self) -> &Decimal256 {
-        &self.shares
-    }
-}
-
-/// Delegation represents the bond with tokens held by an account. It is
-/// owned by one delegator, and is associated with the voting power of one
-/// validator.
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct UnbondingDelegation {
-    pub delegator_address: AccAddress,
-    pub validator_address: ValAddress,
-    pub entries: Vec<UnbondingDelegationEntry>,
-}
-
-/// UnbondingDelegationEntry - entry to an UnbondingDelegation
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct UnbondingDelegationEntry {
-    pub creation_height: u32,
-    pub completion_time: Timestamp,
-    pub initial_balance: Uint256,
-    pub balance: Uint256,
-}
-
-impl UnbondingDelegationEntry {
-    pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let completion_time = chrono::DateTime::from_timestamp(
-            self.completion_time.seconds,
-            self.completion_time.nanos as u32,
-        )
-        .unwrap();
-        completion_time <= time
-    }
-}
-
-/// Redelegation contains the list of a particular delegator's
-/// redelegating bonds from a particular source validator to a
-/// particular destination validator
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Redelegation {
-    pub delegator_address: AccAddress,
-    pub validator_src_address: ValAddress,
-    pub validator_dst_address: ValAddress,
-    pub entries: Vec<RedelegationEntry>,
-}
-
-impl Redelegation {
-    pub fn add_entry(&mut self, redelegation_entry: RedelegationEntry) {
-        self.entries.push(redelegation_entry);
-    }
-}
-
-/// RedelegationEntry - entry to a Redelegation
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct RedelegationEntry {
-    pub creation_height: u32,
-    pub completion_time: Timestamp,
-    pub initial_balance: Uint256,
-    pub share_dst: Decimal256,
-}
-
-impl RedelegationEntry {
-    pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let completion_time = chrono::DateTime::from_timestamp(
-            self.completion_time.seconds,
-            self.completion_time.nanos as u32,
-        )
-        .unwrap();
-        completion_time <= time
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DvvTriplet {
-    pub del_addr: AccAddress,
-    pub val_src_addr: ValAddress,
-    pub val_dst_addr: ValAddress,
-}
-impl DvvTriplet {
-    pub fn new(del_addr: AccAddress, val_src_addr: ValAddress, val_dst_addr: ValAddress) -> Self {
-        Self {
-            del_addr,
-            val_src_addr,
-            val_dst_addr,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct DvPair {
-    pub val_addr: ValAddress,
-    pub del_addr: AccAddress,
-}
-impl DvPair {
-    pub fn new(val_addr: ValAddress, del_addr: AccAddress) -> Self {
-        Self { val_addr, del_addr }
-    }
 }
 
 /// Validator defines a validator, together with the total amount of the
