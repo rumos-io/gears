@@ -45,7 +45,7 @@ fn account_query() -> anyhow::Result<()> {
         account: Some(Account::Base(BaseAccount {
             address: acc_adress,
             pub_key: None,
-            account_number: 0,
+            account_number: 2,
             sequence: 0,
         })),
     }));
