@@ -14,7 +14,7 @@ pub enum GaiaQuery {
 }
 
 impl Query for GaiaQuery {
-    fn query_url(&self) -> std::borrow::Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
             GaiaQuery::Auth(var) => var.query_url(),
             GaiaQuery::Bank(var) => var.query_url(),

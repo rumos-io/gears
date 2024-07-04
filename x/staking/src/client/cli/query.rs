@@ -13,7 +13,7 @@ use gears::{
     },
 };
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, fmt::Debug};
+use std::fmt::Debug;
 
 #[derive(Args, Debug)]
 pub struct StakingQueryCli {
@@ -147,17 +147,13 @@ pub enum StakingQuery {
 }
 
 impl Query for StakingQuery {
-    fn query_url(&self) -> Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
-            StakingQuery::Validator(_) => Cow::Borrowed("/cosmos.staking.v1beta1.Query/Validator"),
-            StakingQuery::Delegation(_) => {
-                Cow::Borrowed("/cosmos.staking.v1beta1.Query/Delegation")
-            }
-            StakingQuery::Redelegation(_) => {
-                Cow::Borrowed("/cosmos.staking.v1beta1.Query/Redelegation")
-            }
+            StakingQuery::Validator(_) => "/cosmos.staking.v1beta1.Query/Validator",
+            StakingQuery::Delegation(_) => "/cosmos.staking.v1beta1.Query/Delegation",
+            StakingQuery::Redelegation(_) => "/cosmos.staking.v1beta1.Query/Redelegation",
             StakingQuery::UnbondingDelegation(_) => {
-                Cow::Borrowed("/cosmos.staking.v1beta1.Query/UnbondingDelegation")
+                "/cosmos.staking.v1beta1.Query/UnbondingDelegation"
             }
         }
     }

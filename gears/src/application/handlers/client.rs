@@ -141,7 +141,7 @@ pub trait QueryHandler {
         let client = HttpClient::new(node.as_str())?;
 
         let res = runtime().block_on(client.abci_query(
-            Some(query.query_url().into_owned()),
+            Some(query.query_url().to_owned()),
             query.into_bytes(),
             height,
             false,

@@ -3,7 +3,7 @@ use serde::Deserialize;
 const QUERY_DEFAULT_LIMIT: u8 = 100;
 
 //#[derive(FromForm, Debug)]
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct Pagination {
     offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.
@@ -23,6 +23,23 @@ pub fn parse_pagination(pagination: Pagination) -> (u32, u8) {
     let page = offset / (limit as u32) + 1;
 
     (page, limit)
+}
+
+impl From<core_types::query::request::PageRequest> for Pagination {
+    fn from(
+        core_types::query::request::PageRequest {
+            key: _,
+            offset,
+            limit,
+            count_total: _,
+            reverse: _,
+        }: core_types::query::request::PageRequest,
+    ) -> Self {
+        Self {
+            offset: Some(offset.try_into().unwrap_or(u32::MAX)),
+            limit: Some(limit.try_into().unwrap_or(u8::MAX)),
+        }
+    }
 }
 
 #[cfg(test)]

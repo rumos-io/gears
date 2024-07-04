@@ -7,7 +7,7 @@ use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Message, Serialize, Deserialize)]
 pub struct RawParamChange {
     #[prost(string, tag = "1")]
     pub subspace: String,
@@ -88,7 +88,7 @@ impl<PSK: ParamsSubspaceKey> From<ParamChange<PSK>> for Any {
     }
 }
 
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Message, Serialize, Deserialize)]
 pub struct RawParameterChangeProposal {
     #[prost(string, tag = "1")]
     pub title: String,
@@ -96,6 +96,15 @@ pub struct RawParameterChangeProposal {
     pub description: String,
     #[prost(repeated, message, tag = "3")]
     pub changes: Vec<RawParamChange>,
+}
+
+impl From<RawParameterChangeProposal> for Any {
+    fn from(msg: RawParameterChangeProposal) -> Self {
+        Any {
+            type_url: "/cosmos.params.v1beta1/ParameterChangeProposal".to_owned(),
+            value: msg.encode_to_vec(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

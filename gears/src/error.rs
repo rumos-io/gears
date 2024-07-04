@@ -84,3 +84,9 @@ impl From<GasStoreErrors> for AppError {
         Self::Custom(value.to_string())
     }
 }
+
+impl From<tendermint::error::proto::Error> for AppError {
+    fn from(value: tendermint::error::proto::Error) -> Self {
+        Self::Query(value.to_string())
+    }
+}

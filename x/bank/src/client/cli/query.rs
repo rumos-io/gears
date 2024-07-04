@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::fmt::Debug;
 
 use bytes::Bytes;
@@ -91,12 +90,10 @@ pub enum BankQuery {
 }
 
 impl Query for BankQuery {
-    fn query_url(&self) -> Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
-            BankQuery::Balances(_) => Cow::Borrowed("/cosmos.bank.v1beta1.Query/AllBalances"),
-            BankQuery::DenomMetadata(_) => {
-                Cow::Borrowed("/cosmos.bank.v1beta1.Query/DenomsMetadata")
-            }
+            BankQuery::Balances(_) => "/cosmos.bank.v1beta1.Query/AllBalances",
+            BankQuery::DenomMetadata(_) => "/cosmos.bank.v1beta1.Query/DenomsMetadata",
         }
     }
 

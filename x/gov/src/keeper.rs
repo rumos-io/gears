@@ -32,17 +32,30 @@ use crate::{
     errors::SERDE_JSON_CONVERSION,
     genesis::GovGenesisState,
     msg::{
-        deposit::MsgDeposit,
+        deposit::Deposit,
         proposal::MsgSubmitProposal,
         vote::VoteOption,
         weighted_vote::{MsgVoteWeighted, VoteOptionWeighted},
     },
     params::GovParamsKeeper,
+    query::{
+        request::{
+            ParamsQuery, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
+            QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest,
+            QueryTallyResultRequest, QueryVoteRequest, QueryVotesRequest,
+        },
+        response::{
+            QueryAllParamsResponse, QueryDepositResponse, QueryDepositsResponse,
+            QueryParamsResponse, QueryProposalResponse, QueryProposalsResponse,
+            QueryTallyResultResponse, QueryVoteResponse, QueryVotesResponse,
+        },
+        GovQuery, GovQueryResponse,
+    },
     types::{
         deposit_iter::DepositIterator,
         proposal::{
             active_iter::ActiveProposalIterator, inactive_iter::InactiveProposalIterator, Proposal,
-            ProposalStatus, TallyResult,
+            ProposalStatus, ProposalsIterator, TallyResult,
         },
         validator::ValidatorGovInfo,
         vote_iters::WeightedVoteIterator,
@@ -125,7 +138,7 @@ impl<
                 let mut total_deposits = Vec::with_capacity(deposits.len());
                 for deposit in deposits {
                     store_mut.set(
-                        MsgDeposit::key(deposit.proposal_id, &deposit.depositor),
+                        Deposit::key(deposit.proposal_id, &deposit.depositor),
                         serde_json::to_vec(&deposit).expect(SERDE_JSON_CONVERSION),
                     ); // TODO:NOW IS THIS CORRECT SERIALIZATION?
                     total_deposits.push(deposit.amount);
@@ -192,14 +205,154 @@ impl<
         }
     }
 
+    pub fn query<CTX: QueryableContext<DB, SK>, DB: Database>(
+        &self,
+        ctx: &CTX,
+        query: GovQuery,
+    ) -> Result<GovQueryResponse, GasStoreErrors> {
+        let result = match query {
+            GovQuery::Deposit(QueryDepositRequest {
+                proposal_id,
+                depositor,
+            }) => GovQueryResponse::Deposit(QueryDepositResponse {
+                deposit: deposit_get(ctx, &self.store_key, proposal_id, &depositor)?,
+            }),
+            GovQuery::Deposits(QueryDepositsRequest {
+                proposal_id,
+                pagination: _,
+            }) => {
+                let deposits = DepositIterator::new(ctx.kv_store(&self.store_key))
+                    .map(|this| this.map(|(_key, value)| value))
+                    .filter(|this| this.is_ok())
+                    .map(|this| this.expect("we filtered invalid values out"))
+                    .filter(|this| this.proposal_id == proposal_id)
+                    .collect::<Vec<_>>();
+
+                GovQueryResponse::Deposits(QueryDepositsResponse {
+                    deposits,
+                    pagination: None,
+                })
+            }
+            GovQuery::Params(QueryParamsRequest { kind }) => {
+                let params = self.gov_params_keeper.try_get(ctx)?;
+
+                let result = match kind {
+                    ParamsQuery::Voting => QueryParamsResponse {
+                        voting_params: Some(params.voting),
+                        deposit_params: None,
+                        tally_params: None,
+                    },
+                    ParamsQuery::Deposit => QueryParamsResponse {
+                        voting_params: None,
+                        deposit_params: Some(params.deposit),
+                        tally_params: None,
+                    },
+                    ParamsQuery::Tally => QueryParamsResponse {
+                        voting_params: None,
+                        deposit_params: None,
+                        tally_params: Some(params.tally),
+                    },
+                };
+
+                GovQueryResponse::Params(result)
+            }
+            GovQuery::AllParams(_) => {
+                let params = self.gov_params_keeper.try_get(ctx)?;
+
+                GovQueryResponse::AllParams(QueryAllParamsResponse {
+                    voting_params: params.voting,
+                    deposit_params: params.deposit,
+                    tally_params: params.tally,
+                })
+            }
+            GovQuery::Proposal(QueryProposalRequest { proposal_id }) => {
+                GovQueryResponse::Proposal(QueryProposalResponse {
+                    proposal: proposal_get(ctx, &self.store_key, proposal_id)?,
+                })
+            }
+            GovQuery::Proposals(QueryProposalsRequest {
+                voter,
+                depositor,
+                proposal_status,
+                pagination: _,
+            }) => {
+                let iterator = ProposalsIterator::new(ctx.kv_store(&self.store_key))
+                    .map(|this| this.map(|(_key, value)| value))
+                    .filter(|this| this.is_ok())
+                    .map(|this| this.expect("we filtered invalid values out"));
+
+                let mut proposals = Vec::new();
+                for proposal in iterator {
+                    if let Some(voter) = &voter {
+                        let vote = vote_get(ctx, &self.store_key, proposal.proposal_id, voter)?;
+                        if vote.is_none() {
+                            continue;
+                        }
+                    }
+
+                    if let Some(depositor) = &depositor {
+                        let deposit =
+                            deposit_get(ctx, &self.store_key, proposal.proposal_id, depositor)?;
+                        if deposit.is_none() {
+                            continue;
+                        }
+                    }
+
+                    if let Some(proposal_status) = proposal_status {
+                        if proposal.status != proposal_status {
+                            continue;
+                        }
+                    }
+
+                    proposals.push(proposal);
+                }
+
+                GovQueryResponse::Proposals(QueryProposalsResponse {
+                    proposals,
+                    pagination: None,
+                })
+            }
+            GovQuery::Tally(QueryTallyResultRequest { proposal_id }) => {
+                let proposal = proposal_get(ctx, &self.store_key, proposal_id)?;
+
+                GovQueryResponse::Tally(QueryTallyResultResponse {
+                    tally: proposal.map(|this| this.final_tally_result).flatten(),
+                })
+            }
+            GovQuery::Vote(QueryVoteRequest { proposal_id, voter }) => {
+                GovQueryResponse::Vote(QueryVoteResponse {
+                    vote: vote_get(ctx, &self.store_key, proposal_id, &voter)?,
+                })
+            }
+            GovQuery::Votes(QueryVotesRequest {
+                proposal_id,
+                pagination: _,
+            }) => {
+                let votes = WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id)
+                    .map(|this| this.map(|(_key, value)| value))
+                    .filter(|this| this.is_ok())
+                    .map(|this| this.expect("we filtered invalid values out"))
+                    .collect::<Vec<_>>();
+
+                GovQueryResponse::Votes(QueryVotesResponse {
+                    votes,
+                    pagination: None,
+                })
+            }
+            GovQuery::Proposer(QueryProposerRequest { proposal_id: _ }) => unimplemented!(), // TODO:NOW I couldn't find where this query handles or what method
+        };
+
+        Ok(result)
+    }
+
     pub fn deposit_add<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
-        MsgDeposit {
+        Deposit {
             proposal_id,
             depositor,
             amount,
-        }: MsgDeposit,
+        }: Deposit,
     ) -> anyhow::Result<bool> {
         let mut proposal = proposal_get(ctx, &self.store_key, proposal_id)?
             .ok_or(anyhow!("unknown proposal {proposal_id}"))?;
@@ -224,7 +377,7 @@ impl<
             ProposalStatus::DepositPeriod
                 if proposal
                     .total_deposit
-                    .is_all_gte(&deposit_params.min_deposit) =>
+                    .is_all_gte(deposit_params.min_deposit.inner()) =>
             {
                 true
             }
@@ -236,7 +389,7 @@ impl<
                 deposit.amount = deposit.amount.checked_add(amount)?;
                 deposit
             }
-            None => MsgDeposit {
+            None => Deposit {
                 proposal_id,
                 depositor,
                 amount,
@@ -322,7 +475,7 @@ impl<
             proposal_id,
             content,
             status: ProposalStatus::DepositPeriod,
-            final_tally_result: Default::default(),
+            final_tally_result: None,
             submit_time: submit_date,
             deposit_end_time: submit_date.add(deposit_period),
             total_deposit: initial_deposit,
@@ -425,7 +578,7 @@ impl<
                     false => proposal.status = ProposalStatus::Rejected,
                 }
 
-                proposal.final_tally_result = tally_result;
+                proposal.final_tally_result = Some(tally_result);
 
                 proposal_set(ctx, &self.store_key, &proposal).unwrap_gas();
                 ctx.kv_store_mut(&self.store_key)
@@ -721,9 +874,9 @@ fn deposit_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
     store_key: &SK,
     proposal_id: u64,
     depositor: &AccAddress,
-) -> Result<Option<MsgDeposit>, GasStoreErrors> {
+) -> Result<Option<Deposit>, GasStoreErrors> {
     let key = [
-        MsgDeposit::KEY_PREFIX.as_slice(),
+        Deposit::KEY_PREFIX.as_slice(),
         &proposal_id.to_be_bytes(),
         &[depositor.len()],
         depositor.as_ref(),
@@ -744,12 +897,12 @@ fn deposit_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
 fn deposit_set<DB: Database, SK: StoreKey, CTX: TransactionalContext<DB, SK>>(
     ctx: &mut CTX,
     store_key: &SK,
-    deposit: &MsgDeposit,
+    deposit: &Deposit,
 ) -> Result<(), GasStoreErrors> {
     let mut store = ctx.kv_store_mut(store_key);
 
     store.set(
-        MsgDeposit::key(deposit.proposal_id, &deposit.depositor),
+        Deposit::key(deposit.proposal_id, &deposit.depositor),
         serde_json::to_vec(deposit).expect(SERDE_JSON_CONVERSION),
     )
 }
@@ -781,7 +934,7 @@ fn deposit_del<
             .expect("Failed to burn coins for gov xmod"); // TODO: how to do this better?
 
         ctx.kv_store_mut(&keeper.store_key)
-            .delete(&MsgDeposit::key(proposal_id, &deposit.depositor))?;
+            .delete(&Deposit::key(proposal_id, &deposit.depositor))?;
     }
 
     Ok(())
@@ -804,7 +957,7 @@ fn deposit_refund<
         .map(|this| this.map(|(_, val)| val))
         .collect::<Vec<_>>()
     {
-        let MsgDeposit {
+        let Deposit {
             proposal_id,
             depositor,
             amount,
@@ -816,13 +969,13 @@ fn deposit_refund<
             .expect("Failed to refund coins"); // TODO: how to do this better?
 
         ctx.kv_store_mut(&keeper.store_key)
-            .delete(&MsgDeposit::key(proposal_id, &depositor))?;
+            .delete(&Deposit::key(proposal_id, &depositor))?;
     }
 
     Ok(())
 }
 
-fn _vote_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
+fn vote_get<DB: Database, SK: StoreKey, CTX: QueryableContext<DB, SK>>(
     ctx: &CTX,
     store_key: &SK,
     proposal_id: u64,

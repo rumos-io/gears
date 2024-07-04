@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use bytes::Bytes;
 use clap::{Args, Subcommand};
 use gears::error::IBC_ENCODE_UNWRAP;
@@ -36,9 +34,9 @@ pub enum AuthQuery {
 }
 
 impl Query for AuthQuery {
-    fn query_url(&self) -> Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
-            AuthQuery::Account(_) => Cow::Borrowed("/cosmos.auth.v1beta1.Query/Account"),
+            AuthQuery::Account(_) => "/cosmos.auth.v1beta1.Query/Account",
         }
     }
 

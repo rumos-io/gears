@@ -1,3 +1,7 @@
+use std::fmt::Debug;
+
+use serde::{Deserialize, Serialize};
+
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
@@ -6,8 +10,6 @@ use gears::{
     tendermint::types::proto::crypto::PublicKey,
     types::{address::ConsAddress, query::Query},
 };
-use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, fmt::Debug};
 
 use crate::{
     QueryParamsRequest, QueryParamsResponse, QuerySigningInfoRequest, QuerySigningInfoResponse,
@@ -142,17 +144,11 @@ pub enum SlashingQueryRequest {
 }
 
 impl Query for SlashingQueryRequest {
-    fn query_url(&self) -> Cow<'static, str> {
+    fn query_url(&self) -> &'static str {
         match self {
-            SlashingQueryRequest::SigningInfo(_) => {
-                Cow::Borrowed("/cosmos.slashing.v1beta1.Query/SigningInfo")
-            }
-            SlashingQueryRequest::SigningInfos(_) => {
-                Cow::Borrowed("/cosmos.slashing.v1beta1.Query/SigningInfos")
-            }
-            SlashingQueryRequest::Params(_) => {
-                Cow::Borrowed("/cosmos.slashing.v1beta1.Query/Params")
-            }
+            SlashingQueryRequest::SigningInfo(_) => "/cosmos.slashing.v1beta1.Query/SigningInfo",
+            SlashingQueryRequest::SigningInfos(_) => "/cosmos.slashing.v1beta1.Query/SigningInfos",
+            SlashingQueryRequest::Params(_) => "/cosmos.slashing.v1beta1.Query/Params",
         }
     }
 
