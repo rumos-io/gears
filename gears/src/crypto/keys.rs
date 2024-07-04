@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{convert::Infallible, error::Error};
 
 use bip32::PublicKey as PublicKeyTrait;
 use keyring::key::pair::{secp256k1_key_pair::Secp256k1KeyPair, KeyPair};
@@ -29,7 +29,7 @@ pub trait SigningKey {
 }
 
 impl SigningKey for KeyPair {
-    type Error = keyring::error::Error;
+    type Error = Infallible;
 
     fn sign(&self, message: &[u8]) -> Result<Vec<u8>, Self::Error> {
         Ok(self.sign(message))

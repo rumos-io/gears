@@ -3,7 +3,7 @@ use crate::types::proto::{
     info::{Evidence, LastCommitInfo},
 };
 
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct RequestBeginBlock {
     pub hash: ::prost::bytes::Bytes,
     pub header: Header,

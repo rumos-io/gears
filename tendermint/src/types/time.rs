@@ -37,6 +37,13 @@ pub struct Timestamp {
     pub nanos: i32,
 }
 
+impl Timestamp {
+    pub const ZERO: Timestamp = Timestamp {
+        seconds: 0,
+        nanos: 0,
+    };
+}
+
 impl From<inner::Timestamp> for Timestamp {
     fn from(inner::Timestamp { seconds, nanos }: inner::Timestamp) -> Self {
         Self { seconds, nanos }

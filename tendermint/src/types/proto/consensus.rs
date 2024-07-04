@@ -1,13 +1,38 @@
+use crate::types::time::Duration;
+
 use super::params::{BlockParams, EvidenceParams, ValidatorParams, VersionParams};
 
 /// ConsensusParams contains all consensus-relevant parameters
 /// that can be adjusted by the abci app
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct ConsensusParams {
     pub block: BlockParams,
     pub evidence: EvidenceParams,
     pub validator: ValidatorParams,
     pub version: Option<VersionParams>,
+}
+
+impl Default for ConsensusParams {
+    fn default() -> Self {
+        Self {
+            block: BlockParams {
+                max_bytes: 22020096,
+                max_gas: -1,
+            },
+            evidence: EvidenceParams {
+                max_age_num_blocks: 100000,
+                max_age_duration: Some(Duration {
+                    seconds: 172800,
+                    nanos: 0,
+                }),
+                max_bytes: 1048576,
+            },
+            validator: ValidatorParams {
+                pub_key_types: vec!["ed25519".into()],
+            },
+            version: None,
+        }
+    }
 }
 
 impl From<ConsensusParams> for inner::ConsensusParams {

@@ -45,3 +45,6 @@ serde_json = { workspace = true }
 gears = { path = "../gears", features = ["cli", "utils"] }
 data-encoding = { workspace = true }
 rayon = "1.10.0"
+hex = { workspace = true }
+bip32 = { workspace = true }
+keyring = { path = "../keyring" }

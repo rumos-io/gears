@@ -5,7 +5,7 @@ use crate::types::auth::info::AuthInfo;
 use super::{body::TxBody, TxMessage};
 
 /// TxData is the data about a transaction that is necessary to generate sign bytes.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TxData<M: TxMessage> {
     /// `body` is the `TxBody` that will be part of the transaction.
     pub body: TxBody<M>,

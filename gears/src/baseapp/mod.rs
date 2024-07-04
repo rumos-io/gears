@@ -2,7 +2,7 @@ pub mod options;
 use std::{
     fmt::Debug,
     marker::PhantomData,
-    sync::{atomic::AtomicU32, Arc, RwLock},
+    sync::{Arc, RwLock},
 };
 
 use crate::types::tx::TxMessage;
@@ -44,8 +44,6 @@ pub use params::{
 
 pub use query::*;
 
-static APP_HEIGHT: AtomicU32 = AtomicU32::new(0);
-
 #[derive(Debug, Clone)]
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
     state: Arc<RwLock<ApplicationState<DB, H>>>,
@@ -75,13 +73,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .map(|e| e.max_gas)
             .unwrap_or_default();
 
-        block_height_set(multi_store.head_version());
-
-        // For now let this func to exists only in new method
-        fn block_height_set(height: u32) {
-            let _ = APP_HEIGHT.swap(height, std::sync::atomic::Ordering::Relaxed);
-        }
-
         Self {
             abci_handler,
             block_header: Arc::new(RwLock::new(None)),
@@ -96,14 +87,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         }
     }
 
-    fn block_height(&self) -> u32 {
-        APP_HEIGHT.load(std::sync::atomic::Ordering::Relaxed)
-    }
-
-    fn block_height_increment(&self) -> u32 {
-        APP_HEIGHT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1 //TODO: wraps on overflow - should halt the chain (panic)
-    }
-
     fn get_block_header(&self) -> Option<Header> {
         self.block_header.read().expect(POISONED_LOCK).clone()
     }
@@ -115,9 +98,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
     fn get_last_commit_hash(&self) -> [u8; 32] {
         self.multi_store
-            .write()
+            .read()
             .expect(POISONED_LOCK)
             .head_commit_hash()
+    }
+
+    fn get_last_commit_height(&self) -> u32 {
+        self.multi_store.read().expect(POISONED_LOCK).head_version()
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
@@ -160,7 +147,10 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
             .map_err(|e| RunTxError::Validation(e.to_string()))?;
 
-        let height = self.block_height();
+        let header = self
+            .get_block_header()
+            .expect("block header is set in begin block"); //TODO: return error
+        let height = header.height;
 
         let consensus_params = {
             let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
@@ -170,8 +160,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut ctx = mode.build_ctx(
             height,
-            self.get_block_header()
-                .expect("block header is set in begin block"), //TODO: return error
+            header,
             consensus_params,
             Some(&tx_with_raw.tx.auth_info.fee),
             self.options.clone(),

@@ -17,5 +17,5 @@ gaia-rs query bank balances cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z
 4. Send from ledger
 
 ```shell
-gaia-rs tx ledger bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux 1uatom
+gaia-rs tx --keyring ledger bank send cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux 1uatom
 ```
