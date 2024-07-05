@@ -206,17 +206,19 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn commit(&self) -> ResponseCommit {
         info!("Got commit request");
 
+        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+
         let height = self.get_block_header().unwrap().height;
 
-        let hash = self.multi_store.write().expect(POISONED_LOCK).commit();
+        multi_store.sync(self.state.write().expect(POISONED_LOCK).commit());
+
+        let hash = multi_store.commit();
 
         info!(
             "Committed state, block height: {} app hash: {}",
             height,
             hex::encode(hash)
         );
-
-        self.state.write().expect(POISONED_LOCK).cache_clear();
 
         ResponseCommit {
             data: hash.to_vec().into(),

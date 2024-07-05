@@ -1,5 +1,8 @@
 use database::Database;
-use kv_store::{types::multi::MultiBank, ApplicationStore};
+use kv_store::{
+    types::{kv::store_cache::CacheCommitList, multi::MultiBank},
+    ApplicationStore,
+};
 
 use crate::{
     application::handlers::node::ABCIHandler,
@@ -38,16 +41,16 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         }
     }
 
-    pub fn cache_clear(&mut self) {
-        self.check_mode.multi_store.caches_clear();
-        self.deliver_mode.multi_store.caches_clear();
-    }
-
     // TODO: It would be better to find difference in caches and extend it, but this solution is quicker
     pub fn cache_update(&mut self, store: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>) {
         let cache = store.caches_copy();
 
         self.check_mode.multi_store.caches_update(cache.clone());
         self.deliver_mode.multi_store.caches_update(cache);
+    }
+
+    pub fn commit(&mut self) -> CacheCommitList<AH::StoreKey> {
+        self.check_mode.multi_store.caches_clear();
+        self.deliver_mode.multi_store.commit()
     }
 }

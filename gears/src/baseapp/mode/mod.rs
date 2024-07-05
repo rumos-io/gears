@@ -2,7 +2,7 @@ pub mod check;
 pub mod deliver;
 pub mod re_check;
 
-use kv_store::{types::multi::MultiBank, ApplicationStore, TransactionStore};
+use kv_store::{types::multi::MultiBank, TransactionStore};
 use tendermint::types::proto::event::Event;
 use tendermint::types::proto::header::Header;
 
@@ -48,10 +48,7 @@ pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
         msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError>;
 
-    fn commit(
-        ctx: TxContext<'_, DB, AH::StoreKey>,
-        global_ms: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>,
-    );
+    fn commit(ctx: TxContext<'_, DB, AH::StoreKey>);
 }
 
 mod sealed {

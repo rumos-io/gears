@@ -88,9 +88,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         Ok(())
     }
 
-    fn commit(
-        _ctx: TxContext<'_, DB, AH::StoreKey>,
-        _global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
-    ) {
+    fn commit(mut ctx: TxContext<'_, DB, AH::StoreKey>) {
+        ctx.multi_store_mut().upgrade_cache();
     }
 }

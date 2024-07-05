@@ -104,10 +104,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         }
     }
 
-    fn commit(
-        mut ctx: TxContext<'_, DB, AH::StoreKey>,
-        global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
-    ) {
-        global_ms.sync(ctx.commit());
+    fn commit(mut ctx: TxContext<'_, DB, AH::StoreKey>) {
+        ctx.multi_store_mut().upgrade_cache();
     }
 }
