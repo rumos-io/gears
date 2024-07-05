@@ -49,7 +49,8 @@ pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
     ) -> Result<Vec<Event>, RunTxError>;
 
     fn commit(
-        ctx: TxContext<'_, DB, AH::StoreKey>,
+        &mut self,
+        ctx_ms: MultiBank<DB, AH::StoreKey, TransactionStore>,
         global_ms: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>,
     );
 }

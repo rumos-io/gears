@@ -18,7 +18,7 @@ pub mod immutable;
 pub mod mutable;
 pub mod store_cache;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KVBank<DB, SK> {
     pub(crate) persistent: Arc<RwLock<Tree<DB>>>,
     pub(crate) cache: KVCache,

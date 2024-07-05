@@ -182,7 +182,9 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
-        MD::commit(ctx, &mut *multi_store);
+
+        let ms = { ctx.multi_store };
+        mode.commit(ms, &mut *multi_store);
 
         Ok(RunTxInfo {
             events,

@@ -4,14 +4,14 @@ use std::collections::HashMap;
 use crate::{error::KEY_EXISTS_MSG, StoreKey};
 use database::{prefix::PrefixDB, Database};
 
-use super::kv::{store_cache::KVCache, KVBank};
+use super::kv::{store_cache::{CacheCommitList, KVCache}, KVBank};
 
 pub mod commit;
 pub mod immutable;
 pub mod mutable;
 
 /// Bank which stores all KVBanks
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MultiBank<DB, SK, ST> {
     pub(crate) head_version: u32,
     pub(crate) head_commit_hash: [u8; 32],
@@ -57,6 +57,19 @@ impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
             let store = self.kv_store_mut(&store_key);
 
             store.cache.storage.extend(storage);
+            store.cache.delete.extend(delete);
+        }
+    }
+
+    pub fn sync(&mut self, data: CacheCommitList<SK>) {
+        if data.is_empty() {
+            return;
+        }
+
+        for (store_key, set, delete) in data.into_iter() {
+            let store = self.kv_store_mut(&store_key);
+
+            store.cache.storage.extend(set);
             store.cache.delete.extend(delete);
         }
     }

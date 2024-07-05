@@ -2,10 +2,7 @@ use std::{cell::RefCell, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 use kv_store::{
-    types::{
-        kv::store_cache::CacheCommitList,
-        multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
-    },
+    types::multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
     StoreKey, TransactionStore,
 };
 use tendermint::types::{
@@ -42,13 +39,13 @@ pub struct TxContext<'a, DB, SK> {
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
     pub(crate) consensus_params: ConsensusParams,
-    multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
+    pub(crate) multi_store: MultiBank<DB, SK, TransactionStore>,
     is_check: bool,
 }
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
+        multi_store: MultiBank<DB, SK, TransactionStore>,
         height: u32,
         header: Header,
         consensus_params: ConsensusParams,
@@ -72,11 +69,11 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
 
     #[allow(dead_code)]
     pub(crate) fn multi_store(&self) -> MultiStore<'_, DB, SK> {
-        MultiStore::from(&*self.multi_store)
+        MultiStore::from(&self.multi_store)
     }
 
     pub(crate) fn multi_store_mut(&mut self) -> MultiStoreMut<'_, DB, SK> {
-        MultiStoreMut::from(&mut *self.multi_store)
+        MultiStoreMut::from(&mut self.multi_store)
     }
 
     pub fn chain_id(&self) -> &ChainId {
@@ -89,10 +86,6 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
-    pub(crate) fn commit(&mut self) -> CacheCommitList<SK> {
-        self.multi_store.commit()
-    }
-
     pub fn consensus_params(&self) -> &ConsensusParams {
         &self.consensus_params
     }

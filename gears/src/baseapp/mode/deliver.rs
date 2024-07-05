@@ -54,7 +54,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         options: NodeOptions,
     ) -> TxContext<'_, DB, AH::StoreKey> {
         TxContext::new(
-            &mut self.multi_store,
+            self.multi_store.clone(),
             height,
             header,
             consensus_params,
@@ -105,9 +105,10 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
     }
 
     fn commit(
-        mut ctx: TxContext<'_, DB, AH::StoreKey>,
+        &mut self,
+        mut ctx_ms:  MultiBank<DB, AH::StoreKey, TransactionStore>,
         global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
     ) {
-        global_ms.sync(ctx.commit());
+        global_ms.sync(ctx_ms.commit());
     }
 }

@@ -51,7 +51,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         options: NodeOptions,
     ) -> TxContext<'_, DB, AH::StoreKey> {
         TxContext::new(
-            &mut self.multi_store,
+            self.multi_store.clone(),
             height,
             header,
             consensus_params,
@@ -89,8 +89,10 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     }
 
     fn commit(
-        _ctx: TxContext<'_, DB, AH::StoreKey>,
+        &mut self,
+        ctx_ms: MultiBank<DB, AH::StoreKey, TransactionStore>,
         _global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
     ) {
+        self.multi_store.sync(ctx_ms.into_commit());
     }
 }

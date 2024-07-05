@@ -2,11 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
-use crate::{
-    hash::StoreInfo,
-    types::kv::{store_cache::CacheCommitList, KVBank},
-    ApplicationStore, StoreKey, TransactionStore,
-};
+use crate::{hash::StoreInfo, types::kv::KVBank, ApplicationStore, StoreKey, TransactionStore};
 
 use super::MultiBank;
 
@@ -68,18 +64,5 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
         self.head_commit_hash = hash;
         self.head_version += 1; //TODO: wraps on overflow - should halt the chain (panic)
         hash
-    }
-
-    pub fn sync(&mut self, data: CacheCommitList<SK>) {
-        if data.is_empty() {
-            return;
-        }
-
-        for (store_key, set, delete) in data.into_iter() {
-            let store = self.kv_store_mut(&store_key);
-
-            store.cache.storage.extend(set);
-            store.cache.delete.extend(delete);
-        }
     }
 }
