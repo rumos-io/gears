@@ -78,8 +78,8 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
         for (store_key, set, delete) in data.into_iter() {
             let store = self.kv_store_mut(&store_key);
 
-            store.cache.storage.extend(set);
-            store.cache.delete.extend(delete);
+            store.tx.storage.extend(set);
+            store.tx.delete.extend(delete);
         }
     }
 }

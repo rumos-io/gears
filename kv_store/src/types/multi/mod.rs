@@ -37,7 +37,7 @@ impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
 
     pub fn caches_clear(&mut self) {
         for (_, store) in &mut self.stores {
-            store.clear_cache();
+            store.clear_tx_cache();
         }
     }
 
@@ -45,7 +45,7 @@ impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
         let mut map: Vec<(SK, KVCache)> = Vec::with_capacity(self.stores.len());
 
         for (sk, store) in &self.stores {
-            let cache = store.cache.clone();
+            let cache = store.tx.clone();
             map.push((sk.to_owned(), cache));
         }
 
@@ -56,8 +56,14 @@ impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
         for (store_key, KVCache { storage, delete }) in cache {
             let store = self.kv_store_mut(&store_key);
 
-            store.cache.storage.extend(storage);
-            store.cache.delete.extend(delete);
+            store.tx.storage.extend(storage);
+            store.tx.delete.extend(delete);
+        }
+    }
+
+    pub fn upgrade_cache(&mut self) {
+        for store in self.stores.values_mut() {
+            store.upgrade_cache();
         }
     }
 }

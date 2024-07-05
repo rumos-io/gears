@@ -8,7 +8,7 @@ use super::{immutable::KVStore, KVBank};
 
 impl<DB: Database> KVBank<DB, TransactionStore> {
     pub fn commit(&mut self) -> (BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>) {
-        self.cache.take()
+        self.tx.take()
     }
 
     pub fn prefix_store<I: IntoIterator<Item = u8>>(

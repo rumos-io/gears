@@ -24,13 +24,14 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
                     .try_into()
                     .expect("Unreachable. Tree cache size is > 0"),
             )?)),
-            cache: Default::default(),
+            tx: Default::default(),
             _marker: PhantomData,
+            block: Default::default(),
         })
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
-        let (cache, delete) = self.cache.take();
+        let (cache, delete) = self.tx.take();
         let mut persistent = self.persistent.write().expect(POISONED_LOCK);
 
         for (key, value) in cache {
@@ -52,8 +53,9 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
     pub fn to_cache_kind(&self) -> KVBank<DB, TransactionStore> {
         KVBank {
             persistent: Arc::clone(&self.persistent),
-            cache: self.cache.clone(),
+            tx: self.tx.clone(),
             _marker: std::marker::PhantomData,
+            block: self.block.clone(),
         }
     }
 
