@@ -49,7 +49,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
     }
 
     #[inline]
-    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+    pub fn set<KI: IntoIterator<Item=u8>, VI: IntoIterator<Item=u8>>(
         &mut self,
         key: KI,
         value: VI,
@@ -70,6 +70,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
     pub fn upgrade_cache(&mut self) {
         let (set_values, delete) = self.tx.take();
         for (key, value) in set_values {
+            self.block.delete.remove(&key);
             self.block.set(key, value);
         }
 
@@ -83,12 +84,9 @@ impl<DB: Database, SK> KVBank<DB, SK> {
             Ok(var) => var,
             Err(_) => return None,
         }
-        .or(match self.block.get(k.as_ref()) {
-            Ok(var) => var,
-            Err(_) => return None,
-        })
-        .cloned()
-        .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
+            .or(self.block.get(k.as_ref()).unwrap_or(None))
+            .cloned()
+            .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
     }
 
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, DB> {
@@ -111,11 +109,6 @@ impl<DB: Database, SK> KVBank<DB, SK> {
 
         MergedRange::merge(cached_values.into_iter(), persisted_values).into()
     }
-
-    pub fn caches_update(&mut self, KVCache { storage, delete }: KVCache) {
-        self.tx.storage.extend(storage);
-        self.tx.delete.extend(delete);
-    }
 }
 
 #[cfg(test)]
@@ -130,6 +123,24 @@ mod tests {
 
     #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
     pub struct TestStore;
+
+    #[test]
+    fn get_from_tx_cache_deleted_in_block() {
+        let mut store = build_store(build_tree(), None);
+
+        let key = vec![1];
+
+        store.delete(&key);
+        store.upgrade_cache();
+
+        store.set(key.clone(), vec![2]);
+
+        // ---
+        let result = store.get(&key);
+
+        // ---
+        assert_eq!(Some(vec![2]), result);
+    }
 
     #[test]
     fn delete_empty_cache() {
@@ -271,28 +282,6 @@ mod tests {
     }
 
     #[test]
-    fn get_deleted_in_block() {
-        let mut tree = build_tree();
-
-        let key = vec![1];
-
-        tree.set(key.clone(), vec![2]);
-
-        let mut cache = KVCache::default();
-
-        cache.delete.insert(key.clone());
-
-        let mut store = build_store(tree, Some(cache));
-        store.upgrade_cache();
-
-        // ---
-        let result = store.get(&key);
-
-        // ---
-        assert_eq!(None, result);
-    }
-
-    #[test]
     fn range_work_for_persist_values() {
         let mut tree = build_tree();
 
@@ -308,9 +297,9 @@ mod tests {
             (9, 99),
             (10, 100),
         ]
-        .into_iter()
-        .map(|(key, value)| (vec![key], vec![value]))
-        .collect::<BTreeMap<_, _>>();
+            .into_iter()
+            .map(|(key, value)| (vec![key], vec![value]))
+            .collect::<BTreeMap<_, _>>();
 
         for (key, value) in values_insert.clone() {
             tree.set(key, value);
@@ -372,11 +361,11 @@ mod tests {
             (vec![6], vec![60]),
             (vec![7], vec![77]),
         ]
-        .into_iter()
-        .collect::<BTreeMap<_, _>>()
-        .range(range)
-        .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
-        .collect::<BTreeMap<_, _>>();
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .range(range)
+            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+            .collect::<BTreeMap<_, _>>();
 
         assert_eq!(expected_range, result_range);
     }
@@ -410,11 +399,11 @@ mod tests {
             (vec![2], vec![222]),
             (vec![3], vec![33]),
         ]
-        .into_iter()
-        .collect::<BTreeMap<_, _>>()
-        .range(range)
-        .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
-        .collect::<BTreeMap<_, _>>();
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .range(range)
+            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+            .collect::<BTreeMap<_, _>>();
 
         assert_eq!(expected_range, result_range);
     }
@@ -574,11 +563,11 @@ mod tests {
             (vec![3], vec![3]),
             (vec![5], vec![55]),
         ]
-        .into_iter()
-        .collect::<BTreeMap<_, _>>()
-        .range(range)
-        .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
-        .collect::<BTreeMap<_, _>>();
+            .into_iter()
+            .collect::<BTreeMap<_, _>>()
+            .range(range)
+            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+            .collect::<BTreeMap<_, _>>();
 
         assert_eq!(expected_range, result_range);
     }
@@ -591,7 +580,7 @@ mod tests {
                 .try_into()
                 .expect("Unreachable. Tree cache size is > 0"),
         )
-        .expect("Failed to create Tree")
+            .expect("Failed to create Tree")
     }
 
     fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> KVBank<MemDB, TestStore> {

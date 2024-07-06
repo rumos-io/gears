@@ -1,11 +1,12 @@
-pub mod cache;
 use std::collections::HashMap;
 
-use crate::{error::KEY_EXISTS_MSG, StoreKey};
 use database::{prefix::PrefixDB, Database};
+
+use crate::{error::KEY_EXISTS_MSG, StoreKey};
 
 use super::kv::{store_cache::KVCache, KVBank};
 
+pub mod cache;
 pub mod commit;
 pub mod immutable;
 pub mod mutable;
@@ -35,8 +36,14 @@ impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
         self.head_commit_hash
     }
 
-    pub fn caches_clear(&mut self) {
-        for (_, store) in &mut self.stores {
+    pub fn clear_block_cache(&mut self) {
+        for store in self.stores.values_mut() {
+            store.clear_block_cache();
+        }
+    }
+
+    pub fn clear_tx_cache(&mut self) {
+        for store in self.stores.values_mut() {
             store.clear_tx_cache();
         }
     }

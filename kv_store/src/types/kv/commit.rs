@@ -7,9 +7,9 @@ use database::Database;
 use trees::iavl::Tree;
 
 use crate::{
+    ApplicationStore,
     error::{KVStoreError, POISONED_LOCK},
-    types::prefix::immutable::ImmutablePrefixStore,
-    ApplicationStore, TransactionStore, TREE_CACHE_SIZE,
+    TransactionStore, TREE_CACHE_SIZE, types::prefix::immutable::ImmutablePrefixStore,
 };
 
 use super::{immutable::KVStore, KVBank};
@@ -31,7 +31,10 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
-        let (cache, delete) = self.tx.take();
+        let (cache, delete) = self.block.take();
+        self.tx.storage.clear();
+        self.tx.delete.clear();
+
         let mut persistent = self.persistent.write().expect(POISONED_LOCK);
 
         for (key, value) in cache {
@@ -59,7 +62,7 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
         }
     }
 
-    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+    pub fn prefix_store<I: IntoIterator<Item=u8>>(
         &self,
         prefix: I,
     ) -> ImmutablePrefixStore<'_, DB> {
