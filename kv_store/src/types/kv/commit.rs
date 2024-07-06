@@ -32,6 +32,9 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
 
     pub fn commit(&mut self) -> [u8; 32] {
         let (cache, delete) = self.block.take();
+        self.tx.storage.clear();
+        self.tx.delete.clear();
+
         let mut persistent = self.persistent.write().expect(POISONED_LOCK);
 
         for (key, value) in cache {

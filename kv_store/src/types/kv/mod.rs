@@ -83,10 +83,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
             Ok(var) => var,
             Err(_) => return None,
         }
-        .or(match self.block.get(k.as_ref()) {
-            Ok(var) => var,
-            Err(_) => None,
-        })
+        .or(self.block.get(k.as_ref()).unwrap_or(None))
         .cloned()
         .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
     }
@@ -111,25 +108,78 @@ impl<DB: Database, SK> KVBank<DB, SK> {
 
         MergedRange::merge(cached_values.into_iter(), persisted_values).into()
     }
-
-    pub fn caches_update(&mut self, KVCache { storage, delete }: KVCache) {
-        self.tx.storage.extend(storage);
-        self.tx.delete.extend(delete);
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::BTreeMap;
+    use std::collections::{BTreeMap, HashSet};
 
     use database::MemDB;
 
-    use crate::TREE_CACHE_SIZE;
+    use crate::{TransactionStore, TREE_CACHE_SIZE};
 
     use super::*;
 
+    const ERR_MSG: &str = "expected != actual";
+
     #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
     pub struct TestStore;
+
+    #[test]
+    pub fn commit_with_only_tx_for_transactional() {
+        let mut store = build_other_store::<TransactionStore>();
+
+        store.delete(&vec![2]);
+        store.set(vec![1], vec![2]);
+
+        let (insert, delete) = store.commit();
+
+        assert!(insert.is_empty());
+        assert!(delete.is_empty());
+    }
+
+    #[test]
+    pub fn commit_with_tx_and_block_for_transactional() {
+        let mut store = build_other_store::<TransactionStore>();
+
+        store.delete(&[2]);
+        store.set(vec![1], vec![2]);
+        store.upgrade_cache();
+        store.set(vec![1], vec![22]);
+        store.set(vec![2], vec![33]);
+        store.delete(&[3]);
+
+        let (insert, delete) = store.commit();
+
+        let expected_insert = [(vec![1], vec![2])].into_iter().collect::<BTreeMap<_, _>>();
+        let expected_delete = [vec![2]].into_iter().collect::<HashSet<_>>();
+
+        assert_eq!(expected_insert, insert, "{ERR_MSG}");
+        assert_eq!(expected_delete, delete, "{ERR_MSG}");
+    }
+
+    #[test]
+    pub fn commit_with_block_twice_upgraded_for_transactional() {
+        let mut store = build_other_store::<TransactionStore>();
+
+        store.delete(&[2]);
+        store.set(vec![1], vec![2]);
+        store.upgrade_cache();
+        store.set(vec![1], vec![22]);
+        store.set(vec![2], vec![33]);
+        store.delete(&[3]);
+        store.upgrade_cache();
+
+        let (insert, delete) = store.commit();
+
+        let expected_insert = [(vec![1], vec![22]), (vec![2], vec![33])]
+            .into_iter()
+            .collect::<BTreeMap<_, _>>();
+        let expected_delete = [vec![3]].into_iter().collect::<HashSet<_>>();
+
+        assert_eq!(expected_insert, insert, "{ERR_MSG}");
+        assert_eq!(expected_delete, delete, "{ERR_MSG}");
+    }
 
     #[test]
     fn delete_empty_cache() {
@@ -594,6 +644,15 @@ mod tests {
         KVBank {
             persistent: Arc::new(RwLock::new(tree)),
             tx: cache.unwrap_or_default(),
+            _marker: PhantomData,
+            block: Default::default(),
+        }
+    }
+
+    fn build_other_store<T>() -> KVBank<MemDB, T> {
+        KVBank {
+            persistent: Arc::new(RwLock::new(build_tree())),
+            tx: Default::default(),
             _marker: PhantomData,
             block: Default::default(),
         }
