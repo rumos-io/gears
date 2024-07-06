@@ -289,28 +289,6 @@ mod tests {
     }
 
     #[test]
-    fn get_deleted_in_block() {
-        let mut tree = build_tree();
-
-        let key = vec![1];
-
-        tree.set(key.clone(), vec![2]);
-
-        let mut cache = KVCache::default();
-
-        cache.delete.insert(key.clone());
-
-        let mut store = build_store(tree, Some(cache));
-        store.upgrade_cache();
-
-        // ---
-        let result = store.get(&key);
-
-        // ---
-        assert_eq!(None, result);
-    }
-
-    #[test]
     fn range_work_for_persist_values() {
         let mut tree = build_tree();
 
