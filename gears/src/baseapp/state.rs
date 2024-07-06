@@ -50,7 +50,8 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
     }
 
     pub fn commit(&mut self) -> CacheCommitList<AH::StoreKey> {
-        self.check_mode.multi_store.caches_clear();
+        self.check_mode.multi_store.clear_tx_cache();
+        self.check_mode.multi_store.clear_block_cache();
         self.deliver_mode.multi_store.commit()
     }
 }

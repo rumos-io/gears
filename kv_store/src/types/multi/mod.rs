@@ -35,9 +35,16 @@ impl<DB: Database, SK: StoreKey, ST> MultiBank<DB, SK, ST> {
         self.head_commit_hash
     }
 
-    pub fn caches_clear(&mut self) {
+    pub fn clear_tx_cache(&mut self) {
         for (_, store) in &mut self.stores {
             store.clear_tx_cache();
+        }
+    }
+
+    pub fn clear_block_cache(&mut self)
+    {
+        for (_, store) in &mut self.stores {
+            store.clear_block_cache();
         }
     }
 

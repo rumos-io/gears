@@ -73,7 +73,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         for msg in msgs {
             handler
                 .tx(ctx, msg)
-                .inspect_err(|_| ctx.multi_store_mut().caches_clear()) // This may be ignored as `CacheKind` MS gets dropped at end of `run_tx`, but I want to be 100% sure
+                .inspect_err(|_| ctx.multi_store_mut().clear_tx_cache()) // This may be ignored as `CacheKind` MS gets dropped at end of `run_tx`, but I want to be 100% sure
                 .map_err(|e| RunTxError::Custom(e.to_string()))?;
         }
 
@@ -90,7 +90,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         match handler.run_ante_checks(ctx, tx_with_raw) {
             Ok(_) => Ok(()),
             Err(e) => {
-                ctx.multi_store_mut().caches_clear();
+                ctx.multi_store_mut().clear_tx_cache();
                 Err(RunTxError::Custom(e.to_string()))
             }
         }

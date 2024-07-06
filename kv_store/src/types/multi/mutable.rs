@@ -68,10 +68,10 @@ impl<DB: Database, SK: StoreKey> MultiStoreMut<'_, DB, SK> {
         }
     }
 
-    pub fn caches_clear(&mut self) {
+    pub fn clear_tx_cache(&mut self) {
         match &mut self.0 {
-            MultiStoreBackendMut::Commit(var) => var.caches_clear(),
-            MultiStoreBackendMut::Cache(var) => var.caches_clear(),
+            MultiStoreBackendMut::Commit(var) => var.clear_tx_cache(),
+            MultiStoreBackendMut::Cache(var) => var.clear_tx_cache(),
         }
     }
 
