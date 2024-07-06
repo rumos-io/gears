@@ -204,7 +204,7 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
             &GaiaCoreClient,
         )?;
 
-        dbg!(&deliver_tx);
+        dbg!(&check_tx);
         assert!(check_tx.code.is_ok());
         assert!(deliver_tx.code.is_ok());
 

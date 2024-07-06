@@ -49,7 +49,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
     }
 
     #[inline]
-    pub fn set<KI: IntoIterator<Item=u8>, VI: IntoIterator<Item=u8>>(
+    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
         key: KI,
         value: VI,
@@ -84,9 +84,9 @@ impl<DB: Database, SK> KVBank<DB, SK> {
             Ok(var) => var,
             Err(_) => return None,
         }
-            .or(self.block.get(k.as_ref()).unwrap_or(None))
-            .cloned()
-            .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
+        .or(self.block.get(k.as_ref()).unwrap_or(None))
+        .cloned()
+        .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
     }
 
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, DB> {
@@ -101,9 +101,10 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         let tree = self.persistent.read().expect(POISONED_LOCK);
         let persisted_values = tree
             .range(range)
-            // NOTE: Keys filtered only for persisted 'cause cache structure should remove inserted values on delete, but if this change then it's a place for a bug
             .filter(|(key, _)| {
-                !(self.tx.delete.contains(&**key) || self.block.delete.contains(&**key))
+                !self.tx.delete.contains(&**key)
+                    || !(self.block.delete.contains(&**key)
+                        && !self.tx.storage.contains_key(&**key))
             })
             .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
@@ -297,9 +298,9 @@ mod tests {
             (9, 99),
             (10, 100),
         ]
-            .into_iter()
-            .map(|(key, value)| (vec![key], vec![value]))
-            .collect::<BTreeMap<_, _>>();
+        .into_iter()
+        .map(|(key, value)| (vec![key], vec![value]))
+        .collect::<BTreeMap<_, _>>();
 
         for (key, value) in values_insert.clone() {
             tree.set(key, value);
@@ -361,11 +362,11 @@ mod tests {
             (vec![6], vec![60]),
             (vec![7], vec![77]),
         ]
-            .into_iter()
-            .collect::<BTreeMap<_, _>>()
-            .range(range)
-            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
-            .collect::<BTreeMap<_, _>>();
+        .into_iter()
+        .collect::<BTreeMap<_, _>>()
+        .range(range)
+        .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+        .collect::<BTreeMap<_, _>>();
 
         assert_eq!(expected_range, result_range);
     }
@@ -399,11 +400,11 @@ mod tests {
             (vec![2], vec![222]),
             (vec![3], vec![33]),
         ]
-            .into_iter()
-            .collect::<BTreeMap<_, _>>()
-            .range(range)
-            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
-            .collect::<BTreeMap<_, _>>();
+        .into_iter()
+        .collect::<BTreeMap<_, _>>()
+        .range(range)
+        .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+        .collect::<BTreeMap<_, _>>();
 
         assert_eq!(expected_range, result_range);
     }
@@ -563,11 +564,11 @@ mod tests {
             (vec![3], vec![3]),
             (vec![5], vec![55]),
         ]
-            .into_iter()
-            .collect::<BTreeMap<_, _>>()
-            .range(range)
-            .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
-            .collect::<BTreeMap<_, _>>();
+        .into_iter()
+        .collect::<BTreeMap<_, _>>()
+        .range(range)
+        .map(|(key, value)| (Cow::Owned(key.clone()), Cow::Owned(value.clone())))
+        .collect::<BTreeMap<_, _>>();
 
         assert_eq!(expected_range, result_range);
     }
@@ -580,7 +581,7 @@ mod tests {
                 .try_into()
                 .expect("Unreachable. Tree cache size is > 0"),
         )
-            .expect("Failed to create Tree")
+        .expect("Failed to create Tree")
     }
 
     fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> KVBank<MemDB, TestStore> {
