@@ -70,6 +70,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
     pub fn upgrade_cache(&mut self) {
         let (set_values, delete) = self.tx.take();
         for (key, value) in set_values {
+            self.block.delete.remove(&key);
             self.block.set(key, value);
         }
 
@@ -124,6 +125,23 @@ mod tests {
 
     #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
     pub struct TestStore;
+
+    #[test]
+    pub fn upgrade_cache_work_without_del() {
+        let mut store = build_other_store::<TestStore>();
+        store.set(vec![1], vec![11]);
+        store.set(vec![2], vec![22]);
+
+        store.upgrade_cache();
+
+        let KVCache { storage, delete } = store.block;
+
+        let expected_storage = [(vec![1], vec![11]), (vec![2], vec![22])]
+            .into_iter()
+            .collect::<BTreeMap<_, _>>();
+        assert_eq!(expected_storage, storage, "{ERR_MSG}");
+        assert!(delete.is_empty())
+    }
 
     #[test]
     pub fn commit_with_only_tx_for_transactional() {
