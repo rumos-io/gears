@@ -85,7 +85,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         }
         .or(match self.block.get(k.as_ref()) {
             Ok(var) => var,
-            Err(_) => return None,
+            Err(_) => None,
         })
         .cloned()
         .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
@@ -205,6 +205,24 @@ mod tests {
 
         // ---
         assert_eq!(Some(vec![3]), result);
+    }
+
+    #[test]
+    fn get_from_tx_cache_deleted_in_block() {
+        let mut store = build_store(build_tree(), None);
+
+        let key = vec![1];
+
+        store.delete(&key);
+        store.upgrade_cache();
+
+        store.set(key.clone(), vec![2]);
+
+        // ---
+        let result = store.get(&key);
+
+        // ---
+        assert_eq!(Some(vec![2]), result);
     }
 
     #[test]

@@ -67,8 +67,6 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         _handler: &AH,
         _msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError> {
-        ctx.multi_store_mut().clear_tx_cache();
-
         Ok(ctx.events_drain())
     }
 
@@ -79,9 +77,9 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     ) -> Result<(), RunTxError> {
         let result = handler.run_ante_checks(ctx, tx_with_raw);
 
-        ctx.multi_store_mut().clear_tx_cache();
-
-        result.map_err(|e| RunTxError::Custom(e.to_string()))
+        result
+            .map_err(|e| RunTxError::Custom(e.to_string()))
+            .inspect_err(|_| ctx.multi_store_mut().clear_tx_cache())
     }
 
     fn runnable(_: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError> {
