@@ -10,19 +10,19 @@ members = [
   "trees",
   "kv_store",
   "keyring",
-  "gears",
-  "gears-derive",
+  # "gears",
+  # "gears-derive",
 
   # GAIA
-  "gaia-rs",
+  # "gaia-rs",
 
   # xmodules
-  "x/auth",
-  "x/bank",
-  "x/ibc-rs",
-  "x/slashing",
-  "x/staking",
-  "x/gov",
+  # "x/auth",
+  # "x/bank",
+  # "x/ibc-rs",
+  # "x/slashing",
+  # "x/staking",
+  # "x/gov",
 
   # new unsorted
 ]
