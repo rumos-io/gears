@@ -20,15 +20,15 @@ impl<SK, DB> MultiBankBackend<DB, SK> for TransactionStore<DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, TransactionStore<DB, SK>> {
-    // pub fn commit(&mut self) -> CacheCommitList<SK> {
-    //     let mut map: Vec<(SK, BTreeMap<Vec<u8>, Vec<u8>>, HashSet<Vec<u8>>)> =
-    //         Vec::with_capacity(self.backend.0.len());
+    pub fn tx_cache_clear(&mut self) {
+        for store in self.backend.0.values_mut() {
+            store.tx_cache_clear()
+        }
+    }
 
-    //     for (sk, store) in &mut self.backend.0 {
-    //         let (set, delete) = store.commit();
-    //         map.push((sk.to_owned(), set, delete));
-    //     }
-
-    //     CacheCommitList(map)
-    // }
+    pub fn upgrade_cache(&mut self) {
+        for store in self.backend.0.values_mut() {
+            store.upgrade_cache()
+        }
+    }
 }

@@ -11,7 +11,10 @@ use crate::{
     cache::KVCache,
     error::{KVStoreError, POISONED_LOCK},
     range::Range,
-    store::{kv::{immutable::KVStore, mutable::KVStoreMut}, prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore}},
+    store::{
+        kv::{immutable::KVStore, mutable::KVStoreMut},
+        prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
+    },
     utils::MergedRange,
     TREE_CACHE_SIZE,
 };
@@ -124,6 +127,19 @@ impl<DB: Database> ApplicationKVBank<DB> {
             .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
         MergedRange::merge(cached_values, persisted_values).into()
+    }
+
+    pub fn consume_tx_cache(&mut self, other: &mut TransactionKVBank<DB>) {
+        other.tx_cache_clear();
+        let (set_values, del_values) = other.block.take();
+
+        for (key, value) in set_values {
+            self.cache.set(key, value)
+        }
+
+        for del in del_values {
+            self.cache.delete(&del);
+        }
     }
 
     pub fn commit(&mut self) -> [u8; 32] {

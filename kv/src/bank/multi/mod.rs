@@ -49,42 +49,4 @@ impl<DB: Database, SK: StoreKey, SB: MultiBankBackend<DB, SK>> MultiBank<DB, SK,
     pub fn head_commit_hash(&self) -> [u8; 32] {
         self.head_commit_hash
     }
-
-    // pub fn clear_block_cache(&mut self) {
-    //     for store in self.backend.stores().values_mut() {
-    //         store.clear_block_cache();
-    //     }
-    // }
-
-    // pub fn clear_tx_cache(&mut self) {
-    //     for store in self.stores.values_mut() {
-    //         store.clear_tx_cache();
-    //     }
-    // }
-
-    // pub fn caches_copy(&self) -> Vec<(SK, KVCache)> {
-    //     let mut map: Vec<(SK, KVCache)> = Vec::with_capacity(self.stores.len());
-
-    //     for (sk, store) in &self.stores {
-    //         let cache = store.tx.clone();
-    //         map.push((sk.to_owned(), cache));
-    //     }
-
-    //     map
-    // }
-
-    // pub fn caches_update(&mut self, cache: Vec<(SK, KVCache)>) {
-    //     for (store_key, KVCache { storage, delete }) in cache {
-    //         let store = self.kv_store_mut(&store_key);
-
-    //         store.tx.storage.extend(storage);
-    //         store.tx.delete.extend(delete);
-    //     }
-    // }
-
-    // pub fn upgrade_cache(&mut self) {
-    //     for store in self.stores.values_mut() {
-    //         store.upgrade_cache();
-    //     }
-    // }
 }

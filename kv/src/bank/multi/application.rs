@@ -53,17 +53,26 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
         }
     }
 
-    // pub fn to_cache_kind(&self) -> MultiBank<DB, SK, TransactionStore> {
-    //     MultiBank {
-    //         head_version: self.head_version,
-    //         head_commit_hash: self.head_commit_hash,
-    //         stores: self
-    //             .stores
-    //             .iter()
-    //             .map(|(sk, store)| (sk.to_owned(), store.to_cache_kind()))
-    //             .collect(),
-    //     }
-    // }
+    pub fn to_tx_kind(&self) -> TransactionMultiBank<DB, SK> {
+        TransactionMultiBank {
+            head_version: self.head_version,
+            head_commit_hash: self.head_commit_hash,
+            backend: TransactionStore(
+                self.backend
+                    .0
+                    .iter()
+                    .map(|(sk, store)| (sk.to_owned(), store.to_tx_kind()))
+                    .collect(),
+            ),
+            _marker: PhantomData,
+        }
+    }
+
+    pub fn consume_tx_cache(&mut self, other: &mut TransactionMultiBank<DB, SK>) {
+        for (sk, store) in &mut self.backend.0 {
+            store.consume_tx_cache(other.kv_store_mut(sk))
+        }
+    }
 
     pub fn commit(&mut self) -> [u8; 32] {
         let mut store_infos = vec![];
@@ -82,17 +91,4 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
         self.head_version += 1; //TODO: wraps on overflow - should halt the chain (panic)
         hash
     }
-
-    // pub fn sync(&mut self, data: CacheCommitList<SK>) {
-    //     if data.is_empty() {
-    //         return;
-    //     }
-
-    //     for (store_key, set, delete) in data.into_iter() {
-    //         let store = self.kv_store_mut(&store_key);
-
-    //         store.cache.storage.extend(set);
-    //         store.cache.delete.extend(delete);
-    //     }
-    // }
 }
