@@ -26,6 +26,12 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, TransactionStore<DB, SK>> {
         }
     }
 
+    pub fn block_cache_clear(&mut self) {
+        for store in self.backend.0.values_mut() {
+            store.block_cache_clear()
+        }
+    }
+
     pub fn upgrade_cache(&mut self) {
         for store in self.backend.0.values_mut() {
             store.upgrade_cache()

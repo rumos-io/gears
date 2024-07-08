@@ -6,7 +6,7 @@ use crate::{
     types::tx::{raw::TxWithRaw, TxMessage},
 };
 use database::Database;
-use kv_store::StoreKey;
+use kv::StoreKey;
 use tendermint::types::{
     proto::validator::ValidatorUpdate,
     request::{begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery},

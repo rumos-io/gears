@@ -91,4 +91,12 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
         self.head_version += 1; //TODO: wraps on overflow - should halt the chain (panic)
         hash
     }
+
+    pub fn clear_cache(&mut self)
+    {
+        for store in self.backend.0.values_mut()
+        {
+            store.cache_clear();
+        }
+    }
 }

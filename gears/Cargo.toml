@@ -12,7 +12,7 @@ address = { path = "../address" }
 tendermint = { path = "../tendermint" }
 core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
-kv_store = { path = "../kv_store" }
+kv = { path = "../kv" }
 database = { path = "../database" }
 gears-derive = { path = "../gears-derive" }
 

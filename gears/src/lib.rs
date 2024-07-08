@@ -32,7 +32,7 @@ pub mod tendermint {
 
 #[cfg(feature = "export")]
 pub mod store {
-    pub use kv_store::*;
+    pub use kv::*;
     pub mod database {
         pub use database::*;
     }

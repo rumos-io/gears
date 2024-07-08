@@ -1,7 +1,8 @@
 use database::{prefix::PrefixDB, Database};
-use kv_store::{
-    types::{kv::immutable::KVStore, multi::MultiBank},
-    ApplicationStore, StoreKey, TransactionStore,
+use kv::{
+    bank::multi::{ApplicationMultiBank, TransactionMultiBank},
+    store::kv::immutable::KVStore,
+    StoreKey,
 };
 
 use crate::types::store::kv::Store;
@@ -10,18 +11,18 @@ use super::{InfallibleContext, QueryableContext};
 
 #[derive(Debug)]
 pub enum SimpleBackend<'a, DB, SK> {
-    Application(&'a mut MultiBank<DB, SK, ApplicationStore>),
-    Transactional(&'a mut MultiBank<DB, SK, TransactionStore>),
+    Application(&'a mut ApplicationMultiBank<DB, SK>),
+    Transactional(&'a mut TransactionMultiBank<DB, SK>),
 }
 
-impl<'a, DB, SK> From<&'a mut MultiBank<DB, SK, ApplicationStore>> for SimpleBackend<'a, DB, SK> {
-    fn from(value: &'a mut MultiBank<DB, SK, ApplicationStore>) -> Self {
+impl<'a, DB, SK> From<&'a mut ApplicationMultiBank<DB, SK>> for SimpleBackend<'a, DB, SK> {
+    fn from(value: &'a mut ApplicationMultiBank<DB, SK>) -> Self {
         Self::Application(value)
     }
 }
 
-impl<'a, DB, SK> From<&'a mut MultiBank<DB, SK, TransactionStore>> for SimpleBackend<'a, DB, SK> {
-    fn from(value: &'a mut MultiBank<DB, SK, TransactionStore>) -> Self {
+impl<'a, DB, SK> From<&'a mut TransactionMultiBank<DB, SK>> for SimpleBackend<'a, DB, SK> {
+    fn from(value: &'a mut TransactionMultiBank<DB, SK>) -> Self {
         Self::Transactional(value)
     }
 }

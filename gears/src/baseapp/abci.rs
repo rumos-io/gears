@@ -25,17 +25,17 @@ use tendermint::{
             info::ResponseInfo,
             init_chain::ResponseInitChain,
             query::ResponseQuery,
-            ResponseCommit,
-            ResponseFlush, snapshot::{
+            snapshot::{
                 ResponseApplySnapshotChunk, ResponseListSnapshots, ResponseLoadSnapshotChunk,
                 ResponseOfferSnapshot,
             },
+            ResponseCommit, ResponseFlush,
         },
     },
 };
 
-use crate::application::ApplicationInfo;
 use crate::application::handlers::node::ABCIHandler;
+use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
 use crate::context::{block::BlockContext, init::InitContext};
 use crate::error::POISONED_LOCK;
@@ -45,7 +45,7 @@ use crate::types::gas::Gas;
 use super::BaseApp;
 
 impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
-ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
+    ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
         info!("Got init chain request"); // TODO: should we move logs to proxy?
@@ -130,10 +130,10 @@ ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 
         match result {
             Ok(RunTxInfo {
-                   events,
-                   gas_wanted,
-                   gas_used,
-               }) => {
+                events,
+                gas_wanted,
+                gas_used,
+            }) => {
                 debug!("{:?}", events);
                 ResponseCheckTx {
                     code: 0,
@@ -177,10 +177,10 @@ ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 
         match result {
             Ok(RunTxInfo {
-                   events,
-                   gas_wanted,
-                   gas_used,
-               }) => ResponseDeliverTx {
+                events,
+                gas_wanted,
+                gas_used,
+            }) => ResponseDeliverTx {
                 code: 0,
                 data: Default::default(),
                 log: "".to_string(),
@@ -213,8 +213,10 @@ ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 
         let height = self.get_block_header().unwrap().height;
 
-        multi_store.sync(self.state.write().expect(POISONED_LOCK).commit());
-        multi_store.upgrade_cache();
+        self.state
+            .write()
+            .expect(POISONED_LOCK)
+            .push_changes(&mut multi_store);
 
         let hash = multi_store.commit();
 
@@ -267,7 +269,7 @@ ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 
         let events = ctx.events;
 
-        state.cache_update(&mut multi_store);
+        state.multi_store_replace(&mut multi_store);
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -291,7 +293,7 @@ ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
         self.state
             .write()
             .expect(POISONED_LOCK)
-            .cache_update(&mut multi_store);
+            .push_changes(&mut multi_store);
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

@@ -6,7 +6,7 @@ use std::{
 };
 
 use database::{prefix::PrefixDB, Database};
-use kv_store::StoreKey;
+use kv::StoreKey;
 
 use crate::context::{InfallibleContext, InfallibleContextMut};
 

@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use database::Database;
-use kv_store::StoreKey;
+use kv::StoreKey;
 
 use crate::{
     context::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext},

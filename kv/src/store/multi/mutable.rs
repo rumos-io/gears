@@ -61,6 +61,20 @@ impl<DB: Database, SK: StoreKey> MultiStoreMut<'_, DB, SK> {
             }
         }
     }
+
+    pub fn clear_cache(&mut self) {
+        match &mut self.0 {
+            MultiStoreBackendMut::App(var) => var.clear_cache(),
+            MultiStoreBackendMut::Tx(var) => var.tx_cache_clear(),
+        }
+    }
+
+    pub fn upgrade_cache(&mut self) {
+        match &mut self.0 {
+            MultiStoreBackendMut::App(_) => (),
+            MultiStoreBackendMut::Tx(var) => var.upgrade_cache(),
+        }
+    }
 }
 
 impl<'a, DB, SK> From<&'a mut ApplicationMultiBank<DB, SK>> for MultiStoreMut<'a, DB, SK> {

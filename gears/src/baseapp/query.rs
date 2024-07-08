@@ -1,5 +1,5 @@
 use database::Database;
-use kv_store::types::query::QueryMultiStore;
+use kv::query::QueryMultiStore;
 use serde::Serialize;
 
 use crate::{

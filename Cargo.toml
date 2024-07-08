@@ -10,8 +10,8 @@ members = [
   "trees",
   "kv",
   "keyring",
-  # "gears",
-  # "gears-derive",
+  "gears",
+  "gears-derive",
 
   # GAIA
   # "gaia-rs",

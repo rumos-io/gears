@@ -1,11 +1,5 @@
 use database::{prefix::PrefixDB, Database};
-use kv_store::{
-    types::{
-        kv::{immutable::KVStore, mutable::KVStoreMut},
-        multi::MultiBank,
-    },
-    ApplicationStore, StoreKey,
-};
+use kv::{bank::multi::ApplicationMultiBank, store::kv::{immutable::KVStore, mutable::KVStoreMut}, StoreKey};
 
 use crate::types::store::kv::{mutable::StoreMut, Store};
 use tendermint::types::{
@@ -18,7 +12,7 @@ use super::{InfallibleContext, InfallibleContextMut, QueryableContext, Transacti
 
 #[derive(Debug)]
 pub struct BlockContext<'a, DB, SK> {
-    multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
+    multi_store: &'a mut ApplicationMultiBank<DB, SK>,
     pub(crate) height: u32,
     pub header: Header,
     pub events: Vec<Event>,
@@ -26,7 +20,7 @@ pub struct BlockContext<'a, DB, SK> {
 
 impl<'a, DB, SK> BlockContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
+        multi_store: &'a mut ApplicationMultiBank<DB, SK>,
         height: u32,
         header: Header,
     ) -> Self {

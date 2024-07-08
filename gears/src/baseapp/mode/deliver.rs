@@ -1,33 +1,32 @@
 use database::Database;
-use kv_store::TransactionStore;
-use kv_store::types::multi::MultiBank;
+use kv::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::event::Event;
 use tendermint::types::proto::header::Header;
 
-use crate::{
-    application::handlers::node::ABCIHandler,
-    baseapp::errors::RunTxError,
-    context::{TransactionalContext, tx::TxContext},
-    types::tx::raw::TxWithRaw,
-};
-use crate::baseapp::ConsensusParams;
 use crate::baseapp::options::NodeOptions;
+use crate::baseapp::ConsensusParams;
 use crate::types::auth::fee::Fee;
-use crate::types::gas::{Gas, GasMeter};
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
+use crate::types::gas::{Gas, GasMeter};
+use crate::{
+    application::handlers::node::ABCIHandler,
+    baseapp::errors::RunTxError,
+    context::{tx::TxContext, TransactionalContext},
+    types::tx::raw::TxWithRaw,
+};
 
 use super::{build_tx_gas_meter, ExecutionMode};
 
 #[derive(Debug)]
 pub struct DeliverTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
+    pub(crate) multi_store: TransactionMultiBank<DB, AH::StoreKey>,
 }
 
 impl<DB, AH: ABCIHandler> DeliverTxMode<DB, AH> {
-    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>) -> Self {
+    pub fn new(max_gas: Gas, multi_store: TransactionMultiBank<DB, AH::StoreKey>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
@@ -62,12 +61,12 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
     fn run_msg<'m>(
         ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
-        msgs: impl Iterator<Item=&'m AH::Message>,
+        msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError> {
         for msg in msgs {
             handler
                 .tx(ctx, msg)
-                .inspect_err(|_| ctx.multi_store_mut().clear_tx_cache()) // This may be ignored as `CacheKind` MS gets dropped at end of `run_tx`, but I want to be 100% sure
+                .inspect_err(|_| ctx.multi_store_mut().clear_cache())
                 .map_err(|e| RunTxError::Custom(e.to_string()))?;
         }
 
@@ -84,7 +83,7 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         match handler.run_ante_checks(ctx, tx_with_raw) {
             Ok(_) => Ok(()),
             Err(e) => {
-                ctx.multi_store_mut().clear_tx_cache();
+                ctx.multi_store_mut().clear_cache();
                 Err(RunTxError::Custom(e.to_string()))
             }
         }

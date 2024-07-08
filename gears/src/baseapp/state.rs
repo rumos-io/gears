@@ -1,8 +1,5 @@
 use database::Database;
-use kv_store::{
-    types::{kv::store_cache::CacheCommitList, multi::MultiBank},
-    ApplicationStore,
-};
+use kv::bank::multi::ApplicationMultiBank;
 
 use crate::{
     application::handlers::node::ABCIHandler,
@@ -18,10 +15,10 @@ pub struct ApplicationState<DB, AH: ABCIHandler> {
 }
 
 impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
-    pub fn new(max_gas: Gas, global_ms: &MultiBank<DB, AH::StoreKey, ApplicationStore>) -> Self {
+    pub fn new(max_gas: Gas, global_ms: &ApplicationMultiBank<DB, AH::StoreKey>) -> Self {
         Self {
-            check_mode: CheckTxMode::new(max_gas, global_ms.to_cache_kind()),
-            deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_cache_kind()),
+            check_mode: CheckTxMode::new(max_gas, global_ms.to_tx_kind()),
+            deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_tx_kind()),
         }
     }
 
@@ -41,17 +38,15 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         }
     }
 
-    // TODO: It would be better to find difference in caches and extend it, but this solution is quicker
-    pub fn cache_update(&mut self, store: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>) {
-        let cache = store.caches_copy();
-
-        self.check_mode.multi_store.caches_update(cache.clone());
-        self.deliver_mode.multi_store.caches_update(cache);
+    pub fn multi_store_replace(&mut self, store: &mut ApplicationMultiBank<DB, AH::StoreKey>) {
+        self.check_mode.multi_store = store.to_tx_kind();
+        self.deliver_mode.multi_store = store.to_tx_kind();
     }
 
-    pub fn commit(&mut self) -> CacheCommitList<AH::StoreKey> {
-        self.check_mode.multi_store.clear_block_cache();
-        self.check_mode.multi_store.clear_tx_cache();
-        self.deliver_mode.multi_store.commit()
+    pub fn push_changes(&mut self, app_ms: &mut ApplicationMultiBank<DB, AH::StoreKey>) {
+        self.check_mode.multi_store.tx_cache_clear();
+        self.check_mode.multi_store.block_cache_clear();
+
+        app_ms.consume_tx_cache(&mut self.deliver_mode.multi_store);
     }
 }

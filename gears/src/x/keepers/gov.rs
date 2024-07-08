@@ -1,5 +1,5 @@
 use database::Database;
-use kv_store::StoreKey;
+use kv::StoreKey;
 
 use crate::{
     context::QueryableContext,

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use database::Database;
-use kv_store::{range::Range, types::prefix::range::PrefixRange};
+use kv::{range::Range, store::prefix::range::PrefixRange};
 
 use crate::types::store::gas::errors::GasStoreErrors;
 

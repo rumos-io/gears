@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use database::Database;
-use kv_store::StoreKey;
+use kv::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 

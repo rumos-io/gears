@@ -1,16 +1,16 @@
 use database::Database;
-use kv_store::{TransactionStore, types::multi::MultiBank};
+use kv::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::{event::Event, header::Header};
 
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::{errors::RunTxError, options::NodeOptions, params::ConsensusParams},
-    context::{TransactionalContext, tx::TxContext},
+    context::{tx::TxContext, TransactionalContext},
     types::{
         auth::fee::Fee,
         gas::{
-            basic_meter::BasicGasMeter, Gas, GasMeter, infinite_meter::InfiniteGasMeter,
-            kind::BlockKind,
+            basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::BlockKind, Gas,
+            GasMeter,
         },
         tx::raw::TxWithRaw,
     },
@@ -21,11 +21,11 @@ use super::{build_tx_gas_meter, ExecutionMode};
 #[derive(Debug)]
 pub struct CheckTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
+    pub(crate) multi_store: TransactionMultiBank<DB, AH::StoreKey>,
 }
 
 impl<DB, AH: ABCIHandler> CheckTxMode<DB, AH> {
-    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>) -> Self {
+    pub fn new(max_gas: Gas, multi_store: TransactionMultiBank<DB, AH::StoreKey>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
@@ -60,7 +60,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     fn run_msg<'m>(
         ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         _handler: &AH,
-        _msgs: impl Iterator<Item=&'m AH::Message>,
+        _msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError> {
         Ok(ctx.events_drain())
     }
@@ -72,7 +72,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     ) -> Result<(), RunTxError> {
         handler
             .run_ante_checks(ctx, tx_with_raw)
-            .inspect_err(|_| ctx.multi_store_mut().clear_tx_cache())
+            .inspect_err(|_| ctx.multi_store_mut().clear_cache())
             .map_err(|e| RunTxError::Custom(e.to_string()))
     }
 

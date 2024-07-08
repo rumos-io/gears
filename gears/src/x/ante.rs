@@ -27,7 +27,7 @@ use core_types::{
 };
 use cosmwasm_std::Decimal256;
 use database::Database;
-use kv_store::StoreKey;
+use kv::StoreKey;
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
 

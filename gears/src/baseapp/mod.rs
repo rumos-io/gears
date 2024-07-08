@@ -18,10 +18,7 @@ use crate::{
 };
 use bytes::Bytes;
 use database::Database;
-use kv_store::{
-    types::{multi::MultiBank, query::QueryMultiStore},
-    ApplicationStore,
-};
+use kv::{bank::multi::ApplicationMultiBank, query::QueryMultiStore};
 use tendermint::types::{
     proto::{event::Event, header::Header},
     request::query::RequestQuery,
@@ -47,7 +44,7 @@ pub use query::*;
 #[derive(Debug, Clone)]
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
     state: Arc<RwLock<ApplicationState<DB, H>>>,
-    multi_store: Arc<RwLock<MultiBank<DB, H::StoreKey, ApplicationStore>>>,
+    multi_store: Arc<RwLock<ApplicationMultiBank<DB, H::StoreKey>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
@@ -59,7 +56,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     BaseApp<DB, PSK, H, AI>
 {
     pub fn new(db: DB, params_subspace_key: PSK, abci_handler: H, options: NodeOptions) -> Self {
-        let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
+        let mut multi_store = ApplicationMultiBank::<_, _>::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_subspace_key,

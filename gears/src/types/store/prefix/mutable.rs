@@ -1,5 +1,5 @@
 use database::Database;
-use kv_store::types::prefix::mutable::MutablePrefixStore;
+use kv::store::prefix::mutable::MutablePrefixStore;
 
 use crate::types::store::gas::{errors::GasStoreErrors, prefix::mutable::GasPrefixStoreMut};
 

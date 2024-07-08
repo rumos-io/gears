@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Result};
 
-use kv_store::error::KVStoreError;
+use kv::error::KVStoreError;
 
 use crate::types::store::gas::errors::GasStoreErrors;
 

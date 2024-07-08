@@ -3,7 +3,7 @@ pub mod mutable;
 use std::ops::RangeBounds;
 
 use database::Database;
-use kv_store::types::kv::immutable::KVStore;
+use kv::store::kv::immutable::KVStore;
 
 use super::{errors::GasStoreErrors, guard::GasGuard, prefix::GasPrefixStore, range::GasRange};
 
