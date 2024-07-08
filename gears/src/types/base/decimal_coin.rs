@@ -1,11 +1,27 @@
+use super::{coin::Coin, errors::CoinsError};
+use crate::types::denom::Denom;
+use core_types::{errors::CoreError, Protobuf};
+use cosmwasm_std::{DecCoin, Decimal256};
+use prost::Message;
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-use cosmwasm_std::{DecCoin, Decimal256};
-use serde::{Deserialize, Serialize};
+#[derive(Clone, PartialEq, Eq, Message)]
+pub struct DecimalCoinRaw {
+    #[prost(string, tag = "1")]
+    pub denom: String,
+    #[prost(string, tag = "2")]
+    pub amount: String,
+}
 
-use crate::types::denom::Denom;
-
-use super::errors::CoinsError;
+impl From<DecimalCoin> for DecimalCoinRaw {
+    fn from(DecimalCoin { denom, amount }: DecimalCoin) -> Self {
+        Self {
+            denom: denom.to_string(),
+            amount: amount.to_string(),
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
 pub struct DecimalCoin {
@@ -20,6 +36,22 @@ impl DecimalCoin {
             amount: amount.into(),
         }
     }
+
+    // truncate_decimal returns a Coin with a truncated decimal and a DecimalCoin for the
+    // change. Note, the change may be zero.
+    pub fn truncate_decimal(&self) -> (Coin, DecimalCoin) {
+        let truncated = self.amount.to_uint_floor();
+        let dec = Decimal256::from_atomics(truncated, 0)
+            .expect("cannot fail because it is a truncated part from decimal");
+        let change = self.amount - dec;
+        (
+            Coin {
+                amount: truncated,
+                denom: self.denom.clone(),
+            },
+            DecimalCoin::new(change, self.denom.clone()),
+        )
+    }
 }
 
 impl TryFrom<DecCoin> for DecimalCoin {
@@ -32,6 +64,21 @@ impl TryFrom<DecCoin> for DecimalCoin {
         })
     }
 }
+
+impl TryFrom<DecimalCoinRaw> for DecimalCoin {
+    type Error = CoreError;
+
+    fn try_from(DecimalCoinRaw { denom, amount }: DecimalCoinRaw) -> Result<Self, Self::Error> {
+        Ok(Self {
+            denom: denom
+                .try_into()
+                .map_err(|e| CoreError::Coin(format!("{e}")))?,
+            amount: Decimal256::from_str(&amount).map_err(|e| CoreError::Coin(e.to_string()))?,
+        })
+    }
+}
+
+impl Protobuf<DecimalCoinRaw> for DecimalCoin {}
 
 impl From<DecimalCoin> for DecCoin {
     fn from(DecimalCoin { denom, amount }: DecimalCoin) -> Self {
