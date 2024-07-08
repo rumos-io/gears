@@ -142,82 +142,164 @@ mod tests {
 
     use super::*;
 
+    /// # What
+    /// Test checks that we get value from tx cache
     #[test]
-    fn get_none_set_in_block_deleted_in_tx()
-    {
-        let mut store = build_store(build_tree(), None);
-
-        store.set(vec![1], vec![11]);
-        store.upgrade_cache();
-
-        store.delete(&[1]);
-
+    fn get_from_tx_cache_empty_persisted() {
+        let store = store_build([], [(1, 11)], [], [], []);
         // ---
         let result = store.get(&[1]);
+        // ---
+        assert_eq!(Some(vec![11]), result)
+    }
 
+    /// # What
+    /// Test checks that we get value from block cache
+    #[test]
+    fn get_from_block_cache_empty_persisted() {
+        let store = store_build([], [], [(1, 11)], [], []);
+        // ---
+        let result = store.get(&[1]);
+        // ---
+        assert_eq!(Some(vec![11]), result)
+    }
+
+    /// # What
+    /// Test checks that we get value from persisted db if any cache empty
+    #[test]
+    fn get_from_persisted() {
+        let store = build_store(build_tree([(1, 22)]), None);
+        // ---
+        let result = store.get(&[1]);
+        // ---
+        assert_eq!(Some(vec![22]), result)
+    }
+
+    /// # What
+    /// Test checks that we get None value from persisted db if value deleted in tx cache
+    #[test]
+    fn get_from_persisted_deleted_in_tx() {
+        let mut store = build_store(build_tree([(1, 22)]), None);
+        store.delete(&[1]);
+        // ---
+        let result = store.get(&[1]);
         // ---
         assert_eq!(None, result)
     }
 
+    /// # What
+    /// Test checks that we get None value from persisted db if value deleted in block cache
     #[test]
-    fn get_from_tx_cache_deleted_in_block() {
-        let mut store = build_store(build_tree(), None);
-
-        let key = vec![1];
-
-        store.delete(&key);
+    fn get_from_persisted_deleted_in_block() {
+        let mut store = build_store(build_tree([(1, 22)]), None);
+        store.delete(&[1]);
         store.upgrade_cache();
-
-        store.set(key.clone(), vec![2]);
-
         // ---
-        let result = store.get(&key);
-
+        let result = store.get(&[1]);
         // ---
-        assert_eq!(Some(vec![2]), result);
+        assert_eq!(None, result)
     }
 
+    /// # What
+    /// Test checks that we get None value from persisted db if value deleted in all caches
     #[test]
-    fn delete_empty_cache() {
-        let mut tree = build_tree();
-
-        let key = vec![1];
-
-        tree.set(key.clone(), vec![2]);
-
-        let mut store = build_store(tree, None);
-
+    fn get_from_persisted_deleted_in_block_and_tx() {
+        let mut store = build_store(build_tree([(1, 22)]), None);
+        store.delete(&[1]);
+        store.upgrade_cache();
+        store.delete(&[1]);
         // ---
-        let deleted = store.delete(&key);
-
+        let result = store.get(&[1]);
         // ---
-        assert_eq!(Some(vec![2]), deleted);
+        assert_eq!(None, result)
     }
 
+    /// # What
+    /// Test checks that we try get value from store it gets overwritten by tx cache
     #[test]
-    fn delete_taken_from_cache() {
-        let mut tree = build_tree();
-
-        let key = vec![1];
-
-        tree.set(key.clone(), vec![2]);
-
-        let mut cache = KVCache::default();
-
-        cache.storage.insert(key.clone(), vec![3]);
-
-        let mut store = build_store(tree, Some(cache));
-
+    fn get_from_persisted_overwritten_by_tx() {
+        let mut store = build_store(build_tree([(1, 22)]), None);
+        store.set(vec![1], vec![11]);
         // ---
-        let deleted = store.delete(&key);
-
+        let result = store.get(&[1]);
         // ---
-        assert_eq!(Some(vec![3]), deleted);
+        assert_eq!(Some(vec![11]), result)
     }
+
+    /// # What
+    /// Test checks that we try get value from store it gets overwritten by block cache
+    #[test]
+    fn get_from_persisted_overwritten_by_block() {
+        let mut store = build_store(build_tree([(1, 22)]), None);
+        store.set(vec![1], vec![11]);
+        store.upgrade_cache();
+        // ---
+        let result = store.get(&[1]);
+        // ---
+        assert_eq!(Some(vec![11]), result)
+    }
+
+    /// # What
+    /// Test checks that we get value from tx cache while key exists in block and persisted
+    #[test]
+    fn get_from_tx_cache_override_persisted_and_block() {
+        let store = store_build([(1, 11)], [(1, 22)], [(1, 33)], [], []);
+        // ---
+        let result = store.get(&[1]);
+        // ---
+        assert_eq!(Some(vec![22]), result)
+    }
+
+    /// # What
+    /// Test checks that we get None from tx cache while key exists in block and persisted
+    #[test]
+    fn get_deleted_from_tx_cache_override_persisted_and_block() {
+        let mut store = store_build([(1, 11)], [(1, 22)], [(1, 33)], [], []);
+        store.delete(&[1]);
+        // ---
+        let result = store.get(&[1]);
+        // ---
+        assert_eq!(None, result)
+    }
+
+    /// # What
+    /// Test checks that we get value from tx while value deleted in block cache
+    #[test]
+    fn get_from_tx_cache_while_deleted_in_block() {
+        let store = store_build([(1, 11)], [(1, 22)], [(1, 33)], [], [1]);
+        // ---
+        let result = store.get(&[1]);
+        // ---
+        assert_eq!(Some(vec![22]), result)
+    }
+
+    /// # What
+    /// Test checks that we get None value from block if value deleted in tx cache
+    #[test]
+    fn get_none_from_block_cache_cause_deleted_in_tx() {
+        let store = store_build([(1, 11)], [(1, 22)], [(1, 33)], [1], []);
+        // ---
+        let result = store.get(&[1]);
+        // ---
+        assert_eq!(None, result)
+    }
+
+    /// # What
+    /// Test checks that we get deleted value from tx cache
+    #[test]
+    fn delete_taken_from_tx_cache() {
+        let mut store = store_build([(1, 11)], [(1, 22)], [(1, 33)], [], []);
+        // ---
+        let deleted = store.delete(&[1]);
+        // ---
+        assert_eq!(Some(vec![22]), deleted);
+    }
+
+    /// ================================== OLD =============
 
     #[test]
     fn get_empty_cache() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         let key = vec![1];
 
@@ -234,7 +316,7 @@ mod tests {
 
     #[test]
     fn get_from_tx_cache() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         let key = vec![1];
 
@@ -255,7 +337,7 @@ mod tests {
 
     #[test]
     fn get_from_block_cache() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         let key = vec![1];
 
@@ -277,7 +359,7 @@ mod tests {
 
     #[test]
     fn get_from_tx_overwriting_block_cache() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
         tree.set(vec![1], vec![2]);
 
         let mut cache = KVCache::default();
@@ -297,7 +379,7 @@ mod tests {
 
     #[test]
     fn get_deleted_in_tx() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         let key = vec![1];
 
@@ -318,7 +400,7 @@ mod tests {
 
     #[test]
     fn range_work_for_persist_values() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         let values_insert = [
             (1, 11),
@@ -360,7 +442,7 @@ mod tests {
 
     #[test]
     fn range_work_for_persist_and_cached_values() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         for (key, value) in [
             (1, 11),
@@ -407,7 +489,7 @@ mod tests {
 
     #[test]
     fn range_work_for_persist_and_cached_values_with_block() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         for (key, value) in [(1, 11), (2, 22), (3, 33), (4, 44)] {
             tree.set(vec![key], vec![value]);
@@ -445,7 +527,7 @@ mod tests {
 
     #[test]
     fn range_work_for_persist_values_without_deleted() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         for (key, value) in [
             (1, 11),
@@ -488,7 +570,7 @@ mod tests {
 
     #[test]
     fn range_work_for_persist_values_without_deleted_with_block() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         for (key, value) in [(1, 11), (2, 22), (3, 33), (4, 44), (5, 55), (6, 66)] {
             tree.set(vec![key], vec![value]);
@@ -522,7 +604,7 @@ mod tests {
 
     #[test]
     fn range_work_for_persist_and_cached_values_without_deleted() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         for (key, value) in [
             (1, 11),
@@ -566,7 +648,7 @@ mod tests {
 
     #[test]
     fn range_work_for_persist_and_cached_values_without_deleted_with_block() {
-        let mut tree = build_tree();
+        let mut tree = build_tree([]);
 
         for (key, value) in [(1, 11), (2, 22), (3, 33), (4, 44), (5, 55), (6, 66)] {
             tree.set(vec![key], vec![value]);
@@ -607,15 +689,21 @@ mod tests {
         assert_eq!(expected_range, result_range);
     }
 
-    fn build_tree() -> Tree<MemDB> {
-        Tree::new(
+    fn build_tree(values: impl IntoIterator<Item = (u8, u8)>) -> Tree<MemDB> {
+        let mut tree = Tree::new(
             MemDB::new(),
             None,
             TREE_CACHE_SIZE
                 .try_into()
                 .expect("Unreachable. Tree cache size is > 0"),
         )
-        .expect("Failed to create Tree")
+        .expect("Failed to create Tree");
+
+        for (key, value) in values {
+            tree.set(vec![key], vec![value]);
+        }
+
+        tree
     }
 
     fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> TransactionKVBank<MemDB> {
@@ -623,6 +711,55 @@ mod tests {
             persistent: Arc::new(RwLock::new(tree)),
             tx: cache.unwrap_or_default(),
             block: Default::default(),
+        }
+    }
+
+    fn store_build(
+        tree_val: impl IntoIterator<Item = (u8, u8)>,
+        tx_set: impl IntoIterator<Item = (u8, u8)>,
+        block_set: impl IntoIterator<Item = (u8, u8)>,
+        tx_del: impl IntoIterator<Item = u8>,
+        block_del: impl IntoIterator<Item = u8>,
+    ) -> TransactionKVBank<MemDB> {
+        let mut tree = Tree::new(
+            MemDB::new(),
+            None,
+            TREE_CACHE_SIZE
+                .try_into()
+                .expect("Unreachable. Tree cache size is > 0"),
+        )
+        .expect("Failed to create Tree");
+
+        for (key, value) in tree_val {
+            tree.set(vec![key], vec![value]);
+        }
+
+        TransactionKVBank {
+            persistent: Arc::new(RwLock::new(tree)),
+            tx: {
+                let mut cache = KVCache::default();
+                for (key, value) in tx_set {
+                    cache.set(vec![key], vec![value]);
+                }
+
+                for del in tx_del {
+                    cache.delete(&[del]);
+                }
+
+                cache
+            },
+            block: {
+                let mut cache = KVCache::default();
+                for (key, value) in block_set {
+                    cache.set(vec![key], vec![value]);
+                }
+
+                for del in block_del {
+                    cache.delete(&[del]);
+                }
+
+                cache
+            },
         }
     }
 }
