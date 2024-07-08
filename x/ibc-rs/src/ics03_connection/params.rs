@@ -10,7 +10,6 @@ use gears::params::ParamKind;
 use gears::params::ParamsDeserialize;
 use gears::params::ParamsSerialize;
 use gears::params::ParamsSubspaceKey;
-use gears::store::types::prefix::immutable::ImmutablePrefixStore;
 use gears::{
     context::{QueryableContext, TransactionalContext},
     store::{
