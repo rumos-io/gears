@@ -1,20 +1,20 @@
 use strum::IntoEnumIterator;
 
+pub mod cache;
 pub mod error;
 pub mod ext;
 mod hash;
+pub mod kv;
+pub mod multi;
+pub mod prefix;
+pub mod query;
 pub mod range;
-pub mod types;
+pub mod store;
 mod utils;
 
 use std::hash::Hash;
 
 pub(crate) const TREE_CACHE_SIZE: usize = 100_000;
-
-#[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TransactionStore;
-#[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ApplicationStore;
 
 pub trait StoreKey:
     std::fmt::Debug + Hash + Eq + IntoEnumIterator + Clone + Send + Sync + 'static

@@ -2,7 +2,7 @@ use std::ops::{Bound, RangeBounds};
 
 use database::Database;
 
-use crate::types::kv::immutable::KVStore;
+use crate::store::kv::immutable::KVStore;
 
 use super::{prefix_end_bound, range::PrefixRange};
 

@@ -5,25 +5,22 @@ use trees::iavl::QueryTree;
 
 use crate::{
     error::{KVStoreError, KEY_EXISTS_MSG, POISONED_LOCK},
-    ApplicationStore, StoreKey,
+    kv::application::ApplicationKVBank,
+    multi::ApplicationMultiBank,
+    StoreKey,
 };
 
 use self::kv::QueryKVStore;
 
-use super::{
-    kv::immutable::{KVStore, KVStoreBackend},
-    multi::MultiBank,
-};
+use super::store::kv::immutable::{KVStore, KVStoreBackend};
 
 pub mod kv;
 
-pub struct QueryStoreOptions<'a, DB, SK>(
-    &'a HashMap<SK, super::kv::KVBank<PrefixDB<DB>, ApplicationStore>>,
-);
+pub struct QueryStoreOptions<'a, DB, SK>(&'a HashMap<SK, ApplicationKVBank<PrefixDB<DB>>>);
 
-impl<'a, DB, SK> From<&'a MultiBank<DB, SK, ApplicationStore>> for QueryStoreOptions<'a, DB, SK> {
-    fn from(value: &'a MultiBank<DB, SK, ApplicationStore>) -> Self {
-        Self(&value.stores)
+impl<'a, DB, SK> From<&'a ApplicationMultiBank<DB, SK>> for QueryStoreOptions<'a, DB, SK> {
+    fn from(value: &'a ApplicationMultiBank<DB, SK>) -> Self {
+        Self(&value.backend.0)
     }
 }
 

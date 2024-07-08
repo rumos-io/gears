@@ -1,7 +1,6 @@
 use std::{
     borrow::Cow,
     collections::HashMap,
-    marker::PhantomData,
     ops::RangeBounds,
     sync::{Arc, RwLock},
 };
@@ -9,64 +8,44 @@ use std::{
 use database::Database;
 use trees::iavl::Tree;
 
-use crate::{error::POISONED_LOCK, range::Range, utils::MergedRange};
-
-use self::store_cache::KVCache;
-
-pub mod cache;
-pub mod commit;
-pub mod immutable;
-pub mod mutable;
-pub mod store_cache;
+use crate::{
+    cache::KVCache,
+    error::POISONED_LOCK,
+    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
+    range::Range,
+    store::kv::{immutable::KVStore, mutable::KVStoreMut},
+    utils::MergedRange,
+};
 
 #[derive(Debug)]
-pub struct KVBank<DB, SK> {
+pub struct TransactionKVBank<DB> {
     pub(crate) persistent: Arc<RwLock<Tree<DB>>>,
     pub(crate) tx: KVCache,
     pub(crate) block: KVCache,
-    pub(crate) _marker: PhantomData<SK>,
 }
 
-impl<DB: Database, SK> KVBank<DB, SK> {
+impl<DB: Database> TransactionKVBank<DB> {
+    /// Read persistent database
     #[inline]
-    pub fn head_commit_hash(&self) -> [u8; 32] {
-        self.persistent.read().expect(POISONED_LOCK).root_hash()
+    pub fn persistent(&self) -> std::sync::RwLockReadGuard<Tree<DB>> {
+        self.persistent.read().expect(POISONED_LOCK)
     }
 
+    /// Clear uncommitted cache for tx
     #[inline]
-    pub fn last_committed_version(&self) -> u32 {
-        self.persistent
-            .read()
-            .expect(POISONED_LOCK)
-            .loaded_version()
-    }
-
-    #[inline]
-    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
-        self.tx
-            .delete(k)
-            .or(self.persistent.read().expect(POISONED_LOCK).get(k))
-    }
-
-    #[inline]
-    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
-        &mut self,
-        key: KI,
-        value: VI,
-    ) {
-        self.tx.set(key, value)
-    }
-
-    pub fn clear_tx_cache(&mut self) {
+    pub fn tx_cache_clear(&mut self) {
         self.tx.storage.clear();
         self.tx.delete.clear();
     }
 
-    pub fn clear_block_cache(&mut self) {
+    /// Clear uncommitted cache for block
+    #[inline]
+    pub fn block_cache_clear(&mut self) {
         self.block.storage.clear();
         self.block.delete.clear();
     }
 
+    /// Upgrade cache means push changes from tx to block
     pub fn upgrade_cache(&mut self) {
         let (set_values, delete) = self.tx.take();
         for (key, value) in set_values {
@@ -79,14 +58,54 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         }
     }
 
+    /// Delete value from storage
+    #[inline]
+    pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
+        self.tx
+            .delete(k)
+            .or(self.persistent.read().expect(POISONED_LOCK).get(k))
+    }
+
+    /// Set or append value
+    #[inline]
+    pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
+        &mut self,
+        key: KI,
+        value: VI,
+    ) {
+        self.tx.set(key, value)
+    }
+
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        match self.tx.get(k.as_ref()) {
-            Ok(var) => var,
-            Err(_) => return None,
+        match self.tx.get(k.as_ref()).ok()? {
+            Some(var) => Some(var.to_owned()),
+            None => self
+                .block
+                .get(k.as_ref())
+                .ok()?
+                .cloned()
+                .or_else(|| self.persistent.read().expect(POISONED_LOCK).get(k.as_ref())),
         }
-        .or(self.block.get(k.as_ref()).unwrap_or(None))
-        .cloned()
-        .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
+    }
+
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+        &self,
+        prefix: I,
+    ) -> ImmutablePrefixStore<'_, DB> {
+        ImmutablePrefixStore {
+            store: KVStore::from(self),
+            prefix: prefix.into_iter().collect(),
+        }
+    }
+
+    pub fn prefix_store_mut<I: IntoIterator<Item = u8>>(
+        &mut self,
+        prefix: I,
+    ) -> MutablePrefixStore<'_, DB> {
+        MutablePrefixStore {
+            store: KVStoreMut::from(self),
+            prefix: prefix.into_iter().collect(),
+        }
     }
 
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, DB> {
@@ -114,6 +133,7 @@ impl<DB: Database, SK> KVBank<DB, SK> {
 
 #[cfg(test)]
 mod tests {
+
     use std::collections::BTreeMap;
 
     use database::MemDB;
@@ -584,11 +604,10 @@ mod tests {
         .expect("Failed to create Tree")
     }
 
-    fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> KVBank<MemDB, TestStore> {
-        KVBank {
+    fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> TransactionKVBank<MemDB> {
+        TransactionKVBank {
             persistent: Arc::new(RwLock::new(tree)),
             tx: cache.unwrap_or_default(),
-            _marker: PhantomData,
             block: Default::default(),
         }
     }
