@@ -63,8 +63,8 @@ impl<DB: Database, SK> KVBank<DB, SK> {
     }
 
     pub fn clear_block_cache(&mut self) {
-        self.tx.storage.clear();
-        self.tx.delete.clear();
+        self.block.storage.clear();
+        self.block.delete.clear();
     }
 
     pub fn upgrade_cache(&mut self) {

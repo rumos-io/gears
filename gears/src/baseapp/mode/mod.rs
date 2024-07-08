@@ -1,12 +1,6 @@
-pub mod check;
-pub mod deliver;
-pub mod re_check;
-
-use kv_store::{types::multi::MultiBank, TransactionStore};
 use tendermint::types::proto::event::Event;
 use tendermint::types::proto::header::Header;
 
-use self::sealed::Sealed;
 use crate::{
     application::handlers::node::ABCIHandler,
     baseapp::errors::RunTxError,
@@ -14,17 +8,21 @@ use crate::{
     types::{
         auth::fee::Fee,
         gas::{
-            basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, kind::TxKind, GasMeter,
+            basic_meter::BasicGasMeter, GasMeter, infinite_meter::InfiniteGasMeter, kind::TxKind,
         },
         tx::raw::TxWithRaw,
     },
 };
 
-use super::{options::NodeOptions, ConsensusParams};
+use super::{ConsensusParams, options::NodeOptions};
+
+use self::sealed::Sealed;
+
+pub mod check;
+pub mod deliver;
+pub mod re_check;
 
 pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
-    fn multi_store(&mut self) -> &mut MultiBank<DB, AH::StoreKey, TransactionStore>;
-
     fn build_ctx(
         &mut self,
         height: u32,
@@ -45,7 +43,7 @@ pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
     fn run_msg<'m>(
         ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
-        msgs: impl Iterator<Item = &'m AH::Message>,
+        msgs: impl Iterator<Item=&'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError>;
 
     fn commit(ctx: TxContext<'_, DB, AH::StoreKey>);

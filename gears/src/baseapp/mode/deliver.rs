@@ -39,12 +39,6 @@ impl<DB, AH: ABCIHandler> DeliverTxMode<DB, AH> {
 }
 
 impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, AH> {
-    fn multi_store(
-        &mut self,
-    ) -> &mut MultiBank<DB, <AH as ABCIHandler>::StoreKey, TransactionStore> {
-        &mut self.multi_store
-    }
-
     fn build_ctx(
         &mut self,
         height: u32,
