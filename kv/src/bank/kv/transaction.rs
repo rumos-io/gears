@@ -142,8 +142,22 @@ mod tests {
 
     use super::*;
 
-    #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
-    pub struct TestStore;
+    #[test]
+    fn get_none_set_in_block_deleted_in_tx()
+    {
+        let mut store = build_store(build_tree(), None);
+
+        store.set(vec![1], vec![11]);
+        store.upgrade_cache();
+
+        store.delete(&[1]);
+
+        // ---
+        let result = store.get(&[1]);
+
+        // ---
+        assert_eq!(None, result)
+    }
 
     #[test]
     fn get_from_tx_cache_deleted_in_block() {
