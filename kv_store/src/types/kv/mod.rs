@@ -102,9 +102,9 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         let persisted_values = tree
             .range(range)
             .filter(|(key, _)| {
-                !self.tx.delete.contains(&**key)
-                    || !(self.block.delete.contains(&**key)
-                        && !self.tx.storage.contains_key(&**key))
+                !(self.tx.delete.contains(&**key)
+                    || (self.block.delete.contains(&**key)
+                        && !self.tx.storage.contains_key(&**key)))
             })
             .map(|(first, second)| (Cow::Owned(first), Cow::Owned(second)));
 
