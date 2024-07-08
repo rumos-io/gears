@@ -1,12 +1,10 @@
+pub mod bank;
 use strum::IntoEnumIterator;
 
 pub mod cache;
 pub mod error;
 pub mod ext;
 mod hash;
-pub mod kv;
-pub mod multi;
-pub mod prefix;
 pub mod query;
 pub mod range;
 pub mod store;

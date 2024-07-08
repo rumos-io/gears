@@ -3,7 +3,7 @@ use std::ops::RangeBounds;
 use database::Database;
 use trees::iavl::QueryTree;
 
-use crate::prefix::immutable::ImmutablePrefixStore;
+use crate::store::prefix::immutable::ImmutablePrefixStore;
 
 #[derive(Debug)]
 pub struct QueryKVStore<DB>(QueryTree<DB>);

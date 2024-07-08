@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 
-use crate::{hash::StoreInfo, kv::application::ApplicationKVBank, StoreKey};
+use crate::{bank::kv::application::ApplicationKVBank, hash::StoreInfo, StoreKey};
 
 use super::*;
 

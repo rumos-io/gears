@@ -11,9 +11,9 @@ use trees::iavl::Tree;
 use crate::{
     cache::KVCache,
     error::POISONED_LOCK,
-    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     range::Range,
     store::kv::{immutable::KVStore, mutable::KVStoreMut},
+    store::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     utils::MergedRange,
 };
 

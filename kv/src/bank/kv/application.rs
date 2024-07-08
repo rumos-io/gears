@@ -10,9 +10,8 @@ use trees::iavl::Tree;
 use crate::{
     cache::KVCache,
     error::{KVStoreError, POISONED_LOCK},
-    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     range::Range,
-    store::kv::{immutable::KVStore, mutable::KVStoreMut},
+    store::{kv::{immutable::KVStore, mutable::KVStoreMut}, prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore}},
     utils::MergedRange,
     TREE_CACHE_SIZE,
 };

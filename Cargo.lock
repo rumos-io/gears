@@ -1519,7 +1519,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kv_store"
+name = "kv"
 version = "0.1.0"
 dependencies = [
  "database",

@@ -4,9 +4,9 @@ use database::{prefix::PrefixDB, Database};
 use trees::iavl::QueryTree;
 
 use crate::{
+    bank::kv::application::ApplicationKVBank,
+    bank::multi::ApplicationMultiBank,
     error::{KVStoreError, KEY_EXISTS_MSG, POISONED_LOCK},
-    kv::application::ApplicationKVBank,
-    multi::ApplicationMultiBank,
     StoreKey,
 };
 

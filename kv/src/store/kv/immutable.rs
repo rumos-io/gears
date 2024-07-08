@@ -3,10 +3,10 @@ use std::ops::RangeBounds;
 use database::Database;
 
 use crate::{
-    kv::{application::ApplicationKVBank, transaction::TransactionKVBank},
-    prefix::immutable::ImmutablePrefixStore,
+    bank::kv::{application::ApplicationKVBank, transaction::TransactionKVBank},
     query::kv::QueryKVStore,
     range::Range,
+    store::prefix::immutable::ImmutablePrefixStore,
 };
 
 /// Internal structure which holds different stores

@@ -1,7 +1,7 @@
 use database::{prefix::PrefixDB, Database};
 
 use crate::{
-    multi::{ApplicationMultiBank, TransactionMultiBank},
+    bank::multi::{ApplicationMultiBank, TransactionMultiBank},
     query::QueryMultiStore,
     store::kv::immutable::{KVStore, KVStoreBackend},
     StoreKey,

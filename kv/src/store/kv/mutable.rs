@@ -3,9 +3,9 @@ use std::ops::RangeBounds;
 use database::Database;
 
 use crate::{
-    kv::{application::ApplicationKVBank, transaction::TransactionKVBank},
-    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
+    bank::kv::{application::ApplicationKVBank, transaction::TransactionKVBank},
     range::Range,
+    store::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
 };
 
 use super::immutable::{KVStore, KVStoreBackend};

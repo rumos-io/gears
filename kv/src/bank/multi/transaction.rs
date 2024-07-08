@@ -1,6 +1,6 @@
 use database::{prefix::PrefixDB, Database};
 
-use crate::{kv::transaction::TransactionKVBank, StoreKey};
+use crate::{bank::kv::transaction::TransactionKVBank, StoreKey};
 
 use super::*;
 

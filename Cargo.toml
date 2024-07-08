@@ -8,7 +8,7 @@ members = [
   # with local deps
   "address",
   "trees",
-  "kv_store",
+  "kv",
   "keyring",
   # "gears",
   # "gears-derive",
