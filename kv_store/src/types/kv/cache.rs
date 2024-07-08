@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use database::Database;
 
-use crate::{TransactionStore, types::prefix::immutable::ImmutablePrefixStore};
+use crate::{types::prefix::immutable::ImmutablePrefixStore, TransactionStore};
 
 use super::{immutable::KVStore, KVBank};
 
@@ -12,7 +12,7 @@ impl<DB: Database> KVBank<DB, TransactionStore> {
         self.block.take()
     }
 
-    pub fn prefix_store<I: IntoIterator<Item=u8>>(
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
         &self,
         prefix: I,
     ) -> ImmutablePrefixStore<'_, DB> {

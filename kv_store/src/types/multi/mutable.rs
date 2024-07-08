@@ -1,11 +1,11 @@
-use database::{Database, prefix::PrefixDB};
+use database::{prefix::PrefixDB, Database};
 
 use crate::{
-    ApplicationStore,
-    StoreKey, TransactionStore, types::kv::{
+    types::kv::{
         immutable::{KVStore, KVStoreBackend},
         mutable::{KVStoreBackendMut, KVStoreMut},
     },
+    ApplicationStore, StoreKey, TransactionStore,
 };
 
 use super::{

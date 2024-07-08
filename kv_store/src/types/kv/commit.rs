@@ -7,9 +7,9 @@ use database::Database;
 use trees::iavl::Tree;
 
 use crate::{
-    ApplicationStore,
     error::{KVStoreError, POISONED_LOCK},
-    TransactionStore, TREE_CACHE_SIZE, types::prefix::immutable::ImmutablePrefixStore,
+    types::prefix::immutable::ImmutablePrefixStore,
+    ApplicationStore, TransactionStore, TREE_CACHE_SIZE,
 };
 
 use super::{immutable::KVStore, KVBank};
@@ -62,7 +62,7 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
         }
     }
 
-    pub fn prefix_store<I: IntoIterator<Item=u8>>(
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
         &self,
         prefix: I,
     ) -> ImmutablePrefixStore<'_, DB> {
