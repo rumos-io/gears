@@ -64,10 +64,10 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             chain_id: init_state.chain_id,
             time: init_state.time,
             last_block_id: BlockId {
-                hash: vec![].into(),
+                hash: vec![],
                 part_set_header: Some(PartSetHeader {
                     total: 0,
-                    hash: vec![].into(),
+                    hash: vec![],
                 }),
             },
             _phantom: Default::default(),
@@ -81,10 +81,10 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
 
         let request_begin_block = RequestBeginBlock {
             header,
-            last_commit_info: Some(LastCommitInfo {
+            last_commit_info: LastCommitInfo {
                 round: 0,
                 votes: vec![],
-            }),
+            },
             byzantine_validators: vec![],
             hash:  b"\xaaw\xbd^\x9d\x041\xfdc\x17\x11\x82\xb9iU\xde2\xd0\x19\xca\xdeV\x0e\x7fK\x1c\x88\xb6\xa3\xe3\x8b\x89".as_slice().into(),
         };

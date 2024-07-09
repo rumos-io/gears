@@ -12,8 +12,9 @@ use crate::{
     PROPOSER_KEY,
 };
 use gears::{
-    context::InfallibleContextMut,
+    context::{InfallibleContext, InfallibleContextMut},
     core::Protobuf,
+    store::database::ext::UnwrapCorrupt,
     types::address::{AccAddress, ValAddress},
 };
 
@@ -36,6 +37,17 @@ impl<
         store.set(FEE_POOL_KEY, fee_pool.encode_vec());
     }
 
+    /// get the global fee pool distribution info
+    pub fn fee_pool<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Option<FeePool> {
+        let store = ctx.infallible_store(&self.store_key);
+        store
+            .get(&FEE_POOL_KEY)
+            .map(|bytes| FeePool::decode_vec(&bytes).unwrap_or_corrupt())
+    }
+
     /// set the delegator withdraw address
     pub fn set_delegator_withdraw_addr<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
@@ -48,6 +60,19 @@ impl<
             delegator_withdraw_addr_key(delegator_address.clone()),
             Vec::from(withdraw_address.clone()),
         );
+    }
+
+    /// previous_proposer_cons_addr returns the proposer consensus address for the
+    /// current block.
+    pub fn previous_proposer_cons_addr<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Option<ConsAddress> {
+        let store = ctx.infallible_store(&self.store_key);
+        store.get(&PROPOSER_KEY).map(|bytes| {
+            ConsAddress::try_from(ByteValue::decode_vec(&bytes).unwrap_or_corrupt().value)
+                .unwrap_or_corrupt()
+        })
     }
 
     /// set the proposer public key for this block
@@ -63,6 +88,18 @@ impl<
         store.set(PROPOSER_KEY, byte_value.encode_vec());
     }
 
+    /// get validator outstanding rewards
+    pub fn validator_outstanding_rewards<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: &ValAddress,
+    ) -> Option<ValidatorOutstandingRewards> {
+        let store = ctx.infallible_store(&self.store_key);
+        store
+            .get(&validator_outstanding_rewards_key(address.clone()))
+            .map(|bytes| ValidatorOutstandingRewards::decode_vec(&bytes).unwrap_or_corrupt())
+    }
+
     /// set validator outstanding rewards
     pub fn set_validator_outstanding_rewards<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
         &self,
@@ -75,6 +112,18 @@ impl<
             validator_outstanding_rewards_key(address.clone()),
             outstanding_rewards.encode_vec(),
         )
+    }
+
+    /// get accumulated commission for a validator
+    pub fn validator_accumulated_commission<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: &ValAddress,
+    ) -> Option<ValidatorAccumulatedCommission> {
+        let store = ctx.infallible_store(&self.store_key);
+        store
+            .get(&validator_accumulated_commission_key(address.clone()))
+            .map(|bytes| ValidatorAccumulatedCommission::decode_vec(&bytes).unwrap_or_corrupt())
     }
 
     /// set accumulated commission for a validator
@@ -110,6 +159,18 @@ impl<
             validator_historical_rewards_key(address.clone(), power),
             rewards.encode_vec(),
         )
+    }
+
+    /// get current rewards for a validator
+    pub fn validator_current_rewards<DB: Database, CTX: InfallibleContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+        address: &ValAddress,
+    ) -> Option<ValidatorCurrentRewards> {
+        let store = ctx.infallible_store(&self.store_key);
+        store
+            .get(&validator_current_rewards_key(address.clone()))
+            .map(|bytes| ValidatorCurrentRewards::decode_vec(&bytes).unwrap_or_corrupt())
     }
 
     /// set current rewards for a validator

@@ -85,6 +85,10 @@ impl StakingValidator for Validator {
         &self.min_self_delegation
     }
 
+    fn commission(&self) -> Decimal256 {
+        self.commission.commission_rates().rate()
+    }
+
     fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, AppError> {
         self.tokens_from_shares(shares)
             .map_err(|e| AppError::Custom(e.to_string()))

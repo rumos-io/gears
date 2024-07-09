@@ -5,9 +5,9 @@ use super::{
     send::SendCoins,
 };
 use crate::types::denom::Denom;
-use cosmwasm_std::Decimal256;
+use cosmwasm_std::{Decimal256, OverflowError};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, str::FromStr};
+use std::{cmp::Ordering, collections::HashMap, str::FromStr};
 
 // Represents a list of coins with the following properties:
 // - Contains at least one coin
@@ -85,15 +85,96 @@ impl DecimalCoins {
         self.0.is_empty()
     }
 
-    pub fn checked_add(&self, other: DecimalCoins) -> Result<Self, SendCoinsError> {
-        let result = self
-            .inner()
-            .iter()
-            .cloned()
-            .chain(other.0)
-            .collect::<Vec<_>>();
+    pub fn checked_add(&self, other: &DecimalCoins) -> Result<Self, SendCoinsError> {
+        let coins = self.checked_calculate_iterate(other.inner(), Decimal256::checked_add)?;
+        Self::new(coins)
+    }
 
-        Self::new(result)
+    fn checked_calculate_iterate(
+        &self,
+        other_coins: &[DecimalCoin],
+        operation: impl Fn(Decimal256, Decimal256) -> Result<Decimal256, OverflowError>,
+    ) -> Result<Vec<DecimalCoin>, SendCoinsError> {
+        let mut i = 0;
+        let mut j = 0;
+        let self_coins = self.inner();
+
+        let mut result = vec![];
+        // we do not handle cases where length of a coins is 0, because DecimalCoins is non-empty
+        // list
+        while i < self_coins.len() || j < other_coins.len() {
+            match self_coins[i].denom.cmp(&other_coins[j].denom) {
+                Ordering::Less => {
+                    result.push(self_coins[i].clone());
+                    i += 1;
+                }
+                Ordering::Equal => {
+                    result.push(DecimalCoin {
+                        denom: self_coins[i].denom.clone(),
+                        amount: operation(self_coins[i].amount, other_coins[j].amount)
+                            .map_err(|_| SendCoinsError::InvalidAmount)?,
+                    });
+                    i += 1;
+                    j += 1;
+                }
+                Ordering::Greater => {
+                    result.push(other_coins[j].clone());
+                    j += 1;
+                }
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn checked_sub(&self, other: &DecimalCoins) -> Result<Self, SendCoinsError> {
+        let coins = self.checked_calculate_iterate(other.inner(), Decimal256::checked_sub)?;
+        Self::new(coins)
+    }
+
+    pub fn checked_mul_dec_truncate(&self, multiplier: Decimal256) -> Result<Self, SendCoinsError> {
+        let mut coins = vec![];
+        for coin in self.inner().iter() {
+            coins.push(DecimalCoin::new(
+                coin.amount
+                    .checked_mul(multiplier)
+                    // TODO: extend error
+                    .map_err(|_| SendCoinsError::InvalidAmount)?
+                    .floor(),
+                coin.denom.clone(),
+            ));
+        }
+
+        Self::new(coins)
+    }
+
+    pub fn checked_mul_dec(&self, multiplier: Decimal256) -> Result<Self, SendCoinsError> {
+        let mut coins = vec![];
+        for coin in self.inner().iter() {
+            let normal = DecimalCoin::new(
+                coin.amount
+                    .checked_mul(multiplier)
+                    .map_err(|_| SendCoinsError::InvalidAmount)?
+                    .floor(),
+                coin.denom.clone(),
+            );
+            let mut floored = DecimalCoin::new(
+                coin.amount
+                    .checked_mul(multiplier)
+                    .map_err(|_| SendCoinsError::InvalidAmount)?
+                    .floor(),
+                coin.denom.clone(),
+            );
+
+            if normal.amount - floored.amount
+                >= Decimal256::from_atomics(5u64, 0).expect("hardcoded values cannot fail")
+            {
+                floored.amount += Decimal256::one();
+            }
+            coins.push(floored);
+        }
+
+        Self::new(coins)
     }
 
     pub fn is_all_gte<'a>(&self, other: impl IntoIterator<Item = &'a DecimalCoin>) -> bool {
@@ -133,6 +214,22 @@ impl DecimalCoins {
 impl From<DecimalCoins> for Vec<DecimalCoin> {
     fn from(coins: DecimalCoins) -> Vec<DecimalCoin> {
         coins.0
+    }
+}
+
+// TODO: maybe SendCoins instead of Vec<DecimalCoin
+impl TryFrom<Vec<Coin>> for DecimalCoins {
+    type Error = SendCoinsError;
+
+    fn try_from(value: Vec<Coin>) -> Result<Self, Self::Error> {
+        // TODO: maybe add TryFrom<Coin> for DecimalCoin
+        let mut dec_coins = vec![];
+        for coin in value {
+            let amount = Decimal256::from_atomics(coin.amount, 0)
+                .map_err(|_| SendCoinsError::InvalidAmount)?;
+            dec_coins.push(DecimalCoin::new(amount, coin.denom));
+        }
+        Self::new(dec_coins)
     }
 }
 

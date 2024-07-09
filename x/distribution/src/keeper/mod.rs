@@ -9,6 +9,7 @@ pub use gears::{
             auth::AuthKeeper, bank::StakingBankKeeper as BankKeeper, staking::SlashingStakingKeeper,
         },
         module::Module,
+        types::validator::StakingValidator,
     },
 };
 use gears::{
@@ -19,8 +20,9 @@ use gears::{
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
 };
-use std::collections::HashMap;
+use std::{collections::HashMap, u64};
 
+mod allocation;
 mod store;
 
 /// Keeper of the slashing store
@@ -113,7 +115,7 @@ impl<
         let module_holdings = module_holdings
             .into_iter()
             .take(1)
-            .try_fold(start, |acc, holdings| acc.checked_add(holdings))?;
+            .try_fold(start, |acc, holdings| acc.checked_add(&holdings))?;
 
         genesis
             .validator_accumulated_commissions
@@ -158,7 +160,7 @@ impl<
             )
         });
 
-        let module_holdings = module_holdings.checked_add(genesis.fee_pool.community_pool)?;
+        let module_holdings = module_holdings.checked_add(&genesis.fee_pool.community_pool)?;
         let (module_holdings_int, _) = module_holdings.truncate_decimal();
 
         // check if the module account exists
