@@ -17,6 +17,8 @@ use crate::{
     utils::MergedRange,
 };
 
+use super::application::ApplicationKVBank;
+
 #[derive(Debug)]
 pub struct TransactionKVBank<DB> {
     pub(crate) persistent: Arc<RwLock<Tree<DB>>>,
@@ -74,6 +76,13 @@ impl<DB: Database> TransactionKVBank<DB> {
         value: VI,
     ) {
         self.tx.set(key, value)
+    }
+
+    pub fn append_block_cache(&mut self, other: &mut ApplicationKVBank<DB>) {
+        let (append, delete) = (other.cache.storage.clone(), other.cache.delete.clone());
+
+        self.block.storage.extend(append);
+        self.block.delete.extend(delete);
     }
 
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {

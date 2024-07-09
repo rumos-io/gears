@@ -67,6 +67,11 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.abci_handler
             .init_genesis(&mut ctx, request.app_genesis.clone());
 
+        self.state
+            .write()
+            .expect(POISONED_LOCK)
+            .append_block_cache(&mut multi_store);
+
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),
             validators: request.validators,
@@ -269,7 +274,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let events = ctx.events;
 
-        state.multi_store_replace(&mut multi_store);
+        state.append_block_cache(&mut multi_store);
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -293,7 +298,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.state
             .write()
             .expect(POISONED_LOCK)
-            .push_changes(&mut multi_store);
+            .append_block_cache(&mut multi_store);
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

@@ -37,4 +37,10 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, TransactionStore<DB, SK>> {
             store.upgrade_cache()
         }
     }
+
+    pub fn append_block_cache(&mut self, other: &mut ApplicationMultiBank<DB, SK>) {
+        for (sk, store) in &mut self.backend.0 {
+            store.append_block_cache(other.kv_store_mut(sk))
+        }
+    }
 }

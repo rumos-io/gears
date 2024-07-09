@@ -38,9 +38,11 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         }
     }
 
-    pub fn multi_store_replace(&mut self, store: &mut ApplicationMultiBank<DB, AH::StoreKey>) {
-        self.check_mode.multi_store = store.to_tx_kind();
-        self.deliver_mode.multi_store = store.to_tx_kind();
+    
+
+    pub fn append_block_cache(&mut self, other: &mut ApplicationMultiBank<DB, AH::StoreKey>) {
+        self.check_mode.multi_store.append_block_cache(other);
+        self.deliver_mode.multi_store.append_block_cache(other);
     }
 
     pub fn push_changes(&mut self, app_ms: &mut ApplicationMultiBank<DB, AH::StoreKey>) {
