@@ -304,6 +304,24 @@ mod tests {
         assert_eq!(Some(vec![22]), deleted);
     }
 
+    /// # What
+    /// Test checks that we get deleted value from tx cache
+    #[test]
+    fn set_override_another_set() {
+        let mut store = store_build([(1, 0)], [], [(1, 0)], [], []);
+        store.set(vec![1], vec![11]);
+        store.upgrade_cache();
+        store.set(vec![1], vec![22]);
+        store.upgrade_cache();
+        store.set(vec![1], vec![33]);
+        store.upgrade_cache();
+
+        // ---
+        let get = store.get(&[1]);
+        // ---
+        assert_eq!(Some(vec![33]), get);
+    }
+
     /// ================================== OLD =============
 
     #[test]
