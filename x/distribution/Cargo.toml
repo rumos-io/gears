@@ -1,0 +1,13 @@
+[package]
+edition = "2021"
+name = "distribution"
+version = "0.1.0"
+
+[dependencies]
+anyhow = { workspace = true }
+bytes = { workspace = true }
+clap = { workspace = true }
+gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
+prost = { workspace = true }
+serde = { workspace = true, default-features = false }
+serde_json = { workspace = true }
