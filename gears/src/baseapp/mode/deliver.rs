@@ -1,11 +1,7 @@
 use database::Database;
 use kv::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::event::Event;
-use tendermint::types::proto::header::Header;
 
-use crate::baseapp::options::NodeOptions;
-use crate::baseapp::ConsensusParams;
-use crate::types::auth::fee::Fee;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
@@ -17,7 +13,7 @@ use crate::{
     types::tx::raw::TxWithRaw,
 };
 
-use super::{build_tx_gas_meter, ExecutionMode};
+use super::ExecutionMode;
 
 #[derive(Debug)]
 pub struct DeliverTxMode<DB, AH: ABCIHandler> {
@@ -37,27 +33,7 @@ impl<DB, AH: ABCIHandler> DeliverTxMode<DB, AH> {
     }
 }
 
-impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, AH> {
-    fn build_ctx(
-        &mut self,
-        height: u32,
-        header: Header,
-        consensus_params: ConsensusParams,
-        fee: Option<&Fee>,
-        options: NodeOptions,
-    ) -> TxContext<'_, DB, AH::StoreKey> {
-        TxContext::new(
-            &mut self.multi_store,
-            height,
-            header,
-            consensus_params,
-            build_tx_gas_meter(height, fee),
-            &mut self.block_gas_meter,
-            false,
-            options,
-        )
-    }
-
+impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, AH> {
     fn run_msg<'m>(
         ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
@@ -95,9 +71,5 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         } else {
             Ok(())
         }
-    }
-
-    fn commit(mut ctx: TxContext<'_, DB, AH::StoreKey>) {
-        ctx.multi_store_mut().upgrade_cache();
     }
 }
