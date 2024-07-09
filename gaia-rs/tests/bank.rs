@@ -185,7 +185,7 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
         };
 
         let Response {
-            check_tx: _,
+            check_tx,
             deliver_tx,
             hash: _,
             height: _,
@@ -204,7 +204,7 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
             &GaiaCoreClient,
         )?;
 
-        // assert!(check_tx.code.is_ok());
+        assert!(check_tx.code.is_ok());
         assert!(deliver_tx.code.is_ok());
 
         anyhow::Ok(())

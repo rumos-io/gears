@@ -84,12 +84,11 @@ impl<DB: Database> ApplicationKVBank<DB> {
     ///
     /// _Note_: deleted keys wont be returned even before commit.
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        match self.cache.get(k.as_ref()) {
-            Ok(var) => var,
-            Err(_) => return None, // If value deleted in cache we should return `None`
-        }
-        .cloned()
-        .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
+        self.cache.get(k.as_ref()).ok()?.cloned().or(self
+            .persistent
+            .read()
+            .expect(POISONED_LOCK)
+            .get(k.as_ref()))
     }
 
     pub fn prefix_store<I: IntoIterator<Item = u8>>(
@@ -168,9 +167,38 @@ mod tests {
 
     use database::MemDB;
 
-    use crate::TREE_CACHE_SIZE;
+    use crate::{
+        bank::kv::test_utils::{app_store_build, tx_store_build},
+        TREE_CACHE_SIZE,
+    };
 
     use super::*;
+
+    #[test]
+    fn to_tx_kind_returns_empty() {
+        let store = app_store_build([], [], []);
+
+        let result = store.to_tx_kind();
+        let expected = tx_store_build([], [], [], [], []);
+
+        assert_eq!(result.block, expected.block);
+        assert_eq!(result.tx, expected.tx);
+    }
+
+    #[test]
+    fn to_tx_kind_returns_with_cache() {
+        let store = app_store_build([(1, 11)], [(2, 22), (3, 33)], [4, 5]);
+
+        let result = store.to_tx_kind();
+        let expected = tx_store_build([(1, 11)], [], [(2, 22), (3, 33)], [], [4, 5]);
+
+        assert_eq!(result.block, expected.block);
+        assert_eq!(result.tx, expected.tx);
+
+        let result_get = result.get(&[1]);
+
+        assert_eq!(Some(vec![11]), result_get)
+    }
 
     #[test]
     fn delete_empty_cache() {

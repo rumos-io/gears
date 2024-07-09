@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashSet};
 
 /// Storage for store cache
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct KVCache {
     pub(crate) storage: BTreeMap<Vec<u8>, Vec<u8>>,
     pub(crate) delete: HashSet<Vec<u8>>,
