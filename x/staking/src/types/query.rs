@@ -233,8 +233,8 @@ impl TryFrom<DelegationResponseRaw> for DelegationResponse {
     fn try_from(raw: DelegationResponseRaw) -> Result<Self, Self::Error> {
         let delegation: Delegation = serde_json::from_slice(&raw.delegation)
             .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
-        let balance =
-            UnsignedCoin::decode_vec(&raw.balance).map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+        let balance = UnsignedCoin::decode_vec(&raw.balance)
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
         Ok(DelegationResponse {
             delegation,
