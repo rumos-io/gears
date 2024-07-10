@@ -4959,6 +4959,7 @@ dependencies = [
  "thiserror",
  "time",
  "tracing",
+ "ux",
 ]
 
 [[package]]
