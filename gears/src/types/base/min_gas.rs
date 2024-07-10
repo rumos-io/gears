@@ -3,7 +3,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    decimal_coin::DecimalCoin,
+    coin::DecimalCoin,
     errors::{CoinsParseError, SendCoinsError},
 };
 

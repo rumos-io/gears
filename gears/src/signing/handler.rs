@@ -56,7 +56,7 @@ mod tests {
     use crate::types::denom::Denom;
     use crate::types::{
         auth::{fee::Fee, info::AuthInfo},
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::Coin, coins::SendCoins},
         msg::send::MsgSend,
         rendering::{
             cbor::Cbor,

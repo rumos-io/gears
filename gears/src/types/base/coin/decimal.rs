@@ -1,10 +1,11 @@
-use super::{coin::Coin, errors::CoinsError};
-use crate::types::denom::Denom;
+use crate::types::{base::errors::CoinsError, denom::Denom};
 use core_types::{errors::CoreError, Protobuf};
 use cosmwasm_std::{DecCoin, Decimal256};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
+
+use super::unsigned::Coin;
 
 #[derive(Clone, PartialEq, Eq, Message)]
 pub struct DecimalCoinRaw {

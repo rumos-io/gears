@@ -22,7 +22,7 @@ use gears::{
     },
     types::{
         address::{AccAddress, ValAddress},
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::Coin, coins::SendCoins},
         decimal256::Decimal256,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
         uint::Uint256,

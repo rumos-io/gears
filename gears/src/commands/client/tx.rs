@@ -11,7 +11,7 @@ use crate::application::handlers::client::TxHandler;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
-use crate::types::base::send::SendCoins;
+use crate::types::base::coins::SendCoins;
 use crate::types::tx::raw::TxRaw;
 
 use super::keys::KeyringBackend;

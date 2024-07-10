@@ -11,7 +11,7 @@ use crate::crypto::public::PublicKey;
 
 use self::{body::TxBody, errors::TxError};
 
-use super::{address::AccAddress, auth::info::AuthInfo, base::send::SendCoins};
+use super::{address::AccAddress, auth::info::AuthInfo, base::coins::SendCoins};
 
 pub mod body;
 pub mod raw;

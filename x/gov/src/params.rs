@@ -10,7 +10,7 @@ use gears::{
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::proto::Protobuf,
     types::{
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::Coin, coins::SendCoins},
         decimal256::Decimal256,
     },
 };

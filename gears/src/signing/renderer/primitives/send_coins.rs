@@ -2,7 +2,7 @@ use crate::signing::handler::MetadataGetter;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRendererWithMetadata,
 };
-use crate::types::{base::send::SendCoins, rendering::screen::Content};
+use crate::types::{base::coins::SendCoins, rendering::screen::Content};
 
 impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<MG: MetadataGetter>(
@@ -42,7 +42,7 @@ mod tests {
         DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
     use crate::types::{
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::Coin, coins::SendCoins},
         rendering::screen::Content,
     };
 

@@ -1,5 +1,5 @@
 use gears::tendermint::types::time::Timestamp;
-use gears::types::base::send::SendCoins;
+use gears::types::base::coins::SendCoins;
 use gears::types::msg::send::MsgSend;
 
 use crate::{generate_txs, setup_mock_node};

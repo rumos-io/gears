@@ -1,13 +1,15 @@
-use super::{
-    coin::Coin,
-    decimal_coin::DecimalCoin,
-    errors::{CoinsParseError, SendCoinsError},
-    send::SendCoins,
-};
-use crate::types::denom::Denom;
-use cosmwasm_std::Decimal256;
-use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
+
+use cosmwasm_std::Uint256;
+use serde::{Deserialize, Serialize};
+
+use crate::types::{
+    base::{
+        coin::Coin,
+        errors::{CoinsParseError, SendCoinsError},
+    },
+    denom::Denom,
+};
 
 // Represents a list of coins with the following properties:
 // - Contains at least one coin
@@ -15,15 +17,16 @@ use std::{collections::HashMap, str::FromStr};
 // - No duplicate denominations
 // - Sorted lexicographically
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct DecimalCoins(Vec<DecimalCoin>);
+pub struct SendCoins(Vec<Coin>);
 
-impl DecimalCoins {
-    pub fn new(coins: Vec<DecimalCoin>) -> Result<DecimalCoins, SendCoinsError> {
+impl SendCoins {
+    pub fn new(coins: Vec<Coin>) -> Result<SendCoins, SendCoinsError> {
         Self::validate_coins(&coins)?;
-        Ok(DecimalCoins(coins))
+
+        Ok(SendCoins(coins))
     }
 
-    // Checks that the DecimalCoins are sorted, have positive amount, with a valid and unique
+    // Checks that the SendCoins are sorted, have positive amount, with a valid and unique
     // denomination (i.e no duplicates). Otherwise, it returns an error.
     // A valid list of coins satisfies:
     // - Contains at least one coin
@@ -31,7 +34,7 @@ impl DecimalCoins {
     // - No duplicate denominations
     // - Sorted lexicographically
     // TODO: implement ordering on coins or denominations so that conversion to string can be avoided
-    fn validate_coins(coins: &[DecimalCoin]) -> Result<(), SendCoinsError> {
+    fn validate_coins(coins: &[Coin]) -> Result<(), SendCoinsError> {
         if coins.is_empty() {
             return Err(SendCoinsError::EmptyList);
         }
@@ -59,25 +62,27 @@ impl DecimalCoins {
         Ok(())
     }
 
-    pub fn into_inner(self) -> Vec<DecimalCoin> {
+    pub fn into_inner(self) -> Vec<Coin> {
         self.0
     }
 
-    pub fn inner(&self) -> &Vec<DecimalCoin> {
+    pub fn inner(&self) -> &Vec<Coin> {
         &self.0
     }
 
-    pub fn amount_of(&self, denom: &Denom) -> Decimal256 {
+    pub fn amount_of(&self, denom: &Denom) -> Uint256 {
         let coins = self
             .0
             .iter()
             .map(|this| (&this.denom, &this.amount))
             .collect::<HashMap<_, _>>();
 
-        if let Some(coin) = coins.get(denom) {
+        let coin = coins.get(denom);
+
+        if let Some(coin) = coin {
             **coin
         } else {
-            Decimal256::zero()
+            Uint256::zero()
         }
     }
 
@@ -85,7 +90,7 @@ impl DecimalCoins {
         self.0.is_empty()
     }
 
-    pub fn checked_add(&self, other: DecimalCoins) -> Result<Self, SendCoinsError> {
+    pub fn checked_add(&self, other: SendCoins) -> Result<Self, SendCoinsError> {
         let result = self
             .inner()
             .iter()
@@ -96,7 +101,7 @@ impl DecimalCoins {
         Self::new(result)
     }
 
-    pub fn is_all_gte<'a>(&self, other: impl IntoIterator<Item = &'a DecimalCoin>) -> bool {
+    pub fn is_all_gte<'a>(&self, other: impl IntoIterator<Item = &'a Coin>) -> bool {
         let other = other.into_iter().collect::<Vec<_>>();
 
         if other.is_empty() {
@@ -111,33 +116,16 @@ impl DecimalCoins {
 
         true
     }
-
-    pub fn truncate_decimal(&self) -> (SendCoins, DecimalCoins) {
-        let (truncated, change): (Vec<Coin>, Vec<DecimalCoin>) =
-            self.0.iter().map(DecimalCoin::truncate_decimal).unzip();
-
-        (
-            SendCoins::new(
-                truncated
-                    .into_iter()
-                    .filter(|c| !c.amount.is_zero())
-                    .collect(),
-            )
-            .expect("inner structure of coins should be unchanged"),
-            DecimalCoins::new(change.into_iter().filter(|c| !c.amount.is_zero()).collect())
-                .expect("inner structure of coins should be unchanged"),
-        )
-    }
 }
 
-impl From<DecimalCoins> for Vec<DecimalCoin> {
-    fn from(coins: DecimalCoins) -> Vec<DecimalCoin> {
+impl From<SendCoins> for Vec<Coin> {
+    fn from(coins: SendCoins) -> Vec<Coin> {
         coins.0
     }
 }
 
-impl IntoIterator for DecimalCoins {
-    type Item = DecimalCoin;
+impl IntoIterator for SendCoins {
+    type Item = Coin;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
@@ -145,7 +133,7 @@ impl IntoIterator for DecimalCoins {
     }
 }
 
-impl FromStr for DecimalCoins {
+impl FromStr for SendCoins {
     type Err = CoinsParseError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -153,7 +141,7 @@ impl FromStr for DecimalCoins {
         let mut coins = vec![];
 
         for coin in coin_strings {
-            let coin = DecimalCoin::from_str(coin)?;
+            let coin = Coin::from_str(coin)?;
             coins.push(coin);
         }
 

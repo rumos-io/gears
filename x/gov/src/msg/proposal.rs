@@ -5,7 +5,7 @@ use gears::{
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
-        base::{errors::CoinsError, send::SendCoins},
+        base::{coins::SendCoins, errors::CoinsError},
         tx::TxMessage,
     },
 };

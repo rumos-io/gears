@@ -15,7 +15,7 @@ use gears::{
     context::TransactionalContext,
     types::{
         address::ConsAddress,
-        base::send::SendCoins,
+        base::coins::SendCoins,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
 };

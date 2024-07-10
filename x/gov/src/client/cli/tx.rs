@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, Subcommand};
-use gears::types::base::send::SendCoins;
+use gears::types::base::coins::SendCoins;
 
 use crate::msg::{vote::VoteOption, weighted_vote::VoteOptionWeighted};
 

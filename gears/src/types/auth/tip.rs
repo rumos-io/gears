@@ -5,8 +5,8 @@ use crate::types::{
     address::{AccAddress, AddressError},
     base::{
         coin::Coin,
+        coins::SendCoins,
         errors::{CoinsError, SendCoinsError},
-        send::SendCoins,
     },
 };
 

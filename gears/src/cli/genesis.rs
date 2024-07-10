@@ -5,7 +5,7 @@ use clap::{ArgAction, ValueHint};
 use crate::{
     application::ApplicationInfo,
     commands::node::genesis::GenesisCommand,
-    types::{address::AccAddress, base::send::SendCoins},
+    types::{address::AccAddress, base::coins::SendCoins},
 };
 
 /// Add a genesis account to genesis.json. The provided account must specify the

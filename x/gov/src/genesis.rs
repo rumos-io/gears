@@ -1,6 +1,6 @@
 use gears::{
     baseapp::genesis::Genesis,
-    types::{address::AccAddress, base::send::SendCoins},
+    types::{address::AccAddress, base::coins::SendCoins},
 };
 use serde::{Deserialize, Serialize};
 

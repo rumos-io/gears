@@ -3,8 +3,8 @@ use gears::{
     types::{
         address::ValAddress,
         base::{
-            decimal_coin::{DecimalCoin, DecimalCoinRaw},
-            decimal_coins::DecimalCoins,
+            coin::{DecimalCoin, DecimalCoinRaw},
+            coins::DecimalCoins,
             errors::SendCoinsError,
         },
         decimal256::Decimal256,

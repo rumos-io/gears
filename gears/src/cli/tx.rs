@@ -11,7 +11,7 @@ use crate::{
         tx::{Keyring as TxKeyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    types::base::send::SendCoins,
+    types::base::coins::SendCoins,
 };
 
 /// Transaction subcommands

@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use gears::types::{address::AccAddress, base::send::SendCoins};
+use gears::types::{address::AccAddress, base::coins::SendCoins};
 use gears::{
     core::{any::google::Any, errors::CoreError},
     error::IBC_ENCODE_UNWRAP,

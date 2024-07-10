@@ -1,8 +1,8 @@
 use gears::{
     core::{errors::CoreError, Protobuf},
     types::base::{
-        decimal_coin::{DecimalCoin, DecimalCoinRaw},
-        decimal_coins::DecimalCoins,
+        coin::{DecimalCoin, DecimalCoinRaw},
+        coins::DecimalCoins,
         errors::SendCoinsError,
     },
 };

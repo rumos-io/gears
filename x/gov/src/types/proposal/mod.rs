@@ -6,7 +6,7 @@ use gears::{
     store::database::Database,
     tendermint::types::proto::Protobuf,
     types::{
-        base::send::SendCoins,
+        base::coins::SendCoins,
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
         uint::Uint256,
     },

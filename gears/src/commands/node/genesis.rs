@@ -7,7 +7,7 @@ use crate::{
     baseapp::genesis::Genesis as SDKGenesis,
     config::ConfigDirectory,
     error::AppError,
-    types::{address::AccAddress, base::send::SendCoins},
+    types::{address::AccAddress, base::coins::SendCoins},
 };
 
 #[derive(Debug, Clone, former::Former)]

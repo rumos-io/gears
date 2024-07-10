@@ -2,7 +2,7 @@ use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
 use gears::types::{
     address::AccAddress,
-    base::{coin::Coin, send::SendCoins},
+    base::{coin::Coin, coins::SendCoins},
     msg::send::MsgSend,
 };
 

@@ -1,4 +1,4 @@
-use gears::types::{address::AccAddress, base::send::SendCoins, tx::metadata::Metadata};
+use gears::types::{address::AccAddress, base::coins::SendCoins, tx::metadata::Metadata};
 use serde::{Deserialize, Serialize};
 
 use crate::BankParams;

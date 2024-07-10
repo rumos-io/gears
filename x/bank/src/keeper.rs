@@ -18,7 +18,7 @@ use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
 use gears::types::address::AccAddress;
 use gears::types::base::coin::Coin;
-use gears::types::base::send::SendCoins;
+use gears::types::base::coins::SendCoins;
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::store::gas::errors::GasStoreErrors;

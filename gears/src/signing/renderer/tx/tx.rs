@@ -11,7 +11,7 @@ use crate::signing::{
 use crate::types::address::AccAddress;
 use crate::types::{
     auth::tip::Tip,
-    base::send::SendCoins,
+    base::coins::SendCoins,
     rendering::screen::{Indent, Screen},
     tx::{data::TxData, signer::SignerData, TxMessage},
 };
@@ -245,7 +245,7 @@ mod tests {
     use crate::types::auth::fee::Fee;
     use crate::types::auth::info::AuthInfo;
     use crate::types::base::coin::Coin;
-    use crate::types::base::send::SendCoins;
+    use crate::types::base::coins::SendCoins;
     use crate::types::denom::Denom;
     use crate::types::msg::send::MsgSend;
     use crate::types::rendering::screen::{Content, Indent, Screen};

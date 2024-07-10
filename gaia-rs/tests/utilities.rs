@@ -22,7 +22,7 @@ use gears::{
 };
 use gears::{
     types::address::AccAddress,
-    types::base::send::SendCoins,
+    types::base::coins::SendCoins,
     utils::{TempDir, TmpChild},
 };
 

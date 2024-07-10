@@ -10,7 +10,7 @@ use crate::{
     types::{
         address::AccAddress,
         auth::fee::Fee,
-        base::send::SendCoins,
+        base::coins::SendCoins,
         denom::Denom,
         query::{
             account::{QueryAccountRequest, QueryAccountResponse},

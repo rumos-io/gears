@@ -6,7 +6,7 @@ use crate::{
     error::AppError,
     types::{
         address::AccAddress,
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::Coin, coins::SendCoins},
         denom::Denom,
         store::gas::errors::GasStoreErrors,
         tx::metadata::Metadata,

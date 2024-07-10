@@ -1,6 +1,6 @@
 use crate::{
     error::AppError,
-    types::{address::AccAddress, base::send::SendCoins},
+    types::{address::AccAddress, base::coins::SendCoins},
 };
 use serde::{de::DeserializeOwned, Serialize};
 

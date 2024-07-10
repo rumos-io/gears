@@ -20,7 +20,7 @@ use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::time::Timestamp;
 use gears::types::address::AccAddress;
 use gears::types::auth::fee::Fee;
-use gears::types::base::send::SendCoins;
+use gears::types::base::coins::SendCoins;
 use gears::types::tx::body::TxBody;
 use keyring::key::pair::KeyPair;
 use prost::Message;

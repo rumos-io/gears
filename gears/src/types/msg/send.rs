@@ -5,7 +5,7 @@ use tendermint::types::proto::Protobuf;
 
 use crate::types::{
     address::AccAddress,
-    base::{coin::Coin, errors::CoinsError, send::SendCoins},
+    base::{coin::Coin, coins::SendCoins, errors::CoinsError},
     tx::TxMessage,
 };
 

@@ -10,9 +10,9 @@ use tendermint::types::proto::Protobuf;
 use crate::types::address::AccAddress;
 use crate::types::address::AddressError;
 use crate::types::base::coin::Coin;
+use crate::types::base::coins::SendCoins;
 use crate::types::base::errors::CoinsError;
 use crate::types::base::errors::SendCoinsError;
-use crate::types::base::send::SendCoins;
 
 use super::gas::{Gas, GasError};
 
