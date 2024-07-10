@@ -19,7 +19,6 @@ sha2 = { workspace = true }
 ed25519-consensus = { version = "2" }
 bytes = { workspace = true }
 time = { workspace = true }
-ux = { workspace = true }
 
 #utils
 thiserror = { workspace = true }

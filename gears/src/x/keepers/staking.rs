@@ -158,7 +158,7 @@ pub trait SlashingStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 
         ctx: &mut CTX,
         addr: &ConsAddress,
         height: u32,
-        power: u32,
+        power: u64,
         slash_fraction_downtime: Decimal256,
     ) -> Result<(), GasStoreErrors>;
 

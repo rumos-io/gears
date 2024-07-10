@@ -123,7 +123,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 .handle_validator_signature(
                     ctx,
                     vote.validator.address.into(),
-                    vote.validator.power as u32,
+                    vote.validator.power.power(),
                     vote.signed_last_block,
                 )
                 .expect(

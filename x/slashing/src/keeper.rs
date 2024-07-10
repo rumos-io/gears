@@ -114,7 +114,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
         cons_addr: ConsAddress,
-        power: u32,
+        power: u64,
         signed: bool,
     ) -> anyhow::Result<()> {
         let height = ctx.height();
