@@ -4,13 +4,14 @@ pub use unsigned::*;
 mod decimal;
 mod unsigned;
 
-use std::{collections::BTreeMap, marker::PhantomData, str::FromStr};
+use std::{marker::PhantomData, str::FromStr};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::types::denom::Denom;
 
 use super::{
+    coin::Coin,
     errors::{CoinError, CoinsError, CoinsParseError},
     ZeroNumeric,
 };
@@ -18,17 +19,13 @@ use super::{
 #[derive(Serialize, Deserialize)]
 pub struct CoinsRaw<U>(Vec<U>);
 
-impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> From<Coins<T, U>>
-    for CoinsRaw<U>
-{
+impl<T: ZeroNumeric, U: Coin<T>> From<Coins<T, U>> for CoinsRaw<U> {
     fn from(Coins { storage, _marker }: Coins<T, U>) -> Self {
-        Self(storage.into_iter().map(|this| U::from(this)).collect())
+        Self(storage.into_iter().collect())
     }
 }
 
-impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> TryFrom<CoinsRaw<U>>
-    for Coins<T, U>
-{
+impl<T: Clone + ZeroNumeric, U: Coin<T>> TryFrom<CoinsRaw<U>> for Coins<T, U> {
     type Error = CoinsError;
 
     fn try_from(CoinsRaw(value): CoinsRaw<U>) -> Result<Self, Self::Error> {
@@ -44,13 +41,13 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Try
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(try_from = "CoinsRaw<U>", into = "CoinsRaw<U>")]
 #[serde(bound = "U: Serialize + DeserializeOwned")]
-pub struct Coins<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> {
-    storage: BTreeMap<Denom, T>,
-    _marker: PhantomData<U>,
+pub struct Coins<T: ZeroNumeric, U: Coin<T>> {
+    storage: Vec<U>,
+    _marker: PhantomData<T>,
 }
 
-impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coins<T, U> {
-    // Checks that the SendCoins are sorted, have positive amount, with a valid and unique
+impl<T: ZeroNumeric, U: Coin<T>> Coins<T, U> {
+    // Checks that the Coins are sorted, have positive amount, with a valid and unique
     // denomination (i.e no duplicates). Otherwise, it returns an error.
     // A valid list of coins satisfies:
     // - Contains at least one coin
@@ -58,69 +55,62 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coi
     // - No duplicate denominations
     // - Sorted lexicographically
     pub fn new(coins: impl IntoIterator<Item = U>) -> Result<Self, CoinsError> {
-        Self::try_new(coins.into_iter().map(|this| this.into()))
-    }
-
-    fn try_new(coins: impl IntoIterator<Item = (Denom, T)>) -> Result<Self, CoinsError> {
         let coins = coins.into_iter().collect::<Vec<_>>();
 
         if coins.is_empty() {
             Err(CoinsError::EmptyList)?
         }
 
-        if coins.iter().any(|this| this.1.is_zero()) {
+        if coins.iter().any(|this| this.amount().is_zero()) {
             Err(CoinsError::InvalidAmount)?
         }
 
-        let mut storage = BTreeMap::<Denom, T>::new();
+        {
+            let mut previous_denom = coins[0].denom();
 
-        for (denom, amount) in coins {
-            if storage.contains_key(&denom) {
-                Err(CoinsError::Duplicates)?
-            } else {
-                storage.insert(denom, amount);
+            for coin in &coins[1..] {
+                // Less than to ensure lexicographical ordering
+                // Equality to ensure that there are no duplications
+                match coin.denom().cmp(previous_denom) {
+                    std::cmp::Ordering::Less => Err(CoinsError::Unsorted),
+                    std::cmp::Ordering::Equal => Err(CoinsError::Duplicates),
+                    std::cmp::Ordering::Greater => Ok(()),
+                }?;
+
+                previous_denom = coin.denom();
             }
         }
 
         Ok(Self {
-            storage,
+            storage: coins,
             _marker: PhantomData,
         })
-    }
-
-    pub fn amount_of(&self, denom: &Denom) -> T {
-        match self.storage.get(denom) {
-            Some(amount) => amount.clone(),
-            None => T::zero(),
-        }
-    }
-
-    pub fn checked_add(&self, other: Self) -> Result<Self, CoinsError> {
-        let result = self
-            .storage
-            .iter()
-            .map(|(denom, amount)| (denom.clone(), amount.clone()))
-            .chain(other.storage);
-
-        Self::try_new(result)
     }
 
     pub fn is_empty(&self) -> bool {
         self.storage.is_empty()
     }
 
+    pub fn inner(&self) -> &Vec<U> {
+        &self.storage
+    }
+
     pub fn into_inner(self) -> Vec<U> {
-        self.storage.into_iter().map(|this| U::from(this)).collect()
+        self.storage
+    }
+
+    pub fn amount_of(&self, denom: &Denom) -> T {
+        match self.storage.iter().find(|this| this.denom() == denom) {
+            Some(coin) => coin.amount().clone(),
+            None => T::zero(),
+        }
     }
 
     pub fn first(&self) -> U {
-        let coin = self
-            .storage
-            .first_key_value()
-            .map(|(denom, amount)| (denom.clone(), amount.clone()))
-            .expect("Should contains at least single element");
-
-        U::from(coin)
+        self.storage
+            .first()
+            .cloned()
+            .expect("Should contains at least single element")
     }
 
     pub fn len(&self) -> usize {
@@ -128,11 +118,7 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coi
     }
 }
 
-impl<
-        T: ZeroNumeric + Clone,
-        U: FromStr<Err = CoinError> + Into<(Denom, T)> + From<(Denom, T)> + Clone,
-    > FromStr for Coins<T, U>
-{
+impl<T: ZeroNumeric + Clone, U: FromStr<Err = CoinError> + Coin<T>> FromStr for Coins<T, U> {
     type Err = CoinsParseError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -148,29 +134,17 @@ impl<
     }
 }
 
-impl<T: ZeroNumeric + Clone, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> From<Coins<T, U>>
-    for Vec<U>
-{
+impl<T: ZeroNumeric + Clone, U: Coin<T>> From<Coins<T, U>> for Vec<U> {
     fn from(coins: Coins<T, U>) -> Vec<U> {
-        coins
-            .storage
-            .into_iter()
-            .map(|coin| U::from(coin))
-            .collect()
+        coins.storage
     }
 }
 
-impl<T: ZeroNumeric + Clone, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> IntoIterator
-    for Coins<T, U>
-{
+impl<T: ZeroNumeric + Clone, U: Coin<T>> IntoIterator for Coins<T, U> {
     type Item = U;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.storage
-            .into_iter()
-            .map(|coin| U::from(coin))
-            .collect::<Vec<_>>()
-            .into_iter()
+        self.storage.into_iter()
     }
 }

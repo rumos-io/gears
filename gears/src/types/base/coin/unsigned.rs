@@ -5,6 +5,8 @@ use tendermint::types::proto::Protobuf;
 
 use crate::types::{base::errors::CoinError, denom::Denom, errors::Error};
 
+use super::Coin;
+
 mod inner {
     pub use core_types::base::coin::Coin;
     pub use core_types::base::coin::IntProto;
@@ -13,12 +15,22 @@ mod inner {
 /// Coin defines a token with a denomination and an amount.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(try_from = "inner::Coin", into = "inner::Coin")]
-pub struct Coin {
+pub struct UnsignedCoin {
     pub denom: Denom,
     pub amount: Uint256,
 }
 
-impl TryFrom<inner::Coin> for Coin {
+impl Coin<Uint256> for UnsignedCoin {
+    fn denom(&self) -> &Denom {
+        &self.denom
+    }
+
+    fn amount(&self) -> &Uint256 {
+        &self.amount
+    }
+}
+
+impl TryFrom<inner::Coin> for UnsignedCoin {
     type Error = CoinError;
 
     fn try_from(value: inner::Coin) -> Result<Self, Self::Error> {
@@ -29,12 +41,12 @@ impl TryFrom<inner::Coin> for Coin {
         let amount =
             Uint256::from_str(&value.amount).map_err(|e| CoinError::Uint(e.to_string()))?;
 
-        Ok(Coin { denom, amount })
+        Ok(UnsignedCoin { denom, amount })
     }
 }
 
-impl From<Coin> for inner::Coin {
-    fn from(value: Coin) -> inner::Coin {
+impl From<UnsignedCoin> for inner::Coin {
+    fn from(value: UnsignedCoin) -> inner::Coin {
         Self {
             denom: value.denom.to_string(),
             amount: value.amount.to_string(),
@@ -42,9 +54,9 @@ impl From<Coin> for inner::Coin {
     }
 }
 
-impl Protobuf<inner::Coin> for Coin {}
+impl Protobuf<inner::Coin> for UnsignedCoin {}
 
-impl FromStr for Coin {
+impl FromStr for UnsignedCoin {
     type Err = CoinError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -59,7 +71,7 @@ impl FromStr for Coin {
             .parse::<Denom>()
             .map_err(|e| CoinError::Denom(e.to_string()))?;
 
-        Ok(Coin { denom, amount })
+        Ok(UnsignedCoin { denom, amount })
     }
 }
 
@@ -87,15 +99,3 @@ impl From<Uint256Proto> for inner::IntProto {
 }
 
 impl Protobuf<inner::IntProto> for Uint256Proto {}
-
-impl From<(Denom, Uint256)> for Coin {
-    fn from((denom, amount): (Denom, Uint256)) -> Self {
-        Self { denom, amount }
-    }
-}
-
-impl From<Coin> for (Denom, Uint256) {
-    fn from(Coin { denom, amount }: Coin) -> Self {
-        (denom, amount)
-    }
-}

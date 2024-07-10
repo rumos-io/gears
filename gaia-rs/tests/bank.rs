@@ -27,7 +27,7 @@ use gears::{
         types::chain_id::ChainId,
     },
     types::address::AccAddress,
-    types::{base::coin::Coin, denom::Denom},
+    types::{base::coin::UnsignedCoin, denom::Denom},
 };
 use utilities::run_gaia_and_tendermint;
 
@@ -60,7 +60,7 @@ fn balances_query() -> anyhow::Result<()> {
 
     let expected = GaiaQueryResponse::Bank(bank::cli::query::BankQueryResponse::Balances(
         QueryAllBalancesResponse {
-            balances: vec![Coin {
+            balances: vec![UnsignedCoin {
                 denom: Denom::from_str("uatom")?,
                 amount: 34_u32.into(),
             }],
@@ -109,7 +109,7 @@ fn send_tx() -> anyhow::Result<()> {
 
     let tx_cmd = BankCommands::Send {
         to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
-        amount: Coin::from_str("10uatom")?,
+        amount: UnsignedCoin::from_str("10uatom")?,
     };
 
     let Response {
@@ -178,7 +178,7 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
     (0..10).into_par_iter().try_for_each(|_| {
         let tx_cmd = BankCommands::Send {
             to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
-            amount: Coin::from_str(&format!(
+            amount: UnsignedCoin::from_str(&format!(
                 "{}uatom",
                 COUNTER.fetch_add(10, std::sync::atomic::Ordering::Relaxed)
             ))?,

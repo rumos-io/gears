@@ -5,7 +5,7 @@ use tendermint::types::proto::Protobuf;
 
 use crate::types::{
     address::AccAddress,
-    base::{coin::Coin, coins::UnsignedCoins, errors::CoinError},
+    base::{coin::UnsignedCoin, coins::UnsignedCoins, errors::CoinError},
     tx::TxMessage,
 };
 
@@ -39,7 +39,7 @@ impl TryFrom<inner::MsgSend> for MsgSend {
         let coins = raw
             .amount
             .into_iter()
-            .map(Coin::try_from)
+            .map(UnsignedCoin::try_from)
             .collect::<Result<Vec<_>, CoinError>>()
             .map_err(|e| MsgSendParseError(e.to_string()))?;
 
@@ -53,7 +53,7 @@ impl TryFrom<inner::MsgSend> for MsgSend {
 
 impl From<MsgSend> for inner::MsgSend {
     fn from(msg: MsgSend) -> inner::MsgSend {
-        let coins: Vec<Coin> = msg.amount.into();
+        let coins: Vec<UnsignedCoin> = msg.amount.into();
         let coins = coins.into_iter().map(inner::Coin::from).collect();
 
         Self {

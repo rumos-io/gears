@@ -322,7 +322,7 @@ impl<
         ctx: &mut BlockContext<'_, DB, SK>,
         val_addr: &ValAddress,
         del_addr: &AccAddress,
-    ) -> anyhow::Result<Vec<Coin>> {
+    ) -> anyhow::Result<Vec<UnsignedCoin>> {
         let params = self.staking_params_keeper.get(ctx);
         let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr)? {
             delegation
@@ -340,7 +340,7 @@ impl<
                 // track undelegation only when remaining or truncated shares are non-zero
                 let amount = entry.balance;
                 if amount.is_zero() {
-                    let coin = Coin {
+                    let coin = UnsignedCoin {
                         denom: bond_denom.clone(),
                         amount,
                     };

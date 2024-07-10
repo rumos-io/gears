@@ -4,7 +4,7 @@ use tendermint::types::proto::Protobuf;
 use crate::types::{
     address::{AccAddress, AddressError},
     base::{
-        coin::Coin,
+        coin::UnsignedCoin,
         coins::UnsignedCoins,
         errors::{CoinError, CoinsError},
     },
@@ -42,8 +42,8 @@ impl TryFrom<inner::Tip> for Tip {
     fn try_from(raw: inner::Tip) -> Result<Self, Self::Error> {
         let tipper = AccAddress::from_bech32(&raw.tipper)?;
 
-        let coins: Result<Vec<Coin>, CoinError> =
-            raw.amount.into_iter().map(Coin::try_from).collect();
+        let coins: Result<Vec<UnsignedCoin>, CoinError> =
+            raw.amount.into_iter().map(UnsignedCoin::try_from).collect();
 
         Ok(Tip {
             amount: Some(UnsignedCoins::new(coins?)?),
@@ -58,7 +58,7 @@ impl From<Tip> for inner::Tip {
 
         match tip.amount {
             Some(amount) => {
-                let coins: Vec<Coin> = amount.into();
+                let coins: Vec<UnsignedCoin> = amount.into();
                 let coins = coins.into_iter().map(inner::Coin::from).collect();
 
                 Self {

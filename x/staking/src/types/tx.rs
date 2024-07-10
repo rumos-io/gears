@@ -6,7 +6,7 @@ use gears::{
     types::{
         address::{AccAddress, ValAddress},
         auth::fee::inner::Coin as CoinRaw,
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         decimal256::{CosmosDecimalProtoString, Decimal256, ONE_DEC},
         errors::StdError,
         uint::Uint256,
@@ -352,7 +352,7 @@ pub struct CreateValidator {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
     pub pub_key: PublicKey,
-    pub value: Coin,
+    pub value: UnsignedCoin,
 }
 
 impl TryFrom<CreateValidatorRaw> for CreateValidator {
@@ -484,7 +484,7 @@ impl From<DelegateMsg> for DelegateMsgRaw {
 pub struct DelegateMsg {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
-    pub amount: Coin,
+    pub amount: UnsignedCoin,
 }
 
 impl TryFrom<DelegateMsgRaw> for DelegateMsg {
@@ -536,7 +536,7 @@ pub struct RedelegateMsg {
     pub delegator_address: AccAddress,
     pub src_validator_address: ValAddress,
     pub dst_validator_address: ValAddress,
-    pub amount: Coin,
+    pub amount: UnsignedCoin,
 }
 
 impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
@@ -586,7 +586,7 @@ impl From<UndelegateMsg> for UndelegateMsgRaw {
 pub struct UndelegateMsg {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
-    pub amount: Coin,
+    pub amount: UnsignedCoin,
 }
 
 impl TryFrom<UndelegateMsgRaw> for UndelegateMsg {

@@ -68,7 +68,7 @@ impl<
                 .try_get(ctx)?
                 .bond_denom()
                 .clone();
-            let coins = Coins::new(vec![Coin {
+            let coins = Coins::new(vec![UnsignedCoin {
                 denom,
                 amount: bond_amount,
             }])

@@ -38,7 +38,7 @@ impl<
     fn total_bonded_tokens<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Coin, GasStoreErrors> {
+    ) -> Result<UnsignedCoin, GasStoreErrors> {
         let account = self
             .auth_keeper
             .get_account(ctx, &self.bonded_module.get_address())?

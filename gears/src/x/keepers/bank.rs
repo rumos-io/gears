@@ -6,7 +6,7 @@ use crate::{
     error::AppError,
     types::{
         address::AccAddress,
-        base::{coin::Coin, coins::UnsignedCoins},
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
         denom::Denom,
         store::gas::errors::GasStoreErrors,
         tx::metadata::Metadata,
@@ -61,7 +61,7 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors>;
+    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors>;
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,

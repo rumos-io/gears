@@ -58,7 +58,7 @@ impl<
         let tokens = validator
             .tokens_from_shares(delegation.shares)
             .map_err(|e| AppError::Coins(e.to_string()))?;
-        let balance = Coin {
+        let balance = UnsignedCoin {
             denom: params.bond_denom().clone(),
             amount: tokens.to_uint_floor(),
         };

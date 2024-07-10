@@ -8,7 +8,7 @@ use crate::{
     },
     types::{
         address::AccAddress,
-        base::{coin::Coin, coins::Coins},
+        base::{coin::UnsignedCoin, coins::Coins},
         denom::Denom,
     },
 };
@@ -65,7 +65,7 @@ impl TmpChild {
         let genesis_account_cmd = GenesisCommand {
             home: tmp_dir.to_path_buf(),
             address,
-            coins: Coins::new(vec![Coin {
+            coins: Coins::new(vec![UnsignedCoin {
                 denom: Denom::from_str("uatom").expect("default denom should be valid"),
                 amount: coins.into(),
             }])

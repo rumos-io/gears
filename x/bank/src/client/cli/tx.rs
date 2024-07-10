@@ -2,7 +2,7 @@ use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
 use gears::types::{
     address::AccAddress,
-    base::{coin::Coin, coins::Coins},
+    base::{coin::UnsignedCoin, coins::Coins},
     msg::send::MsgSend,
 };
 
@@ -21,7 +21,7 @@ pub enum BankCommands {
         /// to address
         to_address: AccAddress,
         /// amount
-        amount: Coin,
+        amount: UnsignedCoin,
     },
 }
 

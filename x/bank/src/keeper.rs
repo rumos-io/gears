@@ -17,7 +17,7 @@ use gears::store::StoreKey;
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
 use gears::types::address::AccAddress;
-use gears::types::base::coin::Coin;
+use gears::types::base::coin::UnsignedCoin;
 use gears::types::base::coins::UnsignedCoins;
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
@@ -170,7 +170,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors> {
+    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
         self.get_all_balances(ctx, addr)
     }
 
@@ -212,11 +212,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         address: &AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors> {
+    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
         let iterator = BalanceIterator::new(ctx.kv_store(&self.store_key), address)
             .map(|this| this.map(|(_, val)| val));
 
-        let mut balances = Vec::<Coin>::new();
+        let mut balances = Vec::<UnsignedCoin>::new();
         for coin in iterator {
             let coin = coin?;
 
@@ -231,21 +231,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         address: &AccAddress,
         denom: &Denom,
-    ) -> Result<Coin, GasStoreErrors> {
+    ) -> Result<UnsignedCoin, GasStoreErrors> {
         let store = ctx
             .kv_store(&self.store_key)
             .prefix_store(account_key(address));
 
         let coin_bytes = store.get(denom.as_ref().as_bytes())?;
         let coin = if let Some(coin_bytes) = coin_bytes {
-            Coin {
+            UnsignedCoin {
                 denom: denom.to_owned(),
                 amount: Uint256::from_str(&String::from_utf8_lossy(&coin_bytes))
                     .ok()
                     .unwrap_or_corrupt(),
             }
         } else {
-            Coin {
+            UnsignedCoin {
                 denom: denom.to_owned(),
                 amount: Uint256::zero(),
             }
@@ -302,7 +302,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         for coin in total_supply {
             self.set_supply(
                 ctx,
-                Coin {
+                UnsignedCoin {
                     denom: coin.0,
                     amount: coin.1,
                 },
@@ -329,7 +329,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         match bal {
             Some(amount) => QueryBalanceResponse {
                 balance: Some(
-                    Coin::decode::<Bytes>(amount.to_owned().into())
+                    UnsignedCoin::decode::<Bytes>(amount.to_owned().into())
                         .ok()
                         .unwrap_or_corrupt(),
                 ),
@@ -345,14 +345,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         address: &AccAddress,
         denom: &Denom,
-    ) -> Result<Option<Coin>, GasStoreErrors> {
+    ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(address.clone());
 
         let account_store = bank_store.prefix_store(prefix);
         let bal = account_store.get(denom.to_string().as_bytes())?;
         let res = bal.map(|bytes| {
-            Coin::decode::<Bytes>(bytes.to_owned().into())
+            UnsignedCoin::decode::<Bytes>(bytes.to_owned().into())
                 .ok()
                 .unwrap_or_corrupt()
         });
@@ -364,7 +364,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         address: &AccAddress,
-        amount: Coin,
+        amount: UnsignedCoin,
     ) -> Result<(), GasStoreErrors> {
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let prefix = create_denom_balance_prefix(address.clone());
@@ -387,7 +387,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         address: &AccAddress,
-        amount: Vec<Coin>,
+        amount: Vec<UnsignedCoin>,
     ) -> Result<(), GasStoreErrors> {
         for coin in &amount {
             if let Some(mut balance) = self.balance(ctx, address, &coin.denom)? {
@@ -432,7 +432,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let mut balances = vec![];
 
         for (_, coin) in account_store.into_range(..) {
-            let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
+            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             balances.push(coin);
@@ -448,7 +448,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors> {
+    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(addr);
         let account_store = bank_store.prefix_store(prefix);
@@ -456,7 +456,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let mut balances = vec![];
         for rcoin in account_store.into_range(..) {
             let (_, coin) = rcoin?;
-            let coin: Coin = Coin::decode::<Bytes>(coin.into_owned().into())
+            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             balances.push(coin);
@@ -471,7 +471,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     pub fn get_paginated_total_supply<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-    ) -> Vec<Coin> {
+    ) -> Vec<UnsignedCoin> {
         let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
@@ -484,7 +484,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 let amount = Uint256::from_str(&String::from_utf8_lossy(&raw_coin.1))
                     .ok()
                     .unwrap_or_corrupt();
-                Coin { denom, amount }
+                UnsignedCoin { denom, amount }
             })
             .collect()
     }
@@ -552,7 +552,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     send_coin.amount
                 )))?;
 
-            let mut from_balance: Coin = Coin::decode::<Bytes>(from_balance.to_owned().into())
+            let mut from_balance: UnsignedCoin = UnsignedCoin::decode::<Bytes>(from_balance.to_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
 
@@ -575,11 +575,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             let mut to_account_store = self.get_address_balances_store(ctx, &to_address);
             let to_balance = to_account_store.get(send_coin.denom.to_string().as_bytes())?;
 
-            let mut to_balance: Coin = match to_balance {
-                Some(to_balance) => Coin::decode::<Bytes>(to_balance.to_owned().into())
+            let mut to_balance: UnsignedCoin = match to_balance {
+                Some(to_balance) => UnsignedCoin::decode::<Bytes>(to_balance.to_owned().into())
                     .ok()
                     .unwrap_or_corrupt(),
-                None => Coin {
+                None => UnsignedCoin {
                     denom: send_coin.denom.clone(),
                     amount: Uint256::zero(),
                 },
@@ -618,7 +618,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     pub fn set_supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        coin: Coin,
+        coin: UnsignedCoin,
     ) -> Result<(), GasStoreErrors> {
         // TODO: need to delete coins with zero balance
 
@@ -635,14 +635,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         denom: &Denom,
-    ) -> Result<Option<Coin>, GasStoreErrors> {
+    ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let supply_store = store.prefix_store(SUPPLY_KEY);
 
         let amount_bytes = supply_store.get(denom.as_ref().as_bytes())?;
 
         match amount_bytes {
-            Some(bytes) => Ok(Some(Coin {
+            Some(bytes) => Ok(Some(UnsignedCoin {
                 denom: denom.clone(),
                 amount: Uint256::from_str(&String::from_utf8_lossy(&bytes))
                     .ok()
@@ -861,7 +861,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     ) -> Result<(), AppError> {
         let locked_coins = self.locked_coins(ctx, addr)?;
 
-        let amount_of = |coins: &Vec<Coin>, denom: &Denom| -> Uint256 {
+        let amount_of = |coins: &Vec<UnsignedCoin>, denom: &Denom| -> Uint256 {
             let coins = coins.iter().find(|c| c.denom == *denom);
             coins.map(|c| c.amount).unwrap_or(Uint256::zero())
         };
@@ -915,7 +915,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         addr: &AccAddress,
         // TODO: consider to add struct Coins that can have empty coins list
-    ) -> Result<Vec<Coin>, AppError> {
+    ) -> Result<Vec<UnsignedCoin>, AppError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             //     vacc, ok := acc.(vestexported.VestingAccount)
             //     if ok {

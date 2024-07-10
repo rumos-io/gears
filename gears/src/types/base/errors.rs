@@ -4,10 +4,12 @@ pub enum CoinsError {
     EmptyList,
     #[error("coin amount must be positive")]
     InvalidAmount,
-    #[error("coins are not sorted and/or contain duplicates")]
-    DuplicatesOrUnsorted,
+    // #[error("coins are not sorted and/or contain duplicates")]
+    // DuplicatesOrUnsorted,
     #[error("coins contain duplicates")]
     Duplicates,
+    #[error("coins are not sorted")]
+    Unsorted,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

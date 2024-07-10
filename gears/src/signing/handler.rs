@@ -56,7 +56,7 @@ mod tests {
     use crate::types::denom::Denom;
     use crate::types::{
         auth::{fee::Fee, info::AuthInfo},
-        base::{coin::Coin, coins::UnsignedCoins},
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
         msg::send::MsgSend,
         rendering::{
             cbor::Cbor,
@@ -88,7 +88,7 @@ mod tests {
             signer_infos: vec![signer_info],
             fee: Fee {
                 amount: Some(
-                    UnsignedCoins::new(vec![Coin {
+                    UnsignedCoins::new(vec![UnsignedCoin {
                         denom: Denom::try_from("uatom".to_owned())?,
                         amount: Uint256::from(2000u32),
                     }])
@@ -122,7 +122,7 @@ mod tests {
                 to_address: AccAddress::from_bech32(
                     "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
                 )?,
-                amount: UnsignedCoins::new(vec![Coin {
+                amount: UnsignedCoins::new(vec![UnsignedCoin {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(10000000u32),
                 }])
@@ -315,7 +315,7 @@ mod tests {
                 to_address: AccAddress::from_bech32(
                     "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
                 )?,
-                amount: UnsignedCoins::new(vec![Coin {
+                amount: UnsignedCoins::new(vec![UnsignedCoin {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(1u8),
                 }])
@@ -421,7 +421,7 @@ mod tests {
                 to_address: AccAddress::from_bech32(
                     "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
                 )?,
-                amount: UnsignedCoins::new(vec![Coin {
+                amount: UnsignedCoins::new(vec![UnsignedCoin {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(1u8),
                 }])

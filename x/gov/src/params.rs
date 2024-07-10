@@ -11,7 +11,7 @@ use gears::{
     tendermint::types::proto::Protobuf,
     types::{
         base::{
-            coin::Coin,
+            coin::UnsignedCoin,
             coins::{Coins, UnsignedCoins},
         },
         decimal256::Decimal256,
@@ -37,7 +37,7 @@ impl Default for DepositParams {
     fn default() -> Self {
         Self {
             min_deposit: Coins::new(vec![
-                Coin::from_str("10000000uatom").expect("default is valid")
+                UnsignedCoin::from_str("10000000uatom").expect("default is valid")
             ])
             .expect("default is valid"),
             max_deposit_period: DEFAULT_PERIOD,

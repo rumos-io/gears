@@ -5,13 +5,13 @@ use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,
     TryPrimitiveValueRendererWithMetadata,
 };
-use crate::types::base::coin::Coin;
+use crate::types::base::coin::UnsignedCoin;
 use crate::types::rendering::screen::Content;
 use crate::types::tx::metadata::Metadata;
 
-impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
+impl TryPrimitiveValueRendererWithMetadata<UnsignedCoin> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<MG: MetadataGetter>(
-        coin: Coin,
+        coin: UnsignedCoin,
         get_metadata: &MG,
     ) -> Result<Content, RenderError> {
         let metadata = get_metadata.metadata(&coin.denom).map_err(|e| {
@@ -116,13 +116,13 @@ mod tests {
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
-    use crate::types::{base::coin::Coin, rendering::screen::Content};
+    use crate::types::{base::coin::UnsignedCoin, rendering::screen::Content};
     use anyhow::Ok;
     use cosmwasm_std::Uint256;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(10000000_u64),
         };
@@ -139,7 +139,7 @@ mod tests {
 
     #[test]
     fn coin_formatting_small_amounts_works() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(1u8),
         };
@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn coin_formatting_zero_amount_works() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(0u8),
         };
@@ -173,7 +173,7 @@ mod tests {
 
     #[test]
     fn coin_formatting_large_amount_works() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "ATOM".try_into()?,
             amount: Uint256::from(10_000u16),
         };

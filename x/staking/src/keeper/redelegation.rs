@@ -213,7 +213,7 @@ impl<
         del_addr: AccAddress,
         val_src_addr: ValAddress,
         val_dst_addr: ValAddress,
-    ) -> anyhow::Result<Vec<Coin>> {
+    ) -> anyhow::Result<Vec<UnsignedCoin>> {
         let redelegation = self
             .redelegation(ctx, &del_addr, &val_src_addr, &val_dst_addr)
             .map_err(|e| AppError::Custom(e.to_string()))?
@@ -227,7 +227,7 @@ impl<
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
         for entry in &redelegation.entries {
-            let coin = Coin {
+            let coin = UnsignedCoin {
                 denom: denom.clone(),
                 amount: entry.initial_balance,
             };

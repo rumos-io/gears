@@ -5,7 +5,7 @@ pub mod coins;
 pub mod errors;
 pub mod min_gas;
 
-pub trait ZeroNumeric {
+pub trait ZeroNumeric: Clone {
     fn is_zero(&self) -> bool;
 
     fn zero() -> Self;

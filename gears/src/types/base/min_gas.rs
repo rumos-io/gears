@@ -33,16 +33,18 @@ impl MinGasPrices {
             return Err(CoinsError::EmptyList);
         }
 
-        let mut previous_denom = coins[0].denom.to_string();
+        let mut previous_denom = &coins[0].denom;
 
         for coin in &coins[1..] {
             // Less than to ensure lexicographical ordering
             // Equality to ensure that there are no duplications
-            if coin.denom.to_string() <= previous_denom {
-                return Err(CoinsError::DuplicatesOrUnsorted);
-            }
+            match coin.denom.cmp(previous_denom) {
+                std::cmp::Ordering::Less => Err(CoinsError::Unsorted),
+                std::cmp::Ordering::Equal => Err(CoinsError::Duplicates),
+                std::cmp::Ordering::Greater => Ok(()),
+            }?;
 
-            previous_denom = coin.denom.to_string();
+            previous_denom = &coin.denom;
         }
 
         Ok(())

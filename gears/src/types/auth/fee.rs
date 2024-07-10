@@ -9,7 +9,7 @@ use tendermint::types::proto::Protobuf;
 
 use crate::types::address::AccAddress;
 use crate::types::address::AddressError;
-use crate::types::base::coin::Coin;
+use crate::types::base::coin::UnsignedCoin;
 use crate::types::base::coins::UnsignedCoins;
 use crate::types::base::errors::CoinError;
 use crate::types::base::errors::CoinsError;
@@ -91,8 +91,8 @@ impl TryFrom<inner::Fee> for Fee {
             });
         }
 
-        let coins: Result<Vec<Coin>, CoinError> =
-            raw.amount.into_iter().map(Coin::try_from).collect();
+        let coins: Result<Vec<UnsignedCoin>, CoinError> =
+            raw.amount.into_iter().map(UnsignedCoin::try_from).collect();
 
         Ok(Fee {
             amount: Some(UnsignedCoins::new(coins?)?),
@@ -111,7 +111,7 @@ impl From<Fee> for inner::Fee {
         };
         match fee.amount {
             Some(amount) => {
-                let coins: Vec<Coin> = amount.into();
+                let coins: Vec<UnsignedCoin> = amount.into();
                 let coins = coins.into_iter().map(inner::Coin::from).collect();
 
                 Self {

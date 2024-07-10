@@ -7,7 +7,7 @@ use crate::{
     context::{QueryableContext, TransactionalContext},
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         store::gas::errors::GasStoreErrors,
     },
     x::{
@@ -125,7 +125,7 @@ pub trait GovStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'stat
     fn total_bonded_tokens<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Coin, GasStoreErrors>;
+    ) -> Result<UnsignedCoin, GasStoreErrors>;
 }
 
 /// Staking keeper which used in slashing xmod

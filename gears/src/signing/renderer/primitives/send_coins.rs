@@ -42,13 +42,13 @@ mod tests {
         DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
     use crate::types::{
-        base::{coin::Coin, coins::UnsignedCoins},
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
         rendering::screen::Content,
     };
 
     #[test]
     fn send_coins_check_format() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2000u32),
         };
@@ -67,12 +67,12 @@ mod tests {
 
     #[test]
     fn send_coins_check_format_multi_denom_alphabetical() -> anyhow::Result<()> {
-        let coin1 = Coin {
+        let coin1 = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2000u32),
         };
 
-        let coin2 = Coin {
+        let coin2 = UnsignedCoin {
             denom: "uon".try_into()?,
             amount: Uint256::from(2000u32),
         };
@@ -91,7 +91,7 @@ mod tests {
 
     #[test]
     fn send_coins_check_format_more_sig_figs() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2047u32),
         };
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn send_coins_check_format_int_and_dec_part() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2_123_456u32),
         };
