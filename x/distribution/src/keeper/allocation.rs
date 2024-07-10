@@ -31,8 +31,8 @@ impl<
     pub fn allocate_tokens<DB: Database>(
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
-        sum_previous_precommit_power: i64,
-        total_previous_power: i64,
+        sum_previous_precommit_power: u64,
+        total_previous_power: u64,
         previous_proposer: &ConsAddress,
         bonded_votes: &[VoteInfo],
     ) -> anyhow::Result<()> {
@@ -66,9 +66,8 @@ impl<
 
         // calculate fraction votes
         // TODO: reduce conversions
-        let previous_fraction_votes =
-            Decimal256::from_atomics(sum_previous_precommit_power as u64, 0)?
-                .checked_div(Decimal256::from_atomics(total_previous_power as u64, 0)?)?;
+        let previous_fraction_votes = Decimal256::from_atomics(sum_previous_precommit_power, 0)?
+            .checked_div(Decimal256::from_atomics(total_previous_power, 0)?)?;
 
         let params = self.params_keeper.get(ctx);
         // calculate previous proposer reward
@@ -147,8 +146,8 @@ impl<
             //
             // Ref: https://github.com/cosmos/cosmos-sdk/issues/2525#issuecomment-430838701
 
-            let power_fraction = Decimal256::from_atomics(vote.validator.power as u32, 0)?
-                .checked_div(Decimal256::from_atomics(total_previous_power as u32, 0)?)?
+            let power_fraction = Decimal256::from_atomics(vote.validator.power, 0)?
+                .checked_div(Decimal256::from_atomics(total_previous_power, 0)?)?
                 .floor();
             let reward = fee_multiplier.checked_mul_dec_truncate(power_fraction)?;
             self.allocate_tokens_to_validator(

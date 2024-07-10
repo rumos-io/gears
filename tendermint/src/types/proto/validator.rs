@@ -39,14 +39,16 @@ pub struct Validator {
     /// The first 20 bytes of SHA256(public key)
     pub address: ValAddress,
     /// The voting power
-    pub power: i64,
+    // look at https://github.com/tendermint/tendermint/issues/2985
+    // https://github.com/tendermint/tendermint/issues/7913
+    pub power: u64,
 }
 
 impl From<Validator> for inner::Validator {
     fn from(Validator { address, power }: Validator) -> Self {
         Self {
             address: address.as_ref().to_vec().into(),
-            power,
+            power: power as i64,
         }
     }
 }
@@ -58,7 +60,9 @@ impl TryFrom<inner::Validator> for Validator {
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             address: ValAddress::try_from(address.to_vec())?,
-            power,
+            // SAFETY:
+            // https://github.com/tendermint/tendermint/blob/9c236ffd6c56add84f3c17930ae75c26c68d61ec/types/validator_set.go#L15-L22
+            power: power as u64,
         })
     }
 }
