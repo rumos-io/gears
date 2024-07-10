@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use gears::types::base::coins::UnsignedCoins;
 use gears::types::{address::AccAddress, base::coins::Coins};
 use gears::{
     core::{any::google::Any, errors::CoreError},
@@ -19,7 +20,7 @@ mod inner {
 pub struct Deposit {
     pub proposal_id: u64,
     pub depositor: AccAddress,
-    pub amount: Coins,
+    pub amount: UnsignedCoins,
 }
 
 impl Deposit {

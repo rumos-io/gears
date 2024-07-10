@@ -377,7 +377,7 @@ impl<
             ProposalStatus::DepositPeriod
                 if proposal
                     .total_deposit
-                    .is_all_gte(deposit_params.min_deposit.inner()) =>
+                    .is_all_gte(Vec::from(deposit_params.min_deposit.clone()).iter()) =>
             {
                 true
             }

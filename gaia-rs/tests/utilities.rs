@@ -19,10 +19,10 @@ use gears::{
     },
     config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
     store::database::rocks::RocksDBBuilder,
+    types::base::coins::UnsignedCoins,
 };
 use gears::{
     types::address::AccAddress,
-    types::base::coins::Coins,
     utils::{TempDir, TmpChild},
 };
 
@@ -92,7 +92,7 @@ impl Genesis for MockGenesis {
     fn add_genesis_account(
         &mut self,
         address: AccAddress,
-        coins: Coins,
+        coins: UnsignedCoins,
     ) -> Result<(), gears::error::AppError> {
         self.0.add_genesis_account(address, coins)
     }

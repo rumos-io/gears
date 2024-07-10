@@ -4,7 +4,7 @@ pub use unsigned::*;
 mod decimal;
 mod unsigned;
 
-use std::{collections::HashMap, marker::PhantomData, str::FromStr};
+use std::{collections::BTreeMap, marker::PhantomData, str::FromStr};
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
@@ -45,7 +45,7 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Try
 #[serde(try_from = "CoinsRaw<U>", into = "CoinsRaw<U>")]
 #[serde(bound = "U: Serialize + DeserializeOwned")]
 pub struct Coins<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> {
-    storage: HashMap<Denom, T>,
+    storage: BTreeMap<Denom, T>,
     _marker: PhantomData<U>,
 }
 
@@ -72,7 +72,7 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coi
             Err(SendCoinsError::InvalidAmount)?
         }
 
-        let mut storage = HashMap::<Denom, T>::with_capacity(coins.len());
+        let mut storage = BTreeMap::<Denom, T>::new();
 
         for (denom, amount) in coins {
             if storage.contains_key(&denom) {
@@ -111,6 +111,20 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coi
 
     pub fn into_inner(self) -> Vec<U> {
         self.storage.into_iter().map(|this| U::from(this)).collect()
+    }
+
+    pub fn first(&self) -> U {
+        let coin = self
+            .storage
+            .first_key_value()
+            .map(|(denom, amount)| (denom.clone(), amount.clone()))
+            .expect("Should contains at least single element");
+
+        U::from(coin)
+    }
+
+    pub fn len(&self) -> usize {
+        self.storage.len()
     }
 }
 

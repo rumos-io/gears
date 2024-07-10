@@ -10,7 +10,7 @@ use gears::{
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::proto::Protobuf,
     types::{
-        base::{coin::Coin, coins::Coins},
+        base::{coin::Coin, coins::{Coins, UnsignedCoins}},
         decimal256::Decimal256,
     },
 };
@@ -26,7 +26,7 @@ const DEFAULT_PERIOD: Duration = Duration::from_secs(172800); // 2 days
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
-    pub min_deposit: Coins,
+    pub min_deposit: UnsignedCoins,
     pub max_deposit_period: Duration, // ?
 }
 

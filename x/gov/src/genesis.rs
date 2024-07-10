@@ -1,6 +1,6 @@
 use gears::{
     baseapp::genesis::Genesis,
-    types::{address::AccAddress, base::coins::Coins},
+    types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +23,7 @@ impl Genesis for GovGenesisState {
     fn add_genesis_account(
         &mut self,
         _address: AccAddress,
-        _coins: Coins,
+        _coins: UnsignedCoins,
     ) -> Result<(), gears::error::AppError> {
         todo!()
     }

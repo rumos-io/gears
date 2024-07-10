@@ -18,7 +18,7 @@ use gears::tendermint::types::proto::event::{Event, EventAttribute};
 use gears::tendermint::types::proto::Protobuf;
 use gears::types::address::AccAddress;
 use gears::types::base::coin::Coin;
-use gears::types::base::coins::Coins;
+use gears::types::base::coins::UnsignedCoins;
 use gears::types::denom::Denom;
 use gears::types::msg::send::MsgSend;
 use gears::types::store::gas::errors::GasStoreErrors;
@@ -63,7 +63,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         ctx: &mut CTX,
         from_address: AccAddress,
         to_module: &M,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         self.auth_keeper
             .check_create_new_module_account(ctx, to_module)?;
@@ -98,7 +98,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         &self,
         ctx: &mut CTX,
         module: &M,
-        deposit: &Coins,
+        deposit: &UnsignedCoins,
     ) -> Result<(), AppError> {
         let module_acc_addr = module.get_address();
 
@@ -114,7 +114,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
 
         self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
 
-        for coin in deposit.inner() {
+        for coin in deposit.clone() {
             let supply = self.supply(ctx, &coin.denom)?; // TODO: HOW TO HANDLE OPTION::NONE
             if let Some(mut supply) = supply {
                 supply.amount.sub_assign(coin.amount);
@@ -146,7 +146,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         ctx: &mut CTX,
         address: &AccAddress,
         module: &M,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         let module_address = module.get_address();
 
@@ -179,7 +179,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         sender_pool: &M,
         recepient_pool: &M,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         self.send_coins_from_module_to_module(ctx, sender_pool, recepient_pool, amount)
     }
@@ -189,7 +189,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         sender_module: &M,
         addr: AccAddress,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         self.undelegate_coins_from_module_to_account(ctx, sender_module, addr, amount)
     }
@@ -199,7 +199,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         sender_addr: AccAddress,
         recepient_module: &M,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         self.delegate_coins_from_account_to_module(ctx, sender_addr, recepient_module, amount)
     }
@@ -515,7 +515,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         sender_pool: &M,
         recepient_pool: &M,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         self.auth_keeper
             .check_create_new_module_account(ctx, sender_pool)?;
@@ -711,7 +711,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         sender_addr: AccAddress,
         recepient_module: &M,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         let recepient_module_addr = recepient_module.get_address();
         self.auth_keeper
@@ -740,7 +740,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         delegator_addr: AccAddress,
         module_acc_addr: AccAddress,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         if self
             .auth_keeper
@@ -751,7 +751,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         };
 
         let mut balances = vec![];
-        for coin in amount.inner() {
+        for coin in amount.clone() {
             if let Some(mut balance) = self.balance(ctx, &delegator_addr, &coin.denom)? {
                 if balance.amount < coin.amount {
                     return Err(AppError::Custom(format!(
@@ -773,7 +773,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         self.track_delegation(
             ctx,
             &delegator_addr,
-            &Coins::new(balances.clone()).map_err(|e| AppError::Coins(e.to_string()))?,
+            &UnsignedCoins::new(balances.clone()).map_err(|e| AppError::Coins(e.to_string()))?,
             &amount,
         )?;
 
@@ -786,7 +786,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 EventAttribute::new(
                     "amount".into(),
                     serde_json::to_string(&amount)
-                        .unwrap_or(amount.inner()[0].amount.to_string())
+                        .unwrap_or(Vec::from(amount.clone())[0].amount.to_string())
                         .into(),
                     true,
                 ),
@@ -807,7 +807,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         sender_module: &M,
         addr: AccAddress,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         let sender_module_addr = sender_module.get_address();
         self.auth_keeper
@@ -836,7 +836,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         module_acc_addr: AccAddress,
         delegator_addr: AccAddress,
-        amount: Coins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError> {
         if self
             .auth_keeper
@@ -857,7 +857,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
-        amount: &Coins,
+        amount: &UnsignedCoins,
     ) -> Result<(), AppError> {
         let locked_coins = self.locked_coins(ctx, addr)?;
 
@@ -866,7 +866,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             coins.map(|c| c.amount).unwrap_or(Uint256::zero())
         };
 
-        for coin in amount.inner() {
+        for coin in amount.clone() {
             if let Some(mut balance) = self.balance(ctx, addr, &coin.denom)? {
                 let locked_amount = amount_of(&locked_coins, &coin.denom);
                 let spendable = balance.amount - locked_amount;
@@ -897,7 +897,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 EventAttribute::new(
                     "amount".into(),
                     serde_json::to_string(&amount)
-                        .unwrap_or(amount.inner()[0].amount.to_string())
+                        .unwrap_or(Vec::from(amount.clone())[0].amount.to_string())
                         .into(),
                     true,
                 ),
@@ -933,8 +933,8 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
-        _balance: &Coins,
-        _amount: &Coins,
+        _balance: &UnsignedCoins,
+        _amount: &UnsignedCoins,
     ) -> Result<(), AppError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             // TODO: logic with vesting accounts
@@ -954,7 +954,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
-        _amount: &Coins,
+        _amount: &UnsignedCoins,
     ) -> Result<(), AppError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             // TODO: logic with vesting accounts

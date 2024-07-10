@@ -1,4 +1,4 @@
-use gears::types::{address::AccAddress, base::coins::Coins, tx::metadata::Metadata};
+use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::metadata::Metadata};
 use serde::{Deserialize, Serialize};
 
 use crate::BankParams;
@@ -14,7 +14,7 @@ pub struct GenesisState {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Balance {
     pub address: AccAddress,
-    pub coins: Coins,
+    pub coins: UnsignedCoins,
 }
 
 impl Default for GenesisState {
@@ -54,7 +54,7 @@ impl Default for GenesisState {
 impl GenesisState {
     /// NOTE: If the genesis_state already contains an entry for the given address then this method
     /// will add another entry to the list i.e. it does not merge entries
-    pub fn add_genesis_account(&mut self, address: AccAddress, coins: Coins) {
+    pub fn add_genesis_account(&mut self, address: AccAddress, coins: UnsignedCoins) {
         self.balances.push(Balance { address, coins })
     }
 }

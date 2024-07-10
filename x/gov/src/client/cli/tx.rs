@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Args, Subcommand};
-use gears::types::base::coins::Coins;
+use gears::types::base::coins::UnsignedCoins;
 
 use crate::msg::{vote::VoteOption, weighted_vote::VoteOptionWeighted};
 
@@ -23,7 +23,7 @@ pub enum GovTxCommands {
 #[derive(Args, Debug, Clone)]
 pub struct DepositCliCommand {
     pub proposal_id: u64,
-    pub amount: Coins,
+    pub amount: UnsignedCoins,
     // #[arg(long)]
     // pub from: AccAddress,
 }
@@ -47,7 +47,7 @@ pub struct WeightedVoteCliCommand {
 /// Submit a proposal along with an initial deposit
 #[derive(Args, Debug, Clone)]
 pub struct ProposalCliCommand<T: Subcommand> {
-    pub initial_deposit: Coins,
+    pub initial_deposit: UnsignedCoins,
     #[command(subcommand)]
     pub command: T,
 }
