@@ -1,20 +1,81 @@
-use address::{AddressError, ValAddress};
+use address::ValAddress;
+use serde::{Deserialize, Serialize};
 
 use crate::error::Error;
 
 use super::crypto::PublicKey;
 
-#[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
+const MAX_VALIDATOR_POWER: u64 = 8198552921648689607;
+/// VotingPower holds validator power and guarantees that its value is less than
+/// 8198552921648689607.
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Debug)]
+pub struct VotingPower {
+    // look at https://github.com/tendermint/tendermint/issues/2985
+    // https://github.com/tendermint/tendermint/issues/7913
+    power: u64,
+}
+
+impl VotingPower {
+    pub fn new(power: u64) -> Result<VotingPower, Error> {
+        if power > MAX_VALIDATOR_POWER {
+            return Err(Error::InvalidData(format!(
+                "validator power is greater than max validator power {MAX_VALIDATOR_POWER}"
+            )));
+        }
+
+        Ok(VotingPower { power })
+    }
+
+    pub fn power(&self) -> u64 {
+        self.power
+    }
+}
+
+impl std::fmt::Display for VotingPower {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.power)
+    }
+}
+
+impl TryFrom<u64> for VotingPower {
+    type Error = Error;
+
+    fn try_from(power: u64) -> Result<Self, Self::Error> {
+        Self::new(power)
+    }
+}
+
+impl TryFrom<i64> for VotingPower {
+    type Error = Error;
+
+    fn try_from(power: i64) -> Result<Self, Self::Error> {
+        Self::new(u64::try_from(power).map_err(|e| Error::InvalidData(e.to_string()))?)
+    }
+}
+
+impl From<VotingPower> for u64 {
+    fn from(power: VotingPower) -> Self {
+        power.power()
+    }
+}
+
+impl From<VotingPower> for i64 {
+    fn from(power: VotingPower) -> Self {
+        power.power() as i64
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct ValidatorUpdate {
     pub pub_key: PublicKey,
-    pub power: i64,
+    pub power: VotingPower,
 }
 
 impl From<ValidatorUpdate> for inner::ValidatorUpdate {
     fn from(ValidatorUpdate { pub_key, power }: ValidatorUpdate) -> Self {
         Self {
             pub_key: Some(pub_key.into()),
-            power,
+            power: power.into(),
         }
     }
 }
@@ -28,37 +89,40 @@ impl TryFrom<inner::ValidatorUpdate> for ValidatorUpdate {
         let pub_key = pub_key.ok_or(Error::InvalidData("public key is empty".to_string()))?;
         Ok(Self {
             pub_key: pub_key.try_into()?,
-            power,
+            power: power.try_into()?,
         })
     }
 }
 
 /// Validator
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Validator {
     /// The first 20 bytes of SHA256(public key)
     pub address: ValAddress,
     /// The voting power
-    pub power: i64,
+    pub power: VotingPower,
 }
 
 impl From<Validator> for inner::Validator {
     fn from(Validator { address, power }: Validator) -> Self {
         Self {
             address: address.as_ref().to_vec().into(),
-            power,
+            power: power.into(),
         }
     }
 }
 
 impl TryFrom<inner::Validator> for Validator {
-    type Error = AddressError;
+    type Error = Error;
     fn try_from(
         inner::Validator { address, power }: inner::Validator,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            address: ValAddress::try_from(address.to_vec())?,
-            power,
+            address: ValAddress::try_from(address.to_vec())
+                .map_err(|e| Error::InvalidData(e.to_string()))?,
+            // SAFETY:
+            // https://github.com/tendermint/tendermint/blob/9c236ffd6c56add84f3c17930ae75c26c68d61ec/types/validator_set.go#L15-L22
+            power: power.try_into()?,
         })
     }
 }

@@ -11,3 +11,4 @@ gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
 prost = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
+tracing = { workspace = true }

@@ -118,20 +118,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         // Iterate over all the validators which *should* have signed this block
         // store whether or not they have actually signed it and slash/unbond any
         // which have missed too many blocks in a row (downtime slashing)
-        if let Some(vote_info) = request.last_commit_info {
-            for vote in vote_info.votes {
-                self.keeper
-                    .handle_validator_signature(
-                        ctx,
-                        vote.validator.address.into(),
-                        vote.validator.power as u32,
-                        vote.signed_last_block,
-                    )
-                    .expect(
-                        "method `handle_validator_signature` is called from infallible method.
+        for vote in request.last_commit_info.votes {
+            self.keeper
+                .handle_validator_signature(
+                    ctx,
+                    vote.validator.address.into(),
+                    vote.validator.power,
+                    vote.signed_last_block,
+                )
+                .expect(
+                    "method `handle_validator_signature` is called from infallible method.
                          Something wrong in the handler.",
-                    );
-            }
+                );
         }
     }
 }

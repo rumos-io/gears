@@ -19,9 +19,9 @@ impl HistoricalInfo {
     pub fn new(
         header: Header,
         mut validators: Vec<Validator>,
-        power_reduction: i64,
+        power_reduction: u64,
     ) -> HistoricalInfo {
-        fn less(v1: &Validator, v2: &Validator, power_reduction: i64) -> Ordering {
+        fn less(v1: &Validator, v2: &Validator, power_reduction: u64) -> Ordering {
             let cons_power1 = v1.consensus_power(power_reduction);
             let cons_power2 = v2.consensus_power(power_reduction);
             if cons_power1 == cons_power2 {

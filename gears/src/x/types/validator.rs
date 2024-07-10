@@ -12,6 +12,7 @@ pub trait StakingValidator {
     fn cons_pub_key(&self) -> &PublicKey;
     fn is_jailed(&self) -> bool;
     fn min_self_delegation(&self) -> &Uint256;
+    fn commission(&self) -> Decimal256;
     fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, AppError>;
 }
 
