@@ -114,7 +114,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
 
         self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
 
-        for coin in deposit.clone() {
+        for coin in deposit.inner() {
             let supply = self.supply(ctx, &coin.denom)?; // TODO: HOW TO HANDLE OPTION::NONE
             if let Some(mut supply) = supply {
                 supply.amount.sub_assign(coin.amount);
@@ -552,9 +552,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     send_coin.amount
                 )))?;
 
-            let mut from_balance: UnsignedCoin = UnsignedCoin::decode::<Bytes>(from_balance.to_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
+            let mut from_balance: UnsignedCoin =
+                UnsignedCoin::decode::<Bytes>(from_balance.to_owned().into())
+                    .ok()
+                    .unwrap_or_corrupt();
 
             if from_balance.amount < send_coin.amount {
                 return Err(AppError::Send(format!(
@@ -751,7 +752,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         };
 
         let mut balances = vec![];
-        for coin in amount.clone() {
+        for coin in amount.inner() {
             if let Some(mut balance) = self.balance(ctx, &delegator_addr, &coin.denom)? {
                 if balance.amount < coin.amount {
                     return Err(AppError::Custom(format!(
@@ -786,7 +787,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 EventAttribute::new(
                     "amount".into(),
                     serde_json::to_string(&amount)
-                        .unwrap_or(Vec::from(amount.clone())[0].amount.to_string())
+                        .unwrap_or(amount.inner()[0].amount.to_string())
                         .into(),
                     true,
                 ),
@@ -866,7 +867,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             coins.map(|c| c.amount).unwrap_or(Uint256::zero())
         };
 
-        for coin in amount.clone() {
+        for coin in amount.inner() {
             if let Some(mut balance) = self.balance(ctx, addr, &coin.denom)? {
                 let locked_amount = amount_of(&locked_coins, &coin.denom);
                 let spendable = balance.amount - locked_amount;
@@ -897,7 +898,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 EventAttribute::new(
                     "amount".into(),
                     serde_json::to_string(&amount)
-                        .unwrap_or(Vec::from(amount.clone())[0].amount.to_string())
+                        .unwrap_or(amount.inner()[0].amount.to_string())
                         .into(),
                     true,
                 ),

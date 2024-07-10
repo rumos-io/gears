@@ -1,6 +1,6 @@
 use bytes::Bytes;
+use gears::types::address::AccAddress;
 use gears::types::base::coins::UnsignedCoins;
-use gears::types::{address::AccAddress, base::coins::Coins};
 use gears::{
     core::{any::google::Any, errors::CoreError},
     error::IBC_ENCODE_UNWRAP,
@@ -76,7 +76,7 @@ impl TryFrom<inner::MsgDeposit> for Deposit {
                             .map_err(|e: CoinError| CoreError::Coin(e.to_string()))?,
                     )
                 }
-                Coins::new(coins).map_err(|e| CoreError::DecodeAddress(e.to_string()))?
+                UnsignedCoins::new(coins).map_err(|e| CoreError::DecodeAddress(e.to_string()))?
             },
         })
     }
@@ -145,7 +145,7 @@ impl TryFrom<inner::Deposit> for Deposit {
             proposal_id,
             depositor: AccAddress::from_bech32(&depositor)
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            amount: Coins::new({
+            amount: UnsignedCoins::new({
                 let mut result = Vec::with_capacity(amount.len());
 
                 for coin in amount {

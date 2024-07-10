@@ -1,5 +1,5 @@
 use super::*;
-use gears::types::store::gas::errors::GasStoreErrors;
+use gears::types::{base::coins::UnsignedCoins, store::gas::errors::GasStoreErrors};
 
 impl<
         SK: StoreKey,
@@ -19,7 +19,7 @@ impl<
 
         // original routine is infallible, it means that the amount should be a valid number.
         // All errors in sdk panics in this method
-        let coins = Coins::new(vec![UnsignedCoin {
+        let coins = UnsignedCoins::new(vec![UnsignedCoin {
             denom: params.bond_denom().clone(),
             amount,
         }])

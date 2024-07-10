@@ -36,7 +36,7 @@ pub struct DepositParams {
 impl Default for DepositParams {
     fn default() -> Self {
         Self {
-            min_deposit: Coins::new(vec![
+            min_deposit: UnsignedCoins::new(vec![
                 UnsignedCoin::from_str("10000000uatom").expect("default is valid")
             ])
             .expect("default is valid"),

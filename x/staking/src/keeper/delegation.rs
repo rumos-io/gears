@@ -1,6 +1,7 @@
 use super::*;
 use gears::{
-    store::database::ext::UnwrapCorrupt, types::store::gas::errors::GasStoreErrors,
+    store::database::ext::UnwrapCorrupt,
+    types::{base::coins::UnsignedCoins, store::gas::errors::GasStoreErrors},
     x::types::validator::BondStatus,
 };
 
@@ -68,7 +69,7 @@ impl<
                 .try_get(ctx)?
                 .bond_denom()
                 .clone();
-            let coins = Coins::new(vec![UnsignedCoin {
+            let coins = UnsignedCoins::new(vec![UnsignedCoin {
                 denom,
                 amount: bond_amount,
             }])

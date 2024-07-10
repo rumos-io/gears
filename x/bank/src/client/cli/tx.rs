@@ -2,7 +2,7 @@ use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
 use gears::types::{
     address::AccAddress,
-    base::{coin::UnsignedCoin, coins::Coins},
+    base::{coin::UnsignedCoin, coins::UnsignedCoins},
     msg::send::MsgSend,
 };
 
@@ -30,7 +30,7 @@ pub fn run_bank_tx_command(args: BankTxCli, from_address: AccAddress) -> Result<
         BankCommands::Send { to_address, amount } => Ok(BankMessage::Send(MsgSend {
             from_address,
             to_address: to_address.clone(),
-            amount: Coins::new(vec![amount.clone()])?,
+            amount: UnsignedCoins::new(vec![amount.clone()])?,
         })),
     }
 }

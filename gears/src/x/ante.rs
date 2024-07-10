@@ -200,7 +200,7 @@ impl<
             let required_fees = UnsignedCoins::new(required_fees)
                 .expect("MinGasPrices has same restriction as Self");
 
-            if !is_any_gte(fee_coins.clone().into(), &required_fees) {
+            if !is_any_gte(fee_coins.inner(), &required_fees) {
                 Err(anyhow!(
                     "insufficient fees; got: {:?} required: {:?}",
                     fee_coins,
@@ -211,7 +211,7 @@ impl<
             Err(anyhow!("rejected. `fee_coins` is None"))?
         }
 
-        fn is_any_gte(coins_a: Vec<UnsignedCoin>, coins_b: &UnsignedCoins) -> bool {
+        fn is_any_gte(coins_a: &Vec<UnsignedCoin>, coins_b: &UnsignedCoins) -> bool {
             if coins_b.is_empty() {
                 return false;
             }

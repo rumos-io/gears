@@ -22,7 +22,10 @@ use gears::{
     },
     types::{
         address::{AccAddress, ValAddress},
-        base::{coin::UnsignedCoin, coins::Coins},
+        base::{
+            coin::UnsignedCoin,
+            coins::{Coins, UnsignedCoins},
+        },
         decimal256::Decimal256,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
         uint::Uint256,
@@ -539,7 +542,7 @@ impl<
         // original routine is infallible, it means that the amount should be a valid number.
         // All errors in sdk panics in this method
         let params = self.staking_params_keeper.try_get(ctx)?;
-        let coins = Coins::new(vec![UnsignedCoin {
+        let coins = UnsignedCoins::new(vec![UnsignedCoin {
             denom: params.bond_denom().clone(),
             amount,
         }])
