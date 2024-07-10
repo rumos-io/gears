@@ -5,7 +5,7 @@ use clap::{ArgAction, ValueHint};
 use crate::{
     application::ApplicationInfo,
     commands::node::genesis::GenesisCommand,
-    types::{address::AccAddress, base::coins::Coins},
+    types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 
 /// Add a genesis account to genesis.json. The provided account must specify the
@@ -17,7 +17,7 @@ pub struct CliGenesisCommand<T: ApplicationInfo> {
     #[arg(required = true)]
     address: AccAddress,
     #[arg(required = true)]
-    coins: Coins,
+    coins: UnsignedCoins,
 
     #[arg(skip)]
     _marker: PhantomData<T>,

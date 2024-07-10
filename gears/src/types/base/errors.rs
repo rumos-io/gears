@@ -6,6 +6,8 @@ pub enum SendCoinsError {
     InvalidAmount,
     #[error("coins are not sorted and/or contain duplicates")]
     DuplicatesOrUnsorted,
+    #[error("coins contain duplicates")]
+    Duplicates,
 }
 
 #[derive(Debug, Clone, thiserror::Error)]

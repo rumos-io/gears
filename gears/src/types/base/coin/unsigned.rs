@@ -12,6 +12,7 @@ mod inner {
 
 /// Coin defines a token with a denomination and an amount.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(try_from = "inner::Coin", into = "inner::Coin")]
 pub struct Coin {
     pub denom: Denom,
     pub amount: Uint256,
@@ -86,3 +87,15 @@ impl From<Uint256Proto> for inner::IntProto {
 }
 
 impl Protobuf<inner::IntProto> for Uint256Proto {}
+
+impl From<(Denom, Uint256)> for Coin {
+    fn from((denom, amount): (Denom, Uint256)) -> Self {
+        Self { denom, amount }
+    }
+}
+
+impl From<Coin> for (Denom, Uint256) {
+    fn from(Coin { denom, amount }: Coin) -> Self {
+        (denom, amount)
+    }
+}

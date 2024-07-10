@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use super::unsigned::Coin;
 
-#[derive(Clone, PartialEq, Eq, Message)]
+#[derive(Clone, PartialEq, Eq, Message, Serialize, Deserialize)]
 pub struct DecimalCoinRaw {
     #[prost(string, tag = "1")]
     pub denom: String,
@@ -25,6 +25,7 @@ impl From<DecimalCoin> for DecimalCoinRaw {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(try_from = "DecimalCoinRaw", into = "DecimalCoinRaw")]
 pub struct DecimalCoin {
     pub denom: Denom,
     pub amount: Decimal256, // TODO:LATER DO WE HAVE LOCAL COPY?
@@ -40,7 +41,7 @@ impl DecimalCoin {
 
     // truncate_decimal returns a Coin with a truncated decimal and a DecimalCoin for the
     // change. Note, the change may be zero.
-    pub fn truncate_decimal(&self) -> (Coin, DecimalCoin) {
+    pub fn truncate_decimal(self) -> (Coin, DecimalCoin) {
         let truncated = self.amount.to_uint_floor();
         let dec = Decimal256::from_atomics(truncated, 0)
             .expect("cannot fail because it is a truncated part from decimal");
@@ -106,5 +107,17 @@ impl FromStr for DecimalCoin {
             .map_err(|e| CoinsError::Denom(e.to_string()))?;
 
         Ok(Self { denom, amount })
+    }
+}
+
+impl From<(Denom, Decimal256)> for DecimalCoin {
+    fn from((denom, amount): (Denom, Decimal256)) -> Self {
+        Self { denom, amount }
+    }
+}
+
+impl From<DecimalCoin> for (Denom, Decimal256) {
+    fn from(DecimalCoin { denom, amount }: DecimalCoin) -> Self {
+        (denom, amount)
     }
 }
