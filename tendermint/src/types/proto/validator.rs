@@ -8,8 +8,7 @@ use super::crypto::PublicKey;
 const MAX_VALIDATOR_POWER: u64 = 8198552921648689607;
 /// VotingPower holds validator power and guarantees that its value is less than
 /// 8198552921648689607.
-// TODO: can be a Copy type
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct VotingPower {
     // look at https://github.com/tendermint/tendermint/issues/2985
     // https://github.com/tendermint/tendermint/issues/7913
@@ -32,6 +31,12 @@ impl VotingPower {
     }
 }
 
+impl std::fmt::Display for VotingPower {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.power)
+    }
+}
+
 impl TryFrom<u64> for VotingPower {
     type Error = Error;
 
@@ -40,9 +45,23 @@ impl TryFrom<u64> for VotingPower {
     }
 }
 
+impl TryFrom<i64> for VotingPower {
+    type Error = Error;
+
+    fn try_from(power: i64) -> Result<Self, Self::Error> {
+        Self::new(u64::try_from(power).map_err(|e| Error::InvalidData(e.to_string()))?)
+    }
+}
+
 impl From<VotingPower> for u64 {
     fn from(power: VotingPower) -> Self {
         power.power()
+    }
+}
+
+impl From<VotingPower> for i64 {
+    fn from(power: VotingPower) -> Self {
+        power.power() as i64
     }
 }
 
@@ -56,7 +75,7 @@ impl From<ValidatorUpdate> for inner::ValidatorUpdate {
     fn from(ValidatorUpdate { pub_key, power }: ValidatorUpdate) -> Self {
         Self {
             pub_key: Some(pub_key.into()),
-            power: power.power() as i64,
+            power: power.into(),
         }
     }
 }
@@ -70,7 +89,7 @@ impl TryFrom<inner::ValidatorUpdate> for ValidatorUpdate {
         let pub_key = pub_key.ok_or(Error::InvalidData("public key is empty".to_string()))?;
         Ok(Self {
             pub_key: pub_key.try_into()?,
-            power: VotingPower::new(power as u64)?,
+            power: power.try_into()?,
         })
     }
 }
@@ -88,7 +107,7 @@ impl From<Validator> for inner::Validator {
     fn from(Validator { address, power }: Validator) -> Self {
         Self {
             address: address.as_ref().to_vec().into(),
-            power: power.power() as i64,
+            power: power.into(),
         }
     }
 }
@@ -103,7 +122,7 @@ impl TryFrom<inner::Validator> for Validator {
                 .map_err(|e| Error::InvalidData(e.to_string()))?,
             // SAFETY:
             // https://github.com/tendermint/tendermint/blob/9c236ffd6c56add84f3c17930ae75c26c68d61ec/types/validator_set.go#L15-L22
-            power: VotingPower::new(power as u64)?,
+            power: power.try_into()?,
         })
     }
 }

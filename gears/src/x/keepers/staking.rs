@@ -1,6 +1,7 @@
 use cosmwasm_std::Decimal256;
 use database::Database;
 use kv_store::StoreKey;
+use tendermint::types::proto::validator::VotingPower;
 
 use crate::{
     context::{QueryableContext, TransactionalContext},
@@ -158,7 +159,7 @@ pub trait SlashingStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 
         ctx: &mut CTX,
         addr: &ConsAddress,
         height: u32,
-        power: u64,
+        power: VotingPower,
         slash_fraction_downtime: Decimal256,
     ) -> Result<(), GasStoreErrors>;
 

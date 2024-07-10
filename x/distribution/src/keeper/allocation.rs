@@ -146,10 +146,9 @@ impl<
             //
             // Ref: https://github.com/cosmos/cosmos-sdk/issues/2525#issuecomment-430838701
 
-            let power_fraction =
-                Decimal256::from_atomics(u64::from(vote.validator.power.clone()), 0)?
-                    .checked_div(Decimal256::from_atomics(total_previous_power, 0)?)?
-                    .floor();
+            let power_fraction = Decimal256::from_atomics(u64::from(vote.validator.power), 0)?
+                .checked_div(Decimal256::from_atomics(total_previous_power, 0)?)?
+                .floor();
             let reward = fee_multiplier.checked_mul_dec_truncate(power_fraction)?;
             self.allocate_tokens_to_validator(
                 ctx,

@@ -22,6 +22,7 @@ use gears::{
         proto::{
             crypto::PublicKey,
             event::{Event, EventAttribute},
+            validator::VotingPower,
             Protobuf,
         },
         time::Timestamp,
@@ -114,7 +115,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
         cons_addr: ConsAddress,
-        power: u64,
+        power: VotingPower,
         signed: bool,
     ) -> anyhow::Result<()> {
         let height = ctx.height();

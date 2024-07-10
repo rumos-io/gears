@@ -54,7 +54,7 @@ impl<
         // determine the total power signing the block
         let mut sum_previous_precommit_power: u64 = 0;
         let previous_total_power = request.last_commit_info.votes.iter().fold(0, |acc, vote| {
-            let power = u64::from(vote.validator.power.clone());
+            let power = u64::from(vote.validator.power);
             if vote.signed_last_block {
                 sum_previous_precommit_power += power;
             }
