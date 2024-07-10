@@ -10,7 +10,7 @@ use tendermint::types::proto::Protobuf;
 use crate::types::address::AccAddress;
 use crate::types::address::AddressError;
 use crate::types::base::coin::Coin;
-use crate::types::base::coins::SendCoins;
+use crate::types::base::coins::Coins;
 use crate::types::base::errors::CoinsError;
 use crate::types::base::errors::SendCoinsError;
 
@@ -28,7 +28,7 @@ pub mod inner {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Fee {
     /// amount is the amount of coins to be paid as a fee
-    pub amount: Option<SendCoins>,
+    pub amount: Option<Coins>,
     /// gas_limit is the maximum gas that can be used in transaction processing
     /// before an out of gas error occurs
     #[serde_as(as = "DisplayFromStr")]
@@ -95,7 +95,7 @@ impl TryFrom<inner::Fee> for Fee {
             raw.amount.into_iter().map(Coin::try_from).collect();
 
         Ok(Fee {
-            amount: Some(SendCoins::new(coins?)?),
+            amount: Some(Coins::new(coins?)?),
             gas_limit: raw.gas_limit.try_into()?,
             payer,
             granter: raw.granter,

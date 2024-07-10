@@ -19,7 +19,7 @@ impl<
 
         // original routine is infallible, it means that the amount should be a valid number.
         // All errors in sdk panics in this method
-        let coins = SendCoins::new(vec![Coin {
+        let coins = Coins::new(vec![Coin {
             denom: params.bond_denom().clone(),
             amount,
         }])

@@ -10,7 +10,7 @@ use crate::{
     types::{
         address::AccAddress,
         auth::fee::Fee,
-        base::coins::SendCoins,
+        base::coins::Coins,
         denom::Denom,
         query::{
             account::{QueryAccountRequest, QueryAccountResponse},
@@ -54,7 +54,7 @@ pub trait TxHandler {
         key: K,
         node: url::Url,
         chain_id: ChainId,
-        fee: Option<SendCoins>,
+        fee: Option<Coins>,
         mode: SignMode,
     ) -> anyhow::Result<Response> {
         let fee = Fee {

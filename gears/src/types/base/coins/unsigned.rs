@@ -17,13 +17,13 @@ use crate::types::{
 // - No duplicate denominations
 // - Sorted lexicographically
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-pub struct SendCoins(Vec<Coin>);
+pub struct Coins(Vec<Coin>);
 
-impl SendCoins {
-    pub fn new(coins: Vec<Coin>) -> Result<SendCoins, SendCoinsError> {
+impl Coins {
+    pub fn new(coins: Vec<Coin>) -> Result<Coins, SendCoinsError> {
         Self::validate_coins(&coins)?;
 
-        Ok(SendCoins(coins))
+        Ok(Coins(coins))
     }
 
     // Checks that the SendCoins are sorted, have positive amount, with a valid and unique
@@ -90,7 +90,7 @@ impl SendCoins {
         self.0.is_empty()
     }
 
-    pub fn checked_add(&self, other: SendCoins) -> Result<Self, SendCoinsError> {
+    pub fn checked_add(&self, other: Coins) -> Result<Self, SendCoinsError> {
         let result = self
             .inner()
             .iter()
@@ -118,13 +118,13 @@ impl SendCoins {
     }
 }
 
-impl From<SendCoins> for Vec<Coin> {
-    fn from(coins: SendCoins) -> Vec<Coin> {
+impl From<Coins> for Vec<Coin> {
+    fn from(coins: Coins) -> Vec<Coin> {
         coins.0
     }
 }
 
-impl IntoIterator for SendCoins {
+impl IntoIterator for Coins {
     type Item = Coin;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
@@ -133,7 +133,7 @@ impl IntoIterator for SendCoins {
     }
 }
 
-impl FromStr for SendCoins {
+impl FromStr for Coins {
     type Err = CoinsParseError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {

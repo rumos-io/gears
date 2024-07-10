@@ -2,11 +2,11 @@ use crate::signing::handler::MetadataGetter;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRendererWithMetadata,
 };
-use crate::types::{base::coins::SendCoins, rendering::screen::Content};
+use crate::types::{base::coins::Coins, rendering::screen::Content};
 
-impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
+impl TryPrimitiveValueRendererWithMetadata<Coins> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<MG: MetadataGetter>(
-        coins: SendCoins,
+        coins: Coins,
         get_metadata: &MG,
     ) -> Result<Content, RenderError> {
         let inner_coins = coins.clone().into_inner();
@@ -42,7 +42,7 @@ mod tests {
         DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
     use crate::types::{
-        base::{coin::Coin, coins::SendCoins},
+        base::{coin::Coin, coins::Coins},
         rendering::screen::Content,
     };
 
@@ -56,7 +56,7 @@ mod tests {
         let expected_content = Content::new("0.002 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin]).unwrap(),
+            Coins::new(vec![coin]).unwrap(),
             &TestMetadataGetter,
         );
 
@@ -80,7 +80,7 @@ mod tests {
         let expected_content = Content::new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin1, coin2]).unwrap(),
+            Coins::new(vec![coin1, coin2]).unwrap(),
             &TestMetadataGetter,
         );
 
@@ -99,7 +99,7 @@ mod tests {
         let expected_content = Content::new("0.002047 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin]).unwrap(),
+            Coins::new(vec![coin]).unwrap(),
             &TestMetadataGetter,
         );
 
@@ -118,7 +118,7 @@ mod tests {
         let expected_content = Content::new("2.123456 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin]).unwrap(),
+            Coins::new(vec![coin]).unwrap(),
             &TestMetadataGetter,
         );
 

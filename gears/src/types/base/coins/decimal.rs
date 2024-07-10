@@ -9,7 +9,7 @@ use cosmwasm_std::Decimal256;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, str::FromStr};
 
-use super::unsigned::SendCoins;
+use super::unsigned::Coins;
 
 // Represents a list of coins with the following properties:
 // - Contains at least one coin
@@ -114,12 +114,12 @@ impl DecimalCoins {
         true
     }
 
-    pub fn truncate_decimal(&self) -> (SendCoins, DecimalCoins) {
+    pub fn truncate_decimal(&self) -> (Coins, DecimalCoins) {
         let (truncated, change): (Vec<Coin>, Vec<DecimalCoin>) =
             self.0.iter().map(DecimalCoin::truncate_decimal).unzip();
 
         (
-            SendCoins::new(
+            Coins::new(
                 truncated
                     .into_iter()
                     .filter(|c| !c.amount.is_zero())

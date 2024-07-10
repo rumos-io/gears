@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use gears::types::{address::AccAddress, base::coins::SendCoins};
+use gears::types::{address::AccAddress, base::coins::Coins};
 use gears::{
     core::{any::google::Any, errors::CoreError},
     error::IBC_ENCODE_UNWRAP,
@@ -19,7 +19,7 @@ mod inner {
 pub struct Deposit {
     pub proposal_id: u64,
     pub depositor: AccAddress,
-    pub amount: SendCoins,
+    pub amount: Coins,
 }
 
 impl Deposit {
@@ -75,7 +75,7 @@ impl TryFrom<inner::MsgDeposit> for Deposit {
                             .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?,
                     )
                 }
-                SendCoins::new(coins).map_err(|e| CoreError::DecodeAddress(e.to_string()))?
+                Coins::new(coins).map_err(|e| CoreError::DecodeAddress(e.to_string()))?
             },
         })
     }
@@ -144,7 +144,7 @@ impl TryFrom<inner::Deposit> for Deposit {
             proposal_id,
             depositor: AccAddress::from_bech32(&depositor)
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            amount: SendCoins::new({
+            amount: Coins::new({
                 let mut result = Vec::with_capacity(amount.len());
 
                 for coin in amount {

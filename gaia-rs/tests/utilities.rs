@@ -22,7 +22,7 @@ use gears::{
 };
 use gears::{
     types::address::AccAddress,
-    types::base::coins::SendCoins,
+    types::base::coins::Coins,
     utils::{TempDir, TmpChild},
 };
 
@@ -92,7 +92,7 @@ impl Genesis for MockGenesis {
     fn add_genesis_account(
         &mut self,
         address: AccAddress,
-        coins: SendCoins,
+        coins: Coins,
     ) -> Result<(), gears::error::AppError> {
         self.0.add_genesis_account(address, coins)
     }

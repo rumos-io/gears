@@ -5,7 +5,7 @@ use gears::{
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
-        base::{coins::SendCoins, errors::CoinsError},
+        base::{coins::Coins, errors::CoinsError},
         tx::TxMessage,
     },
 };
@@ -19,7 +19,7 @@ mod inner {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MsgSubmitProposal {
     pub content: Any,
-    pub initial_deposit: SendCoins,
+    pub initial_deposit: Coins,
     pub proposer: AccAddress,
 }
 
@@ -57,7 +57,7 @@ impl TryFrom<inner::MsgSubmitProposal> for MsgSubmitProposal {
             content: content.ok_or(CoreError::MissingField(
                 "MsgSubmitProposal missing content".to_owned(),
             ))?,
-            initial_deposit: SendCoins::new({
+            initial_deposit: Coins::new({
                 let mut coins = Vec::with_capacity(initial_deposit.len());
                 for coin in initial_deposit {
                     coins.push(

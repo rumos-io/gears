@@ -15,7 +15,7 @@ use gears::{
     context::TransactionalContext,
     types::{
         address::ConsAddress,
-        base::coins::SendCoins,
+        base::coins::Coins,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
 };
@@ -169,7 +169,7 @@ impl<
             .get_all_balances(ctx, self.distribution_module.get_address())
             .unwrap_gas();
 
-        if module_holdings_int != SendCoins::new(balances)? {
+        if module_holdings_int != Coins::new(balances)? {
             return Err(anyhow!(
                 "distribution module balance does not match the module holdings".to_string(),
             ));

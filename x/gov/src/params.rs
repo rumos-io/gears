@@ -10,7 +10,7 @@ use gears::{
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::proto::Protobuf,
     types::{
-        base::{coin::Coin, coins::SendCoins},
+        base::{coin::Coin, coins::Coins},
         decimal256::Decimal256,
     },
 };
@@ -26,14 +26,14 @@ const DEFAULT_PERIOD: Duration = Duration::from_secs(172800); // 2 days
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
-    pub min_deposit: SendCoins,
+    pub min_deposit: Coins,
     pub max_deposit_period: Duration, // ?
 }
 
 impl Default for DepositParams {
     fn default() -> Self {
         Self {
-            min_deposit: SendCoins::new(vec![
+            min_deposit: Coins::new(vec![
                 Coin::from_str("10000000uatom").expect("default is valid")
             ])
             .expect("default is valid"),
@@ -169,7 +169,7 @@ impl TryFrom<inner::DepositParams> for DepositParams {
                     )?)
                 }
 
-                SendCoins::new(result).map_err(|e| CoreError::Coins(e.to_string()))?
+                Coins::new(result).map_err(|e| CoreError::Coins(e.to_string()))?
             },
             max_deposit_period: {
                 let duration = max_deposit_period.ok_or(CoreError::MissingField(

@@ -11,7 +11,7 @@ use crate::crypto::public::PublicKey;
 
 use self::{body::TxBody, errors::TxError};
 
-use super::{address::AccAddress, auth::info::AuthInfo, base::coins::SendCoins};
+use super::{address::AccAddress, auth::info::AuthInfo, base::coins::Coins};
 
 pub mod body;
 pub mod raw;
@@ -98,7 +98,7 @@ impl<M: TxMessage> Tx<M> {
         &self.body.memo
     }
 
-    pub fn get_fee(&self) -> Option<&SendCoins> {
+    pub fn get_fee(&self) -> Option<&Coins> {
         self.auth_info.fee.amount.as_ref()
     }
 

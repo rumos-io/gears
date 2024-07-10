@@ -68,7 +68,7 @@ impl<
                 .try_get(ctx)?
                 .bond_denom()
                 .clone();
-            let coins = SendCoins::new(vec![Coin {
+            let coins = Coins::new(vec![Coin {
                 denom,
                 amount: bond_amount,
             }])

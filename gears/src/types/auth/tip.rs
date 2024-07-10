@@ -5,7 +5,7 @@ use crate::types::{
     address::{AccAddress, AddressError},
     base::{
         coin::Coin,
-        coins::SendCoins,
+        coins::Coins,
         errors::{CoinsError, SendCoinsError},
     },
 };
@@ -21,7 +21,7 @@ mod inner {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Tip {
     /// amount is the amount of the tip
-    pub amount: Option<SendCoins>,
+    pub amount: Option<Coins>,
     /// tipper is the address of the account paying for the tip
     pub tipper: AccAddress,
 }
@@ -46,7 +46,7 @@ impl TryFrom<inner::Tip> for Tip {
             raw.amount.into_iter().map(Coin::try_from).collect();
 
         Ok(Tip {
-            amount: Some(SendCoins::new(coins?)?),
+            amount: Some(Coins::new(coins?)?),
             tipper,
         })
     }

@@ -11,7 +11,7 @@ use crate::application::handlers::client::TxHandler;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
-use crate::types::base::coins::SendCoins;
+use crate::types::base::coins::Coins;
 use crate::types::tx::raw::TxRaw;
 
 use super::keys::KeyringBackend;
@@ -20,7 +20,7 @@ use super::keys::KeyringBackend;
 pub struct TxCommand<C> {
     pub node: url::Url,
     pub chain_id: ChainId,
-    pub fee: Option<SendCoins>,
+    pub fee: Option<Coins>,
     pub keyring: Keyring,
     pub inner: C,
 }

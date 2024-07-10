@@ -7,14 +7,14 @@ use crate::{
     baseapp::genesis::Genesis as SDKGenesis,
     config::ConfigDirectory,
     error::AppError,
-    types::{address::AccAddress, base::coins::SendCoins},
+    types::{address::AccAddress, base::coins::Coins},
 };
 
 #[derive(Debug, Clone, former::Former)]
 pub struct GenesisCommand {
     pub home: PathBuf,
     pub address: AccAddress,
-    pub coins: SendCoins,
+    pub coins: Coins,
 }
 
 #[derive(Debug, thiserror::Error)]

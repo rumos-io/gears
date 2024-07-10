@@ -1,6 +1,6 @@
 use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
-use gears::{error::AppError, types::address::AccAddress, types::base::coins::SendCoins};
+use gears::{error::AppError, types::address::AccAddress, types::base::coins::Coins};
 use ibc_rs::GenesisState as IBCGenesis;
 use serde::{Deserialize, Serialize};
 use staking::GenesisState as StakingGenesis;
@@ -18,7 +18,7 @@ impl gears::baseapp::genesis::Genesis for GenesisState {
     fn add_genesis_account(
         &mut self,
         address: AccAddress,
-        coins: SendCoins,
+        coins: Coins,
     ) -> Result<(), AppError> {
         self.bank.add_genesis_account(address.clone(), coins);
         self.auth.add_genesis_account(address)

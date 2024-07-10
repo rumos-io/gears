@@ -344,7 +344,7 @@ impl<
                         denom: bond_denom.clone(),
                         amount,
                     };
-                    let amount = SendCoins::new(vec![coin.clone()])?;
+                    let amount = Coins::new(vec![coin.clone()])?;
                     self.bank_keeper
                         .undelegate_coins_from_module_to_account::<DB, BlockContext<'_, DB, SK>>(
                             ctx,

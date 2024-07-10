@@ -5,7 +5,7 @@ use tendermint::types::proto::Protobuf;
 
 use crate::types::{
     address::AccAddress,
-    base::{coin::Coin, coins::SendCoins, errors::CoinsError},
+    base::{coin::Coin, coins::Coins, errors::CoinsError},
     tx::TxMessage,
 };
 
@@ -23,7 +23,7 @@ pub struct MsgSendParseError(pub String);
 pub struct MsgSend {
     pub from_address: AccAddress,
     pub to_address: AccAddress,
-    pub amount: SendCoins,
+    pub amount: Coins,
 }
 
 impl TryFrom<inner::MsgSend> for MsgSend {
@@ -46,7 +46,7 @@ impl TryFrom<inner::MsgSend> for MsgSend {
         Ok(MsgSend {
             from_address,
             to_address,
-            amount: SendCoins::new(coins).map_err(|e| MsgSendParseError(e.to_string()))?,
+            amount: Coins::new(coins).map_err(|e| MsgSendParseError(e.to_string()))?,
         })
     }
 }
