@@ -147,6 +147,21 @@ impl DecimalCoins {
     }
 }
 
+impl TryFrom<Vec<UnsignedCoin>> for DecimalCoins {
+    type Error = CoinsError;
+
+    fn try_from(value: Vec<UnsignedCoin>) -> Result<Self, Self::Error> {
+        // TODO: maybe add TryFrom<Coin> for DecimalCoin
+        let mut dec_coins = vec![];
+        for coin in value {
+            let amount =
+                Decimal256::from_atomics(coin.amount, 0).map_err(|_| CoinsError::InvalidAmount)?;
+            dec_coins.push(DecimalCoin::new(amount, coin.denom));
+        }
+        Self::new(dec_coins)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::str::FromStr;

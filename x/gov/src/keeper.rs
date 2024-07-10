@@ -369,7 +369,7 @@ impl<
             amount.clone(),
         )?;
 
-        proposal.total_deposit = proposal.total_deposit.checked_add(amount.clone())?;
+        proposal.total_deposit = proposal.total_deposit.checked_add(&amount)?;
         proposal_set(ctx, &self.store_key, &proposal)?;
 
         let deposit_params = self.gov_params_keeper.try_get(ctx)?.deposit;
@@ -386,7 +386,7 @@ impl<
 
         let deposit = match deposit_get(ctx, &self.store_key, proposal_id, &depositor)? {
             Some(mut deposit) => {
-                deposit.amount = deposit.amount.checked_add(amount)?;
+                deposit.amount = deposit.amount.checked_add(&amount)?;
                 deposit
             }
             None => Deposit {

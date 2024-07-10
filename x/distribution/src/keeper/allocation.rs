@@ -7,7 +7,7 @@ use gears::{
     },
     types::{
         address::ValAddress,
-        base::decimal_coins::DecimalCoins,
+        base::coins::{DecimalCoins, UnsignedCoins},
         decimal256::{Decimal256, ONE_DEC},
     },
 };
@@ -50,7 +50,7 @@ impl<
             ctx,
             &self.fee_collector_module,
             &self.distribution_module,
-            SendCoins::new(fees_collected_int)?,
+            UnsignedCoins::new(fees_collected_int)?,
         )?;
 
         // temporary workaround to keep CanWithdrawInvariant happy
