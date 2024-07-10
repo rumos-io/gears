@@ -6,7 +6,10 @@ use gears::{
     core::{errors::CoreError, Protobuf},
     error::AppError,
     tendermint::types::{
-        proto::{crypto::PublicKey, validator::ValidatorUpdate},
+        proto::{
+            crypto::PublicKey,
+            validator::{ValidatorUpdate, VotingPower},
+        },
         time::Timestamp,
     },
     types::{
@@ -85,6 +88,10 @@ impl StakingValidator for Validator {
         &self.min_self_delegation
     }
 
+    fn commission(&self) -> Decimal256 {
+        self.commission.commission_rates().rate()
+    }
+
     fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, AppError> {
         self.tokens_from_shares(shares)
             .map_err(|e| AppError::Custom(e.to_string()))
@@ -122,14 +129,15 @@ impl Validator {
         }
     }
 
-    pub fn abci_validator_update(&self, power: i64) -> ValidatorUpdate {
-        ValidatorUpdate {
+    pub fn abci_validator_update(&self, power: u64) -> anyhow::Result<ValidatorUpdate> {
+        Ok(ValidatorUpdate {
             pub_key: self.consensus_pubkey.clone(),
-            power: self.consensus_power(power),
-        }
+            power: VotingPower::new(self.consensus_power(power))?,
+        })
     }
     pub fn abci_validator_update_zero(&self) -> ValidatorUpdate {
         self.abci_validator_update(0)
+            .expect("hardcoded value is less than max voting power")
     }
 
     pub fn set_initial_commission(&mut self, commission: Commission) {
@@ -231,22 +239,22 @@ impl Validator {
             .expect("Unexpected conversion error")
     }
 
-    pub fn consensus_power(&self, power: i64) -> i64 {
+    pub fn consensus_power(&self, power: u64) -> u64 {
         match self.status {
             BondStatus::Bonded => self.potential_consensus_power(power),
             _ => 0,
         }
     }
 
-    pub fn potential_consensus_power(&self, power: i64) -> i64 {
+    pub fn potential_consensus_power(&self, power: u64) -> u64 {
         self.tokens_to_consensus_power(power)
     }
 
-    pub fn tokens_to_consensus_power(&self, power: i64) -> i64 {
-        let amount = self.tokens / Uint256::from(power as u64);
+    pub fn tokens_to_consensus_power(&self, power: u64) -> u64 {
+        let amount = self.tokens / Uint256::from(power);
         amount
             .to_string()
-            .parse::<i64>()
+            .parse::<u64>()
             .expect("Unexpected conversion error")
     }
 
@@ -254,7 +262,7 @@ impl Validator {
     /// Power index is the key used in the power-store, and represents the relative
     /// power ranking of the validator.
     /// VALUE: validator operator address ([]byte)
-    pub fn key_by_power_index_key(&self, power_reduction: i64) -> Vec<u8> {
+    pub fn key_by_power_index_key(&self, power_reduction: u64) -> Vec<u8> {
         // NOTE the address doesn't need to be stored because counter bytes must always be different
         // NOTE the larger values are of higher value
         let consensus_power = self.tokens_to_consensus_power(power_reduction);

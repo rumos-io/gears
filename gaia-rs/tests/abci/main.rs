@@ -15,7 +15,7 @@ use gears::store::database::MemDB;
 use gears::tendermint::mock::{InitState, MockNode};
 use gears::tendermint::types::chain_id::ChainId;
 use gears::tendermint::types::proto::consensus::ConsensusParams;
-use gears::tendermint::types::proto::validator::ValidatorUpdate;
+use gears::tendermint::types::proto::validator::{ValidatorUpdate, VotingPower};
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::time::Timestamp;
 use gears::types::address::AccAddress;
@@ -75,7 +75,7 @@ fn setup_mock_node() -> (
             pub_key: consensus_key
                 .try_into()
                 .expect("ed25519 key conversion is supported"),
-            power: 10,
+            power: VotingPower::new(10).expect("hardcoded power is less the max voting power"),
         }],
         app_genesis: genesis,
         initial_height: 1,

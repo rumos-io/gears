@@ -263,8 +263,11 @@ impl<
                     .validator(ctx, &last_validator.address)
                     .expect("Init ctx doesn't have any gas")
                     .expect("validator in the store was not found");
-                let mut update = validator.abci_validator_update(self.power_reduction(ctx));
-                update.power = last_validator.power;
+                // TODO: check unwraps and update types to omit conversion
+                let mut update = validator
+                    .abci_validator_update(self.power_reduction(ctx))
+                    .unwrap();
+                update.power = (last_validator.power as u64).try_into().unwrap();
                 res.push(update);
             }
         } else {
@@ -458,13 +461,15 @@ impl<
             if old_power_bytes.is_none()
                 || old_power_bytes.map(|v| v.as_slice()) != Some(&new_power_bytes)
             {
-                updates.push(validator.abci_validator_update(power_reduction));
+                // TODO: check unwraps and update types to omit conversion
+                updates.push(validator.abci_validator_update(power_reduction).unwrap());
 
                 self.set_last_validator_power(
                     ctx,
                     &LastValidatorPower {
                         address: val_addr.clone(),
-                        power: new_power,
+                        // TODO: update types to omit conversion
+                        power: new_power as i64,
                     },
                 )?;
             }
@@ -521,7 +526,7 @@ impl<
         Ok(updates)
     }
 
-    pub fn power_reduction<DB: Database, CTX: QueryableContext<DB, SK>>(&self, _ctx: &CTX) -> i64 {
+    pub fn power_reduction<DB: Database, CTX: QueryableContext<DB, SK>>(&self, _ctx: &CTX) -> u64 {
         // TODO: sdk constant in cosmos
         1_000_000
     }
