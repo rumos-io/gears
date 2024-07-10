@@ -5,7 +5,7 @@ use gears::{
         base::{
             coin::{DecimalCoin, DecimalCoinRaw},
             coins::DecimalCoins,
-            errors::SendCoinsError,
+            errors::CoinsError,
         },
         decimal256::Decimal256,
         errors::StdError,
@@ -47,7 +47,7 @@ pub struct ValidatorOutstandingRewards {
 }
 
 impl TryFrom<Vec<DecimalCoin>> for ValidatorOutstandingRewards {
-    type Error = SendCoinsError;
+    type Error = CoinsError;
 
     fn try_from(value: Vec<DecimalCoin>) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -108,7 +108,7 @@ pub struct ValidatorAccumulatedCommission {
 }
 
 impl TryFrom<Vec<DecimalCoin>> for ValidatorAccumulatedCommission {
-    type Error = SendCoinsError;
+    type Error = CoinsError;
 
     fn try_from(value: Vec<DecimalCoin>) -> Result<Self, Self::Error> {
         Ok(Self {

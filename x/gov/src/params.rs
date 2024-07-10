@@ -10,7 +10,10 @@ use gears::{
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::proto::Protobuf,
     types::{
-        base::{coin::Coin, coins::{Coins, UnsignedCoins}},
+        base::{
+            coin::Coin,
+            coins::{Coins, UnsignedCoins},
+        },
         decimal256::Decimal256,
     },
 };
@@ -165,7 +168,7 @@ impl TryFrom<inner::DepositParams> for DepositParams {
 
                 for coin in min_deposit {
                     result.push(coin.try_into().map_err(
-                        |e: gears::types::base::errors::CoinsError| CoreError::Coin(e.to_string()),
+                        |e: gears::types::base::errors::CoinError| CoreError::Coin(e.to_string()),
                     )?)
                 }
 

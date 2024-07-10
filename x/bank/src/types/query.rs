@@ -3,7 +3,7 @@ use gears::{
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
-        base::{coin::Coin, errors::CoinsError},
+        base::{coin::Coin, errors::CoinError},
         denom::Denom,
         response::PageResponse,
         tx::metadata::{Metadata, MetadataParseError},
@@ -110,7 +110,7 @@ impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
             .balances
             .into_iter()
             .map(Coin::try_from)
-            .collect::<Result<Vec<Coin>, CoinsError>>()
+            .collect::<Result<Vec<Coin>, CoinError>>()
             .map_err(|e| CoreError::Coin(e.to_string()))?;
 
         Ok(QueryAllBalancesResponse {
@@ -149,7 +149,7 @@ impl TryFrom<inner::QueryBalanceResponse> for QueryBalanceResponse {
             .balance
             .map(|coin| coin.try_into())
             .transpose()
-            .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?;
+            .map_err(|e: CoinError| CoreError::Coin(e.to_string()))?;
         Ok(QueryBalanceResponse { balance })
     }
 }
@@ -183,7 +183,7 @@ impl TryFrom<inner::QueryTotalSupplyResponse> for QueryTotalSupplyResponse {
             .supply
             .into_iter()
             .map(Coin::try_from)
-            .collect::<Result<Vec<Coin>, CoinsError>>()
+            .collect::<Result<Vec<Coin>, CoinError>>()
             .map_err(|e| CoreError::Coin(e.to_string()))?;
 
         Ok(Self {

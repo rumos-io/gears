@@ -5,7 +5,7 @@ use gears::{
     core::{any::google::Any, errors::CoreError},
     error::IBC_ENCODE_UNWRAP,
     tendermint::types::proto::Protobuf,
-    types::{base::errors::CoinsError, tx::TxMessage},
+    types::{base::errors::CoinError, tx::TxMessage},
 };
 use serde::{Deserialize, Serialize};
 
@@ -73,7 +73,7 @@ impl TryFrom<inner::MsgDeposit> for Deposit {
                 for coin in amount {
                     coins.push(
                         coin.try_into()
-                            .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?,
+                            .map_err(|e: CoinError| CoreError::Coin(e.to_string()))?,
                     )
                 }
                 Coins::new(coins).map_err(|e| CoreError::DecodeAddress(e.to_string()))?

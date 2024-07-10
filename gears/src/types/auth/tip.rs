@@ -6,7 +6,7 @@ use crate::types::{
     base::{
         coin::Coin,
         coins::UnsignedCoins,
-        errors::{CoinsError, SendCoinsError},
+        errors::{CoinError, CoinsError},
     },
 };
 
@@ -31,9 +31,9 @@ pub enum TipError {
     #[error("{0}")]
     Address(#[from] AddressError),
     #[error("{0}")]
-    SendError(#[from] SendCoinsError),
+    SendError(#[from] CoinsError),
     #[error("{0}")]
-    Coins(#[from] CoinsError),
+    Coins(#[from] CoinError),
 }
 
 impl TryFrom<inner::Tip> for Tip {
@@ -42,7 +42,7 @@ impl TryFrom<inner::Tip> for Tip {
     fn try_from(raw: inner::Tip) -> Result<Self, Self::Error> {
         let tipper = AccAddress::from_bech32(&raw.tipper)?;
 
-        let coins: Result<Vec<Coin>, CoinsError> =
+        let coins: Result<Vec<Coin>, CoinError> =
             raw.amount.into_iter().map(Coin::try_from).collect();
 
         Ok(Tip {

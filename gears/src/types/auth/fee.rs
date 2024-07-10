@@ -11,8 +11,8 @@ use crate::types::address::AccAddress;
 use crate::types::address::AddressError;
 use crate::types::base::coin::Coin;
 use crate::types::base::coins::UnsignedCoins;
+use crate::types::base::errors::CoinError;
 use crate::types::base::errors::CoinsError;
-use crate::types::base::errors::SendCoinsError;
 
 use super::gas::{Gas, GasError};
 
@@ -48,11 +48,11 @@ pub enum FeeError {
     #[error("{0}")]
     Gas(#[from] GasError),
     #[error("{0}")]
-    Coins(#[from] CoinsError),
+    Coins(#[from] CoinError),
     #[error("{0}")]
     Address(#[from] AddressError),
     #[error("{0}")]
-    SendCoins(#[from] SendCoinsError),
+    SendCoins(#[from] CoinsError),
     #[error("parse error {0}")]
     Parse(String),
 }
@@ -66,7 +66,7 @@ impl TryFrom<inner::Fee> for Fee {
         let mut all_zero = true;
         for coin in &raw.amount {
             let amount =
-                Uint256::from_str(&coin.amount).map_err(|e| CoinsError::Uint(e.to_string()))?;
+                Uint256::from_str(&coin.amount).map_err(|e| CoinError::Uint(e.to_string()))?;
 
             if !amount.is_zero() {
                 all_zero = false;
@@ -91,7 +91,7 @@ impl TryFrom<inner::Fee> for Fee {
             });
         }
 
-        let coins: Result<Vec<Coin>, CoinsError> =
+        let coins: Result<Vec<Coin>, CoinError> =
             raw.amount.into_iter().map(Coin::try_from).collect();
 
         Ok(Fee {

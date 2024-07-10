@@ -11,7 +11,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use crate::types::denom::Denom;
 
 use super::{
-    errors::{CoinsError, CoinsParseError, SendCoinsError},
+    errors::{CoinError, CoinsError, CoinsParseError},
     ZeroNumeric,
 };
 
@@ -29,7 +29,7 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Fro
 impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> TryFrom<CoinsRaw<U>>
     for Coins<T, U>
 {
-    type Error = SendCoinsError;
+    type Error = CoinsError;
 
     fn try_from(CoinsRaw(value): CoinsRaw<U>) -> Result<Self, Self::Error> {
         Self::new(value)
@@ -57,26 +57,26 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coi
     // - All amounts are positive
     // - No duplicate denominations
     // - Sorted lexicographically
-    pub fn new(coins: impl IntoIterator<Item = U>) -> Result<Self, SendCoinsError> {
+    pub fn new(coins: impl IntoIterator<Item = U>) -> Result<Self, CoinsError> {
         Self::try_new(coins.into_iter().map(|this| this.into()))
     }
 
-    fn try_new(coins: impl IntoIterator<Item = (Denom, T)>) -> Result<Self, SendCoinsError> {
+    fn try_new(coins: impl IntoIterator<Item = (Denom, T)>) -> Result<Self, CoinsError> {
         let coins = coins.into_iter().collect::<Vec<_>>();
 
         if coins.is_empty() {
-            Err(SendCoinsError::EmptyList)?
+            Err(CoinsError::EmptyList)?
         }
 
         if coins.iter().any(|this| this.1.is_zero()) {
-            Err(SendCoinsError::InvalidAmount)?
+            Err(CoinsError::InvalidAmount)?
         }
 
         let mut storage = BTreeMap::<Denom, T>::new();
 
         for (denom, amount) in coins {
             if storage.contains_key(&denom) {
-                Err(SendCoinsError::DuplicatesOrUnsorted)?
+                Err(CoinsError::Duplicates)?
             } else {
                 storage.insert(denom, amount);
             }
@@ -95,7 +95,7 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coi
         }
     }
 
-    pub fn checked_add(&self, other: Self) -> Result<Self, SendCoinsError> {
+    pub fn checked_add(&self, other: Self) -> Result<Self, CoinsError> {
         let result = self
             .storage
             .iter()
@@ -130,7 +130,7 @@ impl<T: Clone + ZeroNumeric, U: Into<(Denom, T)> + From<(Denom, T)> + Clone> Coi
 
 impl<
         T: ZeroNumeric + Clone,
-        U: FromStr<Err = CoinsError> + Into<(Denom, T)> + From<(Denom, T)> + Clone,
+        U: FromStr<Err = CoinError> + Into<(Denom, T)> + From<(Denom, T)> + Clone,
     > FromStr for Coins<T, U>
 {
     type Err = CoinsParseError;

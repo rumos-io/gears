@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tendermint::types::proto::Protobuf;
 
-use crate::types::{base::errors::CoinsError, denom::Denom, errors::Error};
+use crate::types::{base::errors::CoinError, denom::Denom, errors::Error};
 
 mod inner {
     pub use core_types::base::coin::Coin;
@@ -19,15 +19,15 @@ pub struct Coin {
 }
 
 impl TryFrom<inner::Coin> for Coin {
-    type Error = CoinsError;
+    type Error = CoinError;
 
     fn try_from(value: inner::Coin) -> Result<Self, Self::Error> {
         let denom = value
             .denom
             .try_into()
-            .map_err(|e: Error| CoinsError::Denom(e.to_string()))?;
+            .map_err(|e: Error| CoinError::Denom(e.to_string()))?;
         let amount =
-            Uint256::from_str(&value.amount).map_err(|e| CoinsError::Uint(e.to_string()))?;
+            Uint256::from_str(&value.amount).map_err(|e| CoinError::Uint(e.to_string()))?;
 
         Ok(Coin { denom, amount })
     }
@@ -45,7 +45,7 @@ impl From<Coin> for inner::Coin {
 impl Protobuf<inner::Coin> for Coin {}
 
 impl FromStr for Coin {
-    type Err = CoinsError;
+    type Err = CoinError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         // get the index at which amount ends and denom starts
@@ -53,11 +53,11 @@ impl FromStr for Coin {
 
         let amount = input[..i]
             .parse::<Uint256>()
-            .map_err(|e| CoinsError::Uint(e.to_string()))?;
+            .map_err(|e| CoinError::Uint(e.to_string()))?;
 
         let denom = input[i..]
             .parse::<Denom>()
-            .map_err(|e| CoinsError::Denom(e.to_string()))?;
+            .map_err(|e| CoinError::Denom(e.to_string()))?;
 
         Ok(Coin { denom, amount })
     }
@@ -70,10 +70,10 @@ pub struct Uint256Proto {
 }
 
 impl TryFrom<inner::IntProto> for Uint256Proto {
-    type Error = CoinsError;
+    type Error = CoinError;
 
     fn try_from(value: inner::IntProto) -> Result<Self, Self::Error> {
-        let uint = Uint256::from_str(&value.int).map_err(|e| CoinsError::Uint(e.to_string()))?;
+        let uint = Uint256::from_str(&value.int).map_err(|e| CoinError::Uint(e.to_string()))?;
         Ok(Uint256Proto { uint })
     }
 }

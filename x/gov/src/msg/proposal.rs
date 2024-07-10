@@ -5,7 +5,7 @@ use gears::{
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
-        base::{coins::UnsignedCoins, errors::CoinsError},
+        base::{coins::UnsignedCoins, errors::CoinError},
         tx::TxMessage,
     },
 };
@@ -62,7 +62,7 @@ impl TryFrom<inner::MsgSubmitProposal> for MsgSubmitProposal {
                 for coin in initial_deposit {
                     coins.push(
                         coin.try_into()
-                            .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?,
+                            .map_err(|e: CoinError| CoreError::Coin(e.to_string()))?,
                     )
                 }
 

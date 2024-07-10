@@ -1,4 +1,4 @@
-use crate::types::{base::errors::CoinsError, denom::Denom};
+use crate::types::{base::errors::CoinError, denom::Denom};
 use core_types::{errors::CoreError, Protobuf};
 use cosmwasm_std::{DecCoin, Decimal256};
 use prost::Message;
@@ -92,7 +92,7 @@ impl From<DecimalCoin> for DecCoin {
 }
 
 impl FromStr for DecimalCoin {
-    type Err = CoinsError;
+    type Err = CoinError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         // get the index at which amount ends and denom starts
@@ -100,11 +100,11 @@ impl FromStr for DecimalCoin {
 
         let amount = input[..i]
             .parse::<Decimal256>()
-            .map_err(|e| CoinsError::Uint(e.to_string()))?;
+            .map_err(|e| CoinError::Uint(e.to_string()))?;
 
         let denom = input[i..]
             .parse::<Denom>()
-            .map_err(|e| CoinsError::Denom(e.to_string()))?;
+            .map_err(|e| CoinError::Denom(e.to_string()))?;
 
         Ok(Self { denom, amount })
     }
