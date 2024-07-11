@@ -20,7 +20,9 @@ pub struct UnsignedCoin {
     pub amount: Uint256,
 }
 
-impl Coin<Uint256> for UnsignedCoin {
+impl Coin for UnsignedCoin {
+    type Amount = Uint256;
+
     fn denom(&self) -> &Denom {
         &self.denom
     }

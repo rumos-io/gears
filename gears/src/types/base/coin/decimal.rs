@@ -31,7 +31,9 @@ pub struct DecimalCoin {
     pub amount: Decimal256, // TODO:LATER DO WE HAVE LOCAL COPY?
 }
 
-impl Coin<Decimal256> for DecimalCoin {
+impl Coin for DecimalCoin {
+    type Amount = Decimal256;
+
     fn denom(&self) -> &Denom {
         &self.denom
     }

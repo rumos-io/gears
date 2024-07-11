@@ -19,13 +19,13 @@ use super::{
 #[derive(Serialize, Deserialize)]
 pub struct CoinsRaw<U>(Vec<U>);
 
-impl<T: ZeroNumeric, U: Coin<T>> From<Coins<T, U>> for CoinsRaw<U> {
+impl<T: ZeroNumeric, U: Coin<Amount = T>> From<Coins<T, U>> for CoinsRaw<U> {
     fn from(Coins { storage, _marker }: Coins<T, U>) -> Self {
         Self(storage.into_iter().collect())
     }
 }
 
-impl<T: Clone + ZeroNumeric, U: Coin<T>> TryFrom<CoinsRaw<U>> for Coins<T, U> {
+impl<T: Clone + ZeroNumeric, U: Coin<Amount = T>> TryFrom<CoinsRaw<U>> for Coins<T, U> {
     type Error = CoinsError;
 
     fn try_from(CoinsRaw(value): CoinsRaw<U>) -> Result<Self, Self::Error> {
@@ -41,12 +41,12 @@ impl<T: Clone + ZeroNumeric, U: Coin<T>> TryFrom<CoinsRaw<U>> for Coins<T, U> {
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(try_from = "CoinsRaw<U>", into = "CoinsRaw<U>")]
 #[serde(bound = "U: Serialize + DeserializeOwned")]
-pub struct Coins<T: ZeroNumeric, U: Coin<T>> {
+pub struct Coins<T: ZeroNumeric, U: Coin<Amount = T>> {
     storage: Vec<U>,
     _marker: PhantomData<T>,
 }
 
-impl<T: ZeroNumeric, U: Coin<T>> Coins<T, U> {
+impl<T: ZeroNumeric, U: Coin<Amount = T>> Coins<T, U> {
     // Checks that the Coins are sorted, have positive amount, with a valid and unique
     // denomination (i.e no duplicates). Otherwise, it returns an error.
     // A valid list of coins satisfies:
@@ -118,7 +118,9 @@ impl<T: ZeroNumeric, U: Coin<T>> Coins<T, U> {
     }
 }
 
-impl<T: ZeroNumeric + Clone, U: FromStr<Err = CoinError> + Coin<T>> FromStr for Coins<T, U> {
+impl<T: ZeroNumeric + Clone, U: FromStr<Err = CoinError> + Coin<Amount = T>> FromStr
+    for Coins<T, U>
+{
     type Err = CoinsParseError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -134,13 +136,13 @@ impl<T: ZeroNumeric + Clone, U: FromStr<Err = CoinError> + Coin<T>> FromStr for 
     }
 }
 
-impl<T: ZeroNumeric + Clone, U: Coin<T>> From<Coins<T, U>> for Vec<U> {
+impl<T: ZeroNumeric + Clone, U: Coin<Amount = T>> From<Coins<T, U>> for Vec<U> {
     fn from(coins: Coins<T, U>) -> Vec<U> {
         coins.storage
     }
 }
 
-impl<T: ZeroNumeric + Clone, U: Coin<T>> IntoIterator for Coins<T, U> {
+impl<T: ZeroNumeric + Clone, U: Coin<Amount = T>> IntoIterator for Coins<T, U> {
     type Item = U;
     type IntoIter = std::vec::IntoIter<Self::Item>;
 

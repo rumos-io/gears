@@ -6,7 +6,9 @@ pub use unsigned::*;
 
 use crate::types::denom::Denom;
 
-pub trait Coin<T>: Clone {
+pub trait Coin: Clone {
+    type Amount;
+
     fn denom(&self) -> &Denom;
-    fn amount(&self) -> &T;
+    fn amount(&self) -> &Self::Amount;
 }
