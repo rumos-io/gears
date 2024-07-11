@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use cosmwasm_std::Decimal256;
-use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 use crate::types::denom::Denom;
 
@@ -10,9 +10,26 @@ use super::{
     errors::{CoinsError, CoinsParseError},
 };
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
-#[serde(transparent)]
+#[derive(Clone, PartialEq, Debug, SerializeDisplay, DeserializeFromStr)]
 pub struct MinGasPrices(Vec<DecimalCoin>);
+
+impl std::fmt::Display for MinGasPrices {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let last = self.0.last();
+
+        for coin in &self.0 {
+            if let Some(last) = last {
+                if last == coin {
+                    write!(f, "{}{}", last.amount, last.denom)?;
+                } else {
+                    write!(f, "{}{},", coin.amount, coin.denom)?;
+                }
+            }
+        }
+
+        std::fmt::Result::Ok(())
+    }
+}
 
 impl Default for MinGasPrices {
     fn default() -> Self {

@@ -104,4 +104,9 @@ rest_listen_addr = "{{rest_listen_addr}}"
 
 # Tendermint node RPC proxy address
 tendermint_rpc_address = "{{tendermint_rpc_address}}"
+
+min_gas_prices = "{{min_gas_prices}}"
 "#;
+
+// # Minimal gas prices for transactions
+// {{min_gas_prices}}
