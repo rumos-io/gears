@@ -20,8 +20,8 @@ use tracing::{error, info};
 #[derive(Debug, Clone)]
 pub struct RunCommand {
     pub home: PathBuf,
-    pub address: SocketAddr,
-    pub rest_listen_addr: SocketAddr,
+    pub address: Option<SocketAddr>,
+    pub rest_listen_addr: Option<SocketAddr>,
     pub read_buf_size: usize,
     pub log_level: LogLevel,
     pub min_gas_prices: Option<MinGasPrices>,
