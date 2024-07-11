@@ -10,6 +10,10 @@ use super::{
     errors::{CoinsError, CoinsParseError},
 };
 
+/// Represents a list of coins with the following properties:
+/// - Contains at least one coin
+/// - No duplicate denominations
+/// - Sorted lexicographically
 #[derive(Clone, PartialEq, Debug, SerializeDisplay, DeserializeFromStr)]
 pub struct MinGasPrices(Vec<DecimalCoin>);
 
@@ -41,6 +45,12 @@ impl Default for MinGasPrices {
 }
 
 impl MinGasPrices {
+    /// Checks that the SendCoins are sorted, have positive amount, with a valid and unique
+    /// denomination (i.e no duplicates). Otherwise, it returns an error.
+    /// A valid list of coins satisfies:
+    /// - Contains at least one coin
+    /// - No duplicate denominations
+    /// - Sorted lexicographically
     pub fn new(coins: impl IntoIterator<Item = DecimalCoin>) -> Result<Self, CoinsError> {
         let coins = coins.into_iter().collect::<Vec<_>>();
 
