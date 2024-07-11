@@ -16,9 +16,21 @@ The minimum supported Rust version is 1.67.1. Follow the [installation instructi
 
 Gaia v0.7.1.0 uses Tendermint version v0.34.21. After cloning the [Tendermint repo](https://github.com/tendermint/tendermint) checkout v0.34.21 then follow the [installation instructions](https://github.com/tendermint/tendermint/blob/v0.34.21/docs/introduction/install.md).
 
-**libclang**
+**libclang** and **llvm**
 
-This is needed by the rocks db crate, run `sudo apt install libclang-dev build-essential`.
+This is needed by the rocks db crate.
+
+Ubuntu
+
+```bash
+sudo apt install llvm clang libclang-dev build-essential
+```
+
+OpenSUSE
+
+```bash
+sudo zypper in libclang13 clang18 libLLVM18
+```
 
 ## Running a local chain
 
