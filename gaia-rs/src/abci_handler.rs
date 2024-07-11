@@ -6,6 +6,7 @@ use crate::{
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
+use anyhow::anyhow;
 use gears::config::Config;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
@@ -13,7 +14,7 @@ use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
-use gears::{context::tx::TxContext, error::AppError, x::ante::DefaultSignGasConsumer};
+use gears::{context::tx::TxContext, x::ante::DefaultSignGasConsumer};
 
 #[derive(Debug, Clone)]
 pub struct GaiaABCIHandler {
@@ -118,7 +119,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
             Message::Staking(msg) => self.staking_abci_handler.tx(ctx, msg),
@@ -158,17 +159,17 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &QueryContext<DB, GaiaStoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, AppError> {
+    ) -> Result<bytes::Bytes, anyhow::Error> {
         if query.path.starts_with("/cosmos.auth") {
-            self.auth_abci_handler.query(ctx, query)
+            Ok(self.auth_abci_handler.query(ctx, query)?)
         } else if query.path.starts_with("/cosmos.bank") {
-            self.bank_abci_handler.query(ctx, query)
+            Ok(self.bank_abci_handler.query(ctx, query)?)
         } else if query.path.starts_with("/cosmos.staking") {
-            self.staking_abci_handler.query(ctx, query)
+            Ok(self.staking_abci_handler.query(ctx, query)?)
         } else if query.path.starts_with("/ibc.core.client") {
-            self.ibc_abci_handler.query(ctx, query)
+            Ok(self.ibc_abci_handler.query(ctx, query)?)
         } else {
-            Err(AppError::InvalidRequest("query path not found".into()))
+            Err(anyhow!("query path not found"))
         }
     }
 
@@ -176,7 +177,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         tx: &TxWithRaw<Message>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         self.ante_handler.run(ctx, tx)
     }
 

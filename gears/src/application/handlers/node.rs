@@ -1,7 +1,6 @@
 use crate::{
     baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    error::AppError,
     signing::renderer::value_renderer::ValueRenderer,
     types::tx::{raw::TxWithRaw, TxMessage},
 };
@@ -12,12 +11,13 @@ use tendermint::types::{
     request::{begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery},
 };
 
+// TODO: consider removing. Does it do anything?
 pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
     fn run<DB: Database, M: TxMessage + ValueRenderer>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError>;
+    ) -> Result<(), anyhow::Error>;
 }
 
 pub trait ABCIHandler: Clone + Send + Sync + 'static {
@@ -38,13 +38,13 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), AppError>;
+    ) -> Result<(), anyhow::Error>;
 
     fn tx<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
-    ) -> Result<(), AppError>;
+    ) -> Result<(), anyhow::Error>;
 
     #[allow(unused_variables)]
     fn begin_block<'a, DB: Database>(
@@ -73,5 +73,5 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, AppError>;
+    ) -> Result<bytes::Bytes, anyhow::Error>;
 }

@@ -39,7 +39,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         match msg {
             Message::ClientCreate(msg) => {
                 // let MsgCreateClient {

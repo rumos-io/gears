@@ -89,11 +89,11 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         match msg {
-            Message::Send(msg_send) => self
+            Message::Send(msg_send) => Ok(self
                 .keeper
-                .send_coins_from_account_to_account(ctx, msg_send),
+                .send_coins_from_account_to_account(ctx, msg_send)?),
         }
     }
 

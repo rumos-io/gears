@@ -94,7 +94,7 @@ where
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         BaseAnteHandler::run(self, ctx, tx)
     }
 }
@@ -125,7 +125,7 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         // Note: we currently don't have simulate mode at all, so some methods receive hardcoded values for this mode
         // ante.NewSetUpContextDecorator(), // WE not going to implement this in ante. Some logic should be in application
         self.mempool_fee(ctx, tx)

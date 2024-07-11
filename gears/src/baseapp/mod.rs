@@ -107,7 +107,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.multi_store.read().expect(POISONED_LOCK).head_version()
     }
 
-    fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
+    fn run_query(&self, request: &RequestQuery) -> Result<Bytes, anyhow::Error> {
         //TODO: request height u32
         let version: u32 = request.height.try_into().map_err(|_| {
             AppError::InvalidRequest("Block height must be greater than or equal to zero".into())

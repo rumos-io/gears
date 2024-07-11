@@ -71,13 +71,13 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         match msg {
-            Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
-            Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
-            Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
-            Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
-            Message::Undelegate(msg) => self.keeper.undelegate_cmd_handler(ctx, msg),
+            Message::CreateValidator(msg) => Ok(self.keeper.create_validator(ctx, msg)?),
+            Message::EditValidator(msg) => Ok(self.keeper.edit_validator(ctx, msg)?),
+            Message::Delegate(msg) => Ok(self.keeper.delegate_cmd_handler(ctx, msg)?),
+            Message::Redelegate(msg) => Ok(self.keeper.redelegate_cmd_handler(ctx, msg)?),
+            Message::Undelegate(msg) => Ok(self.keeper.undelegate_cmd_handler(ctx, msg)?),
         }
     }
 
