@@ -44,7 +44,7 @@ pub struct Config<AC: Default + Clone> {
     pub tendermint_rpc_address: Url,
     pub rest_listen_addr: SocketAddr,
     pub address: SocketAddr,
-    pub min_gas_prices: MinGasPrices,
+    pub min_gas_prices: Option<MinGasPrices>,
     pub app_config: AC,
 }
 
@@ -60,7 +60,11 @@ impl<AC: ApplicationConfig> Config<AC> {
             .register_template_string("config", CONFIG_TEMPLATE)
             .expect("hard coded config template is valid");
 
-        let cfg: Config<AC> = Config::default();
+        let cfg: Config<AC> = {
+            let mut cfg = Config::default();
+            cfg.min_gas_prices = Some(MinGasPrices::default());
+            cfg
+        };
 
         let config = handlebars
             .render("config", &cfg)
@@ -84,7 +88,7 @@ impl<AC: ApplicationConfig> Default for Config<AC> {
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             address: DEFAULT_ADDRESS,
             app_config: AC::default(),
-            min_gas_prices: Default::default(),
+            min_gas_prices: None,
         }
     }
 }
