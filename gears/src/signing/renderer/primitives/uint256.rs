@@ -17,7 +17,7 @@ impl PrimitiveValueRenderer<Uint256> for DefaultPrimitiveRenderer {
         // Small comment: For this num we required to use heap allocated buffer
         let mut buf = String::new();
         let _ = buf.write_formatted(&value, format_get()); // writing into `String` never fails.
-        Content::new(buf).expect("String will never be empty")
+        Content::try_new(buf).expect("String will never be empty")
     }
 }
 
@@ -50,7 +50,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(Uint256::from(i));
 
-            assert_eq!(Content::new(expected).unwrap(), actual);
+            assert_eq!(Content::try_new(expected).unwrap(), actual);
         }
     }
 }

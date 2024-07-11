@@ -30,13 +30,13 @@ mod tests {
         let expected_screens = vec![
             Screen {
                 title: "Public key".to_string(),
-                content: Content::new("/cosmos.crypto.secp256k1.PubKey")?,
+                content: Content::try_new("/cosmos.crypto.secp256k1.PubKey")?,
                 indent: None,
                 expert: true,
             },
             Screen {
                 title: "Key".to_string(),
-                content: Content::new("02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D")?,
+                content: Content::try_new("02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D")?,
                 indent: Some(Indent::one()),
                 expert: true,
             },
