@@ -7,37 +7,55 @@ use crate::types::denom::Denom;
 
 use super::{
     coin::DecimalCoin,
-    coins::DecimalCoins,
     errors::{CoinsError, CoinsParseError},
 };
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct MinGasPrices(DecimalCoins);
+pub struct MinGasPrices(Vec<DecimalCoin>);
 
 impl Default for MinGasPrices {
     fn default() -> Self {
-        Self(
-            DecimalCoins::new(vec![DecimalCoin {
-                denom: Denom::from_str("uatom").expect("Default is valid"),
-                amount: Decimal256::zero(),
-            }])
-            .expect("Default is valid"),
-        )
+        Self(vec![DecimalCoin {
+            denom: Denom::from_str("uatom").expect("Default is valid"),
+            amount: Decimal256::zero(),
+        }])
     }
 }
 
 impl MinGasPrices {
-    pub fn new(coins: Vec<DecimalCoin>) -> Result<Self, CoinsError> {
-        Ok(Self(DecimalCoins::new(coins)?))
+    pub fn new(coins: impl IntoIterator<Item = DecimalCoin>) -> Result<Self, CoinsError> {
+        let coins = coins.into_iter().collect::<Vec<_>>();
+
+        if coins.is_empty() {
+            Err(CoinsError::EmptyList)?
+        }
+
+        {
+            let mut previous_denom = &coins[0].denom;
+
+            for coin in &coins[1..] {
+                // Less than to ensure lexicographical ordering
+                // Equality to ensure that there are no duplications
+                match coin.denom.cmp(&previous_denom) {
+                    std::cmp::Ordering::Less => Err(CoinsError::Unsorted),
+                    std::cmp::Ordering::Equal => Err(CoinsError::Duplicates),
+                    std::cmp::Ordering::Greater => Ok(()),
+                }?;
+
+                previous_denom = &coin.denom;
+            }
+        }
+
+        Ok(Self(coins))
     }
 
     pub fn into_inner(self) -> Vec<DecimalCoin> {
-        self.0.into_inner()
+        self.0
     }
 
     pub fn inner(&self) -> &Vec<DecimalCoin> {
-        self.0.inner()
+        &self.0
     }
 
     pub fn is_empty(&self) -> bool {
@@ -45,7 +63,7 @@ impl MinGasPrices {
     }
 
     pub fn is_zero(&self) -> bool {
-        self.0.is_zero()
+        self.0.iter().any(|this| this.amount.is_zero())
     }
 
     pub fn len(&self) -> usize {
