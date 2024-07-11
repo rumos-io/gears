@@ -52,7 +52,7 @@ fn run_tx_local(
             }),
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
+            fees: None,
             inner: WrappedGaiaTxCommands(command),
         },
         &GaiaCoreClient,

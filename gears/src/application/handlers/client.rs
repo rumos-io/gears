@@ -54,11 +54,11 @@ pub trait TxHandler {
         key: K,
         node: url::Url,
         chain_id: ChainId,
-        fee: Option<UnsignedCoins>,
+        fees: Option<UnsignedCoins>,
         mode: SignMode,
     ) -> anyhow::Result<Response> {
         let fee = Fee {
-            amount: fee,
+            amount: fees,
             gas_limit: 200_000_u64
                 .try_into()
                 .expect("hard coded gas limit is valid"), //TODO: remove hard coded gas limit
