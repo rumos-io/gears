@@ -19,7 +19,7 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
         })?;
         let Some(metadata) = metadata else {
             let display = coin.denom.to_string();
-            return Ok(Content::new(format!(
+            return Ok(Content::try_new(format!(
                 "{} {display}",
                 DefaultPrimitiveRenderer::format(coin.amount).into_inner()
             ))
@@ -34,7 +34,7 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
 
         if display.is_empty() || coin.denom.to_string() == display {
             let display = coin.denom.to_string();
-            return Ok(Content::new(format!(
+            return Ok(Content::try_new(format!(
                 "{} {display}",
                 DefaultPrimitiveRenderer::format(coin.amount).into_inner()
             ))
@@ -95,12 +95,12 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
                     }
                 };
 
-                Ok(Content::new(format!("{formatted_amount} {display}"))
+                Ok(Content::try_new(format!("{formatted_amount} {display}"))
                     .expect("this String is not empty so it will never fail to parse"))
             }
             _ => {
                 let display = coin.denom.to_string();
-                Ok(Content::new(format!(
+                Ok(Content::try_new(format!(
                     "{} {display}",
                     DefaultPrimitiveRenderer::format(coin.amount).into_inner()
                 ))
@@ -127,7 +127,7 @@ mod tests {
             amount: Uint256::from(10000000_u64),
         };
 
-        let expected_content = Content::new("10 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("10 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
@@ -144,7 +144,7 @@ mod tests {
             amount: Uint256::from(1u8),
         };
 
-        let expected_content = Content::new("0.000001 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.000001 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
@@ -161,7 +161,7 @@ mod tests {
             amount: Uint256::from(0u8),
         };
 
-        let expected_content = Content::new("0 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
@@ -178,7 +178,7 @@ mod tests {
             amount: Uint256::from(10_000u16),
         };
 
-        let expected_content = Content::new("10'000 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("10'000 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);

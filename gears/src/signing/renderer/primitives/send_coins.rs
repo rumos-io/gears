@@ -29,7 +29,7 @@ impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRender
             acc
         });
 
-        Ok(Content::new(formatted_coins).expect("send coins are never empty"))
+        Ok(Content::try_new(formatted_coins).expect("send coins are never empty"))
     }
 }
 
@@ -53,7 +53,7 @@ mod tests {
             amount: Uint256::from(2000u32),
         };
 
-        let expected_content = Content::new("0.002 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin]).unwrap(),
@@ -77,7 +77,7 @@ mod tests {
             amount: Uint256::from(2000u32),
         };
 
-        let expected_content = Content::new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin1, coin2]).unwrap(),
@@ -96,7 +96,7 @@ mod tests {
             amount: Uint256::from(2047u32),
         };
 
-        let expected_content = Content::new("0.002047 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002047 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin]).unwrap(),
@@ -115,7 +115,7 @@ mod tests {
             amount: Uint256::from(2_123_456u32),
         };
 
-        let expected_content = Content::new("2.123456 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("2.123456 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
             SendCoins::new(vec![coin]).unwrap(),

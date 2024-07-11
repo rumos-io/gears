@@ -7,9 +7,9 @@ use crate::signing::renderer::value_renderer::{DefaultPrimitiveRenderer, Primiti
 impl PrimitiveValueRenderer<bool> for DefaultPrimitiveRenderer {
     fn format(value: bool) -> Content {
         if value {
-            Content::new("True").expect("hard coded String is not empty")
+            Content::try_new("True").expect("hard coded String is not empty")
         } else {
-            Content::new("False").expect("hard coded String is not empty")
+            Content::try_new("False").expect("hard coded String is not empty")
         }
     }
 }
