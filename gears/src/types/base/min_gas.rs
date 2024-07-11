@@ -1,61 +1,43 @@
 use std::str::FromStr;
 
+use cosmwasm_std::Decimal256;
 use serde::{Deserialize, Serialize};
+
+use crate::types::denom::Denom;
 
 use super::{
     coin::DecimalCoin,
+    coins::DecimalCoins,
     errors::{CoinsError, CoinsParseError},
 };
 
-// Represents a list of coins with the following properties:
-// - Contains at least one coin
-// - No duplicate denominations
-// - Sorted lexicographically
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Default)]
-pub struct MinGasPrices(Vec<DecimalCoin>);
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct MinGasPrices(DecimalCoins);
+
+impl Default for MinGasPrices {
+    fn default() -> Self {
+        Self(
+            DecimalCoins::new(vec![DecimalCoin {
+                denom: Denom::from_str("uatom").expect("Default is valid"),
+                amount: Decimal256::zero(),
+            }])
+            .expect("Default is valid"),
+        )
+    }
+}
 
 impl MinGasPrices {
     pub fn new(coins: Vec<DecimalCoin>) -> Result<Self, CoinsError> {
-        Self::validate_coins(&coins)?;
-
-        Ok(Self(coins))
-    }
-
-    // Checks that the SendCoins are sorted, have positive amount, with a valid and unique
-    // denomination (i.e no duplicates). Otherwise, it returns an error.
-    // A valid list of coins satisfies:
-    // - Contains at least one coin
-    // - No duplicate denominations
-    // - Sorted lexicographically
-    // TODO: implement ordering on coins or denominations so that conversion to string can be avoided
-    fn validate_coins(coins: &Vec<DecimalCoin>) -> Result<(), CoinsError> {
-        if coins.is_empty() {
-            return Err(CoinsError::EmptyList);
-        }
-
-        let mut previous_denom = &coins[0].denom;
-
-        for coin in &coins[1..] {
-            // Less than to ensure lexicographical ordering
-            // Equality to ensure that there are no duplications
-            match coin.denom.cmp(previous_denom) {
-                std::cmp::Ordering::Less => Err(CoinsError::Unsorted),
-                std::cmp::Ordering::Equal => Err(CoinsError::Duplicates),
-                std::cmp::Ordering::Greater => Ok(()),
-            }?;
-
-            previous_denom = &coin.denom;
-        }
-
-        Ok(())
+        Ok(Self(DecimalCoins::new(coins)?))
     }
 
     pub fn into_inner(self) -> Vec<DecimalCoin> {
-        self.0
+        self.0.into_inner()
     }
 
     pub fn inner(&self) -> &Vec<DecimalCoin> {
-        &self.0
+        self.0.inner()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -63,17 +45,11 @@ impl MinGasPrices {
     }
 
     pub fn is_zero(&self) -> bool {
-        self.0.iter().any(|this| this.amount.is_zero())
+        self.0.is_zero()
     }
 
     pub fn len(&self) -> usize {
         self.0.len()
-    }
-}
-
-impl From<MinGasPrices> for Vec<DecimalCoin> {
-    fn from(coins: MinGasPrices) -> Vec<DecimalCoin> {
-        coins.0
     }
 }
 

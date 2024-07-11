@@ -106,6 +106,10 @@ impl<T: ZeroNumeric, U: Coin<Amount = T>> Coins<T, U> {
         }
     }
 
+    pub fn is_zero(&self) -> bool {
+        self.storage.iter().all(|this| this.amount().is_zero())
+    }
+
     pub fn first(&self) -> U {
         self.storage
             .first()

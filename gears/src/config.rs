@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tendermint::rpc::url::Url;
 
 use crate::defaults::{CONFIG_DIR, CONFIG_FILE_NAME, GENESIS_FILE_NAME};
+use crate::types::base::min_gas::MinGasPrices;
 
 pub const DEFAULT_REST_LISTEN_ADDR: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1317);
@@ -43,6 +44,7 @@ pub struct Config<AC: Default + Clone> {
     pub tendermint_rpc_address: Url,
     pub rest_listen_addr: SocketAddr,
     pub address: SocketAddr,
+    pub min_gas_prices: MinGasPrices,
     pub app_config: AC,
 }
 
@@ -82,6 +84,7 @@ impl<AC: ApplicationConfig> Default for Config<AC> {
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             address: DEFAULT_ADDRESS,
             app_config: AC::default(),
+            min_gas_prices: Default::default(),
         }
     }
 }
