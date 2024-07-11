@@ -130,14 +130,15 @@ pub fn run<
 
     run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),
-        rest_listen_addr,
+        rest_listen_addr.unwrap_or(config.rest_listen_addr),
         router_builder.build_router::<BaseApp<DB, PSK, H, AI>>(),
         config.tendermint_rpc_address,
     );
 
     run_grpc_server(router_builder.build_grpc_router::<BaseApp<DB, PSK, H, AI>>(app.clone()));
 
-    let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
+    let server = ServerBuilder::new(read_buf_size)
+        .bind(address.unwrap_or(config.address), ABCI::from(app))?;
 
     server.listen().map_err(|e| e.into())
 }
