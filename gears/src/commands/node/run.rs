@@ -24,7 +24,7 @@ pub struct RunCommand {
     pub rest_listen_addr: SocketAddr,
     pub read_buf_size: usize,
     pub log_level: LogLevel,
-    pub min_gas_prices: MinGasPrices,
+    pub min_gas_prices: Option<MinGasPrices>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -120,7 +120,11 @@ pub fn run<
 
     let abci_handler = abci_handler_builder(config.clone());
 
-    let options = NodeOptions::new(min_gas_prices);
+    let options = NodeOptions::new(min_gas_prices.or(config.min_gas_prices).ok_or(
+        RunError::HomeDirectory(
+            "Failed to get `min_gas_prices` set it via cli or in config file".to_owned(),
+        ),
+    )?);
 
     let app: BaseApp<DB, PSK, H, AI> = BaseApp::new(db, params_subspace_key, abci_handler, options);
 

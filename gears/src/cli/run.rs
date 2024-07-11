@@ -25,7 +25,7 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub log_level: LogLevel,
     /// Minimum gas prices to accept for transactions; Any fee in a tx must meet this minimum (e.g. 0.01photino,0.0001stake)
     #[arg(long, action = ArgAction::Set)]
-    pub min_gas_prices: MinGasPrices,
+    pub min_gas_prices: Option<MinGasPrices>,
 
     #[arg(skip)]
     pub _marker: PhantomData<T>,
