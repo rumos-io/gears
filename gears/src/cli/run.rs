@@ -14,10 +14,10 @@ use crate::{
 pub struct CliRunCommand<T: ApplicationInfo> {
     #[arg(long,  global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     pub home: PathBuf,
-    #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_ADDRESS, help = "Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided" )]
-    pub address: SocketAddr,
-    #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_REST_LISTEN_ADDR, help = "Bind the REST server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided")]
-    pub rest_listen_addr: SocketAddr,
+    #[arg(long, action = ArgAction::Set, help = format!( "Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_ADDRESS) )]
+    pub address: Option<SocketAddr>,
+    #[arg(long, action = ArgAction::Set, help = format!("Bind the REST server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_REST_LISTEN_ADDR))]
+    pub rest_listen_addr: Option<SocketAddr>,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
     pub read_buf_size: usize,
     /// The logging level
