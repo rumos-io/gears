@@ -22,7 +22,10 @@ use gears::{
     },
     types::{
         address::{AccAddress, ValAddress},
-        base::{coin::Coin, send::SendCoins},
+        base::{
+            coin::UnsignedCoin,
+            coins::{Coins, UnsignedCoins},
+        },
         decimal256::Decimal256,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
         uint::Uint256,
@@ -193,7 +196,7 @@ impl<
         }
 
         let bonded_coins = if !bonded_tokens.is_zero() {
-            vec![Coin {
+            vec![UnsignedCoin {
                 denom: genesis.params.bond_denom().clone(),
                 amount: bonded_tokens,
             }]
@@ -201,7 +204,7 @@ impl<
             vec![]
         };
         let not_bonded_coins = if !not_bonded_tokens.is_zero() {
-            vec![Coin {
+            vec![UnsignedCoin {
                 denom: genesis.params.bond_denom().clone(),
                 amount: not_bonded_tokens,
             }]
@@ -539,7 +542,7 @@ impl<
         // original routine is infallible, it means that the amount should be a valid number.
         // All errors in sdk panics in this method
         let params = self.staking_params_keeper.try_get(ctx)?;
-        let coins = SendCoins::new(vec![Coin {
+        let coins = UnsignedCoins::new(vec![UnsignedCoin {
             denom: params.bond_denom().clone(),
             amount,
         }])

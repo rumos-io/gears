@@ -3,7 +3,7 @@ use gears::{
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
-        base::{coin::Coin, errors::CoinsError},
+        base::{coin::UnsignedCoin, errors::CoinError},
         denom::Denom,
         response::PageResponse,
         tx::metadata::{Metadata, MetadataParseError},
@@ -97,7 +97,7 @@ impl Protobuf<inner::QueryAllBalancesRequest> for QueryAllBalancesRequest {}
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct QueryAllBalancesResponse {
     /// balances is the balances of all the coins.
-    pub balances: Vec<Coin>,
+    pub balances: Vec<UnsignedCoin>,
     /// pagination defines the pagination in the response.
     pub pagination: Option<PageResponse>,
 }
@@ -109,8 +109,8 @@ impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
         let balances = raw
             .balances
             .into_iter()
-            .map(Coin::try_from)
-            .collect::<Result<Vec<Coin>, CoinsError>>()
+            .map(UnsignedCoin::try_from)
+            .collect::<Result<Vec<UnsignedCoin>, CoinError>>()
             .map_err(|e| CoreError::Coin(e.to_string()))?;
 
         Ok(QueryAllBalancesResponse {
@@ -122,7 +122,7 @@ impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
 
 impl From<QueryAllBalancesResponse> for inner::QueryAllBalancesResponse {
     fn from(query: QueryAllBalancesResponse) -> inner::QueryAllBalancesResponse {
-        let balances: Vec<Coin> = query.balances;
+        let balances: Vec<UnsignedCoin> = query.balances;
         let balances = balances.into_iter().map(inner::Coin::from).collect();
 
         Self {
@@ -138,7 +138,7 @@ impl Protobuf<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {}
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct QueryBalanceResponse {
     /// balance is the balance of the coin.
-    pub balance: Option<Coin>,
+    pub balance: Option<UnsignedCoin>,
 }
 
 impl TryFrom<inner::QueryBalanceResponse> for QueryBalanceResponse {
@@ -149,7 +149,7 @@ impl TryFrom<inner::QueryBalanceResponse> for QueryBalanceResponse {
             .balance
             .map(|coin| coin.try_into())
             .transpose()
-            .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?;
+            .map_err(|e: CoinError| CoreError::Coin(e.to_string()))?;
         Ok(QueryBalanceResponse { balance })
     }
 }
@@ -168,7 +168,7 @@ impl Protobuf<inner::QueryBalanceResponse> for QueryBalanceResponse {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryTotalSupplyResponse {
     /// supply is the supply of the coins
-    pub supply: Vec<Coin>,
+    pub supply: Vec<UnsignedCoin>,
     /// pagination defines the pagination in the response.
     ///
     /// Since: cosmos-sdk 0.43
@@ -182,8 +182,8 @@ impl TryFrom<inner::QueryTotalSupplyResponse> for QueryTotalSupplyResponse {
         let supply = raw
             .supply
             .into_iter()
-            .map(Coin::try_from)
-            .collect::<Result<Vec<Coin>, CoinsError>>()
+            .map(UnsignedCoin::try_from)
+            .collect::<Result<Vec<UnsignedCoin>, CoinError>>()
             .map_err(|e| CoreError::Coin(e.to_string()))?;
 
         Ok(Self {
@@ -195,7 +195,7 @@ impl TryFrom<inner::QueryTotalSupplyResponse> for QueryTotalSupplyResponse {
 
 impl From<QueryTotalSupplyResponse> for inner::QueryTotalSupplyResponse {
     fn from(query: QueryTotalSupplyResponse) -> inner::QueryTotalSupplyResponse {
-        let supply: Vec<Coin> = query.supply;
+        let supply: Vec<UnsignedCoin> = query.supply;
         let supply = supply.into_iter().map(inner::Coin::from).collect();
 
         Self {

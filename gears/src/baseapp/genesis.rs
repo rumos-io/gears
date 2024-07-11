@@ -1,6 +1,6 @@
 use crate::{
     error::AppError,
-    types::{address::AccAddress, base::send::SendCoins},
+    types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -10,6 +10,6 @@ pub trait Genesis:
     fn add_genesis_account(
         &mut self,
         address: AccAddress,
-        coins: SendCoins,
+        coins: UnsignedCoins,
     ) -> Result<(), AppError>;
 }

@@ -1,12 +1,13 @@
-use super::{coin::Coin, errors::CoinsError};
-use crate::types::denom::Denom;
+use crate::types::{base::errors::CoinError, denom::Denom};
 use core_types::{errors::CoreError, Protobuf};
 use cosmwasm_std::{DecCoin, Decimal256};
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Clone, PartialEq, Eq, Message)]
+use super::{unsigned::UnsignedCoin, Coin};
+
+#[derive(Clone, PartialEq, Eq, Message, Serialize, Deserialize)]
 pub struct DecimalCoinRaw {
     #[prost(string, tag = "1")]
     pub denom: String,
@@ -24,9 +25,22 @@ impl From<DecimalCoin> for DecimalCoinRaw {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)]
+#[serde(try_from = "DecimalCoinRaw", into = "DecimalCoinRaw")]
 pub struct DecimalCoin {
     pub denom: Denom,
     pub amount: Decimal256, // TODO:LATER DO WE HAVE LOCAL COPY?
+}
+
+impl Coin for DecimalCoin {
+    type Amount = Decimal256;
+
+    fn denom(&self) -> &Denom {
+        &self.denom
+    }
+
+    fn amount(&self) -> &Decimal256 {
+        &self.amount
+    }
 }
 
 impl DecimalCoin {
@@ -39,13 +53,13 @@ impl DecimalCoin {
 
     // truncate_decimal returns a Coin with a truncated decimal and a DecimalCoin for the
     // change. Note, the change may be zero.
-    pub fn truncate_decimal(&self) -> (Coin, DecimalCoin) {
+    pub fn truncate_decimal(&self) -> (UnsignedCoin, DecimalCoin) {
         let truncated = self.amount.to_uint_floor();
         let dec = Decimal256::from_atomics(truncated, 0)
             .expect("cannot fail because it is a truncated part from decimal");
         let change = self.amount - dec;
         (
-            Coin {
+            UnsignedCoin {
                 amount: truncated,
                 denom: self.denom.clone(),
             },
@@ -90,7 +104,7 @@ impl From<DecimalCoin> for DecCoin {
 }
 
 impl FromStr for DecimalCoin {
-    type Err = CoinsError;
+    type Err = CoinError;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         // get the index at which amount ends and denom starts
@@ -98,11 +112,11 @@ impl FromStr for DecimalCoin {
 
         let amount = input[..i]
             .parse::<Decimal256>()
-            .map_err(|e| CoinsError::Uint(e.to_string()))?;
+            .map_err(|e| CoinError::Uint(e.to_string()))?;
 
         let denom = input[i..]
             .parse::<Denom>()
-            .map_err(|e| CoinsError::Denom(e.to_string()))?;
+            .map_err(|e| CoinError::Denom(e.to_string()))?;
 
         Ok(Self { denom, amount })
     }

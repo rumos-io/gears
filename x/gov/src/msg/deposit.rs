@@ -1,10 +1,11 @@
 use bytes::Bytes;
-use gears::types::{address::AccAddress, base::send::SendCoins};
+use gears::types::address::AccAddress;
+use gears::types::base::coins::UnsignedCoins;
 use gears::{
     core::{any::google::Any, errors::CoreError},
     error::IBC_ENCODE_UNWRAP,
     tendermint::types::proto::Protobuf,
-    types::{base::errors::CoinsError, tx::TxMessage},
+    types::{base::errors::CoinError, tx::TxMessage},
 };
 use serde::{Deserialize, Serialize};
 
@@ -19,7 +20,7 @@ mod inner {
 pub struct Deposit {
     pub proposal_id: u64,
     pub depositor: AccAddress,
-    pub amount: SendCoins,
+    pub amount: UnsignedCoins,
 }
 
 impl Deposit {
@@ -72,10 +73,10 @@ impl TryFrom<inner::MsgDeposit> for Deposit {
                 for coin in amount {
                     coins.push(
                         coin.try_into()
-                            .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?,
+                            .map_err(|e: CoinError| CoreError::Coin(e.to_string()))?,
                     )
                 }
-                SendCoins::new(coins).map_err(|e| CoreError::DecodeAddress(e.to_string()))?
+                UnsignedCoins::new(coins).map_err(|e| CoreError::DecodeAddress(e.to_string()))?
             },
         })
     }
@@ -144,7 +145,7 @@ impl TryFrom<inner::Deposit> for Deposit {
             proposal_id,
             depositor: AccAddress::from_bech32(&depositor)
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            amount: SendCoins::new({
+            amount: UnsignedCoins::new({
                 let mut result = Vec::with_capacity(amount.len());
 
                 for coin in amount {

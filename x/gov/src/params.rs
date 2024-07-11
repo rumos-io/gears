@@ -10,7 +10,10 @@ use gears::{
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     tendermint::types::proto::Protobuf,
     types::{
-        base::{coin::Coin, send::SendCoins},
+        base::{
+            coin::UnsignedCoin,
+            coins::{Coins, UnsignedCoins},
+        },
         decimal256::Decimal256,
     },
 };
@@ -26,15 +29,15 @@ const DEFAULT_PERIOD: Duration = Duration::from_secs(172800); // 2 days
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
-    pub min_deposit: SendCoins,
+    pub min_deposit: UnsignedCoins,
     pub max_deposit_period: Duration, // ?
 }
 
 impl Default for DepositParams {
     fn default() -> Self {
         Self {
-            min_deposit: SendCoins::new(vec![
-                Coin::from_str("10000000uatom").expect("default is valid")
+            min_deposit: UnsignedCoins::new(vec![
+                UnsignedCoin::from_str("10000000uatom").expect("default is valid")
             ])
             .expect("default is valid"),
             max_deposit_period: DEFAULT_PERIOD,
@@ -165,11 +168,11 @@ impl TryFrom<inner::DepositParams> for DepositParams {
 
                 for coin in min_deposit {
                     result.push(coin.try_into().map_err(
-                        |e: gears::types::base::errors::CoinsError| CoreError::Coin(e.to_string()),
+                        |e: gears::types::base::errors::CoinError| CoreError::Coin(e.to_string()),
                     )?)
                 }
 
-                SendCoins::new(result).map_err(|e| CoreError::Coins(e.to_string()))?
+                Coins::new(result).map_err(|e| CoreError::Coins(e.to_string()))?
             },
             max_deposit_period: {
                 let duration = max_deposit_period.ok_or(CoreError::MissingField(

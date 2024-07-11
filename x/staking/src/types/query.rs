@@ -9,7 +9,7 @@ use gears::{
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         response::PageResponse,
         uint::Uint256,
     },
@@ -224,7 +224,7 @@ impl Protobuf<QueryValidatorResponseRaw> for QueryValidatorResponse {}
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct DelegationResponse {
     pub delegation: Delegation,
-    pub balance: Coin,
+    pub balance: UnsignedCoin,
 }
 
 impl TryFrom<DelegationResponseRaw> for DelegationResponse {
@@ -233,8 +233,8 @@ impl TryFrom<DelegationResponseRaw> for DelegationResponse {
     fn try_from(raw: DelegationResponseRaw) -> Result<Self, Self::Error> {
         let delegation: Delegation = serde_json::from_slice(&raw.delegation)
             .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
-        let balance =
-            Coin::decode_vec(&raw.balance).map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+        let balance = UnsignedCoin::decode_vec(&raw.balance)
+            .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
         Ok(DelegationResponse {
             delegation,

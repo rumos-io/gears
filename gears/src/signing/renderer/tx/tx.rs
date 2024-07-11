@@ -11,7 +11,7 @@ use crate::signing::{
 use crate::types::address::AccAddress;
 use crate::types::{
     auth::tip::Tip,
-    base::send::SendCoins,
+    base::coins::UnsignedCoins,
     rendering::screen::{Indent, Screen},
     tx::{data::TxData, signer::SignerData, TxMessage},
 };
@@ -30,10 +30,10 @@ pub struct Envelope<M> {
     public_key: PublicKey,
     message: Vec<M>,
     memo: String,
-    fees: Option<SendCoins>,
+    fees: Option<UnsignedCoins>,
     fee_payer: Option<AccAddress>,
     fee_granter: String, // TODO: this should be an AccAddress
-    tip: Option<SendCoins>,
+    tip: Option<UnsignedCoins>,
     tipper: Option<AccAddress>,
     gas_limit: u64,
     timeout_height: u32,
@@ -244,8 +244,8 @@ mod tests {
     use crate::types::address::AccAddress;
     use crate::types::auth::fee::Fee;
     use crate::types::auth::info::AuthInfo;
-    use crate::types::base::coin::Coin;
-    use crate::types::base::send::SendCoins;
+    use crate::types::base::coin::UnsignedCoin;
+    use crate::types::base::coins::UnsignedCoins;
     use crate::types::denom::Denom;
     use crate::types::msg::send::MsgSend;
     use crate::types::rendering::screen::{Content, Indent, Screen};
@@ -294,7 +294,7 @@ mod tests {
             signer_infos: vec![signer_info],
             fee: Fee {
                 amount: Some(
-                    SendCoins::new(vec![Coin {
+                    UnsignedCoins::new(vec![UnsignedCoin {
                         denom: Denom::try_from("uatom".to_owned())?,
                         amount: Uint256::from(2000u32),
                     }])
@@ -328,7 +328,7 @@ mod tests {
                 to_address: AccAddress::from_bech32(
                     "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
                 )?,
-                amount: SendCoins::new(vec![Coin {
+                amount: UnsignedCoins::new(vec![UnsignedCoin {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(10000000u32),
                 }])

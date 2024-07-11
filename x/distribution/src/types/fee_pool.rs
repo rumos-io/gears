@@ -1,9 +1,9 @@
 use gears::{
     core::{errors::CoreError, Protobuf},
     types::base::{
-        decimal_coin::{DecimalCoin, DecimalCoinRaw},
-        decimal_coins::DecimalCoins,
-        errors::SendCoinsError,
+        coin::{DecimalCoin, DecimalCoinRaw},
+        coins::DecimalCoins,
+        errors::CoinsError,
     },
 };
 use prost::Message;
@@ -35,7 +35,7 @@ pub struct FeePool {
 }
 
 impl TryFrom<Vec<DecimalCoin>> for FeePool {
-    type Error = SendCoinsError;
+    type Error = CoinsError;
 
     fn try_from(value: Vec<DecimalCoin>) -> Result<Self, Self::Error> {
         Ok(Self {

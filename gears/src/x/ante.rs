@@ -4,8 +4,8 @@ use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
-use crate::types::base::coin::Coin;
-use crate::types::base::send::SendCoins;
+use crate::types::base::coin::UnsignedCoin;
+use crate::types::base::coins::UnsignedCoins;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
@@ -188,7 +188,7 @@ impl<
             let mut required_fees = Vec::with_capacity(min_gas_prices.len());
 
             for gp in min_gas_prices {
-                required_fees.push(Coin {
+                required_fees.push(UnsignedCoin {
                     denom: gp.denom,
                     amount: gp
                         .amount
@@ -197,8 +197,8 @@ impl<
                 });
             }
 
-            let required_fees =
-                SendCoins::new(required_fees).expect("MinGasPrices has same restriction as Self");
+            let required_fees = UnsignedCoins::new(required_fees)
+                .expect("MinGasPrices has same restriction as Self");
 
             if !is_any_gte(fee_coins.inner(), &required_fees) {
                 Err(anyhow!(
@@ -211,7 +211,7 @@ impl<
             Err(anyhow!("rejected. `fee_coins` is None"))?
         }
 
-        fn is_any_gte(coins_a: &Vec<Coin>, coins_b: &SendCoins) -> bool {
+        fn is_any_gte(coins_a: &Vec<UnsignedCoin>, coins_b: &UnsignedCoins) -> bool {
             if coins_b.is_empty() {
                 return false;
             }

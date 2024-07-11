@@ -4,7 +4,7 @@ use gears::{
     store::database::Database,
     types::{
         address::AccAddress,
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
     },
 };
@@ -24,7 +24,7 @@ impl<'a, DB: Database> BalanceIterator<'a, DB> {
 }
 
 impl<'a, DB: Database> Iterator for BalanceIterator<'a, DB> {
-    type Item = Result<(Cow<'a, Vec<u8>>, Coin), GasStoreErrors>;
+    type Item = Result<(Cow<'a, Vec<u8>>, UnsignedCoin), GasStoreErrors>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(var) = self.0.next() {

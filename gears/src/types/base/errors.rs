@@ -1,15 +1,17 @@
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum SendCoinsError {
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum CoinsError {
     #[error("list of coins is empty")]
     EmptyList,
     #[error("coin amount must be positive")]
     InvalidAmount,
-    #[error("coins are not sorted and/or contain duplicates")]
-    DuplicatesOrUnsorted,
+    #[error("coins contain duplicates")]
+    Duplicates,
+    #[error("coins are not sorted")]
+    Unsorted,
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
-pub enum CoinsError {
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum CoinError {
     #[error("Denom parse error: {0}")]
     Denom(String),
     #[error("Uint256 parse error: {0}")]
@@ -18,10 +20,10 @@ pub enum CoinsError {
     Decimal(String),
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
 pub enum CoinsParseError {
     #[error("Failed to parse: {0}")]
-    Parse(#[from] CoinsError),
+    Parse(#[from] CoinError),
     #[error("Parsed invalid coins: {0}")]
-    Validate(#[from] SendCoinsError),
+    Validate(#[from] CoinsError),
 }

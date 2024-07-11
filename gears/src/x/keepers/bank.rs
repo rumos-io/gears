@@ -6,7 +6,7 @@ use crate::{
     error::AppError,
     types::{
         address::AccAddress,
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
         denom::Denom,
         store::gas::errors::GasStoreErrors,
         tx::metadata::Metadata,
@@ -20,7 +20,7 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         ctx: &mut CTX,
         from_address: AccAddress,
         to_module: &M,
-        amount: SendCoins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError>;
 
     fn send_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -28,7 +28,7 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         ctx: &mut CTX,
         address: &AccAddress,
         module: &M,
-        amount: SendCoins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError>;
 
     fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -41,7 +41,7 @@ pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut CTX,
         module: &M,
-        deposit: &SendCoins,
+        deposit: &UnsignedCoins,
     ) -> Result<(), AppError>;
 }
 
@@ -61,14 +61,14 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<Coin>, GasStoreErrors>;
+    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors>;
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         sender_pool: &M,
         recepient_pool: &M,
-        amount: SendCoins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError>;
 
     fn undelegate_coins_from_module_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -76,7 +76,7 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
         ctx: &mut CTX,
         sender_module: &M,
         addr: AccAddress,
-        amount: SendCoins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError>;
 
     fn delegate_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -84,6 +84,6 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
         ctx: &mut CTX,
         sender_addr: AccAddress,
         recepient_module: &M,
-        amount: SendCoins,
+        amount: UnsignedCoins,
     ) -> Result<(), AppError>;
 }

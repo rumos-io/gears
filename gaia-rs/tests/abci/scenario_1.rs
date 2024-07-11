@@ -1,5 +1,5 @@
 use gears::tendermint::types::time::Timestamp;
-use gears::types::base::send::SendCoins;
+use gears::types::base::coins::Coins;
 use gears::types::msg::send::MsgSend;
 
 use crate::{generate_txs, setup_mock_node};
@@ -21,7 +21,7 @@ fn scenario_1() {
     let to_address = "cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut"
         .parse()
         .expect("hard coded address is valid");
-    let amount = SendCoins::new(vec!["10uatom".parse().expect("hard coded coin is valid")])
+    let amount = Coins::new(vec!["10uatom".parse().expect("hard coded coin is valid")])
         .expect("hard coded coins are valid");
 
     let msg = gaia_rs::message::Message::Bank(bank::Message::Send(MsgSend {

@@ -20,7 +20,7 @@ use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::time::Timestamp;
 use gears::types::address::AccAddress;
 use gears::types::auth::fee::Fee;
-use gears::types::base::send::SendCoins;
+use gears::types::base::coins::Coins;
 use gears::types::tx::body::TxBody;
 use keyring::key::pair::KeyPair;
 use prost::Message;
@@ -98,7 +98,7 @@ fn generate_txs(
 ) -> Vec<Bytes> {
     let fee = Fee {
         amount: Some(
-            SendCoins::new(vec!["1uatom".parse().expect("hard coded coin is valid")])
+            Coins::new(vec!["1uatom".parse().expect("hard coded coin is valid")])
                 .expect("hard coded coins are valid"),
         ),
         gas_limit: 200_000_u64

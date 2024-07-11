@@ -6,7 +6,7 @@ use gears::{
     store::database::Database,
     tendermint::types::proto::Protobuf,
     types::{
-        base::send::SendCoins,
+        base::coins::UnsignedCoins,
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
         uint::Uint256,
     },
@@ -35,7 +35,7 @@ pub struct Proposal {
     pub final_tally_result: Option<TallyResult>,
     pub submit_time: DateTime<Utc>,
     pub deposit_end_time: DateTime<Utc>,
-    pub total_deposit: SendCoins,
+    pub total_deposit: UnsignedCoins,
     pub voting_start_time: Option<DateTime<Utc>>,
     pub voting_end_time: Option<DateTime<Utc>>,
 }
@@ -85,7 +85,7 @@ impl TryFrom<inner::Proposal> for Proposal {
             .ok_or(CoreError::DecodeGeneral(
                 "Proposal: invalid `deposit_end_time`".to_owned(),
             ))?,
-            total_deposit: SendCoins::new({
+            total_deposit: UnsignedCoins::new({
                 let mut result = Vec::with_capacity(total_deposit.len());
 
                 for coin in total_deposit {

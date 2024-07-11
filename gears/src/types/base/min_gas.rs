@@ -3,8 +3,8 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    decimal_coin::DecimalCoin,
-    errors::{CoinsParseError, SendCoinsError},
+    coin::DecimalCoin,
+    errors::{CoinsError, CoinsParseError},
 };
 
 // Represents a list of coins with the following properties:
@@ -15,7 +15,7 @@ use super::{
 pub struct MinGasPrices(Vec<DecimalCoin>);
 
 impl MinGasPrices {
-    pub fn new(coins: Vec<DecimalCoin>) -> Result<Self, SendCoinsError> {
+    pub fn new(coins: Vec<DecimalCoin>) -> Result<Self, CoinsError> {
         Self::validate_coins(&coins)?;
 
         Ok(Self(coins))
@@ -28,21 +28,23 @@ impl MinGasPrices {
     // - No duplicate denominations
     // - Sorted lexicographically
     // TODO: implement ordering on coins or denominations so that conversion to string can be avoided
-    fn validate_coins(coins: &Vec<DecimalCoin>) -> Result<(), SendCoinsError> {
+    fn validate_coins(coins: &Vec<DecimalCoin>) -> Result<(), CoinsError> {
         if coins.is_empty() {
-            return Err(SendCoinsError::EmptyList);
+            return Err(CoinsError::EmptyList);
         }
 
-        let mut previous_denom = coins[0].denom.to_string();
+        let mut previous_denom = &coins[0].denom;
 
         for coin in &coins[1..] {
             // Less than to ensure lexicographical ordering
             // Equality to ensure that there are no duplications
-            if coin.denom.to_string() <= previous_denom {
-                return Err(SendCoinsError::DuplicatesOrUnsorted);
-            }
+            match coin.denom.cmp(previous_denom) {
+                std::cmp::Ordering::Less => Err(CoinsError::Unsorted),
+                std::cmp::Ordering::Equal => Err(CoinsError::Duplicates),
+                std::cmp::Ordering::Greater => Ok(()),
+            }?;
 
-            previous_denom = coin.denom.to_string();
+            previous_denom = &coin.denom;
         }
 
         Ok(())
