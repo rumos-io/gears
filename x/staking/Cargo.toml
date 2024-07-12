@@ -16,3 +16,10 @@ serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 tokio = { workspace = true }
 thiserror = { workspace = true }
+ibc-proto = { workspace = true }
+tonic = { workspace = true }
+tower-layer = { workspace = true }
+tonic-reflection = { workspace = true }
+
+# log
+tracing = { workspace = true }

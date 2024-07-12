@@ -19,3 +19,5 @@ pub(crate) use keys::*;
 pub use message::*;
 pub use params::*;
 pub use types::*;
+
+pub const FILE_DESCRIPTOR_SET: &[u8] = ibc_proto::FILE_DESCRIPTOR_SET;
