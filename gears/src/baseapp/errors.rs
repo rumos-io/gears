@@ -1,17 +1,17 @@
 use crate::types::gas::GasMeteringErrors;
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum RunTxError {
-    #[error("no block gas left to run tx")]
+    #[error("there is no block gas left to run the transaction, try resubmitting")]
     OutOfGas,
-    #[error("invalid transaction: {0}")]
+    #[error("the transaction is invalid, {0}")]
     TxParseError(String),
-    #[error("Message validation error: {0}")]
+    #[error("the transaction contains an invalid message, {0}")]
     Validation(String),
-    #[error("Gas errors: {0}")]
+    #[error("{0}")]
     GasErrors(#[from] GasMeteringErrors),
-    #[error("Custom error: {0}")]
-    Custom(String),
+    #[error(transparent)]
+    Application(#[from] anyhow::Error),
 }
 
 impl RunTxError {
