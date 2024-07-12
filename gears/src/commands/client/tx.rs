@@ -20,7 +20,7 @@ use super::keys::KeyringBackend;
 pub struct TxCommand<C> {
     pub node: url::Url,
     pub chain_id: ChainId,
-    pub fee: Option<UnsignedCoins>,
+    pub fees: Option<UnsignedCoins>,
     pub keyring: Keyring,
     pub inner: C,
 }
@@ -42,7 +42,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     TxCommand {
         node,
         chain_id,
-        fee,
+        fees,
         inner,
         keyring,
     }: TxCommand<C>,
@@ -53,7 +53,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
             let key = LedgerProxyKey::new()?;
 
             let message = handler.prepare_tx(inner, key.get_address())?;
-            handler.handle_tx(message, key, node, chain_id, fee, SignMode::Textual)
+            handler.handle_tx(message, key, node, chain_id, fees, SignMode::Textual)
         }
         Keyring::Local(info) => {
             let keyring_home = info.home.join(info.keyring_backend.get_sub_dir());
@@ -63,7 +63,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
             )?;
 
             let message = handler.prepare_tx(inner, key.get_address())?;
-            handler.handle_tx(message, key, node, chain_id, fee, SignMode::Direct)
+            handler.handle_tx(message, key, node, chain_id, fees, SignMode::Direct)
         }
     }
 }

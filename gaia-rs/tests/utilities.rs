@@ -70,8 +70,8 @@ pub fn run_gaia_and_tendermint(
 
         let cmd = RunCommand {
             home: tmp_path,
-            address: DEFAULT_ADDRESS,
-            rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
+            address: Some(DEFAULT_ADDRESS),
+            rest_listen_addr: Some(DEFAULT_REST_LISTEN_ADDR),
             read_buf_size: 1048576,
             log_level: LogLevel::Off,
             min_gas_prices: Default::default(),

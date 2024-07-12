@@ -2,7 +2,7 @@ use crate::types::gas::GasMeteringErrors;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RunTxError {
-    #[error("there is no block gas left to run the transaction, try resubmitting")]
+    #[error("there is no block gas left to run the transaction")]
     OutOfGas,
     #[error("the transaction is invalid, {0}")]
     TxParseError(String),
