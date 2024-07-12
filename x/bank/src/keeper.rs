@@ -619,17 +619,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     pub fn set_supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        coin: UnsignedCoin,
+        UnsignedCoin { denom, amount }: UnsignedCoin,
     ) -> Result<(), GasStoreErrors> {
-        // TODO:ME need to delete coins with zero balance
-
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
 
-        supply_store.set(
-            coin.denom.to_string().into_bytes(),
-            coin.amount.to_string().into_bytes(),
-        )
+        match amount.is_zero() {
+            true => supply_store.delete(denom.as_ref().as_bytes()).map(|_| ()),
+            false => supply_store.set(
+                denom.to_string().into_bytes(),
+                amount.to_string().into_bytes(),
+            ),
+        }
     }
 
     pub fn supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
