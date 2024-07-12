@@ -43,6 +43,20 @@ impl Gas {
     }
 
     // TODO: write a test for this
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        let self_inner: u64 = self.0.into();
+        let rhs_inner: u64 = rhs.0.into();
+
+        let result = self_inner.checked_sub(rhs_inner)?;
+
+        if result > u63::MAX.into() {
+            None
+        } else {
+            Some(Gas::new(u63::new(result)))
+        }
+    }
+
+    // TODO: write a test for this
     pub fn checked_add(self, rhs: Self) -> Option<Self> {
         if (Self::MAX - self) >= rhs {
             Some(self + rhs)
