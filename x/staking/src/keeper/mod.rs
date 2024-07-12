@@ -263,7 +263,7 @@ impl<
                     .validator(ctx, &last_validator.address)
                     .expect("Init ctx doesn't have any gas")
                     .expect("validator in the store was not found");
-                // TODO: check unwraps and update types to omit conversion
+                // check unwraps and update types to omit conversion
                 let mut update = validator
                     .abci_validator_update(self.power_reduction(ctx))
                     .unwrap();
@@ -461,7 +461,7 @@ impl<
             if old_power_bytes.is_none()
                 || old_power_bytes.map(|v| v.as_slice()) != Some(&new_power_bytes)
             {
-                // TODO: check unwraps and update types to omit conversion
+                //  check unwraps and update types to omit conversion
                 updates.push(validator.abci_validator_update(power_reduction).unwrap());
 
                 self.set_last_validator_power(

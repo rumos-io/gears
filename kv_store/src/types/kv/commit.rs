@@ -45,7 +45,7 @@ impl<DB: Database> KVBank<DB, ApplicationStore> {
             let _ = persistent.remove(&key);
         }
 
-        let (hash, _) = persistent.save_version().ok().unwrap_or_default(); //TODO: is it safe to assume this won't ever error?
+        let (hash, _) = persistent.save_version().ok().unwrap_or_default(); //TODO:ME is it safe to assume this won't ever error?
         hash
     }
 

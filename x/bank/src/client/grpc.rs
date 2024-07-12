@@ -53,56 +53,56 @@ where
         &self,
         _request: Request<QueryAllBalancesRequest>,
     ) -> Result<Response<QueryAllBalancesResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 
     async fn spendable_balances(
         &self,
         _request: Request<QuerySpendableBalancesRequest>,
     ) -> Result<Response<QuerySpendableBalancesResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 
     async fn total_supply(
         &self,
         _request: Request<QueryTotalSupplyRequest>,
     ) -> Result<Response<QueryTotalSupplyResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 
     async fn supply_of(
         &self,
         _request: Request<QuerySupplyOfRequest>,
     ) -> Result<Response<QuerySupplyOfResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 
     async fn params(
         &self,
         _request: Request<QueryParamsRequest>,
     ) -> Result<Response<QueryParamsResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 
     async fn denom_metadata(
         &self,
         _request: Request<QueryDenomMetadataRequest>,
     ) -> Result<Response<QueryDenomMetadataResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 
     async fn denoms_metadata(
         &self,
         _request: Request<QueryDenomsMetadataRequest>,
     ) -> Result<Response<QueryDenomsMetadataResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 
     async fn denom_owners(
         &self,
         _request: Request<QueryDenomOwnersRequest>,
     ) -> Result<Response<QueryDenomOwnersResponse>, Status> {
-        unimplemented!() //TODO: implement
+        unimplemented!()
     }
 }
 

@@ -16,7 +16,7 @@ pub struct RequestInitChain<G> {
     pub consensus_params: ConsensusParams,
     pub validators: Vec<ValidatorUpdate>,
     pub app_genesis: G,
-    pub initial_height: i64, //TODO: use u64?
+    pub initial_height: i64, //TODO:ME use u64?
 }
 
 impl<G: DeserializeOwned> TryFrom<super::inner::RequestInitChain> for RequestInitChain<G> {

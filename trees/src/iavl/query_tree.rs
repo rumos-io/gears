@@ -43,7 +43,6 @@ impl<DB: Database> QueryTree<DB> {
         }
     }
 
-    // TODO: can we share this function with a regular tree's get_ method?
     fn get_(&self, key: &[u8], root: &Node) -> Option<Vec<u8>> {
         let mut loop_node = root;
         let mut cached_node;
@@ -97,7 +96,7 @@ impl<DB: Database> QueryTree<DB> {
         match &self.root {
             Some(root) => Range::new(
                 range,
-                vec![root.clone()], //TODO: remove clone
+                vec![root.clone()], //TODO:ME remove clone
                 &self.node_db,
             ),
             None => Range::new(range, vec![], &self.node_db),

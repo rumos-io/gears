@@ -62,10 +62,10 @@ impl<DB: Database, SK: StoreKey> QueryMultiStore<DB, SK> {
     }
 
     pub fn head_version(&self) -> u32 {
-        unimplemented!() // TODO:NOW
+        unimplemented!() // TODO:ME
     }
 
     pub fn head_commit_hash(&self) -> [u8; 32] {
-        unimplemented!() // TODO:NOW
+        unimplemented!() // TODO:ME
     }
 }

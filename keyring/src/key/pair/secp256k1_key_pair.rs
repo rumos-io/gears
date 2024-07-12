@@ -63,7 +63,7 @@ impl Secp256k1KeyPair {
         let mut iv = [0u8; 16];
         rng.fill_bytes(&mut iv);
 
-        // TODO: remove unwraps
+        // TODO::ME remove unwraps
 
         // 14 = log_2(16384), 32 bytes = 256 bits
         let scrypt_params = scrypt::Params::new(14, 8, 1, 32).unwrap();

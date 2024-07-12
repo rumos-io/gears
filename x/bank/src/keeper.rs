@@ -105,7 +105,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         let account = self
             .auth_keeper
             .get_account(ctx, &module_acc_addr)?
-            .unwrap(); // TODO:
+            .unwrap();
 
         match account.has_permissions("burner") {
             true => Ok(()),
@@ -290,7 +290,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             for coin in balance.coins {
                 denom_balance_store.set(
                     coin.denom.to_string().into_bytes(),
-                    coin.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                    coin.encode_vec().expect(IBC_ENCODE_UNWRAP),
                 );
                 let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
@@ -568,7 +568,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into_bytes(),
-                from_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                from_balance.encode_vec().expect(IBC_ENCODE_UNWRAP),
             )?;
 
             //TODO: if balance == 0 then denom should be removed from store
@@ -590,7 +590,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
             to_account_store.set(
                 send_coin.denom.to_string().into_bytes(),
-                to_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                to_balance.encode_vec().expect(IBC_ENCODE_UNWRAP),
             )?;
 
             events.push(Event::new(
@@ -621,7 +621,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         coin: UnsignedCoin,
     ) -> Result<(), GasStoreErrors> {
-        // TODO: need to delete coins with zero balance
+        // TODO:ME need to delete coins with zero balance
 
         let bank_store = ctx.kv_store_mut(&self.store_key);
         let mut supply_store = bank_store.prefix_store_mut(SUPPLY_KEY);
@@ -677,7 +677,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         denom_metadata_store.set(
             denom_metadata.base.clone().into_bytes(),
-            denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+            denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP),
         );
     }
 
@@ -915,7 +915,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
-        // TODO: consider to add struct Coins that can have empty coins list
     ) -> Result<Vec<UnsignedCoin>, AppError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             //     vacc, ok := acc.(vestexported.VestingAccount)

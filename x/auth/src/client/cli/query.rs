@@ -42,7 +42,7 @@ impl Query for AuthQuery {
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            AuthQuery::Account(cmd) => cmd.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
+            AuthQuery::Account(cmd) => cmd.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }

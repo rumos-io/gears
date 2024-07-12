@@ -42,7 +42,7 @@ impl GenesisState {
                 address,
                 pub_key: None,
                 account_number: 0, // This is ignored when initializing from genesis
-                sequence: 0,       //TODO: make a BaseAccount constructor
+                sequence: 0,       //TODO:ME make a BaseAccount constructor
             });
             Ok(())
         } else {

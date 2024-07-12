@@ -51,7 +51,7 @@ impl From<Message> for Any {
         match msg {
             Message::Send(msg) => Any {
                 type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
             },
         }
     }

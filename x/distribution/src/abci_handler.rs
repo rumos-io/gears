@@ -81,7 +81,7 @@ impl<
         }
 
         // record the proposer for when we payout on the next block
-        // TODO: consider to change request header structure to have ConsAddress
+        // TODO:ME consider to change request header structure to have ConsAddress
         let cons_addr = match ConsAddress::try_from(request.header.proposer_address) {
             Ok(addr) => addr,
             Err(e) => panic!("{e}"),

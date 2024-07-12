@@ -17,7 +17,7 @@ impl TxMessage for Message {
     }
 
     fn type_url(&self) -> &'static str {
-        "TODO"
+        "TODO:ME"
     }
 }
 

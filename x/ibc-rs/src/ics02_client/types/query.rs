@@ -84,8 +84,8 @@ impl TryFrom<RawIdentifiedClientState> for IdentifiedClientState {
 
     fn try_from(value: RawIdentifiedClientState) -> Result<Self, Self::Error> {
         Ok(IdentifiedClientState {
-            client_id: value.client_id.parse().unwrap(), //TODO: unwrap
-            client_state: value.client_state.unwrap().try_into().unwrap(), //TODO: unwraps
+            client_id: value.client_id.parse().unwrap(),
+            client_state: value.client_state.unwrap().try_into().unwrap(),
         })
     }
 }

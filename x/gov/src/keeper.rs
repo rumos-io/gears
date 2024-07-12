@@ -469,7 +469,7 @@ impl<
             .max_deposit_period;
 
         let submit_date =
-            DateTime::from_timestamp(submit_time.seconds, submit_time.nanos as u32).unwrap(); // TODO
+            DateTime::from_timestamp(submit_time.seconds, submit_time.nanos as u32).unwrap();
 
         let proposal = Proposal {
             proposal_id,
@@ -515,7 +515,7 @@ impl<
         let mut events = Vec::new();
 
         let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
-            .unwrap(); // TODO
+            .unwrap();
 
         {
             let inactive_iter = {
@@ -663,7 +663,7 @@ impl<
                     // delegation shares * bonded / total shares
                     let voting_power = delegation
                         .shares()
-                        .mul(Decimal256::from_atomics(validator.bounded_tokens, 0).unwrap()) // TODO: HANDLE THIS
+                        .mul(Decimal256::from_atomics(validator.bounded_tokens, 0).unwrap())
                         .div(validator.delegator_shares);
 
                     for VoteOptionWeighted { option, weight } in &vote_options {
@@ -695,7 +695,7 @@ impl<
             }
 
             let voting_power = (delegator_shares - delegator_deduction)
-                * Decimal256::from_atomics(*bounded_tokens, 0).unwrap() // TODO: HANDLE THIS
+                * Decimal256::from_atomics(*bounded_tokens, 0).unwrap()
                 / delegator_shares;
 
             for VoteOptionWeighted { option, weight } in vote {
@@ -717,7 +717,7 @@ impl<
 
         // If there is not enough quorum of votes, the proposal fails
         let percent_voting =
-            total_voting_power / Decimal256::from_atomics(total_bonded_tokens.amount, 0).unwrap(); // TODO: HANDLE THIS
+            total_voting_power / Decimal256::from_atomics(total_bonded_tokens.amount, 0).unwrap();
         if percent_voting < tally_params.quorum {
             return Ok((false, true, tally_results.to_result()));
         }

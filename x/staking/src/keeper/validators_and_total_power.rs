@@ -41,7 +41,7 @@ impl<
             uint: last_total_power,
         }
         .encode_vec()
-        .expect(IBC_ENCODE_UNWRAP); // TODO:IBC;
+        .expect(IBC_ENCODE_UNWRAP);
         store.set(LAST_TOTAL_POWER_KEY, val)
     }
 

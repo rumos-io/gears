@@ -99,7 +99,7 @@ impl Query for BankQuery {
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            BankQuery::Balances(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+            BankQuery::Balances(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP),
             BankQuery::DenomMetadata(var) => var.encode_to_vec(),
         }
     }

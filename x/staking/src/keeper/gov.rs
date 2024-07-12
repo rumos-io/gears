@@ -42,7 +42,7 @@ impl<
         let account = self
             .auth_keeper
             .get_account(ctx, &self.bonded_module.get_address())?
-            .unwrap(); // TODO: Unsure what to do in this case
+            .unwrap(); //  Unsure what to do in this case
 
         self.bank_keeper.balance(
             ctx,

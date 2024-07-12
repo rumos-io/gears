@@ -1,7 +1,7 @@
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
 pub struct RequestEndBlock {
     #[prost(int64, tag = "1")]
-    pub height: i64, // TODO: make u32
+    pub height: i64, // TODO:ME make u32
 }
 
 impl From<super::inner::RequestEndBlock> for RequestEndBlock {

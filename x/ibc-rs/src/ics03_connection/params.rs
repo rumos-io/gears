@@ -76,7 +76,7 @@ impl<PSK: ParamsSubspaceKey> ConnectionParamsKeeper<PSK> {
     ) -> ConnectionParams {
         let store = infallible_subspace(ctx, &self.params_subspace_key);
 
-        store.params().unwrap() // TODO: Add default
+        store.params().unwrap()
     }
 
     pub fn set<DB: Database, SK: StoreKey, CTX: InfallibleContextMut<DB, SK>>(

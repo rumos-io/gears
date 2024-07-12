@@ -305,10 +305,9 @@ fn parse_proposal_key_bytes(bytes: impl AsRef<[u8]>) -> (u64, DateTime<Utc>) {
         &String::from_utf8(bytes.as_ref()[1..1 + length_time].to_vec())
             .expect("We serialize date as String so conversion is save"),
     )
-    .unwrap() // TODO
+    .unwrap()
     .to_utc();
     let proposal = u64::from_be_bytes(bytes.as_ref()[1 + length_time..].try_into().unwrap());
-    // TODO
 
     (proposal, time)
 }
