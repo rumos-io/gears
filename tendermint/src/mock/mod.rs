@@ -37,7 +37,7 @@ impl<G> From<InitState<G>> for RequestInitChain<G> {
             consensus_params: init_state.consensus_params,
             validators: init_state.validators,
             app_genesis: init_state.app_genesis,
-            initial_height: init_state.initial_height as i64,
+            initial_height: init_state.initial_height,
         }
     }
 }
