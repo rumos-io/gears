@@ -43,7 +43,10 @@ impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PK, PSK, P
 
         let mut store = subspace_mut(ctx, subspace_key);
 
-        store.raw_key_set(proposal.key, proposal.value)?;
+        // This block is still safe, but I use it to make sure to indicate that this method could break any 
+        unsafe {
+            store.raw_key_set(proposal.key, proposal.value)?;
+        }
 
         Ok(())
     }

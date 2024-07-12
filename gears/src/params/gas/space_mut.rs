@@ -44,8 +44,8 @@ impl<DB: Database> GasParamsSpaceMut<'_, DB> {
         Ok(())
     }
 
-    // TODO:ME What about marking it unsafe?
-    pub fn raw_key_set(
+    #[cfg(feature = "governance")]
+    pub unsafe fn raw_key_set(
         &mut self,
         key: impl IntoIterator<Item = u8>,
         value: impl IntoIterator<Item = u8>,
