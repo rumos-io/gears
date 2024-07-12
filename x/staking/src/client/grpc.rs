@@ -1,6 +1,3 @@
-// /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
-/// TODO:ME move to staking module when it's hooked into gaia-rs
-/// /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
 use gears::baseapp::{NodeQueryHandler, QueryRequest, QueryResponse};
 use ibc_proto::{
     cosmos::staking::v1beta1::{
