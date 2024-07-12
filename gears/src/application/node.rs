@@ -27,20 +27,32 @@ pub trait Node:
     type ApplicationConfig: ApplicationConfig;
 }
 
-pub struct NodeApplication<'a, Core: Node, DB: Database, DBO: DatabaseBuilder<DB>> {
+pub struct NodeApplication<
+    Core: Node,
+    DB: Database,
+    DBO: DatabaseBuilder<DB>,
+    AHB: FnOnce(Config<Core::ApplicationConfig>) -> Core::Handler,
+> {
     core: Core,
-    abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
+    abci_handler_builder: AHB,
 
     params_subspace_key: Core::ParamsSubspaceKey,
     db_builder: DBO,
     _marker: PhantomData<DB>,
 }
 
-impl<'a, Core: Node, DB: Database, DBO: DatabaseBuilder<DB>> NodeApplication<'a, Core, DB, DBO> {
+impl<
+        'a,
+        Core: Node,
+        DB: Database,
+        DBO: DatabaseBuilder<DB>,
+        AHB: FnOnce(Config<Core::ApplicationConfig>) -> Core::Handler,
+    > NodeApplication<Core, DB, DBO, AHB>
+{
     pub fn new(
         core: Core,
         db_builder: DBO,
-        abci_handler_builder: &'a dyn Fn(Config<Core::ApplicationConfig>) -> Core::Handler,
+        abci_handler_builder: AHB,
         params_subspace_key: Core::ParamsSubspaceKey,
     ) -> Self {
         Self {
