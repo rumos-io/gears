@@ -5,7 +5,7 @@ pub mod node;
 /// It's reason exists to add user specific commands which doesn't supports usually.
 #[allow(unused_variables)]
 pub trait AuxHandler {
-    type AuxCommands; // TODO: use NilAuxCommand as default if/when associated type defaults land https://github.com/rust-lang/rust/issues/29661
+    type AuxCommands;
     type Aux;
 
     fn prepare_aux(&self, command: Self::AuxCommands) -> anyhow::Result<Self::Aux> {

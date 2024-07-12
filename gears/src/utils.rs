@@ -80,7 +80,7 @@ impl TmpChild {
                 "#,
             &vec![],
             &options,
-        )?; // TODO: make it work for windows too?
+        )?; // QA: make it work for windows too? Docker would be answer
 
         let script = format!(
             "./tendermint start --home {}",

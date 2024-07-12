@@ -149,7 +149,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let header = self
             .get_block_header()
-            .expect("block header is set in begin block"); //TODO: return error
+            .expect("block header is set in begin block"); //TODO:ME return error
         let height = header.height;
 
         let consensus_params = {

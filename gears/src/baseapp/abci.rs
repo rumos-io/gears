@@ -45,15 +45,15 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
-        info!("Got init chain request"); // TODO: should we move logs to proxy?
+        info!("Got init chain request"); // TODO:ME should we move logs to proxy?
 
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
-        //TODO: handle request height > 1 as is done in SDK
+        //TODO:ME handle request height > 1 as is done in SDK
 
         let mut ctx = InitContext::new(
             &mut multi_store,
-            request.initial_height as u32, // TODO: make request height u32
+            request.initial_height as u32, // TODO:ME make request height u32
             request.time,
             request.chain_id,
         );
@@ -67,7 +67,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),
             validators: request.validators,
-            app_hash: "hash_goes_here".into(), //TODO: set app hash - note this will be the hash of block 1
+            app_hash: "hash_goes_here".into(), //TODO:ME set app hash - note this will be the hash of block 1
         }
     }
 
@@ -121,7 +121,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let mut state = self.state.write().expect(POISONED_LOCK);
 
         let result = match r#type {
-            0 | 1 => self.run_tx(tx.clone(), &mut state.check_mode), // TODO: ReCheckTxMode
+            0 | 1 => self.run_tx(tx.clone(), &mut state.check_mode),
             _ => panic!("unknown Request CheckTx type: {}", r#type),
         };
 

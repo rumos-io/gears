@@ -36,7 +36,7 @@ impl PlainGasMeter for BasicGasMeter {
         if self.is_past_limit() {
             Gas::Finite(FiniteGas::ZERO)
         } else {
-            Gas::Finite(self.limit - self.consumed) // TODO: this could go negative
+            Gas::Finite(self.limit - self.consumed) // TODO:ME this could go negative
         }
     }
 

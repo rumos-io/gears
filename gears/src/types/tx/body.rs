@@ -33,11 +33,11 @@ pub struct TxBody<M> {
     /// extension_options are arbitrary options that can be added by chains
     /// when the default options are not sufficient. If any of these are present
     /// and can't be handled, the transaction will be rejected
-    pub extension_options: Vec<Any>, //TODO: use a domain type here
+    pub extension_options: Vec<Any>, //TODO:ME use a domain type here
     /// extension_options are arbitrary options that can be added by chains
     /// when the default options are not sufficient. If any of these are present
     /// and can't be handled, they will be ignored
-    pub non_critical_extension_options: Vec<Any>, //TODO: use a domain type here
+    pub non_critical_extension_options: Vec<Any>, //TODO:ME use a domain type here
 }
 
 impl<M> TxBody<M> {
@@ -91,7 +91,7 @@ impl<M: TxMessage> From<TxBody<M>> for inner::TxBody {
                 .map(|this| this.into())
                 .collect(),
             memo: tx_body.memo,
-            timeout_height: tx_body.timeout_height as u64, //TODO: consider using a copy of the raw TxBody struct which has a u32 timeout_height
+            timeout_height: tx_body.timeout_height as u64, //TODO:ME consider using a copy of the raw TxBody struct which has a u32 timeout_height
             extension_options: tx_body
                 .extension_options
                 .into_iter()

@@ -19,8 +19,6 @@ pub struct RocksDB {
     db: Arc<DBWithThreadMode<SingleThreaded>>, // QA: Are we sure? Probably
 }
 
-// TODO: remove panics
-
 impl RocksDB {
     pub fn new<P>(path: P) -> Result<RocksDB, Error>
     where
@@ -36,7 +34,7 @@ impl Database for RocksDB {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>> {
         self.db
             .get(key)
-            .unwrap_or_else(|e| panic!("unrecoverable database error {}", e)) //TODO: this is probably not the right thing to do when handling a abci or REST query. Perhaps we should have a must_get method?
+            .unwrap_or_else(|e| panic!("unrecoverable database error {}", e))
     }
 
     fn put(&self, key: Vec<u8>, value: Vec<u8>) {

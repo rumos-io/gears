@@ -81,7 +81,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP))?; // TODO:IBC
+        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP))?;
 
         Ok(())
     }
@@ -214,7 +214,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP))?; // TODO:IBC
+        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP))?;
 
         Ok(())
     }

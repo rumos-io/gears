@@ -17,7 +17,6 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<AbciQueryRequest>,
     ) -> Result<Response<AbciQueryResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -25,7 +24,6 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<GetNodeInfoRequest>,
     ) -> Result<Response<GetNodeInfoResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -33,7 +31,7 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<GetSyncingRequest>,
     ) -> Result<Response<GetSyncingResponse>, Status> {
-        //TODO: query the node for syncing status and return it
+        // query the node for syncing status and return it
         info!("Received a gRPC request health::get_syncing");
         Ok(Response::new(GetSyncingResponse { syncing: false }))
     }
@@ -42,7 +40,6 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<GetLatestBlockRequest>,
     ) -> Result<Response<GetLatestBlockResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -50,7 +47,6 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<GetBlockByHeightRequest>,
     ) -> Result<Response<GetBlockByHeightResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -58,7 +54,6 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<GetLatestValidatorSetRequest>,
     ) -> Result<Response<GetLatestValidatorSetResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -66,7 +61,6 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<GetValidatorSetByHeightRequest>,
     ) -> Result<Response<GetValidatorSetByHeightResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 }

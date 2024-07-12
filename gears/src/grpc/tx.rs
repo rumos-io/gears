@@ -17,7 +17,7 @@ impl Service for TxService {
         _request: Request<SimulateRequest>,
     ) -> Result<Response<SimulateResponse>, Status> {
         info!("Received a gRPC request tx::simulate");
-        // TODO: run simulation once implemented
+        //  run simulation once implemented
         Ok(Response::new(SimulateResponse {
             gas_info: None,
             result: None,
@@ -28,7 +28,6 @@ impl Service for TxService {
         &self,
         _request: Request<GetTxRequest>,
     ) -> Result<Response<GetTxResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -36,7 +35,6 @@ impl Service for TxService {
         &self,
         _request: Request<BroadcastTxRequest>,
     ) -> Result<Response<BroadcastTxResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -44,7 +42,6 @@ impl Service for TxService {
         &self,
         _request: Request<GetTxsEventRequest>,
     ) -> Result<Response<GetTxsEventResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 
@@ -52,7 +49,6 @@ impl Service for TxService {
         &self,
         _request: Request<GetBlockWithTxsRequest>,
     ) -> Result<Response<GetBlockWithTxsResponse>, Status> {
-        //TODO: implement
         unimplemented!()
     }
 }

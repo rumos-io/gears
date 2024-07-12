@@ -27,8 +27,6 @@ pub type AccAddress = BaseAddress<0>;
 pub type ValAddress = BaseAddress<1>;
 pub type ConsAddress = BaseAddress<2>;
 
-// TODO: when more complex const parameter types arrive, replace u8 with &'static str
-// https://github.com/rust-lang/rust/issues/95174
 #[derive(Debug, PartialEq, Eq, Clone, Hash, PartialOrd, Ord)]
 pub struct BaseAddress<const PREFIX: u8>(Vec<u8>);
 

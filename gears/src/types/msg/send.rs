@@ -66,12 +66,11 @@ impl From<MsgSend> for inner::MsgSend {
 
 impl Protobuf<inner::MsgSend> for MsgSend {}
 
-//TODO: should to Any be implemented at the individual message type?
 impl From<MsgSend> for Any {
     fn from(msg: MsgSend) -> Self {
         Any {
             type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-            value: msg.encode_vec().expect("msg"), // TODO
+            value: msg.encode_vec().expect("msg"),
         }
     }
 }

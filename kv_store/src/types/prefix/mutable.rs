@@ -7,7 +7,7 @@ use super::immutable::ImmutablePrefixStore;
 /// Wraps an mutable KVStore with a prefix
 #[derive(Debug)]
 pub struct MutablePrefixStore<'a, DB> {
-    pub(crate) store: KVStoreMut<'a, DB>, //TODO: does this need to own the store?
+    pub(crate) store: KVStoreMut<'a, DB>,
     pub(crate) prefix: Vec<u8>,
 }
 
@@ -32,7 +32,7 @@ impl<DB: Database> MutablePrefixStore<'_, DB> {
     }
 
     pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(&mut self, k: KI, v: VI) {
-        // TODO: do we need to check for zero length keys as with the KVStore::set?
+        // TODO:ME do we need to check for zero length keys as with the KVStore::set?
         let full_key = [self.prefix.clone(), k.into_iter().collect()].concat();
         self.store.set(full_key, v);
     }

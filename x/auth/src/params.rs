@@ -87,7 +87,6 @@ impl ParamsSerialize for AuthsParams {
 
 impl ParamsDeserialize for AuthsParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
-        // TODO:NOW THIS IS AWFUL
         Self {
             max_memo_characters: ParamKind::U64
                 .parse_param(fields.remove(KEY_MAX_MEMO_CHARACTERS).unwrap())

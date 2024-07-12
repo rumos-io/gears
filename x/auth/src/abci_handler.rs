@@ -62,7 +62,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
                     .into())
-                // TODO:IBC
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

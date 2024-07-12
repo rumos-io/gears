@@ -28,7 +28,7 @@ impl From<DecimalCoin> for DecimalCoinRaw {
 #[serde(try_from = "DecimalCoinRaw", into = "DecimalCoinRaw")]
 pub struct DecimalCoin {
     pub denom: Denom,
-    pub amount: Decimal256, // TODO:LATER DO WE HAVE LOCAL COPY?
+    pub amount: Decimal256,
 }
 
 impl Coin for DecimalCoin {

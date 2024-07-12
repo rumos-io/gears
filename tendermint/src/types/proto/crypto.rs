@@ -11,12 +11,12 @@ pub enum PublicKey {
         rename = "tendermint/PubKeyEd25519",
         with = "crate::types::serializers::bytes::base64string"
     )]
-    Ed25519(Vec<u8>), //TODO: should we check that bytes contain a valid public key?
+    Ed25519(Vec<u8>), //TODO:ME should we check that bytes contain a valid public key?
     #[serde(
         rename = "tendermint/PubKeySecp256k1",
         with = "crate::types::serializers::bytes::base64string"
     )]
-    Secp256k1(Vec<u8>), //TODO: should we check that bytes contain a valid public key?
+    Secp256k1(Vec<u8>), //TODO:ME should we check that bytes contain a valid public key?
 }
 
 impl PublicKey {

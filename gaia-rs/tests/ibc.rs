@@ -64,7 +64,7 @@
 //     let cmd = CliCreateClient {
 //         client_state: serde_json::to_string(&state)?,
 //         consensus_state: serde_json::to_string(&consensus)?,
-//         signer: Signer::from("TODO"),
+//         signer: Signer::from(""),
 //     };
 //     let args_cmd = IbcTxCli {
 //         command: IbcCommands::ClientCreate(cmd),
@@ -94,8 +94,8 @@
 
 //     let cli_args = CliUpdateClient {
 //         client_id: ClientId::from_str("07-tendermint-0")?,
-//         client_message: String::new(), // TODO: !!!!!! what msg here should be?
-//         signer: Signer::from("TODO"),
+//         client_message: String::new(), //  !!!!!! what msg here should be?
+//         signer: Signer::from(""),
 //     };
 
 //     let args_cmd = IbcTxCli {
@@ -130,7 +130,7 @@
 //         upgraded_consensus_state: String::new(),
 //         proof_upgrade_client: String::new(),
 //         proof_upgrade_consensus_state: String::new(),
-//         signer: Signer::from("TODO"),
+//         signer: Signer::from(""),
 //     };
 
 //     let args_cmd = IbcTxCli {

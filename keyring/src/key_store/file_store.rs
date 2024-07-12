@@ -120,7 +120,7 @@ fn open<'a>(
                 })
             } else {
                 let password = Some(
-                    //TODO: wrap password in secret
+                    //TODO:ME wrap password in secret
                     rpassword::prompt_password("Enter keyring passphrase: ").map_err(|e| {
                         Error::IO {
                             msg: e.to_string(),

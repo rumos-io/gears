@@ -13,7 +13,7 @@ num-bigint = { workspace = true }
 num-format = { workspace = true, features = ["with-num-bigint"] }
 num-traits = { workspace = true }
 secp256k1 = { workspace = true, features = ["hashes"] }
-ibc-proto = { workspace = true }                                  # TODO: should we import through gears via core-types?
+ibc-proto = { workspace = true }
 
 #log
 tracing = { workspace = true }

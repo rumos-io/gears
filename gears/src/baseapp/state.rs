@@ -43,7 +43,6 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         self.deliver_mode.multi_store.caches_clear();
     }
 
-    // TODO: It would be better to find difference in caches and extend it, but this solution is quicker
     pub fn cache_update(&mut self, store: &mut MultiBank<DB, AH::StoreKey, ApplicationStore>) {
         let cache = store.caches_copy();
 

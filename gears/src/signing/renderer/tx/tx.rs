@@ -32,7 +32,7 @@ pub struct Envelope<M> {
     memo: String,
     fees: Option<UnsignedCoins>,
     fee_payer: Option<AccAddress>,
-    fee_granter: String, // TODO: this should be an AccAddress
+    fee_granter: String, // TODO:ME this should be an AccAddress
     tip: Option<UnsignedCoins>,
     tipper: Option<AccAddress>,
     gas_limit: u64,
@@ -50,12 +50,12 @@ impl<M: TxMessage> Envelope<M> {
             .body
             .to_owned()
             .encode_vec()
-            .expect(IBC_ENCODE_UNWRAP); // TODO:IBC
+            .expect(IBC_ENCODE_UNWRAP);
         let auth_info_bytes = tx_data
             .auth_info
             .to_owned()
             .encode_vec()
-            .expect(IBC_ENCODE_UNWRAP); // TODO:IBC
+            .expect(IBC_ENCODE_UNWRAP);
 
         let (tip, tipper) = match tx_data.auth_info.tip {
             Some(Tip { amount, tipper }) => (amount, Some(tipper)),

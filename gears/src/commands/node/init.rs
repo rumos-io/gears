@@ -104,7 +104,7 @@ pub fn init<G: Serialize, AC: ApplicationConfig>(
 
 #[derive(Debug, thiserror::Error)]
 pub enum InitError {
-    // TODO: reduce error count
+    // TODO:ME reduce error count
     #[error("Could not create config directory {0}")]
     CreateConfigDirectory(#[source] std::io::Error),
     #[error("Could not create data directory {0}")]

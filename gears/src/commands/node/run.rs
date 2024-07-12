@@ -89,7 +89,7 @@ pub fn run<
     cmd: RunCommand,
     db_builder: DBO,
     params_subspace_key: PSK,
-    abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO: why trait object here. Why not FnOnce?
+    abci_handler_builder: &dyn Fn(Config<AC>) -> H, // TODO:ME ~~why trait object here. Why not FnOnce?~~ Remove
     router_builder: RB,
 ) -> Result<(), RunError> {
     let RunCommand {

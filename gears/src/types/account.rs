@@ -209,11 +209,11 @@ impl From<Account> for Any {
         match account {
             Account::Base(base) => Any {
                 type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                value: base.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
+                value: base.encode_vec().expect(IBC_ENCODE_UNWRAP),
             },
             Account::Module(module) => Any {
                 type_url: "/cosmos.auth.v1beta1.ModuleAccount".to_string(),
-                value: module.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
+                value: module.encode_vec().expect(IBC_ENCODE_UNWRAP),
             },
         }
     }

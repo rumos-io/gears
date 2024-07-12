@@ -110,7 +110,7 @@ pub struct BlockParams {
 
 impl Default for BlockParams {
     fn default() -> Self {
-        // TODO: implement defaults
+        // TODO:ME implement defaults
         // from sdk testing setup
         BlockParams {
             max_bytes: 200_000.to_string(),
@@ -159,7 +159,7 @@ pub struct EvidenceParams {
 
 impl Default for EvidenceParams {
     fn default() -> Self {
-        // TODO: update defaults
+        // TODO:ME update defaults
         // from sdk testing setup
         EvidenceParams {
             max_age_num_blocks: 302400.to_string(),

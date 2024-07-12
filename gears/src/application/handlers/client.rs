@@ -61,9 +61,9 @@ pub trait TxHandler {
             amount: fees,
             gas_limit: 200_000_u64
                 .try_into()
-                .expect("hard coded gas limit is valid"), //TODO: remove hard coded gas limit
-            payer: None,        //TODO: remove hard coded payer
-            granter: "".into(), //TODO: remove hard coded granter
+                .expect("hard coded gas limit is valid"), //TODO:ME remove hard coded gas limit
+            payer: None,        //TODO:ME remove hard coded payer
+            granter: "".into(), //TODO:ME remove hard coded granter
         };
 
         let address = key.get_address();
@@ -82,13 +82,13 @@ pub trait TxHandler {
 
         let tx_body = TxBody {
             messages: vec![msg],
-            memo: String::new(),                    // TODO: remove hard coded
-            timeout_height: 0,                      // TODO: remove hard coded
-            extension_options: vec![],              // TODO: remove hard coded
-            non_critical_extension_options: vec![], // TODO: remove hard coded
+            memo: String::new(),                    // TODO:ME remove hard coded
+            timeout_height: 0,                      // TODO:ME remove hard coded
+            extension_options: vec![],              // TODO:ME remove hard coded
+            non_critical_extension_options: vec![], // TODO:ME remove hard coded
         };
 
-        let tip = None; //TODO: remove hard coded
+        let tip = None; //TODO:ME remove hard coded
 
         let raw_tx = match mode {
             SignMode::Direct => create_signed_transaction_direct(
@@ -172,7 +172,7 @@ mod inner {
     pub use core_types::query::response::account::QueryAccountResponse;
 }
 
-// TODO: we're assuming here that the app has an auth module which handles this query
+// TODO:ME we're assuming here that the app has an auth module which handles this query
 pub(crate) fn get_account_latest(
     address: AccAddress,
     node: &str,
@@ -187,7 +187,7 @@ pub(crate) fn get_account_latest(
     )
 }
 
-// TODO: we're assuming here that the app has a bank module which handles this query
+// TODO:ME we're assuming here that the app has a bank module which handles this query
 pub(crate) fn get_denom_metadata(
     base: Denom,
     node: &str,
@@ -196,7 +196,7 @@ pub(crate) fn get_denom_metadata(
 
     execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
         "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
-        query.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+        query.encode_vec().expect(IBC_ENCODE_UNWRAP),
         node,
         None,
     )

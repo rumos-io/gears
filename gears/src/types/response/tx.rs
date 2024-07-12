@@ -23,7 +23,7 @@ pub struct TxResponse<M: TxMessage> {
     /// non-deterministic.
     pub raw_log: String,
     /// The output of the application's logger (typed). May be non-deterministic.
-    pub logs: String, // TODO: may need to be typed in futureVec<AbciMessageLog>,
+    pub logs: String, // TODO:ME may need to be typed in futureVec<AbciMessageLog>,
     /// Additional information. May be non-deterministic.
     pub info: String,
     /// Amount of gas requested for transaction.

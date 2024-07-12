@@ -58,11 +58,6 @@ pub trait ParamsSubspaceKey:
     fn name(&self) -> &'static str;
 }
 
-// TODO:LATER For PR with xmod to change any params
-// pub trait ModuleParams {
-//     fn module_params<PSK: ParamsSubspaceKey, P: Params>() -> (PSK, P);
-// }
-
 pub trait ParamsSerialize {
     /// Return all unique keys for this structure
     fn keys() -> HashSet<&'static str>;
