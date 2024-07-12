@@ -89,7 +89,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         match msg {
             Message::Send(msg_send) => Ok(self
                 .keeper

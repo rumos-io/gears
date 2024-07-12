@@ -17,7 +17,7 @@ pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), anyhow::Error>;
+    ) -> anyhow::Result<()>;
 }
 
 pub trait ABCIHandler: Clone + Send + Sync + 'static {
@@ -38,13 +38,13 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), anyhow::Error>;
+    ) -> anyhow::Result<()>;
 
     fn tx<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
-    ) -> Result<(), anyhow::Error>;
+    ) -> anyhow::Result<()>;
 
     #[allow(unused_variables)]
     fn begin_block<'a, DB: Database>(
@@ -73,5 +73,5 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, anyhow::Error>;
+    ) -> anyhow::Result<bytes::Bytes>;
 }

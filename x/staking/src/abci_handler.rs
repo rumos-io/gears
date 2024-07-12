@@ -71,7 +71,7 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         match msg {
             Message::CreateValidator(msg) => Ok(self.keeper.create_validator(ctx, msg)?),
             Message::EditValidator(msg) => Ok(self.keeper.edit_validator(ctx, msg)?),

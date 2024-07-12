@@ -119,7 +119,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
             Message::Staking(msg) => self.staking_abci_handler.tx(ctx, msg),
@@ -159,7 +159,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &QueryContext<DB, GaiaStoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, anyhow::Error> {
+    ) -> anyhow::Result<bytes::Bytes> {
         if query.path.starts_with("/cosmos.auth") {
             Ok(self.auth_abci_handler.query(ctx, query)?)
         } else if query.path.starts_with("/cosmos.bank") {
@@ -177,7 +177,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         tx: &TxWithRaw<Message>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         self.ante_handler.run(ctx, tx)
     }
 

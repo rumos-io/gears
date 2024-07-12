@@ -96,7 +96,7 @@ impl<
         &self,
         _ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         _tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         Ok(())
     }
 
@@ -104,7 +104,7 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
-    ) -> Result<(), anyhow::Error> {
+    ) -> anyhow::Result<()> {
         enum EmitEvent {
             Regular,
             Deposit(u64),
@@ -237,7 +237,7 @@ impl<
             height: _,
             prove: _,
         }: RequestQuery,
-    ) -> Result<Bytes, anyhow::Error> {
+    ) -> anyhow::Result<Bytes> {
         let query = match path.as_str() {
             QueryDepositRequest::QUERY_URL => GovQuery::Deposit(QueryDepositRequest::decode(data)?),
             QueryDepositsRequest::QUERY_URL => {
