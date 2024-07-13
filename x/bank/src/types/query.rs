@@ -1,6 +1,6 @@
 use gears::{
-    core::{errors::CoreError, query::request::PageRequest},
-    rest::response::PaginationResponse,
+    core::errors::CoreError,
+    rest::{request::PaginationRequest, response::PaginationResponse},
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
@@ -16,11 +16,39 @@ mod inner {
     pub use gears::core::base::coin::Coin;
     pub use gears::core::query::request::bank::QueryAllBalancesRequest;
     pub use gears::core::query::request::bank::QueryBalanceRequest;
+    pub use gears::core::query::request::bank::QueryDenomsMetadataRequest;
     pub use gears::core::query::response::bank::QueryAllBalancesResponse;
     pub use gears::core::query::response::bank::QueryBalanceResponse;
     pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
     pub use gears::core::query::response::PageResponse;
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct QueryDenomsMetadataRequest {
+    pub pagination: Option<PaginationRequest>,
+}
+
+impl TryFrom<inner::QueryDenomsMetadataRequest> for QueryDenomsMetadataRequest {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryDenomsMetadataRequest { pagination }: inner::QueryDenomsMetadataRequest,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            pagination: pagination.map(PaginationRequest::from),
+        })
+    }
+}
+
+impl From<QueryDenomsMetadataRequest> for inner::QueryDenomsMetadataRequest {
+    fn from(QueryDenomsMetadataRequest { pagination }: QueryDenomsMetadataRequest) -> Self {
+        Self {
+            pagination: pagination.map(PaginationRequest::into),
+        }
+    }
+}
+
+impl Protobuf<inner::QueryDenomsMetadataRequest> for QueryDenomsMetadataRequest {}
 
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
 #[derive(Clone, PartialEq, Debug)]
@@ -64,7 +92,7 @@ pub struct QueryAllBalancesRequest {
     /// address is the address to query balances for.
     pub address: AccAddress,
     /// pagination defines an optional pagination for the request.
-    pub pagination: Option<PageRequest>,
+    pub pagination: Option<PaginationRequest>,
 }
 
 impl TryFrom<inner::QueryAllBalancesRequest> for QueryAllBalancesRequest {
@@ -76,7 +104,7 @@ impl TryFrom<inner::QueryAllBalancesRequest> for QueryAllBalancesRequest {
 
         Ok(Self {
             address,
-            pagination: raw.pagination,
+            pagination: raw.pagination.map(PaginationRequest::from),
         })
     }
 }
@@ -85,7 +113,7 @@ impl From<QueryAllBalancesRequest> for inner::QueryAllBalancesRequest {
     fn from(query: QueryAllBalancesRequest) -> inner::QueryAllBalancesRequest {
         Self {
             address: query.address.to_string(),
-            pagination: query.pagination,
+            pagination: query.pagination.map(PaginationRequest::into),
         }
     }
 }
@@ -115,19 +143,23 @@ impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
 
         Ok(QueryAllBalancesResponse {
             balances,
-            pagination: raw.pagination.map(|this| this.into()),
+            pagination: raw.pagination.map(PaginationResponse::from),
         })
     }
 }
 
 impl From<QueryAllBalancesResponse> for inner::QueryAllBalancesResponse {
-    fn from(query: QueryAllBalancesResponse) -> inner::QueryAllBalancesResponse {
-        let balances: Vec<UnsignedCoin> = query.balances;
+    fn from(
+        QueryAllBalancesResponse {
+            balances,
+            pagination,
+        }: QueryAllBalancesResponse,
+    ) -> inner::QueryAllBalancesResponse {
         let balances = balances.into_iter().map(inner::Coin::from).collect();
 
         Self {
             balances,
-            pagination: query.pagination.map(|this| this.into()),
+            pagination: pagination.map(PaginationResponse::into),
         }
     }
 }

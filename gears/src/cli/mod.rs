@@ -1,3 +1,4 @@
+pub mod pagination;
 use std::io::Write;
 
 use clap::{Command, CommandFactory, Subcommand};
