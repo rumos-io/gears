@@ -1,9 +1,9 @@
-use super::pagination::parse_pagination;
-use crate::rest::{error::HTTPError, pagination::Pagination};
+use super::request::{parse_pagination, PaginationRequest};
+use super::response::PaginationResponse;
+use crate::rest::error::HTTPError;
 use crate::types::response::any::AnyTx;
 use crate::types::response::tx::TxResponse;
 use crate::types::response::tx_event::GetTxsEventResponse;
-use crate::types::response::PageResponse;
 use crate::types::tx::{Tx, TxMessage};
 use axum::extract::{Query as AxumQuery, State};
 use axum::Json;
@@ -51,7 +51,7 @@ pub struct RawEvents {
 
 pub async fn txs<M: TxMessage>(
     events: AxumQuery<RawEvents>,
-    pagination: AxumQuery<Pagination>,
+    pagination: AxumQuery<PaginationRequest>,
     State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,
 ) -> Result<Json<GetTxsEventResponse<M>>, HTTPError> {
     let client = HttpClient::new(tendermint_rpc_address).expect("hard coded URL is valid");
@@ -109,7 +109,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
     let total = txs.len().try_into().map_err(|_| HTTPError::bad_gateway())?;
 
     Ok(GetTxsEventResponse {
-        pagination: Some(PageResponse {
+        pagination: Some(PaginationResponse {
             next_key: vec![],
             total,
         }),

@@ -1,8 +1,6 @@
 use gears::{
-    core::errors::CoreError,
-    ext::FallibleMapExt,
-    tendermint::types::proto::Protobuf,
-    types::{address::AccAddress, response::PageResponse},
+    core::errors::CoreError, ext::FallibleMapExt, rest::response::PaginationResponse,
+    tendermint::types::proto::Protobuf, types::address::AccAddress,
 };
 use serde::{Deserialize, Serialize};
 
@@ -58,7 +56,7 @@ impl Protobuf<inner::QueryProposalResponse> for QueryProposalResponse {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryProposalsResponse {
     pub proposals: Vec<Proposal>,
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<inner::QueryProposalsResponse> for QueryProposalsResponse {
@@ -134,7 +132,7 @@ impl Protobuf<inner::QueryVoteResponse> for QueryVoteResponse {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryVotesResponse {
     pub votes: Vec<MsgVoteWeighted>,
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<inner::QueryVotesResponse> for QueryVotesResponse {
@@ -242,7 +240,7 @@ impl Protobuf<inner::QueryDepositResponse> for QueryDepositResponse {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 pub struct QueryDepositsResponse {
     pub deposits: Vec<Deposit>,
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<inner::QueryDepositsResponse> for QueryDepositsResponse {

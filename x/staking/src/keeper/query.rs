@@ -4,7 +4,7 @@ use crate::{
     QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationResponse,
     QueryValidatorRequest, QueryValidatorResponse, RedelegationEntryResponse, RedelegationResponse,
 };
-use gears::{context::query::QueryContext, types::response::PageResponse};
+use gears::{context::query::QueryContext, rest::response::PaginationResponse};
 
 impl<
         SK: StoreKey,
@@ -112,7 +112,7 @@ impl<
             None
         } else {
             // TODO: make correct pagination response
-            Some(PageResponse {
+            Some(PaginationResponse {
                 next_key: vec![],
                 total: redelegation_responses.len() as u64,
             })

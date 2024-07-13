@@ -1,11 +1,11 @@
 use gears::{
     core::{errors::CoreError, query::request::PageRequest},
+    rest::response::PaginationResponse,
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
         base::{coin::UnsignedCoin, errors::CoinError},
         denom::Denom,
-        response::PageResponse,
         tx::metadata::{Metadata, MetadataParseError},
     },
 };
@@ -99,7 +99,7 @@ pub struct QueryAllBalancesResponse {
     /// balances is the balances of all the coins.
     pub balances: Vec<UnsignedCoin>,
     /// pagination defines the pagination in the response.
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse {
@@ -172,7 +172,7 @@ pub struct QueryTotalSupplyResponse {
     /// pagination defines the pagination in the response.
     ///
     /// Since: cosmos-sdk 0.43
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<inner::QueryTotalSupplyResponse> for QueryTotalSupplyResponse {
@@ -227,7 +227,7 @@ pub struct QueryDenomsMetadataResponse {
     // metadata provides the client information for all the registered tokens.
     pub metadatas: Vec<Metadata>,
     // pagination defines the pagination in the response.
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse {

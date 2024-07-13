@@ -1,9 +1,7 @@
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
-    types::{
-        address::{AddressError, ConsAddress},
-        response::PageResponse,
-    },
+    rest::response::PaginationResponse,
+    types::address::{AddressError, ConsAddress},
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -157,7 +155,7 @@ impl From<QuerySigningInfosResponse> for QuerySigningInfosResponseRaw {
 pub struct QuerySigningInfosResponse {
     /// Info is the signing info of all validators
     pub info: Vec<ValidatorSigningInfo>,
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<QuerySigningInfosResponseRaw> for QuerySigningInfosResponse {

@@ -14,6 +14,7 @@ use gears::{
     },
     error::{AppError, IBC_ENCODE_UNWRAP},
     params::ParamsSubspaceKey,
+    rest::response::PaginationResponse,
     store::{
         database::{ext::UnwrapCorrupt, Database},
         StoreKey,
@@ -30,7 +31,6 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
-        response::PageResponse,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
@@ -370,7 +370,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         QuerySigningInfosResponse {
             info: signing_infos,
             // TODO: make correct pagination struct
-            pagination: Some(PageResponse {
+            pagination: Some(PaginationResponse {
                 next_key: vec![],
                 total,
             }),

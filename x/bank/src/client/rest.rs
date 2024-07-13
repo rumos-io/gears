@@ -6,7 +6,7 @@ use axum::{
 use gears::types::address::AccAddress;
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::{error::HTTPError, Pagination, RestState},
+    rest::{error::HTTPError, request::PaginationRequest, RestState},
     types::denom::Denom,
 };
 use serde::Deserialize;
@@ -38,7 +38,7 @@ pub async fn get_balances<
     App: NodeQueryHandler<QReq, QRes>,
 >(
     Path(address): Path<AccAddress>,
-    _pagination: Query<Pagination>,
+    _pagination: Query<PaginationRequest>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::AllBalances(QueryAllBalancesRequest {

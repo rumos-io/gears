@@ -1,5 +1,5 @@
 use gears::{
-    core::errors::CoreError, rest::Pagination, tendermint::types::proto::Protobuf,
+    core::errors::CoreError, rest::request::PaginationRequest, tendermint::types::proto::Protobuf,
     types::address::AccAddress,
 };
 
@@ -57,7 +57,7 @@ pub struct QueryProposalsRequest {
     pub voter: Option<AccAddress>,
     pub depositor: Option<AccAddress>,
     pub proposal_status: Option<ProposalStatus>,
-    pub pagination: Option<Pagination>,
+    pub pagination: Option<PaginationRequest>,
 }
 
 impl QueryProposalsRequest {
@@ -160,7 +160,7 @@ impl Protobuf<inner::QueryVoteRequest> for QueryVoteRequest {}
 #[derive(Clone, PartialEq, Debug)]
 pub struct QueryVotesRequest {
     pub proposal_id: u64,
-    pub pagination: Option<Pagination>,
+    pub pagination: Option<PaginationRequest>,
 }
 
 impl QueryVotesRequest {
@@ -288,7 +288,7 @@ impl Protobuf<inner::QueryDepositRequest> for QueryDepositRequest {}
 #[derive(Clone, PartialEq, Debug)]
 pub struct QueryDepositsRequest {
     pub proposal_id: u64,
-    pub pagination: Option<Pagination>,
+    pub pagination: Option<PaginationRequest>,
 }
 
 impl QueryDepositsRequest {

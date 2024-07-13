@@ -5,12 +5,12 @@ use crate::{
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
     error::{AppError, IBC_ENCODE_UNWRAP},
+    rest::response::PaginationResponse,
     store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
-        response::PageResponse,
         uint::Uint256,
     },
 };
@@ -391,7 +391,7 @@ impl From<RedelegationResponse> for RedelegationResponseRaw {
 pub struct QueryRedelegationResponse {
     /// Redelegation with balance.
     pub redelegation_responses: Vec<RedelegationResponse>,
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<QueryRedelegationResponseRaw> for QueryRedelegationResponse {

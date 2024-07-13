@@ -4,7 +4,7 @@ const QUERY_DEFAULT_LIMIT: u8 = 100;
 
 //#[derive(FromForm, Debug)]
 #[derive(Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
-pub struct Pagination {
+pub struct PaginationRequest {
     offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.
     /// If left empty it will default to a value to be set by each app.
@@ -12,7 +12,7 @@ pub struct Pagination {
 }
 
 // ParsePagination validate PageRequest and returns page number & limit.
-pub fn parse_pagination(pagination: Pagination) -> (u32, u8) {
+pub fn parse_pagination(pagination: PaginationRequest) -> (u32, u8) {
     let offset = pagination.offset.unwrap_or(0);
     let mut limit = pagination.limit.unwrap_or(QUERY_DEFAULT_LIMIT);
 
@@ -25,7 +25,7 @@ pub fn parse_pagination(pagination: Pagination) -> (u32, u8) {
     (page, limit)
 }
 
-impl From<core_types::query::request::PageRequest> for Pagination {
+impl From<core_types::query::request::PageRequest> for PaginationRequest {
     fn from(
         core_types::query::request::PageRequest {
             key: _,
@@ -49,7 +49,7 @@ mod tests {
 
     #[test]
     fn parse_pagination_works() {
-        let (page, limit) = parse_pagination(Pagination {
+        let (page, limit) = parse_pagination(PaginationRequest {
             offset: Some(100),
             limit: Some(30),
         });
@@ -57,7 +57,7 @@ mod tests {
         assert_eq!(page, 4);
         assert_eq!(limit, 30);
 
-        let (page, limit) = parse_pagination(Pagination {
+        let (page, limit) = parse_pagination(PaginationRequest {
             offset: Some(100),
             limit: Some(0),
         });
@@ -65,7 +65,7 @@ mod tests {
         assert_eq!(page, 2);
         assert_eq!(limit, 100);
 
-        let (page, limit) = parse_pagination(Pagination {
+        let (page, limit) = parse_pagination(PaginationRequest {
             offset: None,
             limit: None,
         });
