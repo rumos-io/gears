@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use super::response::PaginationResponse;
+
 pub(crate) const QUERY_DEFAULT_LIMIT: u8 = 100;
 
 //#[derive(FromForm, Debug)]
@@ -12,6 +14,41 @@ pub struct PaginationRequest {
     /// limit is the total number of results to be returned in the result page.
     /// If left empty it will default to a value to be set by each app.
     pub limit: u8,
+}
+
+impl PaginationRequest {
+    pub fn paginate<T>(
+        pagination: Option<Self>,
+        iterator: Vec<T>,
+    ) -> (Option<PaginationResponse>, Vec<T>) {
+        let total = iterator.len();
+        let paginate = pagination.is_some();
+
+        let sorted = match pagination {
+            Some(PaginationRequest { offset, limit }) => iterator
+                .into_iter()
+                .skip(
+                    offset
+                        .checked_mul(limit as u32)
+                        .map(|this| this as usize)
+                        .unwrap_or(usize::MAX),
+                )
+                .take(limit as usize)
+                .collect(),
+            None => iterator,
+        };
+
+        (
+            match paginate {
+                true => Some(PaginationResponse {
+                    next_key: Vec::new(), // TODO:ME
+                    total: total as u64,
+                }),
+                false => None,
+            },
+            sorted,
+        )
+    }
 }
 
 impl Default for PaginationRequest {

@@ -3,11 +3,13 @@ use gears::core::errors::CoreError as IbcError;
 use gears::error::AppError;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::params::ParamsSubspaceKey;
+use gears::rest::request::PaginationRequest;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadataResponse};
+use gears::types::store::gas::ext::GasResultExt;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
 use gears::x::module::Module;
@@ -61,8 +63,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 BankNodeQueryResponse::Balance(res)
             }
             BankNodeQueryRequest::AllBalances(req) => {
-                let res = self.keeper.query_all_balances(ctx, req);
-                BankNodeQueryResponse::AllBalances(res)
+                BankNodeQueryResponse::AllBalances(self.query_balances(ctx, req))
             }
             BankNodeQueryRequest::TotalSupply => {
                 let res = self.keeper.get_paginated_total_supply(ctx);
@@ -103,16 +104,13 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         query: RequestQuery,
     ) -> std::result::Result<bytes::Bytes, AppError> {
         match query.path.as_str() {
-            "/cosmos.bank.v1beta1.Query/AllBalances" => {
+            QueryAllBalancesRequest::TYPE_URL => {
                 let req = QueryAllBalancesRequest::decode(query.data)
                     .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self
-                    .keeper
-                    .query_all_balances(ctx, req)
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                let result = self.query_balances(ctx, req);
+
+                Ok(result.encode_vec().expect(IBC_ENCODE_UNWRAP).into()) // TODO:IBC
             }
             "/cosmos.bank.v1beta1.Query/TotalSupply" => Ok(QueryTotalSupplyResponse {
                 supply: self.keeper.get_paginated_total_supply(ctx),
@@ -158,5 +156,24 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         self.keeper.init_genesis(ctx, genesis)
+    }
+
+    fn query_balances<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryAllBalancesRequest {
+            address,
+            pagination,
+        }: QueryAllBalancesRequest,
+    ) -> QueryAllBalancesResponse {
+        let (pagination, balances) = PaginationRequest::paginate(
+            pagination,
+            self.keeper.all_balances(ctx, address).unwrap_gas(),
+        );
+
+        QueryAllBalancesResponse {
+            balances,
+            pagination,
+        }
     }
 }

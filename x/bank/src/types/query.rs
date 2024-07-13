@@ -95,6 +95,10 @@ pub struct QueryAllBalancesRequest {
     pub pagination: Option<PaginationRequest>,
 }
 
+impl QueryAllBalancesRequest {
+    pub const TYPE_URL: &'static str = "/cosmos.bank.v1beta1.Query/AllBalances";
+}
+
 impl TryFrom<inner::QueryAllBalancesRequest> for QueryAllBalancesRequest {
     type Error = CoreError;
 

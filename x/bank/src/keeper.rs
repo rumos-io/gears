@@ -1,8 +1,5 @@
 use crate::types::iter::balances::BalanceIterator;
-use crate::types::query::{
-    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
-    QueryDenomsMetadataResponse,
-};
+use crate::types::query::{QueryBalanceRequest, QueryBalanceResponse, QueryDenomsMetadataResponse};
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
@@ -171,7 +168,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         addr: AccAddress,
     ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        self.get_all_balances(ctx, addr)
+        self.all_balances(ctx, addr)
     }
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -420,31 +417,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         Ok(())
     }
 
-    pub fn query_all_balances<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        req: QueryAllBalancesRequest,
-    ) -> QueryAllBalancesResponse {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(req.address);
-        let account_store = bank_store.prefix_store(prefix);
-
-        let mut balances = vec![];
-
-        for (_, coin) in account_store.into_range(..) {
-            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-            balances.push(coin);
-        }
-
-        QueryAllBalancesResponse {
-            balances,
-            pagination: None,
-        }
-    }
-
-    pub fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: AccAddress,
