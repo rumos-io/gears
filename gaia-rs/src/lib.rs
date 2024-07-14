@@ -46,7 +46,6 @@ pub mod modules;
 pub mod params;
 pub mod query;
 pub mod rest;
-mod staking_grpc;
 pub mod store_keys;
 
 #[derive(Debug, Clone, Serialize)]
@@ -243,7 +242,7 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
 
         Server::builder()
             .add_service(reflection_service)
-            .add_service(staking_grpc::new(app.clone()))
+            .add_service(staking::grpc::new(app.clone()))
             .add_service(auth::grpc::new(app.clone()))
             .add_service(bank::grpc::new(app))
             .add_service(health_server())
