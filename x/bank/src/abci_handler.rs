@@ -2,13 +2,17 @@ use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
 use gears::core::errors::CoreError as IbcError;
 use gears::error::AppError;
 use gears::error::IBC_ENCODE_UNWRAP;
+use gears::ext::Pagination;
 use gears::params::ParamsSubspaceKey;
 use gears::rest::request::PaginationRequest;
+use gears::rest::response::PaginationResponse;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::query::metadata::{QueryDenomMetadataRequest, QueryDenomMetadataResponse};
+use gears::types::query::metadata::{
+    QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
+};
 use gears::types::store::gas::ext::GasResultExt;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
@@ -31,7 +35,7 @@ pub enum BankNodeQueryRequest {
     Balance(QueryBalanceRequest),
     AllBalances(QueryAllBalancesRequest),
     TotalSupply,
-    DenomsMetadata,
+    DenomsMetadata(QueryDenomsMetadataRequest),
     DenomMetadata(QueryDenomMetadataRequest),
 }
 
@@ -72,9 +76,8 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     pagination: None,
                 })
             }
-            BankNodeQueryRequest::DenomsMetadata => {
-                let res = self.keeper.query_denoms_metadata(ctx);
-                BankNodeQueryResponse::DenomsMetadata(res)
+            BankNodeQueryRequest::DenomsMetadata(req) => {
+                BankNodeQueryResponse::DenomsMetadata(self.query_denoms(ctx, req))
             }
             BankNodeQueryRequest::DenomMetadata(req) => {
                 let metadata = self
@@ -110,7 +113,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
                 let result = self.query_balances(ctx, req);
 
-                Ok(result.encode_vec().expect(IBC_ENCODE_UNWRAP).into()) // TODO:IBC
+                Ok(result.encode_vec().expect(IBC_ENCODE_UNWRAP).into())
             }
             "/cosmos.bank.v1beta1.Query/TotalSupply" => Ok(QueryTotalSupplyResponse {
                 supply: self.keeper.get_paginated_total_supply(ctx),
@@ -130,13 +133,16 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     .expect(IBC_ENCODE_UNWRAP)
                     .into()) // TODO:IBC
             }
-            "/cosmos.bank.v1beta1.Query/DenomsMetadata" => {
-                Ok(self
-                    .keeper
-                    .query_denoms_metadata(ctx)
+            QueryDenomsMetadataRequest::TYPE_URL => {
+                let req = QueryDenomsMetadataRequest::decode(query.data)
+                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
+
+                let result = self
+                    .query_denoms(ctx, req)
                     .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                    .expect(IBC_ENCODE_UNWRAP);
+
+                Ok(result.into())
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)
@@ -174,6 +180,29 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         QueryAllBalancesResponse {
             balances,
             pagination,
+        }
+    }
+
+    fn query_denoms<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryDenomsMetadataRequest { pagination }: QueryDenomsMetadataRequest,
+    ) -> QueryDenomsMetadataResponse {
+        let paginate = pagination.is_some();
+
+        let (total, metadatas) = self
+            .keeper
+            .denoms_metadata(ctx, pagination.map(Pagination::from));
+
+        QueryDenomsMetadataResponse {
+            metadatas,
+            pagination: match paginate {
+                true => Some(PaginationResponse {
+                    next_key: Vec::new(),
+                    total: total as u64,
+                }),
+                false => None,
+            },
         }
     }
 }

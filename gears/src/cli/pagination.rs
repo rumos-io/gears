@@ -1,6 +1,9 @@
 use clap::ArgAction;
 
-use crate::rest::request::{PaginationRequest, QUERY_DEFAULT_LIMIT};
+use crate::{
+    ext::Pagination,
+    rest::request::{PaginationRequest, QUERY_DEFAULT_LIMIT},
+};
 
 #[derive(Debug, Clone, clap::Args)]
 pub struct CliPaginationRequest {
@@ -33,5 +36,17 @@ impl From<PaginationRequest> for CliPaginationRequest {
 impl From<CliPaginationRequest> for PaginationRequest {
     fn from(CliPaginationRequest { offset, limit }: CliPaginationRequest) -> Self {
         Self { offset, limit }
+    }
+}
+
+impl From<CliPaginationRequest> for Pagination {
+    fn from(CliPaginationRequest { offset, limit }: CliPaginationRequest) -> Self {
+        Self {
+            offset: offset
+                .checked_mul(limit as u32)
+                .map(|this| this as usize)
+                .unwrap_or(usize::MAX),
+            limit: limit as usize,
+        }
     }
 }

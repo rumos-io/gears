@@ -1,14 +1,50 @@
 //! TODO:ME MOVE THIS FILE TO X
 
+use core_types::errors::CoreError;
 use serde::Serialize;
 use tendermint::types::proto::Protobuf;
 
-use crate::types::{denom::Denom, tx::metadata::Metadata};
+use crate::{
+    rest::request::PaginationRequest,
+    types::{denom::Denom, tx::metadata::Metadata},
+};
 
 mod inner {
     pub use core_types::bank::Metadata;
     pub use core_types::query::request::bank::QueryDenomMetadataRequest;
+    pub use core_types::query::request::bank::QueryDenomsMetadataRequest;
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct QueryDenomsMetadataRequest {
+    pub pagination: Option<PaginationRequest>,
+}
+
+impl QueryDenomsMetadataRequest {
+    pub const TYPE_URL: &'static str = "/cosmos.bank.v1beta1.Query/DenomsMetadata";
+}
+
+impl TryFrom<inner::QueryDenomsMetadataRequest> for QueryDenomsMetadataRequest {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryDenomsMetadataRequest { pagination }: inner::QueryDenomsMetadataRequest,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            pagination: pagination.map(PaginationRequest::from),
+        })
+    }
+}
+
+impl From<QueryDenomsMetadataRequest> for inner::QueryDenomsMetadataRequest {
+    fn from(QueryDenomsMetadataRequest { pagination }: QueryDenomsMetadataRequest) -> Self {
+        Self {
+            pagination: pagination.map(PaginationRequest::into),
+        }
+    }
+}
+
+impl Protobuf<inner::QueryDenomsMetadataRequest> for QueryDenomsMetadataRequest {}
 
 #[derive(Clone, PartialEq)]
 pub struct QueryDenomMetadataRequest {

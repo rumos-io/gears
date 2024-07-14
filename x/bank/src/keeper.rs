@@ -1,11 +1,12 @@
 use crate::types::iter::balances::BalanceIterator;
-use crate::types::query::{QueryBalanceRequest, QueryBalanceResponse, QueryDenomsMetadataResponse};
+use crate::types::query::{QueryBalanceRequest, QueryBalanceResponse};
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
+use gears::ext::{IteratorPaginate, Pagination};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
@@ -654,27 +655,46 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         );
     }
 
-    pub fn query_denoms_metadata<DB: Database>(
+    pub fn denoms_metadata<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-    ) -> QueryDenomsMetadataResponse {
+        pagination: Option<Pagination>,
+    ) -> (usize, Vec<Metadata>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
-        for (_, metadata) in bank_store
-            .prefix_store(DENOM_METADATA_PREFIX)
-            .into_range(..)
-        {
-            let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-            denoms_metadata.push(metadata);
+        if let Some(pagination) = pagination {
+            for (_, metadata) in bank_store
+                .clone()
+                .prefix_store(DENOM_METADATA_PREFIX)
+                .into_range(..)
+                .paginate(pagination)
+            {
+                let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
+                    .ok()
+                    .unwrap_or_corrupt();
+                denoms_metadata.push(metadata);
+            }
+        } else {
+            for (_, metadata) in bank_store
+                .clone()
+                .prefix_store(DENOM_METADATA_PREFIX)
+                .into_range(..)
+            {
+                let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
+                    .ok()
+                    .unwrap_or_corrupt();
+                denoms_metadata.push(metadata);
+            }
         }
 
-        QueryDenomsMetadataResponse {
-            metadatas: denoms_metadata,
-            pagination: None,
-        }
+        (
+            bank_store
+                .prefix_store(DENOM_METADATA_PREFIX)
+                .into_range(..)
+                .count(),
+            denoms_metadata,
+        )
     }
 
     pub fn delegate_coins_from_account_to_module<

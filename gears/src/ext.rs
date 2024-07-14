@@ -31,3 +31,24 @@ impl<T, U, E> FallibleMapExt<T, U, E> for Option<T> {
         }
     }
 }
+
+#[derive(Debug, Clone)]
+pub struct Pagination {
+    pub offset: usize,
+    pub limit: usize,
+}
+
+pub trait IteratorPaginate {
+    type Item;
+
+    fn paginate(self, pagination: impl Into<Pagination>) -> impl Iterator<Item = Self::Item>;
+}
+
+impl<T: Iterator<Item = U>, U> IteratorPaginate for T {
+    type Item = U;
+
+    fn paginate(self, pagination: impl Into<Pagination>) -> impl Iterator<Item = Self::Item> {
+        let Pagination { offset, limit } = pagination.into();
+        self.skip(offset * limit).take(limit)
+    }
+}
