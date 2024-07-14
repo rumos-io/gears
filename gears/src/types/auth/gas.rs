@@ -52,6 +52,20 @@ impl Gas {
     }
 
     // TODO: write a test for this
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        let self_inner: u64 = self.0.into();
+        let rhs_inner: u64 = rhs.0.into();
+
+        let result = self_inner.checked_sub(rhs_inner)?;
+
+        if result > u63::MAX.into() {
+            None
+        } else {
+            Some(Gas::new(u63::new(result)))
+        }
+    }
+
+    // TODO: write a test for this
     pub fn checked_mul(self, rhs: Self) -> Option<Self> {
         // Div and Mul are not implemented for u63 so we can't do this:
         // if self != Self::ZERO && rhs > Self::MAX / self {
