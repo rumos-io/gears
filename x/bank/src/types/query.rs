@@ -19,9 +19,41 @@ mod inner {
     pub use gears::core::query::request::bank::QueryDenomsMetadataRequest;
     pub use gears::core::query::response::bank::QueryAllBalancesResponse;
     pub use gears::core::query::response::bank::QueryBalanceResponse;
+    pub use gears::core::query::response::bank::QueryTotalSupplyRequest;
     pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
     pub use gears::core::query::response::PageResponse;
 }
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct QueryTotalSupplyRequest {
+    pub pagination: Option<PaginationRequest>,
+}
+
+impl QueryTotalSupplyRequest {
+    pub const TYPE_URL: &'static str = "/cosmos.bank.v1beta1.Query/TotalSupply";
+}
+
+impl TryFrom<inner::QueryTotalSupplyRequest> for QueryTotalSupplyRequest {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryTotalSupplyRequest { pagination }: inner::QueryTotalSupplyRequest,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            pagination: pagination.map(PaginationRequest::from),
+        })
+    }
+}
+
+impl From<QueryTotalSupplyRequest> for inner::QueryTotalSupplyRequest {
+    fn from(QueryTotalSupplyRequest { pagination }: QueryTotalSupplyRequest) -> Self {
+        Self {
+            pagination: pagination.map(PaginationRequest::into),
+        }
+    }
+}
+
+impl Protobuf<inner::QueryTotalSupplyRequest> for QueryTotalSupplyRequest {}
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct QueryDenomsMetadataRequest {

@@ -439,17 +439,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     }
 
     /// Gets the total supply of every denom
-    // TODO: should be paginated
-    // TODO: should ignore coins with zero balance
-    // TODO: does this method guarantee that coins are sorted?
-    pub fn get_paginated_total_supply<DB: Database>(
+    pub fn total_supply<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-    ) -> Vec<UnsignedCoin> {
+        pagination: Option<Pagination>,
+    ) -> (usize, Vec<UnsignedCoin>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
-        supply_store
+        let supply_store = supply_store
             .into_range(..)
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
@@ -460,7 +458,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     .unwrap_or_corrupt();
                 UnsignedCoin { denom, amount }
             })
-            .collect()
+            .filter(|this| !this.amount.is_zero());
+
+        let total = supply_store.clone().count();
+
+        let mut store: Vec<_> = match pagination {
+            Some(pagination) => supply_store.paginate(pagination).collect(),
+            None => supply_store.collect(),
+        };
+
+        store.sort_by_key(|this| this.denom.clone());
+
+        (total, store)
     }
 
     pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(

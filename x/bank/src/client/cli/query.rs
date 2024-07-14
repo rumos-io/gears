@@ -83,7 +83,7 @@ impl QueryHandler for BankQueryHandler {
             BankCommands::Balances(_) => BankQueryResponse::Balances(
                 QueryAllBalancesResponse::decode::<Bytes>(query_bytes.into())?,
             ),
-            BankCommands::DenomMetadata { pagination : _ } => BankQueryResponse::DenomMetadata(
+            BankCommands::DenomMetadata { pagination: _ } => BankQueryResponse::DenomMetadata(
                 QueryDenomsMetadataResponse::decode::<Bytes>(query_bytes.into())?,
             ),
         };

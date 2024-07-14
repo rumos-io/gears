@@ -21,7 +21,7 @@ use serde::Serialize;
 
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
-    QueryDenomsMetadataResponse, QueryTotalSupplyResponse,
+    QueryDenomsMetadataResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
 
@@ -34,7 +34,7 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, 
 pub enum BankNodeQueryRequest {
     Balance(QueryBalanceRequest),
     AllBalances(QueryAllBalancesRequest),
-    TotalSupply,
+    TotalSupply(QueryTotalSupplyRequest),
     DenomsMetadata(QueryDenomsMetadataRequest),
     DenomMetadata(QueryDenomMetadataRequest),
 }
@@ -69,12 +69,8 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             BankNodeQueryRequest::AllBalances(req) => {
                 BankNodeQueryResponse::AllBalances(self.query_balances(ctx, req))
             }
-            BankNodeQueryRequest::TotalSupply => {
-                let res = self.keeper.get_paginated_total_supply(ctx);
-                BankNodeQueryResponse::TotalSupply(QueryTotalSupplyResponse {
-                    supply: res,
-                    pagination: None,
-                })
+            BankNodeQueryRequest::TotalSupply(req) => {
+                BankNodeQueryResponse::TotalSupply(self.query_total_supply(ctx, req))
             }
             BankNodeQueryRequest::DenomsMetadata(req) => {
                 BankNodeQueryResponse::DenomsMetadata(self.query_denoms(ctx, req))
@@ -115,13 +111,16 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
                 Ok(result.encode_vec().expect(IBC_ENCODE_UNWRAP).into())
             }
-            "/cosmos.bank.v1beta1.Query/TotalSupply" => Ok(QueryTotalSupplyResponse {
-                supply: self.keeper.get_paginated_total_supply(ctx),
-                pagination: None,
+            QueryTotalSupplyRequest::TYPE_URL => {
+                let req = QueryTotalSupplyRequest::decode(query.data)
+                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .query_total_supply(ctx, req)
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into())
             }
-            .encode_vec()
-            .expect(IBC_ENCODE_UNWRAP)
-            .into()), // TODO:IBC
             "/cosmos.bank.v1beta1.Query/Balance" => {
                 let req = QueryBalanceRequest::decode(query.data)
                     .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
@@ -196,6 +195,29 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         QueryDenomsMetadataResponse {
             metadatas,
+            pagination: match paginate {
+                true => Some(PaginationResponse {
+                    next_key: Vec::new(),
+                    total: total as u64,
+                }),
+                false => None,
+            },
+        }
+    }
+
+    fn query_total_supply<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryTotalSupplyRequest { pagination }: QueryTotalSupplyRequest,
+    ) -> QueryTotalSupplyResponse {
+        let paginate = pagination.is_some();
+
+        let (total, supply) = self
+            .keeper
+            .total_supply(ctx, pagination.map(Pagination::from));
+
+        QueryTotalSupplyResponse {
+            supply,
             pagination: match paginate {
                 true => Some(PaginationResponse {
                     next_key: Vec::new(),
