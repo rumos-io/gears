@@ -25,10 +25,10 @@ fn main() -> anyhow::Result<()> {
     args.execute_or_help(
         |command| ClientApplication::new(GaiaCoreClient).execute(command.try_into()?),
         |command| {
-            NodeApplication::<'_, GaiaCore, _, _>::new(
+            NodeApplication::<GaiaCore, _, _, _>::new(
                 GaiaCore,
                 RocksDBBuilder,
-                &GaiaABCIHandler::new,
+                GaiaABCIHandler::new,
                 GaiaParamsStoreKey::BaseApp,
             )
             .execute::<GaiaApplication>(command.try_into()?)

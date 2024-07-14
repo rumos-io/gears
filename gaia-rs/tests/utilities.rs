@@ -61,10 +61,10 @@ pub fn run_gaia_and_tendermint(
     std::thread::sleep(Duration::from_secs(10));
 
     let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, _, _>::new(
+        let node = NodeApplication::<GaiaCore, _, _, _>::new(
             GaiaCore,
             RocksDBBuilder,
-            &GaiaABCIHandler::new,
+            GaiaABCIHandler::new,
             GaiaParamsStoreKey::BaseApp,
         );
 
