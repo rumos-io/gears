@@ -6,27 +6,24 @@ use serde::Serialize;
 #[derive(Debug, Clone, Serialize)]
 pub enum Message {}
 
-//TODO: the fact that this implements proto_messages::cosmos::tx::v1beta1::Message  is not used
+// You can't execute this methods with empty enum
 impl TxMessage for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
-        vec![]
+        unreachable!()
     }
 
     fn validate_basic(&self) -> Result<(), String> {
-        Ok(())
+        unreachable!()
     }
 
     fn type_url(&self) -> &'static str {
-        "TODO"
+        unreachable!()
     }
 }
 
 impl From<Message> for Any {
     fn from(_msg: Message) -> Self {
-        Any {
-            type_url: "/cosmos.auth.v1beta1".to_string(),
-            value: vec![],
-        }
+        unreachable!()
     }
 }
 
