@@ -38,6 +38,12 @@ pub struct Pagination {
     pub limit: usize,
 }
 
+impl From<(usize, usize)> for Pagination {
+    fn from((offset, limit): (usize, usize)) -> Self {
+        Self { offset, limit }
+    }
+}
+
 pub trait IteratorPaginate {
     type Item;
 

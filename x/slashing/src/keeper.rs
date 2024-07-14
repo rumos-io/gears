@@ -366,14 +366,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         } else {
             vec![]
         };
-        let total = signing_infos.len() as u64;
+        let total = signing_infos.len();
         QuerySigningInfosResponse {
             info: signing_infos,
             // TODO: make correct pagination struct
-            pagination: Some(PaginationResponse {
-                next_key: vec![],
-                total,
-            }),
+            pagination: Some(PaginationResponse::new(total)),
         }
     }
 

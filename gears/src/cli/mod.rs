@@ -1,4 +1,3 @@
-pub mod pagination;
 use std::io::Write;
 
 use clap::{Command, CommandFactory, Subcommand};
@@ -20,6 +19,7 @@ pub mod aux;
 pub mod genesis;
 pub mod init;
 pub mod key;
+pub mod pagination;
 pub mod query;
 pub mod run;
 pub mod tx;

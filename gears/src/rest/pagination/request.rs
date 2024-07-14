@@ -54,10 +54,7 @@ impl PaginationRequest {
 
         (
             match paginate {
-                true => Some(PaginationResponse {
-                    next_key: Vec::new(), // TODO:ME
-                    total: total as u64,
-                }),
+                true => Some(PaginationResponse::new(total)),
                 false => None,
             },
             sorted,
