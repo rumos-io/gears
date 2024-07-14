@@ -10,6 +10,15 @@ pub struct PaginationResponse {
     pub total: u64,
 }
 
+impl PaginationResponse {
+    pub fn new(total: usize) -> Self {
+        Self {
+            next_key: Vec::new(),
+            total: total as u64,
+        }
+    }
+}
+
 impl From<inner::PageResponse> for PaginationResponse {
     fn from(inner::PageResponse { next_key, total }: inner::PageResponse) -> Self {
         Self { next_key, total }

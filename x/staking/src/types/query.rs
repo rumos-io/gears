@@ -5,7 +5,7 @@ use crate::{
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
     error::{AppError, IBC_ENCODE_UNWRAP},
-    rest::response::PaginationResponse,
+    rest::{request::PaginationRequest, response::PaginationResponse},
     store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
@@ -109,7 +109,7 @@ pub struct QueryRedelegationRequest {
     /// dst_validator_addr defines the validator address to redelegate to.
     pub dst_validator_address: Option<ValAddress>,
     /// pagination defines an optional pagination for the request.
-    pub pagination: Option<PageRequest>,
+    pub pagination: Option<PaginationRequest>,
 }
 
 impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
@@ -145,7 +145,7 @@ impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
             delegator_address,
             src_validator_address,
             dst_validator_address,
-            pagination: raw.pagination.map(|p| p.into()),
+            pagination: raw.pagination.map(PaginationRequest::from),
         })
     }
 }
@@ -407,7 +407,7 @@ impl TryFrom<QueryRedelegationResponseRaw> for QueryRedelegationResponse {
         };
         Ok(QueryRedelegationResponse {
             redelegation_responses,
-            pagination: raw.pagination.map(|p| p.into()),
+            pagination: raw.pagination.map(PaginationResponse::from),
         })
     }
 }

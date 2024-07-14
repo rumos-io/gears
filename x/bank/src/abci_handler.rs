@@ -196,10 +196,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         QueryDenomsMetadataResponse {
             metadatas,
             pagination: match paginate {
-                true => Some(PaginationResponse {
-                    next_key: Vec::new(),
-                    total: total as u64,
-                }),
+                true => Some(PaginationResponse::new(total)),
                 false => None,
             },
         }
@@ -219,10 +216,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         QueryTotalSupplyResponse {
             supply,
             pagination: match paginate {
-                true => Some(PaginationResponse {
-                    next_key: Vec::new(),
-                    total: total as u64,
-                }),
+                true => Some(PaginationResponse::new(total)),
                 false => None,
             },
         }
