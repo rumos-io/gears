@@ -52,6 +52,12 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         key: KI,
         value: VI,
     ) {
+        let key = key.into_iter().collect::<Vec<_>>();
+
+        if key.is_empty() {
+            panic!("tried to set empty key to store")
+        }
+
         self.cache.set(key, value)
     }
 
