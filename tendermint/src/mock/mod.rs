@@ -59,7 +59,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
 
         Self {
             app,
-            app_hash: res.app_hash,
+            app_hash: res.app_hash.to_vec().into(),
             height: 0,
             chain_id: init_state.chain_id,
             time: init_state.time,

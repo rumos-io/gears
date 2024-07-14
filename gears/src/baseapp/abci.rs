@@ -67,7 +67,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),
             validators: request.validators,
-            app_hash: "hash_goes_here".into(), //TODO: set app hash - note this will be the hash of block 1
+            app_hash: ctx.multi_store().head_commit_hash(),
         }
     }
 

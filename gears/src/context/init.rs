@@ -1,6 +1,7 @@
 use database::prefix::PrefixDB;
 use database::Database;
 use kv_store::types::kv::immutable::KVStore;
+use kv_store::types::multi::immutable::MultiStore;
 use kv_store::types::{kv::mutable::KVStoreMut, multi::MultiBank};
 use kv_store::{ApplicationStore, StoreKey};
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
@@ -37,6 +38,10 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
 
     pub fn chain_id(&self) -> &ChainId {
         &self.chain_id
+    }
+
+    pub(crate) fn multi_store(&self) -> MultiStore<'_, DB, SK> {
+        MultiStore::from(&*self.multi_store)
     }
 }
 
