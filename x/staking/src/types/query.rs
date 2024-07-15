@@ -168,7 +168,7 @@ impl From<QueryRedelegationRequest> for QueryRedelegationRequestRaw {
             delegator_address: query.delegator_address.map(|a| a.to_string()),
             src_validator_address: query.src_validator_address.map(|a| a.to_string()),
             dst_validator_address: query.dst_validator_address.map(|a| a.to_string()),
-            pagination: query.pagination.map(|p| p.into()),
+            pagination: query.pagination,
         }
     }
 }

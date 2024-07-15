@@ -10,8 +10,6 @@ thiserror = { workspace = true }
 serde = { workspace = true }
 prost = { workspace = true }
 ibc-proto = { workspace = true }
-bech32 = { workspace = true }
-data-encoding = { workspace = true }
 base64-serde = { workspace = true }
 base64 = { workspace = true }
 

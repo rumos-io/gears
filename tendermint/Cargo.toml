@@ -23,8 +23,6 @@ time = { workspace = true }
 #utils
 thiserror = { workspace = true }
 rand = { workspace = true }
-tracing = { workspace = true }
-anyhow = { workspace = true }
 
 #serialization
 serde = { workspace = true }

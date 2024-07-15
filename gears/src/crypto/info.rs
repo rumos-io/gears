@@ -100,7 +100,7 @@ pub fn create_signed_transaction_textual<
     let auth_info_bytes = auth_info.encode_vec().expect(IBC_ENCODE_UNWRAP);
     let tx_data = TxData {
         body: tx_body,
-        auth_info: auth_info,
+        auth_info,
     };
 
     let sign_mode_handler = SignModeHandler;
