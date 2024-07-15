@@ -106,10 +106,10 @@ impl<
 
         (
             count,
-            match pagination {
-                Some(var) => redelegations.into_iter().paginate(var).collect(),
-                None => redelegations,
-            },
+            redelegations
+                .into_iter()
+                .maybe_paginate(pagination)
+                .collect(),
         )
     }
 

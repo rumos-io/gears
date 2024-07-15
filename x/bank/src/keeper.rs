@@ -467,10 +467,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         let total = supply_store.clone().count();
 
-        let mut store: Vec<_> = match pagination {
-            Some(pagination) => supply_store.paginate(pagination).collect(),
-            None => supply_store.collect(),
-        };
+        let mut store: Vec<_> = supply_store.maybe_paginate(pagination).collect();
 
         store.sort_by_key(|this| this.denom.clone());
 
