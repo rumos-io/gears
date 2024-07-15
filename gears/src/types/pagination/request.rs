@@ -37,7 +37,6 @@ impl Default for PaginationRequest {
     }
 }
 
-
 impl From<core_types::query::request::PageRequest> for PaginationRequest {
     fn from(
         core_types::query::request::PageRequest {
