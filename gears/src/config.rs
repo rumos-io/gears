@@ -41,7 +41,7 @@ impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T 
 #[serde(deny_unknown_fields)]
 #[serde(default)]
 pub struct Config<AC: Default + Clone> {
-    pub tendermint_rpc_address: Url,
+    pub tendermint_rpc_address: Url, // TODO: change to HttpClientUrl when Serialize and Deserialize are implemented
     pub rest_listen_addr: SocketAddr,
     pub address: SocketAddr,
     pub min_gas_prices: Option<MinGasPrices>,

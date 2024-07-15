@@ -37,6 +37,8 @@ pub enum RunError {
     TendermintServer(#[from] tendermint::abci::errors::Error),
     #[error("{0}")]
     Custom(String),
+    #[error("{0}")]
+    TendermintRPC(#[from] tendermint::rpc::error::Error),
 }
 
 #[derive(Debug, Clone, Default, strum::Display)]
@@ -132,7 +134,7 @@ pub fn run<
         app.clone(),
         rest_listen_addr.unwrap_or(config.rest_listen_addr),
         router_builder.build_router::<BaseApp<DB, PSK, H, AI>>(),
-        config.tendermint_rpc_address,
+        config.tendermint_rpc_address.try_into()?,
     );
 
     run_grpc_server(router_builder.build_grpc_router::<BaseApp<DB, PSK, H, AI>>(app.clone()));
