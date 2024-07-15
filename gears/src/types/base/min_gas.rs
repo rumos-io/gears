@@ -64,7 +64,7 @@ impl MinGasPrices {
             for coin in &coins[1..] {
                 // Less than to ensure lexicographical ordering
                 // Equality to ensure that there are no duplications
-                match coin.denom.cmp(&previous_denom) {
+                match coin.denom.cmp(previous_denom) {
                     std::cmp::Ordering::Less => Err(CoinsError::Unsorted),
                     std::cmp::Ordering::Equal => Err(CoinsError::Duplicates),
                     std::cmp::Ordering::Greater => Ok(()),
