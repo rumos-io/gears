@@ -6,7 +6,7 @@ use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::ext::{IteratorPaginate, Pagination, TwoIterators};
+use gears::ext::{IteratorPaginate, Pagination};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
@@ -433,13 +433,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         let mut balances = vec![];
 
-        let iterator = match pagination {
-            Some(pagination) => {
-                TwoIterators::One(account_store.into_range(..).paginate(pagination))
-            }
-            None => TwoIterators::Second(account_store.into_range(..)),
-        };
-        for rcoin in iterator {
+        for rcoin in account_store.into_range(..).maybe_paginate(pagination) {
             let (_, coin) = rcoin?;
             let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
@@ -690,12 +684,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         let total = bank_iterator.clone().count();
 
-        let iterator = match pagination {
-            Some(pagination) => TwoIterators::One(bank_iterator.paginate(pagination)),
-            None => TwoIterators::Second(bank_iterator),
-        };
-
-        for (_, metadata) in iterator {
+        for (_, metadata) in bank_iterator.maybe_paginate(pagination) {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
