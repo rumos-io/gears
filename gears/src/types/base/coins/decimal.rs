@@ -20,6 +20,10 @@ impl DecimalCoins {
         }
 
         for coin in other {
+            // Note:
+            // operator '>' means that all values are greater or equal
+            // operator '>=' means that if some value is equal then we should return false as it
+            // less than the current one
             if coin.amount > self.amount_of(&coin.denom) {
                 return false;
             }
@@ -79,7 +83,12 @@ impl DecimalCoins {
 
     pub fn checked_sub(&self, other: &DecimalCoins) -> Result<Self, CoinsError> {
         if self.is_all_gte(other.inner()) {
-            let coins = self.checked_calculate_iterate(other.inner(), Decimal256::checked_sub)?;
+            let coins: Vec<DecimalCoin> = self
+                .checked_calculate_iterate(other.inner(), Decimal256::checked_sub)?
+                .into_iter()
+                // filter zeros after sub
+                .filter(|c| !c.amount.is_zero())
+                .collect();
             Self::new(coins)
         } else {
             Err(CoinsError::InvalidAmount)
@@ -131,19 +140,72 @@ impl DecimalCoins {
         Self::new(coins)
     }
 
-    pub fn truncate_decimal(&self) -> (UnsignedCoins, DecimalCoins) {
+    pub fn checked_quo_dec_truncate(&self, multiplier: Decimal256) -> Result<Self, CoinsError> {
+        let mut coins = vec![];
+        for coin in self.inner().iter() {
+            coins.push(DecimalCoin::new(
+                coin.amount
+                    .checked_div(multiplier)
+                    .map_err(|_| CoinsError::InvalidAmount)?
+                    .floor(),
+                coin.denom.clone(),
+            ));
+        }
+
+        Self::new(coins)
+    }
+
+    pub fn truncate_decimal(&self) -> (Option<UnsignedCoins>, Option<DecimalCoins>) {
         let (truncated, change): (Vec<UnsignedCoin>, Vec<DecimalCoin>) = self
             .storage
             .iter()
             .map(DecimalCoin::truncate_decimal)
             .unzip();
 
-        (
-            UnsignedCoins::new(truncated.into_iter().filter(|c| !c.amount.is_zero()))
-                .expect("inner structure of coins should be unchanged"),
-            DecimalCoins::new(change.into_iter().filter(|c| !c.amount.is_zero()))
-                .expect("inner structure of coins should be unchanged"),
-        )
+        let truncated: Vec<UnsignedCoin> = truncated
+            .into_iter()
+            .filter(|coin| !coin.amount.is_zero())
+            .collect();
+        let change: Vec<DecimalCoin> = change
+            .into_iter()
+            .filter(|coin| !coin.amount.is_zero())
+            .collect();
+
+        let truncated = if truncated.is_empty() {
+            None
+        } else {
+            Some(
+                UnsignedCoins::new(truncated)
+                    .expect("inner structure of coins should be unchanged"),
+            )
+        };
+        let change = if change.is_empty() {
+            None
+        } else {
+            Some(DecimalCoins::new(change).expect("inner structure of coins should be unchanged"))
+        };
+
+        (truncated, change)
+    }
+
+    /// Intersect will return a new set of coins which contains the minimum DecCoin
+    /// for common denoms found in both `coins` and `coinsB`. For denoms not common
+    /// to both `coins` and `coinsB` the minimum is considered to be 0, thus they
+    /// are not added to the final set. In other words, trim any denom amount from
+    /// coin which exceeds that of coinB, such that (coin.Intersect(coinB)).IsLTE(coinB).
+    /// See also Coins.Min().
+    pub fn intersect(&self, other: &DecimalCoins) -> DecimalCoins {
+        let coins: Vec<_> = self
+            .inner()
+            .iter()
+            .map(|coin| DecimalCoin {
+                denom: coin.denom.clone(),
+                amount: coin.amount.min(other.amount_of(&coin.denom)),
+            })
+            .filter(|coin| !coin.amount.is_zero())
+            .collect();
+        DecimalCoins::new(coins)
+            .expect("inner structure is unchanged except that some coins are filtered")
     }
 }
 

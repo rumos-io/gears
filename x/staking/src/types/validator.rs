@@ -68,12 +68,16 @@ impl StakingValidator for Validator {
         &self.operator_address
     }
 
-    fn bonded_tokens(&self) -> &Uint256 {
-        &self.tokens
+    fn tokens(&self) -> Uint256 {
+        self.tokens
     }
 
-    fn delegator_shares(&self) -> &Decimal256 {
-        &self.delegator_shares
+    fn bonded_tokens(&self) -> Uint256 {
+        self.bonded_tokens()
+    }
+
+    fn delegator_shares(&self) -> Decimal256 {
+        self.delegator_shares
     }
 
     fn cons_pub_key(&self) -> &PublicKey {
@@ -84,8 +88,8 @@ impl StakingValidator for Validator {
         self.jailed
     }
 
-    fn min_self_delegation(&self) -> &Uint256 {
-        &self.min_self_delegation
+    fn min_self_delegation(&self) -> Uint256 {
+        self.min_self_delegation
     }
 
     fn commission(&self) -> Decimal256 {
@@ -138,6 +142,14 @@ impl Validator {
     pub fn abci_validator_update_zero(&self) -> ValidatorUpdate {
         self.abci_validator_update(0)
             .expect("hardcoded value is less than max voting power")
+    }
+
+    pub fn bonded_tokens(&self) -> Uint256 {
+        if self.status == BondStatus::Bonded {
+            self.tokens
+        } else {
+            Uint256::zero()
+        }
     }
 
     pub fn set_initial_commission(&mut self, commission: Commission) {

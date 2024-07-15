@@ -4,7 +4,6 @@ use clap::{Args, Subcommand};
 use gears::types::address::AccAddress;
 
 #[derive(Args, Debug, Clone)]
-/// Unjail validator previously jailed for downtime
 pub struct SlashingTxCli {
     #[command(subcommand)]
     pub command: SlashingCommands,
@@ -12,6 +11,7 @@ pub struct SlashingTxCli {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum SlashingCommands {
+    /// Unjail validator previously jailed for downtime
     Unjail,
 }
 

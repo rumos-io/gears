@@ -4,6 +4,8 @@ pub use cosmwasm_std::Decimal256;
 use cosmwasm_std::{StdError, Uint256};
 
 pub const ONE_DEC: Decimal256 = Decimal256::one();
+// 1/10^18
+pub const SMALLEST_DEC: Decimal256 = Decimal256::new(Uint256::from_u128(1u128));
 // equivalent to Decimal256::from_atomics(1_000_000_000_000_000_000, 0)
 pub const PRECISION_REUSE: Decimal256 = Decimal256::new(Uint256::from_u128(
     1_000_000_000_000_000_000_000_000_000_000_000_000,
