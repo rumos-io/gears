@@ -6,7 +6,7 @@ use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::ext::{IteratorPaginate, Pagination};
+use gears::ext::{IteratorPaginate, Pagination, TwoIterators};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
@@ -169,7 +169,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         addr: AccAddress,
     ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        self.all_balances(ctx, addr)
+        let (_, result) = self.all_balances(ctx, addr, None)?;
+
+        Ok(result)
     }
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -422,20 +424,29 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
+        pagination: Option<Pagination>,
+    ) -> Result<(usize, Vec<UnsignedCoin>), GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(addr);
         let account_store = bank_store.prefix_store(prefix);
+        let total = account_store.clone().into_range(..).count();
 
         let mut balances = vec![];
-        for rcoin in account_store.into_range(..) {
+
+        let iterator = match pagination {
+            Some(pagination) => {
+                TwoIterators::One(account_store.into_range(..).paginate(pagination))
+            }
+            None => TwoIterators::Second(account_store.into_range(..)),
+        };
+        for rcoin in iterator {
             let (_, coin) = rcoin?;
             let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             balances.push(coin);
         }
-        Ok(balances)
+        Ok((total, balances))
     }
 
     /// Gets the total supply of every denom
@@ -672,38 +683,26 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
-        if let Some(pagination) = pagination {
-            for (_, metadata) in bank_store
-                .clone()
-                .prefix_store(DENOM_METADATA_PREFIX)
-                .into_range(..)
-                .paginate(pagination)
-            {
-                let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
-                    .ok()
-                    .unwrap_or_corrupt();
-                denoms_metadata.push(metadata);
-            }
-        } else {
-            for (_, metadata) in bank_store
-                .clone()
-                .prefix_store(DENOM_METADATA_PREFIX)
-                .into_range(..)
-            {
-                let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
-                    .ok()
-                    .unwrap_or_corrupt();
-                denoms_metadata.push(metadata);
-            }
+        let bank_iterator = bank_store
+            .clone()
+            .prefix_store(DENOM_METADATA_PREFIX)
+            .into_range(..);
+
+        let total = bank_iterator.clone().count();
+
+        let iterator = match pagination {
+            Some(pagination) => TwoIterators::One(bank_iterator.paginate(pagination)),
+            None => TwoIterators::Second(bank_iterator),
+        };
+
+        for (_, metadata) in iterator {
+            let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
+                .ok()
+                .unwrap_or_corrupt();
+            denoms_metadata.push(metadata);
         }
 
-        (
-            bank_store
-                .prefix_store(DENOM_METADATA_PREFIX)
-                .into_range(..)
-                .count(),
-            denoms_metadata,
-        )
+        (total, denoms_metadata)
     }
 
     pub fn delegate_coins_from_account_to_module<

@@ -4,7 +4,6 @@ use gears::error::AppError;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ext::Pagination;
 use gears::params::ParamsSubspaceKey;
-use gears::rest::request::PaginationRequest;
 use gears::rest::response::PaginationResponse;
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -171,14 +170,18 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             pagination,
         }: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
-        let (pagination, balances) = PaginationRequest::paginate(
-            pagination,
-            self.keeper.all_balances(ctx, address).unwrap_gas(),
-        );
+        let paginate = pagination.is_some();
+        let (total, balances) = self
+            .keeper
+            .all_balances(ctx, address, pagination.map(Pagination::from))
+            .unwrap_gas();
 
         QueryAllBalancesResponse {
             balances,
-            pagination,
+            pagination: match paginate {
+                true => Some(PaginationResponse::new(total)),
+                false => None,
+            },
         }
     }
 

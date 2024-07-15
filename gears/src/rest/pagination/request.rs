@@ -2,8 +2,6 @@ use serde::Deserialize;
 
 use crate::ext::Pagination;
 
-use super::response::PaginationResponse;
-
 pub(crate) const QUERY_DEFAULT_LIMIT: u8 = 100;
 
 //#[derive(FromForm, Debug)]
@@ -27,38 +25,6 @@ impl From<PaginationRequest> for Pagination {
                 .unwrap_or(usize::MAX),
             limit: limit as usize,
         }
-    }
-}
-
-impl PaginationRequest {
-    pub fn paginate<T>(
-        pagination: Option<Self>,
-        iterator: Vec<T>,
-    ) -> (Option<PaginationResponse>, Vec<T>) {
-        let total = iterator.len();
-        let paginate = pagination.is_some();
-
-        let sorted = match pagination {
-            Some(PaginationRequest { offset, limit }) => iterator
-                .into_iter()
-                .skip(
-                    offset
-                        .checked_mul(limit as u32)
-                        .map(|this| this as usize)
-                        .unwrap_or(usize::MAX),
-                )
-                .take(limit as usize)
-                .collect(),
-            None => iterator,
-        };
-
-        (
-            match paginate {
-                true => Some(PaginationResponse::new(total)),
-                false => None,
-            },
-            sorted,
-        )
     }
 }
 
