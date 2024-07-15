@@ -14,7 +14,6 @@ ibc-proto = { workspace = true }
 #utils
 clap = { workspace = true }
 anyhow = { workspace = true }
-strum = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }
@@ -25,7 +24,6 @@ prost = { workspace = true }
 tracing = { workspace = true }
 
 #other
-tokio = { workspace = true }
 axum = { workspace = true }
 tonic = { workspace = true }
 
