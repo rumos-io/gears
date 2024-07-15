@@ -5,18 +5,21 @@ use gears::types::address::AccAddress;
 use gears::types::tx::TxMessage;
 use serde::Serialize;
 
-use crate::MsgWithdrawDelegatorReward;
+use crate::{MsgSetWithdrawAddr, MsgWithdrawDelegatorReward};
 
 #[derive(Debug, Clone, Serialize)]
 pub enum Message {
     #[serde(rename = "/cosmos.distribution.v1beta1.WithdrawRewards")]
     WithdrawRewards(MsgWithdrawDelegatorReward),
+    #[serde(rename = "/cosmos.distribution.v1beta1.SetWithdrawAddr")]
+    SetWithdrawAddr(MsgSetWithdrawAddr),
 }
 
 impl TxMessage for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
         match self {
             Message::WithdrawRewards(msg) => vec![&msg.delegator_address],
+            Message::SetWithdrawAddr(msg) => vec![&msg.delegator_address],
         }
     }
 
@@ -27,6 +30,7 @@ impl TxMessage for Message {
     fn type_url(&self) -> &'static str {
         match self {
             Message::WithdrawRewards(_) => "/cosmos.distribution.v1beta1.WithdrawRewards",
+            Message::SetWithdrawAddr(_) => "/cosmos.distribution.v1beta1.SetWithdrawAddr",
         }
     }
 }
@@ -36,6 +40,10 @@ impl From<Message> for Any {
         match msg {
             Message::WithdrawRewards(msg) => Any {
                 type_url: "/cosmos.distribution.v1beta1.WithdrawRewards".to_string(),
+                value: msg.encode_vec(),
+            },
+            Message::SetWithdrawAddr(msg) => Any {
+                type_url: "/cosmos.distribution.v1beta1.SetWithdrawAddr".to_string(),
                 value: msg.encode_vec(),
             },
         }
@@ -53,6 +61,11 @@ impl TryFrom<Any> for Message {
                     gears::core::errors::CoreError::DecodeProtobuf(e.to_string())
                 })?;
                 Ok(Message::WithdrawRewards(msg))
+            }
+            "/cosmos.distribution.v1beta1.SetWithdrawAddr" => {
+                let msg = MsgSetWithdrawAddr::decode::<Bytes>(value.value.clone().into())
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
+                Ok(Message::SetWithdrawAddr(msg))
             }
             _ => Err(gears::core::errors::CoreError::DecodeGeneral(
                 "message type not recognized".into(),

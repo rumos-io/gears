@@ -1,6 +1,7 @@
-use crate::{GenesisState, Keeper};
+use crate::{GenesisState, Keeper, Message};
 use gears::{
-    context::{block::BlockContext, init::InitContext, QueryableContext},
+    context::{block::BlockContext, init::InitContext, tx::TxContext, QueryableContext},
+    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::request::begin_block::RequestBeginBlock,
@@ -41,6 +42,19 @@ impl<
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
         if let Err(e) = self.keeper.init_genesis(ctx, genesis) {
             panic!("Initialization of genesis failed with error:\n{e}")
+        }
+    }
+
+    pub fn tx<DB: Database + Sync + Send>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &Message,
+    ) -> Result<(), AppError> {
+        match msg {
+            Message::WithdrawRewards(msg) => self
+                .keeper
+                .withdraw_delegator_reward_and_commission(ctx, msg),
+            Message::SetWithdrawAddr(msg) => self.keeper.set_withdraw_address(ctx, msg),
         }
     }
 

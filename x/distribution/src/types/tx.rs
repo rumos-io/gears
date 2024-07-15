@@ -59,3 +59,51 @@ impl TryFrom<MsgWithdrawDelegatorRewardRaw> for MsgWithdrawDelegatorReward {
 }
 
 impl Protobuf<MsgWithdrawDelegatorRewardRaw> for MsgWithdrawDelegatorReward {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct MsgSetWithdrawAddrRaw {
+    #[prost(bytes, tag = "1")]
+    pub delegator_address: Vec<u8>,
+    #[prost(bytes, tag = "2")]
+    pub withdraw_address: Vec<u8>,
+}
+
+impl From<MsgSetWithdrawAddr> for MsgSetWithdrawAddrRaw {
+    fn from(
+        MsgSetWithdrawAddr {
+            delegator_address,
+            withdraw_address,
+        }: MsgSetWithdrawAddr,
+    ) -> Self {
+        Self {
+            delegator_address: delegator_address.into(),
+            withdraw_address: withdraw_address.into(),
+        }
+    }
+}
+
+/// MsgSetWithdrawAddr represents delegation withdrawal to a delegator
+/// from a single validator.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MsgSetWithdrawAddr {
+    pub delegator_address: AccAddress,
+    pub withdraw_address: AccAddress,
+}
+
+impl TryFrom<MsgSetWithdrawAddrRaw> for MsgSetWithdrawAddr {
+    type Error = AddressError;
+
+    fn try_from(
+        MsgSetWithdrawAddrRaw {
+            delegator_address,
+            withdraw_address,
+        }: MsgSetWithdrawAddrRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            delegator_address: AccAddress::try_from(delegator_address)?,
+            withdraw_address: AccAddress::try_from(withdraw_address)?,
+        })
+    }
+}
+
+impl Protobuf<MsgSetWithdrawAddrRaw> for MsgSetWithdrawAddr {}

@@ -209,7 +209,8 @@ impl<
             ctx,
             validator_operator_addr,
             &current_commission,
-        );
+        )
+        .unwrap_gas();
 
         // update current rewards
         let current_rewards = if let Some(mut cur_reward) = self

@@ -1,4 +1,4 @@
-use crate::{Message, MsgWithdrawDelegatorReward};
+use crate::{Message, MsgSetWithdrawAddr, MsgWithdrawDelegatorReward};
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
 use gears::types::address::{AccAddress, ValAddress};
@@ -18,6 +18,8 @@ pub enum DistributionCommands {
         #[arg(long, default_value_t = false)]
         commission: bool,
     },
+    /// Change the default withdraw address for rewards associated with an address
+    SetWithdrawAddr { withdraw_address: AccAddress },
 }
 
 pub fn run_staking_tx_command(
@@ -33,5 +35,11 @@ pub fn run_staking_tx_command(
             delegator_address: from_address.clone(),
             withdraw_commission: *commission,
         })),
+        DistributionCommands::SetWithdrawAddr { withdraw_address } => {
+            Ok(Message::SetWithdrawAddr(MsgSetWithdrawAddr {
+                delegator_address: from_address.clone(),
+                withdraw_address: withdraw_address.clone(),
+            }))
+        }
     }
 }

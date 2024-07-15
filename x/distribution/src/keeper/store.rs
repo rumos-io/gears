@@ -61,17 +61,17 @@ impl<
     }
 
     /// set the delegator withdraw address
-    pub fn set_delegator_withdraw_addr<DB: Database, CTX: InfallibleContextMut<DB, SK>>(
+    pub fn set_delegator_withdraw_addr<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
         delegator_address: &AccAddress,
         withdraw_address: &AccAddress,
-    ) {
-        let mut store = ctx.infallible_store_mut(&self.store_key);
+    ) -> Result<(), GasStoreErrors> {
+        let mut store = ctx.kv_store_mut(&self.store_key);
         store.set(
             delegator_withdraw_addr_key(delegator_address.clone()),
             Vec::from(withdraw_address.clone()),
-        );
+        )
     }
 
     /// previous_proposer_cons_addr returns the proposer consensus address for the

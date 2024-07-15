@@ -76,6 +76,7 @@ pub fn validator_slash_event_key_prefix(addr: ValAddress, height: u64) -> Vec<u8
     .concat()
 }
 
+#[allow(dead_code)]
 /// validator_slash_event_address_height creates the height from a validator's slash event key
 pub fn validator_slash_event_address_height(key: &[u8]) -> Result<(ValAddress, u64), AddressError> {
     // key is in the format:

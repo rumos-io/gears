@@ -100,6 +100,7 @@ impl<
 
         genesis.delegator_withdraw_infos.iter().for_each(|dwi| {
             self.set_delegator_withdraw_addr(ctx, &dwi.delegator_address, &dwi.withdraw_address)
+                .unwrap_gas()
         });
 
         let previous_proposer = if !genesis.previous_proposer.is_empty() {
@@ -135,6 +136,7 @@ impl<
                     &vac.validator_address,
                     &vac.accumulated,
                 )
+                .unwrap_gas()
             });
 
         genesis.validator_historical_rewards.iter().for_each(|vhr| {

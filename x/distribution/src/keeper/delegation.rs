@@ -1,7 +1,4 @@
-use crate::{
-    keys::validator_slash_event_address_height, DelegatorStartingInfo, SlashEventIterator,
-    ValidatorOutstandingRewards,
-};
+use crate::{DelegatorStartingInfo, SlashEventIterator, ValidatorOutstandingRewards};
 
 use super::*;
 use gears::{

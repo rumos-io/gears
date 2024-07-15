@@ -1,7 +1,7 @@
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 
 use super::*;
-use crate::MsgWithdrawDelegatorReward;
+use crate::{MsgSetWithdrawAddr, MsgWithdrawDelegatorReward};
 
 impl<
         SK: StoreKey,
@@ -53,6 +53,32 @@ impl<
                 ],
             });
         }
+
+        Ok(())
+    }
+
+    pub fn set_withdraw_address<DB: Database>(
+        &self,
+        ctx: &mut TxContext<DB, SK>,
+        msg: &MsgSetWithdrawAddr,
+    ) -> Result<(), AppError> {
+        self.set_delegator_withdraw_addr(ctx, &msg.delegator_address, &msg.withdraw_address)?;
+
+        ctx.push_event(Event {
+            r#type: "message".to_string(),
+            attributes: vec![
+                EventAttribute {
+                    key: "module".into(),
+                    value: self.distribution_module.get_name().into(),
+                    index: false,
+                },
+                EventAttribute {
+                    key: "sender".into(),
+                    value: msg.delegator_address.to_string().into(),
+                    index: false,
+                },
+            ],
+        });
 
         Ok(())
     }
