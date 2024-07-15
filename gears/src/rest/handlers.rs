@@ -1,6 +1,5 @@
-use super::request::{parse_pagination, PaginationRequest};
-use super::response::PaginationResponse;
 use crate::rest::error::HTTPError;
+use crate::types::pagination::response::PaginationResponse;
 use crate::types::response::any::AnyTx;
 use crate::types::response::tx::TxResponse;
 use crate::types::response::tx_event::GetTxsEventResponse;
@@ -16,6 +15,8 @@ use tendermint::rpc::response::tx::search::Response;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 use tendermint::types::proto::Protobuf;
+
+use super::{parse_pagination, Pagination};
 
 // TODO:
 // 1. handle multiple events in /cosmos/tx/v1beta1/txs request
@@ -52,7 +53,7 @@ pub struct RawEvents {
 
 pub async fn txs<M: TxMessage>(
     events: AxumQuery<RawEvents>,
-    pagination: AxumQuery<PaginationRequest>,
+    pagination: AxumQuery<Pagination>,
     State(tendermint_rpc_address): State<HttpClientUrl>,
 ) -> Result<Json<GetTxsEventResponse<M>>, HTTPError> {
     let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");

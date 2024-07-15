@@ -4,10 +4,7 @@ use core_types::errors::CoreError;
 use serde::Serialize;
 use tendermint::types::proto::Protobuf;
 
-use crate::{
-    rest::request::PaginationRequest,
-    types::{denom::Denom, tx::metadata::Metadata},
-};
+use crate::types::{denom::Denom, pagination::request::PaginationRequest, tx::metadata::Metadata};
 
 mod inner {
     pub use core_types::bank::Metadata;

@@ -10,7 +10,6 @@ use gears::{
     error::AppError,
     ext::Pagination,
     params::ParamsSubspaceKey,
-    rest::response::PaginationResponse,
     store::{database::Database, StoreKey},
     tendermint::types::{
         proto::validator::ValidatorUpdate,
@@ -18,7 +17,7 @@ use gears::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },
     },
-    types::store::gas::ext::GasResultExt,
+    types::{pagination::response::PaginationResponse, store::gas::ext::GasResultExt},
     x::{
         keepers::{auth::AuthKeeper, bank::StakingBankKeeper, staking::KeeperHooks},
         module::Module,

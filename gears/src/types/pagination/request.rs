@@ -37,16 +37,6 @@ impl Default for PaginationRequest {
     }
 }
 
-// ParsePagination validate PageRequest and returns page number & limit.
-pub fn parse_pagination(PaginationRequest { offset, mut limit }: PaginationRequest) -> (u32, u8) {
-    if limit == 0 {
-        limit = QUERY_DEFAULT_LIMIT
-    }
-
-    let page = offset / (limit as u32) + 1;
-
-    (page, limit)
-}
 
 impl From<core_types::query::request::PageRequest> for PaginationRequest {
     fn from(
@@ -74,35 +64,5 @@ impl From<PaginationRequest> for core_types::query::request::PageRequest {
             count_total: false,
             reverse: false,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-
-    #[test]
-    fn parse_pagination_works() {
-        let (page, limit) = parse_pagination(PaginationRequest {
-            offset: 100,
-            limit: 30,
-        });
-
-        assert_eq!(page, 4);
-        assert_eq!(limit, 30);
-
-        let (page, limit) = parse_pagination(PaginationRequest {
-            offset: 100,
-            limit: 0,
-        });
-
-        assert_eq!(page, 2);
-        assert_eq!(limit, 100);
-
-        let (page, limit) = parse_pagination(PaginationRequest::default());
-
-        assert_eq!(page, 1);
-        assert_eq!(limit, 100);
     }
 }

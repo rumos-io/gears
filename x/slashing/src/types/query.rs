@@ -1,7 +1,6 @@
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
-    rest::response::PaginationResponse,
-    types::address::{AddressError, ConsAddress},
+    types::{address::{AddressError, ConsAddress}, pagination::response::PaginationResponse},
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};

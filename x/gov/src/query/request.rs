@@ -1,6 +1,7 @@
 use gears::{
-    core::errors::CoreError, rest::request::PaginationRequest, tendermint::types::proto::Protobuf,
-    types::address::AccAddress,
+    core::errors::CoreError,
+    tendermint::types::proto::Protobuf,
+    types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 
 use crate::types::proposal::ProposalStatus;

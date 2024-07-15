@@ -4,11 +4,11 @@ use gears::error::AppError;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ext::Pagination;
 use gears::params::ParamsSubspaceKey;
-use gears::rest::response::PaginationResponse;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
+use gears::types::pagination::response::PaginationResponse;
 use gears::types::query::metadata::{
     QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
 };

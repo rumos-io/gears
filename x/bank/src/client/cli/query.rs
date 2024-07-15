@@ -7,9 +7,8 @@ use gears::{
     application::handlers::client::QueryHandler,
     cli::pagination::CliPaginationRequest,
     error::IBC_ENCODE_UNWRAP,
-    rest::request::PaginationRequest,
     tendermint::types::proto::Protobuf,
-    types::{address::AccAddress, query::Query},
+    types::{address::AccAddress, pagination::request::PaginationRequest, query::Query},
 };
 use serde::{Deserialize, Serialize};
 

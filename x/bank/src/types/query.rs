@@ -1,11 +1,11 @@
 use gears::{
     core::errors::CoreError,
-    rest::{request::PaginationRequest, response::PaginationResponse},
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
         base::{coin::UnsignedCoin, errors::CoinError},
         denom::Denom,
+        pagination::{request::PaginationRequest, response::PaginationResponse},
         tx::metadata::{Metadata, MetadataParseError},
     },
 };

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 
-use crate::rest::response::PaginationResponse;
+use crate::types::pagination::response::PaginationResponse;
 use crate::types::tx::Tx;
 use crate::types::tx::TxMessage;
 

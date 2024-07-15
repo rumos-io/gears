@@ -2,7 +2,7 @@ use clap::ArgAction;
 
 use crate::{
     ext::Pagination,
-    rest::request::{PaginationRequest, QUERY_DEFAULT_LIMIT},
+    types::pagination::request::{PaginationRequest, QUERY_DEFAULT_LIMIT},
 };
 
 #[derive(Debug, Clone, clap::Args)]

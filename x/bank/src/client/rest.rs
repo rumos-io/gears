@@ -3,11 +3,14 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use gears::types::address::AccAddress;
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::{error::HTTPError, request::PaginationRequest, RestState},
+    rest::{error::HTTPError, RestState},
     types::denom::Denom,
+};
+use gears::{
+    rest::Pagination,
+    types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 use serde::Deserialize;
 
@@ -22,11 +25,11 @@ pub async fn supply<
     QRes: QueryResponse,
     App: NodeQueryHandler<QReq, QRes>,
 >(
-    pagination: Query<Option<PaginationRequest>>,
+    pagination: Query<Option<Pagination>>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::TotalSupply(QueryTotalSupplyRequest {
-        pagination: pagination.0,
+        pagination: pagination.0.map(PaginationRequest::from),
     });
 
     let res = rest_state.app.typed_query(req)?;

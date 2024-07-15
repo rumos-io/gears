@@ -14,7 +14,6 @@ use gears::{
     },
     error::{AppError, IBC_ENCODE_UNWRAP},
     params::ParamsSubspaceKey,
-    rest::response::PaginationResponse,
     store::{
         database::{ext::UnwrapCorrupt, Database},
         StoreKey,
@@ -31,6 +30,7 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
+        pagination::response::PaginationResponse,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{

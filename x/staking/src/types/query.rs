@@ -5,12 +5,12 @@ use crate::{
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
     error::{AppError, IBC_ENCODE_UNWRAP},
-    rest::{request::PaginationRequest, response::PaginationResponse},
     store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
+        pagination::{request::PaginationRequest, response::PaginationResponse},
         uint::Uint256,
     },
 };

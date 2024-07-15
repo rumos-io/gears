@@ -1,6 +1,8 @@
 use gears::{
-    core::errors::CoreError, ext::FallibleMapExt, rest::response::PaginationResponse,
-    tendermint::types::proto::Protobuf, types::address::AccAddress,
+    core::errors::CoreError,
+    ext::FallibleMapExt,
+    tendermint::types::proto::Protobuf,
+    types::{address::AccAddress, pagination::response::PaginationResponse},
 };
 use serde::{Deserialize, Serialize};
 
