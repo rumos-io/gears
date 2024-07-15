@@ -11,6 +11,7 @@ use gears::config::Config;
 use gears::core::tx::raw::TxRaw;
 use gears::crypto::info::SigningInfo;
 use gears::crypto::keys::ReadAccAddress;
+use gears::error::IBC_ENCODE_UNWRAP;
 use gears::store::database::MemDB;
 use gears::tendermint::mock::{InitState, MockNode};
 use gears::tendermint::types::chain_id::ChainId;
@@ -116,7 +117,7 @@ fn generate_txs(
 
     let body_bytes = TxBody::new_with_defaults(vec![msg])
         .encode_vec()
-        .expect("can't fail fixed in later versions of dependency");
+        .expect(IBC_ENCODE_UNWRAP);
 
     let raw_tx = gears::crypto::info::create_signed_transaction_direct(
         vec![signing_info],

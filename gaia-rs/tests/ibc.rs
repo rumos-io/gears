@@ -94,7 +94,7 @@
 
 //     let cli_args = CliUpdateClient {
 //         client_id: ClientId::from_str("07-tendermint-0")?,
-//         client_message: String::new(), //  !!!!!! what msg here should be?
+//         client_message: String::new(), // TODO !!!!!! what msg here should be?
 //         signer: Signer::from(""),
 //     };
 

@@ -3,11 +3,11 @@ use core_types::any::google::Any;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
-use crate::types::{
+use crate::{error::IBC_ENCODE_UNWRAP, types::{
     address::AccAddress,
     base::{coin::UnsignedCoin, coins::UnsignedCoins, errors::CoinError},
     tx::TxMessage,
-};
+}};
 
 mod inner {
     pub use core_types::base::coin::Coin;
@@ -70,7 +70,7 @@ impl From<MsgSend> for Any {
     fn from(msg: MsgSend) -> Self {
         Any {
             type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-            value: msg.encode_vec().expect("msg"),
+            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
