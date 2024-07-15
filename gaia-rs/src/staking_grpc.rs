@@ -1,7 +1,5 @@
-// /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
-/// TODO:ME move to staking module when it's hooked into gaia-rs
-/// /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
-use gears::baseapp::{NodeQueryHandler, QueryRequest, QueryResponse};
+use std::marker::PhantomData;
+
 use ibc_proto::{
     cosmos::staking::v1beta1::{
         query_server::{Query, QueryServer},
@@ -19,9 +17,13 @@ use ibc_proto::{
     },
     google::protobuf::Duration,
 };
-use std::marker::PhantomData;
 use tonic::{Request, Response, Status};
 use tracing::info;
+
+// /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+/// TODO move to staking module when it's hooked into gaia-rs
+/// /!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\/!\
+use gears::baseapp::{NodeQueryHandler, QueryRequest, QueryResponse};
 
 #[derive(Debug, Default)]
 pub struct StakingService<QH, QReq, QRes> {
