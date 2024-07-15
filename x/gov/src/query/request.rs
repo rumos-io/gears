@@ -94,10 +94,7 @@ impl TryFrom<inner::QueryProposalsRequest> for QueryProposalsRequest {
                 true => None,
                 false => Some(proposal_status.try_into()?),
             },
-            pagination: match pagination {
-                Some(var) => Some(var.into()),
-                None => None,
-            },
+            pagination: pagination.map(|var| var.into()),
         })
     }
 }

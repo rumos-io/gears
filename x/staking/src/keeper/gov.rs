@@ -47,7 +47,7 @@ impl<
         self.bank_keeper.balance(
             ctx,
             account.get_address(),
-            &self.staking_params_keeper.try_get(ctx)?.bond_denom(),
+            self.staking_params_keeper.try_get(ctx)?.bond_denom(),
         )
     }
 }
