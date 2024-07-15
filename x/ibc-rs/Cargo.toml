@@ -26,8 +26,6 @@ constcat = { workspace = true }
 derive_more = "0.99.17"          # TODO: move to workspace
 
 #networking
-tonic = { workspace = true }
-http = { workspace = true }
 axum = { workspace = true }
 
 #other
