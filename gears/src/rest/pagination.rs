@@ -1,7 +1,6 @@
 use crate::types::pagination::request::{PaginationRequest, QUERY_DEFAULT_LIMIT};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
-#[serde(default)]
 pub struct Pagination {
     /// offset is a numeric offset that can be used when key is unavailable.
     /// It is less efficient than using key. Only one of offset or key should
@@ -17,15 +16,6 @@ impl From<Pagination> for PaginationRequest {
         let (offset, limit) = parse_pagination(pagination);
 
         Self { offset, limit }
-    }
-}
-
-impl Default for Pagination {
-    fn default() -> Self {
-        Self {
-            offset: Some(0),
-            limit: Some(QUERY_DEFAULT_LIMIT),
-        }
     }
 }
 
