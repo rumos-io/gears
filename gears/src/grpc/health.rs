@@ -31,7 +31,7 @@ impl HealthService for GearsHealthService {
         &self,
         _request: Request<GetSyncingRequest>,
     ) -> Result<Response<GetSyncingResponse>, Status> {
-        // query the node for syncing status and return it
+        // TODO query the node for syncing status and return it
         info!("Received a gRPC request health::get_syncing");
         Ok(Response::new(GetSyncingResponse { syncing: false }))
     }

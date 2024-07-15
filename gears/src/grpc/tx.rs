@@ -17,7 +17,7 @@ impl Service for TxService {
         _request: Request<SimulateRequest>,
     ) -> Result<Response<SimulateResponse>, Status> {
         info!("Received a gRPC request tx::simulate");
-        //  run simulation once implemented
+        // TODO run simulation once implemented
         Ok(Response::new(SimulateResponse {
             gas_info: None,
             result: None,
