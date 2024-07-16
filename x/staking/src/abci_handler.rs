@@ -1,9 +1,11 @@
 use crate::{
-    GenesisState, Keeper, Message, QueryDelegationRequest, QueryDelegationResponse,
-    QueryParamsResponse, QueryRedelegationRequest, QueryRedelegationResponse,
-    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    error::StakingTxError, GenesisState, Keeper, Message, QueryDelegationRequest,
+    QueryDelegationResponse, QueryParamsResponse, QueryRedelegationRequest,
+    QueryRedelegationResponse, QueryUnbondingDelegationResponse, QueryValidatorRequest,
+    QueryValidatorResponse,
 };
 use gears::{
+    application::handlers::node::{ModuleInfo, TxError},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::{errors::CoreError, Protobuf},
     error::AppError,
@@ -30,8 +32,10 @@ pub struct ABCIHandler<
     BK: StakingBankKeeper<SK, M>,
     KH: KeeperHooks<SK, AK, M>,
     M: Module,
+    MI: ModuleInfo,
 > {
     keeper: Keeper<SK, PSK, AK, BK, KH, M>,
+    phantom_data: std::marker::PhantomData<MI>,
 }
 
 #[derive(Clone)]
@@ -61,23 +65,42 @@ impl<
         BK: StakingBankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
-    > ABCIHandler<SK, PSK, AK, BK, KH, M>
+        MI: ModuleInfo,
+    > ABCIHandler<SK, PSK, AK, BK, KH, M, MI>
 {
     pub fn new(keeper: Keeper<SK, PSK, AK, BK, KH, M>) -> Self {
-        ABCIHandler { keeper }
+        ABCIHandler {
+            keeper,
+            phantom_data: std::marker::PhantomData,
+        }
     }
 
-    pub fn tx<DB: Database + Sync + Send>(
+    pub fn msg<DB: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         match msg {
-            Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
-            Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
-            Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
-            Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
-            Message::Undelegate(msg) => self.keeper.undelegate_cmd_handler(ctx, msg),
+            Message::CreateValidator(msg) => Ok(self
+                .keeper
+                .create_validator(ctx, msg)
+                .map_err(|e| Into::<StakingTxError<MI>>::into(e))?),
+            Message::EditValidator(msg) => Ok(self
+                .keeper
+                .edit_validator(ctx, msg)
+                .map_err(|e| Into::<StakingTxError<MI>>::into(e))?),
+            Message::Delegate(msg) => Ok(self
+                .keeper
+                .delegate_cmd_handler(ctx, msg)
+                .map_err(|e| Into::<StakingTxError<MI>>::into(e))?),
+            Message::Redelegate(msg) => Ok(self
+                .keeper
+                .redelegate_cmd_handler(ctx, msg)
+                .map_err(|e| Into::<StakingTxError<MI>>::into(e))?),
+            Message::Undelegate(msg) => Ok(self
+                .keeper
+                .undelegate_cmd_handler(ctx, msg)
+                .map_err(|e| Into::<StakingTxError<MI>>::into(e))?),
         }
     }
 

@@ -149,14 +149,14 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             Err(e) => {
                 error!("check err: {e}");
                 ResponseCheckTx {
-                    code: 1,
+                    code: e.code(),
                     data: Default::default(),
                     log: e.to_string(),
                     info: "".to_string(),
                     gas_wanted: 1,
                     gas_used: 0,
                     events: vec![],
-                    codespace: "".to_string(),
+                    codespace: e.codespace().to_string(),
                     mempool_error: "".to_string(),
                     priority: 0,
                     sender: "".to_string(),
@@ -197,7 +197,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
                     gas_wanted: 0,
                     gas_used: 0,
                     events: vec![],
-                    codespace: "".to_string(),
+                    codespace: e.codespace().to_string(),
                 }
             }
         }
