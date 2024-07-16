@@ -136,8 +136,8 @@ impl ABCIHandler for GaiaABCIHandler {
     ) -> Result<(), TxError> {
         match msg {
             Message::Bank(msg) => self.bank_abci_handler.msg(ctx, msg),
-            Message::Staking(msg) => Ok(self.staking_abci_handler.msg(ctx, msg)?),
-            Message::IBC(msg) => Ok(self.ibc_abci_handler.msg(ctx, msg.clone())?),
+            Message::Staking(msg) => self.staking_abci_handler.msg(ctx, msg),
+            Message::IBC(msg) => self.ibc_abci_handler.msg(ctx, msg.clone()),
         }
     }
 
