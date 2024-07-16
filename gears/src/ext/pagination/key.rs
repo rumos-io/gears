@@ -6,8 +6,14 @@ use super::TwoIterators;
 
 #[derive(Debug, Clone)]
 pub struct PaginationByKey {
-    pub key: Vec<u8>,
+    pub key: Vec<u8>, // TODO: consider usage of vec1
     pub limit: usize,
+}
+
+impl From<(Vec<u8>, usize)> for PaginationByKey {
+    fn from((key, limit): (Vec<u8>, usize)) -> Self {
+        Self { key, limit }
+    }
 }
 
 pub trait PaginationKeyIterator {
@@ -69,6 +75,12 @@ impl PaginationKeyIterator for Cow<'_, Vec<u8>> {
     }
 }
 
+impl PaginationKeyIterator for Vec<u8> {
+    fn iterator_key(&self) -> impl AsRef<[u8]> {
+        AsRef::<[u8]>::as_ref(self)
+    }
+}
+
 impl<T: PaginationKeyIterator> PaginationKeyIterator for Result<T, GasStoreErrors> {
     fn iterator_key(&self) -> impl AsRef<[u8]> {
         match self {
@@ -89,5 +101,84 @@ impl<T: AsRef<[u8]>, U: AsRef<[u8]>> AsRef<[u8]> for TwoAsRef<T, U> {
             TwoAsRef::First(var) => var.as_ref(),
             TwoAsRef::Second(var) => var.as_ref(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_values() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let expected = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]]
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_key((vec![1], 6))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn first_half_of_values() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let expected = [vec![1_u8], vec![2], vec![3]]
+            .into_iter()
+            .collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_key((vec![1], 3))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn second_half_of_values() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let expected = [vec![4], vec![5], vec![6]].into_iter().collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_key((vec![4], 3))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn first_middle_of_values() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let expected = [vec![2], vec![3]].into_iter().collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_key((vec![2], 2))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn second_middle_of_values() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let expected = [vec![4], vec![5]].into_iter().collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_key((vec![4], 2))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
     }
 }

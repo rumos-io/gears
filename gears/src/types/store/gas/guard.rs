@@ -143,14 +143,14 @@ impl GasGuard {
                     VALUE_PER_BYTE_DESC,
                 )
                 .map_err(|e| GasStoreErrors::new(get_key, e))?;
-        }
 
-        gas_meter
-            .consume_gas(
-                GasConfig::kv().iter_next_cost_flat,
-                ITER_NEXT_CAST_FLAT_DESC,
-            )
-            .map_err(|e| GasStoreErrors::new(&[], e))?; // I'm unsure how to handle such case
+            gas_meter
+                .consume_gas(
+                    GasConfig::kv().iter_next_cost_flat,
+                    ITER_NEXT_CAST_FLAT_DESC,
+                )
+                .map_err(|e| GasStoreErrors::new(get_key, e))?; // I'm unsure how to handle such case
+        }
 
         Ok(())
     }
