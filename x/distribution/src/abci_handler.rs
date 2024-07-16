@@ -2,6 +2,7 @@ use crate::{
     GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
     QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
+    QueryValidatorSlashesRequest, QueryValidatorSlashesResponse,
 };
 use gears::{
     context::{
@@ -26,12 +27,14 @@ use gears::{
 pub enum DistributionNodeQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     ValidatorCommission(QueryValidatorCommissionRequest),
+    ValidatorSlashes(QueryValidatorSlashesRequest),
     Params(QueryParamsRequest),
 }
 #[derive(Clone)]
 pub enum DistributionNodeQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     ValidatorCommission(QueryValidatorCommissionResponse),
+    ValidatorSlashes(QueryValidatorSlashesResponse),
     Params(QueryParamsResponse),
 }
 
@@ -76,7 +79,7 @@ impl<
                 .keeper
                 .withdraw_delegator_reward_and_commission(ctx, msg),
             Message::SetWithdrawAddr(msg) => self.keeper.set_withdraw_address(ctx, msg),
-            Message::FundCommunityPool(_msg) => todo!(),
+            Message::FundCommunityPool(msg) => self.keeper.fund_community_pool_cmd(ctx, msg),
         }
     }
 
@@ -86,7 +89,7 @@ impl<
         query: RequestQuery,
     ) -> Result<prost::bytes::Bytes, AppError> {
         match query.path.as_str() {
-            "/cosmos.slashing.v1beta1.Query/ValidatorOutstandingRewards" => {
+            "/cosmos.distribution.v1beta1.Query/ValidatorOutstandingRewards" => {
                 let req = QueryValidatorOutstandingRewardsRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
@@ -96,7 +99,7 @@ impl<
                     .encode_vec()
                     .into())
             }
-            "/cosmos.slashing.v1beta1.Query/ValidatorCommission" => {
+            "/cosmos.distribution.v1beta1.Query/ValidatorCommission" => {
                 let req = QueryValidatorCommissionRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
@@ -106,7 +109,17 @@ impl<
                     .encode_vec()
                     .into())
             }
-            "/cosmos.slashing.v1beta1.Query/Params" => {
+            "/cosmos.distribution.v1beta1.Query/ValidatorSlashes" => {
+                let req = QueryValidatorSlashesRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_validator_slashes(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
+            "/cosmos.distribution.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
@@ -130,6 +143,11 @@ impl<
             DistributionNodeQueryRequest::ValidatorCommission(req) => {
                 DistributionNodeQueryResponse::ValidatorCommission(
                     self.keeper.query_validator_commission(ctx, req),
+                )
+            }
+            DistributionNodeQueryRequest::ValidatorSlashes(req) => {
+                DistributionNodeQueryResponse::ValidatorSlashes(
+                    self.keeper.query_validator_slashes(ctx, req),
                 )
             }
             DistributionNodeQueryRequest::Params(req) => {

@@ -1,13 +1,14 @@
 use crate::{
     QueryParamsRequest, QueryParamsResponse, QueryValidatorCommissionRequest,
     QueryValidatorCommissionResponse, QueryValidatorOutstandingRewardsRequest,
-    QueryValidatorOutstandingRewardsResponse,
+    QueryValidatorOutstandingRewardsResponse, QueryValidatorSlashesRequest,
+    QueryValidatorSlashesResponse,
 };
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
     core::Protobuf,
-    types::{address::ValAddress, query::Query},
+    types::{address::ValAddress, pagination::request::PaginationRequest, query::Query},
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -22,6 +23,7 @@ pub struct DistributionQueryCli {
 pub enum DistributionCommands {
     ValidatorOutstandingRewards(ValidatorOutstandingRewardsCommand),
     ValidatorCommission(ValidatorCommissionCommand),
+    ValidatorSlashes(ValidatorSlashesCommand),
     /// Query distribution params
     Params,
 }
@@ -38,6 +40,22 @@ pub struct ValidatorOutstandingRewardsCommand {
 pub struct ValidatorCommissionCommand {
     /// validator address
     pub address: ValAddress,
+}
+
+/// Query distribution validator slashes
+#[derive(Args, Debug, Clone)]
+pub struct ValidatorSlashesCommand {
+    /// validator address
+    pub address: ValAddress,
+    /// start height for slash events
+    pub start_height: u64,
+    /// end height for slash events
+    pub end_height: u64,
+    #[arg(long, default_value_t = 0)]
+    pub offset: u32,
+    /// Pagination limit
+    #[arg(long, default_value_t = 100)]
+    pub limit: u8,
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +85,21 @@ impl QueryHandler for DistributionQueryHandler {
                     validator_address: address.clone(),
                 })
             }
+            DistributionCommands::ValidatorSlashes(ValidatorSlashesCommand {
+                address,
+                start_height,
+                end_height,
+                offset,
+                limit,
+            }) => Self::QueryRequest::ValidatorSlashes(QueryValidatorSlashesRequest {
+                validator_address: address.clone(),
+                starting_height: *start_height,
+                ending_height: *end_height,
+                pagination: Some(PaginationRequest {
+                    offset: *offset,
+                    limit: *limit,
+                }),
+            }),
             DistributionCommands::Params => Self::QueryRequest::Params(QueryParamsRequest {}),
         };
 
@@ -89,6 +122,11 @@ impl QueryHandler for DistributionQueryHandler {
                     QueryValidatorCommissionResponse::decode_vec(&query_bytes)?,
                 )
             }
+            DistributionCommands::ValidatorSlashes(_) => {
+                DistributionQueryResponse::ValidatorSlashes(
+                    QueryValidatorSlashesResponse::decode_vec(&query_bytes)?,
+                )
+            }
             DistributionCommands::Params => {
                 DistributionQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
             }
@@ -102,6 +140,7 @@ impl QueryHandler for DistributionQueryHandler {
 pub enum DistributionQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     ValidatorCommission(QueryValidatorCommissionRequest),
+    ValidatorSlashes(QueryValidatorSlashesRequest),
     Params(QueryParamsRequest),
 }
 
@@ -114,6 +153,9 @@ impl Query for DistributionQueryRequest {
             DistributionQueryRequest::ValidatorCommission(_) => {
                 "/cosmos.distribution.v1beta1.Query/ValidatorCommission"
             }
+            DistributionQueryRequest::ValidatorSlashes(_) => {
+                "/cosmos.distribution.v1beta1.Query/ValidatorSlashes"
+            }
             DistributionQueryRequest::Params(_) => "/cosmos.distribution.v1beta1.Query/Params",
         }
     }
@@ -122,6 +164,7 @@ impl Query for DistributionQueryRequest {
         match self {
             DistributionQueryRequest::ValidatorOutstandingRewards(var) => var.encode_vec(),
             DistributionQueryRequest::ValidatorCommission(var) => var.encode_vec(),
+            DistributionQueryRequest::ValidatorSlashes(var) => var.encode_vec(),
             DistributionQueryRequest::Params(var) => var.encode_vec(),
         }
     }
@@ -129,9 +172,9 @@ impl Query for DistributionQueryRequest {
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
 #[serde(untagged)]
-#[allow(clippy::large_enum_variant)]
 pub enum DistributionQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     ValidatorCommission(QueryValidatorCommissionResponse),
+    ValidatorSlashes(QueryValidatorSlashesResponse),
     Params(QueryParamsResponse),
 }

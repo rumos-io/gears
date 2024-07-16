@@ -1,10 +1,15 @@
 use crate::{
     DistributionParams, DistributionParamsRaw, ValidatorAccumulatedCommission,
     ValidatorAccumulatedCommissionRaw, ValidatorOutstandingRewards, ValidatorOutstandingRewardsRaw,
+    ValidatorSlashEvent, ValidatorSlashEventRaw,
 };
 use gears::{
-    core::{errors::CoreError, Protobuf},
-    types::address::{AddressError, ValAddress},
+    core::{errors::CoreError, query::request::PageRequest, Protobuf},
+    types::{
+        address::{AddressError, ValAddress},
+        errors::StdError,
+        pagination::{request::PaginationRequest, response::PaginationResponse},
+    },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -89,6 +94,72 @@ impl TryFrom<QueryValidatorCommissionRequestRaw> for QueryValidatorCommissionReq
 }
 
 impl Protobuf<QueryValidatorCommissionRequestRaw> for QueryValidatorCommissionRequest {}
+
+#[derive(Clone, Serialize, Message)]
+pub struct QueryValidatorSlashesRequestRaw {
+    #[prost(bytes, tag = "1")]
+    pub validator_address: Vec<u8>,
+    #[prost(uint64, tag = "2")]
+    pub starting_height: u64,
+    #[prost(uint64, tag = "3")]
+    pub ending_height: u64,
+    #[prost(message, optional, tag = "4")]
+    pub pagination: Option<PageRequest>,
+}
+
+impl From<QueryValidatorSlashesRequest> for QueryValidatorSlashesRequestRaw {
+    fn from(
+        QueryValidatorSlashesRequest {
+            validator_address,
+            starting_height,
+            ending_height,
+            pagination,
+        }: QueryValidatorSlashesRequest,
+    ) -> Self {
+        Self {
+            validator_address: validator_address.into(),
+            starting_height,
+            ending_height,
+            pagination: pagination.map(Into::into),
+        }
+    }
+}
+
+impl Protobuf<QueryValidatorSlashesRequestRaw> for QueryValidatorSlashesRequest {}
+
+/// QueryValidatorSlashesRequest is the response type for the
+/// Query/ValidatorSlashes RPC method.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct QueryValidatorSlashesRequest {
+    /// validator_address defines the validator address to query for.
+    pub validator_address: ValAddress,
+    /// starting_height defines the optional starting height to query the slashes.
+    pub starting_height: u64,
+    /// ending_height defines the optional ending height to query the slashes.
+    pub ending_height: u64,
+    /// pagination defines an optional pagination for the request.
+    pub pagination: Option<PaginationRequest>,
+}
+
+impl TryFrom<QueryValidatorSlashesRequestRaw> for QueryValidatorSlashesRequest {
+    type Error = AddressError;
+
+    fn try_from(
+        QueryValidatorSlashesRequestRaw {
+            validator_address,
+            starting_height,
+            ending_height,
+            pagination,
+        }: QueryValidatorSlashesRequestRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            validator_address: ValAddress::try_from(validator_address)?,
+            starting_height,
+            ending_height,
+            pagination: pagination.map(Into::into),
+        })
+    }
+}
 
 #[derive(Clone, PartialEq, Message)]
 pub struct QueryParamsRequest {}
@@ -186,6 +257,61 @@ impl TryFrom<QueryValidatorCommissionResponseRaw> for QueryValidatorCommissionRe
 }
 
 impl Protobuf<QueryValidatorCommissionResponseRaw> for QueryValidatorCommissionResponse {}
+
+#[derive(Clone, Serialize, Message)]
+pub struct QueryValidatorSlashesResponseRaw {
+    #[prost(message, repeated, tag = "1")]
+    pub slashes: Vec<ValidatorSlashEventRaw>,
+    #[prost(message, optional, tag = "2")]
+    pub pagination: Option<gears::core::query::response::PageResponse>,
+}
+
+impl From<QueryValidatorSlashesResponse> for QueryValidatorSlashesResponseRaw {
+    fn from(
+        QueryValidatorSlashesResponse {
+            slashes,
+            pagination,
+        }: QueryValidatorSlashesResponse,
+    ) -> Self {
+        Self {
+            slashes: slashes.into_iter().map(Into::into).collect(),
+            pagination: pagination.map(Into::into),
+        }
+    }
+}
+
+/// QueryValidatorSlashesResponse is the response type for the
+/// Query/ValidatorSlashes RPC method.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct QueryValidatorSlashesResponse {
+    /// slashes defines the slashes the validator received.
+    pub slashes: Vec<ValidatorSlashEvent>,
+    /// pagination defines the pagination in the response.
+    pub pagination: Option<PaginationResponse>,
+}
+
+impl TryFrom<QueryValidatorSlashesResponseRaw> for QueryValidatorSlashesResponse {
+    type Error = StdError;
+
+    fn try_from(
+        QueryValidatorSlashesResponseRaw {
+            slashes,
+            pagination,
+        }: QueryValidatorSlashesResponseRaw,
+    ) -> Result<Self, Self::Error> {
+        let mut slashes_res = vec![];
+        for slash in slashes {
+            slashes_res.push(slash.try_into()?);
+        }
+
+        Ok(Self {
+            slashes: slashes_res,
+            pagination: pagination.map(Into::into),
+        })
+    }
+}
+
+impl Protobuf<QueryValidatorSlashesResponseRaw> for QueryValidatorSlashesResponse {}
 
 #[derive(Clone, Serialize, Message)]
 pub struct QueryParamsResponseRaw {

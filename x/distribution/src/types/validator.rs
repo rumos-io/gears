@@ -277,7 +277,7 @@ pub struct ValidatorSlashEventRecord {
     pub validator_slash_event: ValidatorSlashEvent,
 }
 
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Serialize, Message)]
 pub struct ValidatorSlashEventRaw {
     #[prost(uint64)]
     pub validator_period: u64,
