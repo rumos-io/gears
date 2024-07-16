@@ -1,10 +1,14 @@
-use crate::{GenesisState, Keeper, Message};
+use crate::{GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse};
 use gears::{
-    context::{block::BlockContext, init::InitContext, tx::TxContext, QueryableContext},
+    context::{
+        block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
+        QueryableContext,
+    },
+    core::{errors::CoreError, Protobuf},
     error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::request::begin_block::RequestBeginBlock,
+    tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
     types::address::ConsAddress,
     x::{
         keepers::{
@@ -13,6 +17,15 @@ use gears::{
         module::Module,
     },
 };
+
+#[derive(Clone)]
+pub enum DistributionNodeQueryRequest {
+    Params(QueryParamsRequest),
+}
+#[derive(Clone)]
+pub enum DistributionNodeQueryResponse {
+    Params(QueryParamsResponse),
+}
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
@@ -55,6 +68,35 @@ impl<
                 .keeper
                 .withdraw_delegator_reward_and_commission(ctx, msg),
             Message::SetWithdrawAddr(msg) => self.keeper.set_withdraw_address(ctx, msg),
+            Message::FundCommunityPool(_msg) => todo!(),
+        }
+    }
+
+    pub fn query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: RequestQuery,
+    ) -> Result<prost::bytes::Bytes, AppError> {
+        match query.path.as_str() {
+            "/cosmos.slashing.v1beta1.Query/Params" => {
+                let req = QueryParamsRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self.keeper.query_params(ctx, req).encode_vec().into())
+            }
+            _ => Err(AppError::InvalidRequest("query path not found".into())),
+        }
+    }
+
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: DistributionNodeQueryRequest,
+    ) -> DistributionNodeQueryResponse {
+        match query {
+            DistributionNodeQueryRequest::Params(req) => {
+                DistributionNodeQueryResponse::Params(self.keeper.query_params(ctx, req))
+            }
         }
     }
 

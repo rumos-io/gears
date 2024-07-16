@@ -1,7 +1,7 @@
-use std::fmt::Debug;
-
-use serde::{Deserialize, Serialize};
-
+use crate::{
+    QueryParamsRequest, QueryParamsResponse, QuerySigningInfoRequest, QuerySigningInfoResponse,
+    QuerySigningInfosRequest, QuerySigningInfosResponse,
+};
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
@@ -10,11 +10,8 @@ use gears::{
     tendermint::types::proto::crypto::PublicKey,
     types::{address::ConsAddress, query::Query},
 };
-
-use crate::{
-    QueryParamsRequest, QueryParamsResponse, QuerySigningInfoRequest, QuerySigningInfoResponse,
-    QuerySigningInfosRequest, QuerySigningInfosResponse,
-};
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 #[derive(Args, Debug)]
 pub struct SlashingQueryCli {

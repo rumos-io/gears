@@ -1,1 +1,88 @@
+use crate::{QueryParamsRequest, QueryParamsResponse};
+use clap::{Args, Subcommand};
+use gears::{
+    application::handlers::client::QueryHandler, core::Protobuf,
+    tendermint::types::proto::crypto::PublicKey, types::query::Query,
+};
+use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
+#[derive(Args, Debug)]
+pub struct DistributionQueryCli {
+    #[command(subcommand)]
+    pub command: DistributionCommands,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum DistributionCommands {
+    Params,
+}
+
+/// Query signing info.
+#[derive(Args, Debug, Clone)]
+pub struct SigningInfoCommand {
+    /// validator public key
+    pub pubkey: PublicKey,
+}
+
+#[derive(Debug, Clone)]
+pub struct DistributionQueryHandler;
+
+impl QueryHandler for DistributionQueryHandler {
+    type QueryRequest = DistributionQueryRequest;
+
+    type QueryResponse = DistributionQueryResponse;
+
+    type QueryCommands = DistributionQueryCli;
+
+    fn prepare_query_request(
+        &self,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryRequest> {
+        let res = match &command.command {
+            DistributionCommands::Params => Self::QueryRequest::Params(QueryParamsRequest {}),
+        };
+
+        Ok(res)
+    }
+
+    fn handle_raw_response(
+        &self,
+        query_bytes: Vec<u8>,
+        command: &Self::QueryCommands,
+    ) -> anyhow::Result<Self::QueryResponse> {
+        let res = match &command.command {
+            DistributionCommands::Params => {
+                DistributionQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
+            }
+        };
+
+        Ok(res)
+    }
+}
+
+#[derive(Clone, PartialEq)]
+pub enum DistributionQueryRequest {
+    Params(QueryParamsRequest),
+}
+
+impl Query for DistributionQueryRequest {
+    fn query_url(&self) -> &'static str {
+        match self {
+            DistributionQueryRequest::Params(_) => "/cosmos.distribution.v1beta1.Query/Params",
+        }
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        match self {
+            DistributionQueryRequest::Params(var) => var.encode_vec(),
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[serde(untagged)]
+#[allow(clippy::large_enum_variant)]
+pub enum DistributionQueryResponse {
+    Params(QueryParamsResponse),
+}

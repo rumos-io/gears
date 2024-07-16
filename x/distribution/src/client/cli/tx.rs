@@ -1,7 +1,10 @@
-use crate::{Message, MsgSetWithdrawAddr, MsgWithdrawDelegatorReward};
+use crate::{Message, MsgFundCommunityPool, MsgSetWithdrawAddr, MsgWithdrawDelegatorReward};
 use anyhow::{Ok, Result};
 use clap::{Args, Subcommand};
-use gears::types::address::{AccAddress, ValAddress};
+use gears::types::{
+    address::{AccAddress, ValAddress},
+    base::{coin::UnsignedCoin, coins::UnsignedCoins},
+};
 
 #[derive(Args, Debug, Clone)]
 pub struct DistributionTxCli {
@@ -20,6 +23,8 @@ pub enum DistributionCommands {
     },
     /// Change the default withdraw address for rewards associated with an address
     SetWithdrawAddr { withdraw_address: AccAddress },
+    /// Funds the community pool with the specified amount
+    FundCommunityPool { amount: UnsignedCoin },
 }
 
 pub fn run_staking_tx_command(
@@ -39,6 +44,13 @@ pub fn run_staking_tx_command(
             Ok(Message::SetWithdrawAddr(MsgSetWithdrawAddr {
                 delegator_address: from_address.clone(),
                 withdraw_address: withdraw_address.clone(),
+            }))
+        }
+        DistributionCommands::FundCommunityPool { amount } => {
+            let amount = UnsignedCoins::new(vec![amount.clone()])?;
+            Ok(Message::FundCommunityPool(MsgFundCommunityPool {
+                amount,
+                depositor: from_address.clone(),
             }))
         }
     }

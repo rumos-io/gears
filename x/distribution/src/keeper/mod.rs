@@ -29,6 +29,7 @@ use std::{collections::HashMap, u64};
 
 mod allocation;
 mod delegation;
+mod query;
 mod store;
 mod tx;
 mod validator;
@@ -311,5 +312,36 @@ impl<
         });
 
         Ok(commission)
+    }
+
+    /// fund_community_pool allows an account to directly fund the community fund pool.
+    /// The amount is first added to the distribution module account and then directly
+    /// added to the pool. An error is returned if the amount cannot be sent to the
+    /// module account.
+    pub fn fund_community_pool<DB: Database>(
+        &self,
+        ctx: &mut TxContext<DB, SK>,
+        amount: UnsignedCoins,
+        sender: &AccAddress,
+    ) -> Result<(), AppError> {
+        self.bank_keeper.send_coins_from_account_to_module(
+            ctx,
+            sender.clone(),
+            &self.distribution_module,
+            amount.clone(),
+        )?;
+        let mut fee_pool = self
+            .fee_pool(ctx)?
+            .ok_or(AppError::Custom("fee pool is not found".to_string()))?;
+        fee_pool.community_pool = fee_pool
+            .community_pool
+            .checked_add(
+                &DecimalCoins::try_from(amount.into_inner())
+                    .map_err(|e| AppError::Coins(e.to_string()))?,
+            )
+            .map_err(|e| AppError::Coins(e.to_string()))?;
+        self.set_fee_pool(ctx, &fee_pool)?;
+
+        Ok(())
     }
 }

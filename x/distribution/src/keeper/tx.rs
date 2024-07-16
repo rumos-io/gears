@@ -1,7 +1,7 @@
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
 
 use super::*;
-use crate::{MsgSetWithdrawAddr, MsgWithdrawDelegatorReward};
+use crate::{MsgFundCommunityPool, MsgSetWithdrawAddr, MsgWithdrawDelegatorReward};
 
 impl<
         SK: StoreKey,
@@ -75,6 +75,32 @@ impl<
                 EventAttribute {
                     key: "sender".into(),
                     value: msg.delegator_address.to_string().into(),
+                    index: false,
+                },
+            ],
+        });
+
+        Ok(())
+    }
+
+    pub fn fund_community_pool_cmd<DB: Database>(
+        &self,
+        ctx: &mut TxContext<DB, SK>,
+        msg: &MsgFundCommunityPool,
+    ) -> Result<(), AppError> {
+        self.fund_community_pool(ctx, msg.amount.clone(), &msg.depositor)?;
+
+        ctx.push_event(Event {
+            r#type: "message".to_string(),
+            attributes: vec![
+                EventAttribute {
+                    key: "module".into(),
+                    value: self.distribution_module.get_name().into(),
+                    index: false,
+                },
+                EventAttribute {
+                    key: "sender".into(),
+                    value: msg.depositor.to_string().into(),
                     index: false,
                 },
             ],

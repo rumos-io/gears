@@ -1,6 +1,9 @@
 use gears::{
-    core::Protobuf,
-    types::address::{AccAddress, AddressError, ValAddress},
+    core::{errors::CoreError, Protobuf},
+    types::{
+        address::{AccAddress, AddressError, ValAddress},
+        base::coins::UnsignedCoins,
+    },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -107,3 +110,45 @@ impl TryFrom<MsgSetWithdrawAddrRaw> for MsgSetWithdrawAddr {
 }
 
 impl Protobuf<MsgSetWithdrawAddrRaw> for MsgSetWithdrawAddr {}
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct MsgFundCommunityPoolRaw {
+    #[prost(bytes, tag = "1")]
+    pub amount: Vec<u8>,
+    #[prost(bytes, tag = "2")]
+    pub depositor: Vec<u8>,
+}
+
+impl From<MsgFundCommunityPool> for MsgFundCommunityPoolRaw {
+    fn from(MsgFundCommunityPool { amount, depositor }: MsgFundCommunityPool) -> Self {
+        Self {
+            amount: serde_json::to_vec(&amount).expect("serialization of domain type never fail"),
+            depositor: depositor.into(),
+        }
+    }
+}
+
+/// MsgFundCommunityPool represents delegation withdrawal to a delegator
+/// from a single validator.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MsgFundCommunityPool {
+    pub amount: UnsignedCoins,
+    pub depositor: AccAddress,
+}
+
+impl TryFrom<MsgFundCommunityPoolRaw> for MsgFundCommunityPool {
+    type Error = CoreError;
+
+    fn try_from(
+        MsgFundCommunityPoolRaw { amount, depositor }: MsgFundCommunityPoolRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            amount: serde_json::from_slice(&amount)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            depositor: AccAddress::try_from(depositor)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+        })
+    }
+}
+
+impl Protobuf<MsgFundCommunityPoolRaw> for MsgFundCommunityPool {}
