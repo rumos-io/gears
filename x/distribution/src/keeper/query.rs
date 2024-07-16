@@ -1,6 +1,9 @@
 use gears::context::query::QueryContext;
 
-use crate::{QueryParamsRequest, QueryParamsResponse};
+use crate::{
+    QueryParamsRequest, QueryParamsResponse, QueryValidatorOutstandingRewardsRequest,
+    QueryValidatorOutstandingRewardsResponse,
+};
 
 use super::*;
 
@@ -21,5 +24,16 @@ impl<
         QueryParamsResponse {
             params: self.params_keeper.get(ctx),
         }
+    }
+
+    pub fn query_validator_outstanding_rewards<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorOutstandingRewardsRequest,
+    ) -> QueryValidatorOutstandingRewardsResponse {
+        let rewards = self
+            .validator_outstanding_rewards(ctx, &query.validator_address)
+            .unwrap_gas();
+        QueryValidatorOutstandingRewardsResponse { rewards }
     }
 }

@@ -1,8 +1,12 @@
-use crate::{QueryParamsRequest, QueryParamsResponse};
+use crate::{
+    QueryParamsRequest, QueryParamsResponse, QueryValidatorOutstandingRewardsRequest,
+    QueryValidatorOutstandingRewardsResponse,
+};
 use clap::{Args, Subcommand};
 use gears::{
-    application::handlers::client::QueryHandler, core::Protobuf,
-    tendermint::types::proto::crypto::PublicKey, types::query::Query,
+    application::handlers::client::QueryHandler,
+    core::Protobuf,
+    types::{address::ValAddress, query::Query},
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -15,14 +19,16 @@ pub struct DistributionQueryCli {
 
 #[derive(Subcommand, Debug)]
 pub enum DistributionCommands {
+    ValidatorOutstandingRewards(ValidatorOutstandingRewardsCommand),
+    /// Query distribution params
     Params,
 }
 
 /// Query signing info.
 #[derive(Args, Debug, Clone)]
-pub struct SigningInfoCommand {
-    /// validator public key
-    pub pubkey: PublicKey,
+pub struct ValidatorOutstandingRewardsCommand {
+    /// validator address
+    pub address: ValAddress,
 }
 
 #[derive(Debug, Clone)]
@@ -40,6 +46,13 @@ impl QueryHandler for DistributionQueryHandler {
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
+            DistributionCommands::ValidatorOutstandingRewards(
+                ValidatorOutstandingRewardsCommand { address },
+            ) => Self::QueryRequest::ValidatorOutstandingRewards(
+                QueryValidatorOutstandingRewardsRequest {
+                    validator_address: address.clone(),
+                },
+            ),
             DistributionCommands::Params => Self::QueryRequest::Params(QueryParamsRequest {}),
         };
 
@@ -52,6 +65,11 @@ impl QueryHandler for DistributionQueryHandler {
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
         let res = match &command.command {
+            DistributionCommands::ValidatorOutstandingRewards(_) => {
+                DistributionQueryResponse::ValidatorOutstandingRewards(
+                    QueryValidatorOutstandingRewardsResponse::decode_vec(&query_bytes)?,
+                )
+            }
             DistributionCommands::Params => {
                 DistributionQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
             }
@@ -63,18 +81,23 @@ impl QueryHandler for DistributionQueryHandler {
 
 #[derive(Clone, PartialEq)]
 pub enum DistributionQueryRequest {
+    ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     Params(QueryParamsRequest),
 }
 
 impl Query for DistributionQueryRequest {
     fn query_url(&self) -> &'static str {
         match self {
+            DistributionQueryRequest::ValidatorOutstandingRewards(_) => {
+                "/cosmos.distribution.v1beta1.Query/ValidatorOutstandingRewards"
+            }
             DistributionQueryRequest::Params(_) => "/cosmos.distribution.v1beta1.Query/Params",
         }
     }
 
     fn into_bytes(self) -> Vec<u8> {
         match self {
+            DistributionQueryRequest::ValidatorOutstandingRewards(var) => var.encode_vec(),
             DistributionQueryRequest::Params(var) => var.encode_vec(),
         }
     }
@@ -84,5 +107,6 @@ impl Query for DistributionQueryRequest {
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum DistributionQueryResponse {
+    ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     Params(QueryParamsResponse),
 }

@@ -24,7 +24,7 @@ pub struct ValidatorOutstandingRewardsRecord {
     pub outstanding_rewards: ValidatorOutstandingRewards,
 }
 
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Serialize, Message)]
 pub struct ValidatorOutstandingRewardsRaw {
     #[prost(message, repeated)]
     pub rewards: Vec<DecimalCoinRaw>,

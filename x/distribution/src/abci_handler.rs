@@ -1,4 +1,7 @@
-use crate::{GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse};
+use crate::{
+    GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
+    QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
+};
 use gears::{
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
@@ -20,10 +23,12 @@ use gears::{
 
 #[derive(Clone)]
 pub enum DistributionNodeQueryRequest {
+    ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     Params(QueryParamsRequest),
 }
 #[derive(Clone)]
 pub enum DistributionNodeQueryResponse {
+    ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     Params(QueryParamsResponse),
 }
 
@@ -78,6 +83,16 @@ impl<
         query: RequestQuery,
     ) -> Result<prost::bytes::Bytes, AppError> {
         match query.path.as_str() {
+            "/cosmos.slashing.v1beta1.Query/ValidatorOutstandingRewards" => {
+                let req = QueryValidatorOutstandingRewardsRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_validator_outstanding_rewards(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
             "/cosmos.slashing.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
@@ -94,6 +109,11 @@ impl<
         query: DistributionNodeQueryRequest,
     ) -> DistributionNodeQueryResponse {
         match query {
+            DistributionNodeQueryRequest::ValidatorOutstandingRewards(req) => {
+                DistributionNodeQueryResponse::ValidatorOutstandingRewards(
+                    self.keeper.query_validator_outstanding_rewards(ctx, req),
+                )
+            }
             DistributionNodeQueryRequest::Params(req) => {
                 DistributionNodeQueryResponse::Params(self.keeper.query_params(ctx, req))
             }
