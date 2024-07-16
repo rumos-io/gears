@@ -10,13 +10,13 @@ use super::{
 
 pub mod mutable;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum PrefixStoreBackend<'a, DB> {
     Gas(GasPrefixStore<'a, DB>),
     Kv(ImmutablePrefixStore<'a, DB>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PrefixStore<'a, DB>(pub(self) PrefixStoreBackend<'a, DB>);
 
 impl<'a, DB> From<GasPrefixStore<'a, DB>> for PrefixStore<'a, DB> {

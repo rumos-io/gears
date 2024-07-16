@@ -1,12 +1,12 @@
 use crate::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::handlers::{node_info, staking_params, txs},
+    rest::handlers::{block_latest, node_info, staking_params, txs},
     runtime::runtime,
     types::tx::TxMessage,
 };
 use axum::{extract::FromRef, http::Method, routing::get, Router};
 use std::{marker::PhantomData, net::SocketAddr};
-use tendermint::rpc::url::Url;
+use tendermint::rpc::client::HttpClientUrl;
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
@@ -21,7 +21,7 @@ pub fn run_rest_server<
     app: App,
     listen_addr: SocketAddr,
     router: Router<RestState<QReq, QRes, App>>,
-    tendermint_rpc_address: Url,
+    tendermint_rpc_address: HttpClientUrl,
 ) {
     std::thread::spawn(move || {
         let result = runtime().block_on(launch::<M, _, _, _>(
@@ -39,20 +39,14 @@ pub fn run_rest_server<
 #[derive(Clone)]
 pub struct RestState<QReq, QRes, App: NodeQueryHandler<QReq, QRes>> {
     pub app: App,
-    pub tendermint_rpc_address: Url,
+    pub tendermint_rpc_address: HttpClientUrl,
     phantom: PhantomData<(QReq, QRes)>,
 }
 
-// impl<QReq: QueryRequest, QRes: QueryResponse, App: NodeQueryHandler<QReq, QRes>>
-//     FromRef<RestState<QReq, QRes, App>> for App
-// {
-//     fn from_ref(rest_state: &RestState<QReq, QRes, App>) -> App {
-//         rest_state.app.clone()
-//     }
-// }
-
-impl<QReq, QRes, App: NodeQueryHandler<QReq, QRes>> FromRef<RestState<QReq, QRes, App>> for Url {
-    fn from_ref(rest_state: &RestState<QReq, QRes, App>) -> Url {
+impl<QReq, QRes, App: NodeQueryHandler<QReq, QRes>> FromRef<RestState<QReq, QRes, App>>
+    for HttpClientUrl
+{
+    fn from_ref(rest_state: &RestState<QReq, QRes, App>) -> HttpClientUrl {
         rest_state.tendermint_rpc_address.clone()
     }
 }
@@ -70,7 +64,7 @@ async fn launch<
     app: App,
     listen_addr: SocketAddr,
     router: Router<RestState<QReq, QRes, App>>,
-    tendermint_rpc_address: Url,
+    tendermint_rpc_address: HttpClientUrl,
 ) -> anyhow::Result<()> {
     let cors = CorsLayer::new()
         .allow_methods([Method::GET, Method::POST])
@@ -86,6 +80,10 @@ async fn launch<
         .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
         .route("/cosmos/staking/v1beta1/params", get(staking_params))
         .route("/cosmos/tx/v1beta1/txs", get(txs::<M>))
+        .route(
+            "/cosmos/base/tendermint/v1beta1/blocks/latest",
+            get(block_latest),
+        )
         .merge(router)
         .layer(cors)
         .layer(TraceLayer::new_for_http())

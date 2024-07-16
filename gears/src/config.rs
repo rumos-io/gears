@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use tendermint::rpc::url::Url;
 
 use crate::defaults::{CONFIG_DIR, CONFIG_FILE_NAME, GENESIS_FILE_NAME};
+use crate::types::base::min_gas::MinGasPrices;
 
 pub const DEFAULT_REST_LISTEN_ADDR: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1317);
@@ -40,9 +41,10 @@ impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T 
 #[serde(deny_unknown_fields)]
 #[serde(default)]
 pub struct Config<AC: Default + Clone> {
-    pub tendermint_rpc_address: Url,
+    pub tendermint_rpc_address: Url, // TODO: change to HttpClientUrl when Serialize and Deserialize are implemented
     pub rest_listen_addr: SocketAddr,
     pub address: SocketAddr,
+    pub min_gas_prices: Option<MinGasPrices>,
     pub app_config: AC,
 }
 
@@ -58,7 +60,11 @@ impl<AC: ApplicationConfig> Config<AC> {
             .register_template_string("config", CONFIG_TEMPLATE)
             .expect("hard coded config template is valid");
 
-        let cfg: Config<AC> = Config::default();
+        let cfg: Config<AC> = {
+            let mut cfg = Config::default();
+            cfg.min_gas_prices = Some(MinGasPrices::default());
+            cfg
+        };
 
         let config = handlebars
             .render("config", &cfg)
@@ -82,6 +88,7 @@ impl<AC: ApplicationConfig> Default for Config<AC> {
             rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
             address: DEFAULT_ADDRESS,
             app_config: AC::default(),
+            min_gas_prices: None,
         }
     }
 }
@@ -101,4 +108,6 @@ rest_listen_addr = "{{rest_listen_addr}}"
 
 # Tendermint node RPC proxy address
 tendermint_rpc_address = "{{tendermint_rpc_address}}"
+
+min_gas_prices = "{{min_gas_prices}}"
 "#;

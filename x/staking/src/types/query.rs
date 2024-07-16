@@ -10,7 +10,7 @@ use gears::{
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
-        response::PageResponse,
+        pagination::{request::PaginationRequest, response::PaginationResponse},
         uint::Uint256,
     },
 };
@@ -109,7 +109,7 @@ pub struct QueryRedelegationRequest {
     /// dst_validator_addr defines the validator address to redelegate to.
     pub dst_validator_address: Option<ValAddress>,
     /// pagination defines an optional pagination for the request.
-    pub pagination: Option<PageRequest>,
+    pub pagination: Option<PaginationRequest>,
 }
 
 impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
@@ -145,7 +145,7 @@ impl TryFrom<QueryRedelegationRequestRaw> for QueryRedelegationRequest {
             delegator_address,
             src_validator_address,
             dst_validator_address,
-            pagination: raw.pagination.map(|p| p.into()),
+            pagination: raw.pagination.map(PaginationRequest::from),
         })
     }
 }
@@ -168,7 +168,7 @@ impl From<QueryRedelegationRequest> for QueryRedelegationRequestRaw {
             delegator_address: query.delegator_address.map(|a| a.to_string()),
             src_validator_address: query.src_validator_address.map(|a| a.to_string()),
             dst_validator_address: query.dst_validator_address.map(|a| a.to_string()),
-            pagination: query.pagination.map(|p| p.into()),
+            pagination: query.pagination.map(PaginationRequest::into),
         }
     }
 }
@@ -391,7 +391,7 @@ impl From<RedelegationResponse> for RedelegationResponseRaw {
 pub struct QueryRedelegationResponse {
     /// Redelegation with balance.
     pub redelegation_responses: Vec<RedelegationResponse>,
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<QueryRedelegationResponseRaw> for QueryRedelegationResponse {
@@ -407,7 +407,7 @@ impl TryFrom<QueryRedelegationResponseRaw> for QueryRedelegationResponse {
         };
         Ok(QueryRedelegationResponse {
             redelegation_responses,
-            pagination: raw.pagination.map(|p| p.into()),
+            pagination: raw.pagination.map(PaginationResponse::from),
         })
     }
 }

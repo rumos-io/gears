@@ -30,7 +30,7 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
-        response::PageResponse,
+        pagination::response::PaginationResponse,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
@@ -366,14 +366,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         } else {
             vec![]
         };
-        let total = signing_infos.len() as u64;
+        let total = signing_infos.len();
         QuerySigningInfosResponse {
             info: signing_infos,
             // TODO: make correct pagination struct
-            pagination: Some(PageResponse {
-                next_key: vec![],
-                total,
-            }),
+            pagination: Some(PaginationResponse::new(total)),
         }
     }
 

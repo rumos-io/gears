@@ -45,6 +45,7 @@ fn balances_query() -> anyhow::Result<()> {
 
     let query = BalancesCommand {
         address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")?,
+        pagination: None,
     };
 
     let result = run_query(
@@ -83,7 +84,7 @@ fn denom_query() -> anyhow::Result<()> {
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             height: None,
             inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
-                command: BankQueryCommands::DenomMetadata,
+                command: BankQueryCommands::DenomMetadata { pagination: None },
             })),
         },
         &GaiaCoreClient,
@@ -126,7 +127,7 @@ fn send_tx() -> anyhow::Result<()> {
             }),
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
+            fees: None,
             inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
         },
         &GaiaCoreClient,
@@ -198,7 +199,7 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
                 }),
                 node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
                 chain_id: ChainId::from_str("test-chain")?,
-                fee: None,
+                fees: None,
                 inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
             },
             &GaiaCoreClient,

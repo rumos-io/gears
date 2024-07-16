@@ -223,8 +223,7 @@ impl<
             }) => {
                 let deposits = DepositIterator::new(ctx.kv_store(&self.store_key))
                     .map(|this| this.map(|(_key, value)| value))
-                    .filter(|this| this.is_ok())
-                    .map(|this| this.expect("we filtered invalid values out"))
+                    .filter_map(|this| this.ok())
                     .filter(|this| this.proposal_id == proposal_id)
                     .collect::<Vec<_>>();
 
@@ -278,8 +277,7 @@ impl<
             }) => {
                 let iterator = ProposalsIterator::new(ctx.kv_store(&self.store_key))
                     .map(|this| this.map(|(_key, value)| value))
-                    .filter(|this| this.is_ok())
-                    .map(|this| this.expect("we filtered invalid values out"));
+                    .filter_map(|this| this.ok());
 
                 let mut proposals = Vec::new();
                 for proposal in iterator {
@@ -316,7 +314,7 @@ impl<
                 let proposal = proposal_get(ctx, &self.store_key, proposal_id)?;
 
                 GovQueryResponse::Tally(QueryTallyResultResponse {
-                    tally: proposal.map(|this| this.final_tally_result).flatten(),
+                    tally: proposal.and_then(|this| this.final_tally_result),
                 })
             }
             GovQuery::Vote(QueryVoteRequest { proposal_id, voter }) => {
@@ -330,8 +328,7 @@ impl<
             }) => {
                 let votes = WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id)
                     .map(|this| this.map(|(_key, value)| value))
-                    .filter(|this| this.is_ok())
-                    .map(|this| this.expect("we filtered invalid values out"))
+                    .filter_map(|this| this.ok())
                     .collect::<Vec<_>>();
 
                 GovQueryResponse::Votes(QueryVotesResponse {

@@ -1,12 +1,14 @@
 use crate::{
     GenesisState, Keeper, Message, QueryDelegationRequest, QueryDelegationResponse,
     QueryParamsResponse, QueryRedelegationRequest, QueryRedelegationResponse,
-    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse, Redelegation,
+    RedelegationEntryResponse, RedelegationResponse,
 };
 use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::{errors::CoreError, Protobuf},
     error::AppError,
+    ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -15,6 +17,7 @@ use gears::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },
     },
+    types::{pagination::response::PaginationResponse, store::gas::ext::GasResultExt},
     x::{
         keepers::{auth::AuthKeeper, bank::StakingBankKeeper, staking::KeeperHooks},
         module::Module,
@@ -107,11 +110,7 @@ impl<
                 let req = QueryRedelegationRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self
-                    .keeper
-                    .query_redelegations(ctx, req)
-                    .encode_vec()
-                    .into())
+                Ok(self.query_redelegations(ctx, req).encode_vec().into())
             }
             "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
@@ -143,7 +142,7 @@ impl<
                 StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
             }
             StakingNodeQueryRequest::Redelegation(req) => {
-                StakingNodeQueryResponse::Redelegation(self.keeper.query_redelegations(ctx, req))
+                StakingNodeQueryResponse::Redelegation(self.query_redelegations(ctx, req))
             }
             StakingNodeQueryRequest::UnbondingDelegation(req) => {
                 StakingNodeQueryResponse::UnbondingDelegation(
@@ -170,5 +169,73 @@ impl<
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
         self.keeper.block_validator_updates(ctx)
+    }
+
+    fn query_redelegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryRedelegationRequest {
+            delegator_address,
+            src_validator_address,
+            dst_validator_address,
+            pagination,
+        }: QueryRedelegationRequest,
+    ) -> QueryRedelegationResponse {
+        let paginate = pagination.is_some();
+
+        let (total, redelegations) = self.keeper.redelegations(
+            ctx,
+            &delegator_address,
+            &src_validator_address,
+            &dst_validator_address,
+            pagination.map(Pagination::from),
+        );
+
+        let redelegation_responses = self
+            .redelegations_to_redelegations_response(ctx, redelegations)
+            .ok()
+            .unwrap_or_default();
+
+        QueryRedelegationResponse {
+            redelegation_responses,
+            pagination: match paginate {
+                true => Some(PaginationResponse::new(total)),
+                false => None,
+            },
+        }
+    }
+
+    fn redelegations_to_redelegations_response<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        redelegations: Vec<Redelegation>,
+    ) -> Result<Vec<RedelegationResponse>, AppError> {
+        let mut resp = Vec::with_capacity(redelegations.len());
+        for red in redelegations.into_iter() {
+            let validator = self
+                .keeper
+                .validator(ctx, &red.validator_dst_address)
+                .unwrap_gas()
+                .ok_or(AppError::AccountNotFound)?;
+
+            let mut entries = Vec::with_capacity(red.entries.len());
+            for entry in red.entries.clone().into_iter() {
+                let balance = validator
+                    .tokens_from_shares(entry.share_dst)
+                    .map_err(|e| AppError::Custom(e.to_string()))?
+                    .to_uint_floor();
+                entries.push(RedelegationEntryResponse {
+                    redelegation_entry: entry,
+                    balance,
+                });
+            }
+
+            resp.push(RedelegationResponse {
+                redelegation: red,
+                entries,
+            });
+        }
+
+        Ok(resp)
     }
 }

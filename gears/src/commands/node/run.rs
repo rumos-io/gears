@@ -20,11 +20,11 @@ use tracing::{error, info};
 #[derive(Debug, Clone)]
 pub struct RunCommand {
     pub home: PathBuf,
-    pub address: SocketAddr,
-    pub rest_listen_addr: SocketAddr,
+    pub address: Option<SocketAddr>,
+    pub rest_listen_addr: Option<SocketAddr>,
     pub read_buf_size: usize,
     pub log_level: LogLevel,
-    pub min_gas_prices: MinGasPrices,
+    pub min_gas_prices: Option<MinGasPrices>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -37,6 +37,8 @@ pub enum RunError {
     TendermintServer(#[from] tendermint::abci::errors::Error),
     #[error("{0}")]
     Custom(String),
+    #[error("{0}")]
+    TendermintRPC(#[from] tendermint::rpc::error::Error),
 }
 
 #[derive(Debug, Clone, Default, strum::Display)]
@@ -120,20 +122,25 @@ pub fn run<
 
     let abci_handler = abci_handler_builder(config.clone());
 
-    let options = NodeOptions::new(min_gas_prices);
+    let options = NodeOptions::new(min_gas_prices.or(config.min_gas_prices).ok_or(
+        RunError::HomeDirectory(
+            "Failed to get `min_gas_prices` set it via cli or in config file".to_owned(),
+        ),
+    )?);
 
     let app: BaseApp<DB, PSK, H, AI> = BaseApp::new(db, params_subspace_key, abci_handler, options);
 
     run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),
-        rest_listen_addr,
+        rest_listen_addr.unwrap_or(config.rest_listen_addr),
         router_builder.build_router::<BaseApp<DB, PSK, H, AI>>(),
-        config.tendermint_rpc_address,
+        config.tendermint_rpc_address.try_into()?,
     );
 
     run_grpc_server(router_builder.build_grpc_router::<BaseApp<DB, PSK, H, AI>>(app.clone()));
 
-    let server = ServerBuilder::new(read_buf_size).bind(address, ABCI::from(app))?;
+    let server = ServerBuilder::new(read_buf_size)
+        .bind(address.unwrap_or(config.address), ABCI::from(app))?;
 
     server.listen().map_err(|e| e.into())
 }

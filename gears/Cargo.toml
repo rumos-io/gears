@@ -33,7 +33,6 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-integer-encoding = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
 derive_more = { workspace = true }
@@ -64,7 +63,6 @@ former = { workspace = true }
 axum = { workspace = true }
 tower-http = { workspace = true, features = ["cors"] }
 tonic = { workspace = true }
-tonic-reflection = { workspace = true }
 tower-service = { workspace = true }
 tower-layer = { workspace = true }
 http = { workspace = true }
@@ -75,7 +73,6 @@ clap_complete = { workspace = true, optional = true }
 
 # crypto
 k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }
-pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"] }
 ripemd = { workspace = true }
 data-encoding = { workspace = true }
 
