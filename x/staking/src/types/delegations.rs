@@ -1,4 +1,5 @@
 use gears::{
+    ext::PaginationKeyIterator,
     tendermint::types::time::Timestamp,
     types::{
         address::{AccAddress, ValAddress},
@@ -80,6 +81,17 @@ pub struct Redelegation {
 impl Redelegation {
     pub fn add_entry(&mut self, redelegation_entry: RedelegationEntry) {
         self.entries.push(redelegation_entry);
+    }
+}
+
+impl PaginationKeyIterator for Redelegation {
+    fn iterator_key(&self) -> impl AsRef<[u8]> {
+        [
+            self.delegator_address.to_string().as_bytes(),
+            self.validator_src_address.to_string().as_bytes(),
+            self.validator_dst_address.to_string().as_bytes(),
+        ]
+        .concat()
     }
 }
 

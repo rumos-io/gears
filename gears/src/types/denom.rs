@@ -26,11 +26,21 @@ impl Denom {
     pub fn into_inner(self) -> String {
         self.0
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl AsRef<str> for Denom {
     fn as_ref(&self) -> &str {
         self.0.as_str()
+    }
+}
+
+impl AsRef<[u8]> for Denom {
+    fn as_ref(&self) -> &[u8] {
+        self.0.as_bytes()
     }
 }
 

@@ -1,12 +1,17 @@
 use clap::ArgAction;
 
 use crate::{
-    ext::Pagination,
+    ext::{Pagination, PaginationByKey, PaginationByOffset},
     types::pagination::request::{PaginationRequest, QUERY_DEFAULT_LIMIT},
 };
 
 #[derive(Debug, Clone, clap::Args)]
 pub struct CliPaginationRequest {
+    /// key is a value returned in PageResponse.next_key to begin
+    /// querying the next page most efficiently. Only one of offset or key
+    /// should be set.
+    #[arg(short, long, action = ArgAction::Set , help_heading = "Pagination")]
+    pub key: Option<Vec<u8>>,
     /// offset is a numeric offset that can be used when key is unavailable.
     /// It is less efficient than using key. Only one of offset or key should
     /// be set.
@@ -23,30 +28,37 @@ impl Default for CliPaginationRequest {
         Self {
             offset: 0,
             limit: QUERY_DEFAULT_LIMIT,
+            key: None,
         }
     }
 }
 
 impl From<PaginationRequest> for CliPaginationRequest {
-    fn from(PaginationRequest { offset, limit }: PaginationRequest) -> Self {
-        Self { offset, limit }
+    fn from(PaginationRequest { offset, limit, key }: PaginationRequest) -> Self {
+        Self { offset, limit, key }
     }
 }
 
 impl From<CliPaginationRequest> for PaginationRequest {
-    fn from(CliPaginationRequest { offset, limit }: CliPaginationRequest) -> Self {
-        Self { offset, limit }
+    fn from(CliPaginationRequest { offset, limit, key }: CliPaginationRequest) -> Self {
+        Self { offset, limit, key }
     }
 }
 
 impl From<CliPaginationRequest> for Pagination {
-    fn from(CliPaginationRequest { offset, limit }: CliPaginationRequest) -> Self {
-        Self {
-            offset: offset
-                .checked_mul(limit as u32)
-                .map(|this| this as usize)
-                .unwrap_or(usize::MAX),
-            limit: limit as usize,
+    fn from(CliPaginationRequest { offset, limit, key }: CliPaginationRequest) -> Self {
+        match key {
+            Some(key) => Self::from(PaginationByKey {
+                key,
+                limit: limit as usize,
+            }),
+            None => Self::from(PaginationByOffset {
+                offset: offset
+                    .checked_mul(limit as u32)
+                    .map(|this| this as usize)
+                    .unwrap_or(usize::MAX),
+                limit: limit as usize,
+            }),
         }
     }
 }

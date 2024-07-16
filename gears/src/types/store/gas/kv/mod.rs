@@ -32,7 +32,7 @@ impl<DB: Database> GasKVStore<'_, DB> {
         let value = self.inner.get(&k);
 
         self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()), k.as_ref())?;
 
         Ok(value)
     }

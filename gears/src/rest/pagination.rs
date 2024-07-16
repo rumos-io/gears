@@ -15,7 +15,11 @@ impl From<Pagination> for PaginationRequest {
     fn from(pagination: Pagination) -> Self {
         let (offset, limit) = parse_pagination(pagination);
 
-        Self { offset, limit }
+        Self {
+            offset,
+            limit,
+            key: None,
+        }
     }
 }
 

@@ -236,7 +236,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .kv_store(&self.store_key)
             .prefix_store(account_key(address));
 
-        let coin_bytes = store.get(denom.as_ref().as_bytes())?;
+        let coin_bytes = store.get(denom.as_str().as_bytes())?;
         let coin = if let Some(coin_bytes) = coin_bytes {
             UnsignedCoin {
                 denom: denom.to_owned(),
@@ -625,7 +625,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let store = ctx.kv_store(&self.store_key);
         let supply_store = store.prefix_store(SUPPLY_KEY);
 
-        let amount_bytes = supply_store.get(denom.as_ref().as_bytes())?;
+        let amount_bytes = supply_store.get(denom.as_str().as_bytes())?;
 
         match amount_bytes {
             Some(bytes) => Ok(Some(UnsignedCoin {
