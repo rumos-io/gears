@@ -922,7 +922,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Range<'a, DB> {
     range: (Bound<Vec<u8>>, Bound<Vec<u8>>),
     delayed_nodes: Vec<Box<Node>>,

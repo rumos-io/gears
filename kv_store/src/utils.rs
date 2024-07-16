@@ -1,7 +1,7 @@
 use std::{borrow::Cow, iter::Peekable};
 
 /// Favours a over b if keys are equal (so make a the cache)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MergedRange<'a> {
     a: Peekable<std::vec::IntoIter<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>>,
     b: Peekable<std::vec::IntoIter<(Cow<'a, Vec<u8>>, Cow<'a, Vec<u8>>)>>,

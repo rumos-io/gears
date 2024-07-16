@@ -3,16 +3,19 @@ use axum::{
     routing::get,
     Json, Router,
 };
-use gears::types::address::AccAddress;
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::{error::HTTPError, Pagination, RestState},
+    rest::{error::HTTPError, RestState},
     types::denom::Denom,
+};
+use gears::{
+    rest::Pagination,
+    types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 use serde::Deserialize;
 
 use crate::{
-    types::query::{QueryAllBalancesRequest, QueryBalanceRequest},
+    types::query::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyRequest},
     BankNodeQueryRequest, BankNodeQueryResponse,
 };
 
@@ -22,9 +25,12 @@ pub async fn supply<
     QRes: QueryResponse,
     App: NodeQueryHandler<QReq, QRes>,
 >(
+    pagination: Query<Option<Pagination>>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
-    let req = BankNodeQueryRequest::TotalSupply;
+    let req = BankNodeQueryRequest::TotalSupply(QueryTotalSupplyRequest {
+        pagination: pagination.0.map(PaginationRequest::from),
+    });
 
     let res = rest_state.app.typed_query(req)?;
 
@@ -38,12 +44,12 @@ pub async fn get_balances<
     App: NodeQueryHandler<QReq, QRes>,
 >(
     Path(address): Path<AccAddress>,
-    _pagination: Query<Pagination>,
+    pagination: Query<Option<PaginationRequest>>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::AllBalances(QueryAllBalancesRequest {
         address,
-        pagination: None,
+        pagination: pagination.0,
     });
 
     let res = rest_state.app.typed_query(req)?;
