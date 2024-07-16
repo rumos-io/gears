@@ -77,10 +77,3 @@ impl<I, T: Iterator<Item = I>, U: Iterator<Item = I>> Iterator for TwoIterators<
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    // use super::*;
-
-    // TODO:ME TEEEEEEEESTS
-}

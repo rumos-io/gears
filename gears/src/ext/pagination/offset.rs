@@ -47,3 +47,78 @@ impl<T: Iterator<Item = U>, U> IteratorPaginateByOffset for T {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_values() {
+        let array = (0..20).collect::<Vec<_>>();
+
+        let expected = (0..20).collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_offset((0, 20))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn first_half_of_values() {
+        let array = (0..20).collect::<Vec<_>>();
+
+        let expected = (0..10).collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_offset((0, 10))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn second_half_of_values() {
+        let array = (0..20).collect::<Vec<_>>();
+
+        let expected = (10..20).collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_offset((1, 10))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn first_middle_of_values() {
+        let array = (0..20).collect::<Vec<_>>();
+
+        let expected = (5..10).collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_offset((1, 5))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn second_middle_of_values() {
+        let array = (0..20).collect::<Vec<_>>();
+
+        let expected = (10..15).collect::<Vec<_>>();
+
+        let result = array
+            .into_iter()
+            .paginate_by_offset((2, 5))
+            .collect::<Vec<_>>();
+
+        assert_eq!(expected, result)
+    }
+}
