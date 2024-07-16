@@ -1,5 +1,6 @@
 use crate::{
     GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
+    QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
 };
 use gears::{
@@ -24,11 +25,13 @@ use gears::{
 #[derive(Clone)]
 pub enum DistributionNodeQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
+    ValidatorCommission(QueryValidatorCommissionRequest),
     Params(QueryParamsRequest),
 }
 #[derive(Clone)]
 pub enum DistributionNodeQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
+    ValidatorCommission(QueryValidatorCommissionResponse),
     Params(QueryParamsResponse),
 }
 
@@ -93,6 +96,16 @@ impl<
                     .encode_vec()
                     .into())
             }
+            "/cosmos.slashing.v1beta1.Query/ValidatorCommission" => {
+                let req = QueryValidatorCommissionRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_validator_commission(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
             "/cosmos.slashing.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
@@ -112,6 +125,11 @@ impl<
             DistributionNodeQueryRequest::ValidatorOutstandingRewards(req) => {
                 DistributionNodeQueryResponse::ValidatorOutstandingRewards(
                     self.keeper.query_validator_outstanding_rewards(ctx, req),
+                )
+            }
+            DistributionNodeQueryRequest::ValidatorCommission(req) => {
+                DistributionNodeQueryResponse::ValidatorCommission(
+                    self.keeper.query_validator_commission(ctx, req),
                 )
             }
             DistributionNodeQueryRequest::Params(req) => {

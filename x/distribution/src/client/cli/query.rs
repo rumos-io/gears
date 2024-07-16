@@ -1,5 +1,6 @@
 use crate::{
-    QueryParamsRequest, QueryParamsResponse, QueryValidatorOutstandingRewardsRequest,
+    QueryParamsRequest, QueryParamsResponse, QueryValidatorCommissionRequest,
+    QueryValidatorCommissionResponse, QueryValidatorOutstandingRewardsRequest,
     QueryValidatorOutstandingRewardsResponse,
 };
 use clap::{Args, Subcommand};
@@ -20,13 +21,21 @@ pub struct DistributionQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum DistributionCommands {
     ValidatorOutstandingRewards(ValidatorOutstandingRewardsCommand),
+    ValidatorCommission(ValidatorCommissionCommand),
     /// Query distribution params
     Params,
 }
 
-/// Query signing info.
+/// Query distribution outstanding (un-withdrawn) rewards for a validator and all their delegations
 #[derive(Args, Debug, Clone)]
 pub struct ValidatorOutstandingRewardsCommand {
+    /// validator address
+    pub address: ValAddress,
+}
+
+/// Query distribution validator commission
+#[derive(Args, Debug, Clone)]
+pub struct ValidatorCommissionCommand {
     /// validator address
     pub address: ValAddress,
 }
@@ -53,6 +62,11 @@ impl QueryHandler for DistributionQueryHandler {
                     validator_address: address.clone(),
                 },
             ),
+            DistributionCommands::ValidatorCommission(ValidatorCommissionCommand { address }) => {
+                Self::QueryRequest::ValidatorCommission(QueryValidatorCommissionRequest {
+                    validator_address: address.clone(),
+                })
+            }
             DistributionCommands::Params => Self::QueryRequest::Params(QueryParamsRequest {}),
         };
 
@@ -70,6 +84,11 @@ impl QueryHandler for DistributionQueryHandler {
                     QueryValidatorOutstandingRewardsResponse::decode_vec(&query_bytes)?,
                 )
             }
+            DistributionCommands::ValidatorCommission(_) => {
+                DistributionQueryResponse::ValidatorCommission(
+                    QueryValidatorCommissionResponse::decode_vec(&query_bytes)?,
+                )
+            }
             DistributionCommands::Params => {
                 DistributionQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
             }
@@ -82,6 +101,7 @@ impl QueryHandler for DistributionQueryHandler {
 #[derive(Clone, PartialEq)]
 pub enum DistributionQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
+    ValidatorCommission(QueryValidatorCommissionRequest),
     Params(QueryParamsRequest),
 }
 
@@ -91,6 +111,9 @@ impl Query for DistributionQueryRequest {
             DistributionQueryRequest::ValidatorOutstandingRewards(_) => {
                 "/cosmos.distribution.v1beta1.Query/ValidatorOutstandingRewards"
             }
+            DistributionQueryRequest::ValidatorCommission(_) => {
+                "/cosmos.distribution.v1beta1.Query/ValidatorCommission"
+            }
             DistributionQueryRequest::Params(_) => "/cosmos.distribution.v1beta1.Query/Params",
         }
     }
@@ -98,6 +121,7 @@ impl Query for DistributionQueryRequest {
     fn into_bytes(self) -> Vec<u8> {
         match self {
             DistributionQueryRequest::ValidatorOutstandingRewards(var) => var.encode_vec(),
+            DistributionQueryRequest::ValidatorCommission(var) => var.encode_vec(),
             DistributionQueryRequest::Params(var) => var.encode_vec(),
         }
     }
@@ -108,5 +132,6 @@ impl Query for DistributionQueryRequest {
 #[allow(clippy::large_enum_variant)]
 pub enum DistributionQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
+    ValidatorCommission(QueryValidatorCommissionResponse),
     Params(QueryParamsResponse),
 }

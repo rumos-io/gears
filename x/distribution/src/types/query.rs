@@ -1,6 +1,6 @@
 use crate::{
-    DistributionParams, DistributionParamsRaw, ValidatorOutstandingRewards,
-    ValidatorOutstandingRewardsRaw,
+    DistributionParams, DistributionParamsRaw, ValidatorAccumulatedCommission,
+    ValidatorAccumulatedCommissionRaw, ValidatorOutstandingRewards, ValidatorOutstandingRewardsRaw,
 };
 use gears::{
     core::{errors::CoreError, Protobuf},
@@ -51,6 +51,44 @@ impl Protobuf<QueryValidatorOutstandingRewardsRequestRaw>
     for QueryValidatorOutstandingRewardsRequest
 {
 }
+
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct QueryValidatorCommissionRequestRaw {
+    #[prost(bytes, tag = "1")]
+    pub validator_address: Vec<u8>,
+}
+
+impl From<QueryValidatorCommissionRequest> for QueryValidatorCommissionRequestRaw {
+    fn from(
+        QueryValidatorCommissionRequest { validator_address }: QueryValidatorCommissionRequest,
+    ) -> Self {
+        Self {
+            validator_address: validator_address.into(),
+        }
+    }
+}
+
+/// QueryValidatorCommissionRequest is the request type for the
+/// Query/ValidatorCommission RPC method
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct QueryValidatorCommissionRequest {
+    /// validator_address defines the validator address to query for.
+    pub validator_address: ValAddress,
+}
+
+impl TryFrom<QueryValidatorCommissionRequestRaw> for QueryValidatorCommissionRequest {
+    type Error = AddressError;
+
+    fn try_from(
+        QueryValidatorCommissionRequestRaw { validator_address }: QueryValidatorCommissionRequestRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(QueryValidatorCommissionRequest {
+            validator_address: ValAddress::try_from(validator_address)?,
+        })
+    }
+}
+
+impl Protobuf<QueryValidatorCommissionRequestRaw> for QueryValidatorCommissionRequest {}
 
 #[derive(Clone, PartialEq, Message)]
 pub struct QueryParamsRequest {}
@@ -107,6 +145,47 @@ impl Protobuf<QueryValidatorOutstandingRewardsResponseRaw>
     for QueryValidatorOutstandingRewardsResponse
 {
 }
+
+#[derive(Clone, Serialize, Message)]
+pub struct QueryValidatorCommissionResponseRaw {
+    #[prost(message, optional, tag = "1")]
+    pub commission: Option<ValidatorAccumulatedCommissionRaw>,
+}
+
+impl From<QueryValidatorCommissionResponse> for QueryValidatorCommissionResponseRaw {
+    fn from(
+        QueryValidatorCommissionResponse { commission }: QueryValidatorCommissionResponse,
+    ) -> Self {
+        Self {
+            commission: commission.map(Into::into),
+        }
+    }
+}
+
+/// QueryValidatorCommissionResponse is the response type for the
+/// Query/ValidatorOutstandingRewards RPC method.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct QueryValidatorCommissionResponse {
+    /// commission defines the commision the validator received.
+    pub commission: Option<ValidatorAccumulatedCommission>,
+}
+
+impl TryFrom<QueryValidatorCommissionResponseRaw> for QueryValidatorCommissionResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        QueryValidatorCommissionResponseRaw { commission }: QueryValidatorCommissionResponseRaw,
+    ) -> Result<Self, Self::Error> {
+        let commission = if let Some(com) = commission {
+            Some(com.try_into()?)
+        } else {
+            None
+        };
+        Ok(Self { commission })
+    }
+}
+
+impl Protobuf<QueryValidatorCommissionResponseRaw> for QueryValidatorCommissionResponse {}
 
 #[derive(Clone, Serialize, Message)]
 pub struct QueryParamsResponseRaw {

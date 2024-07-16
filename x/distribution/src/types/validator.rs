@@ -81,7 +81,7 @@ pub struct ValidatorAccumulatedCommissionRecord {
     pub accumulated: ValidatorAccumulatedCommission,
 }
 
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Serialize, Message)]
 pub struct ValidatorAccumulatedCommissionRaw {
     #[prost(message, repeated)]
     pub commission: Vec<DecimalCoinRaw>,
