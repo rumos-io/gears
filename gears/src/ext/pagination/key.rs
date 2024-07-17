@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 
+use itertools::Itertools;
 use vec1::Vec1;
 
 use crate::types::{base::coin::UnsignedCoin, store::gas::errors::GasStoreErrors};
 
-use super::TwoIterators;
+use super::{PaginationResult, TwoIterators};
 
 #[derive(Debug, Clone)]
 pub struct PaginationByKey {
@@ -23,67 +24,62 @@ pub trait PaginationKeyIterator {
 }
 
 pub trait IteratorPaginateByKey {
-    type Item;
+    type Item: Clone;
 
     fn paginate_by_key(
         self,
         pagination: impl Into<PaginationByKey>,
-    ) -> impl Iterator<Item = Self::Item>;
+    ) -> (
+        PaginationResult<Self::Item>,
+        impl Iterator<Item = Self::Item>,
+    );
 
     fn maybe_paginate_by_key<P: Into<PaginationByKey>>(
         self,
         pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item>;
-
-    fn skip_by_key_pagination(
-        self,
-        pagination: impl Into<PaginationByKey>,
-    ) -> impl Iterator<Item = Self::Item>;
-
-    fn maybe_skip_by_key_pagination<P: Into<PaginationByKey>>(
-        self,
-        pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item>;
+    ) -> (
+        Option<PaginationResult<Self::Item>>,
+        impl Iterator<Item = Self::Item>,
+    );
 }
 
-impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginateByKey for T {
+impl<T: Iterator<Item = U>, U: PaginationKeyIterator + Clone> IteratorPaginateByKey for T {
     type Item = U;
 
     fn paginate_by_key(
         self,
         pagination: impl Into<PaginationByKey>,
-    ) -> impl Iterator<Item = Self::Item> {
+    ) -> (
+        PaginationResult<Self::Item>,
+        impl Iterator<Item = Self::Item>,
+    ) {
         let PaginationByKey { key, limit } = pagination.into();
-        self.skip_while(move |this| this.iterator_key().as_ref() != key)
-            .take(limit)
+
+        let mut iterator =
+            itertools::peek_nth(self.skip_while(move |this| this.iterator_key().as_ref() != key));
+
+        let last = iterator.peek_nth(limit).cloned();
+        let count = match iterator.try_len() {
+            Ok(len) => len,
+            Err((_lower_bound, upper_bound)) => upper_bound.unwrap_or(usize::MAX),
+        };
+
+        (PaginationResult::new(count, last), iterator.take(limit))
     }
 
     fn maybe_paginate_by_key<P: Into<PaginationByKey>>(
         self,
         pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item> {
+    ) -> (
+        Option<PaginationResult<Self::Item>>,
+        impl Iterator<Item = Self::Item>,
+    ) {
         match pagination {
-            Some(pagination) => TwoIterators::First(self.paginate_by_key(pagination)),
-            None => TwoIterators::Second(self),
-        }
-    }
-
-    fn skip_by_key_pagination(
-        self,
-        pagination: impl Into<PaginationByKey>,
-    ) -> impl Iterator<Item = Self::Item> {
-        let PaginationByKey { key, limit: _ } = pagination.into();
-
-        self.skip_while(move |this| this.iterator_key().as_ref() != key)
-    }
-
-    fn maybe_skip_by_key_pagination<P: Into<PaginationByKey>>(
-        self,
-        pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item> {
-        match pagination {
-            Some(pagination) => TwoIterators::First(self.skip_by_key_pagination(pagination)),
-            None => TwoIterators::Second(self),
+            Some(pagination) => {
+                let (result, iter) = self.paginate_by_key(pagination);
+                (Some(result), TwoIterators::First(iter))
+            }
+            None => (None, TwoIterators::Second(self)),
         }
     }
 }
@@ -120,9 +116,12 @@ impl<T: PaginationKeyIterator> PaginationKeyIterator for Result<T, GasStoreError
         }
     }
 }
+ 
 
 #[cfg(test)]
 mod tests {
+    use crate::ext::UnwrapPagination;
+
     use super::*;
     use vec1::vec1;
 
@@ -137,6 +136,7 @@ mod tests {
         let result: Vec1<_> = array
             .into_iter()
             .paginate_by_key((vec1![1], 6))
+            .unwrap_pagination()
             .collect::<Vec<_>>()
             .try_into()
             .expect(VALUE_VALID);
@@ -153,6 +153,7 @@ mod tests {
         let result: Vec1<_> = array
             .into_iter()
             .paginate_by_key((vec1![1], 3))
+            .unwrap_pagination()
             .collect::<Vec<_>>()
             .try_into()
             .expect(VALUE_VALID);
@@ -169,6 +170,7 @@ mod tests {
         let result: Vec1<_> = array
             .into_iter()
             .paginate_by_key((vec1![4], 3))
+            .unwrap_pagination()
             .collect::<Vec<_>>()
             .try_into()
             .expect(VALUE_VALID);
@@ -185,6 +187,7 @@ mod tests {
         let result: Vec1<_> = array
             .into_iter()
             .paginate_by_key((vec1![2], 2))
+            .unwrap_pagination()
             .collect::<Vec<_>>()
             .try_into()
             .expect(VALUE_VALID);
@@ -201,6 +204,7 @@ mod tests {
         let result: Vec1<_> = array
             .into_iter()
             .paginate_by_key((vec1![4], 2))
+            .unwrap_pagination()
             .collect::<Vec<_>>()
             .try_into()
             .expect(VALUE_VALID);

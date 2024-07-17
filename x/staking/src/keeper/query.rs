@@ -5,7 +5,7 @@ use crate::{
 };
 use gears::{
     context::query::QueryContext,
-    ext::{IteratorPaginate, Pagination},
+    ext::{IteratorPaginate, Pagination, PaginationResult},
 };
 
 impl<
@@ -77,7 +77,7 @@ impl<
         src_validator_address: &Option<ValAddress>,
         dst_validator_address: &Option<ValAddress>,
         pagination: Option<Pagination>,
-    ) -> (usize, Vec<u8>, Vec<Redelegation>) {
+    ) -> (Option<PaginationResult<Redelegation>>, Vec<Redelegation>) {
         let redelegations = match (
             delegator_address,
             src_validator_address,
@@ -102,16 +102,9 @@ impl<
             }
         };
 
-        let count = redelegations.len();
+        let (p_result, iter) = redelegations.into_iter().maybe_paginate(pagination);
 
-        (
-            count,
-            Vec::new(), // TODO:NOW
-            redelegations
-                .into_iter()
-                .maybe_paginate(pagination)
-                .collect(),
-        )
+        (p_result, iter.collect())
     }
 
     pub fn query_unbonding_delegation<DB: Database>(

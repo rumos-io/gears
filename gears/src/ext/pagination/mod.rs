@@ -1,6 +1,8 @@
 mod key;
 mod offset;
 
+use crate::types::pagination::response::PaginationResponse;
+
 pub use self::key::*;
 pub use self::offset::*;
 
@@ -28,35 +30,42 @@ impl From<PaginationByKey> for Pagination {
 pub trait IteratorPaginate {
     type Item;
 
-    fn paginate(self, pagination: impl Into<Pagination>) -> impl Iterator<Item = Self::Item>;
+    fn paginate(
+        self,
+        pagination: impl Into<Pagination>,
+    ) -> (
+        PaginationResult<Self::Item>,
+        impl Iterator<Item = Self::Item>,
+    );
 
     fn maybe_paginate<P: Into<Pagination>>(
         self,
         pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item>;
-
-    fn skip_by_pagination(
-        self,
-        pagination: impl Into<Pagination>,
-    ) -> impl Iterator<Item = Self::Item>;
-
-    fn maybe_skip_by_pagination<P: Into<Pagination>>(
-        self,
-        pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item>;
+    ) -> (
+        Option<PaginationResult<Self::Item>>,
+        impl Iterator<Item = Self::Item>,
+    );
 }
 
-impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginate for T {
+impl<T: Iterator<Item = U>, U: PaginationKeyIterator + Clone> IteratorPaginate for T {
     type Item = U;
 
-    fn paginate(self, pagination: impl Into<Pagination>) -> impl Iterator<Item = Self::Item> {
+    fn paginate(
+        self,
+        pagination: impl Into<Pagination>,
+    ) -> (
+        PaginationResult<Self::Item>,
+        impl Iterator<Item = Self::Item>,
+    ) {
         let Pagination(variant) = pagination.into();
         match variant {
             PaginationVariant::Offset(pagination) => {
-                TwoIterators::First(self.paginate_by_offset(pagination))
+                let (result, iter) = self.paginate_by_offset(pagination);
+                (result, TwoIterators::First(iter))
             }
             PaginationVariant::Key(pagination) => {
-                TwoIterators::Second(self.paginate_by_key(pagination))
+                let (result, iter) = self.paginate_by_key(pagination);
+                (result, TwoIterators::Second(iter))
             }
         }
     }
@@ -64,35 +73,16 @@ impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginate for T {
     fn maybe_paginate<P: Into<Pagination>>(
         self,
         pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item> {
+    ) -> (
+        Option<PaginationResult<Self::Item>>,
+        impl Iterator<Item = Self::Item>,
+    ) {
         match pagination {
-            Some(pagination) => TwoIterators::First(self.paginate(pagination)),
-            None => TwoIterators::Second(self),
-        }
-    }
-
-    fn skip_by_pagination(
-        self,
-        pagination: impl Into<Pagination>,
-    ) -> impl Iterator<Item = Self::Item> {
-        let Pagination(variant) = pagination.into();
-        match variant {
-            PaginationVariant::Offset(pagination) => {
-                TwoIterators::First(self.skip_by_offset_pagination(pagination))
+            Some(pagination) => {
+                let (result, iter) = self.paginate(pagination);
+                (Some(result), TwoIterators::First(iter))
             }
-            PaginationVariant::Key(pagination) => {
-                TwoIterators::Second(self.skip_by_key_pagination(pagination))
-            }
-        }
-    }
-
-    fn maybe_skip_by_pagination<P: Into<Pagination>>(
-        self,
-        pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item> {
-        match pagination {
-            Some(pagination) => TwoIterators::First(self.skip_by_pagination(pagination)),
-            None => TwoIterators::Second(self),
+            None => (None, TwoIterators::Second(self)),
         }
     }
 }
@@ -110,6 +100,71 @@ impl<I, T: Iterator<Item = I>, U: Iterator<Item = I>> Iterator for TwoIterators<
         match self {
             TwoIterators::First(var) => var.next(),
             TwoIterators::Second(var) => var.next(),
+        }
+    }
+}
+
+pub trait UnwrapPagination<I> {
+    /// Drop pagination info and paginated return iterator only
+    fn unwrap_pagination(self) -> I;
+}
+
+impl<T, I: Iterator<Item = T>> UnwrapPagination<I> for (Option<PaginationResult<T>>, I) {
+    fn unwrap_pagination(self) -> I {
+        let (_, iter) = self;
+        iter
+    }
+}
+
+impl<T, I: Iterator<Item = T>> UnwrapPagination<I> for (PaginationResult<T>, I) {
+    fn unwrap_pagination(self) -> I {
+        let (_, iter) = self;
+        iter
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct PaginationResult<T> {
+    pub total: usize,
+    pub next_element: Option<T>,
+}
+
+impl<T> PaginationResult<T> {
+    pub fn new(total: usize, next_element: Option<T>) -> Self {
+        Self {
+            total,
+            next_element,
+        }
+    }
+}
+
+pub fn bytes_pagination_result<T: PaginationKeyIterator>(
+    p_result: Option<PaginationResult<T>>,
+) -> Option<PaginationResult<Vec<u8>>> {
+    match p_result {
+        Some(PaginationResult {
+            total,
+            next_element,
+        }) => Some(PaginationResult::new(
+            total,
+            next_element.map(|this| this.iterator_key().into_owned()),
+        )),
+        None => None,
+    }
+}
+
+impl<T: PaginationKeyIterator> From<PaginationResult<T>> for PaginationResponse {
+    fn from(
+        PaginationResult {
+            total,
+            next_element,
+        }: PaginationResult<T>,
+    ) -> Self {
+        Self {
+            next_key: next_element
+                .map(|this| this.iterator_key().into_owned())
+                .unwrap_or_default(),
+            total: total as u64,
         }
     }
 }

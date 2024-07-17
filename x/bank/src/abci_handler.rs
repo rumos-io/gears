@@ -170,18 +170,14 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             pagination,
         }: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
-        let paginate = pagination.is_some();
-        let (total, next_key, balances) = self
+        let (p_result, balances) = self
             .keeper
             .all_balances(ctx, address, pagination.map(Pagination::from))
             .unwrap_gas();
 
         QueryAllBalancesResponse {
             balances,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total, next_key)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 
@@ -190,18 +186,13 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &QueryContext<DB, SK>,
         QueryDenomsMetadataRequest { pagination }: QueryDenomsMetadataRequest,
     ) -> QueryDenomsMetadataResponse {
-        let paginate = pagination.is_some();
-
-        let (total, next_key, metadatas) = self
+        let (p_result, metadatas) = self
             .keeper
             .denoms_metadata(ctx, pagination.map(Pagination::from));
 
         QueryDenomsMetadataResponse {
             metadatas,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total, next_key)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 
@@ -210,18 +201,13 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &QueryContext<DB, SK>,
         QueryTotalSupplyRequest { pagination }: QueryTotalSupplyRequest,
     ) -> QueryTotalSupplyResponse {
-        let paginate = pagination.is_some();
-
-        let (total, next_key, supply) = self
+        let (p_result, supply) = self
             .keeper
             .total_supply(ctx, pagination.map(Pagination::from));
 
         QueryTotalSupplyResponse {
             supply,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total, next_key)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 }

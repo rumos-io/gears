@@ -1,4 +1,6 @@
-use super::TwoIterators;
+use itertools::Itertools;
+
+use super::{PaginationResult, TwoIterators};
 
 #[derive(Debug, Clone)]
 pub struct PaginationByOffset {
@@ -18,66 +20,64 @@ pub trait IteratorPaginateByOffset {
     fn paginate_by_offset(
         self,
         pagination: impl Into<PaginationByOffset>,
-    ) -> impl Iterator<Item = Self::Item>;
+    ) -> (
+        PaginationResult<Self::Item>,
+        impl Iterator<Item = Self::Item>,
+    );
 
     fn maybe_paginate_by_offset<P: Into<PaginationByOffset>>(
         self,
         pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item>;
-
-    fn skip_by_offset_pagination(
-        self,
-        pagination: impl Into<PaginationByOffset>,
-    ) -> impl Iterator<Item = Self::Item>;
-
-    fn maybe_skip_by_offset_pagination<P: Into<PaginationByOffset>>(
-        self,
-        pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item>;
+    ) -> (
+        Option<PaginationResult<Self::Item>>,
+        impl Iterator<Item = Self::Item>,
+    );
 }
 
-impl<T: Iterator<Item = U>, U> IteratorPaginateByOffset for T {
+impl<T: Iterator<Item = U>, U: Clone> IteratorPaginateByOffset for T {
     type Item = U;
 
     fn paginate_by_offset(
         self,
         pagination: impl Into<PaginationByOffset>,
-    ) -> impl Iterator<Item = Self::Item> {
+    ) -> (
+        PaginationResult<Self::Item>,
+        impl Iterator<Item = Self::Item>,
+    ) {
         let PaginationByOffset { offset, limit } = pagination.into();
-        self.skip(offset * limit).take(limit)
+
+        let mut iterator = itertools::peek_nth(self.skip(offset * limit));
+
+        let last = iterator.peek_nth(limit).cloned();
+        let count = match iterator.try_len() {
+            Ok(len) => len,
+            Err((_lower_bound, upper_bound)) => upper_bound.unwrap_or(usize::MAX),
+        };
+
+        (PaginationResult::new(count, last), iterator.take(limit))
     }
 
     fn maybe_paginate_by_offset<P: Into<PaginationByOffset>>(
         self,
         pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item> {
+    ) -> (
+        Option<PaginationResult<Self::Item>>,
+        impl Iterator<Item = Self::Item>,
+    ) {
         match pagination {
-            Some(pagination) => TwoIterators::First(self.paginate_by_offset(pagination)),
-            None => TwoIterators::Second(self),
-        }
-    }
-
-    fn skip_by_offset_pagination(
-        self,
-        pagination: impl Into<PaginationByOffset>,
-    ) -> impl Iterator<Item = Self::Item> {
-        let PaginationByOffset { offset, limit } = pagination.into();
-        self.skip(offset * limit)
-    }
-
-    fn maybe_skip_by_offset_pagination<P: Into<PaginationByOffset>>(
-        self,
-        pagination: Option<P>,
-    ) -> impl Iterator<Item = Self::Item> {
-        match pagination {
-            Some(pagination) => TwoIterators::First(self.skip_by_offset_pagination(pagination)),
-            None => TwoIterators::Second(self),
+            Some(pagination) => {
+                let (result, iter) = self.paginate_by_offset(pagination);
+                (Some(result), TwoIterators::First(iter))
+            }
+            None => (None, TwoIterators::Second(self)),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::ext::UnwrapPagination;
+
     use super::*;
 
     #[test]
@@ -89,6 +89,7 @@ mod tests {
         let result = array
             .into_iter()
             .paginate_by_offset((0, 20))
+            .unwrap_pagination()
             .collect::<Vec<_>>();
 
         assert_eq!(expected, result)
@@ -103,6 +104,7 @@ mod tests {
         let result = array
             .into_iter()
             .paginate_by_offset((0, 10))
+            .unwrap_pagination()
             .collect::<Vec<_>>();
 
         assert_eq!(expected, result)
@@ -117,6 +119,7 @@ mod tests {
         let result = array
             .into_iter()
             .paginate_by_offset((1, 10))
+            .unwrap_pagination()
             .collect::<Vec<_>>();
 
         assert_eq!(expected, result)
@@ -131,6 +134,7 @@ mod tests {
         let result = array
             .into_iter()
             .paginate_by_offset((1, 5))
+            .unwrap_pagination()
             .collect::<Vec<_>>();
 
         assert_eq!(expected, result)
@@ -145,6 +149,7 @@ mod tests {
         let result = array
             .into_iter()
             .paginate_by_offset((2, 5))
+            .unwrap_pagination()
             .collect::<Vec<_>>();
 
         assert_eq!(expected, result)
