@@ -42,8 +42,8 @@ impl GasGuard {
                 read_cost_per_byte
                     .checked_mul(
                         Gas::try_from(key as u64).map_err(|e| GasStoreErrors::new(get_key, e))?,
-                    )
-                    .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))
+                    ) //TODO: should we use the GasStore overflow error once we have one (see TODO below?
+                    .ok_or(GasMeteringErrors::ErrorGasOverflow(GUARD_DESC.to_owned()))  //TODO: GasStore should define its own overflow error not steal from GasMetering
                     .map_err(|e| GasStoreErrors::new(get_key, e))?,
                 READ_PER_BYTE_DESC,
             )

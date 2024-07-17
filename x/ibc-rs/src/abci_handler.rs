@@ -3,6 +3,7 @@ use crate::{
     message::Message, types::genesis::GenesisState,
 };
 use gears::{
+    application::handlers::node::TxError,
     context::{init::InitContext, query::QueryContext, tx::TxContext},
     core::errors::CoreError,
     error::AppError,
@@ -35,11 +36,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         Self { keeper }
     }
 
-    pub fn tx<DB: Database + Sync + Send>(
+    pub fn msg<DB: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         match msg {
             Message::ClientCreate(msg) => {
                 // let MsgCreateClient {

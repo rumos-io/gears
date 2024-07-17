@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use gears::{
-    application::handlers::node::ABCIHandler,
+    application::handlers::node::{ABCIHandler, TxError},
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         TransactionalContext,
@@ -24,6 +24,7 @@ use gears::{
 };
 
 use crate::{
+    errors::GovTxError,
     genesis::GovGenesisState,
     keeper::GovKeeper,
     msg::{deposit::Deposit, GovMsg},
@@ -96,15 +97,15 @@ impl<
         &self,
         _ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         _tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         Ok(())
     }
 
-    fn tx<DB: Database>(
+    fn msg<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         enum EmitEvent {
             Regular,
             Deposit(u64),
@@ -116,7 +117,7 @@ impl<
                 let is_voting_started = self
                     .keeper
                     .deposit_add(ctx, msg.clone())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
+                    .map_err(|e| Into::<GovTxError>::into(e))?;
 
                 match is_voting_started {
                     true => (
@@ -129,14 +130,14 @@ impl<
             GovMsg::Vote(msg) => {
                 self.keeper
                     .vote_add(ctx, msg.clone().into())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
+                    .map_err(|e| Into::<GovTxError>::into(e))?;
 
                 (msg.voter.to_string(), EmitEvent::Regular)
             }
             GovMsg::Weighted(msg) => {
                 self.keeper
                     .vote_add(ctx, msg.clone())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
+                    .map_err(|e| Into::<GovTxError>::into(e))?;
 
                 (msg.voter.to_string(), EmitEvent::Regular)
             }
@@ -144,7 +145,7 @@ impl<
                 let proposal_id = self
                     .keeper
                     .submit_proposal(ctx, msg.clone())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
+                    .map_err(|e| Into::<GovTxError>::into(e))?;
 
                 let is_voting_started = self
                     .keeper
@@ -156,7 +157,7 @@ impl<
                             amount: msg.initial_deposit.clone(),
                         },
                     )
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
+                    .map_err(|e| Into::<GovTxError>::into(e))?;
 
                 match is_voting_started {
                     true => (

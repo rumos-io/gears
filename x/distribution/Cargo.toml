@@ -7,7 +7,7 @@ version = "0.1.0"
 anyhow = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true }
-gears = { path = "../../gears", features = ["cli", "export", "xmods"] }
+gears = { path = "../../gears", features = ["cli", "xmods"] }
 prost = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
