@@ -1,11 +1,14 @@
 use super::*;
 use crate::{
-    QueryParamsRequest, QueryParamsResponse, QueryValidatorCommissionRequest,
-    QueryValidatorCommissionResponse, QueryValidatorOutstandingRewardsRequest,
-    QueryValidatorOutstandingRewardsResponse, QueryValidatorSlashesRequest,
-    QueryValidatorSlashesResponse, SlashEventIterator,
+    QueryDelegationRewardsRequest, QueryDelegationRewardsResponse, QueryParamsRequest,
+    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
+    QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, SlashEventIterator,
 };
-use gears::{context::query::QueryContext, types::pagination::response::PaginationResponse};
+use gears::{
+    context::query::QueryContext, types::pagination::response::PaginationResponse,
+    x::types::delegation::StakingDelegation,
+};
 
 impl<
         SK: StoreKey,
@@ -65,6 +68,65 @@ impl<
         QueryValidatorSlashesResponse {
             slashes: events,
             pagination: pagination.map(|_| PaginationResponse::new(total)),
+        }
+    }
+
+    pub fn query_delegation_rewards<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryDelegationRewardsRequest {
+            delegator_address,
+            validator_address,
+        }: QueryDelegationRewardsRequest,
+    ) -> Result<QueryDelegationRewardsResponse, AppError> {
+        // TODO: original logic, can't implement and it's wrong idea to modify state via query
+        //       do we have a way to have isolated transactional context that doesn't affect state?
+        //     // branch the context to isolate state changes
+        //     let validator = self
+        //         .staking_keeper
+        //         .validator(ctx, &validator_address)
+        //         .unwrap_gas()
+        //         .ok_or(AppError::AccountNotFound)?;
+        //     let delegation = self
+        //         .staking_keeper
+        //         .delegation(ctx, &delegator_address, &validator_address)
+        //         .unwrap_gas()
+        //         .ok_or(AppError::Custom("delegation is not found".to_string()))?;
+        // let ending_period =
+        //     self.increment_validator_period(ctx, validator.operator(), validator.tokens())?;
+        // let rewards = self.calculate_delegation_rewards(
+        //     ctx,
+        //     &validator_address,
+        //     &delegator_address,
+        //     validator.tokens_from_shares(*delegation.shares())?,
+        //     ending_period,
+        // )?;
+
+        // logic is checked the ending_period is the period from current rewards
+        if let Some(rew) = self
+            .validator_current_rewards(ctx, &validator_address)
+            .unwrap_gas()
+        {
+            let validator = self
+                .staking_keeper
+                .validator(ctx, &validator_address)
+                .unwrap_gas()
+                .ok_or(AppError::AccountNotFound)?;
+            let delegation = self
+                .staking_keeper
+                .delegation(ctx, &delegator_address, &validator_address)
+                .unwrap_gas()
+                .ok_or(AppError::Custom("delegation is not found".to_string()))?;
+            let rewards = self.calculate_delegation_rewards(
+                ctx,
+                &validator_address,
+                &delegator_address,
+                validator.tokens_from_shares(*delegation.shares())?,
+                rew.period,
+            )?;
+            Ok(QueryDelegationRewardsResponse { rewards })
+        } else {
+            Ok(QueryDelegationRewardsResponse { rewards: None })
         }
     }
 

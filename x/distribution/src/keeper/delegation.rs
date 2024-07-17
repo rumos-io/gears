@@ -197,9 +197,9 @@ impl<
     }
 
     /// calculate the total rewards accrued by a delegation
-    pub fn calculate_delegation_rewards<DB: Database>(
+    pub fn calculate_delegation_rewards<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
+        ctx: &CTX,
         validator_address: &ValAddress,
         delegator_address: &AccAddress,
         tokens: Decimal256,
@@ -348,9 +348,9 @@ impl<
     }
 
     /// calculate the rewards accrued by a delegation between two periods
-    pub fn calculate_delegation_rewards_between<DB: Database>(
+    pub fn calculate_delegation_rewards_between<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &TxContext<'_, DB, SK>,
+        ctx: &CTX,
         validator_address: &ValAddress,
         starting_period: u64,
         ending_period: u64,

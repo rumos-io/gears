@@ -1,14 +1,18 @@
 use crate::{
-    QueryParamsRequest, QueryParamsResponse, QueryValidatorCommissionRequest,
-    QueryValidatorCommissionResponse, QueryValidatorOutstandingRewardsRequest,
-    QueryValidatorOutstandingRewardsResponse, QueryValidatorSlashesRequest,
-    QueryValidatorSlashesResponse,
+    QueryDelegationRewardsRequest, QueryDelegationRewardsResponse, QueryParamsRequest,
+    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
+    QueryValidatorSlashesRequest, QueryValidatorSlashesResponse,
 };
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
     core::Protobuf,
-    types::{address::ValAddress, pagination::request::PaginationRequest, query::Query},
+    types::{
+        address::{AccAddress, ValAddress},
+        pagination::request::PaginationRequest,
+        query::Query,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -24,6 +28,7 @@ pub enum DistributionCommands {
     ValidatorOutstandingRewards(ValidatorOutstandingRewardsCommand),
     ValidatorCommission(ValidatorCommissionCommand),
     ValidatorSlashes(ValidatorSlashesCommand),
+    Rewards(DelegationRewardsCommand),
     /// Query distribution params
     Params,
 }
@@ -56,6 +61,15 @@ pub struct ValidatorSlashesCommand {
     /// Pagination limit
     #[arg(long, default_value_t = 100)]
     pub limit: u8,
+}
+
+/// Query all distribution delegator rewards or rewards from a particular validator
+#[derive(Args, Debug, Clone)]
+pub struct DelegationRewardsCommand {
+    /// delegator_address defines the delegator address to query for.
+    pub delegator_address: AccAddress,
+    /// validator_address defines the validator address to query for
+    pub validator_address: ValAddress,
 }
 
 #[derive(Debug, Clone)]
@@ -100,6 +114,13 @@ impl QueryHandler for DistributionQueryHandler {
                     limit: *limit,
                 }),
             }),
+            DistributionCommands::Rewards(DelegationRewardsCommand {
+                delegator_address,
+                validator_address,
+            }) => Self::QueryRequest::DelegationRewards(QueryDelegationRewardsRequest {
+                delegator_address: delegator_address.clone(),
+                validator_address: validator_address.clone(),
+            }),
             DistributionCommands::Params => Self::QueryRequest::Params(QueryParamsRequest {}),
         };
 
@@ -127,6 +148,9 @@ impl QueryHandler for DistributionQueryHandler {
                     QueryValidatorSlashesResponse::decode_vec(&query_bytes)?,
                 )
             }
+            DistributionCommands::Rewards(_) => DistributionQueryResponse::DelegationRewards(
+                QueryDelegationRewardsResponse::decode_vec(&query_bytes)?,
+            ),
             DistributionCommands::Params => {
                 DistributionQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
             }
@@ -141,6 +165,7 @@ pub enum DistributionQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     ValidatorCommission(QueryValidatorCommissionRequest),
     ValidatorSlashes(QueryValidatorSlashesRequest),
+    DelegationRewards(QueryDelegationRewardsRequest),
     Params(QueryParamsRequest),
 }
 
@@ -156,6 +181,9 @@ impl Query for DistributionQueryRequest {
             DistributionQueryRequest::ValidatorSlashes(_) => {
                 "/cosmos.distribution.v1beta1.Query/ValidatorSlashes"
             }
+            DistributionQueryRequest::DelegationRewards(_) => {
+                "/cosmos.distribution.v1beta1.Query/DelegationRewards"
+            }
             DistributionQueryRequest::Params(_) => "/cosmos.distribution.v1beta1.Query/Params",
         }
     }
@@ -165,6 +193,7 @@ impl Query for DistributionQueryRequest {
             DistributionQueryRequest::ValidatorOutstandingRewards(var) => var.encode_vec(),
             DistributionQueryRequest::ValidatorCommission(var) => var.encode_vec(),
             DistributionQueryRequest::ValidatorSlashes(var) => var.encode_vec(),
+            DistributionQueryRequest::DelegationRewards(var) => var.encode_vec(),
             DistributionQueryRequest::Params(var) => var.encode_vec(),
         }
     }
@@ -176,5 +205,6 @@ pub enum DistributionQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     ValidatorCommission(QueryValidatorCommissionResponse),
     ValidatorSlashes(QueryValidatorSlashesResponse),
+    DelegationRewards(QueryDelegationRewardsResponse),
     Params(QueryParamsResponse),
 }

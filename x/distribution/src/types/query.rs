@@ -6,7 +6,8 @@ use crate::{
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
     types::{
-        address::{AddressError, ValAddress},
+        address::{AccAddress, AddressError, ValAddress},
+        base::coins::DecimalCoins,
         errors::StdError,
         pagination::{request::PaginationRequest, response::PaginationResponse},
     },
@@ -161,6 +162,56 @@ impl TryFrom<QueryValidatorSlashesRequestRaw> for QueryValidatorSlashesRequest {
     }
 }
 
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct QueryDelegationRewardsRequestRaw {
+    #[prost(bytes, tag = "1")]
+    pub delegator_address: Vec<u8>,
+    #[prost(bytes, tag = "2")]
+    pub validator_address: Vec<u8>,
+}
+
+impl From<QueryDelegationRewardsRequest> for QueryDelegationRewardsRequestRaw {
+    fn from(
+        QueryDelegationRewardsRequest {
+            delegator_address,
+            validator_address,
+        }: QueryDelegationRewardsRequest,
+    ) -> Self {
+        Self {
+            delegator_address: delegator_address.into(),
+            validator_address: validator_address.into(),
+        }
+    }
+}
+
+/// QueryDelegationRewardsRequest is the request type for the
+/// Query/DelegationRewards RPC method.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct QueryDelegationRewardsRequest {
+    /// delegator_address defines the delegator address to query for.
+    pub delegator_address: AccAddress,
+    /// validator_address defines the validator address to query for.
+    pub validator_address: ValAddress,
+}
+
+impl TryFrom<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest {
+    type Error = AddressError;
+
+    fn try_from(
+        QueryDelegationRewardsRequestRaw {
+            delegator_address,
+            validator_address,
+        }: QueryDelegationRewardsRequestRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(QueryDelegationRewardsRequest {
+            delegator_address: AccAddress::try_from(delegator_address)?,
+            validator_address: ValAddress::try_from(validator_address)?,
+        })
+    }
+}
+
+impl Protobuf<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest {}
+
 #[derive(Clone, PartialEq, Message)]
 pub struct QueryParamsRequest {}
 
@@ -312,6 +363,45 @@ impl TryFrom<QueryValidatorSlashesResponseRaw> for QueryValidatorSlashesResponse
 }
 
 impl Protobuf<QueryValidatorSlashesResponseRaw> for QueryValidatorSlashesResponse {}
+
+#[derive(Clone, Serialize, Message)]
+pub struct QueryDelegationRewardsResponseRaw {
+    #[prost(bytes, optional, tag = "1")]
+    pub rewards: Option<Vec<u8>>,
+}
+
+impl From<QueryDelegationRewardsResponse> for QueryDelegationRewardsResponseRaw {
+    fn from(QueryDelegationRewardsResponse { rewards }: QueryDelegationRewardsResponse) -> Self {
+        Self {
+            rewards: rewards.map(|rewards| {
+                serde_json::to_vec(&rewards).expect("serialization of domain type can't fail")
+            }),
+        }
+    }
+}
+
+/// QueryDelegationRewardsResponse is the response type for the Query/DelegationRewards RPC method
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct QueryDelegationRewardsResponse {
+    pub rewards: Option<DecimalCoins>,
+}
+
+impl TryFrom<QueryDelegationRewardsResponseRaw> for QueryDelegationRewardsResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        QueryDelegationRewardsResponseRaw { rewards }: QueryDelegationRewardsResponseRaw,
+    ) -> Result<Self, Self::Error> {
+        let rewards = if let Some(rew) = rewards {
+            serde_json::from_slice(&rew).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?
+        } else {
+            None
+        };
+        Ok(Self { rewards })
+    }
+}
+
+impl Protobuf<QueryDelegationRewardsResponseRaw> for QueryDelegationRewardsResponse {}
 
 #[derive(Clone, Serialize, Message)]
 pub struct QueryParamsResponseRaw {

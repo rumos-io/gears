@@ -1,6 +1,6 @@
 use crate::{
-    GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
-    QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    GenesisState, Keeper, Message, QueryDelegationRewardsRequest, QueryParamsRequest,
+    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
     QueryValidatorSlashesRequest, QueryValidatorSlashesResponse,
 };
@@ -116,6 +116,16 @@ impl<
                 Ok(self
                     .keeper
                     .query_validator_slashes(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
+            "/cosmos.distribution.v1beta1.Query/DelegationRewards" => {
+                let req = QueryDelegationRewardsRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_delegation_rewards(ctx, req)?
                     .encode_vec()
                     .into())
             }
