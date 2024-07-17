@@ -77,7 +77,7 @@ impl<
         src_validator_address: &Option<ValAddress>,
         dst_validator_address: &Option<ValAddress>,
         pagination: Option<Pagination>,
-    ) -> (usize, Vec<Redelegation>) {
+    ) -> (usize, Vec<u8>, Vec<Redelegation>) {
         let redelegations = match (
             delegator_address,
             src_validator_address,
@@ -106,6 +106,7 @@ impl<
 
         (
             count,
+            Vec::new(), // TODO:NOW
             redelegations
                 .into_iter()
                 .maybe_paginate(pagination)

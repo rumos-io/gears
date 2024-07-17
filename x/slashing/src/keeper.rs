@@ -369,8 +369,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let total = signing_infos.len();
         QuerySigningInfosResponse {
             info: signing_infos,
-            // TODO: make correct pagination struct
-            pagination: Some(PaginationResponse::new(total)),
+            pagination: Some(PaginationResponse::new(total, Vec::new())), // TODO:NOW
         }
     }
 

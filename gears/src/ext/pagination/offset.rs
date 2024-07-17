@@ -24,6 +24,16 @@ pub trait IteratorPaginateByOffset {
         self,
         pagination: Option<P>,
     ) -> impl Iterator<Item = Self::Item>;
+
+    fn skip_by_offset_pagination(
+        self,
+        pagination: impl Into<PaginationByOffset>,
+    ) -> impl Iterator<Item = Self::Item>;
+
+    fn maybe_skip_by_offset_pagination<P: Into<PaginationByOffset>>(
+        self,
+        pagination: Option<P>,
+    ) -> impl Iterator<Item = Self::Item>;
 }
 
 impl<T: Iterator<Item = U>, U> IteratorPaginateByOffset for T {
@@ -43,6 +53,24 @@ impl<T: Iterator<Item = U>, U> IteratorPaginateByOffset for T {
     ) -> impl Iterator<Item = Self::Item> {
         match pagination {
             Some(pagination) => TwoIterators::First(self.paginate_by_offset(pagination)),
+            None => TwoIterators::Second(self),
+        }
+    }
+
+    fn skip_by_offset_pagination(
+        self,
+        pagination: impl Into<PaginationByOffset>,
+    ) -> impl Iterator<Item = Self::Item> {
+        let PaginationByOffset { offset, limit } = pagination.into();
+        self.skip(offset * limit)
+    }
+
+    fn maybe_skip_by_offset_pagination<P: Into<PaginationByOffset>>(
+        self,
+        pagination: Option<P>,
+    ) -> impl Iterator<Item = Self::Item> {
+        match pagination {
+            Some(pagination) => TwoIterators::First(self.skip_by_offset_pagination(pagination)),
             None => TwoIterators::Second(self),
         }
     }

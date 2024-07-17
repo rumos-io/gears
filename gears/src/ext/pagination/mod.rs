@@ -34,6 +34,16 @@ pub trait IteratorPaginate {
         self,
         pagination: Option<P>,
     ) -> impl Iterator<Item = Self::Item>;
+
+    fn skip_by_pagination(
+        self,
+        pagination: impl Into<Pagination>,
+    ) -> impl Iterator<Item = Self::Item>;
+
+    fn maybe_skip_by_pagination<P: Into<Pagination>>(
+        self,
+        pagination: Option<P>,
+    ) -> impl Iterator<Item = Self::Item>;
 }
 
 impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginate for T {
@@ -60,8 +70,34 @@ impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginate for T {
             None => TwoIterators::Second(self),
         }
     }
+
+    fn skip_by_pagination(
+        self,
+        pagination: impl Into<Pagination>,
+    ) -> impl Iterator<Item = Self::Item> {
+        let Pagination(variant) = pagination.into();
+        match variant {
+            PaginationVariant::Offset(pagination) => {
+                TwoIterators::First(self.skip_by_offset_pagination(pagination))
+            }
+            PaginationVariant::Key(pagination) => {
+                TwoIterators::Second(self.skip_by_key_pagination(pagination))
+            }
+        }
+    }
+
+    fn maybe_skip_by_pagination<P: Into<Pagination>>(
+        self,
+        pagination: Option<P>,
+    ) -> impl Iterator<Item = Self::Item> {
+        match pagination {
+            Some(pagination) => TwoIterators::First(self.skip_by_pagination(pagination)),
+            None => TwoIterators::Second(self),
+        }
+    }
 }
 
+#[derive(Debug, Clone)]
 enum TwoIterators<I, T: Iterator<Item = I>, U: Iterator<Item = I>> {
     First(T),
     Second(U),

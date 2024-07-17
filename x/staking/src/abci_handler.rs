@@ -183,7 +183,7 @@ impl<
     ) -> QueryRedelegationResponse {
         let paginate = pagination.is_some();
 
-        let (total, redelegations) = self.keeper.redelegations(
+        let (total, next_key, redelegations) = self.keeper.redelegations(
             ctx,
             &delegator_address,
             &src_validator_address,
@@ -199,7 +199,7 @@ impl<
         QueryRedelegationResponse {
             redelegation_responses,
             pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
+                true => Some(PaginationResponse::new(total, next_key)),
                 false => None,
             },
         }

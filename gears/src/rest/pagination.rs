@@ -1,7 +1,11 @@
-use crate::types::pagination::request::{PaginationRequest, QUERY_DEFAULT_LIMIT};
+use crate::types::pagination::request::{PaginationKind, PaginationRequest, QUERY_DEFAULT_LIMIT};
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct Pagination {
+    /*
+    ! NOTE: this lines of code https://github.com/NYBACHOK/gears/blob/81883ecfd28c65c8b90460fd9515b18ed33094a4/gears/src/rest/handlers.rs#L69-L76
+    ! doesn't have any way to use key instead of offset, so I assume it not possible at all for this moment
+    */
     /// offset is a numeric offset that can be used when key is unavailable.
     /// It is less efficient than using key. Only one of offset or key should
     /// be set.
@@ -16,9 +20,8 @@ impl From<Pagination> for PaginationRequest {
         let (offset, limit) = parse_pagination(pagination);
 
         Self {
-            offset,
             limit,
-            key: None,
+            kind: PaginationKind::Offset { offset },
         }
     }
 }

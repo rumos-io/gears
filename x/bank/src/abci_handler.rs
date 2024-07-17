@@ -171,7 +171,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
         let paginate = pagination.is_some();
-        let (total, balances) = self
+        let (total, next_key, balances) = self
             .keeper
             .all_balances(ctx, address, pagination.map(Pagination::from))
             .unwrap_gas();
@@ -179,7 +179,7 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         QueryAllBalancesResponse {
             balances,
             pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
+                true => Some(PaginationResponse::new(total, next_key)),
                 false => None,
             },
         }
@@ -192,14 +192,14 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     ) -> QueryDenomsMetadataResponse {
         let paginate = pagination.is_some();
 
-        let (total, metadatas) = self
+        let (total, next_key, metadatas) = self
             .keeper
             .denoms_metadata(ctx, pagination.map(Pagination::from));
 
         QueryDenomsMetadataResponse {
             metadatas,
             pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
+                true => Some(PaginationResponse::new(total, next_key)),
                 false => None,
             },
         }
@@ -212,14 +212,14 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     ) -> QueryTotalSupplyResponse {
         let paginate = pagination.is_some();
 
-        let (total, supply) = self
+        let (total, next_key, supply) = self
             .keeper
             .total_supply(ctx, pagination.map(Pagination::from));
 
         QueryTotalSupplyResponse {
             supply,
             pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
+                true => Some(PaginationResponse::new(total, next_key)),
                 false => None,
             },
         }

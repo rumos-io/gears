@@ -169,7 +169,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         addr: AccAddress,
     ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        let (_, result) = self.all_balances(ctx, addr, None)?;
+        let (_, _, result) = self.all_balances(ctx, addr, None)?;
 
         Ok(result)
     }
@@ -425,22 +425,30 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         addr: AccAddress,
         pagination: Option<Pagination>,
-    ) -> Result<(usize, Vec<UnsignedCoin>), GasStoreErrors> {
+    ) -> Result<(usize, Vec<u8>, Vec<UnsignedCoin>), GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(addr);
         let account_store = bank_store.prefix_store(prefix);
         let total = account_store.clone().into_range(..).count();
+        let next_key = account_store
+            .clone()
+            .into_range(..)
+            .maybe_skip_by_pagination(pagination.clone())
+            .next()
+            .map(|this| this.map(|(key, _)| key.into_owned()).unwrap_or_default())
+            .unwrap_or_default();
 
         let mut balances = vec![];
 
-        for rcoin in account_store.into_range(..).maybe_paginate(pagination) {
+        let iterator = account_store.into_range(..).maybe_paginate(pagination);
+        for rcoin in iterator {
             let (_, coin) = rcoin?;
             let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             balances.push(coin);
         }
-        Ok((total, balances))
+        Ok((total, next_key, balances))
     }
 
     /// Gets the total supply of every denom
@@ -448,7 +456,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &QueryContext<DB, SK>,
         pagination: Option<Pagination>,
-    ) -> (usize, Vec<UnsignedCoin>) {
+    ) -> (usize, Vec<u8>, Vec<UnsignedCoin>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
@@ -466,12 +474,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .filter(|this| !this.amount.is_zero());
 
         let total = supply_store.clone().count();
+        let next_key = supply_store
+            .clone()
+            .maybe_skip_by_pagination(pagination.clone())
+            .next()
+            .map(|this| this.denom.into_inner().into_bytes())
+            .unwrap_or_default();
 
         let mut store: Vec<_> = supply_store.maybe_paginate(pagination).collect();
 
         store.sort_by_key(|this| this.denom.clone());
 
-        (total, store)
+        (total, next_key, store)
     }
 
     pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -670,7 +684,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &QueryContext<DB, SK>,
         pagination: Option<Pagination>,
-    ) -> (usize, Vec<Metadata>) {
+    ) -> (usize, Vec<u8>, Vec<Metadata>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
@@ -680,6 +694,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .into_range(..);
 
         let total = bank_iterator.clone().count();
+        let next_key = bank_iterator
+            .clone()
+            .maybe_skip_by_pagination(pagination.clone())
+            .next()
+            .map(|(key, _)| key.into_owned())
+            .unwrap_or_default();
 
         for (_, metadata) in bank_iterator.maybe_paginate(pagination) {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
@@ -688,7 +708,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             denoms_metadata.push(metadata);
         }
 
-        (total, denoms_metadata)
+        (total, next_key, denoms_metadata)
     }
 
     pub fn delegate_coins_from_account_to_module<
