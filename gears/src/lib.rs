@@ -20,17 +20,17 @@ pub mod utils;
 #[cfg(feature = "xmods")]
 pub mod x;
 
-#[cfg(feature = "export")]
+ 
 pub mod core {
     pub use core_types::*;
 }
 
-#[cfg(feature = "export")]
+ 
 pub mod tendermint {
     pub use tendermint::*;
 }
 
-#[cfg(feature = "export")]
+ 
 pub mod store {
     pub use kv_store::*;
     pub mod database {

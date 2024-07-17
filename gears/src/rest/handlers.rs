@@ -1,9 +1,8 @@
-use super::pagination::parse_pagination;
-use crate::rest::{error::HTTPError, pagination::Pagination};
+use crate::rest::error::HTTPError;
+use crate::types::pagination::response::PaginationResponse;
 use crate::types::response::any::AnyTx;
 use crate::types::response::tx::TxResponse;
 use crate::types::response::tx_event::GetTxsEventResponse;
-use crate::types::response::PageResponse;
 use crate::types::tx::{Tx, TxMessage};
 use axum::extract::{Query as AxumQuery, State};
 use axum::Json;
@@ -16,6 +15,8 @@ use tendermint::rpc::response::tx::search::Response;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 use tendermint::types::proto::Protobuf;
+
+use super::{parse_pagination, Pagination};
 
 // TODO:
 // 1. handle multiple events in /cosmos/tx/v1beta1/txs request
@@ -110,7 +111,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
     let total = txs.len().try_into().map_err(|_| HTTPError::bad_gateway())?;
 
     Ok(GetTxsEventResponse {
-        pagination: Some(PageResponse {
+        pagination: Some(PaginationResponse {
             next_key: vec![],
             total,
         }),

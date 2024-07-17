@@ -5,16 +5,16 @@ use clap::{Args, Subcommand};
 
 use gears::{
     application::handlers::client::QueryHandler,
-    core::query::request::bank::QueryDenomsMetadataRequest,
+    cli::pagination::CliPaginationRequest,
     error::IBC_ENCODE_UNWRAP,
     tendermint::types::proto::Protobuf,
-    types::{address::AccAddress, query::Query},
+    types::{address::AccAddress, pagination::request::PaginationRequest, query::Query},
 };
-use prost::Message;
 use serde::{Deserialize, Serialize};
 
 use crate::types::query::{
-    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataResponse,
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
+    QueryDenomsMetadataResponse,
 };
 
 #[derive(Args, Debug)]
@@ -26,7 +26,10 @@ pub struct BankQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum BankCommands {
     Balances(BalancesCommand),
-    DenomMetadata,
+    DenomMetadata {
+        #[command(flatten)]
+        pagination: Option<CliPaginationRequest>,
+    },
 }
 
 /// Query for account balances by address
@@ -34,6 +37,8 @@ pub enum BankCommands {
 pub struct BalancesCommand {
     /// address
     pub address: AccAddress,
+    #[command(flatten)]
+    pub pagination: Option<CliPaginationRequest>,
 }
 
 #[derive(Debug, Clone)]
@@ -51,14 +56,17 @@ impl QueryHandler for BankQueryHandler {
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
-            BankCommands::Balances(BalancesCommand { address }) => {
-                BankQuery::Balances(QueryAllBalancesRequest {
-                    address: address.clone(),
-                    pagination: None,
+            BankCommands::Balances(BalancesCommand {
+                address,
+                pagination,
+            }) => BankQuery::Balances(QueryAllBalancesRequest {
+                address: address.clone(),
+                pagination: pagination.to_owned().map(PaginationRequest::from),
+            }),
+            BankCommands::DenomMetadata { pagination } => {
+                BankQuery::DenomMetadata(QueryDenomsMetadataRequest {
+                    pagination: pagination.to_owned().map(PaginationRequest::from),
                 })
-            }
-            BankCommands::DenomMetadata => {
-                BankQuery::DenomMetadata(QueryDenomsMetadataRequest { pagination: None })
             }
         };
 
@@ -74,7 +82,7 @@ impl QueryHandler for BankQueryHandler {
             BankCommands::Balances(_) => BankQueryResponse::Balances(
                 QueryAllBalancesResponse::decode::<Bytes>(query_bytes.into())?,
             ),
-            BankCommands::DenomMetadata => BankQueryResponse::DenomMetadata(
+            BankCommands::DenomMetadata { pagination: _ } => BankQueryResponse::DenomMetadata(
                 QueryDenomsMetadataResponse::decode::<Bytes>(query_bytes.into())?,
             ),
         };
@@ -83,7 +91,7 @@ impl QueryHandler for BankQueryHandler {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum BankQuery {
     Balances(QueryAllBalancesRequest),
     DenomMetadata(QueryDenomsMetadataRequest),
@@ -100,7 +108,7 @@ impl Query for BankQuery {
     fn into_bytes(self) -> Vec<u8> {
         match self {
             BankQuery::Balances(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-            BankQuery::DenomMetadata(var) => var.encode_to_vec(),
+            BankQuery::DenomMetadata(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
