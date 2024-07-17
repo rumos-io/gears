@@ -19,7 +19,7 @@ impl From<(Vec1<u8>, usize)> for PaginationByKey {
 }
 
 pub trait PaginationKeyIterator {
-    fn iterator_key(&self) -> impl AsRef<[u8]>;
+    fn iterator_key(&self) -> Cow<'_, [u8]>;
 }
 
 pub trait IteratorPaginateByKey {
@@ -89,49 +89,34 @@ impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginateByKey for 
 }
 
 impl PaginationKeyIterator for UnsignedCoin {
-    fn iterator_key(&self) -> impl AsRef<[u8]> {
-        AsRef::<[u8]>::as_ref(&self.denom)
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(self.denom.as_ref())
     }
 }
 
 impl<T> PaginationKeyIterator for (Cow<'_, Vec<u8>>, T) {
-    fn iterator_key(&self) -> impl AsRef<[u8]> {
-        self.0.as_ref()
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(self.0.as_ref())
     }
 }
 
 impl PaginationKeyIterator for Cow<'_, Vec<u8>> {
-    fn iterator_key(&self) -> impl AsRef<[u8]> {
-        self.as_ref()
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(self.as_ref())
     }
 }
 
 impl PaginationKeyIterator for Vec<u8> {
-    fn iterator_key(&self) -> impl AsRef<[u8]> {
-        AsRef::<[u8]>::as_ref(self)
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(self.as_ref())
     }
 }
 
 impl<T: PaginationKeyIterator> PaginationKeyIterator for Result<T, GasStoreErrors> {
-    fn iterator_key(&self) -> impl AsRef<[u8]> {
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
         match self {
-            Ok(var) => TwoAsRef::First(var.iterator_key()),
-            Err(var) => TwoAsRef::Second(&var.key),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum TwoAsRef<T: AsRef<[u8]>, U: AsRef<[u8]>> {
-    First(T),
-    Second(U),
-}
-
-impl<T: AsRef<[u8]>, U: AsRef<[u8]>> AsRef<[u8]> for TwoAsRef<T, U> {
-    fn as_ref(&self) -> &[u8] {
-        match self {
-            TwoAsRef::First(var) => var.as_ref(),
-            TwoAsRef::Second(var) => var.as_ref(),
+            Ok(var) => var.iterator_key(),
+            Err(var) => Cow::Borrowed(&var.key),
         }
     }
 }

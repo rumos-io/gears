@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use gears::{
     ext::PaginationKeyIterator,
     tendermint::types::time::Timestamp,
@@ -85,13 +87,15 @@ impl Redelegation {
 }
 
 impl PaginationKeyIterator for Redelegation {
-    fn iterator_key(&self) -> impl AsRef<[u8]> {
-        [
-            self.delegator_address.to_string().as_bytes(),
-            self.validator_src_address.to_string().as_bytes(),
-            self.validator_dst_address.to_string().as_bytes(),
-        ]
-        .concat()
+    fn iterator_key(&self) -> Cow<'_, [u8]> {
+        Cow::Owned(
+            [
+                self.delegator_address.to_string().as_bytes(),
+                self.validator_src_address.to_string().as_bytes(),
+                self.validator_dst_address.to_string().as_bytes(),
+            ]
+            .concat(),
+        )
     }
 }
 
