@@ -154,4 +154,37 @@ mod tests {
 
         assert_eq!(expected, result)
     }
+
+    #[test]
+    fn p_result_all_values() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let (p_result, _) = array.into_iter().paginate_by_offset((0, 2));
+
+        let expected = PaginationResult::new(6, Some(vec![3]));
+
+        assert_eq!(expected, p_result);
+    }
+
+    #[test]
+    fn p_result_last_value() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let (p_result, _) = array.into_iter().paginate_by_offset((1, 5));
+
+        let expected = PaginationResult::new(1, None);
+
+        assert_eq!(expected, p_result);
+    }
+
+    #[test]
+    fn p_result_not_existed_value() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let (p_result, _) = array.into_iter().paginate_by_offset((10, 10));
+
+        let expected = PaginationResult::new(0, None);
+
+        assert_eq!(expected, p_result);
+    }
 }

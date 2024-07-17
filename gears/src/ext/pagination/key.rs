@@ -116,7 +116,6 @@ impl<T: PaginationKeyIterator> PaginationKeyIterator for Result<T, GasStoreError
         }
     }
 }
- 
 
 #[cfg(test)]
 mod tests {
@@ -210,5 +209,38 @@ mod tests {
             .expect(VALUE_VALID);
 
         assert_eq!(expected, result)
+    }
+
+    #[test]
+    fn p_result_all_values() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let (p_result, _) = array.into_iter().paginate_by_key((vec1![1], 2));
+
+        let expected = PaginationResult::new(6, Some(vec![3]));
+
+        assert_eq!(expected, p_result);
+    }
+
+    #[test]
+    fn p_result_last_value() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let (p_result, _) = array.into_iter().paginate_by_key((vec1![6], 2));
+
+        let expected = PaginationResult::new(1, None);
+
+        assert_eq!(expected, p_result);
+    }
+
+    #[test]
+    fn p_result_not_existed_value() {
+        let array = [vec![1_u8], vec![2], vec![3], vec![4], vec![5], vec![6]];
+
+        let (p_result, _) = array.into_iter().paginate_by_key((vec1![7], 2));
+
+        let expected = PaginationResult::new(0, None);
+
+        assert_eq!(expected, p_result);
     }
 }

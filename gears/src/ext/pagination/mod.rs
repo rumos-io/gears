@@ -123,7 +123,7 @@ impl<T, I: Iterator<Item = T>> UnwrapPagination<I> for (PaginationResult<T>, I) 
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PaginationResult<T> {
     pub total: usize,
     pub next_element: Option<T>,
