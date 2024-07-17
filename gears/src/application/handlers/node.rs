@@ -2,7 +2,6 @@ use crate::{
     baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     error::AppError,
-    signing::renderer::value_renderer::ValueRenderer,
     types::tx::{raw::TxWithRaw, TxMessage},
 };
 use database::Database;
@@ -11,13 +10,39 @@ use tendermint::types::{
     proto::validator::ValidatorUpdate,
     request::{begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery},
 };
+use thiserror::Error;
 
-pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: TxMessage + ValueRenderer>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError>;
+#[derive(Debug, Error)]
+#[error("error code must be greater than 0")]
+pub struct ErrorCodeError;
+
+#[derive(Debug, Clone)]
+pub struct ErrorCode(u16);
+
+impl ErrorCode {
+    pub const fn try_new(code: u16) -> Result<Self, ErrorCodeError> {
+        if code > 0 {
+            Ok(Self(code))
+        } else {
+            Err(ErrorCodeError)
+        }
+    }
+
+    pub fn value(&self) -> u16 {
+        self.0
+    }
+}
+
+pub trait ModuleInfo {
+    const NAME: &'static str;
+}
+
+#[derive(Error, Debug, Clone)]
+#[error("{msg}")]
+pub struct TxError {
+    pub msg: String,
+    pub code: ErrorCode,
+    pub codespace: &'static str,
 }
 
 pub trait ABCIHandler: Clone + Send + Sync + 'static {
@@ -38,13 +63,13 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), AppError>;
+    ) -> Result<(), TxError>;
 
-    fn tx<DB: Database>(
+    fn msg<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
-    ) -> Result<(), AppError>;
+    ) -> Result<(), TxError>;
 
     #[allow(unused_variables)]
     fn begin_block<'a, DB: Database>(
