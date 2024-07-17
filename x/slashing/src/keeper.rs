@@ -3,9 +3,8 @@ use crate::{
         addr_pubkey_relation_key, validator_missed_block_bit_array_key,
         validator_missed_block_bit_array_prefix_key, validator_signing_info_key,
     },
-    utils, GenesisState, MsgUnjail, QueryParamsRequest, QueryParamsResponse,
-    QuerySigningInfoRequest, QuerySigningInfoResponse, QuerySigningInfosRequest,
-    QuerySigningInfosResponse, SlashingParamsKeeper, ValidatorSigningInfo,
+    GenesisState, MsgUnjail, QueryParamsRequest, QueryParamsResponse, QuerySigningInfoRequest,
+    QuerySigningInfoResponse, SlashingParamsKeeper, ValidatorSigningInfo,
 };
 use gears::{
     context::{
@@ -13,6 +12,7 @@ use gears::{
         InfallibleContextMut, QueryableContext, TransactionalContext,
     },
     error::{AppError, IBC_ENCODE_UNWRAP},
+    ext::{IteratorPaginate, Pagination, PaginationResult},
     params::ParamsSubspaceKey,
     store::{
         database::{ext::UnwrapCorrupt, Database},
@@ -30,7 +30,6 @@ use gears::{
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
-        pagination::response::PaginationResponse,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
@@ -350,29 +349,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
             .map(|val_signing_info| QuerySigningInfoResponse { val_signing_info })
     }
 
-    pub fn query_signing_infos<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        query: QuerySigningInfosRequest,
-    ) -> QuerySigningInfosResponse {
-        let signing_infos = self.validator_signing_infos(ctx);
-        let signing_infos = if let Some((start, end)) = utils::paginate(
-            signing_infos.len() as u64,
-            query.pagination.offset,
-            query.pagination.limit,
-            self.staking_keeper.max_validators(ctx).unwrap_gas() as u64,
-        ) {
-            signing_infos[start as usize..end as usize].to_vec()
-        } else {
-            vec![]
-        };
-        let total = signing_infos.len();
-        QuerySigningInfosResponse {
-            info: signing_infos,
-            pagination: Some(PaginationResponse::new(total, Vec::new())), // TODO:NOW
-        }
-    }
-
     pub fn query_params<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
@@ -501,13 +477,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     pub fn validator_signing_infos<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-    ) -> Vec<ValidatorSigningInfo> {
+        pagination: Option<Pagination>,
+    ) -> (Option<PaginationResult<Vec<u8>>>, Vec<ValidatorSigningInfo>) {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(VALIDATOR_SIGNING_INFO_KEY_PREFIX);
-        store
-            .into_range(..)
-            .map(|(_k, v)| ValidatorSigningInfo::decode_vec(&v).unwrap_or_corrupt())
-            .collect::<Vec<_>>()
+        let (p_result, iter) = store.into_range(..).maybe_paginate(pagination);
+
+        (
+            p_result.map(
+                |PaginationResult {
+                     total,
+                     next_element,
+                 }| {
+                    PaginationResult::new(total, next_element.map(|this| this.0.into_owned()))
+                },
+            ),
+            iter.map(|(_k, v)| ValidatorSigningInfo::decode_vec(&v).unwrap_or_corrupt())
+                .collect::<Vec<_>>(),
+        )
     }
 
     /// set_validator_signing_info sets the validator signing info to a consensus address key

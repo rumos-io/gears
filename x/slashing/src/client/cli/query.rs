@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
-    core::{query::request::PageRequest, Protobuf},
-    error::AppError,
+    cli::pagination::CliPaginationRequest,
+    core::Protobuf,
     tendermint::types::proto::crypto::PublicKey,
-    types::{address::ConsAddress, query::Query},
+    types::{address::ConsAddress, pagination::request::PaginationRequest, query::Query},
 };
 
 use crate::{
@@ -39,24 +39,8 @@ pub struct SigningInfoCommand {
 /// Query signing infos.
 #[derive(Args, Debug, Clone)]
 pub struct SigningInfosCommand {
-    /// Sets offset to a multiple of limit
-    #[arg(long, default_value_t = 1)]
-    pub page: u64,
-    /// Pagination page-key
-    #[arg(long, default_value_t = String::default())]
-    pub page_key: String,
-    /// Pagination offset
-    #[arg(long, default_value_t = 0)]
-    pub offset: u64,
-    /// Pagination limit
-    #[arg(long, default_value_t = 100)]
-    pub limit: u64,
-    /// Count total number of records
-    #[arg(long, default_value_t = false)]
-    pub count_total: bool,
-    /// Results are sorted in descending order
-    #[arg(long, default_value_t = false)]
-    pub reverse: bool,
+    #[command(flatten)]
+    pub pagination: CliPaginationRequest,
 }
 
 #[derive(Debug, Clone)]
@@ -78,36 +62,10 @@ impl QueryHandler for SlashingQueryHandler {
                 let cons_address: ConsAddress = pubkey.clone().into();
                 Self::QueryRequest::SigningInfo(QuerySigningInfoRequest { cons_address })
             }
-            SlashingCommands::SigningInfos(SigningInfosCommand {
-                page,
-                page_key,
-                offset,
-                limit,
-                count_total,
-                reverse,
-            }) => {
-                if *page > 1 && *offset > 0 {
-                    return Err(AppError::InvalidRequest(
-                        "page and offset cannot be used together".to_string(),
-                    )
-                    .into());
-                }
+            SlashingCommands::SigningInfos(cmd) => {
+                let pagination = PaginationRequest::try_from(cmd.to_owned().pagination)?;
 
-                let offset = if *page > 1 {
-                    (*page - 1) * limit
-                } else {
-                    *offset
-                };
-
-                Self::QueryRequest::SigningInfos(QuerySigningInfosRequest {
-                    pagination: PageRequest {
-                        key: page_key.as_bytes().to_vec(),
-                        offset,
-                        limit: *limit,
-                        count_total: *count_total,
-                        reverse: *reverse,
-                    },
-                })
+                Self::QueryRequest::SigningInfos(QuerySigningInfosRequest { pagination })
             }
             SlashingCommands::Params => Self::QueryRequest::Params(QueryParamsRequest {}),
         };
