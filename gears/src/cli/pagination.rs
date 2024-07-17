@@ -26,8 +26,8 @@ pub struct CliPaginationRequest {
     pub key: Option<CliVec1>,
     /// offset is a numeric offset that can be used when key is unavailable.
     /// It is less efficient than using key. Only one of offset or key should
-    /// be set.
-    #[arg(short, long, default_value = "0", required = false, action = ArgAction::Set , help_heading = "Pagination")]
+    /// be set [default: 0]
+    #[arg(short, long, action = ArgAction::Set , help_heading = "Pagination")]
     pub offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.
     /// If left empty it will default to a value to be set by each app.
