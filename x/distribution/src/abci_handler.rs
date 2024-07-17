@@ -1,6 +1,7 @@
 use crate::{
-    GenesisState, Keeper, Message, QueryDelegationRewardsRequest, QueryParamsRequest,
-    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    GenesisState, Keeper, Message, QueryCommunityPoolRequest, QueryCommunityPoolResponse,
+    QueryDelegationRewardsRequest, QueryParamsRequest, QueryParamsResponse,
+    QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
     QueryValidatorSlashesRequest, QueryValidatorSlashesResponse,
 };
@@ -28,6 +29,7 @@ pub enum DistributionNodeQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     ValidatorCommission(QueryValidatorCommissionRequest),
     ValidatorSlashes(QueryValidatorSlashesRequest),
+    CommunityPool(QueryCommunityPoolRequest),
     Params(QueryParamsRequest),
 }
 #[derive(Clone)]
@@ -35,6 +37,7 @@ pub enum DistributionNodeQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     ValidatorCommission(QueryValidatorCommissionResponse),
     ValidatorSlashes(QueryValidatorSlashesResponse),
+    CommunityPool(QueryCommunityPoolResponse),
     Params(QueryParamsResponse),
 }
 
@@ -129,6 +132,16 @@ impl<
                     .encode_vec()
                     .into())
             }
+            "/cosmos.distribution.v1beta1.Query/CommunityPool" => {
+                let req = QueryCommunityPoolRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_community_pool(ctx, req)
+                    .encode_vec()
+                    .into())
+            }
             "/cosmos.distribution.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
@@ -158,6 +171,11 @@ impl<
             DistributionNodeQueryRequest::ValidatorSlashes(req) => {
                 DistributionNodeQueryResponse::ValidatorSlashes(
                     self.keeper.query_validator_slashes(ctx, req),
+                )
+            }
+            DistributionNodeQueryRequest::CommunityPool(req) => {
+                DistributionNodeQueryResponse::CommunityPool(
+                    self.keeper.query_community_pool(ctx, req),
                 )
             }
             DistributionNodeQueryRequest::Params(req) => {

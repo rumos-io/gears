@@ -1,6 +1,7 @@
 use crate::{
-    QueryDelegationRewardsRequest, QueryDelegationRewardsResponse, QueryParamsRequest,
-    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    QueryCommunityPoolRequest, QueryCommunityPoolResponse, QueryDelegationRewardsRequest,
+    QueryDelegationRewardsResponse, QueryParamsRequest, QueryParamsResponse,
+    QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
     QueryValidatorSlashesRequest, QueryValidatorSlashesResponse,
 };
@@ -29,6 +30,8 @@ pub enum DistributionCommands {
     ValidatorCommission(ValidatorCommissionCommand),
     ValidatorSlashes(ValidatorSlashesCommand),
     Rewards(DelegationRewardsCommand),
+    /// Query the amount of coins in the community pool
+    CommunityPool,
     /// Query distribution params
     Params,
 }
@@ -121,6 +124,9 @@ impl QueryHandler for DistributionQueryHandler {
                 delegator_address: delegator_address.clone(),
                 validator_address: validator_address.clone(),
             }),
+            DistributionCommands::CommunityPool => {
+                Self::QueryRequest::CommunityPool(QueryCommunityPoolRequest {})
+            }
             DistributionCommands::Params => Self::QueryRequest::Params(QueryParamsRequest {}),
         };
 
@@ -151,6 +157,9 @@ impl QueryHandler for DistributionQueryHandler {
             DistributionCommands::Rewards(_) => DistributionQueryResponse::DelegationRewards(
                 QueryDelegationRewardsResponse::decode_vec(&query_bytes)?,
             ),
+            DistributionCommands::CommunityPool => DistributionQueryResponse::CommunityPool(
+                QueryCommunityPoolResponse::decode_vec(&query_bytes)?,
+            ),
             DistributionCommands::Params => {
                 DistributionQueryResponse::Params(QueryParamsResponse::decode_vec(&query_bytes)?)
             }
@@ -166,6 +175,7 @@ pub enum DistributionQueryRequest {
     ValidatorCommission(QueryValidatorCommissionRequest),
     ValidatorSlashes(QueryValidatorSlashesRequest),
     DelegationRewards(QueryDelegationRewardsRequest),
+    CommunityPool(QueryCommunityPoolRequest),
     Params(QueryParamsRequest),
 }
 
@@ -184,6 +194,9 @@ impl Query for DistributionQueryRequest {
             DistributionQueryRequest::DelegationRewards(_) => {
                 "/cosmos.distribution.v1beta1.Query/DelegationRewards"
             }
+            DistributionQueryRequest::CommunityPool(_) => {
+                "/cosmos.distribution.v1beta1.Query/CommunityPool"
+            }
             DistributionQueryRequest::Params(_) => "/cosmos.distribution.v1beta1.Query/Params",
         }
     }
@@ -194,6 +207,7 @@ impl Query for DistributionQueryRequest {
             DistributionQueryRequest::ValidatorCommission(var) => var.encode_vec(),
             DistributionQueryRequest::ValidatorSlashes(var) => var.encode_vec(),
             DistributionQueryRequest::DelegationRewards(var) => var.encode_vec(),
+            DistributionQueryRequest::CommunityPool(var) => var.encode_vec(),
             DistributionQueryRequest::Params(var) => var.encode_vec(),
         }
     }
@@ -206,5 +220,6 @@ pub enum DistributionQueryResponse {
     ValidatorCommission(QueryValidatorCommissionResponse),
     ValidatorSlashes(QueryValidatorSlashesResponse),
     DelegationRewards(QueryDelegationRewardsResponse),
+    CommunityPool(QueryCommunityPoolResponse),
     Params(QueryParamsResponse),
 }

@@ -1,7 +1,8 @@
 use super::*;
 use crate::{
-    QueryDelegationRewardsRequest, QueryDelegationRewardsResponse, QueryParamsRequest,
-    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    QueryCommunityPoolRequest, QueryCommunityPoolResponse, QueryDelegationRewardsRequest,
+    QueryDelegationRewardsResponse, QueryParamsRequest, QueryParamsResponse,
+    QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
     QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, SlashEventIterator,
 };
@@ -127,6 +128,19 @@ impl<
             Ok(QueryDelegationRewardsResponse { rewards })
         } else {
             Ok(QueryDelegationRewardsResponse { rewards: None })
+        }
+    }
+
+    pub fn query_community_pool<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        _query: QueryCommunityPoolRequest,
+    ) -> QueryCommunityPoolResponse {
+        QueryCommunityPoolResponse {
+            pool: self
+                .fee_pool(ctx)
+                .unwrap_gas()
+                .map(|fee_pool| fee_pool.community_pool),
         }
     }
 

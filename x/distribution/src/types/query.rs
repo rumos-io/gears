@@ -213,6 +213,11 @@ impl TryFrom<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest
 impl Protobuf<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest {}
 
 #[derive(Clone, PartialEq, Message)]
+pub struct QueryCommunityPoolRequest {}
+
+impl Protobuf<QueryCommunityPoolRequest> for QueryCommunityPoolRequest {}
+
+#[derive(Clone, PartialEq, Message)]
 pub struct QueryParamsRequest {}
 
 impl Protobuf<QueryParamsRequest> for QueryParamsRequest {}
@@ -402,6 +407,46 @@ impl TryFrom<QueryDelegationRewardsResponseRaw> for QueryDelegationRewardsRespon
 }
 
 impl Protobuf<QueryDelegationRewardsResponseRaw> for QueryDelegationRewardsResponse {}
+
+#[derive(Clone, Serialize, Message)]
+pub struct QueryCommunityPoolResponseRaw {
+    #[prost(bytes, optional, tag = "1")]
+    pub pool: Option<Vec<u8>>,
+}
+
+impl From<QueryCommunityPoolResponse> for QueryCommunityPoolResponseRaw {
+    fn from(QueryCommunityPoolResponse { pool }: QueryCommunityPoolResponse) -> Self {
+        Self {
+            pool: pool.map(|pool| {
+                serde_json::to_vec(&pool).expect("serialization of domain type can't fail")
+            }),
+        }
+    }
+}
+
+/// QueryCommunityPoolResponse is the response type for the Query/CommunityPool RPC method.
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct QueryCommunityPoolResponse {
+    /// pool defines community pool's coins.
+    pub pool: Option<DecimalCoins>,
+}
+
+impl TryFrom<QueryCommunityPoolResponseRaw> for QueryCommunityPoolResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        QueryCommunityPoolResponseRaw { pool }: QueryCommunityPoolResponseRaw,
+    ) -> Result<Self, Self::Error> {
+        let pool = if let Some(rew) = pool {
+            serde_json::from_slice(&rew).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?
+        } else {
+            None
+        };
+        Ok(Self { pool })
+    }
+}
+
+impl Protobuf<QueryCommunityPoolResponseRaw> for QueryCommunityPoolResponse {}
 
 #[derive(Clone, Serialize, Message)]
 pub struct QueryParamsResponseRaw {
