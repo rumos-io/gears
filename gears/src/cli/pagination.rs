@@ -22,12 +22,12 @@ pub struct CliPaginationRequest {
     /// key is a value returned in PageResponse.next_key to begin
     /// querying the next page most efficiently. Only one of offset or key
     /// should be set.
-    #[arg(action = ArgAction::Set , help_heading = "Pagination")]
+    #[arg(short, long, action = ArgAction::Set , help_heading = "Pagination")]
     pub key: Option<CliVec1>,
     /// offset is a numeric offset that can be used when key is unavailable.
     /// It is less efficient than using key. Only one of offset or key should
     /// be set.
-    #[arg(default_value = "0", required = false, action = ArgAction::Set , help_heading = "Pagination")]
+    #[arg(short, long, default_value = "0", required = false, action = ArgAction::Set , help_heading = "Pagination")]
     pub offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.
     /// If left empty it will default to a value to be set by each app.
