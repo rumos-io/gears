@@ -1,6 +1,9 @@
 use std::{fs::File, io::Read};
 
-use gears::{application::handlers::client::TxHandler, types::address::AccAddress};
+use gears::{
+    application::handlers::client::TxHandler,
+    types::{address::AccAddress, tx::Messages},
+};
 
 use crate::{
     client::cli::tx::{
@@ -26,7 +29,7 @@ impl TxHandler for GovClientHandler {
         &self,
         command: Self::TxCommands,
         from_address: AccAddress,
-    ) -> anyhow::Result<Self::Message> {
+    ) -> anyhow::Result<Messages<Self::Message>> {
         match command.command {
             GovTxCommands::Deposit(DepositCliCommand {
                 proposal_id,
@@ -35,7 +38,8 @@ impl TxHandler for GovClientHandler {
                 proposal_id,
                 depositor: from_address,
                 amount,
-            })),
+            })
+            .into()),
             GovTxCommands::Vote(VoteCliCommand {
                 proposal_id,
                 option,
@@ -43,7 +47,8 @@ impl TxHandler for GovClientHandler {
                 proposal_id,
                 voter: from_address,
                 option,
-            })),
+            })
+            .into()),
             GovTxCommands::WeightedVote(WeightedVoteCliCommand {
                 proposal_id,
                 options,
@@ -51,7 +56,8 @@ impl TxHandler for GovClientHandler {
                 proposal_id,
                 voter: from_address,
                 options,
-            })),
+            })
+            .into()),
             GovTxCommands::SubmitProposal(ProposalCliCommand {
                 initial_deposit,
                 command,
@@ -61,7 +67,8 @@ impl TxHandler for GovClientHandler {
                         content: TextProposal { title, description }.into(),
                         initial_deposit,
                         proposer: from_address,
-                    }))
+                    })
+                    .into())
                 }
                 ProposalCliSubcommand::ParamChange(ParamChangeProposalCliCommand { file }) => {
                     let mut buf = String::new();
@@ -73,7 +80,8 @@ impl TxHandler for GovClientHandler {
                         content: proposal.into(),
                         initial_deposit,
                         proposer: from_address,
-                    }))
+                    })
+                    .into())
                 }
             },
         }

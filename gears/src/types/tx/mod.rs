@@ -26,6 +26,35 @@ pub trait TxMessage:
     fn type_url(&self) -> &'static str;
 }
 
+/// Utility type that guarantees correctness of transaction messages set
+pub struct Messages<T: TxMessage>(pub(crate) Vec<T>);
+
+impl<T: TxMessage> Messages<T> {
+    pub fn new(messages: Vec<T>) -> anyhow::Result<Messages<T>> {
+        if messages.is_empty() {
+            Err(anyhow::anyhow!(
+                "transaction applies non empty set of messages"
+            ))
+        } else {
+            Ok(Messages(messages))
+        }
+    }
+}
+
+impl<T: TxMessage> From<T> for Messages<T> {
+    fn from(value: T) -> Self {
+        Self(vec![value])
+    }
+}
+
+impl<T: TxMessage> TryFrom<Vec<T>> for Messages<T> {
+    type Error = anyhow::Error;
+
+    fn try_from(messages: Vec<T>) -> Result<Self, Self::Error> {
+        Self::new(messages)
+    }
+}
+
 mod inner {
     pub use core_types::tx::inner::Tx;
 }

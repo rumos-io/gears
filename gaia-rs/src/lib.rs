@@ -27,6 +27,7 @@ use gears::grpc::health::health_server;
 use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
 use gears::types::address::AccAddress;
+use gears::types::tx::Messages;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
@@ -69,7 +70,7 @@ impl TxHandler for GaiaCoreClient {
         &self,
         command: Self::TxCommands,
         from_address: AccAddress,
-    ) -> Result<Self::Message> {
+    ) -> Result<Messages<Self::Message>> {
         tx_command_handler(command.0, from_address)
     }
 }

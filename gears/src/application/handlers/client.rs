@@ -20,7 +20,7 @@ use crate::{
             },
             Query,
         },
-        tx::{body::TxBody, TxMessage},
+        tx::{body::TxBody, Messages, TxMessage},
     },
 };
 
@@ -46,11 +46,11 @@ pub trait TxHandler {
         &self,
         command: Self::TxCommands,
         from_address: AccAddress,
-    ) -> anyhow::Result<Self::Message>;
+    ) -> anyhow::Result<Messages<Self::Message>>;
 
     fn handle_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
-        msg: Self::Message,
+        msgs: Messages<Self::Message>,
         key: K,
         node: url::Url,
         chain_id: ChainId,
@@ -81,7 +81,7 @@ pub trait TxHandler {
         }];
 
         let tx_body = TxBody {
-            messages: vec![msg],
+            messages: msgs.0,
             memo: String::new(),                    // TODO: remove hard coded
             timeout_height: 0,                      // TODO: remove hard coded
             extension_options: vec![],              // TODO: remove hard coded
