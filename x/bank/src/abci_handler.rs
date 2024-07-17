@@ -108,7 +108,7 @@ impl<
             Message::Send(msg_send) => Ok(self
                 .keeper
                 .send_coins_from_account_to_account(ctx, msg_send)
-                .map_err(|e| Into::<BankTxError<MI>>::into(e))?),
+                .map_err(|e| Into::<BankTxError>::into(e).into::<MI>())?),
         }
     }
 

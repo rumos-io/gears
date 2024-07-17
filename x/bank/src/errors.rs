@@ -5,22 +5,19 @@ use gears::{
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum BankTxError<MI> {
+pub enum BankTxError {
     #[error(transparent)]
     Other(#[from] AppError), //TODO: stop using AppError
-    #[error("phantom error")]
-    Phantom((MI, std::convert::Infallible)),
 }
 
-impl<MI: ModuleInfo> From<BankTxError<MI>> for TxError {
-    fn from(error: BankTxError<MI>) -> Self {
-        let code = match &error {
+impl BankTxError {
+    pub fn into<MI: ModuleInfo>(self) -> TxError {
+        let code = match &self {
             BankTxError::Other(_) => 1,
-            BankTxError::Phantom(_) => unreachable!(),
         };
 
         TxError {
-            msg: error.to_string(),
+            msg: self.to_string(),
             code: ErrorCode::try_new(code).expect("all > 0"),
             codespace: MI::NAME,
         }
