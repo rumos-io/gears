@@ -56,11 +56,9 @@ impl From<core_types::query::request::PageRequest> for PaginationRequest {
         }: core_types::query::request::PageRequest,
     ) -> Self {
         Self {
-            kind: match key.is_empty() {
-                true => PaginationKind::Key {
-                    key: key.try_into().expect("we checked it for empty"),
-                },
-                false => PaginationKind::Offset {
+            kind: match Vec1::try_from_vec(key) {
+                Ok(key) => PaginationKind::Key { key },
+                Err(_) => PaginationKind::Offset {
                     offset: offset.try_into().unwrap_or(u32::MAX),
                 },
             },
