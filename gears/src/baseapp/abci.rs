@@ -51,7 +51,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut ctx = InitContext::new(
             &mut multi_store,
-            request.initial_height as u32, // TODO: make request height u32
+            request.initial_height,
             request.time,
             request.chain_id,
         );
