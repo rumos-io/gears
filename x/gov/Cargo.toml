@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-gears = { path = "../../gears", features = ["cli", "export", "xmods", "governance" ] }
+gears = { path = "../../gears", features = ["cli", "xmods", "governance" ] }
 
 # unsorted
 ibc-proto = { workspace = true }
