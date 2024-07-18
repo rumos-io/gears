@@ -1,5 +1,8 @@
 use crate::{
-    commands::client::{query::execute_query, tx::broadcast_tx_commit},
+    commands::client::{
+        query::execute_query,
+        tx::{broadcast_tx_commit, ClientTxContext},
+    },
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
@@ -44,6 +47,7 @@ pub trait TxHandler {
 
     fn prepare_tx(
         &self,
+        client_tx_context: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>>;
@@ -56,7 +60,7 @@ pub trait TxHandler {
         chain_id: ChainId,
         fees: Option<UnsignedCoins>,
         mode: SignMode,
-    ) -> anyhow::Result<Vec<Response>> {
+    ) -> anyhow::Result<Response> {
         let fee = Fee {
             amount: fees,
             gas_limit: 200_000_u64
@@ -80,53 +84,39 @@ pub trait TxHandler {
             account_number: account.get_account_number(),
         }];
 
-        if msgs.chunk_size() > 0
-        /* && broadcast_mode == "block" */
-        {
-            // let step = msgs.chunk_size() as usize;
-            // let msgs = msgs.into_msgs();
-            //
-            // let mut res = vec![];
-            // for i in (0..msgs.len()).step_by(step) {
-            //     res.push(broadcast_tx_commit(client, raw_tx).map(|response| vec![response])?);
-            // }
-            // Ok(res)
-            todo!()
-        } else {
-            let tx_body = TxBody {
-                messages: msgs.into_msgs(),
-                memo: String::new(),                    // TODO: remove hard coded
-                timeout_height: 0,                      // TODO: remove hard coded
-                extension_options: vec![],              // TODO: remove hard coded
-                non_critical_extension_options: vec![], // TODO: remove hard coded
-            };
+        let tx_body = TxBody {
+            messages: msgs.into_msgs(),
+            memo: String::new(),                    // TODO: remove hard coded
+            timeout_height: 0,                      // TODO: remove hard coded
+            extension_options: vec![],              // TODO: remove hard coded
+            non_critical_extension_options: vec![], // TODO: remove hard coded
+        };
 
-            let tip = None; //TODO: remove hard coded
+        let tip = None; //TODO: remove hard coded
 
-            let raw_tx = match mode {
-                SignMode::Direct => create_signed_transaction_direct(
-                    signing_infos,
-                    chain_id,
-                    fee,
-                    tip,
-                    tx_body.encode_vec().expect(IBC_ENCODE_UNWRAP),
-                )
-                .map_err(|e| anyhow!(e.to_string()))?,
-                SignMode::Textual => create_signed_transaction_textual(
-                    signing_infos,
-                    chain_id,
-                    fee,
-                    tip,
-                    node.clone(),
-                    tx_body,
-                )
-                .map_err(|e| anyhow!(e.to_string()))?,
-                _ => return Err(anyhow!("unsupported sign mode")),
-            };
+        let raw_tx = match mode {
+            SignMode::Direct => create_signed_transaction_direct(
+                signing_infos,
+                chain_id,
+                fee,
+                tip,
+                tx_body.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            )
+            .map_err(|e| anyhow!(e.to_string()))?,
+            SignMode::Textual => create_signed_transaction_textual(
+                signing_infos,
+                chain_id,
+                fee,
+                tip,
+                node.clone(),
+                tx_body,
+            )
+            .map_err(|e| anyhow!(e.to_string()))?,
+            _ => return Err(anyhow!("unsupported sign mode")),
+        };
 
-            let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
-            broadcast_tx_commit(client, raw_tx).map(|response| vec![response])
-        }
+        let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
+        broadcast_tx_commit(client, raw_tx)
     }
 }
 
