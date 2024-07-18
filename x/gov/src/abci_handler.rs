@@ -1,11 +1,11 @@
 use bytes::Bytes;
 use gears::{
     application::handlers::node::{ABCIHandler, TxError},
+    baseapp::errors::QueryError,
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         TransactionalContext,
     },
-    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -238,7 +238,7 @@ impl<
             height: _,
             prove: _,
         }: RequestQuery,
-    ) -> Result<Bytes, AppError> {
+    ) -> Result<Bytes, QueryError> {
         let query = match path.as_str() {
             QueryDepositRequest::QUERY_URL => GovQuery::Deposit(QueryDepositRequest::decode(data)?),
             QueryDepositsRequest::QUERY_URL => {
@@ -262,7 +262,7 @@ impl<
             QueryProposerRequest::QUERY_URL => {
                 GovQuery::Proposer(QueryProposerRequest::decode(data)?)
             }
-            _ => Err(AppError::Query("Path not found".to_string()))?,
+            _ => Err(QueryError::PathNotFound)?,
         };
 
         let result = self.keeper.query(ctx, query).unwrap_gas();

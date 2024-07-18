@@ -24,7 +24,7 @@ impl Genesis for GovGenesisState {
         &mut self,
         _address: AccAddress,
         _coins: UnsignedCoins,
-    ) -> Result<(), gears::error::AppError> {
+    ) -> anyhow::Result<()> {
         todo!()
     }
 }
