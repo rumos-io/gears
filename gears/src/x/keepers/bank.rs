@@ -10,10 +10,7 @@ use crate::{
         store::gas::errors::GasStoreErrors,
         tx::metadata::Metadata,
     },
-    x::{
-        errors::{BankGasError, BankKeeperError},
-        module::Module,
-    },
+    x::{errors::BankKeeperError, module::Module},
 };
 
 pub trait BankKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'static {
@@ -64,7 +61,7 @@ pub trait StakingBankKeeper<SK: StoreKey, M: Module>:
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, BankGasError>;
+    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors>;
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,

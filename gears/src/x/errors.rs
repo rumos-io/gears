@@ -8,10 +8,8 @@ use crate::{
     application::handlers::node::{ErrorCode, TxError},
     error::AppError,
     types::{
-        base::errors::CoinsError,
-        denom::Denom,
-        gas::GasMeteringErrors,
-        store::gas::{errors::GasStoreErrors, ext::UnwrapGasError},
+        base::errors::CoinsError, denom::Denom, gas::GasMeteringErrors,
+        store::gas::errors::GasStoreErrors,
     },
 };
 
@@ -83,7 +81,7 @@ pub(crate) enum AnteError {
     #[error("account not found {0}")]
     AccountNotFound(AccAddress),
     #[error("{0}")]
-    AuthGas(#[from] AuthGasError),
+    AuthGas(#[from] GasStoreErrors),
     #[error("failed to send coins: {0}")]
     CoinsSend(#[from] BankKeeperError),
     #[error(transparent)]
@@ -121,23 +119,11 @@ impl From<AnteError> for TxError {
     }
 }
 
-// #[derive(Debug, Clone, thiserror::Error)]
-// pub enum AuthKeeperError {
-//     #[error("{0}")]
-//     GasError(#[from] AuthGasError),
-// }
-
-// impl From<GasStoreErrors> for AuthKeeperError {
-//     fn from(value: GasStoreErrors) -> Self {
-//         Self::GasError(AuthGasError(value))
-//     }
-// }
-
 #[derive(Debug, Clone, thiserror::Error)]
-#[error("auth: {0}")]
-pub struct AuthGasError(#[from] pub GasStoreErrors);
-
-impl UnwrapGasError for AuthGasError {}
+pub enum AuthKeeperError {
+    #[error("{0}")]
+    GasError(#[from] GasStoreErrors),
+}
 
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum InsufficientFundsError {
@@ -167,10 +153,9 @@ pub enum BankKeeperError {
     InsufficientFunds(#[from] InsufficientFundsError),
     #[error("account not found")]
     AccountNotFound,
-    #[error("error from auth xmod: {0}")]
-    AuthGas(#[from] AuthGasError),
+
     #[error("{0}")]
-    GasError(#[from] BankGasError),
+    GasError(#[from] GasStoreErrors),
 }
 
 impl From<CoinsError> for BankKeeperError {
@@ -178,15 +163,3 @@ impl From<CoinsError> for BankKeeperError {
         Self::Coins(BankCoinsError::Parse(value))
     }
 }
-
-impl From<GasStoreErrors> for BankKeeperError {
-    fn from(value: GasStoreErrors) -> Self {
-        Self::GasError(BankGasError(value))
-    }
-}
-
-#[derive(Debug, Clone, thiserror::Error)]
-#[error("bank: {0}")]
-pub struct BankGasError(#[from] GasStoreErrors);
-
-impl UnwrapGasError for BankGasError {}

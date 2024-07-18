@@ -41,8 +41,7 @@ impl<
     ) -> Result<UnsignedCoin, GasStoreErrors> {
         let account = self
             .auth_keeper
-            .get_account(ctx, &self.bonded_module.get_address())
-            .map_err(|e| e.0)? // TODO: proper error
+            .get_account(ctx, &self.bonded_module.get_address())?
             .unwrap(); // TODO: Unsure what to do in this case
 
         self.bank_keeper.balance(

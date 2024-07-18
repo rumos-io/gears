@@ -24,7 +24,7 @@ use gears::types::store::gas::ext::GasResultExt;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
-use gears::x::errors::{BankCoinsError, BankGasError, BankKeeperError, InsufficientFundsError};
+use gears::x::errors::{BankCoinsError, BankKeeperError, InsufficientFundsError};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::{BankKeeper, StakingBankKeeper};
 use gears::x::keepers::gov::GovernanceBankKeeper;
@@ -171,7 +171,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, BankGasError> {
+    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
         let (_, result) = self.all_balances(ctx, addr, None)?;
 
         Ok(result)
