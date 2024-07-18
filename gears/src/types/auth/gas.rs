@@ -58,11 +58,7 @@ impl Gas {
 
         let result = self_inner.checked_sub(rhs_inner)?;
 
-        if result > u63::MAX.into() {
-            None
-        } else {
-            Some(Gas::new(u63::new(result)))
-        }
+        Some(Gas::new(u63::new(result)))
     }
 
     // TODO: write a test for this
