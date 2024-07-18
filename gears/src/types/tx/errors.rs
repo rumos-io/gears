@@ -1,6 +1,12 @@
 use crate::types::auth::info::AuthError;
 
 #[derive(Debug, thiserror::Error)]
+pub enum MessagesError {
+    #[error("transaction applies non empty set of messages")]
+    Empty,
+}
+
+#[derive(Debug, thiserror::Error)]
 pub enum TxError {
     #[error("{0}")]
     Decode(#[from] prost::DecodeError),
