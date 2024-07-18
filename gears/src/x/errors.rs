@@ -6,7 +6,10 @@ use thiserror::Error;
 use crate::{
     application::handlers::node::{ErrorCode, TxError},
     error::AppError,
-    types::{gas::GasMeteringErrors, store::gas::errors::GasStoreErrors},
+    types::{
+        gas::GasMeteringErrors,
+        store::gas::errors::{GasStoreErrorKinds, GasStoreErrors},
+    },
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -51,9 +54,9 @@ impl From<GasMeteringErrors> for AnteGasError {
 
 impl From<GasStoreErrors> for AnteGasError {
     fn from(error: GasStoreErrors) -> Self {
-        match error {
-            GasStoreErrors::Metering(e) => e.into(),
-            GasStoreErrors::Gas(e) => AnteGasError::Overflow(e.to_string()),
+        match error.kind {
+            GasStoreErrorKinds::Metering(e) => e.into(),
+            GasStoreErrorKinds::Gas(e) => AnteGasError::Overflow(e.to_string()),
         }
     }
 }

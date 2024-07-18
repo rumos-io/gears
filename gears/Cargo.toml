@@ -17,7 +17,7 @@ database = { path = "../database" }
 gears-derive = { path = "../gears-derive" }
 
 #newtypes
-# vec1 = "1.12.0"
+vec1 = { version = "1.12.0", features = [ "serde" ] }
 secp256k1 = { workspace = true, features = ["hashes"] }
 bytes = { workspace = true }
 url = { workspace = true }
@@ -36,6 +36,7 @@ tracing-subscriber = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
 derive_more = { workspace = true }
+itertools = "0.13.0"
 
 #serialization
 prost = { workspace = true }

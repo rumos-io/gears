@@ -1,6 +1,9 @@
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
-    types::{address::{AddressError, ConsAddress}, pagination::response::PaginationResponse},
+    types::{
+        address::{AddressError, ConsAddress},
+        pagination::{request::PaginationRequest, response::PaginationResponse},
+    },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -55,7 +58,7 @@ pub struct QuerySigningInfosRequestRaw {
 impl From<QuerySigningInfosRequest> for QuerySigningInfosRequestRaw {
     fn from(QuerySigningInfosRequest { pagination }: QuerySigningInfosRequest) -> Self {
         Self {
-            pagination: Some(pagination),
+            pagination: Some(pagination.into()),
         }
     }
 }
@@ -65,7 +68,7 @@ impl From<QuerySigningInfosRequest> for QuerySigningInfosRequestRaw {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct QuerySigningInfosRequest {
     /// pagination defines an optional pagination for the request.
-    pub pagination: PageRequest,
+    pub pagination: PaginationRequest,
 }
 
 impl TryFrom<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {
@@ -75,9 +78,11 @@ impl TryFrom<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {
         QuerySigningInfosRequestRaw { pagination }: QuerySigningInfosRequestRaw,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            pagination: pagination.ok_or(CoreError::MissingField(
-                "Missing field 'pagination'.".into(),
-            ))?,
+            pagination: pagination
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'pagination'.".into(),
+                ))?
+                .into(),
         })
     }
 }

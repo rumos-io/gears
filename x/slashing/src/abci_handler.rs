@@ -6,9 +6,11 @@ use gears::{
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::{errors::CoreError, Protobuf},
     error::AppError,
+    ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    types::pagination::response::PaginationResponse,
     x::{keepers::staking::SlashingStakingKeeper, module::Module},
 };
 
@@ -77,11 +79,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 let req = QuerySigningInfosRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self
-                    .keeper
-                    .query_signing_infos(ctx, req)
-                    .encode_vec()
-                    .into())
+                Ok(self.query_signing_infos(ctx, req).encode_vec().into())
             }
             "/cosmos.slashing.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)
@@ -100,7 +98,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     ) -> SlashingNodeQueryResponse {
         match query {
             SlashingNodeQueryRequest::SigningInfos(req) => {
-                SlashingNodeQueryResponse::SigningInfos(self.keeper.query_signing_infos(ctx, req))
+                SlashingNodeQueryResponse::SigningInfos(self.query_signing_infos(ctx, req))
             }
             SlashingNodeQueryRequest::Params(req) => {
                 SlashingNodeQueryResponse::Params(self.keeper.query_params(ctx, req))
@@ -130,6 +128,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                     "method `handle_validator_signature` is called from infallible method.
                          Something wrong in the handler.",
                 );
+        }
+    }
+
+    fn query_signing_infos<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QuerySigningInfosRequest { pagination }: QuerySigningInfosRequest,
+    ) -> QuerySigningInfosResponse {
+        let (p_result, info) = self
+            .keeper
+            .validator_signing_infos(ctx, Some(Pagination::from(pagination)));
+
+        QuerySigningInfosResponse {
+            info,
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 }
