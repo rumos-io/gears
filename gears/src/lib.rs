@@ -20,17 +20,14 @@ pub mod utils;
 #[cfg(feature = "xmods")]
 pub mod x;
 
- 
 pub mod core {
     pub use core_types::*;
 }
 
- 
 pub mod tendermint {
     pub use tendermint::*;
 }
 
- 
 pub mod store {
     pub use kv_store::*;
     pub mod database {

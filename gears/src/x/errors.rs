@@ -8,7 +8,7 @@ use crate::{
     application::handlers::node::{ErrorCode, TxError},
     types::{
         base::errors::CoinsError, denom::Denom, gas::GasMeteringErrors,
-        store::gas::errors::GasStoreErrors,
+        store::gas::errors::{GasStoreErrorKinds, GasStoreErrors},
     },
 };
 
@@ -54,9 +54,9 @@ impl From<GasMeteringErrors> for AnteGasError {
 
 impl From<GasStoreErrors> for AnteGasError {
     fn from(error: GasStoreErrors) -> Self {
-        match error {
-            GasStoreErrors::Metering(e) => e.into(),
-            GasStoreErrors::Gas(e) => AnteGasError::Overflow(e.to_string()),
+        match error.kind {
+            GasStoreErrorKinds::Metering(e) => e.into(),
+            GasStoreErrorKinds::Gas(e) => AnteGasError::Overflow(e.to_string()),
         }
     }
 }

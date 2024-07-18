@@ -6,7 +6,7 @@ use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::IBC_ENCODE_UNWRAP;
-use gears::ext::{IteratorPaginate, Pagination};
+use gears::ext::{IteratorPaginate, Pagination, PaginationResult};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
@@ -239,7 +239,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .kv_store(&self.store_key)
             .prefix_store(account_key(address));
 
-        let coin_bytes = store.get(denom.as_ref().as_bytes())?;
+        let coin_bytes = store.get(denom.as_str().as_bytes())?;
         let coin = if let Some(coin_bytes) = coin_bytes {
             UnsignedCoin {
                 denom: denom.to_owned(),
@@ -428,22 +428,22 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         addr: AccAddress,
         pagination: Option<Pagination>,
-    ) -> Result<(usize, Vec<UnsignedCoin>), GasStoreErrors> {
+    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(addr);
         let account_store = bank_store.prefix_store(prefix);
-        let total = account_store.clone().into_range(..).count();
 
         let mut balances = vec![];
 
-        for rcoin in account_store.into_range(..).maybe_paginate(pagination) {
+        let (p_result, iterator) = account_store.into_range(..).maybe_paginate(pagination);
+        for rcoin in iterator {
             let (_, coin) = rcoin?;
             let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             balances.push(coin);
         }
-        Ok((total, balances))
+        Ok((p_result, balances))
     }
 
     /// Gets the total supply of every denom
@@ -451,7 +451,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &QueryContext<DB, SK>,
         pagination: Option<Pagination>,
-    ) -> (usize, Vec<UnsignedCoin>) {
+    ) -> (Option<PaginationResult>, Vec<UnsignedCoin>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
@@ -468,13 +468,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             })
             .filter(|this| !this.amount.is_zero());
 
-        let total = supply_store.clone().count();
+        let (p_result, iter) = supply_store.maybe_paginate(pagination);
 
-        let mut store: Vec<_> = supply_store.maybe_paginate(pagination).collect();
+        let mut store: Vec<_> = iter.collect();
 
         store.sort_by_key(|this| this.denom.clone());
 
-        (total, store)
+        (p_result, store)
     }
 
     pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -628,7 +628,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let store = ctx.kv_store(&self.store_key);
         let supply_store = store.prefix_store(SUPPLY_KEY);
 
-        let amount_bytes = supply_store.get(denom.as_ref().as_bytes())?;
+        let amount_bytes = supply_store.get(denom.as_str().as_bytes())?;
 
         match amount_bytes {
             Some(bytes) => Ok(Some(UnsignedCoin {
@@ -673,7 +673,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &QueryContext<DB, SK>,
         pagination: Option<Pagination>,
-    ) -> (usize, Vec<Metadata>) {
+    ) -> (Option<PaginationResult>, Vec<Metadata>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
@@ -682,16 +682,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .prefix_store(DENOM_METADATA_PREFIX)
             .into_range(..);
 
-        let total = bank_iterator.clone().count();
+        let (p_result, iter) = bank_iterator.maybe_paginate(pagination);
 
-        for (_, metadata) in bank_iterator.maybe_paginate(pagination) {
+        for (_, metadata) in iter {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             denoms_metadata.push(metadata);
         }
 
-        (total, denoms_metadata)
+        (p_result, denoms_metadata)
     }
 
     pub fn delegate_coins_from_account_to_module<

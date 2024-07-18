@@ -179,18 +179,14 @@ impl<
             pagination,
         }: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
-        let paginate = pagination.is_some();
-        let (total, balances) = self
+        let (p_result, balances) = self
             .keeper
             .all_balances(ctx, address, pagination.map(Pagination::from))
             .unwrap_gas();
 
         QueryAllBalancesResponse {
             balances,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 
@@ -199,18 +195,13 @@ impl<
         ctx: &QueryContext<DB, SK>,
         QueryDenomsMetadataRequest { pagination }: QueryDenomsMetadataRequest,
     ) -> QueryDenomsMetadataResponse {
-        let paginate = pagination.is_some();
-
-        let (total, metadatas) = self
+        let (p_result, metadatas) = self
             .keeper
             .denoms_metadata(ctx, pagination.map(Pagination::from));
 
         QueryDenomsMetadataResponse {
             metadatas,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 
@@ -219,18 +210,13 @@ impl<
         ctx: &QueryContext<DB, SK>,
         QueryTotalSupplyRequest { pagination }: QueryTotalSupplyRequest,
     ) -> QueryTotalSupplyResponse {
-        let paginate = pagination.is_some();
-
-        let (total, supply) = self
+        let (p_result, supply) = self
             .keeper
             .total_supply(ctx, pagination.map(Pagination::from));
 
         QueryTotalSupplyResponse {
             supply,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 }

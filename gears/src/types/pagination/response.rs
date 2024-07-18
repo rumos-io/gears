@@ -11,9 +11,9 @@ pub struct PaginationResponse {
 }
 
 impl PaginationResponse {
-    pub fn new(total: usize) -> Self {
+    pub fn new(total: usize, key: impl Into<Vec<u8>>) -> Self {
         Self {
-            next_key: Vec::new(),
+            next_key: key.into(),
             total: total as u64,
         }
     }
