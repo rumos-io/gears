@@ -1,13 +1,14 @@
+use gears::baseapp::errors::QueryError;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
 use gears::error::IBC_ENCODE_UNWRAP;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::query::account::{QueryAccountRequest, QueryAccountResponse};
 use gears::x::module::Module;
-use gears::{error::AppError, params::ParamsSubspaceKey};
 use serde::Serialize;
 
 use crate::{GenesisState, Keeper};
@@ -50,11 +51,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
         &self,
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
-    ) -> std::result::Result<bytes::Bytes, AppError> {
+    ) -> std::result::Result<bytes::Bytes, QueryError> {
         match query.path.as_str() {
             "/cosmos.auth.v1beta1.Query/Account" => {
-                let req = QueryAccountRequest::decode(query.data)
-                    .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
+                let req = QueryAccountRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -64,7 +64,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                     .into())
                 // TODO:IBC
             }
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            _ => Err(QueryError::PathNotFound),
         }
     }
 

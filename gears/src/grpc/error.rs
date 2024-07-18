@@ -11,6 +11,8 @@ impl From<QueryError> for Status {
                 Status::internal("An internal error occurred while querying the application state.")
             }
             QueryError::InvalidRequest => Status::invalid_argument("Invalid message."),
+            QueryError::Proto(_) => Status::invalid_argument("Invalid message."),
+            QueryError::PathNotFound => Status::invalid_argument("Invalid message."),
         }
     }
 }

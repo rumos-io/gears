@@ -16,8 +16,8 @@ members = [
   # GAIA
   # "gaia-rs",
 
-  # # xmodules
-  # "x/auth",
+  # xmodules
+  "x/auth",
   # "x/bank",
   # "x/distribution",
   # "x/ibc-rs",

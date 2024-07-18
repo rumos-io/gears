@@ -1,5 +1,5 @@
 use gears::{
-    error::AppError,
+    commands::node::genesis::GenesisError,
     types::{account::BaseAccount, address::AccAddress},
 };
 use serde::{Deserialize, Serialize};
@@ -28,7 +28,7 @@ impl Default for GenesisState {
 }
 
 impl GenesisState {
-    pub fn add_genesis_account(&mut self, address: AccAddress) -> Result<(), AppError> {
+    pub fn add_genesis_account(&mut self, address: AccAddress) -> Result<(), GenesisError> {
         let mut contains = false;
         for acct in &self.accounts {
             if acct.address == address {
@@ -46,7 +46,7 @@ impl GenesisState {
             });
             Ok(())
         } else {
-            Err(AppError::Genesis(format!(
+            Err(GenesisError::Genesis(anyhow::anyhow!(
                 "cannot add account at existing address {}",
                 address
             )))

@@ -41,10 +41,14 @@ impl RunTxError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum QueryError {
+    #[error("query path not found")]
+    PathNotFound,
     #[error("Block height must be greater than or equal to zero")]
     InvalidRequest,
     #[error(transparent)]
     Store(#[from] kv_store::error::KVStoreError),
+    #[error("error decoding query: {0}")]
+    Proto(#[from] crate::tendermint::error::proto::Error),
 }
 
 #[derive(Debug, Clone, thiserror::Error)]

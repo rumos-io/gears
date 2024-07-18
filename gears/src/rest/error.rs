@@ -102,6 +102,8 @@ impl From<QueryError> for HTTPError {
                 HTTPError::not_found_with_msg("The requested version could not be found.".into())
             }
             QueryError::InvalidRequest => HTTPError::bad_request("Invalid request.".to_owned()),
+            QueryError::Proto(_) => HTTPError::bad_request("Invalid request.".to_owned()),
+            QueryError::PathNotFound => HTTPError::bad_request("Invalid request.".to_owned()),
         }
     }
 }
