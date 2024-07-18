@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use gears::{
-    ext::PaginationKeyIterator,
+    ext::PaginationKey,
     tendermint::types::time::Timestamp,
     types::{
         address::{AccAddress, ValAddress},
@@ -86,7 +86,7 @@ impl Redelegation {
     }
 }
 
-impl PaginationKeyIterator for Redelegation {
+impl PaginationKey for Redelegation {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         Cow::Owned(
             [

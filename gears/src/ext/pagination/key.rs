@@ -21,7 +21,7 @@ impl From<(Vec1<u8>, usize)> for PaginationByKey {
     }
 }
 
-pub trait PaginationKeyIterator {
+pub trait PaginationKey {
     fn iterator_key(&self) -> Cow<'_, [u8]>;
 }
 
@@ -42,7 +42,7 @@ pub trait IteratorPaginateByKey {
     );
 }
 
-impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginateByKey for T {
+impl<T: Iterator<Item = U>, U: PaginationKey> IteratorPaginateByKey for T {
     type Item = U;
 
     fn paginate_by_key(
@@ -85,31 +85,31 @@ impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginateByKey for 
     }
 }
 
-impl PaginationKeyIterator for UnsignedCoin {
+impl PaginationKey for UnsignedCoin {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.denom.as_ref())
     }
 }
 
-impl<T> PaginationKeyIterator for (Cow<'_, Vec<u8>>, T) {
+impl<T> PaginationKey for (Cow<'_, Vec<u8>>, T) {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.0.as_ref())
     }
 }
 
-impl PaginationKeyIterator for Cow<'_, Vec<u8>> {
+impl PaginationKey for Cow<'_, Vec<u8>> {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.as_ref())
     }
 }
 
-impl PaginationKeyIterator for Vec<u8> {
+impl PaginationKey for Vec<u8> {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         Cow::Borrowed(self.as_ref())
     }
 }
 
-impl<T: PaginationKeyIterator> PaginationKeyIterator for Result<T, GasStoreErrors> {
+impl<T: PaginationKey> PaginationKey for Result<T, GasStoreErrors> {
     fn iterator_key(&self) -> Cow<'_, [u8]> {
         match self {
             Ok(var) => var.iterator_key(),

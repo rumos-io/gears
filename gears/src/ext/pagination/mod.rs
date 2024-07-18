@@ -41,7 +41,7 @@ pub trait IteratorPaginate {
     ) -> (Option<PaginationResult>, impl Iterator<Item = Self::Item>);
 }
 
-impl<T: Iterator<Item = U>, U: PaginationKeyIterator + Clone> IteratorPaginate for T {
+impl<T: Iterator<Item = U>, U: PaginationKey + Clone> IteratorPaginate for T {
     type Item = U;
 
     fn paginate(
@@ -135,7 +135,7 @@ impl<T> PaginationResultElement<T> {
     }
 }
 
-impl<T: PaginationKeyIterator> From<PaginationResultElement<T>> for PaginationResponse {
+impl<T: PaginationKey> From<PaginationResultElement<T>> for PaginationResponse {
     fn from(
         PaginationResultElement {
             total,
