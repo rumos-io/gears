@@ -1,13 +1,15 @@
 use std::path::PathBuf;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use core_types::tx::mode_info::SignMode;
 use prost::Message;
 use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
+use tendermint::types::proto::Protobuf;
 
 use crate::application::handlers::client::TxHandler;
+use crate::commands::client::query::execute_query;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
@@ -25,6 +27,50 @@ pub struct TxCommand<C> {
     pub inner: C,
 }
 
+#[allow(dead_code)]
+pub struct ClientTxContext {
+    node: url::Url,
+    chain_id: ChainId,
+    fees: Option<UnsignedCoins>,
+    keyring: Keyring,
+}
+
+impl ClientTxContext {
+    pub fn query<
+        Response: Protobuf<Raw> + std::convert::TryFrom<Raw>,
+        Raw: Message + Default + std::convert::From<Response>,
+    >(
+        &self,
+        path: String,
+        query_bytes: Vec<u8>,
+    ) -> Result<Response>
+    where
+        <Response as TryFrom<Raw>>::Error: std::fmt::Display,
+    {
+        execute_query(path, query_bytes, self.node.as_str(), None)
+    }
+}
+
+impl<C> From<&TxCommand<C>> for ClientTxContext {
+    fn from(
+        // to keep structure after changes in TxCommand
+        TxCommand {
+            node,
+            chain_id,
+            fees,
+            keyring,
+            inner: _,
+        }: &TxCommand<C>,
+    ) -> Self {
+        Self {
+            node: node.clone(),
+            chain_id: chain_id.clone(),
+            fees: fees.clone(),
+            keyring: keyring.clone(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Keyring {
     Ledger,
@@ -39,31 +85,78 @@ pub struct LocalInfo {
 }
 
 pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
-    TxCommand {
-        node,
-        chain_id,
-        fees,
-        inner,
-        keyring,
-    }: TxCommand<C>,
+    command: TxCommand<C>,
     handler: &H,
 ) -> anyhow::Result<Vec<Response>> {
-    match keyring {
+    match command.keyring {
         Keyring::Ledger => {
             let key = LedgerProxyKey::new()?;
 
-            let message = handler.prepare_tx(inner, key.get_address())?;
-            handler.handle_tx(message, key, node, chain_id, fees, SignMode::Textual)
+            let ctx = &(&command).into();
+            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
+            // TODO: maybe remove error and replace with warning message
+            if messages.chunk_size() != 0 {
+                return Err(anyhow!(
+                    "ledger device cannot create more that one transaction per command run"
+                ));
+            }
+            handler
+                .handle_tx(
+                    messages,
+                    key,
+                    command.node,
+                    command.chain_id,
+                    command.fees,
+                    SignMode::Textual,
+                )
+                .map(|res| vec![res])
         }
-        Keyring::Local(info) => {
+        Keyring::Local(ref info) => {
             let keyring_home = info.home.join(info.keyring_backend.get_sub_dir());
             let key = keyring::key_by_name(
                 &info.from_key,
                 info.keyring_backend.to_keyring_backend(&keyring_home),
             )?;
 
-            let message = handler.prepare_tx(inner, key.get_address())?;
-            handler.handle_tx(message, key, node, chain_id, fees, SignMode::Direct)
+            let ctx = &(&command).into();
+            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
+
+            if messages.chunk_size() > 0
+            /* && command.broadcast_mode == BroadcastMode::Block */
+            {
+                let step = messages.chunk_size() as usize;
+                let msgs = messages.into_msgs();
+
+                let mut res = vec![];
+                for i in (0..msgs.len()).step_by(step) {
+                    res.push(
+                        handler.handle_tx(
+                            msgs[i..(i + step).min(msgs.len())]
+                                .to_vec()
+                                .try_into()
+                                .expect("chunking of the messages excludes empty vectors"),
+                            key.clone(),
+                            command.node.clone(),
+                            command.chain_id.clone(),
+                            command.fees.clone(),
+                            SignMode::Direct,
+                        )?,
+                    );
+                }
+                Ok(res)
+            } else {
+                // TODO: can be reduced by changing variable `step`. Do we need it?
+                handler
+                    .handle_tx(
+                        messages,
+                        key,
+                        command.node,
+                        command.chain_id,
+                        command.fees,
+                        SignMode::Direct,
+                    )
+                    .map(|res| vec![res])
+            }
         }
     }
 }
