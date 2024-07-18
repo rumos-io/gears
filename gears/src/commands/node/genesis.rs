@@ -6,7 +6,6 @@ use tendermint::informal::genesis::Genesis;
 use crate::{
     baseapp::genesis::Genesis as SDKGenesis,
     config::ConfigDirectory,
-    error::AppError,
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 
@@ -24,7 +23,7 @@ pub enum GenesisError {
     #[error("{0}")]
     Serde(#[from] serde_json::Error),
     #[error("{0}")]
-    AppError(#[from] AppError),
+    Genesis(#[from] anyhow::Error),
 }
 
 pub fn genesis_account_add<G: SDKGenesis>(cmd: GenesisCommand) -> Result<(), GenesisError> {

@@ -6,7 +6,6 @@ use thiserror::Error;
 
 use crate::{
     application::handlers::node::{ErrorCode, TxError},
-    error::AppError,
     types::{
         base::errors::CoinsError, denom::Denom, gas::GasMeteringErrors,
         store::gas::errors::GasStoreErrors,
@@ -84,8 +83,6 @@ pub(crate) enum AnteError {
     AuthGas(#[from] GasStoreErrors),
     #[error("failed to send coins: {0}")]
     CoinsSend(#[from] BankKeeperError),
-    #[error(transparent)]
-    Other(#[from] AppError), //TODO: remove this once AppError is removed
 }
 
 impl From<AnteError> for TxError {
@@ -106,9 +103,8 @@ impl From<AnteError> for TxError {
             AnteError::Memo(_) => 6,
             AnteError::TxLen => 7,
             AnteError::AccountNotFound(_) => 8,
-            AnteError::Other(_) => 9,
-            AnteError::CoinsSend(_) => 10,
-            AnteError::AuthGas(_) => 11,
+            AnteError::CoinsSend(_) => 9,
+            AnteError::AuthGas(_) => 10,
         };
 
         TxError {

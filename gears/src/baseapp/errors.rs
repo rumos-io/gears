@@ -41,6 +41,16 @@ impl RunTxError {
 
 #[derive(Debug, thiserror::Error)]
 pub enum QueryError {
+    #[error("Block height must be greater than or equal to zero")]
+    InvalidRequest,
     #[error(transparent)]
     Store(#[from] kv_store::error::KVStoreError),
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum TxValidation {
+    #[error("must contain at least one message")]
+    Empty,
+    #[error("{0}")]
+    Validation(String),
 }

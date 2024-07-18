@@ -1,7 +1,6 @@
 use crate::{
-    baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
+    baseapp::{errors::QueryError, genesis::Genesis, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    error::AppError,
     types::tx::{raw::TxWithRaw, TxMessage},
 };
 use database::Database;
@@ -98,5 +97,5 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, AppError>;
+    ) -> Result<bytes::Bytes, QueryError>;
 }

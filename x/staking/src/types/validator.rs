@@ -92,9 +92,9 @@ impl StakingValidator for Validator {
         self.commission.commission_rates().rate()
     }
 
-    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, AppError> {
+    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, MathError> {
         self.tokens_from_shares(shares)
-            .map_err(|e| AppError::Custom(e.to_string()))
+             
     }
 }
 
@@ -167,7 +167,7 @@ impl Validator {
     }
 
     /// calculate the token worth of provided shares
-    pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
+    pub fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, MathError> {
         Ok(shares
             .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
             .checked_div(self.delegator_shares)?)

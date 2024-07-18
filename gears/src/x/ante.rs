@@ -17,7 +17,6 @@ use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
 use crate::{
     context::{tx::TxContext, QueryableContext},
-    error::AppError,
     types::tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
 };
 use core_types::tx::signature::SignatureData;
@@ -252,7 +251,7 @@ impl<
             let acct = self
                 .auth_keeper
                 .get_account(ctx, signer_addr)?
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(AnteError::AccountNotFound(signer_addr.to_owned()))?;
 
             let pub_key = acct
                 .get_public_key()
@@ -385,7 +384,7 @@ impl<
                 let mut acct = self
                     .auth_keeper
                     .get_account(ctx, &addr)?
-                    .ok_or(AppError::AccountNotFound)?;
+                    .ok_or(AnteError::AccountNotFound(addr.to_owned()))?;
 
                 if acct.get_public_key().is_some() {
                     continue;
@@ -423,7 +422,7 @@ impl<
             let acct = self
                 .auth_keeper
                 .get_account(ctx, signer)?
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(AnteError::AccountNotFound(signer.to_owned()))?;
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
                 return Err(AnteError::Validation(format!(
@@ -479,7 +478,7 @@ impl<
 
             public_key
                 .verify_signature(&sign_bytes, &signature_data.signature)
-                .map_err(|e| AppError::TxValidation(format!("invalid signature: {}", e)))?;
+                .map_err(|e| AnteError::Validation(format!("invalid signature: {}", e)))?;
         }
 
         Ok(())
@@ -494,7 +493,7 @@ impl<
             let mut acct = self
                 .auth_keeper
                 .get_account(ctx, signer)?
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(AnteError::AccountNotFound(signer.to_owned()))?;
             acct.increment_sequence();
             self.auth_keeper.set_account(ctx, acct)?;
         }
