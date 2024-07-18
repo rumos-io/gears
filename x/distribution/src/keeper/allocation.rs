@@ -1,6 +1,5 @@
 use gears::{
     context::block::BlockContext,
-    error::AppError,
     tendermint::types::proto::{
         event::{Event, EventAttribute},
         info::VoteInfo,
@@ -55,7 +54,7 @@ impl<
 
         // temporary workaround to keep CanWithdrawInvariant happy
         // general discussions here: https://github.com/cosmos/cosmos-sdk/issues/2906#issuecomment-441867634
-        let mut fee_pool = self.fee_pool(ctx).ok_or(AppError::Custom(
+        let mut fee_pool = self.fee_pool(ctx).ok_or(anyhow::anyhow!(
             "Stored fee pool should not have been none".to_string(),
         ))?;
         if total_previous_power == 0 {
@@ -141,7 +140,7 @@ impl<
                 .staking_keeper
                 .validator_by_cons_addr(ctx, &ConsAddress::from(vote.validator.address.clone()))
                 .unwrap_gas()
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(anyhow::anyhow!("account not found"))?;
             // TODO: Consider micro-slashing for missing votes.
             //
             // Ref: https://github.com/cosmos/cosmos-sdk/issues/2525#issuecomment-430838701
