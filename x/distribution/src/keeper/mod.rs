@@ -14,11 +14,8 @@ pub use gears::{
 };
 use gears::{
     context::TransactionalContext,
-    types::{
-        address::ConsAddress,
-        base::coins::UnsignedCoins,
-        store::gas::{errors::GasStoreErrors, ext::GasResultExt},
-    },
+    types::{address::ConsAddress, base::coins::UnsignedCoins, store::gas::ext::GasResultExt},
+    x::errors::AuthGasError,
 };
 use std::{collections::HashMap, u64};
 
@@ -184,7 +181,7 @@ impl<
     pub fn check_set_distribution_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-    ) -> Result<(), GasStoreErrors> {
+    ) -> Result<(), AuthGasError> {
         // TODO: here is fallible call with module as self
         self.auth_keeper
             .check_create_new_module_account(ctx, &self.distribution_module)

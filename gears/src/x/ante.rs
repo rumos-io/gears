@@ -219,10 +219,7 @@ impl<
             tx_len,
         }: &TxWithRaw<M>,
     ) -> Result<(), AnteError> {
-        let params = self
-            .auth_keeper
-            .get_auth_params(ctx)
-            .map_err(|e| Into::<AnteGasError>::into(e))?;
+        let params = self.auth_keeper.get_auth_params(ctx)?;
         let tx_len: Gas = (*tx_len as u64).try_into().map_err(|_| AnteError::TxLen)?;
         let cost_per_byte: Gas = params.tx_cost_per_byte().try_into().map_err(|_| {
             AnteGasError::Overflow("overflow converting tx cost per byte to gas".to_string())
@@ -246,10 +243,7 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AnteError> {
-        let auth_params = self
-            .auth_keeper
-            .get_auth_params(ctx)
-            .map_err(|e| Into::<AnteGasError>::into(e))?;
+        let auth_params = self.auth_keeper.get_auth_params(ctx)?;
 
         let signatures = tx.get_signatures_data();
         let signers_addr = tx.get_signers();
@@ -257,8 +251,7 @@ impl<
         for (i, signer_addr) in signers_addr.into_iter().enumerate() {
             let acct = self
                 .auth_keeper
-                .get_account(ctx, signer_addr)
-                .map_err(|e| Into::<AnteGasError>::into(e))?
+                .get_account(ctx, signer_addr)?
                 .ok_or(AppError::AccountNotFound)?;
 
             let pub_key = acct
@@ -324,11 +317,7 @@ impl<
         ctx: &TxContext<'_, DB, SK>,
         tx: &Tx<M>,
     ) -> Result<(), AnteError> {
-        let max_memo_chars = self
-            .auth_keeper
-            .get_auth_params(ctx)
-            .map_err(|e| Into::<AnteGasError>::into(e))?
-            .max_memo_characters();
+        let max_memo_chars = self.auth_keeper.get_auth_params(ctx)?.max_memo_characters();
         let memo_length: u64 = tx
             .get_memo()
             .len()
@@ -349,11 +338,7 @@ impl<
         let fee = tx.get_fee();
         let fee_payer = tx.get_fee_payer();
 
-        if !self
-            .auth_keeper
-            .has_account(ctx, fee_payer)
-            .map_err(|e| Into::<AnteGasError>::into(e))?
-        {
+        if !self.auth_keeper.has_account(ctx, fee_payer)? {
             return Err(AnteError::AccountNotFound(fee_payer.clone()));
         }
 
@@ -399,8 +384,7 @@ impl<
 
                 let mut acct = self
                     .auth_keeper
-                    .get_account(ctx, &addr)
-                    .map_err(|e| Into::<AnteGasError>::into(e))?
+                    .get_account(ctx, &addr)?
                     .ok_or(AppError::AccountNotFound)?;
 
                 if acct.get_public_key().is_some() {
@@ -408,9 +392,7 @@ impl<
                 }
 
                 acct.set_public_key(key.clone());
-                self.auth_keeper
-                    .set_account(ctx, acct)
-                    .map_err(|e| Into::<AnteGasError>::into(e))?;
+                self.auth_keeper.set_account(ctx, acct)?;
             }
         }
 
@@ -440,8 +422,7 @@ impl<
             // check sequence number
             let acct = self
                 .auth_keeper
-                .get_account(ctx, signer)
-                .map_err(|e| Into::<AnteGasError>::into(e))?
+                .get_account(ctx, signer)?
                 .ok_or(AppError::AccountNotFound)?;
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
@@ -512,13 +493,10 @@ impl<
         for signer in tx.get_signers() {
             let mut acct = self
                 .auth_keeper
-                .get_account(ctx, signer)
-                .map_err(|e| Into::<AnteGasError>::into(e))?
+                .get_account(ctx, signer)?
                 .ok_or(AppError::AccountNotFound)?;
             acct.increment_sequence();
-            self.auth_keeper
-                .set_account(ctx, acct)
-                .map_err(|e| Into::<AnteGasError>::into(e))?;
+            self.auth_keeper.set_account(ctx, acct)?;
         }
 
         Ok(())

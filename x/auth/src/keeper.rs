@@ -11,11 +11,11 @@ use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::address::AccAddress;
 use gears::types::query::account::QueryAccountRequest;
-use gears::types::store::gas::errors::GasStoreErrors;
 use gears::types::{
     account::{Account, BaseAccount, ModuleAccount},
     query::account::QueryAccountResponse,
 };
+use gears::x::errors::AuthGasError;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use prost::Message;
@@ -39,15 +39,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
     fn get_auth_params<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Self::Params, GasStoreErrors> {
-        self.auth_params_keeper.try_get(ctx)
+    ) -> Result<Self::Params, AuthGasError> {
+        self.auth_params_keeper
+            .try_get(ctx)
+            .map_err(AuthGasError::from)
     }
 
     fn has_account<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: &AccAddress,
-    ) -> Result<bool, GasStoreErrors> {
+    ) -> Result<bool, AuthGasError> {
         let auth_store = ctx.kv_store(&self.store_key);
         let key = create_auth_store_key(addr.to_owned());
         Ok(auth_store.get(&key)?.is_some())
@@ -57,7 +59,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         &self,
         ctx: &CTX,
         addr: &AccAddress,
-    ) -> Result<Option<Account>, GasStoreErrors> {
+    ) -> Result<Option<Account>, AuthGasError> {
         let auth_store = ctx.kv_store(&self.store_key);
         let key = create_auth_store_key(addr.to_owned());
         let account = auth_store.get(&key)?;
@@ -77,7 +79,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         &self,
         ctx: &mut CTX,
         acct: Account,
-    ) -> Result<(), GasStoreErrors> {
+    ) -> Result<(), AuthGasError> {
         let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
@@ -90,7 +92,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         &self,
         ctx: &mut CTX,
         addr: &AccAddress,
-    ) -> Result<(), GasStoreErrors> {
+    ) -> Result<(), AuthGasError> {
         let acct = BaseAccount {
             address: addr.clone(),
             pub_key: None,
@@ -107,7 +109,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         &self,
         ctx: &mut CTX,
         module: &M,
-    ) -> Result<(), GasStoreErrors> {
+    ) -> Result<(), AuthGasError> {
         let addr = module.get_address();
 
         if !self.has_account(ctx, &addr)? {
@@ -187,7 +189,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
     fn get_next_account_number<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-    ) -> Result<u64, GasStoreErrors> {
+    ) -> Result<u64, AuthGasError> {
         let mut auth_store = ctx.kv_store_mut(&self.store_key);
 
         // NOTE: The next available account number is what's stored in the KV store
@@ -210,7 +212,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         &self,
         ctx: &mut CTX,
         acct: Account,
-    ) -> Result<(), GasStoreErrors> {
+    ) -> Result<(), AuthGasError> {
         let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 

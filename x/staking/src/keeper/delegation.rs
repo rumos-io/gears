@@ -81,7 +81,7 @@ impl<
                     delegation.delegator_address.clone(),
                     send_module,
                     coins,
-                )?;
+                ).map_err( | e | AppError::Custom(e.to_string()))?;
         } else {
             // potentially transfer tokens between pools, if
 

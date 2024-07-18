@@ -5,7 +5,7 @@ use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
-use gears::error::{AppError, IBC_ENCODE_UNWRAP};
+use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ext::{IteratorPaginate, Pagination};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
@@ -24,6 +24,7 @@ use gears::types::store::gas::ext::GasResultExt;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
+use gears::x::errors::{BankCoinsError, BankGasError, BankKeeperError, InsufficientFundsError};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::{BankKeeper, StakingBankKeeper};
 use gears::x::keepers::gov::GovernanceBankKeeper;
@@ -62,7 +63,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         from_address: AccAddress,
         to_module: &M,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         self.auth_keeper
             .check_create_new_module_account(ctx, to_module)?;
 
@@ -72,7 +73,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
             amount,
         };
 
-        self.send_coins(ctx, msg)
+        self.send_coins(ctx, msg)?;
+
+        Ok(())
     }
 
     fn get_denom_metadata<DB: Database, CTX: QueryableContext<DB, SK>>(
@@ -97,7 +100,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         ctx: &mut CTX,
         module: &M,
         deposit: &UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         let module_acc_addr = module.get_address();
 
         let account = self
@@ -107,7 +110,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
 
         match account.has_permissions("burner") {
             true => Ok(()),
-            false => Err(AppError::AccountNotFound),
+            false => Err(BankKeeperError::AccountNotFound),
         }?;
 
         self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
@@ -145,7 +148,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
         address: &AccAddress,
         module: &M,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         let module_address = module.get_address();
 
         // TODO: what is blocked account and how to handle it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/bank/keeper/keeper.go#L316-L318
@@ -168,7 +171,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
+    ) -> Result<Vec<UnsignedCoin>, BankGasError> {
         let (_, result) = self.all_balances(ctx, addr, None)?;
 
         Ok(result)
@@ -180,7 +183,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         sender_pool: &M,
         recepient_pool: &M,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         self.send_coins_from_module_to_module(ctx, sender_pool, recepient_pool, amount)
     }
 
@@ -190,7 +193,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         sender_module: &M,
         addr: AccAddress,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         self.undelegate_coins_from_module_to_account(ctx, sender_module, addr, amount)
     }
 
@@ -200,7 +203,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         sender_addr: AccAddress,
         recepient_module: &M,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         self.delegate_coins_from_account_to_module(ctx, sender_addr, recepient_module, amount)
     }
 }
@@ -478,7 +481,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         msg: &MsgSend,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         self.send_coins(ctx, msg.clone())?;
 
         // Create account if recipient does not exist
@@ -501,7 +504,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         sender_pool: &M,
         recepient_pool: &M,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         self.auth_keeper
             .check_create_new_module_account(ctx, sender_pool)?;
         self.auth_keeper
@@ -520,7 +523,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &mut CTX,
         msg: MsgSend,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         // TODO: refactor this to subtract all amounts before adding all amounts
 
         let mut events = vec![];
@@ -532,10 +535,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             let mut from_account_store = self.get_address_balances_store(ctx, &from_address);
             let from_balance = from_account_store
                 .get(send_coin.denom.to_string().as_bytes())?
-                .ok_or(AppError::Send(format!(
-                    "insufficient funds: required: {}, actual: 0",
-                    send_coin.amount
-                )))?;
+                .ok_or(InsufficientFundsError::RequiredActual {
+                    required: send_coin.amount,
+                    actual: Uint256::zero(),
+                })?;
 
             let mut from_balance: UnsignedCoin =
                 UnsignedCoin::decode::<Bytes>(from_balance.to_owned().into())
@@ -543,10 +546,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     .unwrap_or_corrupt();
 
             if from_balance.amount < send_coin.amount {
-                return Err(AppError::Send(format!(
-                    "insufficient funds: required: {}, actual: {}",
-                    send_coin.amount, from_balance.amount
-                )));
+                Err(InsufficientFundsError::RequiredActual {
+                    required: send_coin.amount,
+                    actual: from_balance.amount,
+                })?;
             }
 
             from_balance.amount -= send_coin.amount;
@@ -700,7 +703,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         sender_addr: AccAddress,
         recepient_module: &M,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         let recepient_module_addr = recepient_module.get_address();
         self.auth_keeper
             .check_create_new_module_account(ctx, recepient_module)?;
@@ -710,7 +713,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .iter()
             .any(|p| p == "staking")
         {
-            return Err(AppError::Custom(format!(
+            return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive delegated coins",
                 recepient_module.get_name()
             )));
@@ -729,39 +732,39 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         delegator_addr: AccAddress,
         module_acc_addr: AccAddress,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         if self
             .auth_keeper
             .get_account(ctx, &module_acc_addr)?
             .is_none()
         {
-            return Err(AppError::AccountNotFound);
+            return Err(BankKeeperError::AccountNotFound);
         };
 
         let mut balances = vec![];
         for coin in amount.inner() {
             if let Some(mut balance) = self.balance(ctx, &delegator_addr, &coin.denom)? {
                 if balance.amount < coin.amount {
-                    return Err(AppError::Custom(format!(
-                        "failed to delegate; {} is smaller than {}",
-                        balance.amount, coin.amount
-                    )));
+                    return Err(BankKeeperError::Delegation {
+                        smaller: balance.amount,
+                        bigger: coin.amount,
+                    });
                 }
                 balances.push(balance.clone());
                 balance.amount -= coin.amount;
                 self.set_balance(ctx, &delegator_addr, balance)?;
             } else {
-                return Err(AppError::Custom(format!(
-                    "failed to delegate; 0 is smaller than {}",
-                    coin.amount
-                )));
+                return Err(BankKeeperError::Delegation {
+                    smaller: Uint256::zero(),
+                    bigger: coin.amount,
+                });
             }
         }
 
         self.track_delegation(
             ctx,
             &delegator_addr,
-            &UnsignedCoins::new(balances.clone()).map_err(|e| AppError::Coins(e.to_string()))?,
+            &UnsignedCoins::new(balances.clone())?,
             &amount,
         )?;
 
@@ -796,7 +799,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         sender_module: &M,
         addr: AccAddress,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         let sender_module_addr = sender_module.get_address();
         self.auth_keeper
             .check_create_new_module_account(ctx, sender_module)?;
@@ -806,7 +809,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .iter()
             .any(|p| p == "staking")
         {
-            return Err(AppError::Custom(format!(
+            return Err(BankKeeperError::Permission(format!(
                 "module account {} does not have permissions to receive undelegate coins",
                 sender_module.get_name()
             )));
@@ -825,13 +828,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         module_acc_addr: AccAddress,
         delegator_addr: AccAddress,
         amount: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         if self
             .auth_keeper
             .get_account(ctx, &module_acc_addr)?
             .is_none()
         {
-            return Err(AppError::AccountNotFound);
+            return Err(BankKeeperError::AccountNotFound);
         };
 
         self.sub_unlocked_coins(ctx, &module_acc_addr, &amount)?;
@@ -846,7 +849,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         addr: &AccAddress,
         amount: &UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         let locked_coins = self.locked_coins(ctx, addr)?;
 
         let amount_of = |coins: &Vec<UnsignedCoin>, denom: &Denom| -> Uint256 {
@@ -860,19 +863,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 let spendable = balance.amount - locked_amount;
 
                 if spendable.checked_sub(coin.amount).is_err() {
-                    return Err(AppError::Coins(format!(
-                        "{} is smaller than {}",
-                        spendable, coin.amount
-                    )));
+                    Err(BankCoinsError::Amount {
+                        smaller: spendable,
+                        bigger: coin.amount,
+                    })?;
                 }
 
                 balance.amount -= coin.amount;
                 self.set_balance(ctx, addr, balance)?;
             } else {
-                return Err(AppError::Coins(format!(
-                    "Account {} doesn't have sufficient funds {}",
-                    addr, &coin.denom
-                )));
+                Err(InsufficientFundsError::Account {
+                    account: addr.clone(),
+                    funds: coin.denom.clone(),
+                })?;
             }
         }
 
@@ -903,7 +906,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         addr: &AccAddress,
         // TODO: consider to add struct Coins that can have empty coins list
-    ) -> Result<Vec<UnsignedCoin>, AppError> {
+    ) -> Result<Vec<UnsignedCoin>, BankKeeperError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             //     vacc, ok := acc.(vestexported.VestingAccount)
             //     if ok {
@@ -923,7 +926,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         addr: &AccAddress,
         _balance: &UnsignedCoins,
         _amount: &UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             // TODO: logic with vesting accounts
             //     vacc, ok := acc.(vestexported.VestingAccount)
@@ -933,7 +936,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             //     }
             Ok(())
         } else {
-            Err(AppError::AccountNotFound)
+            Err(BankKeeperError::AccountNotFound)
         }
     }
 
@@ -943,7 +946,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &mut CTX,
         addr: &AccAddress,
         _amount: &UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), BankKeeperError> {
         if let Some(_acc) = self.auth_keeper.get_account(ctx, addr)? {
             // TODO: logic with vesting accounts
             //     vacc, ok := acc.(vestexported.VestingAccount)
@@ -953,7 +956,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             //     }
             Ok(())
         } else {
-            Err(AppError::AccountNotFound)
+            Err(BankKeeperError::AccountNotFound)
         }
     }
 }

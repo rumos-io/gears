@@ -1,19 +1,19 @@
 use gears::{
     application::handlers::node::{ErrorCode, ModuleInfo, TxError},
-    error::AppError,
+    x::errors::BankKeeperError,
 };
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum BankTxError {
     #[error(transparent)]
-    Other(#[from] AppError), //TODO: stop using AppError
+    Keeper(#[from] BankKeeperError),
 }
 
 impl BankTxError {
     pub fn into<MI: ModuleInfo>(self) -> TxError {
         let code = match &self {
-            BankTxError::Other(_) => 1,
+            BankTxError::Keeper(_) => 1,
         };
 
         TxError {
