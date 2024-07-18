@@ -7,7 +7,9 @@ use thiserror::Error;
 use crate::{
     application::handlers::node::{ErrorCode, TxError},
     types::{
-        base::errors::CoinsError, denom::Denom, gas::GasMeteringErrors,
+        base::errors::CoinsError,
+        denom::Denom,
+        gas::GasMeteringErrors,
         store::gas::errors::{GasStoreErrorKinds, GasStoreErrors},
     },
 };

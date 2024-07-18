@@ -11,7 +11,7 @@ use gears::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         InfallibleContextMut, QueryableContext, TransactionalContext,
     },
-    error::{AppError, IBC_ENCODE_UNWRAP},
+    error::IBC_ENCODE_UNWRAP,
     ext::{IteratorPaginate, Pagination, PaginationResult},
     params::ParamsSubspaceKey,
     store::{
@@ -120,7 +120,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let height = ctx.height();
 
         // fetch the validator public key
-        self.get_pub_key(ctx, &cons_addr).ok_or(AppError::Custom(
+        self.get_pub_key(ctx, &cons_addr).ok_or(anyhow::anyhow!(
             "validator consensus address not found".to_string(),
         ))?;
 
@@ -128,7 +128,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let mut sign_info = self
             .validator_signing_info(ctx, &cons_addr)
             .unwrap_gas()
-            .ok_or(AppError::Custom(
+            .ok_or(anyhow::anyhow!(
                 "Expected signing info for validator but it is not found".to_string(),
             ))?;
 
@@ -313,7 +313,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &MsgUnjail,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         self.unjail(ctx, &msg.from_address, &msg.validator_address)?;
 
         ctx.push_event(Event {
@@ -340,12 +340,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &QueryContext<DB, SK>,
         query: QuerySigningInfoRequest,
-    ) -> Result<QuerySigningInfoResponse, AppError> {
+    ) -> Result<QuerySigningInfoResponse, anyhow::Error> {
         self.validator_signing_info(ctx, &query.cons_address)?
-            .ok_or(AppError::Custom(format!(
+            .ok_or(anyhow::anyhow!(
                 "signing info of validator {} is not found",
                 query.cons_address
-            )))
+            ))
             .map(|val_signing_info| QuerySigningInfoResponse { val_signing_info })
     }
 
@@ -366,24 +366,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         ctx: &mut TxContext<'_, DB, SK>,
         delegator_address: &AccAddress,
         validator_address: &ValAddress,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         let validator = self
             .staking_keeper
             .validator(ctx, validator_address)?
-            .ok_or(AppError::AccountNotFound)?;
+            .ok_or(anyhow::anyhow!("account not found"))?;
         // cannot be unjailed if no self-delegation exists
         let self_delegation = self
             .staking_keeper
             .delegation(ctx, delegator_address, validator_address)?
-            .ok_or(AppError::Custom("self delegation is not found".to_string()))?;
+            .ok_or(anyhow::anyhow!("self delegation is not found".to_string()))?;
         let tokens = validator.tokens_from_shares(
             Decimal256::from_atomics(self_delegation.shares().to_uint_floor(), 0)
-                .map_err(|e| AppError::Custom(e.to_string()))?,
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?,
         )?;
         let min_self_bond = validator.min_self_delegation();
         // TODO: check equation
         if tokens.to_uint_ceil() < *min_self_bond {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(format!(
                 "SelfDelegationTooLowToUnjail:\n{} less than {}",
                 tokens, min_self_bond
             )));
@@ -391,7 +391,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
 
         // cannot be unjailed if not jailed
         if !validator.is_jailed() {
-            return Err(AppError::Custom("validator is not jailed".to_string()));
+            return Err(anyhow::anyhow!("validator is not jailed".to_string()));
         }
 
         // TODO: do we need it?
@@ -407,7 +407,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         if let Some(info) = self.validator_signing_info(ctx, &cons_addr)? {
             // cannot be unjailed if tombstoned
             if info.tombstoned {
-                return Err(AppError::Custom("validator is jailed".to_string()));
+                return Err(anyhow::anyhow!("validator is jailed".to_string()));
             }
 
             // cannot be unjailed until out of jail
@@ -422,7 +422,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
             )
             .unwrap();
             if ctx_time < jailed_until_time {
-                return Err(AppError::Custom("validator is jailed".to_string()));
+                return Err(anyhow::anyhow!("validator is jailed".to_string()));
             }
         }
 

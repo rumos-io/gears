@@ -22,7 +22,7 @@ members = [
   "x/distribution",
   "x/gov",
   "x/ibc-rs",
-  # "x/slashing",
+  "x/slashing",
   # "x/staking",
 
   # new unsorted

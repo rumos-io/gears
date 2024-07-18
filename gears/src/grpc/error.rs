@@ -10,9 +10,7 @@ impl From<QueryError> for Status {
                 // we always query the latests version. Therefore, something has gone badly wrong if we get this error.
                 Status::internal("An internal error occurred while querying the application state.")
             }
-            QueryError::InvalidRequest => Status::invalid_argument("Invalid message."),
-            QueryError::Proto(_) => Status::invalid_argument("Invalid message."),
-            QueryError::PathNotFound => Status::invalid_argument("Invalid message."),
+            _ => Status::invalid_argument("Invalid message."),
         }
     }
 }
