@@ -18,7 +18,7 @@ members = [
 
   # xmodules
   "x/auth",
-  # "x/bank",
+  "x/bank",
   # "x/distribution",
   # "x/ibc-rs",
   # "x/slashing",
