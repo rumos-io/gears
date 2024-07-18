@@ -47,7 +47,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
         keyring,
     }: TxCommand<C>,
     handler: &H,
-) -> anyhow::Result<Response> {
+) -> anyhow::Result<Vec<Response>> {
     match keyring {
         Keyring::Ledger => {
             let key = LedgerProxyKey::new()?;
