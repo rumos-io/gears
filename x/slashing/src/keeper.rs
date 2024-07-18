@@ -478,20 +478,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &QueryContext<DB, SK>,
         pagination: Option<Pagination>,
-    ) -> (Option<PaginationResult<Vec<u8>>>, Vec<ValidatorSigningInfo>) {
+    ) -> (Option<PaginationResult>, Vec<ValidatorSigningInfo>) {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(VALIDATOR_SIGNING_INFO_KEY_PREFIX);
         let (p_result, iter) = store.into_range(..).maybe_paginate(pagination);
 
         (
-            p_result.map(
-                |PaginationResult {
-                     total,
-                     next_element,
-                 }| {
-                    PaginationResult::new(total, next_element.map(|this| this.0.into_owned()))
-                },
-            ),
+            p_result,
             iter.map(|(_k, v)| ValidatorSigningInfo::decode_vec(&v).unwrap_or_corrupt())
                 .collect::<Vec<_>>(),
         )

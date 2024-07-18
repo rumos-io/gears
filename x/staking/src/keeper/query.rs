@@ -77,7 +77,7 @@ impl<
         src_validator_address: &Option<ValAddress>,
         dst_validator_address: &Option<ValAddress>,
         pagination: Option<Pagination>,
-    ) -> (Option<PaginationResult<Redelegation>>, Vec<Redelegation>) {
+    ) -> (Option<PaginationResult>, Vec<Redelegation>) {
         let redelegations = match (
             delegator_address,
             src_validator_address,

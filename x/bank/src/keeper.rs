@@ -6,7 +6,7 @@ use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
-use gears::ext::{bytes_pagination_result, IteratorPaginate, Pagination, PaginationResult};
+use gears::ext::{IteratorPaginate, Pagination, PaginationResult};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
@@ -425,7 +425,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         addr: AccAddress,
         pagination: Option<Pagination>,
-    ) -> Result<(Option<PaginationResult<Vec<u8>>>, Vec<UnsignedCoin>), GasStoreErrors> {
+    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(addr);
         let account_store = bank_store.prefix_store(prefix);
@@ -440,7 +440,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 .unwrap_or_corrupt();
             balances.push(coin);
         }
-        Ok((bytes_pagination_result(p_result), balances))
+        Ok((p_result, balances))
     }
 
     /// Gets the total supply of every denom
@@ -448,7 +448,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &QueryContext<DB, SK>,
         pagination: Option<Pagination>,
-    ) -> (Option<PaginationResult<Vec<u8>>>, Vec<UnsignedCoin>) {
+    ) -> (Option<PaginationResult>, Vec<UnsignedCoin>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
@@ -471,7 +471,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         store.sort_by_key(|this| this.denom.clone());
 
-        (bytes_pagination_result(p_result), store)
+        (p_result, store)
     }
 
     pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -670,7 +670,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         &self,
         ctx: &QueryContext<DB, SK>,
         pagination: Option<Pagination>,
-    ) -> (Option<PaginationResult<Vec<u8>>>, Vec<Metadata>) {
+    ) -> (Option<PaginationResult>, Vec<Metadata>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
@@ -688,7 +688,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             denoms_metadata.push(metadata);
         }
 
-        (bytes_pagination_result(p_result), denoms_metadata)
+        (p_result, denoms_metadata)
     }
 
     pub fn delegate_coins_from_account_to_module<

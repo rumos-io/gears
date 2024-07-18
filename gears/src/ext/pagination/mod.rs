@@ -33,18 +33,12 @@ pub trait IteratorPaginate {
     fn paginate(
         self,
         pagination: impl Into<Pagination>,
-    ) -> (
-        PaginationResult<Self::Item>,
-        impl Iterator<Item = Self::Item>,
-    );
+    ) -> (PaginationResult, impl Iterator<Item = Self::Item>);
 
     fn maybe_paginate<P: Into<Pagination>>(
         self,
         pagination: Option<P>,
-    ) -> (
-        Option<PaginationResult<Self::Item>>,
-        impl Iterator<Item = Self::Item>,
-    );
+    ) -> (Option<PaginationResult>, impl Iterator<Item = Self::Item>);
 }
 
 impl<T: Iterator<Item = U>, U: PaginationKeyIterator + Clone> IteratorPaginate for T {
@@ -53,15 +47,19 @@ impl<T: Iterator<Item = U>, U: PaginationKeyIterator + Clone> IteratorPaginate f
     fn paginate(
         self,
         pagination: impl Into<Pagination>,
-    ) -> (
-        PaginationResult<Self::Item>,
-        impl Iterator<Item = Self::Item>,
-    ) {
+    ) -> (PaginationResult, impl Iterator<Item = Self::Item>) {
         let Pagination(variant) = pagination.into();
         match variant {
             PaginationVariant::Offset(pagination) => {
-                let (result, iter) = self.paginate_by_offset(pagination);
-                (result, TwoIterators::First(iter))
+                let (PaginationByOffsetResult { total, next_key }, iter) =
+                    self.paginate_by_offset(pagination);
+                (
+                    PaginationResult {
+                        total,
+                        next_key: next_key.map(|this| this.iterator_key().into_owned()),
+                    },
+                    TwoIterators::First(iter),
+                )
             }
             PaginationVariant::Key(pagination) => {
                 let (result, iter) = self.paginate_by_key(pagination);
@@ -73,10 +71,7 @@ impl<T: Iterator<Item = U>, U: PaginationKeyIterator + Clone> IteratorPaginate f
     fn maybe_paginate<P: Into<Pagination>>(
         self,
         pagination: Option<P>,
-    ) -> (
-        Option<PaginationResult<Self::Item>>,
-        impl Iterator<Item = Self::Item>,
-    ) {
+    ) -> (Option<PaginationResult>, impl Iterator<Item = Self::Item>) {
         match pagination {
             Some(pagination) => {
                 let (result, iter) = self.paginate(pagination);
@@ -109,56 +104,43 @@ pub trait UnwrapPagination<I> {
     fn unwrap_pagination(self) -> I;
 }
 
-impl<T, I: Iterator<Item = T>> UnwrapPagination<I> for (Option<PaginationResult<T>>, I) {
+impl<T, I: Iterator<Item = T>> UnwrapPagination<I> for (Option<PaginationResultElement<T>>, I) {
     fn unwrap_pagination(self) -> I {
         let (_, iter) = self;
         iter
     }
 }
 
-impl<T, I: Iterator<Item = T>> UnwrapPagination<I> for (PaginationResult<T>, I) {
+impl<T, I: Iterator<Item = T>> UnwrapPagination<I> for (PaginationResultElement<T>, I) {
     fn unwrap_pagination(self) -> I {
         let (_, iter) = self;
         iter
     }
 }
+
+pub type PaginationResult = PaginationResultElement<Vec<u8>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PaginationResult<T> {
+pub struct PaginationResultElement<T> {
     pub total: usize,
-    pub next_element: Option<T>,
+    pub next_key: Option<T>,
 }
 
-impl<T> PaginationResult<T> {
+impl<T> PaginationResultElement<T> {
     pub fn new(total: usize, next_element: Option<T>) -> Self {
         Self {
             total,
-            next_element,
+            next_key: next_element,
         }
     }
 }
 
-pub fn bytes_pagination_result<T: PaginationKeyIterator>(
-    p_result: Option<PaginationResult<T>>,
-) -> Option<PaginationResult<Vec<u8>>> {
-    match p_result {
-        Some(PaginationResult {
-            total,
-            next_element,
-        }) => Some(PaginationResult::new(
-            total,
-            next_element.map(|this| this.iterator_key().into_owned()),
-        )),
-        None => None,
-    }
-}
-
-impl<T: PaginationKeyIterator> From<PaginationResult<T>> for PaginationResponse {
+impl<T: PaginationKeyIterator> From<PaginationResultElement<T>> for PaginationResponse {
     fn from(
-        PaginationResult {
+        PaginationResultElement {
             total,
-            next_element,
-        }: PaginationResult<T>,
+            next_key: next_element,
+        }: PaginationResultElement<T>,
     ) -> Self {
         Self {
             next_key: next_element

@@ -1,6 +1,8 @@
 use itertools::Itertools;
 
-use super::{PaginationResult, TwoIterators};
+use super::{PaginationResultElement, TwoIterators};
+
+pub type PaginationByOffsetResult<T> = PaginationResultElement<T>;
 
 #[derive(Debug, Clone)]
 pub struct PaginationByOffset {
@@ -21,7 +23,7 @@ pub trait IteratorPaginateByOffset {
         self,
         pagination: impl Into<PaginationByOffset>,
     ) -> (
-        PaginationResult<Self::Item>,
+        PaginationByOffsetResult<Self::Item>,
         impl Iterator<Item = Self::Item>,
     );
 
@@ -29,7 +31,7 @@ pub trait IteratorPaginateByOffset {
         self,
         pagination: Option<P>,
     ) -> (
-        Option<PaginationResult<Self::Item>>,
+        Option<PaginationByOffsetResult<Self::Item>>,
         impl Iterator<Item = Self::Item>,
     );
 }
@@ -41,7 +43,7 @@ impl<T: Iterator<Item = U>, U: Clone> IteratorPaginateByOffset for T {
         self,
         pagination: impl Into<PaginationByOffset>,
     ) -> (
-        PaginationResult<Self::Item>,
+        PaginationByOffsetResult<Self::Item>,
         impl Iterator<Item = Self::Item>,
     ) {
         let PaginationByOffset { offset, limit } = pagination.into();
@@ -54,14 +56,17 @@ impl<T: Iterator<Item = U>, U: Clone> IteratorPaginateByOffset for T {
             Err((_lower_bound, upper_bound)) => upper_bound.unwrap_or(usize::MAX),
         };
 
-        (PaginationResult::new(count, last), iterator.take(limit))
+        (
+            PaginationResultElement::new(count, last),
+            iterator.take(limit),
+        )
     }
 
     fn maybe_paginate_by_offset<P: Into<PaginationByOffset>>(
         self,
         pagination: Option<P>,
     ) -> (
-        Option<PaginationResult<Self::Item>>,
+        Option<PaginationByOffsetResult<Self::Item>>,
         impl Iterator<Item = Self::Item>,
     ) {
         match pagination {
@@ -161,7 +166,7 @@ mod tests {
 
         let (p_result, _) = array.into_iter().paginate_by_offset((0, 2));
 
-        let expected = PaginationResult::new(6, Some(vec![3]));
+        let expected = PaginationResultElement::new(6, Some(vec![3]));
 
         assert_eq!(expected, p_result);
     }
@@ -172,7 +177,7 @@ mod tests {
 
         let (p_result, _) = array.into_iter().paginate_by_offset((1, 5));
 
-        let expected = PaginationResult::new(1, None);
+        let expected = PaginationResultElement::new(1, None);
 
         assert_eq!(expected, p_result);
     }
@@ -183,7 +188,7 @@ mod tests {
 
         let (p_result, _) = array.into_iter().paginate_by_offset((10, 10));
 
-        let expected = PaginationResult::new(0, None);
+        let expected = PaginationResultElement::new(0, None);
 
         assert_eq!(expected, p_result);
     }

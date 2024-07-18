@@ -5,7 +5,9 @@ use vec1::Vec1;
 
 use crate::types::{base::coin::UnsignedCoin, store::gas::errors::GasStoreErrors};
 
-use super::{PaginationResult, TwoIterators};
+use super::{PaginationResultElement, TwoIterators};
+
+pub type PaginationByKeyResult = PaginationResultElement<Vec<u8>>;
 
 #[derive(Debug, Clone)]
 pub struct PaginationByKey {
@@ -24,54 +26,53 @@ pub trait PaginationKeyIterator {
 }
 
 pub trait IteratorPaginateByKey {
-    type Item: Clone;
+    type Item;
 
     fn paginate_by_key(
         self,
         pagination: impl Into<PaginationByKey>,
-    ) -> (
-        PaginationResult<Self::Item>,
-        impl Iterator<Item = Self::Item>,
-    );
+    ) -> (PaginationByKeyResult, impl Iterator<Item = Self::Item>);
 
     fn maybe_paginate_by_key<P: Into<PaginationByKey>>(
         self,
         pagination: Option<P>,
     ) -> (
-        Option<PaginationResult<Self::Item>>,
+        Option<PaginationByKeyResult>,
         impl Iterator<Item = Self::Item>,
     );
 }
 
-impl<T: Iterator<Item = U>, U: PaginationKeyIterator + Clone> IteratorPaginateByKey for T {
+impl<T: Iterator<Item = U>, U: PaginationKeyIterator> IteratorPaginateByKey for T {
     type Item = U;
 
     fn paginate_by_key(
         self,
         pagination: impl Into<PaginationByKey>,
-    ) -> (
-        PaginationResult<Self::Item>,
-        impl Iterator<Item = Self::Item>,
-    ) {
+    ) -> (PaginationByKeyResult, impl Iterator<Item = Self::Item>) {
         let PaginationByKey { key, limit } = pagination.into();
 
         let mut iterator =
             itertools::peek_nth(self.skip_while(move |this| this.iterator_key().as_ref() != key));
 
-        let last = iterator.peek_nth(limit).cloned();
+        let last = iterator
+            .peek_nth(limit)
+            .map(|e| e.iterator_key().into_owned());
         let count = match iterator.try_len() {
             Ok(len) => len,
             Err((_lower_bound, upper_bound)) => upper_bound.unwrap_or(usize::MAX),
         };
 
-        (PaginationResult::new(count, last), iterator.take(limit))
+        (
+            PaginationResultElement::new(count, last),
+            iterator.take(limit),
+        )
     }
 
     fn maybe_paginate_by_key<P: Into<PaginationByKey>>(
         self,
         pagination: Option<P>,
     ) -> (
-        Option<PaginationResult<Self::Item>>,
+        Option<PaginationByKeyResult>,
         impl Iterator<Item = Self::Item>,
     ) {
         match pagination {
@@ -217,7 +218,7 @@ mod tests {
 
         let (p_result, _) = array.into_iter().paginate_by_key((vec1![1], 2));
 
-        let expected = PaginationResult::new(6, Some(vec![3]));
+        let expected = PaginationResultElement::new(6, Some(vec![3]));
 
         assert_eq!(expected, p_result);
     }
@@ -228,7 +229,7 @@ mod tests {
 
         let (p_result, _) = array.into_iter().paginate_by_key((vec1![6], 2));
 
-        let expected = PaginationResult::new(1, None);
+        let expected = PaginationResultElement::new(1, None);
 
         assert_eq!(expected, p_result);
     }
@@ -239,7 +240,7 @@ mod tests {
 
         let (p_result, _) = array.into_iter().paginate_by_key((vec1![7], 2));
 
-        let expected = PaginationResult::new(0, None);
+        let expected = PaginationResultElement::new(0, None);
 
         assert_eq!(expected, p_result);
     }
