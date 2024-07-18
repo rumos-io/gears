@@ -48,7 +48,18 @@ pub enum QueryError {
     #[error(transparent)]
     Store(#[from] kv_store::error::KVStoreError),
     #[error("error decoding query: {0}")]
-    Proto(#[from] crate::tendermint::error::proto::Error),
+    Proto(String),
+}
+impl From<prost::DecodeError> for QueryError {
+    fn from(value: prost::DecodeError) -> Self {
+        Self::Proto(value.to_string())
+    }
+}
+
+impl From<crate::tendermint::error::proto::Error> for QueryError {
+    fn from(value: crate::tendermint::error::proto::Error) -> Self {
+        Self::Proto(value.to_string())
+    }
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
