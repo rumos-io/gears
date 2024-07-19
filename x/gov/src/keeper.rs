@@ -474,7 +474,7 @@ impl<
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
             submit_time: submit_date,
-            deposit_end_time: submit_date.add(deposit_period),
+            deposit_end_time: submit_date.add(deposit_period), // TODO: consider using checked_add_signed
             total_deposit: initial_deposit,
             voting_start_time: None,
             voting_end_time: None,
