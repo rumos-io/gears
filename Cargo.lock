@@ -4825,10 +4825,12 @@ dependencies = [
  "chrono",
  "clap",
  "gears",
+ "nz",
  "prost 0.11.9",
  "serde",
  "serde-aux",
  "serde_json",
+ "thiserror",
  "tracing",
 ]
 

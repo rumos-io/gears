@@ -1,6 +1,7 @@
 use crate::{
-    GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
-    QuerySigningInfoRequest, QuerySigningInfosRequest, QuerySigningInfosResponse,
+    errors::SlashingTxError, GenesisState, Keeper, Message, QueryParamsRequest,
+    QueryParamsResponse, QuerySigningInfoRequest, QuerySigningInfosRequest,
+    QuerySigningInfosResponse,
 };
 use gears::{
     baseapp::errors::QueryError,
@@ -53,10 +54,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), anyhow::Error> {
+    ) -> Result<(), SlashingTxError> {
         // TODO
         match msg {
-            Message::Unjail(msg) => self.keeper.unjail_tx_handler(ctx, msg),
+            Message::Unjail(msg) => Ok(self.keeper.unjail_tx_handler(ctx, msg)?),
         }
     }
 
