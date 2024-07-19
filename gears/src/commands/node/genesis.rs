@@ -23,7 +23,7 @@ pub enum GenesisError {
     #[error("{0}")]
     Serde(#[from] serde_json::Error),
     #[error("{0}")]
-    Genesis(#[from] anyhow::Error),
+    Genesis(#[from] anyhow::Error), // TODO
 }
 
 pub fn genesis_account_add<G: SDKGenesis>(cmd: GenesisCommand) -> Result<(), GenesisError> {

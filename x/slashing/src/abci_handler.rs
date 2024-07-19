@@ -55,7 +55,6 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
     ) -> Result<(), SlashingTxError> {
-        // TODO
         match msg {
             Message::Unjail(msg) => Ok(self.keeper.unjail_tx_handler(ctx, msg)?),
         }

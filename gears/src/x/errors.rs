@@ -86,7 +86,7 @@ pub(crate) enum AnteError {
     #[error("account not found {0}")]
     AccountNotFound(AccAddress),
     #[error("{0}")]
-    AuthGas(#[from] GasStoreErrors),
+    Gas(#[from] GasStoreErrors),
     #[error("failed to send coins: {0}")]
     CoinsSend(#[from] BankKeeperError),
 }
@@ -110,7 +110,7 @@ impl From<AnteError> for TxError {
             AnteError::TxLen => 7,
             AnteError::AccountNotFound(_) => 8,
             AnteError::CoinsSend(_) => 9,
-            AnteError::AuthGas(_) => 10,
+            AnteError::Gas(_) => 10,
         };
 
         TxError {
