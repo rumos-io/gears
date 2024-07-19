@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 
-use anyhow::{anyhow, Result};
 use core_types::tx::mode_info::SignMode;
 use prost::Message;
 use tendermint::rpc::client::{Client, HttpClient};
@@ -43,7 +42,7 @@ impl ClientTxContext {
         &self,
         path: String,
         query_bytes: Vec<u8>,
-    ) -> Result<Response>
+    ) -> anyhow::Result<Response>
     where
         <Response as TryFrom<Raw>>::Error: std::fmt::Display,
     {
@@ -94,16 +93,10 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
 
             let ctx = &(&command).into();
             let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
-            // TODO: maybe remove error and replace with warning message
-            if messages.chunk_size() != 0 {
-                return Err(anyhow!(
-                    "ledger device cannot create more that one transaction per command run"
-                ));
-            }
             handler
                 .handle_tx(
                     messages,
-                    key,
+                    &key,
                     command.node,
                     command.chain_id,
                     command.fees,
@@ -122,20 +115,21 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
             let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
 
             if messages.chunk_size() > 0
+            // TODO: uncomment and update logic when command will be extended by broadcast_mode
             /* && command.broadcast_mode == BroadcastMode::Block */
             {
-                let step = messages.chunk_size() as usize;
+                let chunk_size = messages.chunk_size();
                 let msgs = messages.into_msgs();
 
                 let mut res = vec![];
-                for i in (0..msgs.len()).step_by(step) {
+                for slice in msgs.chunks(chunk_size) {
                     res.push(
                         handler.handle_tx(
-                            msgs[i..(i + step).min(msgs.len())]
+                            slice
                                 .to_vec()
                                 .try_into()
                                 .expect("chunking of the messages excludes empty vectors"),
-                            key.clone(),
+                            &key,
                             command.node.clone(),
                             command.chain_id.clone(),
                             command.fees.clone(),
@@ -149,7 +143,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                 handler
                     .handle_tx(
                         messages,
-                        key,
+                        &key,
                         command.node,
                         command.chain_id,
                         command.fees,
@@ -161,7 +155,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     }
 }
 
-pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> Result<Response> {
+pub fn broadcast_tx_commit(client: HttpClient, raw_tx: TxRaw) -> anyhow::Result<Response> {
     let res = runtime().block_on(
         client.broadcast_tx_commit(core_types::tx::raw::TxRaw::from(raw_tx).encode_to_vec()),
     )?;

@@ -34,13 +34,13 @@ pub struct Messages<T: TxMessage> {
     messages: Vec<T>,
     /// A number of messages in the transaction. Zero means unlimited number of messages.
     /// Default is 0
-    chunk_size: u16,
+    chunk_size: usize,
 }
 
 impl<T: TxMessage> Messages<T> {
-    pub fn new(messages: Vec<T>, chunk_size: u16) -> Result<Messages<T>, MessagesError> {
+    pub fn new(messages: Vec<T>, chunk_size: usize) -> Result<Messages<T>, MessagesError> {
         if messages.is_empty() {
-            Err(MessagesError::Empty)
+            Err(MessagesError)
         } else {
             Ok(Messages {
                 messages,
@@ -54,7 +54,7 @@ impl<T: TxMessage> Messages<T> {
         self.messages
     }
 
-    pub fn chunk_size(&self) -> u16 {
+    pub fn chunk_size(&self) -> usize {
         self.chunk_size
     }
 }
