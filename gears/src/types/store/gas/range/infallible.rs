@@ -36,10 +36,10 @@ impl<'a, DB: Database> Iterator for RangeIter<'a, DB> {
             RangeBackend::Prefix(var) => var.next(),
         };
 
-        let err = self
-            .range
-            .guard
-            .range(next.as_ref().map(|(key, val)| (key.len(), val.len())));
+        let err = self.range.guard.range(
+            next.as_ref()
+                .map(|(key, val)| (key.len(), val.len(), &***key)),
+        );
 
         if let Err(err) = err {
             self.err = Some(err);

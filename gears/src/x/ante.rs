@@ -1,4 +1,4 @@
-use crate::application::handlers::node::AnteHandlerTrait;
+use crate::application::handlers::node::TxError;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
@@ -9,8 +9,9 @@ use crate::types::base::coins::UnsignedCoins;
 use crate::types::denom::Denom;
 use crate::types::gas::descriptor::{ANTE_SECKP251K1_DESCRIPTOR, TX_SIZE_DESCRIPTOR};
 use crate::types::gas::kind::TxKind;
-use crate::types::gas::{GasMeter, GasMeteringErrors};
+use crate::types::gas::GasMeter;
 use crate::types::store::gas::errors::GasStoreErrors;
+use crate::x::errors::{AnteError, AnteGasError};
 use crate::x::keepers::auth::AuthKeeper;
 use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
@@ -19,7 +20,6 @@ use crate::{
     error::AppError,
     types::tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
 };
-use anyhow::anyhow;
 use core_types::tx::signature::SignatureData;
 use core_types::{
     signing::SignDoc,
@@ -40,7 +40,7 @@ pub trait SignGasConsumer: Clone + Sync + Send + 'static {
         pub_key: PublicKey,
         data: &SignatureData,
         params: &AP,
-    ) -> anyhow::Result<()>;
+    ) -> Result<(), GasStoreErrors>;
 }
 
 #[derive(Debug, Clone)]
@@ -53,12 +53,17 @@ impl SignGasConsumer for DefaultSignGasConsumer {
         pub_key: PublicKey,
         _data: &SignatureData,
         params: &AP,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), GasStoreErrors> {
         // TODO I'm unsure that this is 100% correct due multisig mode see: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/auth/ante/sigverify.go#L401
         match pub_key {
             PublicKey::Secp256k1(_key) => {
-                let amount = params.sig_verify_cost_secp256k1().try_into()?;
-                gas_meter.consume_gas(amount, ANTE_SECKP251K1_DESCRIPTOR)?;
+                let amount = params
+                    .sig_verify_cost_secp256k1()
+                    .try_into()
+                    .map_err(|e| GasStoreErrors::new(&[], e))?; // TODO: Should be okay for now, but needs to be changed
+                gas_meter
+                    .consume_gas(amount, ANTE_SECKP251K1_DESCRIPTOR)
+                    .map_err(|e| GasStoreErrors::new(&[], e))?; // TODO: Should be okay for now, but needs to be changed
             }
         }
 
@@ -79,24 +84,6 @@ pub struct BaseAnteHandler<
     sign_gas_consumer: GC,
     fee_collector_module: M,
     sk: PhantomData<SK>,
-}
-
-impl<SK, BK, AK, GC: SignGasConsumer, MOD> AnteHandlerTrait<SK>
-    for BaseAnteHandler<BK, AK, SK, GC, MOD>
-where
-    SK: StoreKey,
-    BK: BankKeeper<SK, MOD>,
-    AK: AuthKeeper<SK, MOD>,
-    GC: SignGasConsumer,
-    MOD: Module,
-{
-    fn run<DB: Database, M: TxMessage + ValueRenderer>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError> {
-        BaseAnteHandler::run(self, ctx, tx)
-    }
 }
 
 impl<
@@ -125,21 +112,18 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         // Note: we currently don't have simulate mode at all, so some methods receive hardcoded values for this mode
         // ante.NewSetUpContextDecorator(), // WE not going to implement this in ante. Some logic should be in application
-        self.mempool_fee(ctx, tx)
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+        self.mempool_fee(ctx, tx)?;
         self.validate_basic_ante_handler(&tx.tx)?;
         self.tx_timeout_height_ante_handler(ctx, &tx.tx)?;
         self.validate_memo_ante_handler(ctx, &tx.tx)?;
-        self.consume_gas_for_tx_size(ctx, tx)
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+        self.consume_gas_for_tx_size(ctx, tx)?;
         self.deduct_fee_ante_handler(ctx, &tx.tx)?;
         self.set_pub_key_ante_handler(ctx, &tx.tx)?;
         //  ** ante.NewValidateSigCountDecorator(opts.AccountKeeper),
-        self.sign_gas_consume(ctx, &tx.tx)
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+        self.sign_gas_consume(ctx, &tx.tx)?;
         self.sig_verification_handler(ctx, tx)?;
         self.increment_sequence_ante_handler(ctx, &tx.tx)?;
         //  ** ibcante.NewAnteDecorator(opts.IBCkeeper),
@@ -170,7 +154,7 @@ impl<
             raw: _,
             tx_len: _,
         }: &TxWithRaw<M>,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), AnteError> {
         if !ctx.is_check() {
             return Ok(());
         }
@@ -192,23 +176,25 @@ impl<
                     denom: gp.denom,
                     amount: gp
                         .amount
-                        .checked_mul(Decimal256::from_atomics(gas, 0)?)?
+                        .checked_mul(Into::<Decimal256>::into(gas))
+                        .map_err(|_| {
+                            AnteGasError::Overflow("overflow calculating required fees".into())
+                        })?
                         .to_uint_ceil(),
                 });
             }
 
             let required_fees = UnsignedCoins::new(required_fees)
-                .expect("MinGasPrices has same restriction as Self");
+                .expect("we know by now that required_fees: contains at least one coin, all amounts are positive, no duplicate denominations and sorted lexicographically");
 
             if !is_any_gte(fee_coins.inner(), &required_fees) {
-                Err(anyhow!(
-                    "insufficient fees; got: {:?} required: {:?}",
-                    fee_coins,
-                    required_fees
-                ))?
+                Err(AnteError::InsufficientFees {
+                    got: format!("{fee_coins:?}"),
+                    required: format!("{required_fees:?}"),
+                })?
             }
         } else {
-            Err(anyhow!("rejected. `fee_coins` is None"))?
+            Err(AnteError::MissingFee)?
         }
 
         fn is_any_gte(coins_a: &Vec<UnsignedCoin>, coins_b: &UnsignedCoins) -> bool {
@@ -237,17 +223,25 @@ impl<
             raw: _,
             tx_len,
         }: &TxWithRaw<M>,
-    ) -> anyhow::Result<()> {
-        let params = self.auth_keeper.get_auth_params(ctx)?;
-        let tx_len: Gas = (*tx_len as u64).try_into()?;
-        let cost_per_byte: Gas = params.tx_cost_per_byte().try_into()?;
+    ) -> Result<(), AnteError> {
+        let params = self
+            .auth_keeper
+            .get_auth_params(ctx)
+            .map_err(|e| Into::<AnteGasError>::into(e))?;
+        let tx_len: Gas = (*tx_len as u64).try_into().map_err(|_| AnteError::TxLen)?;
+        let cost_per_byte: Gas = params.tx_cost_per_byte().try_into().map_err(|_| {
+            AnteGasError::Overflow("overflow converting tx cost per byte to gas".to_string())
+        })?;
         let gas_required = tx_len
             .checked_mul(cost_per_byte)
-            .ok_or(GasMeteringErrors::ErrorGasOverflow("tx size".to_string()))?;
+            .ok_or(AnteGasError::Overflow(
+                "overflow calculating gas required for tx size".to_string(),
+            ))?;
 
         ctx.gas_meter
             .borrow_mut()
-            .consume_gas(gas_required, TX_SIZE_DESCRIPTOR)?;
+            .consume_gas(gas_required, TX_SIZE_DESCRIPTOR)
+            .map_err(|e| Into::<AnteGasError>::into(e))?;
 
         Ok(())
     }
@@ -256,8 +250,11 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-    ) -> anyhow::Result<()> {
-        let auth_params = self.auth_keeper.get_auth_params(ctx)?;
+    ) -> Result<(), AnteError> {
+        let auth_params = self
+            .auth_keeper
+            .get_auth_params(ctx)
+            .map_err(|e| Into::<AnteGasError>::into(e))?;
 
         let signatures = tx.get_signatures_data();
         let signers_addr = tx.get_signers();
@@ -265,7 +262,8 @@ impl<
         for (i, signer_addr) in signers_addr.into_iter().enumerate() {
             let acct = self
                 .auth_keeper
-                .get_account(ctx, signer_addr)?
+                .get_account(ctx, signer_addr)
+                .map_err(|e| Into::<AnteGasError>::into(e))?
                 .ok_or(AppError::AccountNotFound)?;
 
             let pub_key = acct
@@ -273,29 +271,26 @@ impl<
                 .expect("account pub keys are set in set_pub_key_ante_handler")
                 .to_owned();
 
-            let sig = signatures.get(i).expect("TODO");
+            let sig = signatures.get(i).expect("TODO"); //TODO: expect message
 
-            self.sign_gas_consumer.consume(
-                &mut ctx.gas_meter.borrow_mut(),
-                pub_key,
-                sig,
-                &auth_params,
-            )?;
+            self.sign_gas_consumer
+                .consume(&mut ctx.gas_meter.borrow_mut(), pub_key, sig, &auth_params)
+                .map_err(|e| Into::<AnteGasError>::into(e))?;
         }
 
         Ok(())
     }
 
-    fn validate_basic_ante_handler<M: TxMessage>(&self, tx: &Tx<M>) -> Result<(), AppError> {
+    fn validate_basic_ante_handler<M: TxMessage>(&self, tx: &Tx<M>) -> Result<(), AnteError> {
         // Not sure if we need to explicitly check this given the check which follows.
         // We'll leave it in for now since it's in the SDK.
         let sigs = tx.get_signatures();
         if sigs.is_empty() {
-            return Err(AppError::TxValidation("signature list is empty".into()));
+            return Err(AnteError::Validation("signature list is empty".into()));
         }
 
         if sigs.len() != tx.get_signers().len() {
-            return Err(AppError::TxValidation(format!(
+            return Err(AnteError::Validation(format!(
                 "wrong number of signatures; expected {}, got {}",
                 tx.get_signers().len(),
                 sigs.len()
@@ -309,7 +304,7 @@ impl<
         &self,
         ctx: &TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteError> {
         let timeout_height = tx.get_timeout_height();
 
         // timeout_height of zero means no timeout height
@@ -320,7 +315,7 @@ impl<
         let block_height = ctx.height();
 
         if ctx.height() > timeout_height {
-            return Err(AppError::Timeout {
+            return Err(AnteError::Timeout {
                 timeout: timeout_height,
                 current: block_height,
             });
@@ -333,16 +328,20 @@ impl<
         &self,
         ctx: &TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
-        let max_memo_chars = self.auth_keeper.get_auth_params(ctx)?.max_memo_characters();
+    ) -> Result<(), AnteError> {
+        let max_memo_chars = self
+            .auth_keeper
+            .get_auth_params(ctx)
+            .map_err(|e| Into::<AnteGasError>::into(e))?
+            .max_memo_characters();
         let memo_length: u64 = tx
             .get_memo()
             .len()
             .try_into()
-            .map_err(|_| AppError::Memo(max_memo_chars))?;
+            .map_err(|_| AnteError::Memo(max_memo_chars))?;
 
         if memo_length > max_memo_chars {
-            return Err(AppError::Memo(max_memo_chars));
+            return Err(AnteError::Memo(max_memo_chars));
         };
         Ok(())
     }
@@ -351,12 +350,16 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteError> {
         let fee = tx.get_fee();
         let fee_payer = tx.get_fee_payer();
 
-        if !self.auth_keeper.has_account(ctx, fee_payer)? {
-            return Err(AppError::AccountNotFound);
+        if !self
+            .auth_keeper
+            .has_account(ctx, fee_payer)
+            .map_err(|e| Into::<AnteGasError>::into(e))?
+        {
+            return Err(AnteError::AccountNotFound(fee_payer.clone()));
         }
 
         if let Some(fee) = fee {
@@ -375,13 +378,13 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteError> {
         let public_keys = tx.get_public_keys();
         let signers = tx.get_signers();
 
         // additional check not found in the sdk - this prevents a panic
         if signers.len() != public_keys.len() {
-            return Err(AppError::TxValidation(format!(
+            return Err(AnteError::Validation(format!(
                 "wrong number of signer info; expected {}, got {}",
                 signers.len(),
                 public_keys.len()
@@ -393,12 +396,16 @@ impl<
                 let addr = key.get_address();
 
                 if &addr != signers[i] {
-                    return Err(AppError::InvalidPublicKey);
+                    return Err(AnteError::Validation(format!(
+                        "public key address number {i} does not match signer {i}; expected {}, got {addr}",
+                        signers[i]
+                    )));
                 }
 
                 let mut acct = self
                     .auth_keeper
-                    .get_account(ctx, &addr)?
+                    .get_account(ctx, &addr)
+                    .map_err(|e| Into::<AnteGasError>::into(e))?
                     .ok_or(AppError::AccountNotFound)?;
 
                 if acct.get_public_key().is_some() {
@@ -406,7 +413,9 @@ impl<
                 }
 
                 acct.set_public_key(key.clone());
-                self.auth_keeper.set_account(ctx, acct)?;
+                self.auth_keeper
+                    .set_account(ctx, acct)
+                    .map_err(|e| Into::<AnteGasError>::into(e))?;
             }
         }
 
@@ -417,13 +426,13 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteError> {
         let signers = tx.tx.get_signers();
         let signature_data = tx.tx.get_signatures_data();
 
         // NOTE: this is also checked in validate_basic_ante_handler
         if signature_data.len() != signers.len() {
-            return Err(AppError::TxValidation(format!(
+            return Err(AnteError::Validation(format!(
                 "wrong number of signatures; expected {}, got {}",
                 signers.len(),
                 signature_data.len()
@@ -436,11 +445,12 @@ impl<
             // check sequence number
             let acct = self
                 .auth_keeper
-                .get_account(ctx, signer)?
+                .get_account(ctx, signer)
+                .map_err(|e| Into::<AnteGasError>::into(e))?
                 .ok_or(AppError::AccountNotFound)?;
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
-                return Err(AppError::TxValidation(format!(
+                return Err(AnteError::Validation(format!(
                     "incorrect tx sequence; expected {}, got {}",
                     account_seq, signature_data.sequence
                 )));
@@ -484,16 +494,10 @@ impl<
                         handler.sign_bytes_get(&f, signer_data, tx_data).unwrap()
                         //TODO: remove unwrap
                     }
-                    _ => {
-                        return Err(AppError::TxValidation(
-                            "sign mode not supported".to_string(),
-                        ))
-                    }
+                    _ => return Err(AnteError::Validation("sign mode not supported".to_string())),
                 },
                 ModeInfo::Multi(_) => {
-                    return Err(AppError::TxValidation(
-                        "multi sig not supported".to_string(),
-                    ));
+                    return Err(AnteError::Validation("multi sig not supported".to_string()));
                 }
             };
 
@@ -509,14 +513,17 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), AnteError> {
         for signer in tx.get_signers() {
             let mut acct = self
                 .auth_keeper
-                .get_account(ctx, signer)?
+                .get_account(ctx, signer)
+                .map_err(|e| Into::<AnteGasError>::into(e))?
                 .ok_or(AppError::AccountNotFound)?;
             acct.increment_sequence();
-            self.auth_keeper.set_account(ctx, acct)?;
+            self.auth_keeper
+                .set_account(ctx, acct)
+                .map_err(|e| Into::<AnteGasError>::into(e))?;
         }
 
         Ok(())

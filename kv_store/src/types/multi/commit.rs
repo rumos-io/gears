@@ -66,7 +66,10 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore> {
         let hash = crate::hash::hash_store_infos(store_infos);
 
         self.head_commit_hash = hash;
-        self.head_version += 1; //TODO: wraps on overflow - should halt the chain (panic)
+        self.head_version = match self.head_version.checked_add(1) {
+            Some(head_version) => head_version,
+            None => panic!("version overflow"),
+        };
         hash
     }
 

@@ -7,6 +7,7 @@ use gears::{
     application::handlers::client::QueryHandler,
     cli::pagination::CliPaginationRequest,
     error::IBC_ENCODE_UNWRAP,
+    ext::FallibleMapExt,
     tendermint::types::proto::Protobuf,
     types::{address::AccAddress, pagination::request::PaginationRequest, query::Query},
 };
@@ -61,11 +62,11 @@ impl QueryHandler for BankQueryHandler {
                 pagination,
             }) => BankQuery::Balances(QueryAllBalancesRequest {
                 address: address.clone(),
-                pagination: pagination.to_owned().map(PaginationRequest::from),
+                pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
             }),
             BankCommands::DenomMetadata { pagination } => {
                 BankQuery::DenomMetadata(QueryDenomsMetadataRequest {
-                    pagination: pagination.to_owned().map(PaginationRequest::from),
+                    pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
                 })
             }
         };

@@ -109,7 +109,7 @@ fn generate_txs(
     };
 
     let signing_info = SigningInfo {
-        key: user.key_pair.clone(),
+        key: &user.key_pair,
         sequence,
         account_number: user.account_number,
     };

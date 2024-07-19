@@ -16,7 +16,7 @@ pub struct RequestInitChain<G> {
     pub consensus_params: ConsensusParams,
     pub validators: Vec<ValidatorUpdate>,
     pub app_genesis: G,
-    pub initial_height: i64, //TODO: use u64?
+    pub initial_height: u32,
 }
 
 impl<G: DeserializeOwned> TryFrom<super::inner::RequestInitChain> for RequestInitChain<G> {
@@ -50,7 +50,7 @@ impl<G: DeserializeOwned> TryFrom<super::inner::RequestInitChain> for RequestIni
                 .map(TryInto::try_into)
                 .collect::<Result<Vec<ValidatorUpdate>, Error>>()?,
             app_genesis,
-            initial_height,
+            initial_height : initial_height.try_into().map_err( | e | Self::Error::InvalidData(format!( "failed to read `initial_height`. Expected value of type u32, got value {initial_height} with error {e}")))?,
         })
     }
 }

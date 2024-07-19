@@ -1,3 +1,6 @@
+use std::marker::PhantomData;
+
+use gears::application::handlers::node::{ModuleInfo, TxError};
 use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
 use gears::core::errors::CoreError as IbcError;
 use gears::error::AppError;
@@ -18,6 +21,7 @@ use gears::x::keepers::bank::BankKeeper;
 use gears::x::module::Module;
 use serde::Serialize;
 
+use crate::errors::BankTxError;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomsMetadataResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
@@ -25,8 +29,9 @@ use crate::types::query::{
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
-pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> {
+pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI> {
     keeper: Keeper<SK, PSK, AK, M>,
+    phantom_data: PhantomData<MI>,
 }
 
 #[derive(Clone)]
@@ -48,11 +53,20 @@ pub enum BankNodeQueryResponse {
     DenomMetadata(QueryDenomMetadataResponse),
 }
 
-impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
-    ABCIHandler<SK, PSK, AK, M>
+impl<
+        'a,
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M>,
+        M: Module,
+        MI: ModuleInfo,
+    > ABCIHandler<SK, PSK, AK, M, MI>
 {
     pub fn new(keeper: Keeper<SK, PSK, AK, M>) -> Self {
-        ABCIHandler { keeper }
+        ABCIHandler {
+            keeper,
+            phantom_data: PhantomData,
+        }
     }
 
     pub fn typed_query<DB: Database + Send + Sync>(
@@ -84,15 +98,16 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         }
     }
 
-    pub fn tx<DB: Database>(
+    pub fn msg<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         match msg {
-            Message::Send(msg_send) => self
+            Message::Send(msg_send) => Ok(self
                 .keeper
-                .send_coins_from_account_to_account(ctx, msg_send),
+                .send_coins_from_account_to_account(ctx, msg_send)
+                .map_err(|e| Into::<BankTxError>::into(e).into::<MI>())?),
         }
     }
 
@@ -170,18 +185,14 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             pagination,
         }: QueryAllBalancesRequest,
     ) -> QueryAllBalancesResponse {
-        let paginate = pagination.is_some();
-        let (total, balances) = self
+        let (p_result, balances) = self
             .keeper
             .all_balances(ctx, address, pagination.map(Pagination::from))
             .unwrap_gas();
 
         QueryAllBalancesResponse {
             balances,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 
@@ -190,18 +201,13 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &QueryContext<DB, SK>,
         QueryDenomsMetadataRequest { pagination }: QueryDenomsMetadataRequest,
     ) -> QueryDenomsMetadataResponse {
-        let paginate = pagination.is_some();
-
-        let (total, metadatas) = self
+        let (p_result, metadatas) = self
             .keeper
             .denoms_metadata(ctx, pagination.map(Pagination::from));
 
         QueryDenomsMetadataResponse {
             metadatas,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 
@@ -210,18 +216,13 @@ impl<'a, SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &QueryContext<DB, SK>,
         QueryTotalSupplyRequest { pagination }: QueryTotalSupplyRequest,
     ) -> QueryTotalSupplyResponse {
-        let paginate = pagination.is_some();
-
-        let (total, supply) = self
+        let (p_result, supply) = self
             .keeper
             .total_supply(ctx, pagination.map(Pagination::from));
 
         QueryTotalSupplyResponse {
             supply,
-            pagination: match paginate {
-                true => Some(PaginationResponse::new(total)),
-                false => None,
-            },
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 }

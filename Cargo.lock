@@ -469,6 +469,7 @@ dependencies = [
  "prost 0.11.9",
  "serde",
  "serde_json",
+ "thiserror",
  "tonic",
  "tracing",
 ]
@@ -1887,6 +1888,7 @@ dependencies = [
  "serde_json",
  "staking",
  "strum",
+ "thiserror",
  "tonic",
  "tonic-reflection",
  "tower-layer",
@@ -1922,6 +1924,7 @@ dependencies = [
  "http 0.2.12",
  "human-panic",
  "ibc-proto 0.33.0",
+ "itertools 0.13.0",
  "k256",
  "keyring",
  "kv_store",
@@ -1953,6 +1956,7 @@ dependencies = [
  "tracing-subscriber",
  "url",
  "ux",
+ "vec1",
 ]
 
 [[package]]
@@ -3179,6 +3183,15 @@ name = "itertools"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -4891,10 +4904,14 @@ dependencies = [
  "chrono",
  "clap",
  "gears",
+ "ibc-proto 0.33.0",
  "prost 0.11.9",
  "serde",
  "serde_json",
  "thiserror",
+ "tonic",
+ "tower-layer",
+ "tracing",
 ]
 
 [[package]]
@@ -5089,6 +5106,7 @@ dependencies = [
  "tendermint-rpc",
  "thiserror",
  "time",
+ "tracing",
 ]
 
 [[package]]
@@ -5789,6 +5807,15 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
+
+[[package]]
+name = "vec1"
+version = "1.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eab68b56840f69efb0fefbe3ab6661499217ffdc58e2eef7c3f6f69835386322"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "version_check"

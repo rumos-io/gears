@@ -44,7 +44,7 @@ impl TryPrimitiveValueRendererWithMetadata<UnsignedCoin> for DefaultPrimitiveRen
         let coin_exp = denom_units.iter().find(|this| this.denom == coin.denom);
         let denom_exp = denom_units
             .iter()
-            .find(|this| this.denom.as_ref() == display);
+            .find(|this| this.denom.as_str() == display);
 
         match (coin_exp, denom_exp) {
             (Some(coin_exp), Some(denom_exp)) => {

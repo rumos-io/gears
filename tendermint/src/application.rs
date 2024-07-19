@@ -1,6 +1,7 @@
 use serde::de::DeserializeOwned;
 use tendermint_abci::cancellation::CancellationSource;
 use tendermint_abci::Application;
+use tracing::info;
 
 use crate::ext::UnwrapInvalid;
 use crate::types::{
@@ -132,6 +133,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestEcho,
     ) -> tendermint_proto::abci::ResponseEcho {
+        info!("Got echo request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::echo(&self.handler, request.into());
@@ -144,6 +147,11 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestInfo,
     ) -> tendermint_proto::abci::ResponseInfo {
+        info!(
+            "Got info request. Tendermint version: {}; Block version: {}; P2P version: {}",
+            request.version, request.block_version, request.p2p_version
+        );
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::info(&self.handler, request.into());
@@ -156,6 +164,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestInitChain,
     ) -> tendermint_proto::abci::ResponseInitChain {
+        info!("Got init chain request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::init_chain(&self.handler, request.try_into().unwrap_or_invalid());
@@ -168,6 +178,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestQuery,
     ) -> tendermint_proto::abci::ResponseQuery {
+        info!("Got query request to: {}", request.path);
+
         /*
            Discuss failure handling for query in future. Maybe we could clean lock poisoning after this method
         */
@@ -183,6 +195,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestCheckTx,
     ) -> tendermint_proto::abci::ResponseCheckTx {
+        info!("Got check tx request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::check_tx(&self.handler, request.into());
@@ -195,6 +209,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestDeliverTx,
     ) -> tendermint_proto::abci::ResponseDeliverTx {
+        info!("Got deliver tx request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::deliver_tx(&self.handler, request.into());
@@ -207,6 +223,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestBeginBlock,
     ) -> tendermint_proto::abci::ResponseBeginBlock {
+        info!("Got begin block request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::begin_block(&self.handler, request.try_into().unwrap_or_invalid());
@@ -219,6 +237,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestEndBlock,
     ) -> tendermint_proto::abci::ResponseEndBlock {
+        info!("Got end block request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::end_block(&self.handler, request.into());
@@ -228,6 +248,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
     }
 
     fn flush(&self) -> tendermint_proto::abci::ResponseFlush {
+        info!("Got flush request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::flush(&self.handler);
@@ -237,6 +259,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
     }
 
     fn commit(&self) -> tendermint_proto::abci::ResponseCommit {
+        info!("Got commit request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::commit(&self.handler);
@@ -246,6 +270,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
     }
 
     fn list_snapshots(&self) -> tendermint_proto::abci::ResponseListSnapshots {
+        info!("Got list snapshots request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::list_snapshots(&self.handler);
@@ -258,6 +284,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestOfferSnapshot,
     ) -> tendermint_proto::abci::ResponseOfferSnapshot {
+        info!("Got offer snapshot request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::offer_snapshot(&self.handler, request.into());
@@ -270,6 +298,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestLoadSnapshotChunk,
     ) -> tendermint_proto::abci::ResponseLoadSnapshotChunk {
+        info!("Got load snapshot chunk request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::load_snapshot_chunk(&self.handler, request.into());
@@ -282,6 +312,8 @@ impl<G: DeserializeOwned + Send + Clone + 'static, T: ABCIApplication<G>> Applic
         &self,
         request: tendermint_proto::abci::RequestApplySnapshotChunk,
     ) -> tendermint_proto::abci::ResponseApplySnapshotChunk {
+        info!("Got apply snapshot chunk request");
+
         let guard = CancellationSource::drop_guard();
 
         let result = T::apply_snapshot_chunk(&self.handler, request.into());
