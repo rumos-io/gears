@@ -108,7 +108,7 @@ echo "race draft rival universe maid cheese steel logic crowd fork comic easy tr
 4. Send tokens:
 
 ```console
-gaia-rs tx --keyring local --from-key alice bank send cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut 10uatom --fee 1uatom
+gaia-rs tx --keyring local --from-key alice bank send cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut 10uatom --fees 1uatom
 ```
 
 5. Query the address balance and observe that it has decreased by 11uatom which is the sum of the amount transferred and the fee:

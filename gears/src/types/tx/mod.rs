@@ -6,10 +6,14 @@ use core_types::{any::google::Any, errors::CoreError, tx::signature::SignatureDa
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tendermint::types::proto::Protobuf;
+use vec1::{vec1, Vec1};
 
 use crate::crypto::public::PublicKey;
 
-use self::{body::TxBody, errors::TxError};
+use self::{
+    body::TxBody,
+    errors::{EmptyMessagesError, TxError},
+};
 
 use super::{address::AccAddress, auth::info::AuthInfo, base::coins::UnsignedCoins};
 
@@ -24,6 +28,49 @@ pub trait TxMessage:
     fn validate_basic(&self) -> Result<(), String>;
 
     fn type_url(&self) -> &'static str;
+}
+
+/// Utility type that guarantees correctness of transaction messages set
+pub struct Messages<T: TxMessage> {
+    messages: Vec1<T>,
+    /// A number of messages in the transaction. Zero means unlimited number of messages.
+    /// Default is 0
+    chunk_size: usize,
+}
+
+impl<T: TxMessage> Messages<T> {
+    pub fn new(messages: Vec<T>, chunk_size: usize) -> Result<Messages<T>, EmptyMessagesError> {
+        Ok(Messages {
+            messages: messages.try_into().map_err(|_| EmptyMessagesError)?,
+            chunk_size,
+        })
+    }
+
+    /// Converts instance into vector of messages
+    pub fn into_msgs(self) -> Vec<T> {
+        self.messages.into()
+    }
+
+    pub fn chunk_size(&self) -> usize {
+        self.chunk_size
+    }
+}
+
+impl<T: TxMessage> From<T> for Messages<T> {
+    fn from(value: T) -> Self {
+        Self {
+            messages: vec1![value],
+            chunk_size: 0,
+        }
+    }
+}
+
+impl<T: TxMessage> TryFrom<Vec<T>> for Messages<T> {
+    type Error = EmptyMessagesError;
+
+    fn try_from(messages: Vec<T>) -> Result<Self, Self::Error> {
+        Self::new(messages, 0)
+    }
 }
 
 mod inner {
