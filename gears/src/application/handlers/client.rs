@@ -1,8 +1,5 @@
 use crate::{
-    commands::client::{
-        query::execute_query,
-        tx::{broadcast_tx_commit, ClientTxContext},
-    },
+    commands::client::{query::execute_query, tx::broadcast_tx_commit},
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
@@ -23,7 +20,7 @@ use crate::{
             },
             Query,
         },
-        tx::{body::TxBody, Messages, TxMessage},
+        tx::{body::TxBody, TxMessage},
     },
 };
 
@@ -47,15 +44,14 @@ pub trait TxHandler {
 
     fn prepare_tx(
         &self,
-        client_tx_context: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
-    ) -> anyhow::Result<Messages<Self::Message>>;
+    ) -> anyhow::Result<Self::Message>;
 
     fn handle_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
-        msgs: Messages<Self::Message>,
-        key: &K,
+        msg: Self::Message,
+        key: K,
         node: url::Url,
         chain_id: ChainId,
         fees: Option<UnsignedCoins>,
@@ -85,7 +81,7 @@ pub trait TxHandler {
         }];
 
         let tx_body = TxBody {
-            messages: msgs.into_msgs(),
+            messages: vec![msg],
             memo: String::new(),                    // TODO: remove hard coded
             timeout_height: 0,                      // TODO: remove hard coded
             extension_options: vec![],              // TODO: remove hard coded
