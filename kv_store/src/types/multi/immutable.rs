@@ -37,7 +37,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<'_, DB, SK> {
         match self.0 {
             MultiStoreBackend::Commit(var) => var.head_version,
             MultiStoreBackend::Cache(var) => var.head_version,
-            MultiStoreBackend::Query(var) => var.head_version(),
+            MultiStoreBackend::Query(var) => var.head_version,
         }
     }
 
@@ -45,7 +45,7 @@ impl<DB: Database, SK: StoreKey> MultiStore<'_, DB, SK> {
         match self.0 {
             MultiStoreBackend::Commit(var) => var.head_commit_hash,
             MultiStoreBackend::Cache(var) => var.head_commit_hash,
-            MultiStoreBackend::Query(var) => var.head_commit_hash(),
+            MultiStoreBackend::Query(var) => var.head_commit_hash,
         }
     }
 }
