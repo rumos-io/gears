@@ -55,7 +55,7 @@ pub trait TxHandler {
     fn handle_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
         msgs: Messages<Self::Message>,
-        key: K,
+        key: &K,
         node: url::Url,
         chain_id: ChainId,
         fees: Option<UnsignedCoins>,
