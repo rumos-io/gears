@@ -1,3 +1,4 @@
+pub mod errors;
 mod abci_handler;
 mod client;
 mod consts;

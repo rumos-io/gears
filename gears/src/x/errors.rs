@@ -14,6 +14,10 @@ use crate::{
     },
 };
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, thiserror::Error)]
+#[error("account does not exist")]
+pub struct AccountNotFound;
+
 #[derive(Debug, thiserror::Error)]
 pub enum SignVerificationError {
     #[error("signature list is empty")]

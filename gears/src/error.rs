@@ -5,13 +5,22 @@ pub const POISONED_LOCK: &str = "poisoned lock";
 
 #[derive(Debug, thiserror::Error)]
 pub enum NumericError {
-    #[error("TODO")]
+    #[error("overflow on {0}")]
     Overflow(MathOperation),
-    #[error("TODO")]
+    #[error("{0}")]
     DecimalRange(#[from] Decimal256RangeExceeded),
 }
 
-#[derive(Debug, Clone)]
+impl Clone for NumericError {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Overflow(arg0) => Self::Overflow(arg0.clone()),
+            Self::DecimalRange(_) => Self::DecimalRange(Decimal256RangeExceeded), // Why ZST is not clonable... Why?
+        }
+    }
+}
+
+#[derive(Debug, Clone, strum::Display)]
 pub enum MathOperation {
     Add,
     Sub,
