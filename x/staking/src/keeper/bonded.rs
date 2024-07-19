@@ -43,10 +43,10 @@ impl<
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Bonded {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "bad state transition bonded to unbonding, validator: {}",
                 validator.operator_address
-            ))
+            )
             .into());
         }
         self.begin_unbonding_validator(ctx, validator)

@@ -1,13 +1,10 @@
-use gears::{
-    application::handlers::node::{ErrorCode, ModuleInfo, TxError},
-    error::AppError,
-};
+use gears::application::handlers::node::{ErrorCode, ModuleInfo, TxError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum StakingTxError {
     #[error(transparent)]
-    Other(#[from] AppError), //TODO: stop using AppError
+    Other(#[from] anyhow::Error),
 }
 
 impl StakingTxError {

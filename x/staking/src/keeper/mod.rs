@@ -10,7 +10,6 @@ use gears::{
         block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
         TransactionalContext,
     },
-    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -426,7 +425,7 @@ impl<
                 .expect("validator should be presented in store");
 
             if validator.jailed {
-                return Err(AppError::Custom(
+                return Err(anyhow::anyhow!(
                     "should never retrieve a jailed validator from the power store".to_string(),
                 )
                 .into());

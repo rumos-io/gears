@@ -4,7 +4,7 @@ use crate::{
 };
 use gears::{
     core::{errors::CoreError, Protobuf},
-    error::AppError,
+    error::{MathOperation, NumericError},
     tendermint::types::{
         proto::{
             crypto::PublicKey,
@@ -92,9 +92,8 @@ impl StakingValidator for Validator {
         self.commission.commission_rates().rate()
     }
 
-    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, MathError> {
+    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, NumericError> {
         self.tokens_from_shares(shares)
-             
     }
 }
 
@@ -146,7 +145,7 @@ impl Validator {
 
     pub fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
-            return Err(AppError::Custom("insufficient shares".into()).into());
+            return Err(anyhow::anyhow!("insufficient shares").into());
         }
         Ok(self
             .delegator_shares
@@ -156,7 +155,7 @@ impl Validator {
 
     pub fn shares_from_tokens_truncated(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
-            return Err(AppError::Custom("insufficient shares".into()).into());
+            return Err(anyhow::anyhow!("insufficient shares").into());
         }
         let mul = self
             .delegator_shares
@@ -167,10 +166,12 @@ impl Validator {
     }
 
     /// calculate the token worth of provided shares
-    pub fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, MathError> {
+    pub fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, NumericError> {
         Ok(shares
-            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
-            .checked_div(self.delegator_shares)?)
+            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)
+            .map_err(|_| NumericError::Overflow(MathOperation::Mul))?
+            .checked_div(self.delegator_shares)
+            .map_err(|_| NumericError::Overflow(MathOperation::Div))?)
     }
 
     /// add_tokens_from_del adds tokens to a validator

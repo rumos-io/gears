@@ -4,7 +4,7 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::Protobuf;
 
-use crate::types::denom::Denom;
+use crate::types::{denom::Denom, errors::DenomError};
 
 mod inner {
     pub use core_types::bank::Metadata;
@@ -39,7 +39,7 @@ pub struct DenomUnit {
 }
 
 impl TryFrom<inner::DenomUnit> for DenomUnit {
-    type Error = crate::types::errors::Error;
+    type Error = DenomError;
 
     fn try_from(
         inner::DenomUnit {
@@ -123,7 +123,7 @@ impl TryFrom<RawMetadata> for Metadata {
         for unit in denom_units {
             mapped_denom.push(
                 DenomUnit::try_from(unit)
-                    .map_err(|e: crate::types::errors::Error| MetadataParseError(e.to_string()))?,
+                    .map_err(|e: DenomError| MetadataParseError(e.to_string()))?,
             );
         }
 
