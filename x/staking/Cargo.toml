@@ -13,3 +13,7 @@ prost = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
+ibc-proto = { workspace = true }
+tracing = { workspace = true }
+tonic = { workspace = true }
+tower-layer = { workspace = true }
