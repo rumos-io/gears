@@ -140,7 +140,7 @@ impl<
                     .query_balance(ctx, req)
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                    .into())
             }
             QueryDenomsMetadataRequest::TYPE_URL => {
                 let req = QueryDenomsMetadataRequest::decode(query.data)?;
@@ -161,7 +161,7 @@ impl<
                 Ok(QueryDenomMetadataResponse { metadata }
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                    .into())
             }
             _ => Err(QueryError::PathNotFound),
         }
