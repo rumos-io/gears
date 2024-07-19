@@ -100,7 +100,9 @@ impl<
         };
 
         if self.has_max_unbonding_delegation_entries(ctx, del_addr, val_addr)? {
-            return Err(anyhow::anyhow!("unbonding delegation max entries limit exceeded"));
+            return Err(anyhow::anyhow!(
+                "unbonding delegation max entries limit exceeded"
+            ));
         }
 
         let return_amount = self.unbond(ctx, del_addr, val_addr, shares)?;

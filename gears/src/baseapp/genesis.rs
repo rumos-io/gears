@@ -1,4 +1,7 @@
-use crate::types::{address::AccAddress, base::coins::UnsignedCoins};
+use crate::{
+    commands::node::genesis::GenesisError,
+    types::{address::AccAddress, base::coins::UnsignedCoins},
+};
 use serde::{de::DeserializeOwned, Serialize};
 
 pub trait Genesis:
@@ -8,5 +11,5 @@ pub trait Genesis:
         &mut self,
         address: AccAddress,
         coins: UnsignedCoins,
-    ) -> anyhow::Result<()>;
+    ) -> Result<(), GenesisError>;
 }

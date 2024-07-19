@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use crate::{
     baseapp::{errors::QueryError, genesis::Genesis, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
@@ -16,19 +18,22 @@ use thiserror::Error;
 pub struct ErrorCodeError;
 
 #[derive(Debug, Clone)]
-pub struct ErrorCode(u16);
+pub struct ErrorCode(NonZero<u16>);
 
 impl ErrorCode {
+    pub const fn new(code: NonZero<u16>) -> Self {
+        Self(code)
+    }
+
     pub const fn try_new(code: u16) -> Result<Self, ErrorCodeError> {
-        if code > 0 {
-            Ok(Self(code))
-        } else {
-            Err(ErrorCodeError)
+        match NonZero::new(code) {
+            Some(var) => Ok(Self(var)),
+            None => Err(ErrorCodeError),
         }
     }
 
     pub fn value(&self) -> u16 {
-        self.0
+        self.0.get()
     }
 }
 

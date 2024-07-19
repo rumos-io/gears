@@ -1,7 +1,7 @@
-pub mod errors;
 mod abci_handler;
 mod client;
 mod consts;
+pub mod errors;
 mod genesis;
 mod keeper;
 mod keys;
