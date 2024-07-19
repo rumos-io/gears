@@ -46,8 +46,7 @@ impl<
             return Err(anyhow::anyhow!(
                 "bad state transition bonded to unbonding, validator: {}",
                 validator.operator_address
-            )
-            .into());
+            ));
         }
         self.begin_unbonding_validator(ctx, validator)
     }

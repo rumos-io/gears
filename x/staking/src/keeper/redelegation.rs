@@ -27,7 +27,7 @@ impl<
         shares: Decimal256,
     ) -> anyhow::Result<Timestamp> {
         if val_src_addr == val_dst_addr {
-            return Err(anyhow::anyhow!("self redelegation".to_string()).into());
+            return Err(anyhow::anyhow!("self redelegation".to_string()));
         }
 
         let mut dst_validator = if let Some(validator) = self.validator(ctx, val_dst_addr)? {

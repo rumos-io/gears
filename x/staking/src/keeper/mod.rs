@@ -427,8 +427,7 @@ impl<
             if validator.jailed {
                 return Err(anyhow::anyhow!(
                     "should never retrieve a jailed validator from the power store".to_string(),
-                )
-                .into());
+                ));
             }
             // if we get to a zero-power validator (which we don't bond),
             // there are no more possible bonded validators

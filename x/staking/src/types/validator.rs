@@ -145,7 +145,7 @@ impl Validator {
 
     pub fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
-            return Err(anyhow::anyhow!("insufficient shares").into());
+            return Err(anyhow::anyhow!("insufficient shares"));
         }
         Ok(self
             .delegator_shares
@@ -155,7 +155,7 @@ impl Validator {
 
     pub fn shares_from_tokens_truncated(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
-            return Err(anyhow::anyhow!("insufficient shares").into());
+            return Err(anyhow::anyhow!("insufficient shares"));
         }
         let mul = self
             .delegator_shares
@@ -167,11 +167,11 @@ impl Validator {
 
     /// calculate the token worth of provided shares
     pub fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, NumericError> {
-        Ok(shares
+        shares
             .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)
             .map_err(|_| NumericError::Overflow(MathOperation::Mul))?
             .checked_div(self.delegator_shares)
-            .map_err(|_| NumericError::Overflow(MathOperation::Div))?)
+            .map_err(|_| NumericError::Overflow(MathOperation::Div))
     }
 
     /// add_tokens_from_del adds tokens to a validator

@@ -237,7 +237,7 @@ impl<
         ctx.gas_meter
             .borrow_mut()
             .consume_gas(gas_required, TX_SIZE_DESCRIPTOR)
-            .map_err(|e| Into::<AnteGasError>::into(e))?;
+            .map_err(Into::<AnteGasError>::into)?;
 
         Ok(())
     }
@@ -267,7 +267,7 @@ impl<
 
             self.sign_gas_consumer
                 .consume(&mut ctx.gas_meter.borrow_mut(), pub_key, sig, &auth_params)
-                .map_err(|e| Into::<AnteGasError>::into(e))?;
+                .map_err(Into::<AnteGasError>::into)?;
         }
 
         Ok(())

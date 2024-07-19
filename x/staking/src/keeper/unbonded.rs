@@ -96,11 +96,11 @@ impl<
         let validator = if let Some(validator) = self.validator(ctx, val_addr)? {
             validator
         } else {
-            return Err(anyhow::anyhow!("no validator found").into());
+            return Err(anyhow::anyhow!("no validator found"));
         };
 
         if self.has_max_unbonding_delegation_entries(ctx, del_addr, val_addr)? {
-            return Err(anyhow::anyhow!("unbonding delegation max entries limit exceeded").into());
+            return Err(anyhow::anyhow!("unbonding delegation max entries limit exceeded"));
         }
 
         let return_amount = self.unbond(ctx, del_addr, val_addr, shares)?;

@@ -117,7 +117,7 @@ impl<
                 let is_voting_started = self
                     .keeper
                     .deposit_add(ctx, msg.clone())
-                    .map_err(|e| Into::<GovTxError>::into(e))?;
+                    .map_err(Into::<GovTxError>::into)?;
 
                 match is_voting_started {
                     true => (
@@ -130,14 +130,14 @@ impl<
             GovMsg::Vote(msg) => {
                 self.keeper
                     .vote_add(ctx, msg.clone().into())
-                    .map_err(|e| Into::<GovTxError>::into(e))?;
+                    .map_err(Into::<GovTxError>::into)?;
 
                 (msg.voter.to_string(), EmitEvent::Regular)
             }
             GovMsg::Weighted(msg) => {
                 self.keeper
                     .vote_add(ctx, msg.clone())
-                    .map_err(|e| Into::<GovTxError>::into(e))?;
+                    .map_err(Into::<GovTxError>::into)?;
 
                 (msg.voter.to_string(), EmitEvent::Regular)
             }
@@ -145,7 +145,7 @@ impl<
                 let proposal_id = self
                     .keeper
                     .submit_proposal(ctx, msg.clone())
-                    .map_err(|e| Into::<GovTxError>::into(e))?;
+                    .map_err(Into::<GovTxError>::into)?;
 
                 let is_voting_started = self
                     .keeper
@@ -157,7 +157,7 @@ impl<
                             amount: msg.initial_deposit.clone(),
                         },
                     )
-                    .map_err(|e| Into::<GovTxError>::into(e))?;
+                    .map_err(Into::<GovTxError>::into)?;
 
                 match is_voting_started {
                     true => (
