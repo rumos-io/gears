@@ -2,6 +2,7 @@ use std::{fs::File, io::Read};
 
 use gears::{
     application::handlers::client::TxHandler,
+    commands::client::tx::ClientTxContext,
     types::{address::AccAddress, tx::Messages},
 };
 
@@ -27,6 +28,7 @@ impl TxHandler for GovClientHandler {
 
     fn prepare_tx(
         &self,
+        _ctx: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>> {

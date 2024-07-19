@@ -20,6 +20,7 @@ use gears::application::node::Node;
 use gears::application::ApplicationInfo;
 use gears::baseapp::NodeQueryHandler;
 use gears::baseapp::{QueryRequest, QueryResponse};
+use gears::commands::client::tx::ClientTxContext;
 use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
@@ -67,10 +68,11 @@ impl TxHandler for GaiaCoreClient {
 
     fn prepare_tx(
         &self,
+        ctx: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> Result<Messages<Self::Message>> {
-        tx_command_handler(command.0, from_address)
+        tx_command_handler(ctx, command.0, from_address)
     }
 }
 

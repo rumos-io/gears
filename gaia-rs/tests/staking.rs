@@ -43,7 +43,7 @@ fn run_tx_local(
     command: GaiaTxCommands,
 ) -> anyhow::Result<Response> {
     // a comment
-    run_tx(
+    let mut responses = run_tx(
         TxCommand {
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
@@ -56,7 +56,9 @@ fn run_tx_local(
             inner: WrappedGaiaTxCommands(command),
         },
         &GaiaCoreClient,
-    )
+    )?;
+    assert_eq!(responses.len(), 1);
+    Ok(responses.pop().expect("vector has exactly single element"))
 }
 
 fn run_query_local(command: GaiaQueryCommands) -> anyhow::Result<GaiaQueryResponse> {

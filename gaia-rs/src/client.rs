@@ -5,7 +5,10 @@ use bank::cli::{
     tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
-use gears::types::{address::AccAddress, tx::Messages};
+use gears::{
+    commands::client::tx::ClientTxContext,
+    types::{address::AccAddress, tx::Messages},
+};
 use ibc_rs::client::cli::{
     query::IbcQueryCli,
     tx::{run_ibc_tx_command, IbcTxCli},
@@ -28,6 +31,7 @@ pub enum GaiaTxCommands {
 }
 
 pub fn tx_command_handler(
+    _ctx: &ClientTxContext,
     command: GaiaTxCommands,
     from_address: AccAddress,
 ) -> Result<Messages<Message>> {
