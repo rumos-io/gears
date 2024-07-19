@@ -3,6 +3,7 @@
 mod abci_handler;
 mod client;
 mod consts;
+mod error;
 mod genesis;
 mod keeper;
 mod keys;

@@ -2,11 +2,11 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 
+use crate::types::pagination::response::PaginationResponse;
 use crate::types::tx::Tx;
 use crate::types::tx::TxMessage;
 
 use super::tx::TxResponse;
-use super::PageResponse;
 
 /// GetTxsEventResponse is the response type for the Service.TxsByEvents
 /// RPC method.
@@ -20,7 +20,7 @@ pub struct GetTxsEventResponse<M: TxMessage> {
     /// pagination defines a pagination for the response.
     /// Deprecated post v0.46.x: use total instead.
     // TODO: doesn't serialize correctly - has been deprecated
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
     /// total is total number of results available
     #[serde_as(as = "DisplayFromStr")]
     pub total: u64,

@@ -37,7 +37,7 @@ impl<G> From<InitState<G>> for RequestInitChain<G> {
             consensus_params: init_state.consensus_params,
             validators: init_state.validators,
             app_genesis: init_state.app_genesis,
-            initial_height: init_state.initial_height as i64,
+            initial_height: init_state.initial_height,
         }
     }
 }
@@ -120,51 +120,43 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             last_commit_hash: vec![
                 227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39,
                 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
-            ]
-            .into(),
+            ],
             //TODO: need to calculate this
             data_hash: vec![
                 227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39,
                 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
-            ]
-            .into(),
+            ],
             //TODO: need to calculate this
             validators_hash: vec![
                 105, 109, 157, 224, 221, 36, 139, 200, 18, 31, 171, 146, 191, 69, 50, 98, 210, 209,
                 111, 225, 255, 132, 34, 75, 183, 135, 230, 89, 52, 173, 104, 13,
-            ]
-            .into(),
+            ],
             //TODO: need to calculate this
             next_validators_hash: vec![
                 105, 109, 157, 224, 221, 36, 139, 200, 18, 31, 171, 146, 191, 69, 50, 98, 210, 209,
                 111, 225, 255, 132, 34, 75, 183, 135, 230, 89, 52, 173, 104, 13,
-            ]
-            .into(),
+            ],
             //TODO: need to calculate this
             consensus_hash: vec![
                 4, 128, 145, 188, 125, 220, 40, 63, 119, 191, 191, 145, 215, 60, 68, 218, 88, 195,
                 223, 138, 156, 188, 134, 116, 5, 216, 183, 243, 218, 173, 162, 47,
-            ]
-            .into(),
+            ],
             app_hash: self.app_hash.clone().into(),
             //TODO: need to calculate this
             last_results_hash: vec![
                 227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39,
                 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
-            ]
-            .into(),
+            ],
             //TODO: need to calculate this
             evidence_hash: vec![
                 227, 176, 196, 66, 152, 252, 28, 20, 154, 251, 244, 200, 153, 111, 185, 36, 39,
                 174, 65, 228, 100, 155, 147, 76, 164, 149, 153, 27, 120, 82, 184, 85,
-            ]
-            .into(),
+            ],
             //TODO: need to calculate this
             proposer_address: vec![
                 139, 66, 235, 161, 172, 24, 201, 229, 172, 156, 56, 187, 215, 206, 138, 87, 207,
                 173, 214, 85,
-            ]
-            .into(),
+            ],
         }
     }
 

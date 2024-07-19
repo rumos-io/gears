@@ -1,10 +1,12 @@
 use super::*;
 use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryParamsResponse,
-    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationResponse,
-    QueryValidatorRequest, QueryValidatorResponse, RedelegationEntryResponse, RedelegationResponse,
+    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
 };
-use gears::{context::query::QueryContext, types::response::PageResponse};
+use gears::{
+    context::query::QueryContext,
+    ext::{IteratorPaginate, Pagination, PaginationResult},
+};
 
 impl<
         SK: StoreKey,
@@ -68,34 +70,31 @@ impl<
         })
     }
 
-    pub fn query_redelegations<DB: Database>(
+    pub fn redelegations<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-        query: QueryRedelegationRequest,
-    ) -> QueryRedelegationResponse {
-        let redelegations = match &query {
-            QueryRedelegationRequest {
-                delegator_address: Some(a),
-                src_validator_address: Some(v1),
-                dst_validator_address: Some(v2),
-                pagination: _,
-            } => self
+        delegator_address: &Option<AccAddress>,
+        src_validator_address: &Option<ValAddress>,
+        dst_validator_address: &Option<ValAddress>,
+        pagination: Option<Pagination>,
+    ) -> (Option<PaginationResult>, Vec<Redelegation>) {
+        let redelegations = match (
+            delegator_address,
+            src_validator_address,
+            dst_validator_address,
+        ) {
+            (Some(a), Some(v1), Some(v2)) => self
                 .redelegation(ctx, a, v1, v2)
                 .unwrap_gas()
                 .map(|red| vec![red])
                 .unwrap_or_default(),
-            /* */
-            QueryRedelegationRequest {
-                delegator_address: None,
-                src_validator_address: Some(_v1),
-                dst_validator_address: None,
-                pagination: _,
-            } => {
-                // TODO: add logic for a query with only src validator
-                //     redels = k.GetRedelegationsFromSrcValidator(ctx, params.SrcValidatorAddr)
+            (None, Some(_v1), None) => {
+                /*
+                  TODO: add logic for a query with only src validator
+                    redels = k.GetRedelegationsFromSrcValidator(ctx, params.SrcValidatorAddr)
+                */
                 todo!()
             }
-            /* */
             _ => {
                 // TODO: add logic for a query to get all redelegations
                 //     redels = k.GetAllRedelegations(ctx, params.DelegatorAddr, params.SrcValidatorAddr, params.DstValidatorAddr)
@@ -103,57 +102,9 @@ impl<
             }
         };
 
-        let redelegation_responses = self
-            .redelegations_to_redelegations_response(ctx, redelegations)
-            .ok()
-            .unwrap_or_default();
+        let (p_result, iter) = redelegations.into_iter().maybe_paginate(pagination);
 
-        let pagination = if redelegation_responses.len() <= 1 {
-            None
-        } else {
-            // TODO: make correct pagination response
-            Some(PageResponse {
-                next_key: vec![],
-                total: redelegation_responses.len() as u64,
-            })
-        };
-        QueryRedelegationResponse {
-            redelegation_responses,
-            pagination,
-        }
-    }
-
-    pub fn redelegations_to_redelegations_response<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        redelegations: Vec<Redelegation>,
-    ) -> Result<Vec<RedelegationResponse>, AppError> {
-        let mut resp = Vec::with_capacity(redelegations.len());
-        for red in redelegations.into_iter() {
-            let validator = self
-                .validator(ctx, &red.validator_dst_address)
-                .unwrap_gas()
-                .ok_or(AppError::AccountNotFound)?;
-
-            let mut entries = Vec::with_capacity(red.entries.len());
-            for entry in red.entries.clone().into_iter() {
-                let balance = validator
-                    .tokens_from_shares(entry.share_dst)
-                    .map_err(|e| AppError::Custom(e.to_string()))?
-                    .to_uint_floor();
-                entries.push(RedelegationEntryResponse {
-                    redelegation_entry: entry,
-                    balance,
-                });
-            }
-
-            resp.push(RedelegationResponse {
-                redelegation: red,
-                entries,
-            });
-        }
-
-        Ok(resp)
+        (p_result, iter.collect())
     }
 
     pub fn query_unbonding_delegation<DB: Database>(

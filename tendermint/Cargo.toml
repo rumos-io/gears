@@ -23,8 +23,6 @@ time = { workspace = true }
 #utils
 thiserror = { workspace = true }
 rand = { workspace = true }
-tracing = { workspace = true }
-anyhow = { workspace = true }
 
 #serialization
 serde = { workspace = true }
@@ -33,6 +31,7 @@ prost = { workspace = true }
 
 #other
 handlebars = { workspace = true }
+tracing = { workspace = true }
 
 #tendermint git
 tendermint-informal = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x", package = "tendermint"}

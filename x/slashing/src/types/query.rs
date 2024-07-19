@@ -2,7 +2,7 @@ use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
     types::{
         address::{AddressError, ConsAddress},
-        response::PageResponse,
+        pagination::{request::PaginationRequest, response::PaginationResponse},
     },
 };
 use prost::Message;
@@ -58,7 +58,7 @@ pub struct QuerySigningInfosRequestRaw {
 impl From<QuerySigningInfosRequest> for QuerySigningInfosRequestRaw {
     fn from(QuerySigningInfosRequest { pagination }: QuerySigningInfosRequest) -> Self {
         Self {
-            pagination: Some(pagination),
+            pagination: Some(pagination.into()),
         }
     }
 }
@@ -68,7 +68,7 @@ impl From<QuerySigningInfosRequest> for QuerySigningInfosRequestRaw {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct QuerySigningInfosRequest {
     /// pagination defines an optional pagination for the request.
-    pub pagination: PageRequest,
+    pub pagination: PaginationRequest,
 }
 
 impl TryFrom<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {
@@ -78,9 +78,11 @@ impl TryFrom<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {
         QuerySigningInfosRequestRaw { pagination }: QuerySigningInfosRequestRaw,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            pagination: pagination.ok_or(CoreError::MissingField(
-                "Missing field 'pagination'.".into(),
-            ))?,
+            pagination: pagination
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'pagination'.".into(),
+                ))?
+                .into(),
         })
     }
 }
@@ -157,7 +159,7 @@ impl From<QuerySigningInfosResponse> for QuerySigningInfosResponseRaw {
 pub struct QuerySigningInfosResponse {
     /// Info is the signing info of all validators
     pub info: Vec<ValidatorSigningInfo>,
-    pub pagination: Option<PageResponse>,
+    pub pagination: Option<PaginationResponse>,
 }
 
 impl TryFrom<QuerySigningInfosResponseRaw> for QuerySigningInfosResponse {

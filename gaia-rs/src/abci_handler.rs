@@ -6,14 +6,28 @@ use crate::{
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
-use gears::config::Config;
-use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
 use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
+use gears::{application::handlers::node::ModuleInfo, context::init::InitContext};
+use gears::{application::handlers::node::TxError, config::Config};
 use gears::{context::tx::TxContext, error::AppError, x::ante::DefaultSignGasConsumer};
+
+#[derive(Debug, Clone)]
+struct BankModuleInfo;
+
+impl ModuleInfo for BankModuleInfo {
+    const NAME: &'static str = "bank";
+}
+
+#[derive(Debug, Clone)]
+struct StakingModuleInfo;
+
+impl ModuleInfo for StakingModuleInfo {
+    const NAME: &'static str = "staking";
+}
 
 #[derive(Debug, Clone)]
 pub struct GaiaABCIHandler {
@@ -22,6 +36,7 @@ pub struct GaiaABCIHandler {
         GaiaParamsStoreKey,
         auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
         GaiaModules,
+        BankModuleInfo,
     >,
     auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
     staking_abci_handler: staking::ABCIHandler<
@@ -40,6 +55,7 @@ pub struct GaiaABCIHandler {
             GaiaModules,
         >,
         GaiaModules,
+        StakingModuleInfo,
     >,
     ibc_abci_handler: ibc_rs::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey>,
     ante_handler: BaseAnteHandler<
@@ -110,19 +126,18 @@ impl ABCIHandler for GaiaABCIHandler {
     type Message = Message;
     type Genesis = GenesisState;
     type StoreKey = GaiaStoreKey;
-
     type QReq = GaiaNodeQueryRequest;
     type QRes = GaiaNodeQueryResponse;
 
-    fn tx<DB: Database + Sync + Send>(
+    fn msg<DB: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         match msg {
-            Message::Bank(msg) => self.bank_abci_handler.tx(ctx, msg),
-            Message::Staking(msg) => self.staking_abci_handler.tx(ctx, msg),
-            Message::IBC(msg) => self.ibc_abci_handler.tx(ctx, msg.clone()),
+            Message::Bank(msg) => self.bank_abci_handler.msg(ctx, msg),
+            Message::Staking(msg) => self.staking_abci_handler.msg(ctx, msg),
+            Message::IBC(msg) => self.ibc_abci_handler.msg(ctx, msg.clone()),
         }
     }
 
@@ -176,7 +191,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         tx: &TxWithRaw<Message>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         self.ante_handler.run(ctx, tx)
     }
 

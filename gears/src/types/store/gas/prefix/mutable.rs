@@ -28,8 +28,11 @@ impl<DB: Database> GasPrefixStoreMut<'_, DB> {
     pub fn get<T: AsRef<[u8]> + ?Sized>(&self, k: &T) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let value = self.inner.get(&k);
 
-        self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+        self.guard.get(
+            k.as_ref().len(),
+            value.as_ref().map(|this| this.len()),
+            k.as_ref(),
+        )?;
 
         Ok(value)
     }
@@ -42,7 +45,7 @@ impl<DB: Database> GasPrefixStoreMut<'_, DB> {
         let key = k.into_iter().collect::<Vec<_>>();
         let value = v.into_iter().collect::<Vec<_>>();
 
-        self.guard.set(key.len(), value.len())?;
+        self.guard.set(key.len(), value.len(), &key)?;
 
         self.inner.set(key, value);
 
@@ -50,7 +53,7 @@ impl<DB: Database> GasPrefixStoreMut<'_, DB> {
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
-        self.guard.delete()?;
+        self.guard.delete(k)?;
         Ok(self.inner.delete(k))
     }
 }

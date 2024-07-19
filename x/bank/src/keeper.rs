@@ -1,14 +1,12 @@
 use crate::types::iter::balances::BalanceIterator;
-use crate::types::query::{
-    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
-    QueryDenomsMetadataResponse,
-};
+use crate::types::query::{QueryBalanceRequest, QueryBalanceResponse};
 use crate::{BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::{AppError, IBC_ENCODE_UNWRAP};
+use gears::ext::{IteratorPaginate, Pagination, PaginationResult};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
 use gears::store::database::prefix::PrefixDB;
@@ -171,7 +169,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         ctx: &CTX,
         addr: AccAddress,
     ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
-        self.get_all_balances(ctx, addr)
+        let (_, result) = self.all_balances(ctx, addr, None)?;
+
+        Ok(result)
     }
 
     fn send_coins_from_module_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -236,7 +236,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .kv_store(&self.store_key)
             .prefix_store(account_key(address));
 
-        let coin_bytes = store.get(denom.as_ref().as_bytes())?;
+        let coin_bytes = store.get(denom.as_str().as_bytes())?;
         let coin = if let Some(coin_bytes) = coin_bytes {
             UnsignedCoin {
                 denom: denom.to_owned(),
@@ -420,62 +420,39 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         Ok(())
     }
 
-    pub fn query_all_balances<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        req: QueryAllBalancesRequest,
-    ) -> QueryAllBalancesResponse {
-        let bank_store = ctx.kv_store(&self.store_key);
-        let prefix = create_denom_balance_prefix(req.address);
-        let account_store = bank_store.prefix_store(prefix);
-
-        let mut balances = vec![];
-
-        for (_, coin) in account_store.into_range(..) {
-            let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
-                .ok()
-                .unwrap_or_corrupt();
-            balances.push(coin);
-        }
-
-        QueryAllBalancesResponse {
-            balances,
-            pagination: None,
-        }
-    }
-
-    pub fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
+    pub fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
         addr: AccAddress,
-    ) -> Result<Vec<UnsignedCoin>, GasStoreErrors> {
+        pagination: Option<Pagination>,
+    ) -> Result<(Option<PaginationResult>, Vec<UnsignedCoin>), GasStoreErrors> {
         let bank_store = ctx.kv_store(&self.store_key);
         let prefix = create_denom_balance_prefix(addr);
         let account_store = bank_store.prefix_store(prefix);
 
         let mut balances = vec![];
-        for rcoin in account_store.into_range(..) {
+
+        let (p_result, iterator) = account_store.into_range(..).maybe_paginate(pagination);
+        for rcoin in iterator {
             let (_, coin) = rcoin?;
             let coin: UnsignedCoin = UnsignedCoin::decode::<Bytes>(coin.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             balances.push(coin);
         }
-        Ok(balances)
+        Ok((p_result, balances))
     }
 
     /// Gets the total supply of every denom
-    // TODO: should be paginated
-    // TODO: should ignore coins with zero balance
-    // TODO: does this method guarantee that coins are sorted?
-    pub fn get_paginated_total_supply<DB: Database>(
+    pub fn total_supply<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-    ) -> Vec<UnsignedCoin> {
+        pagination: Option<Pagination>,
+    ) -> (Option<PaginationResult>, Vec<UnsignedCoin>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let supply_store = bank_store.prefix_store(SUPPLY_KEY);
 
-        supply_store
+        let supply_store = supply_store
             .into_range(..)
             .map(|raw_coin| {
                 let denom = Denom::from_str(&String::from_utf8_lossy(&raw_coin.0))
@@ -486,7 +463,15 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                     .unwrap_or_corrupt();
                 UnsignedCoin { denom, amount }
             })
-            .collect()
+            .filter(|this| !this.amount.is_zero());
+
+        let (p_result, iter) = supply_store.maybe_paginate(pagination);
+
+        let mut store: Vec<_> = iter.collect();
+
+        store.sort_by_key(|this| this.denom.clone());
+
+        (p_result, store)
     }
 
     pub fn send_coins_from_account_to_account<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -640,7 +625,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         let store = ctx.kv_store(&self.store_key);
         let supply_store = store.prefix_store(SUPPLY_KEY);
 
-        let amount_bytes = supply_store.get(denom.as_ref().as_bytes())?;
+        let amount_bytes = supply_store.get(denom.as_str().as_bytes())?;
 
         match amount_bytes {
             Some(bytes) => Ok(Some(UnsignedCoin {
@@ -681,27 +666,29 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         );
     }
 
-    pub fn query_denoms_metadata<DB: Database>(
+    pub fn denoms_metadata<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-    ) -> QueryDenomsMetadataResponse {
+        pagination: Option<Pagination>,
+    ) -> (Option<PaginationResult>, Vec<Metadata>) {
         let bank_store = ctx.kv_store(&self.store_key);
         let mut denoms_metadata = vec![];
 
-        for (_, metadata) in bank_store
+        let bank_iterator = bank_store
+            .clone()
             .prefix_store(DENOM_METADATA_PREFIX)
-            .into_range(..)
-        {
+            .into_range(..);
+
+        let (p_result, iter) = bank_iterator.maybe_paginate(pagination);
+
+        for (_, metadata) in iter {
             let metadata: Metadata = Metadata::decode::<Bytes>(metadata.into_owned().into())
                 .ok()
                 .unwrap_or_corrupt();
             denoms_metadata.push(metadata);
         }
 
-        QueryDenomsMetadataResponse {
-            metadatas: denoms_metadata,
-            pagination: None,
-        }
+        (p_result, denoms_metadata)
     }
 
     pub fn delegate_coins_from_account_to_module<
