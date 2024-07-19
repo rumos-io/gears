@@ -102,12 +102,13 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
     ) -> Result<(), TxError> {
-        match msg {
-            Message::Send(msg_send) => Ok(self
+        let result = match msg {
+            Message::Send(msg_send) => self
                 .keeper
-                .send_coins_from_account_to_account(ctx, msg_send)
-                .map_err(|e| Into::<BankTxError>::into(e).into::<MI>())?),
-        }
+                .send_coins_from_account_to_account(ctx, msg_send),
+        };
+
+        result.map_err(|e| Into::<BankTxError>::into(e).into::<MI>())
     }
 
     pub fn query<DB: Database>(
