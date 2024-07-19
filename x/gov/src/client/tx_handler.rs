@@ -32,45 +32,41 @@ impl TxHandler for GovClientHandler {
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>> {
-        match command.command {
+        let command = match command.command {
             GovTxCommands::Deposit(DepositCliCommand {
                 proposal_id,
                 amount,
-            }) => Ok(GovMsg::Deposit(Deposit {
+            }) => GovMsg::Deposit(Deposit {
                 proposal_id,
                 depositor: from_address,
                 amount,
-            })
-            .into()),
+            }),
             GovTxCommands::Vote(VoteCliCommand {
                 proposal_id,
                 option,
-            }) => Ok(GovMsg::Vote(Vote {
+            }) => GovMsg::Vote(Vote {
                 proposal_id,
                 voter: from_address,
                 option,
-            })
-            .into()),
+            }),
             GovTxCommands::WeightedVote(WeightedVoteCliCommand {
                 proposal_id,
                 options,
-            }) => Ok(GovMsg::Weighted(MsgVoteWeighted {
+            }) => GovMsg::Weighted(MsgVoteWeighted {
                 proposal_id,
                 voter: from_address,
                 options,
-            })
-            .into()),
+            }),
             GovTxCommands::SubmitProposal(ProposalCliCommand {
                 initial_deposit,
                 command,
             }) => match command {
                 ProposalCliSubcommand::Text(TextProposalCliCommand { title, description }) => {
-                    Ok(GovMsg::Proposal(MsgSubmitProposal {
+                    GovMsg::Proposal(MsgSubmitProposal {
                         content: TextProposal { title, description }.into(),
                         initial_deposit,
                         proposer: from_address,
                     })
-                    .into())
                 }
                 ProposalCliSubcommand::ParamChange(ParamChangeProposalCliCommand { file }) => {
                     let mut buf = String::new();
@@ -78,14 +74,14 @@ impl TxHandler for GovClientHandler {
 
                     let proposal = serde_json::from_str::<RawParameterChangeProposal>(&buf)?;
 
-                    Ok(GovMsg::Proposal(MsgSubmitProposal {
+                    GovMsg::Proposal(MsgSubmitProposal {
                         content: proposal.into(),
                         initial_deposit,
                         proposer: from_address,
                     })
-                    .into())
                 }
             },
-        }
+        };
+        Ok(command.into())
     }
 }

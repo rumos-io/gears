@@ -2,7 +2,7 @@ use crate::types::auth::info::AuthError;
 
 #[derive(Debug, thiserror::Error)]
 #[error("transaction applies non empty set of messages")]
-pub struct MessagesError;
+pub struct EmptyMessagesError;
 
 #[derive(Debug, thiserror::Error)]
 pub enum TxError {
