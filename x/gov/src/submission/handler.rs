@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use gears::context::TransactionalContext;
+use gears::core::errors::CoreError;
 use gears::params::gas::subspace_mut;
 use gears::store::database::Database;
 use gears::store::StoreKey;
@@ -21,8 +22,12 @@ pub trait SubmissionHandler<PK: ParamsKeeper<PSK>, PSK: ParamsSubspaceKey, P> {
     ) -> Result<(), SubmissionHandlingError>;
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum SubmissionHandlingError {
+    #[error("Can't handle this proposal: decoding error")]
+    Decode(#[from] CoreError),
+    #[error("Can't handle this proposal: not supported subspace")]
+    Subspace,
     #[error("Can't handle this proposal: no such keys in subspace")]
     KeyNotFound,
     #[error("Can't handle this proposal: invalid bytes")]

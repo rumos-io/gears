@@ -1,4 +1,4 @@
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug,)]
 pub enum CoreError {
     #[error("invalid coins: `{0}`")]
     Coins(String),
