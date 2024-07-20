@@ -5,13 +5,11 @@ use crate::{
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use gears::{
-    error::AppError,
     tendermint::types::proto::crypto::PublicKey as TendermintPublicKey,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
         decimal256::Decimal256,
-        tx::TxMessage,
         uint::Uint256,
     },
 };
@@ -151,7 +149,7 @@ pub fn run_staking_tx_command(
                 pub_key: pubkey.clone(),
                 value: amount.clone(),
             });
-            msg.validate_basic().map_err(AppError::TxValidation)?;
+
             Ok(msg)
 
             // genOnly, _ := fs.GetBool(flags.FlagGenerateOnly)
@@ -191,7 +189,7 @@ pub fn run_staking_tx_command(
                 validator_address,
                 from_address: delegator_address,
             });
-            msg.validate_basic().map_err(AppError::TxValidation)?;
+
             Ok(msg)
         }
         StakingCommands::Delegate {

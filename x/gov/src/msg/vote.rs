@@ -113,10 +113,6 @@ impl TxMessage for Vote {
         vec![&self.voter]
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        Ok(())
-    }
-
     fn type_url(&self) -> &'static str {
         Vote::TYPE_URL
     }

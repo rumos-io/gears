@@ -70,6 +70,7 @@ mod tests {
     use cosmwasm_std::Uint256;
     use std::{collections::BTreeMap, str::FromStr};
     use tendermint::types::chain_id::ChainId;
+    use vec1::vec1;
 
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {
@@ -115,7 +116,7 @@ mod tests {
         };
 
         let tx_body = TxBody::<MsgSend> {
-            messages: vec![MsgSend {
+            messages: vec1![MsgSend {
                 from_address: AccAddress::from_bech32(
                     "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
                 )?,
@@ -308,7 +309,7 @@ mod tests {
         };
 
         let tx_body = TxBody::<MsgSend> {
-            messages: vec![MsgSend {
+            messages: vec1![MsgSend {
                 from_address: AccAddress::from_bech32(
                     "cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z",
                 )?,
@@ -414,7 +415,7 @@ mod tests {
         };
 
         let tx_body = TxBody::<MsgSend> {
-            messages: vec![MsgSend {
+            messages: vec1![MsgSend {
                 from_address: AccAddress::from_bech32(
                     "cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z",
                 )?,
