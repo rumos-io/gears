@@ -1,6 +1,5 @@
 use gears::{
-    baseapp::genesis::Genesis,
-    commands::node::genesis::GenesisError,
+    baseapp::genesis::{Genesis, GenesisError},
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 use serde::{Deserialize, Serialize};

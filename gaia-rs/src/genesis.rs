@@ -1,7 +1,7 @@
 use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
 use gears::{
-    commands::node::genesis::GenesisError,
+    baseapp::genesis::GenesisError,
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 use ibc_rs::GenesisState as IBCGenesis;

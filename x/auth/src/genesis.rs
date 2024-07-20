@@ -1,5 +1,5 @@
 use gears::{
-    commands::node::genesis::GenesisError,
+    baseapp::genesis::GenesisError,
     types::{account::BaseAccount, address::AccAddress},
 };
 use serde::{Deserialize, Serialize};
@@ -46,10 +46,7 @@ impl GenesisState {
             });
             Ok(())
         } else {
-            Err(GenesisError::Genesis(anyhow::anyhow!(
-                "cannot add account at existing address {}",
-                address
-            )))
+            Err(GenesisError(address))?
         }
     }
 }
