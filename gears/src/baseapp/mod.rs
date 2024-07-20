@@ -113,7 +113,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let version: u32 = request
             .height
             .try_into()
-            .map_err(|_| QueryError::InvalidRequest)?;
+            .map_err(|_| QueryError::InvalidHeight)?;
 
         let query_store =
             QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;

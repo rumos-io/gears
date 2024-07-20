@@ -44,7 +44,7 @@ pub enum QueryError {
     #[error("query path not found")]
     PathNotFound,
     #[error("Block height must be greater than or equal to zero")]
-    InvalidRequest,
+    InvalidHeight,
     #[error(transparent)]
     Store(#[from] kv_store::error::KVStoreError),
     #[error("error decoding query: {0}")]
