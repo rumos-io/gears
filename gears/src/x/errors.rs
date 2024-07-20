@@ -1,11 +1,11 @@
-use std::fmt::Display;
+use std::{fmt::Display, num::NonZero};
 
 use address::AccAddress;
 use cosmwasm_std::Uint256;
 use thiserror::Error;
 
 use crate::{
-    application::handlers::node::{ErrorCode, TxError},
+    application::handlers::node::TxError,
     types::{
         base::errors::CoinsError,
         denom::Denom,
@@ -114,8 +114,8 @@ impl From<AnteError> for TxError {
         };
 
         TxError {
-            msg: format!("{error}"),
-            code: ErrorCode::try_new(code).expect("all > 0"),
+            msg: format!("{error}").into(),
+            code: NonZero::new(code).expect("all > 0"),
             codespace: "ante",
         }
     }

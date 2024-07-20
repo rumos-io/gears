@@ -1,5 +1,5 @@
 use gears::{
-    application::handlers::node::{ErrorCode, TxError},
+    application::handlers::node::{ModuleInfo, TxError},
     types::{base::errors::CoinsError, store::gas::errors::GasStoreErrors},
     x::errors::BankKeeperError,
 };
@@ -13,15 +13,9 @@ pub enum GovTxError {
     Keeper(#[from] GovKeeperError),
 }
 
-impl From<GovTxError> for TxError {
-    fn from(value: GovTxError) -> Self {
-        match value {
-            GovTxError::Keeper(e) => TxError {
-                msg: format!("{e}"),
-                code: ErrorCode::new(nz::u16!(1)),
-                codespace: "",
-            },
-        }
+impl GovTxError {
+    pub fn into<MI: ModuleInfo>(self) -> TxError {
+        TxError::new::<MI>(self.to_string(), nz::u16!(1))
     }
 }
 

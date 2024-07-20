@@ -1,4 +1,4 @@
-use std::num::NonZero;
+use std::{borrow::Cow, num::NonZero};
 
 use crate::{
     baseapp::{errors::QueryError, genesis::Genesis, QueryRequest, QueryResponse},
@@ -13,30 +13,6 @@ use tendermint::types::{
 };
 use thiserror::Error;
 
-#[derive(Debug, Error)]
-#[error("error code must be greater than 0")]
-pub struct ErrorCodeError;
-
-#[derive(Debug, Clone)]
-pub struct ErrorCode(NonZero<u16>);
-
-impl ErrorCode {
-    pub const fn new(code: NonZero<u16>) -> Self {
-        Self(code)
-    }
-
-    pub const fn try_new(code: u16) -> Result<Self, ErrorCodeError> {
-        match NonZero::new(code) {
-            Some(var) => Ok(Self(var)),
-            None => Err(ErrorCodeError),
-        }
-    }
-
-    pub fn value(&self) -> u16 {
-        self.0.get()
-    }
-}
-
 pub trait ModuleInfo {
     const NAME: &'static str;
 }
@@ -44,9 +20,19 @@ pub trait ModuleInfo {
 #[derive(Error, Debug, Clone)]
 #[error("{msg}")]
 pub struct TxError {
-    pub msg: String,
-    pub code: ErrorCode,
+    pub msg: Cow<'static, str>,
+    pub code: NonZero<u16>,
     pub codespace: &'static str,
+}
+
+impl TxError {
+    pub fn new<MI: ModuleInfo>(msg: impl Into<Cow<'static, str>>, code: NonZero<u16>) -> Self {
+        Self {
+            msg: msg.into(),
+            code,
+            codespace: MI::NAME,
+        }
+    }
 }
 
 pub trait ABCIHandler: Clone + Send + Sync + 'static {

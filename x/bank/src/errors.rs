@@ -1,5 +1,7 @@
+use std::num::NonZero;
+
 use gears::{
-    application::handlers::node::{ErrorCode, ModuleInfo, TxError},
+    application::handlers::node::{ModuleInfo, TxError},
     x::errors::BankKeeperError,
 };
 use thiserror::Error;
@@ -16,10 +18,6 @@ impl BankTxError {
             BankTxError::Keeper(_) => 1,
         };
 
-        TxError {
-            msg: self.to_string(),
-            code: ErrorCode::try_new(code).expect("all > 0"),
-            codespace: MI::NAME,
-        }
+        TxError::new::<MI>(self.to_string(), NonZero::new(code).expect("all > 0"))
     }
 }

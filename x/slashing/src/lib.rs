@@ -1,6 +1,6 @@
-pub mod errors;
 mod abci_handler;
 mod client;
+pub mod errors;
 mod genesis;
 mod keeper;
 mod keys;

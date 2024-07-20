@@ -27,7 +27,7 @@ impl RunTxError {
             RunTxError::InvalidTransaction(_) => INVALID_TRANSACTION_CODE,
             RunTxError::InvalidMessage(_) => INVALID_MESSAGE_CODE,
             RunTxError::GasErrors(_) => GAS_ERRORS_CODE,
-            RunTxError::Application(e) => e.code.value() as u32,
+            RunTxError::Application(e) => e.code.get() as u32,
         }
     }
 

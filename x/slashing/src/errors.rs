@@ -1,5 +1,5 @@
 use gears::{
-    application::handlers::node::{ErrorCode, TxError},
+    application::handlers::node::TxError,
     error::NumericError,
     types::{
         address::{ConsAddress, ValAddress},
@@ -20,8 +20,8 @@ impl From<SlashingTxError> for TxError {
     fn from(value: SlashingTxError) -> Self {
         match value {
             SlashingTxError::Unjail(e) => TxError {
-                msg: format!("{e}"),
-                code: ErrorCode::new(nz::u16!(1)),
+                msg: format!("{e}").into(),
+                code: nz::u16!(1),
                 codespace: "",
             },
         }

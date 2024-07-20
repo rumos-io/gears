@@ -1,4 +1,6 @@
-use gears::application::handlers::node::{ErrorCode, ModuleInfo, TxError};
+use std::num::NonZero;
+
+use gears::application::handlers::node::{ModuleInfo, TxError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -14,8 +16,8 @@ impl StakingTxError {
         };
 
         TxError {
-            msg: self.to_string(),
-            code: ErrorCode::try_new(code).expect("all > 0"),
+            msg: self.to_string().into(),
+            code: NonZero::new(code).expect("all > 0"),
             codespace: MI::NAME,
         }
     }
