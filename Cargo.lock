@@ -1876,7 +1876,6 @@ dependencies = [
  "clap",
  "data-encoding",
  "gears",
- "gears-derive",
  "gov",
  "hex 0.4.3",
  "ibc-proto 0.33.0",
@@ -1918,7 +1917,6 @@ dependencies = [
  "dircpy",
  "dirs",
  "former",
- "gears-derive",
  "handlebars",
  "hex 0.4.3",
  "http 0.2.12",
@@ -1954,18 +1952,10 @@ dependencies = [
  "tower-service",
  "tracing",
  "tracing-subscriber",
+ "tx-derive",
  "url",
  "ux",
  "vec1",
-]
-
-[[package]]
-name = "gears-derive"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn 1.0.109",
- "syner",
 ]
 
 [[package]]
@@ -2942,7 +2932,6 @@ dependencies = [
  "constcat",
  "derive_more 0.99.18",
  "gears",
- "gears-derive",
  "ibc",
  "prost 0.12.6",
  "schemars",
@@ -4140,6 +4129,10 @@ checksum = "9091c90b0a32608e984ff2fa4091273cbdd755d54935c51d520887f4a1dbd5b0"
 dependencies = [
  "prost 0.12.6",
 ]
+
+[[package]]
+name = "query-derive"
+version = "0.1.0"
 
 [[package]]
 name = "quick-error"
@@ -5687,6 +5680,15 @@ name = "try-lock"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e421abadd41a4225275504ea4d6566923418b7f05506fbc9c0fe86ba7396114b"
+
+[[package]]
+name = "tx-derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+ "syner",
+]
 
 [[package]]
 name = "typenum"

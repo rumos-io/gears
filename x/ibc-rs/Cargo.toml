@@ -5,8 +5,7 @@ edition = "2021"
 
 [dependencies]
 #local
-gears = { path = "../../gears" }
-gears-derive = { path = "../../gears-derive" }
+gears = { path = "../../gears" } 
 
 # nutype
 bytes = { workspace = true }

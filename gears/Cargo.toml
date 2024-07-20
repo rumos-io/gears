@@ -14,7 +14,7 @@ core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
 kv_store = { path = "../kv_store" }
 database = { path = "../database" }
-gears-derive = { path = "../gears-derive" }
+tx-derive = { path = "../macros/tx-derive" }
 
 #newtypes
 vec1 = { version = "1.12.0", features = [ "serde" ] }

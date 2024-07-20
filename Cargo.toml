@@ -11,7 +11,10 @@ members = [
   "kv_store",
   "keyring",
   "gears",
-  "gears-derive",
+
+  # macros
+  "macros/tx-derive",
+  "macros/query-derive",
 
   # GAIA
   "gaia-rs",
@@ -23,7 +26,7 @@ members = [
   "x/ibc-rs",
   "x/slashing",
   "x/staking",
-  "x/gov",
+  "x/gov", 
 
   # new unsorted
 ]

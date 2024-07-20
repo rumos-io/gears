@@ -1,3 +1,4 @@
+use gears::derive::RoutingMessage;
 use gears::{
     signing::{
         handler::MetadataGetter,
@@ -5,7 +6,6 @@ use gears::{
     },
     types::rendering::screen::Screen,
 };
-use gears_derive::RoutingMessage;
 use serde::Serialize;
 
 #[derive(Debug, Clone, RoutingMessage, Serialize)]
