@@ -30,6 +30,7 @@ use kv_store::StoreKey;
 use prost::Message as ProstMessage;
 use std::marker::PhantomData;
 
+use super::errors::AccountNotFound;
 use super::module::Module;
 
 pub trait SignGasConsumer: Clone + Sync + Send + 'static {
@@ -256,7 +257,7 @@ impl<
             let acct = self
                 .auth_keeper
                 .get_account(ctx, signer_addr)?
-                .ok_or(AnteError::AccountNotFound(signer_addr.to_owned()))?;
+                .ok_or(AccountNotFound::from(signer_addr.to_owned()))?;
 
             let pub_key = acct
                 .get_public_key()
@@ -343,7 +344,7 @@ impl<
         let fee_payer = tx.get_fee_payer();
 
         if !self.auth_keeper.has_account(ctx, fee_payer)? {
-            return Err(AnteError::AccountNotFound(fee_payer.clone()));
+            Err(AccountNotFound::from(fee_payer.clone()))?
         }
 
         if let Some(fee) = fee {
@@ -389,7 +390,7 @@ impl<
                 let mut acct = self
                     .auth_keeper
                     .get_account(ctx, &addr)?
-                    .ok_or(AnteError::AccountNotFound(addr.to_owned()))?;
+                    .ok_or(AccountNotFound::from(addr.to_owned()))?;
 
                 if acct.get_public_key().is_some() {
                     continue;
@@ -427,7 +428,7 @@ impl<
             let acct = self
                 .auth_keeper
                 .get_account(ctx, signer)?
-                .ok_or(AnteError::AccountNotFound(signer.to_owned()))?;
+                .ok_or(AccountNotFound::from(signer.to_owned()))?;
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
                 return Err(AnteError::Validation(format!(
@@ -498,7 +499,7 @@ impl<
             let mut acct = self
                 .auth_keeper
                 .get_account(ctx, signer)?
-                .ok_or(AnteError::AccountNotFound(signer.to_owned()))?;
+                .ok_or(AccountNotFound::from(signer.to_owned()))?;
             acct.increment_sequence();
             self.auth_keeper.set_account(ctx, acct)?;
         }

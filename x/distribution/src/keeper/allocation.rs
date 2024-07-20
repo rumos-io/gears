@@ -154,7 +154,7 @@ impl<
                 .staking_keeper
                 .validator_by_cons_addr(ctx, &ConsAddress::from(vote.validator.address.clone()))
                 .unwrap_gas()
-                .ok_or(AccountNotFound)?;
+                .ok_or(AccountNotFound::from(vote.validator.address.to_owned()))?;
             // TODO: Consider micro-slashing for missing votes.
             //
             // Ref: https://github.com/cosmos/cosmos-sdk/issues/2525#issuecomment-430838701

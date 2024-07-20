@@ -1,6 +1,6 @@
 use std::{fmt::Display, num::NonZero};
 
-use address::AccAddress;
+use address::{AccAddress, BaseAddress};
 use cosmwasm_std::Uint256;
 use thiserror::Error;
 
@@ -15,8 +15,20 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, thiserror::Error)]
-#[error("account does not exist")]
-pub struct AccountNotFound;
+#[error("account: {0} does not exist")]
+pub struct AccountNotFound(String);
+
+impl AccountNotFound {
+    pub fn new(addr: impl Into<String>) -> Self {
+        Self(addr.into())
+    }
+}
+
+impl<const PREFIX: u8> From<BaseAddress<PREFIX>> for AccountNotFound {
+    fn from(value: BaseAddress<PREFIX>) -> Self {
+        Self(value.to_string())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum SignVerificationError {
@@ -24,8 +36,8 @@ pub enum SignVerificationError {
     EmptySignatureList,
     #[error("wrong number of signatures; expected {expected}, got {got}")]
     WrongSignatureList { expected: usize, got: usize },
-    #[error("account does not exist")]
-    AccountNotFound,
+    #[error("{0}")]
+    AccountNotFound(#[from] AccountNotFound),
     #[error("pubkey on account is not set")]
     PubKeyNotSet,
     #[error("account sequence mismatch, expected {expected}, got {got}")]
@@ -84,7 +96,7 @@ pub(crate) enum AnteError {
     #[error("tx is too long")]
     TxLen,
     #[error("account not found {0}")]
-    AccountNotFound(AccAddress),
+    AccountNotFound(#[from] AccountNotFound),
     #[error("{0}")]
     Gas(#[from] GasStoreErrors),
     #[error("failed to send coins: {0}")]
@@ -153,9 +165,10 @@ pub enum BankKeeperError {
     Permission(String),
     #[error(transparent)]
     InsufficientFunds(#[from] InsufficientFundsError),
-    #[error("account not found")]
-    AccountNotFound,
-
+    #[error("{0}")]
+    AccountNotFound(#[from] AccountNotFound),
+    #[error("account doesnt have enought permission")]
+    AccountPermission,
     #[error("{0}")]
     GasError(#[from] GasStoreErrors),
 }

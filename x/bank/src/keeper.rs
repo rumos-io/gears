@@ -24,7 +24,7 @@ use gears::types::store::gas::ext::GasResultExt;
 use gears::types::store::prefix::mutable::PrefixStoreMut;
 use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
-use gears::x::errors::{BankCoinsError, BankKeeperError, InsufficientFundsError};
+use gears::x::errors::{AccountNotFound, BankCoinsError, BankKeeperError, InsufficientFundsError};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::{BankKeeper, StakingBankKeeper};
 use gears::x::keepers::gov::GovernanceBankKeeper;
@@ -110,7 +110,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
 
         match account.has_permissions("burner") {
             true => Ok(()),
-            false => Err(BankKeeperError::AccountNotFound),
+            false => Err(BankKeeperError::AccountPermission),
         }?;
 
         self.sub_unlocked_coins(ctx, &module_acc_addr, deposit)?;
@@ -738,7 +738,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .get_account(ctx, &module_acc_addr)?
             .is_none()
         {
-            return Err(BankKeeperError::AccountNotFound);
+            Err(AccountNotFound::from(module_acc_addr.to_owned()))?
         };
 
         let mut balances = vec![];
@@ -834,7 +834,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             .get_account(ctx, &module_acc_addr)?
             .is_none()
         {
-            return Err(BankKeeperError::AccountNotFound);
+            Err(AccountNotFound::from(module_acc_addr.to_owned()))?
         };
 
         self.sub_unlocked_coins(ctx, &module_acc_addr, &amount)?;
@@ -936,7 +936,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             //     }
             Ok(())
         } else {
-            Err(BankKeeperError::AccountNotFound)
+            Err(AccountNotFound::from(addr.to_owned()))?
         }
     }
 
@@ -956,7 +956,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             //     }
             Ok(())
         } else {
-            Err(BankKeeperError::AccountNotFound)
+            Err(AccountNotFound::from(addr.to_owned()))?
         }
     }
 }

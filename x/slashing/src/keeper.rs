@@ -369,7 +369,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let validator = self
             .staking_keeper
             .validator(ctx, validator_address)?
-            .ok_or(AccountNotFound)?;
+            .ok_or(AccountNotFound::from(validator_address.to_owned()))?;
         // cannot be unjailed if no self-delegation exists
         let self_delegation = self
             .staking_keeper
