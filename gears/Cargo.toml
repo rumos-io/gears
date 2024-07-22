@@ -15,6 +15,7 @@ keyring = { path = "../keyring" }
 kv_store = { path = "../kv_store" }
 database = { path = "../database" }
 tx-derive = { path = "../macros/tx-derive" }
+query-derive = { path = "../macros/query-derive" }
 
 #newtypes
 vec1 = { version = "1.12.0", features = [ "serde" ] }

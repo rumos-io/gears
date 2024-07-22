@@ -3,7 +3,12 @@ name = "query-derive"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
+[lib]
+proc-macro = true
 
-[lints]
-workspace = true
+[dependencies] 
+quote = "1.0"
+syn = "2.0.72"
+syner = "0.3.0" 
+proc-macro2 = "1.0.86"
+darling = "0.20.10"
