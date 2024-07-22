@@ -31,3 +31,7 @@ impl From<CoreError> for tonic::Status {
         tonic::Status::invalid_argument(format!("{:?}", e))
     }
 }
+
+pub mod ibc {
+    pub use ibc_proto::protobuf::Error;
+}

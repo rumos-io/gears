@@ -27,34 +27,34 @@ impl<
         shares: Decimal256,
     ) -> anyhow::Result<Timestamp> {
         if val_src_addr == val_dst_addr {
-            return Err(AppError::Custom("self redelegation".to_string()).into());
+            return Err(anyhow::anyhow!("self redelegation".to_string()));
         }
 
         let mut dst_validator = if let Some(validator) = self.validator(ctx, val_dst_addr)? {
             validator
         } else {
-            return Err(AppError::Custom(format!("bad redelegation dst: {}", val_dst_addr)).into());
+            return Err(anyhow::anyhow!("bad redelegation dst: {}", val_dst_addr));
         };
 
         let src_validator = if let Some(validator) = self.validator(ctx, val_src_addr)? {
             validator
         } else {
-            return Err(AppError::Custom(format!("bad redelegation src: {}", val_dst_addr)).into());
+            return Err(anyhow::anyhow!("bad redelegation src: {}", val_dst_addr));
         };
 
         // check if this is a transitive redelegation
         if self.has_receiving_redelegation(ctx, del_addr, val_src_addr)? {
-            return Err(AppError::Custom("transitive redelegation".to_string()).into());
+            return Err(anyhow::anyhow!("transitive redelegation"));
         }
 
         if self.has_max_redelegation_entries(ctx, del_addr, val_src_addr, val_dst_addr)? {
-            return Err(AppError::Custom("max redelegation entries".to_string()).into());
+            return Err(anyhow::anyhow!("max redelegation entries"));
         }
 
         let return_amount = self.unbond(ctx, del_addr, val_src_addr, shares)?;
 
         if return_amount.is_zero() {
-            return Err(AppError::Custom("tiny redelegation amount".to_string()).into());
+            return Err(anyhow::anyhow!("tiny redelegation amount"));
         }
 
         let shares_created = self.delegate(
@@ -216,8 +216,8 @@ impl<
     ) -> anyhow::Result<Vec<UnsignedCoin>> {
         let redelegation = self
             .redelegation(ctx, &del_addr, &val_src_addr, &val_dst_addr)
-            .map_err(|e| AppError::Custom(e.to_string()))?
-            .ok_or(AppError::Custom("no redelegation found".to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?
+            .ok_or(anyhow::anyhow!("no redelegation found"))?;
 
         let mut balances = vec![];
         let params = self.staking_params_keeper.get(ctx);

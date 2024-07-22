@@ -293,11 +293,10 @@ impl<
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonding {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "bad state transition unbonding to bonded, validator: {}",
                 validator.operator_address
-            ))
-            .into());
+            ));
         }
         self.bond_validator(ctx, validator)?;
         Ok(())
@@ -327,7 +326,7 @@ impl<
         let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr)? {
             delegation
         } else {
-            return Err(AppError::Custom("No unbonding delegation".into()).into());
+            return Err(anyhow::anyhow!("No unbonding delegation"));
         };
         let bond_denom = params.bond_denom();
         let mut balances = vec![];
@@ -387,11 +386,10 @@ impl<
         self.delete_validator_by_power_index(ctx, validator)?;
         // sanity check
         if validator.status != BondStatus::Bonded {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "should not already be unbonded or unbonding, validator: {}",
                 validator.operator_address
-            ))
-            .into());
+            ));
         }
         validator.update_status(BondStatus::Unbonding);
 

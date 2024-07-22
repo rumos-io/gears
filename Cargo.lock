@@ -466,6 +466,7 @@ dependencies = [
  "gears",
  "hex 0.4.3",
  "ibc-proto 0.33.0",
+ "nz",
  "prost 0.11.9",
  "serde",
  "serde_json",
@@ -1475,6 +1476,7 @@ dependencies = [
  "prost 0.11.9",
  "serde",
  "serde_json",
+ "thiserror",
  "tracing",
 ]
 
@@ -2029,6 +2031,7 @@ dependencies = [
  "clap",
  "gears",
  "ibc-proto 0.33.0",
+ "nz",
  "prost 0.11.9",
  "serde",
  "serde_json",
@@ -3635,6 +3638,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "nz"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef6851b8e9dc0c2b4ebe0551ff127d9c58a0959f45142cf60a4121a6e5667070"
+
+[[package]]
 name = "object"
 version = "0.36.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4850,10 +4859,12 @@ dependencies = [
  "chrono",
  "clap",
  "gears",
+ "nz",
  "prost 0.11.9",
  "serde",
  "serde-aux",
  "serde_json",
+ "thiserror",
  "tracing",
 ]
 
@@ -4905,6 +4916,7 @@ dependencies = [
  "clap",
  "gears",
  "ibc-proto 0.33.0",
+ "nz",
  "prost 0.11.9",
  "serde",
  "serde_json",

@@ -6,10 +6,10 @@ use crate::{
 };
 use gears::{
     application::handlers::node::{ModuleInfo, TxError},
+    baseapp::errors::QueryError,
     baseapp::QueryResponse,
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    core::errors::CoreError,
-    error::AppError,
+    core::Protobuf,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -83,28 +83,15 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
     ) -> Result<(), TxError> {
-        match msg {
-            Message::CreateValidator(msg) => Ok(self
-                .keeper
-                .create_validator(ctx, msg)
-                .map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())?),
-            Message::EditValidator(msg) => Ok(self
-                .keeper
-                .edit_validator(ctx, msg)
-                .map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())?),
-            Message::Delegate(msg) => Ok(self
-                .keeper
-                .delegate_cmd_handler(ctx, msg)
-                .map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())?),
-            Message::Redelegate(msg) => Ok(self
-                .keeper
-                .redelegate_cmd_handler(ctx, msg)
-                .map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())?),
-            Message::Undelegate(msg) => Ok(self
-                .keeper
-                .undelegate_cmd_handler(ctx, msg)
-                .map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())?),
-        }
+        let result = match msg {
+            Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
+            Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
+            Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),
+            Message::Undelegate(msg) => self.keeper.undelegate_cmd_handler(ctx, msg),
+        };
+
+        result.map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())
     }
 
     pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
@@ -115,29 +102,25 @@ impl<
         &self,
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
-    ) -> Result<prost::bytes::Bytes, AppError> {
+    ) -> Result<prost::bytes::Bytes, QueryError> {
         match query.path.as_str() {
             "/cosmos.staking.v1beta1.Query/Validator" => {
-                let req = QueryValidatorRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryValidatorRequest::decode(query.data)?;
 
                 Ok(self.keeper.query_validator(ctx, req).into_bytes().into())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
-                let req = QueryDelegationRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryDelegationRequest::decode(query.data)?;
 
                 Ok(self.keeper.query_delegation(ctx, req).into_bytes().into())
             }
             "/cosmos.staking.v1beta1.Query/Redelegation" => {
-                let req = QueryRedelegationRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryRedelegationRequest::decode(query.data)?;
 
                 Ok(self.query_redelegations(ctx, req).into_bytes().into())
             }
             "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
-                let req = QueryDelegationRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryDelegationRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -148,7 +131,7 @@ impl<
             "/cosmos/staking/v1beta1/params" | "/cosmos.staking.v1beta1.Query/Params" => {
                 Ok(self.keeper.query_params(ctx).into_bytes().into())
             }
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            _ => Err(QueryError::PathNotFound),
         }
     }
 
@@ -227,20 +210,20 @@ impl<
         &self,
         ctx: &QueryContext<DB, SK>,
         redelegations: Vec<Redelegation>,
-    ) -> Result<Vec<RedelegationResponse>, AppError> {
+    ) -> Result<Vec<RedelegationResponse>, anyhow::Error> {
         let mut resp = Vec::with_capacity(redelegations.len());
         for red in redelegations.into_iter() {
             let validator = self
                 .keeper
                 .validator(ctx, &red.validator_dst_address)
                 .unwrap_gas()
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(anyhow::anyhow!("account not found"))?;
 
             let mut entries = Vec::with_capacity(red.entries.len());
             for entry in red.entries.clone().into_iter() {
                 let balance = validator
                     .tokens_from_shares(entry.share_dst)
-                    .map_err(|e| AppError::Custom(e.to_string()))?
+                    .map_err(|e| anyhow::anyhow!(e.to_string()))?
                     .to_uint_floor();
                 entries.push(RedelegationEntryResponse {
                     redelegation_entry: entry,

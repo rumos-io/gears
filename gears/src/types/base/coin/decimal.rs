@@ -1,4 +1,4 @@
-use crate::types::{base::errors::CoinError, denom::Denom};
+use crate::types::{base::errors::CoinError, denom::Denom, errors::DenomError};
 use core_types::{errors::CoreError, Protobuf};
 use cosmwasm_std::{DecCoin, Decimal256};
 use prost::Message;
@@ -69,7 +69,7 @@ impl DecimalCoin {
 }
 
 impl TryFrom<DecCoin> for DecimalCoin {
-    type Error = crate::types::errors::Error;
+    type Error = DenomError;
 
     fn try_from(DecCoin { denom, amount }: DecCoin) -> Result<Self, Self::Error> {
         Ok(Self {

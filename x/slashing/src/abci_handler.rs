@@ -1,12 +1,14 @@
 use crate::{
-    GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
-    QuerySigningInfoRequest, QuerySigningInfosRequest, QuerySigningInfosResponse,
+    errors::SlashingTxError, GenesisState, Keeper, Message, QueryParamsRequest,
+    QueryParamsResponse, QuerySigningInfoRequest, QuerySigningInfosRequest,
+    QuerySigningInfosResponse,
 };
 use gears::{
     baseapp::QueryResponse,
+    baseapp::errors::QueryError,
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::errors::CoreError,
-    error::AppError,
+    core::Protobuf,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -57,9 +59,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), SlashingTxError> {
         match msg {
-            Message::Unjail(msg) => self.keeper.unjail_tx_handler(ctx, msg),
+            Message::Unjail(msg) => Ok(self.keeper.unjail_tx_handler(ctx, msg)?),
         }
     }
 
@@ -67,11 +69,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
-    ) -> Result<prost::bytes::Bytes, AppError> {
+    ) -> Result<prost::bytes::Bytes, QueryError> {
         match query.path.as_str() {
             "/cosmos.slashing.v1beta1.Query/SigningInfo" => {
-                let req = QuerySigningInfoRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QuerySigningInfoRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -80,18 +81,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                     .into())
             }
             "/cosmos.slashing.v1beta1.Query/SigningInfos" => {
-                let req = QuerySigningInfosRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QuerySigningInfosRequest::decode(query.data)?;
 
                 Ok(self.query_signing_infos(ctx, req).into_bytes().into())
             }
             "/cosmos.slashing.v1beta1.Query/Params" => {
-                let req = QueryParamsRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryParamsRequest::decode(query.data)?;
 
                 Ok(self.keeper.query_params(ctx, req).into_bytes().into())
             }
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            _ => Err(QueryError::PathNotFound),
         }
     }
 

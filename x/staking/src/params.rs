@@ -1,6 +1,5 @@
 use gears::{
     application::keepers::params::ParamsKeeper,
-    error::AppError,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     types::denom::Denom,
 };
@@ -40,7 +39,7 @@ struct RawParams {
 }
 
 impl TryFrom<RawParams> for Params {
-    type Error = AppError;
+    type Error = anyhow::Error;
 
     fn try_from(params: RawParams) -> Result<Self, Self::Error> {
         Params::new(
@@ -152,23 +151,23 @@ impl Params {
         max_entries: u32,
         historical_entries: u32,
         bond_denom: Denom,
-    ) -> Result<Self, AppError> {
+    ) -> Result<Self, anyhow::Error> {
         if unbonding_time < 0 {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(format!(
                 "unbonding time must be non negative: {}",
                 unbonding_time
             )));
         }
 
         if max_validators == 0 {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(format!(
                 "max validators must be positive: {}",
                 max_validators
             )));
         }
 
         if max_entries == 0 {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(format!(
                 "max entries must be positive: {}",
                 max_entries
             )));

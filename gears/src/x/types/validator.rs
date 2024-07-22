@@ -3,7 +3,7 @@ use prost::Enumeration;
 use serde::{Deserialize, Serialize};
 use tendermint::types::proto::crypto::PublicKey;
 
-use crate::{error::AppError, types::address::ValAddress};
+use crate::{error::NumericError, types::address::ValAddress};
 
 pub trait StakingValidator {
     fn operator(&self) -> &ValAddress;
@@ -13,7 +13,7 @@ pub trait StakingValidator {
     fn is_jailed(&self) -> bool;
     fn min_self_delegation(&self) -> &Uint256;
     fn commission(&self) -> Decimal256;
-    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, AppError>;
+    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, NumericError>;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Enumeration, strum::Display)]

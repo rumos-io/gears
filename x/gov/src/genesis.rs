@@ -1,5 +1,5 @@
 use gears::{
-    baseapp::genesis::Genesis,
+    baseapp::genesis::{Genesis, GenesisError},
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ impl Genesis for GovGenesisState {
         &mut self,
         _address: AccAddress,
         _coins: UnsignedCoins,
-    ) -> Result<(), gears::error::AppError> {
+    ) -> Result<(), GenesisError> {
         todo!()
     }
 }

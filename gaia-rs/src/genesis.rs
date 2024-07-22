@@ -1,7 +1,7 @@
 use auth::GenesisState as AuthGenesis;
 use bank::GenesisState as BankGenesis;
 use gears::{
-    error::AppError,
+    baseapp::genesis::GenesisError,
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 use ibc_rs::GenesisState as IBCGenesis;
@@ -22,7 +22,7 @@ impl gears::baseapp::genesis::Genesis for GenesisState {
         &mut self,
         address: AccAddress,
         coins: UnsignedCoins,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), GenesisError> {
         self.bank.add_genesis_account(address.clone(), coins);
         self.auth.add_genesis_account(address)
     }

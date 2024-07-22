@@ -4,7 +4,6 @@ use std::{
     ops::{Add, Div, Mul},
 };
 
-use anyhow::anyhow;
 use chrono::DateTime;
 use gears::{
     application::keepers::params::ParamsKeeper,
@@ -29,7 +28,7 @@ use gears::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    errors::SERDE_JSON_CONVERSION,
+    errors::{GovKeeperError, SERDE_JSON_CONVERSION},
     genesis::GovGenesisState,
     msg::{
         deposit::Deposit,
@@ -350,13 +349,13 @@ impl<
             depositor,
             amount,
         }: Deposit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool, GovKeeperError> {
         let mut proposal = proposal_get(ctx, &self.store_key, proposal_id)?
-            .ok_or(anyhow!("unknown proposal {proposal_id}"))?;
+            .ok_or(GovKeeperError::ProposalUnknown(proposal_id))?;
 
         match proposal.status {
             ProposalStatus::DepositPeriod | ProposalStatus::VotingPeriod => Ok(()),
-            _ => Err(anyhow!("inactive proposal {proposal_id}")),
+            _ => Err(GovKeeperError::InactiveProposal(proposal_id)),
         }?;
 
         self.bank_keeper.send_coins_from_account_to_module(
@@ -420,13 +419,13 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         vote: MsgVoteWeighted,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), GovKeeperError> {
         let proposal = proposal_get(ctx, &self.store_key, vote.proposal_id)?
-            .ok_or(anyhow!("unknown proposal {}", vote.proposal_id))?;
+            .ok_or(GovKeeperError::ProposalUnknown(vote.proposal_id))?;
 
         match proposal.status {
             ProposalStatus::VotingPeriod => Ok(()),
-            _ => Err(anyhow!("inactive proposal {}", vote.proposal_id)),
+            _ => Err(GovKeeperError::InactiveProposal(vote.proposal_id)),
         }?;
 
         vote_set(ctx, &self.store_key, &vote)?;
@@ -456,7 +455,7 @@ impl<
             initial_deposit,
             proposer: _proposer,
         }: MsgSubmitProposal,
-    ) -> anyhow::Result<u64> {
+    ) -> Result<u64, GovKeeperError> {
         let proposal_id = proposal_id_get(ctx, &self.store_key)?;
         let submit_time = ctx.header().time.clone();
         let deposit_period = self
@@ -481,7 +480,7 @@ impl<
         };
 
         if !PH::check(&proposal) {
-            return Err(anyhow::anyhow!("gov: no handler exists for proposal type"));
+            return Err(GovKeeperError::NoHandler);
         }
 
         proposal_set(ctx, &self.store_key, &proposal)?;

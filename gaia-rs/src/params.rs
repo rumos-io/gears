@@ -9,7 +9,7 @@ use gears::{
 };
 use gov::{
     submission::{
-        handler::{ParamChangeSubmissionHandler, SubmissionHandler},
+        handler::{ParamChangeSubmissionHandler, SubmissionHandler, SubmissionHandlingError},
         param::ParameterChangeProposal,
         text::{TextProposal, TextSubmissionHandler},
     },
@@ -28,7 +28,7 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
         &self,
         proposal: &Proposal,
         ctx: &mut CTX,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), SubmissionHandlingError> {
         match proposal.content.type_url.as_str() {
             ParameterChangeProposal::<GaiaParamsStoreKey>::TYPE_URL => {
                 let msg: ParameterChangeProposal<GaiaParamsStoreKey> =
@@ -56,10 +56,8 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
                         >::handle(
                             change, ctx, &space
                         ),
-                        GaiaParamsStoreKey::IBC => Err(anyhow::anyhow!("not supported subspace")),
-                        GaiaParamsStoreKey::Capability => {
-                            Err(anyhow::anyhow!("not supported subspace"))
-                        }
+                        GaiaParamsStoreKey::IBC => Err(SubmissionHandlingError::Subspace),
+                        GaiaParamsStoreKey::Capability => Err(SubmissionHandlingError::Subspace),
                     }?;
                 }
 
@@ -70,7 +68,7 @@ impl ProposalHandler<GaiaParamsStoreKey, Proposal> for GaiaProposalHandler {
                 ctx,
                 &DUMMY_PARAMS,
             ),
-            _ => Err(anyhow::anyhow!("Invalid proposal content")),
+            _ => Err(SubmissionHandlingError::InvalidProposal),
         }
     }
 

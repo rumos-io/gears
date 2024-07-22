@@ -1,16 +1,34 @@
-use std::fmt::Display;
+use std::{fmt::Display, num::NonZero};
 
-use address::AccAddress;
+use address::{AccAddress, BaseAddress};
+use cosmwasm_std::Uint256;
 use thiserror::Error;
 
 use crate::{
-    application::handlers::node::{ErrorCode, TxError},
-    error::AppError,
+    application::handlers::node::TxError,
     types::{
+        base::errors::CoinsError,
+        denom::Denom,
         gas::GasMeteringErrors,
         store::gas::errors::{GasStoreErrorKinds, GasStoreErrors},
     },
 };
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, thiserror::Error)]
+#[error("account: {0} does not exist")]
+pub struct AccountNotFound(String);
+
+impl AccountNotFound {
+    pub fn new(addr: impl Into<String>) -> Self {
+        Self(addr.into())
+    }
+}
+
+impl<const PREFIX: u8> From<BaseAddress<PREFIX>> for AccountNotFound {
+    fn from(value: BaseAddress<PREFIX>) -> Self {
+        Self(value.to_string())
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum SignVerificationError {
@@ -18,8 +36,8 @@ pub enum SignVerificationError {
     EmptySignatureList,
     #[error("wrong number of signatures; expected {expected}, got {got}")]
     WrongSignatureList { expected: usize, got: usize },
-    #[error("account does not exist")]
-    AccountNotFound,
+    #[error("{0}")]
+    AccountNotFound(#[from] AccountNotFound),
     #[error("pubkey on account is not set")]
     PubKeyNotSet,
     #[error("account sequence mismatch, expected {expected}, got {got}")]
@@ -78,9 +96,11 @@ pub(crate) enum AnteError {
     #[error("tx is too long")]
     TxLen,
     #[error("account not found {0}")]
-    AccountNotFound(AccAddress),
-    #[error(transparent)]
-    Other(#[from] AppError), //TODO: remove this once AppError is removed
+    AccountNotFound(#[from] AccountNotFound),
+    #[error("{0}")]
+    Gas(#[from] GasStoreErrors),
+    #[error("failed to send coins: {0}")]
+    CoinsSend(#[from] BankKeeperError),
 }
 
 impl From<AnteError> for TxError {
@@ -101,13 +121,60 @@ impl From<AnteError> for TxError {
             AnteError::Memo(_) => 6,
             AnteError::TxLen => 7,
             AnteError::AccountNotFound(_) => 8,
-            AnteError::Other(_) => 9,
+            AnteError::CoinsSend(_) => 9,
+            AnteError::Gas(_) => 10,
         };
 
         TxError {
-            msg: format!("{error}"),
-            code: ErrorCode::try_new(code).expect("all > 0"),
+            msg: format!("{error}").into(),
+            code: NonZero::new(code).expect("all > 0"),
             codespace: "ante",
         }
+    }
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum AuthKeeperError {
+    #[error("{0}")]
+    GasError(#[from] GasStoreErrors),
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum InsufficientFundsError {
+    #[error("account: {account} doesn't have sufficient funds: {funds}")]
+    Account { account: AccAddress, funds: Denom },
+    #[error("insufficient funds, required: {required}, actual: {actual}")]
+    RequiredActual { required: Uint256, actual: Uint256 },
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum BankCoinsError {
+    #[error(transparent)]
+    Parse(#[from] CoinsError),
+    #[error("{smaller} is smaller than {bigger}")]
+    Amount { smaller: Uint256, bigger: Uint256 },
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum BankKeeperError {
+    #[error(transparent)]
+    Coins(#[from] BankCoinsError),
+    #[error("failed to delegate; {smaller} is smaller than {bigger}")]
+    Delegation { smaller: Uint256, bigger: Uint256 },
+    #[error("permission error: {0}")]
+    Permission(String),
+    #[error(transparent)]
+    InsufficientFunds(#[from] InsufficientFundsError),
+    #[error("{0}")]
+    AccountNotFound(#[from] AccountNotFound),
+    #[error("account doesnt have enought permission")]
+    AccountPermission,
+    #[error("{0}")]
+    GasError(#[from] GasStoreErrors),
+}
+
+impl From<CoinsError> for BankKeeperError {
+    fn from(value: CoinsError) -> Self {
+        Self::Coins(BankCoinsError::Parse(value))
     }
 }

@@ -1,10 +1,12 @@
 use std::marker::PhantomData;
 
 use gears::context::TransactionalContext;
+use gears::core::errors::CoreError;
 use gears::params::gas::subspace_mut;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 
+use gears::types::store::gas::errors::GasStoreErrors;
 use gears::{
     application::keepers::params::ParamsKeeper, context::InfallibleContextMut,
     params::ParamsSubspaceKey,
@@ -17,7 +19,21 @@ pub trait SubmissionHandler<PK: ParamsKeeper<PSK>, PSK: ParamsSubspaceKey, P> {
         proposal: P,
         ctx: &mut CTX,
         subspace: &PSK,
-    ) -> anyhow::Result<()>;
+    ) -> Result<(), SubmissionHandlingError>;
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SubmissionHandlingError {
+    #[error("Can't handle this proposal: decoding error")]
+    Decode(#[from] CoreError),
+    #[error("Can't handle this proposal: not supported subspace")]
+    Subspace,
+    #[error("Can't handle this proposal: no such keys in subspace")]
+    KeyNotFound,
+    #[error("Can't handle this proposal: invalid bytes")]
+    InvalidProposal,
+    #[error("Can't handle this proposal: {0}")]
+    Gas(#[from] GasStoreErrors),
 }
 
 #[derive(Debug)]
@@ -30,15 +46,13 @@ impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PK, PSK, P
         proposal: ParamChange<PSK>,
         ctx: &mut CTX,
         subspace_key: &PSK,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), SubmissionHandlingError> {
         if !PK::check_key(&proposal.key) {
-            Err(anyhow::anyhow!(
-                "Can't handle this proposal: no such keys in subspace"
-            ))?
+            Err(SubmissionHandlingError::KeyNotFound)?
         }
 
         if !PK::validate(&proposal.key, &proposal.value) {
-            Err(anyhow::anyhow!("Can't handle this proposal: invalid bytes"))?
+            Err(SubmissionHandlingError::InvalidProposal)?
         }
 
         let mut store = subspace_mut(ctx, subspace_key);

@@ -5,12 +5,13 @@ use crate::{
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
     derive::Query,
-    error::{AppError, IBC_ENCODE_UNWRAP},
+    error::IBC_ENCODE_UNWRAP,
     store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
+        errors::DenomError,
         pagination::{request::PaginationRequest, response::PaginationResponse},
         uint::Uint256,
     },
@@ -523,7 +524,7 @@ pub struct QueryParamsResponse {
 }
 
 impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
-    type Error = AppError;
+    type Error = CoreError;
 
     fn try_from(raw: QueryParamsResponseRaw) -> Result<Self, Self::Error> {
         let params = Params::new(
@@ -533,8 +534,9 @@ impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
             raw.historical_entries,
             raw.bond_denom
                 .try_into()
-                .map_err(|e: gears::types::errors::Error| AppError::Custom(e.to_string()))?,
-        )?;
+                .map_err(|e: DenomError| CoreError::Custom(e.to_string()))?,
+        )
+        .map_err(|e| CoreError::Custom(e.to_string()))?;
         Ok(QueryParamsResponse { params })
     }
 }
