@@ -27,15 +27,19 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         syn::Data::Struct(_) => {
             let QueryAttr { kind, raw, url } = QueryAttr::from_derive_input(&input)?;
 
+            // TODO:MAYBE support of other serialization?
+            let protobuf = match raw {
+                Some(protobuf) => quote! {
+                    impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
+                },
+                None => Err(syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    format!("Query requires `raw` attribute for serialization from protobuf"),
+                ))?,
+            };
+
             match kind.as_str() {
                 "request" => {
-                    let protobuf = match raw {
-                        Some(protobuf) => quote! {
-                            impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
-                        },
-                        None => quote! {},
-                    };
-
                     let url = match url {
                         Some(url) => quote! {
                             impl #ident
@@ -56,7 +60,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                             }
 
                             fn into_bytes(self) -> ::std::vec::Vec<u8> {
-                                self.encode_vec().expect("Should be okay. In future versions of IBC they removed Result")
+                                gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
                             }
                         }
                     };
@@ -72,13 +76,6 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                     Ok(gen.into())
                 }
                 "response" => {
-                    let protobuf = match raw {
-                        Some(protobuf) => quote! {
-                            impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
-                        },
-                        None => quote! {},
-                    };
-
                     let url = match url {
                         Some(_) => quote! {
                             impl #ident
@@ -89,10 +86,20 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         None => quote! {},
                     };
 
+                    let trait_impl = quote! {
+                        impl  ::gears::baseapp::QueryResponse for #ident {
+                            fn into_bytes(self) -> std::vec::Vec<u8> {
+                                gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                            }
+                        }
+                    };
+
                     let gen = quote! {
                         #protobuf
 
                         #url
+
+                        #trait_impl
                     };
 
                     Ok(gen.into())
