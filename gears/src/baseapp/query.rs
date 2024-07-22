@@ -15,7 +15,9 @@ pub trait QueryRequest: Clone + Send + Sync + 'static {
     fn height(&self) -> u32;
 }
 
-pub trait QueryResponse: Clone + Send + Sync + 'static + Serialize {}
+pub trait QueryResponse: Clone + Send + Sync + 'static + Serialize {
+    fn into_bytes(self) -> Vec<u8>;
+}
 
 pub trait NodeQueryHandler<QReq, QRes>: Clone + Send + Sync + 'static {
     fn typed_query<Q: Into<QReq>>(&self, request: Q) -> Result<QRes, QueryError>;

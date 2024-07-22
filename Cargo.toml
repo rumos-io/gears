@@ -10,7 +10,7 @@ members = [
   "trees",
   "kv_store",
   "keyring",
-  "gears",
+  # "gears",
 
   # macros
   "macros/tx-derive",
