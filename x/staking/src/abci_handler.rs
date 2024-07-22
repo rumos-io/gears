@@ -6,14 +6,15 @@ use crate::{
 };
 use gears::{
     application::handlers::node::{ModuleInfo, TxError},
+    baseapp::QueryResponse,
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    core::{errors::CoreError, Protobuf},
+    core::errors::CoreError,
     error::AppError,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
-        proto::validator::ValidatorUpdate,
+        proto::{validator::ValidatorUpdate, Protobuf as _},
         request::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },
@@ -120,19 +121,19 @@ impl<
                 let req = QueryValidatorRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_validator(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_validator(ctx, req).into_bytes().into())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_delegation(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_delegation(ctx, req).into_bytes().into())
             }
             "/cosmos.staking.v1beta1.Query/Redelegation" => {
                 let req = QueryRedelegationRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.query_redelegations(ctx, req).encode_vec().into())
+                Ok(self.query_redelegations(ctx, req).into_bytes().into())
             }
             "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
                 let req = QueryDelegationRequest::decode(query.data)
@@ -141,11 +142,11 @@ impl<
                 Ok(self
                     .keeper
                     .query_unbonding_delegation(ctx, req)
-                    .encode_vec()
+                    .into_bytes()
                     .into())
             }
             "/cosmos/staking/v1beta1/params" | "/cosmos.staking.v1beta1.Query/Params" => {
-                Ok(self.keeper.query_params(ctx).encode_vec().into())
+                Ok(self.keeper.query_params(ctx).into_bytes().into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

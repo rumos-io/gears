@@ -6,11 +6,9 @@ use crate::{
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
-    core::Protobuf,
-    types::{
-        address::{AccAddress, ValAddress},
-        query::Query,
-    },
+    derive::Query,
+    tendermint::types::proto::Protobuf as _,
+    types::address::{AccAddress, ValAddress},
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -138,7 +136,8 @@ impl QueryHandler for StakingQueryHandler {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Query)]
+#[query(kind = "request")]
 pub enum StakingQuery {
     Validator(QueryValidatorRequest),
     Delegation(QueryDelegationRequest),
@@ -146,29 +145,29 @@ pub enum StakingQuery {
     UnbondingDelegation(QueryDelegationRequest),
 }
 
-impl Query for StakingQuery {
-    fn query_url(&self) -> &'static str {
-        match self {
-            StakingQuery::Validator(_) => "/cosmos.staking.v1beta1.Query/Validator",
-            StakingQuery::Delegation(_) => "/cosmos.staking.v1beta1.Query/Delegation",
-            StakingQuery::Redelegation(_) => "/cosmos.staking.v1beta1.Query/Redelegation",
-            StakingQuery::UnbondingDelegation(_) => {
-                "/cosmos.staking.v1beta1.Query/UnbondingDelegation"
-            }
-        }
-    }
+// impl Query for StakingQuery {
+//     fn query_url(&self) -> &'static str {
+//         match self {
+//             StakingQuery::Validator(_) => ,
+//             StakingQuery::Delegation(_) => ,
+//             StakingQuery::Redelegation(_) => ,
+//             StakingQuery::UnbondingDelegation(_) => {
+//
+//             }
+//         }
+//     }
 
-    fn into_bytes(self) -> Vec<u8> {
-        match self {
-            StakingQuery::Validator(var) => var.encode_vec(),
-            StakingQuery::Delegation(var) => var.encode_vec(),
-            StakingQuery::Redelegation(var) => var.encode_vec(),
-            StakingQuery::UnbondingDelegation(var) => var.encode_vec(),
-        }
-    }
-}
+//     fn into_bytes(self) -> Vec<u8> {
+//         match self {
+//             StakingQuery::Validator(var) => var.encode_vec(),
+//             StakingQuery::Delegation(var) => var.encode_vec(),
+//             StakingQuery::Redelegation(var) => var.encode_vec(),
+//             StakingQuery::UnbondingDelegation(var) => var.encode_vec(),
+//         }
+//     }
+// }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum StakingQueryResponse {
