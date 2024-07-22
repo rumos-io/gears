@@ -1376,6 +1376,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "distribution"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "clap",
+ "gears",
+ "prost",
+ "serde",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "doc-comment"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
