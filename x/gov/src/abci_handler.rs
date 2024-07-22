@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 
 use bytes::Bytes;
 use gears::{
-    application::handlers::node::{ABCIHandler, TxError},
-    baseapp::QueryResponse,
+    application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
+    baseapp::{errors::QueryError, QueryResponse},
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         TransactionalContext,

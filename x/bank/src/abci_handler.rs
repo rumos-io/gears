@@ -3,7 +3,6 @@ use std::marker::PhantomData;
 use gears::application::handlers::node::{ModuleInfo, TxError};
 use gears::baseapp::errors::QueryError;
 use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
-use gears::core::errors::CoreError as IbcError;
 use gears::derive::Query;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ext::Pagination;

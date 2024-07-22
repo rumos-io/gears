@@ -4,11 +4,9 @@ use crate::{
     QuerySigningInfosResponse,
 };
 use gears::{
-    baseapp::QueryResponse,
     baseapp::errors::QueryError,
+    baseapp::QueryResponse,
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    core::errors::CoreError,
-    core::Protobuf,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},

@@ -9,7 +9,6 @@ use gears::{
     baseapp::errors::QueryError,
     baseapp::QueryResponse,
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    core::Protobuf,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
