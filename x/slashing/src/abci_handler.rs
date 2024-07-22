@@ -3,13 +3,17 @@ use crate::{
     QuerySigningInfoRequest, QuerySigningInfosRequest, QuerySigningInfosResponse,
 };
 use gears::{
+    baseapp::QueryResponse,
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    core::{errors::CoreError, Protobuf},
+    core::errors::CoreError,
     error::AppError,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    tendermint::types::{
+        proto::Protobuf as _,
+        request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    },
     types::pagination::response::PaginationResponse,
     x::{keepers::staking::SlashingStakingKeeper, module::Module},
 };
@@ -72,20 +76,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 Ok(self
                     .keeper
                     .query_signing_info(ctx, req)?
-                    .encode_vec()
+                    .into_bytes()
                     .into())
             }
             "/cosmos.slashing.v1beta1.Query/SigningInfos" => {
                 let req = QuerySigningInfosRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.query_signing_infos(ctx, req).encode_vec().into())
+                Ok(self.query_signing_infos(ctx, req).into_bytes().into())
             }
             "/cosmos.slashing.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)
                     .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
 
-                Ok(self.keeper.query_params(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_params(ctx, req).into_bytes().into())
             }
             _ => Err(AppError::InvalidRequest("query path not found".into())),
         }

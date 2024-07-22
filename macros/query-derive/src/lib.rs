@@ -12,6 +12,7 @@ enum Kind {
 
 #[derive(FromDeriveInput, Default)]
 #[darling(default, attributes(query), forward_attrs(allow, doc, cfg))]
+#[darling(supports(struct_any, enum_tuple, enum_newtype))]
 struct QueryAttr {
     pub kind: String,
     pub raw: Option<Type>,
