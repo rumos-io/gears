@@ -1,15 +1,15 @@
 [workspace]
 members = [
   # no local deps
-  "database",
-  "tendermint",
-  "core-types",
+  # "database",
+  # "tendermint",
+  # "core-types",
 
   # with local deps
-  "address",
-  "trees",
-  "kv_store",
-  "keyring",
+  # "address",
+  # "trees",
+  # "kv_store",
+  # "keyring",
   # "gears",
 
   # macros

@@ -1,14 +1,16 @@
 use darling::FromDeriveInput;
 use proc_macro::TokenStream;
-use syn::parse_macro_input;
+use syn::{parse_macro_input, Type};
 
 use quote::quote;
 use syn::DeriveInput;
 
-#[derive(FromDeriveInput)]
-#[darling(attributes(query), forward_attrs(allow, doc, cfg))]
+#[derive(FromDeriveInput, Default)]
+#[darling(default, attributes(query), forward_attrs(allow, doc, cfg))]
 struct QueryAttr {
     pub kind: String,
+    pub raw: Option<Type>,
+    pub url: String,
 }
 
 #[proc_macro_derive(Query, attributes(query))]
@@ -22,13 +24,37 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let DeriveInput { ident, data, .. } = &input;
 
     match data {
-        syn::Data::Struct(_) => Err(syn::Error::new(
-            proc_macro2::Span::call_site(),
-            "Query can only be derived for enums",
-        )),
+        syn::Data::Struct(_) => {
+            let QueryAttr { kind: _, raw, url } = QueryAttr::from_derive_input(&input)?;
+
+            let protobuf = match raw {
+                Some(protobuf) => quote! {
+                    impl ::gears::endermint::types::proto::Protobuf<#protobuf> for #ident {}
+                },
+                None => quote! {},
+            };
+
+            let url = match url.is_empty() {
+                true => quote! {},
+                false => quote! {
+                    impl #ident
+                    {
+                        const QUERY_URL : &'static str = #url;
+                    }
+                },
+            };
+
+            let gen = quote! {
+                #protobuf
+
+                #url
+            };
+
+            Ok(gen.into())
+        }
         syn::Data::Union(_) => Err(syn::Error::new(
             proc_macro2::Span::call_site(),
-            "Query can only be derived for enums",
+            "Query can't be derived for `Union`",
         )),
         syn::Data::Enum(enum_data) => match QueryAttr::from_derive_input(&input)?.kind.as_str() {
             "request" => {
