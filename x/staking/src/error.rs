@@ -1,5 +1,3 @@
-use std::num::NonZero;
-
 use gears::application::handlers::node::{ModuleInfo, TxError};
 use thiserror::Error;
 
@@ -12,12 +10,12 @@ pub enum StakingTxError {
 impl StakingTxError {
     pub fn into<MI: ModuleInfo>(self) -> TxError {
         let code = match &self {
-            StakingTxError::Other(_) => 1,
+            StakingTxError::Other(_) => nz::u16!(1),
         };
 
         TxError {
             msg: self.to_string().into(),
-            code: NonZero::new(code).expect("all > 0"),
+            code,
             codespace: MI::NAME,
         }
     }

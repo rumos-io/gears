@@ -1,5 +1,3 @@
-use std::num::NonZero;
-
 use gears::{
     application::handlers::node::{ModuleInfo, TxError},
     x::errors::BankKeeperError,
@@ -15,9 +13,9 @@ pub enum BankTxError {
 impl BankTxError {
     pub fn into<MI: ModuleInfo>(self) -> TxError {
         let code = match &self {
-            BankTxError::Keeper(_) => 1,
+            BankTxError::Keeper(_) => nz::u16!(1),
         };
 
-        TxError::new::<MI>(self.to_string(), NonZero::new(code).expect("all > 0"))
+        TxError::new::<MI>(self.to_string(), code)
     }
 }
