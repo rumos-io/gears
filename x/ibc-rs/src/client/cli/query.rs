@@ -5,7 +5,7 @@ use crate::ics02_client::client::cli::query::query_handler::ClientQueryHandler;
 use std::borrow::Cow;
 
 use clap::{Args, Subcommand};
-use gears::types::query::Query;
+use gears::baseapp::Query;
 use serde::{Deserialize, Serialize};
 
 use crate::ics02_client::client::cli::query::{ClientQuery, ClientQueryCli, ClientQueryResponse};
