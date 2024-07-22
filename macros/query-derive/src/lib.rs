@@ -33,7 +33,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     fn error() -> syn::Result<Kind> {
         Err(syn::Error::new(
             proc_macro2::Span::call_site(),
-            format!("Invalid `kind`. Possible values: request, response"),
+            "Invalid `kind`. Possible values: request, response".to_string(),
         ))
     }
 
@@ -63,7 +63,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 },
                 None => Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!("Query requires `raw` attribute for serialization from protobuf"),
+                    "Query requires `raw` attribute for serialization from protobuf".to_string(),
                 ))?,
             };
 
@@ -78,7 +78,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         },
                         None => Err(syn::Error::new(
                             proc_macro2::Span::call_site(),
-                            format!("Request query requires `url` attribute"),
+                            "Request query requires `url` attribute".to_string(),
                         ))?,
                     };
 
@@ -102,7 +102,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         #url
                     };
 
-                    Ok(gen.into())
+                    Ok(gen)
                 }
                 Kind::Response => {
                     let url = match url {
@@ -131,7 +131,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         #trait_impl
                     };
 
-                    Ok(gen.into())
+                    Ok(gen)
                 }
             }
         }
@@ -144,7 +144,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             if url.is_some() {
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
-                    format!("Enum couldn't contain `url` attribute"),
+                    "Enum couldn't contain `url` attribute".to_string(),
                 ))?
             }
 
@@ -178,7 +178,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         }
                     };
 
-                    Ok(gen.into())
+                    Ok(gen)
                 }
                 Kind::Response => {
                     let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
@@ -197,7 +197,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         }
                     };
 
-                    Ok(gen.into())
+                    Ok(gen)
                 }
             }
         }

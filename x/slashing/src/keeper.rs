@@ -384,7 +384,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         if tokens.to_uint_ceil() < *min_self_bond {
             return Err(UnjailError::LowDelegation {
                 lower: tokens,
-                bigger: min_self_bond.clone(),
+                bigger: *min_self_bond,
             });
         }
 
