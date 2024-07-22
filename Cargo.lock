@@ -466,7 +466,6 @@ dependencies = [
  "gears",
  "hex 0.4.3",
  "ibc-proto 0.33.0",
- "nz",
  "prost 0.11.9",
  "serde",
  "serde_json",
@@ -1476,7 +1475,6 @@ dependencies = [
  "prost 0.11.9",
  "serde",
  "serde_json",
- "thiserror",
  "tracing",
 ]
 
@@ -2040,7 +2038,6 @@ dependencies = [
  "clap",
  "gears",
  "ibc-proto 0.33.0",
- "nz",
  "prost 0.11.9",
  "serde",
  "serde_json",
@@ -2688,7 +2685,7 @@ dependencies = [
  "displaydoc",
  "ibc-primitives",
  "ibc-proto 0.43.0",
- "ics23 0.11.3",
+ "ics23 0.11.1",
  "parity-scale-codec",
  "scale-info",
  "schemars",
@@ -2923,7 +2920,7 @@ dependencies = [
  "borsh",
  "bytes",
  "flex-error",
- "ics23 0.11.3",
+ "ics23 0.11.1",
  "informalsystems-pbjson 0.7.0",
  "parity-scale-codec",
  "prost 0.12.6",
@@ -2971,9 +2968,9 @@ dependencies = [
 
 [[package]]
 name = "ics23"
-version = "0.11.3"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18798160736c1e368938ba6967dbcb3c7afb3256b442a5506ba5222eebb68a5a"
+checksum = "dc3b8be84e7285c73b88effdc3294b552277d6b0ec728ee016c861b7b9a2c19c"
 dependencies = [
  "anyhow",
  "blake2",
@@ -3646,12 +3643,6 @@ dependencies = [
  "syn 2.0.71",
  "urlencoding",
 ]
-
-[[package]]
-name = "nz"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef6851b8e9dc0c2b4ebe0551ff127d9c58a0959f45142cf60a4121a6e5667070"
 
 [[package]]
 name = "object"
@@ -4859,12 +4850,10 @@ dependencies = [
  "chrono",
  "clap",
  "gears",
- "nz",
  "prost 0.11.9",
  "serde",
  "serde-aux",
  "serde_json",
- "thiserror",
  "tracing",
 ]
 
@@ -4915,11 +4904,14 @@ dependencies = [
  "chrono",
  "clap",
  "gears",
- "nz",
+ "ibc-proto 0.33.0",
  "prost 0.11.9",
  "serde",
  "serde_json",
  "thiserror",
+ "tonic",
+ "tower-layer",
+ "tracing",
 ]
 
 [[package]]

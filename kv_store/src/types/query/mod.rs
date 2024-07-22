@@ -19,16 +19,22 @@ pub mod kv;
 
 pub struct QueryStoreOptions<'a, DB, SK>(
     &'a HashMap<SK, super::kv::KVBank<PrefixDB<DB>, ApplicationStore>>,
+    u32,
+    [u8; 32],
 );
 
 impl<'a, DB, SK> From<&'a MultiBank<DB, SK, ApplicationStore>> for QueryStoreOptions<'a, DB, SK> {
     fn from(value: &'a MultiBank<DB, SK, ApplicationStore>) -> Self {
-        Self(&value.stores)
+        Self(&value.stores, value.head_version, value.head_commit_hash)
     }
 }
 
 #[derive(Debug)]
-pub struct QueryMultiStore<DB, SK>(pub(crate) HashMap<SK, QueryKVStore<PrefixDB<DB>>>);
+pub struct QueryMultiStore<DB, SK> {
+    pub(crate) head_version: u32,
+    pub(crate) head_commit_hash: [u8; 32],
+    pub(crate) inner: HashMap<SK, QueryKVStore<PrefixDB<DB>>>,
+}
 
 impl<DB: Database, SK: StoreKey> QueryMultiStore<DB, SK> {
     pub fn new<'a>(
@@ -38,11 +44,11 @@ impl<DB: Database, SK: StoreKey> QueryMultiStore<DB, SK> {
     where
         DB: 'a,
     {
-        let opt = opt.into();
+        let QueryStoreOptions(inner, head_version, head_commit_hash) = opt.into();
 
-        let mut stores = HashMap::with_capacity(opt.0.len());
+        let mut stores = HashMap::with_capacity(inner.len());
 
-        for (key, bank) in opt.0 {
+        for (key, bank) in inner {
             let tree = bank.persistent.read().expect(POISONED_LOCK);
 
             let query_kv_store = QueryKVStore::new(QueryTree::new(&tree, version)?);
@@ -50,22 +56,26 @@ impl<DB: Database, SK: StoreKey> QueryMultiStore<DB, SK> {
             stores.insert(key.to_owned(), query_kv_store);
         }
 
-        Ok(Self(stores))
+        Ok(Self {
+            head_version,
+            head_commit_hash,
+            inner: stores,
+        })
     }
 }
 
 impl<DB: Database, SK: StoreKey> QueryMultiStore<DB, SK> {
     pub fn kv_store(&self, store_key: &SK) -> KVStore<'_, PrefixDB<DB>> {
         KVStore(KVStoreBackend::Query(
-            self.0.get(store_key).expect(KEY_EXISTS_MSG),
+            self.inner.get(store_key).expect(KEY_EXISTS_MSG),
         ))
     }
 
     pub fn head_version(&self) -> u32 {
-        unimplemented!() // TODO:NOW
+        self.head_version
     }
 
     pub fn head_commit_hash(&self) -> [u8; 32] {
-        unimplemented!() // TODO:NOW
+        self.head_commit_hash
     }
 }

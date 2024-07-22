@@ -113,12 +113,7 @@ fn send_tx() -> anyhow::Result<()> {
         amount: UnsignedCoin::from_str("10uatom")?,
     };
 
-    let Response {
-        check_tx: _,
-        deliver_tx,
-        hash,
-        height: _,
-    } = run_tx(
+    let responses = run_tx(
         TxCommand {
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
@@ -132,6 +127,13 @@ fn send_tx() -> anyhow::Result<()> {
         },
         &GaiaCoreClient,
     )?;
+    assert_eq!(responses.len(), 1);
+    let Response {
+        check_tx: _,
+        deliver_tx,
+        hash,
+        height: _,
+    } = &responses[0];
 
     let expected_hash = data_encoding::HEXUPPER
         .decode("13BB2C6817D0EDA960EDB0C6D6D5CB752D341BB603EF4BCE990F4EA5A99500C1".as_bytes())?;
@@ -185,12 +187,7 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
             ))?,
         };
 
-        let Response {
-            check_tx,
-            deliver_tx,
-            hash: _,
-            height: _,
-        } = run_tx(
+        let responses = run_tx(
             TxCommand {
                 keyring: Keyring::Local(LocalInfo {
                     keyring_backend: KeyringBackend::Test,
@@ -204,6 +201,13 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
             },
             &GaiaCoreClient,
         )?;
+        assert_eq!(responses.len(), 1);
+        let Response {
+            check_tx,
+            deliver_tx,
+            hash: _,
+            height: _,
+        } = &responses[0];
 
         assert!(check_tx.code.is_ok());
         assert!(deliver_tx.code.is_ok());
