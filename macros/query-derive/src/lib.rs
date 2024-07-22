@@ -5,6 +5,11 @@ use syn::{parse_macro_input, Type};
 use quote::quote;
 use syn::DeriveInput;
 
+enum Kind {
+    Request,
+    Response,
+}
+
 #[derive(FromDeriveInput, Default)]
 #[darling(default, attributes(query), forward_attrs(allow, doc, cfg))]
 struct QueryAttr {
@@ -22,11 +27,34 @@ pub fn message_derive(input: TokenStream) -> TokenStream {
 
 fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let DeriveInput { ident, data, .. } = &input;
+    let QueryAttr { kind, raw, url } = QueryAttr::from_derive_input(&input)?;
+
+    fn error() -> syn::Result<Kind> {
+        Err(syn::Error::new(
+            proc_macro2::Span::call_site(),
+            format!("Invalid `kind`. Possible values: request, response"),
+        ))
+    }
+
+    let kind = match kind.is_empty() {
+        true => {
+            if ident.to_string().to_lowercase().contains("request") {
+                Kind::Request
+            } else if ident.to_string().to_lowercase().contains("response") {
+                Kind::Response
+            } else {
+                error()?
+            }
+        }
+        false => match kind.as_str() {
+            "request" => Kind::Request,
+            "response" => Kind::Response,
+            _ => error()?,
+        },
+    };
 
     match data {
         syn::Data::Struct(_) => {
-            let QueryAttr { kind, raw, url } = QueryAttr::from_derive_input(&input)?;
-
             // TODO:MAYBE support of other serialization?
             let protobuf = match raw {
                 Some(protobuf) => quote! {
@@ -38,8 +66,8 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 ))?,
             };
 
-            match kind.as_str() {
-                "request" => {
+            match kind {
+                Kind::Request => {
                     let url = match url {
                         Some(url) => quote! {
                             impl #ident
@@ -75,7 +103,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 
                     Ok(gen.into())
                 }
-                "response" => {
+                Kind::Response => {
                     let url = match url {
                         Some(_) => quote! {
                             impl #ident
@@ -104,10 +132,6 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 
                     Ok(gen.into())
                 }
-                _ => Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    format!("Invalid `kind`. Possible values: request, response"),
-                ))?,
             }
         }
         syn::Data::Union(_) => Err(syn::Error::new(
@@ -115,7 +139,6 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             "Query can't be derived for `Union`",
         )),
         syn::Data::Enum(enum_data) => {
-            let QueryAttr { kind, raw: _, url } = QueryAttr::from_derive_input(&input)?;
             if url.is_some() {
                 Err(syn::Error::new(
                     proc_macro2::Span::call_site(),
@@ -123,8 +146,8 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 ))?
             }
 
-            match kind.as_str() {
-                "request" => {
+            match kind {
+                Kind::Request => {
                     let query_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                         quote! {
                             Self::#i(q) => q.query_url()
@@ -155,7 +178,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 
                     Ok(gen.into())
                 }
-                "response" => {
+                Kind::Response => {
                     let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                         quote! {
                             Self::#i(q) => q.into_bytes()
@@ -174,10 +197,6 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 
                     Ok(gen.into())
                 }
-                _ => Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    format!("Invalid `kind`. Possible values: request, response"),
-                ))?,
             }
         }
     }
