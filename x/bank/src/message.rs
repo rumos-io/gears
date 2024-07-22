@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use gears::{
-    core::any::google::Any,
+    core::{any::google::Any, errors::CoreError},
     error::IBC_ENCODE_UNWRAP,
     signing::{
         handler::MetadataGetter,
@@ -51,7 +51,7 @@ impl From<Message> for Any {
         match msg {
             Message::Send(msg) => Any {
                 type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
             },
         }
     }
@@ -64,10 +64,10 @@ impl TryFrom<Any> for Message {
         match value.type_url.as_str() {
             "/cosmos.bank.v1beta1.MsgSend" => {
                 let msg = MsgSend::decode::<Bytes>(value.value.clone().into())
-                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Send(msg))
             }
-            _ => Err(gears::core::errors::CoreError::DecodeGeneral(
+            _ => Err(CoreError::DecodeGeneral(
                 "message type not recognized".into(),
             )),
         }

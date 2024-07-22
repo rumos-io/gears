@@ -22,7 +22,7 @@ impl<
         let mut delegation = if let Some(delegation) = self.delegation(ctx, del_addr, val_addr)? {
             delegation
         } else {
-            return Err(AppError::Custom("no delegator for address".to_string()).into());
+            return Err(anyhow::anyhow!("no delegator for address"));
         };
 
         // call the before-delegation-modified hook
@@ -30,14 +30,14 @@ impl<
 
         // ensure that we have enough shares to remove
         if delegation.shares < shares {
-            return Err(AppError::Custom("not enough delegation shares".to_string()).into());
+            return Err(anyhow::anyhow!("not enough delegation shares"));
         }
 
         // get validator
         let mut validator = if let Some(validator) = self.validator(ctx, val_addr)? {
             validator
         } else {
-            return Err(AppError::Custom("no validator found".to_string()).into());
+            return Err(anyhow::anyhow!("no validator found"));
         };
 
         // subtract shares from delegation
@@ -96,14 +96,13 @@ impl<
         let validator = if let Some(validator) = self.validator(ctx, val_addr)? {
             validator
         } else {
-            return Err(AppError::Custom("no validator found".to_string()).into());
+            return Err(anyhow::anyhow!("no validator found"));
         };
 
         if self.has_max_unbonding_delegation_entries(ctx, del_addr, val_addr)? {
-            return Err(AppError::Custom(
-                "unbonding delegation max entries limit exceeded".to_string(),
-            )
-            .into());
+            return Err(anyhow::anyhow!(
+                "unbonding delegation max entries limit exceeded"
+            ));
         }
 
         let return_amount = self.unbond(ctx, del_addr, val_addr, shares)?;
@@ -144,11 +143,10 @@ impl<
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonded {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "bad state transition unbonded to bonded, validator: {}",
                 validator.operator_address
-            ))
-            .into());
+            ));
         }
         self.bond_validator(ctx, validator)?;
         Ok(())
@@ -166,16 +164,16 @@ impl<
     ) -> anyhow::Result<Decimal256> {
         let validator = self
             .validator(ctx, val_addr)?
-            .ok_or(AppError::AccountNotFound)?;
+            .ok_or(anyhow::anyhow!("account not found"))?;
         let delegation = self
             .delegation(ctx, del_addr, val_addr)?
-            .ok_or(AppError::Custom("Delegation is not found.".to_string()))?;
+            .ok_or(anyhow::anyhow!("Delegation is not found."))?;
         let mut shares = validator.shares_from_tokens(amount)?;
         let truncated_shares = validator.shares_from_tokens_truncated(amount)?;
         let delegation_shares = delegation.shares;
 
         if truncated_shares > delegation_shares {
-            return Err(AppError::Custom("invalid shares amount".to_string()).into());
+            return Err(anyhow::anyhow!("invalid shares amount"));
         }
 
         // Cap the shares at the delegation's shares. Shares being greater could occur

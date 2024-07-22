@@ -1,9 +1,8 @@
 use std::marker::PhantomData;
 
 use gears::application::handlers::node::{ModuleInfo, TxError};
+use gears::baseapp::errors::QueryError;
 use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
-use gears::core::errors::CoreError as IbcError;
-use gears::error::AppError;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ext::Pagination;
 use gears::params::ParamsSubspaceKey;
@@ -103,31 +102,30 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
     ) -> Result<(), TxError> {
-        match msg {
-            Message::Send(msg_send) => Ok(self
+        let result = match msg {
+            Message::Send(msg_send) => self
                 .keeper
-                .send_coins_from_account_to_account(ctx, msg_send)
-                .map_err(|e| Into::<BankTxError>::into(e).into::<MI>())?),
-        }
+                .send_coins_from_account_to_account(ctx, msg_send),
+        };
+
+        result.map_err(|e| Into::<BankTxError>::into(e).into::<MI>())
     }
 
     pub fn query<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
-    ) -> std::result::Result<bytes::Bytes, AppError> {
+    ) -> std::result::Result<bytes::Bytes, QueryError> {
         match query.path.as_str() {
             QueryAllBalancesRequest::TYPE_URL => {
-                let req = QueryAllBalancesRequest::decode(query.data)
-                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryAllBalancesRequest::decode(query.data)?;
 
                 let result = self.query_balances(ctx, req);
 
                 Ok(result.encode_vec().expect(IBC_ENCODE_UNWRAP).into())
             }
             QueryTotalSupplyRequest::TYPE_URL => {
-                let req = QueryTotalSupplyRequest::decode(query.data)
-                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryTotalSupplyRequest::decode(query.data)?;
 
                 Ok(self
                     .query_total_supply(ctx, req)
@@ -136,19 +134,17 @@ impl<
                     .into())
             }
             "/cosmos.bank.v1beta1.Query/Balance" => {
-                let req = QueryBalanceRequest::decode(query.data)
-                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryBalanceRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
                     .query_balance(ctx, req)
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                    .into())
             }
             QueryDenomsMetadataRequest::TYPE_URL => {
-                let req = QueryDenomsMetadataRequest::decode(query.data)
-                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryDenomsMetadataRequest::decode(query.data)?;
 
                 let result = self
                     .query_denoms(ctx, req)
@@ -158,8 +154,7 @@ impl<
                 Ok(result.into())
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
-                let req = QueryDenomMetadataRequest::decode(query.data)
-                    .map_err(|e| IbcError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryDenomMetadataRequest::decode(query.data)?;
                 let metadata = self
                     .keeper
                     .get_denom_metadata(ctx, &req.denom)
@@ -167,9 +162,9 @@ impl<
                 Ok(QueryDenomMetadataResponse { metadata }
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
-                    .into()) // TODO:IBC
+                    .into())
             }
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            _ => Err(QueryError::PathNotFound),
         }
     }
 

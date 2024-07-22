@@ -13,6 +13,7 @@ use gears::{
     commands::{
         client::keys::{keys, AddKeyCommand, KeyCommand, KeyringBackend},
         node::{
+            genesis::GenesisInitError,
             run::{LogLevel, RunCommand},
             AppCommands,
         },
@@ -93,7 +94,7 @@ impl Genesis for MockGenesis {
         &mut self,
         address: AccAddress,
         coins: UnsignedCoins,
-    ) -> Result<(), gears::error::AppError> {
+    ) -> Result<(), GenesisInitError> {
         self.0.add_genesis_account(address, coins)
     }
 }
