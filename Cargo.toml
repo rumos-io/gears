@@ -20,7 +20,7 @@ members = [
   # "gaia-rs",
 
   # xmodules
-  # "x/auth",
+  "x/auth",
   # "x/bank",
   # "x/distribution",
   # "x/ibc-rs",

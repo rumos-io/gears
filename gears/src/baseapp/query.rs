@@ -11,6 +11,12 @@ use crate::{
 
 use super::{errors::QueryError, BaseApp};
 
+/// Return url which could be used to query this... query
+pub trait Query {
+    fn query_url(&self) -> &'static str;
+    fn into_bytes(self) -> Vec<u8>;
+}
+
 pub trait QueryRequest: Clone + Send + Sync + 'static {
     fn height(&self) -> u32;
 }
