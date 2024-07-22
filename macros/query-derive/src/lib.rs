@@ -29,7 +29,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 
             let protobuf = match raw {
                 Some(protobuf) => quote! {
-                    impl ::gears::endermint::types::proto::Protobuf<#protobuf> for #ident {}
+                    impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
                 },
                 None => quote! {},
             };
@@ -96,7 +96,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 });
 
                 let gen = quote! {
-                    impl  ::gears::baseapp::query::QueryResponse for #ident {
+                    impl  ::gears::baseapp::QueryResponse for #ident {
                         fn into_bytes(self) -> std::vec::Vec<u8> {
                             match self {
                                 #(#into_bytes),*
