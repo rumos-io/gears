@@ -8,9 +8,9 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        SSK: SlashingStakingKeeper<SK, M>,
+        DSK: DistributionStakingKeeper<SK, M>,
         M: Module,
-    > Keeper<SK, PSK, AK, BK, SSK, M>
+    > Keeper<SK, PSK, AK, BK, DSK, M>
 {
     pub fn withdraw_delegator_reward_and_commission<DB: Database>(
         &self,

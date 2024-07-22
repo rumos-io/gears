@@ -24,6 +24,7 @@ use gears::{
         base::coins::{DecimalCoins, UnsignedCoins},
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
+    x::keepers::staking::DistributionStakingKeeper,
 };
 use std::{collections::HashMap, u64};
 
@@ -40,19 +41,16 @@ mod validator;
 pub struct Keeper<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
-    // TODO: check/replace
     AK: AuthKeeper<SK, M>,
-    // TODO: check/replace
     BK: BankKeeper<SK, M>,
-    // TODO: check/replace
-    SSK: SlashingStakingKeeper<SK, M>,
+    DSK: DistributionStakingKeeper<SK, M>,
     M: Module,
 > {
     store_key: SK,
     auth_keeper: AK,
     bank_keeper: BK,
     params_keeper: DistributionParamsKeeper<PSK>,
-    staking_keeper: SSK,
+    staking_keeper: DSK,
     fee_collector_module: M,
     distribution_module: M,
     blocked_addrs: HashMap<String, bool>,
@@ -63,16 +61,16 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        SSK: SlashingStakingKeeper<SK, M>,
+        DSK: DistributionStakingKeeper<SK, M>,
         M: Module,
-    > Keeper<SK, PSK, AK, BK, SSK, M>
+    > Keeper<SK, PSK, AK, BK, DSK, M>
 {
     pub fn new(
         store_key: SK,
         params_subspace_key: PSK,
         auth_keeper: AK,
         bank_keeper: BK,
-        staking_keeper: SSK,
+        staking_keeper: DSK,
         fee_collector_module: M,
         distribution_module: M,
         blocked_addrs: HashMap<String, bool>,

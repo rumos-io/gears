@@ -17,9 +17,9 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        SSK: SlashingStakingKeeper<SK, M>,
+        DSK: DistributionStakingKeeper<SK, M>,
         M: Module,
-    > Keeper<SK, PSK, AK, BK, SSK, M>
+    > Keeper<SK, PSK, AK, BK, DSK, M>
 {
     /// initialize starting info for a new delegation
     pub fn initialize_delegation<DB: Database>(

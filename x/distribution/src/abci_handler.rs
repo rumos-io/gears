@@ -3,7 +3,7 @@ use crate::{
     QueryDelegationRewardsRequest, QueryParamsRequest, QueryParamsResponse,
     QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
-    QueryValidatorSlashesRequest, QueryValidatorSlashesResponse,
+    QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, QueryWithdrawAllRewardsRequest,
 };
 use gears::{
     context::{
@@ -18,7 +18,8 @@ use gears::{
     types::address::ConsAddress,
     x::{
         keepers::{
-            auth::AuthKeeper, bank::StakingBankKeeper as BankKeeper, staking::SlashingStakingKeeper,
+            auth::AuthKeeper, bank::StakingBankKeeper as BankKeeper,
+            staking::DistributionStakingKeeper,
         },
         module::Module,
     },
@@ -47,10 +48,10 @@ pub struct ABCIHandler<
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
     BK: BankKeeper<SK, M>,
-    SSK: SlashingStakingKeeper<SK, M>,
+    DSK: DistributionStakingKeeper<SK, M>,
     M: Module,
 > {
-    keeper: Keeper<SK, PSK, AK, BK, SSK, M>,
+    keeper: Keeper<SK, PSK, AK, BK, DSK, M>,
 }
 
 impl<
@@ -58,11 +59,11 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        SSK: SlashingStakingKeeper<SK, M>,
+        DSK: DistributionStakingKeeper<SK, M>,
         M: Module,
-    > ABCIHandler<SK, PSK, AK, BK, SSK, M>
+    > ABCIHandler<SK, PSK, AK, BK, DSK, M>
 {
-    pub fn new(keeper: Keeper<SK, PSK, AK, BK, SSK, M>) -> Self {
+    pub fn new(keeper: Keeper<SK, PSK, AK, BK, DSK, M>) -> Self {
         ABCIHandler { keeper }
     }
 
@@ -129,6 +130,16 @@ impl<
                 Ok(self
                     .keeper
                     .query_delegation_rewards(ctx, req)?
+                    .encode_vec()
+                    .into())
+            }
+            "/cosmos.distribution.v1beta1.Query/DelegatorValidators" => {
+                let req = QueryWithdrawAllRewardsRequest::decode(query.data)
+                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+
+                Ok(self
+                    .keeper
+                    .query_delegator_validators(ctx, req)
                     .encode_vec()
                     .into())
             }

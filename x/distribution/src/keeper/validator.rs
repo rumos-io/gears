@@ -1,6 +1,5 @@
-use crate::{ValidatorCurrentRewards, ValidatorHistoricalRewards};
-
 use super::*;
+use crate::{ValidatorCurrentRewards, ValidatorHistoricalRewards};
 use gears::{
     error::AppError,
     types::{decimal256::Decimal256, uint::Uint256},
@@ -11,9 +10,9 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        SSK: SlashingStakingKeeper<SK, M>,
+        DSK: DistributionStakingKeeper<SK, M>,
         M: Module,
-    > Keeper<SK, PSK, AK, BK, SSK, M>
+    > Keeper<SK, PSK, AK, BK, DSK, M>
 {
     /// increment the reference count for a historical rewards value
     pub fn increment_reference_count<DB: Database>(

@@ -8,7 +8,9 @@ use crate::{
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
+    cli::pagination::CliPaginationRequest,
     core::Protobuf,
+    ext::FallibleMapExt,
     types::{
         address::{AccAddress, ValAddress},
         pagination::request::PaginationRequest,
@@ -59,11 +61,8 @@ pub struct ValidatorSlashesCommand {
     pub start_height: u64,
     /// end height for slash events
     pub end_height: u64,
-    #[arg(long, default_value_t = 0)]
-    pub offset: u32,
-    /// Pagination limit
-    #[arg(long, default_value_t = 100)]
-    pub limit: u8,
+    #[command(flatten)]
+    pub pagination: Option<CliPaginationRequest>,
 }
 
 /// Query all distribution delegator rewards or rewards from a particular validator
@@ -106,16 +105,12 @@ impl QueryHandler for DistributionQueryHandler {
                 address,
                 start_height,
                 end_height,
-                offset,
-                limit,
+                pagination,
             }) => Self::QueryRequest::ValidatorSlashes(QueryValidatorSlashesRequest {
                 validator_address: address.clone(),
                 starting_height: *start_height,
                 ending_height: *end_height,
-                pagination: Some(PaginationRequest {
-                    offset: *offset,
-                    limit: *limit,
-                }),
+                pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
             }),
             DistributionCommands::Rewards(DelegationRewardsCommand {
                 delegator_address,

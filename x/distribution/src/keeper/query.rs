@@ -4,10 +4,13 @@ use crate::{
     QueryDelegationRewardsResponse, QueryParamsRequest, QueryParamsResponse,
     QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
-    QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, SlashEventIterator,
+    QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, QueryWithdrawAllRewardsRequest,
+    QueryWithdrawAllRewardsResponse, SlashEventIterator,
 };
 use gears::{
-    context::query::QueryContext, types::pagination::response::PaginationResponse,
+    context::query::QueryContext,
+    ext::{IteratorPaginate, Pagination},
+    types::pagination::response::PaginationResponse,
     x::types::delegation::StakingDelegation,
 };
 
@@ -16,9 +19,9 @@ impl<
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        SSK: SlashingStakingKeeper<SK, M>,
+        DSK: DistributionStakingKeeper<SK, M>,
         M: Module,
-    > Keeper<SK, PSK, AK, BK, SSK, M>
+    > Keeper<SK, PSK, AK, BK, DSK, M>
 {
     pub fn query_validator_outstanding_rewards<DB: Database>(
         &self,
@@ -52,23 +55,24 @@ impl<
             pagination,
         }: QueryValidatorSlashesRequest,
     ) -> QueryValidatorSlashesResponse {
-        let slash_events_iterator = SlashEventIterator::new(
+        let (pagination_result, slash_events_iterator) = SlashEventIterator::new(
             ctx,
             &self.store_key,
             &validator_address,
             starting_height,
             ending_height,
-        );
+        )
+        .maybe_paginate(pagination.map(Pagination::from));
+
         let mut events = vec![];
         for res in slash_events_iterator {
             let (_, event) = res.unwrap_gas();
             events.push(event);
         }
-        let total = events.len();
 
         QueryValidatorSlashesResponse {
             slashes: events,
-            pagination: pagination.map(|_| PaginationResponse::new(total)),
+            pagination: pagination_result.map(PaginationResponse::from),
         }
     }
 
@@ -129,6 +133,22 @@ impl<
         } else {
             Ok(QueryDelegationRewardsResponse { rewards: None })
         }
+    }
+
+    pub fn query_delegator_validators<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QueryWithdrawAllRewardsRequest { delegator_address }: QueryWithdrawAllRewardsRequest,
+    ) -> QueryWithdrawAllRewardsResponse {
+        let validators = self
+            .staking_keeper
+            .delegations_iter(ctx, &delegator_address)
+            .map(|res| {
+                let del = res.unwrap_gas();
+                del.validator().to_string()
+            })
+            .collect::<Vec<_>>();
+        QueryWithdrawAllRewardsResponse { validators }
     }
 
     pub fn query_community_pool<DB: Database>(

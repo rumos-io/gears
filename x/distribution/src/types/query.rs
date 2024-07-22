@@ -212,6 +212,44 @@ impl TryFrom<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest
 
 impl Protobuf<QueryDelegationRewardsRequestRaw> for QueryDelegationRewardsRequest {}
 
+#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+pub struct QueryWithdrawAllRewardsRequestRaw {
+    #[prost(bytes, tag = "1")]
+    pub delegator_address: Vec<u8>,
+}
+
+impl From<QueryWithdrawAllRewardsRequest> for QueryWithdrawAllRewardsRequestRaw {
+    fn from(
+        QueryWithdrawAllRewardsRequest { delegator_address }: QueryWithdrawAllRewardsRequest,
+    ) -> Self {
+        Self {
+            delegator_address: delegator_address.into(),
+        }
+    }
+}
+
+/// QueryDelegatorValidatorsRequest is the request type for the
+/// Query/DelegatorValidators RPC method.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct QueryWithdrawAllRewardsRequest {
+    /// delegator_address defines the delegator address to query for.
+    pub delegator_address: AccAddress,
+}
+
+impl TryFrom<QueryWithdrawAllRewardsRequestRaw> for QueryWithdrawAllRewardsRequest {
+    type Error = AddressError;
+
+    fn try_from(
+        QueryWithdrawAllRewardsRequestRaw { delegator_address }: QueryWithdrawAllRewardsRequestRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(QueryWithdrawAllRewardsRequest {
+            delegator_address: AccAddress::try_from(delegator_address)?,
+        })
+    }
+}
+
+impl Protobuf<QueryWithdrawAllRewardsRequestRaw> for QueryWithdrawAllRewardsRequest {}
+
 #[derive(Clone, PartialEq, Message)]
 pub struct QueryCommunityPoolRequest {}
 
@@ -407,6 +445,49 @@ impl TryFrom<QueryDelegationRewardsResponseRaw> for QueryDelegationRewardsRespon
 }
 
 impl Protobuf<QueryDelegationRewardsResponseRaw> for QueryDelegationRewardsResponse {}
+
+#[derive(Clone, Serialize, Message)]
+pub struct QueryWithdrawAllRewardsResponseRaw {
+    #[prost(bytes, tag = "1")]
+    pub validators: Vec<u8>,
+}
+
+impl From<QueryWithdrawAllRewardsResponse> for QueryWithdrawAllRewardsResponseRaw {
+    fn from(
+        QueryWithdrawAllRewardsResponse { validators }: QueryWithdrawAllRewardsResponse,
+    ) -> Self {
+        Self {
+            validators: serde_json::to_vec(&validators)
+                .expect("serialization of domain type can't fail"),
+        }
+    }
+}
+
+/// QueryWithdrawAllRewardsResponse is the response type for the Query/DelegationRewards RPC method
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct QueryWithdrawAllRewardsResponse {
+    pub validators: Vec<String>,
+}
+
+impl TryFrom<QueryWithdrawAllRewardsResponseRaw> for QueryWithdrawAllRewardsResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        QueryWithdrawAllRewardsResponseRaw { validators }: QueryWithdrawAllRewardsResponseRaw,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            validators: serde_json::from_slice(&validators)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+        })
+    }
+}
+
+impl Protobuf<QueryWithdrawAllRewardsResponseRaw> for QueryWithdrawAllRewardsResponse {}
+// TODO: For compatibility with the version in method. Use single Protobuf for module
+impl gears::tendermint::types::proto::Protobuf<QueryWithdrawAllRewardsResponseRaw>
+    for QueryWithdrawAllRewardsResponse
+{
+}
 
 #[derive(Clone, Serialize, Message)]
 pub struct QueryCommunityPoolResponseRaw {
