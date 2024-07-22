@@ -17,7 +17,7 @@ members = [
   "macros/query-derive",
 
   # GAIA
-  # "gaia-rs",
+  "gaia-rs",
 
   # xmodules
   "x/auth",

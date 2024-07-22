@@ -139,6 +139,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
             proc_macro2::Span::call_site(),
             "Query can't be derived for `Union`",
         )),
+        // TODO: Support for enums with other enums
         syn::Data::Enum(enum_data) => {
             if url.is_some() {
                 Err(syn::Error::new(

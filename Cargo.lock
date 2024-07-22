@@ -1864,6 +1864,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "gaia-rs"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "auth",
+ "axum 0.7.5",
+ "bank",
+ "bip32",
+ "bytes",
+ "clap",
+ "data-encoding",
+ "gears",
+ "gov",
+ "hex 0.4.3",
+ "ibc-proto 0.33.0",
+ "ibc-rs",
+ "keyring",
+ "prost 0.11.9",
+ "rayon",
+ "serde",
+ "serde_json",
+ "staking",
+ "strum",
+ "thiserror",
+ "tonic",
+ "tonic-reflection",
+ "tower-layer",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "gears"
 version = "0.1.0"
 dependencies = [
@@ -5508,6 +5540,19 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
+]
+
+[[package]]
+name = "tonic-reflection"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0543d7092032041fbeac1f2c84304537553421a11a623c2301b12ef0264862c7"
+dependencies = [
+ "prost 0.11.9",
+ "prost-types 0.11.9",
+ "tokio",
+ "tokio-stream",
+ "tonic",
 ]
 
 [[package]]

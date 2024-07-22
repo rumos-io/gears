@@ -1,4 +1,7 @@
-use auth::cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse};
+use auth::{
+    cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse},
+    query::QueryAccountResponse,
+};
 use gaia_rs::{
     client::{GaiaQueryCommands, WrappedGaiaQueryCommands},
     query::GaiaQueryResponse,
@@ -7,11 +10,8 @@ use gaia_rs::{
 use gears::{
     commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+    types::account::{Account, BaseAccount},
     types::address::AccAddress,
-    types::{
-        account::{Account, BaseAccount},
-        query::account::QueryAccountResponse,
-    },
 };
 
 use utilities::run_gaia_and_tendermint;
