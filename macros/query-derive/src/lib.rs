@@ -10,7 +10,7 @@ use syn::DeriveInput;
 struct QueryAttr {
     pub kind: String,
     pub raw: Option<Type>,
-    pub url: String,
+    pub url: Option<String>,
 }
 
 #[proc_macro_derive(Query, attributes(query))]
@@ -25,92 +25,153 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 
     match data {
         syn::Data::Struct(_) => {
-            let QueryAttr { kind: _, raw, url } = QueryAttr::from_derive_input(&input)?;
+            let QueryAttr { kind, raw, url } = QueryAttr::from_derive_input(&input)?;
 
-            let protobuf = match raw {
-                Some(protobuf) => quote! {
-                    impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
-                },
-                None => quote! {},
-            };
+            match kind.as_str() {
+                "request" => {
+                    let protobuf = match raw {
+                        Some(protobuf) => quote! {
+                            impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
+                        },
+                        None => quote! {},
+                    };
 
-            let url = match url.is_empty() {
-                true => quote! {},
-                false => quote! {
-                    impl #ident
-                    {
-                        const QUERY_URL : &'static str = #url;
-                    }
-                },
-            };
+                    let url = match url {
+                        Some(url) => quote! {
+                            impl #ident
+                            {
+                                const QUERY_URL : &'static str = #url;
+                            }
+                        },
+                        None => Err(syn::Error::new(
+                            proc_macro2::Span::call_site(),
+                            format!("Request query requires `url` attribute"),
+                        ))?,
+                    };
 
-            let gen = quote! {
-                #protobuf
+                    let query_trait = quote! {
+                        impl  ::gears::baseapp::Query for #ident {
+                            fn query_url(&self) -> &'static str  {
+                                Self::QUERY_URL
+                            }
 
-                #url
-            };
+                            fn into_bytes(self) -> ::std::vec::Vec<u8> {
+                                self.encode_vec().expect("Should be okay. In future versions of IBC they removed Result")
+                            }
+                        }
+                    };
 
-            Ok(gen.into())
+                    let gen = quote! {
+                        #query_trait
+
+                        #protobuf
+
+                        #url
+                    };
+
+                    Ok(gen.into())
+                }
+                "response" => {
+                    let protobuf = match raw {
+                        Some(protobuf) => quote! {
+                            impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
+                        },
+                        None => quote! {},
+                    };
+
+                    let url = match url {
+                        Some(_) => quote! {
+                            impl #ident
+                            {
+                                const QUERY_URL : &'static str = #url;
+                            }
+                        },
+                        None => quote! {},
+                    };
+
+                    let gen = quote! {
+                        #protobuf
+
+                        #url
+                    };
+
+                    Ok(gen.into())
+                }
+                _ => Err(syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    format!("Invalid `kind`. Possible values: request, response"),
+                ))?,
+            }
         }
         syn::Data::Union(_) => Err(syn::Error::new(
             proc_macro2::Span::call_site(),
             "Query can't be derived for `Union`",
         )),
-        syn::Data::Enum(enum_data) => match QueryAttr::from_derive_input(&input)?.kind.as_str() {
-            "request" => {
-                let query_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-                    quote! {
-                        Self::#i(q) => q.query_url()
-                    }
-                });
-
-                let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-                            quote! {
-                                Self::#i(q) => q.encode_vec().expect("Should be okay. In future versions of IBC they removed Result")
-                            }
-                        });
-
-                let gen = quote! {
-                    impl  ::gears::types::query::Query for #ident {
-                        fn query_url(&self) -> &'static str  {
-                            match self {
-                                #(#query_url),*
-                            }
-                        }
-
-                        fn into_bytes(self) -> std::vec::Vec<u8> {
-                            match self {
-                                #(#into_bytes),*
-                            }
-                        }
-                    }
-                };
-
-                Ok(gen.into())
+        syn::Data::Enum(enum_data) => {
+            let QueryAttr { kind, raw: _, url } = QueryAttr::from_derive_input(&input)?;
+            if url.is_some() {
+                Err(syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    format!("Enum couldn't contain `url` attribute"),
+                ))?
             }
-            "response" => {
-                let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-                    quote! {
-                        Self::#i(q) => q.encode_vec().expect("Should be okay. In future versions of IBC they removed Result")
-                    }
-                });
 
-                let gen = quote! {
-                    impl  ::gears::baseapp::QueryResponse for #ident {
-                        fn into_bytes(self) -> std::vec::Vec<u8> {
-                            match self {
-                                #(#into_bytes),*
+            match kind.as_str() {
+                "request" => {
+                    let query_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
+                        quote! {
+                            Self::#i(q) => q.query_url()
+                        }
+                    });
+
+                    let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
+                                quote! {
+                                    Self::#i(q) => q.encode_vec().expect("Should be okay. In future versions of IBC they removed Result")
+                                }
+                            });
+
+                    let gen = quote! {
+                        impl  ::gears::baseapp::Query for #ident {
+                            fn query_url(&self) -> &'static str  {
+                                match self {
+                                    #(#query_url),*
+                                }
+                            }
+
+                            fn into_bytes(self) -> ::std::vec::Vec<u8> {
+                                match self {
+                                    #(#into_bytes),*
+                                }
                             }
                         }
-                    }
-                };
+                    };
 
-                Ok(gen.into())
+                    Ok(gen.into())
+                }
+                "response" => {
+                    let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
+                        quote! {
+                            Self::#i(q) => q.into_bytes()
+                        }
+                    });
+
+                    let gen = quote! {
+                        impl  ::gears::baseapp::QueryResponse for #ident {
+                            fn into_bytes(self) -> std::vec::Vec<u8> {
+                                match self {
+                                    #(#into_bytes),*
+                                }
+                            }
+                        }
+                    };
+
+                    Ok(gen.into())
+                }
+                _ => Err(syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    format!("Invalid `kind`. Possible values: request, response"),
+                ))?,
             }
-            _ => Err(syn::Error::new(
-                proc_macro2::Span::call_site(),
-                format!("Invalid `kind`. Possible values: request, response"),
-            ))?,
-        },
+        }
     }
 }
