@@ -6,10 +6,10 @@ use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
     cli::pagination::CliPaginationRequest,
-    error::IBC_ENCODE_UNWRAP,
+    derive::Query,
     ext::FallibleMapExt,
     tendermint::types::proto::Protobuf,
-    types::{address::AccAddress, pagination::request::PaginationRequest, query::Query},
+    types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 use serde::{Deserialize, Serialize};
 
@@ -92,29 +92,14 @@ impl QueryHandler for BankQueryHandler {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Query)]
+#[query(kind = "request")]
 pub enum BankQuery {
     Balances(QueryAllBalancesRequest),
     DenomMetadata(QueryDenomsMetadataRequest),
 }
 
-impl Query for BankQuery {
-    fn query_url(&self) -> &'static str {
-        match self {
-            BankQuery::Balances(_) => "/cosmos.bank.v1beta1.Query/AllBalances",
-            BankQuery::DenomMetadata(_) => "/cosmos.bank.v1beta1.Query/DenomsMetadata",
-        }
-    }
-
-    fn into_bytes(self) -> Vec<u8> {
-        match self {
-            BankQuery::Balances(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-            BankQuery::DenomMetadata(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
 pub enum BankQueryResponse {
     Balances(QueryAllBalancesResponse),

@@ -72,7 +72,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         Some(url) => quote! {
                             impl #ident
                             {
-                                const QUERY_URL : &'static str = #url;
+                               pub const QUERY_URL : &'static str = #url;
                             }
                         },
                         None => Err(syn::Error::new(
@@ -108,7 +108,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         Some(_) => quote! {
                             impl #ident
                             {
-                                const QUERY_URL : &'static str = #url;
+                               pub const QUERY_URL : &'static str = #url;
                             }
                         },
                         None => quote! {},
