@@ -38,6 +38,8 @@ pub enum DistributionError {
     ValidatorOutstandingRewardsNotFound(ValAddress),
     #[error("validator starting rewards are not found: {0}")]
     ValidatorHistoricalRewardsNotFound(ValAddress),
+    #[error("{0}")]
+    ValidatorHistoricalRewardsCounterError(#[from] ValidatorHistoricalRewardsReferenceCountError),
     #[error("validator accumulated commission is not found: {0}")]
     ValidatorAccumulatedCommissionNotFound(ValAddress),
     #[error("validator accumulated commission is not found: {0}")]
@@ -60,4 +62,14 @@ pub enum DistributionError {
     Numeric(#[from] NumericError),
     #[error("{0}")]
     Gas(#[from] GasStoreErrors),
+}
+
+#[derive(Debug, Clone, thiserror::Error)]
+pub enum ValidatorHistoricalRewardsReferenceCountError {
+    #[error("cannot create counter with value higher than upper bound.\ngot: {0}, expected: {1}")]
+    CounterValueOutOfBounds(u32, u32),
+    #[error("the counter reached upper bound: {0}")]
+    IncrementBound(u32),
+    #[error("the counter reached lower value 0")]
+    DecrementBound,
 }

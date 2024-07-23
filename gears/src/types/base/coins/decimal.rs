@@ -22,9 +22,10 @@ impl DecimalCoins {
 
         for coin in other {
             // Note:
-            // operator '>' means that all values are greater or equal
-            // operator '>=' means that if some value is equal then we should return false as it
-            // less than the current one
+            // For all coins in other, self must contain a greater
+            // than or equal amount of that coin. Thus if there exists
+            // a single coin amount in other which is greater than the
+            // self amount of the same coin we fail.
             if coin.amount > self.amount_of(&coin.denom) {
                 return false;
             }

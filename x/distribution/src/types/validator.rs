@@ -1,3 +1,4 @@
+use crate::errors::ValidatorHistoricalRewardsReferenceCountError;
 use gears::{
     core::{errors::CoreError, Protobuf},
     types::{
@@ -144,6 +145,58 @@ pub struct ValidatorHistoricalRewardsRecord {
     pub rewards: ValidatorHistoricalRewards,
 }
 
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+pub struct ValidatorHistoricalRewardsReferenceCount {
+    // inherits sdk type
+    counter: u32,
+    upper_bound: u32,
+}
+
+impl ValidatorHistoricalRewardsReferenceCount {
+    const DEFAULT_UPPER_LIMIT: u32 = 2;
+
+    pub fn new(counter: u32) -> Result<Self, ValidatorHistoricalRewardsReferenceCountError> {
+        if counter > Self::DEFAULT_UPPER_LIMIT {
+            return Err(
+                ValidatorHistoricalRewardsReferenceCountError::CounterValueOutOfBounds(
+                    counter,
+                    Self::DEFAULT_UPPER_LIMIT,
+                ),
+            );
+        }
+        Ok(Self {
+            counter,
+            upper_bound: Self::DEFAULT_UPPER_LIMIT,
+        })
+    }
+
+    pub fn counter(&self) -> u32 {
+        self.counter
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.counter == 0
+    }
+
+    pub fn increment(&mut self) -> Result<u32, ValidatorHistoricalRewardsReferenceCountError> {
+        if self.counter < self.upper_bound {
+            self.counter += 1;
+            Ok(self.counter)
+        } else {
+            Err(ValidatorHistoricalRewardsReferenceCountError::IncrementBound(self.upper_bound))
+        }
+    }
+
+    pub fn decrement(&mut self) -> Result<u32, ValidatorHistoricalRewardsReferenceCountError> {
+        if self.counter > 0 {
+            self.counter -= 1;
+            Ok(self.counter)
+        } else {
+            Err(ValidatorHistoricalRewardsReferenceCountError::DecrementBound)
+        }
+    }
+}
+
 #[derive(Clone, PartialEq, Message)]
 pub struct ValidatorHistoricalRewardsRaw {
     #[prost(message, repeated)]
@@ -165,7 +218,7 @@ impl From<ValidatorHistoricalRewards> for ValidatorHistoricalRewardsRaw {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
-            reference_count,
+            reference_count: reference_count.counter(),
         }
     }
 }
@@ -186,7 +239,7 @@ impl From<ValidatorHistoricalRewards> for ValidatorHistoricalRewardsRaw {
 // TODO: add serde(try_from) to check coins during genesis
 pub struct ValidatorHistoricalRewards {
     pub cumulative_reward_ratio: DecimalCoins,
-    pub reference_count: u32,
+    pub reference_count: ValidatorHistoricalRewardsReferenceCount,
 }
 
 impl TryFrom<ValidatorHistoricalRewardsRaw> for ValidatorHistoricalRewards {
@@ -205,7 +258,8 @@ impl TryFrom<ValidatorHistoricalRewardsRaw> for ValidatorHistoricalRewards {
             DecimalCoins::new(coins).map_err(|e| CoreError::Coin(e.to_string()))?;
         Ok(Self {
             cumulative_reward_ratio,
-            reference_count,
+            reference_count: ValidatorHistoricalRewardsReferenceCount::new(reference_count)
+                .map_err(|e| CoreError::Custom(e.to_string()))?,
         })
     }
 }

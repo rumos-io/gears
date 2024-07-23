@@ -1,5 +1,7 @@
 use super::*;
-use crate::{ValidatorCurrentRewards, ValidatorHistoricalRewards};
+use crate::{
+    ValidatorCurrentRewards, ValidatorHistoricalRewards, ValidatorHistoricalRewardsReferenceCount,
+};
 use gears::types::{decimal256::Decimal256, uint::Uint256};
 
 impl<
@@ -23,11 +25,8 @@ impl<
             .ok_or(DistributionError::ValidatorHistoricalRewardsNotFound(
                 validator_address.clone(),
             ))?;
-        if historical.reference_count > 2 {
-            // TODO: sdk behaviour, seems to be correct
-            panic!("reference count should never exceed 2")
-        }
-        historical.reference_count += 1;
+        // TODO: panics in sdk
+        historical.reference_count.increment()?;
         Ok(self.set_validator_historical_rewards(ctx, validator_address, period, &historical)?)
     }
 
@@ -97,7 +96,8 @@ impl<
             rewards.period,
             &ValidatorHistoricalRewards {
                 cumulative_reward_ratio,
-                reference_count: 1,
+                reference_count: ValidatorHistoricalRewardsReferenceCount::new(1)
+                    .expect("hardcoded value is less than upper bound"),
             },
         )?;
 
@@ -131,13 +131,10 @@ impl<
                 validator_operator_addr.clone(),
             ));
         };
-        if historical.reference_count == 0 {
-            // TODO: panics in sdk
-            return Err(DistributionError::NegativeHistoricalInfoCount);
-        }
+        // TODO: panics in sdk
+        historical.reference_count.decrement()?;
 
-        historical.reference_count -= 1;
-        if historical.reference_count == 0 {
+        if historical.reference_count.is_zero() {
             self.delete_validator_historical_rewards(ctx, validator_operator_addr, period)?;
         } else {
             self.set_validator_historical_rewards(

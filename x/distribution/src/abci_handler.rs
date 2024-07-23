@@ -25,7 +25,7 @@ use gears::{
     },
 };
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum DistributionNodeQueryRequest {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsRequest),
     ValidatorCommission(QueryValidatorCommissionRequest),
@@ -33,7 +33,7 @@ pub enum DistributionNodeQueryRequest {
     CommunityPool(QueryCommunityPoolRequest),
     Params(QueryParamsRequest),
 }
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum DistributionNodeQueryResponse {
     ValidatorOutstandingRewards(QueryValidatorOutstandingRewardsResponse),
     ValidatorCommission(QueryValidatorCommissionResponse),
