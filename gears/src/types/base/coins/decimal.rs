@@ -226,143 +226,140 @@ impl TryFrom<Vec<UnsignedCoin>> for DecimalCoins {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
-    use crate::types::denom::Denom;
-
     use super::*;
+    use crate::types::denom::Denom;
+    use cosmwasm_std::Uint256;
+    use std::{str::FromStr, sync::OnceLock};
+
+    static DENOMS: OnceLock<[Denom; 4]> = OnceLock::new();
+
+    fn setup_denoms() {
+        DENOMS.get_or_init(|| {
+            [
+                Denom::from_str("coin").expect("hardcoded value cannot fail"),
+                Denom::from_str("stake").expect("hardcoded value cannot fail"),
+                Denom::from_str("token").expect("hardcoded value cannot fail"),
+                Denom::from_str("uatom").expect("hardcoded value cannot fail"),
+            ]
+        });
+    }
+
+    // don't restricted because of testing purpose
+    fn generate_coins(amounts: Vec<u64>) -> DecimalCoins {
+        setup_denoms();
+        let mut coins = vec![];
+        for (i, v) in amounts.into_iter().enumerate() {
+            if v != 0 {
+                coins.push(DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[i].clone(),
+                    amount: Decimal256::from_atomics(v, 0).unwrap(),
+                })
+            }
+        }
+        DecimalCoins::new(coins).unwrap()
+    }
 
     #[test]
-    fn checked_add_and_sub() -> anyhow::Result<()> {
-        let denom_1 = Denom::from_str("uatom").expect("hardcoded value cannot fail");
-        let denom_2 = Denom::from_str("stake").expect("hardcoded value cannot fail");
-        let denom_3 = Denom::from_str("coin").expect("hardcoded value cannot fail");
-        let denom_4 = Denom::from_str("token").expect("hardcoded value cannot fail");
+    fn is_all_gte() -> anyhow::Result<()> {
+        /* identical denoms */
+        let dec_coins_1 = generate_coins(vec![100, 100]);
+        let dec_coins_2 = generate_coins(vec![100, 50]);
+        assert!(dec_coins_1.is_all_gte(dec_coins_1.inner()));
+        assert!(dec_coins_1.is_all_gte(dec_coins_2.inner()));
+        assert!(!dec_coins_2.is_all_gte(dec_coins_1.inner()));
 
-        let dec_coins_inner_1 = vec![
-            DecimalCoin {
-                denom: denom_3.clone(),
-                amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_2.clone(),
-                amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_1.clone(),
-                amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-            },
-        ];
-        let dec_coins_1 = DecimalCoins::new(dec_coins_inner_1).unwrap();
-        let dec_coins_inner_2 = vec![
-            DecimalCoin {
-                denom: denom_3.clone(),
-                amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_2.clone(),
-                amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_4.clone(),
-                amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-            },
-        ];
-        let dec_coins_2 = DecimalCoins::new(dec_coins_inner_2.clone()).unwrap();
+        let dec_coins_1 = generate_coins(vec![100, 100]);
+        let dec_coins_2 = generate_coins(vec![100, 150]);
+        assert!(!dec_coins_1.is_all_gte(dec_coins_2.inner()));
+        assert!(dec_coins_2.is_all_gte(dec_coins_1.inner()));
 
-        /* test checked_add */
-        let dec_coins_add = dec_coins_1.checked_add(&dec_coins_2).unwrap();
-        assert_eq!(
-            dec_coins_add.into_inner(),
-            vec![
-                DecimalCoin {
-                    denom: denom_3.clone(),
-                    amount: Decimal256::from_atomics(150u64, 0).unwrap(),
-                },
-                DecimalCoin {
-                    denom: denom_2.clone(),
-                    amount: Decimal256::from_atomics(150u64, 0).unwrap(),
-                },
-                DecimalCoin {
-                    denom: denom_4.clone(),
-                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-                },
-                DecimalCoin {
-                    denom: denom_1.clone(),
-                    amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-                },
-            ]
-        );
-
-        /* test checked_sub */
-        let dec_coins_sub = dec_coins_1.checked_sub(&dec_coins_2);
-        assert!(dec_coins_sub.is_err());
-
-        /* successful sub */
-        let dec_coins_2 = DecimalCoins::new(dec_coins_inner_2[0..2].to_vec()).unwrap();
-        let dec_coins_sub = dec_coins_1.checked_sub(&dec_coins_2)?;
-        assert_eq!(
-            dec_coins_sub.inner(),
-            &vec![
-                DecimalCoin {
-                    denom: denom_3.clone(),
-                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-                },
-                DecimalCoin {
-                    denom: denom_2.clone(),
-                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-                },
-                DecimalCoin {
-                    denom: denom_1.clone(),
-                    amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-                },
-            ]
-        );
+        /* not identical denoms */
+        let dec_coins_1 = generate_coins(vec![100, 100, 100]);
+        let dec_coins_2 = generate_coins(vec![50, 50, 0, 50]);
+        // dec_coins_2 has not matching coins
+        assert!(!dec_coins_1.is_all_gte(dec_coins_2.inner()));
+        // dec_coins_1 has not matching coins and values are greater
+        assert!(!dec_coins_2.is_all_gte(dec_coins_1.inner()));
 
         Ok(())
     }
 
     #[test]
-    fn is_all_gte() -> anyhow::Result<()> {
-        let denom_1 = Denom::from_str("uatom").expect("hardcoded value cannot fail");
-        let denom_2 = Denom::from_str("stake").expect("hardcoded value cannot fail");
-        let denom_3 = Denom::from_str("coin").expect("hardcoded value cannot fail");
-        let denom_4 = Denom::from_str("token").expect("hardcoded value cannot fail");
+    fn checked_add() -> anyhow::Result<()> {
+        let dec_coins_1 = generate_coins(vec![100, 100, 100]);
+        let dec_coins_2 = generate_coins(vec![50, 50, 0, 50]);
+        let dec_coins_add = dec_coins_1.checked_add(&dec_coins_2).unwrap();
+        assert_eq!(
+            dec_coins_add.into_inner(),
+            vec![
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    amount: Decimal256::from_atomics(150u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
+                    amount: Decimal256::from_atomics(150u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
+                    amount: Decimal256::from_atomics(100u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[3].clone(),
+                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
+                },
+            ]
+        );
 
-        let dec_coins_1 = DecimalCoins::new(vec![
-            DecimalCoin {
-                denom: denom_3.clone(),
-                amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_2.clone(),
-                amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_1.clone(),
-                amount: Decimal256::from_atomics(100u64, 0).unwrap(),
-            },
-        ])
-        .unwrap();
-        let dec_coins_2 = DecimalCoins::new(vec![
-            DecimalCoin {
-                denom: denom_3.clone(),
-                amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_2.clone(),
-                amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-            },
-            DecimalCoin {
-                denom: denom_4.clone(),
-                amount: Decimal256::from_atomics(50u64, 0).unwrap(),
-            },
-        ])
-        .unwrap();
+        let dec_coins_inner_1 = vec![DecimalCoin {
+            denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+            amount: Decimal256::new(Uint256::MAX),
+        }];
+        let dec_coins_1 = DecimalCoins::new(dec_coins_inner_1).unwrap();
+        let dec_coins_inner_2 = vec![DecimalCoin {
+            denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+            amount: Decimal256::new(Uint256::MAX),
+        }];
+        let dec_coins_2 = DecimalCoins::new(dec_coins_inner_2.clone()).unwrap();
 
-        assert!(dec_coins_1.is_all_gte(dec_coins_1.inner()));
-        assert!(!dec_coins_1.is_all_gte(dec_coins_2.inner()));
-        assert!(!dec_coins_2.is_all_gte(dec_coins_1.inner()));
+        assert!(dec_coins_1.checked_add(&dec_coins_2).is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn checked_sub() -> anyhow::Result<()> {
+        let dec_coins_1 = generate_coins(vec![100, 100, 100]);
+        let dec_coins_2 = generate_coins(vec![50, 50, 0, 50]);
+        // has not matching coins
+        let dec_coins_sub = dec_coins_1.checked_sub(&dec_coins_2);
+        assert!(dec_coins_sub.is_err());
+        // removes all coins
+        let dec_coins_sub = dec_coins_1.checked_sub(&dec_coins_1);
+        assert!(dec_coins_sub.is_err());
+
+        /* successful sub */
+        let dec_coins_1 = generate_coins(vec![100, 100, 100]);
+        let dec_coins_2 = generate_coins(vec![50, 50]);
+        let dec_coins_sub = dec_coins_1.checked_sub(&dec_coins_2)?;
+        assert_eq!(
+            dec_coins_sub.inner(),
+            &vec![
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
+                    amount: Decimal256::from_atomics(50u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
+                    amount: Decimal256::from_atomics(100u64, 0).unwrap(),
+                },
+            ]
+        );
+
         Ok(())
     }
 }
