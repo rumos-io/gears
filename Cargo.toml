@@ -50,6 +50,7 @@ url = { version = "2.5.0" }
 time = "0.3.34"
 ux = "0.1.6"
 chrono = "0.4.38"
+vec1 = { version = "1.12.0" }
 
 # serialization
 serde = { version = "1.0", default-features = false }

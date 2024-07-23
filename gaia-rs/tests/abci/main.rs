@@ -114,7 +114,7 @@ fn generate_txs(
         account_number: user.account_number,
     };
 
-    let body_bytes = TxBody::new_with_defaults(vec![msg])
+    let body_bytes = TxBody::new_with_defaults(vec1::vec1![msg])
         .encode_vec()
         .expect("can't fail fixed in later versions of dependency");
 

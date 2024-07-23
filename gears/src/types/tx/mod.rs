@@ -25,8 +25,6 @@ pub trait TxMessage:
 {
     fn get_signers(&self) -> Vec<&AccAddress>;
 
-    fn validate_basic(&self) -> Result<(), String>;
-
     fn type_url(&self) -> &'static str;
 }
 
@@ -47,8 +45,8 @@ impl<T: TxMessage> Messages<T> {
     }
 
     /// Converts instance into vector of messages
-    pub fn into_msgs(self) -> Vec<T> {
-        self.messages.into()
+    pub fn into_msgs(self) -> Vec1<T> {
+        self.messages
     }
 
     pub fn chunk_size(&self) -> usize {
@@ -101,7 +99,7 @@ pub struct Tx<M> {
 // 3. Consider removing the "seen" hashset in get_signers()
 // 4. Remove `get_` from method names.
 impl<M: TxMessage> Tx<M> {
-    pub fn get_msgs(&self) -> &Vec<M> {
+    pub fn get_msgs(&self) -> &Vec1<M> {
         &self.body.messages
     }
 

@@ -1895,6 +1895,7 @@ dependencies = [
  "tower-layer",
  "tracing",
  "url",
+ "vec1",
 ]
 
 [[package]]

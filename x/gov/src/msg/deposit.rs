@@ -45,10 +45,6 @@ impl TxMessage for Deposit {
         vec![&self.depositor]
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        Ok(())
-    }
-
     fn type_url(&self) -> &'static str {
         Deposit::TYPE_URL
     }

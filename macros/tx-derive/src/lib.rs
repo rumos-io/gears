@@ -31,12 +31,6 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                 }
             });
 
-            let validate_basic = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-                quote! {
-                    Self::#i(msg) => msg.validate_basic()
-                }
-            });
-
             let type_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                 quote! {
                     Self::#i(msg) => ::gears::types::tx::TxMessage::type_url(msg)
@@ -66,17 +60,10 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
             let gen = quote! {
                 impl  ::gears::types::tx::TxMessage for #name {
 
-
                     fn get_signers(&self) -> Vec<&::gears::types::address::AccAddress> {
 
                         match self {
                             #(#get_signers),*
-                        }
-                    }
-
-                    fn validate_basic(&self) -> ::std::result::Result<(), String> {
-                        match self {
-                            #(#validate_basic),*
                         }
                     }
 
@@ -85,7 +72,6 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                             #(#type_url),*
                         }
                     }
-
 
                 }
 

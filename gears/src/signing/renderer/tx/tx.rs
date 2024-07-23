@@ -68,7 +68,7 @@ impl<M: TxMessage> Envelope<M> {
             sequence: signer_data.sequence,
             address: signer_data.address,
             public_key: signer_data.pub_key,
-            message: tx_data.body.messages,
+            message: tx_data.body.messages.into_vec(),
             memo: tx_data.body.memo,
             fees: tx_data.auth_info.fee.amount,
             fee_payer: tx_data.auth_info.fee.payer,
@@ -257,6 +257,7 @@ mod tests {
     use cosmwasm_std::Uint256;
     use std::str::FromStr;
     use tendermint::types::chain_id::ChainId;
+    use vec1::vec1;
 
     use super::Envelope;
 
@@ -321,7 +322,7 @@ mod tests {
         };
 
         let tx_body = TxBody::<MsgSend> {
-            messages: vec![MsgSend {
+            messages: vec1![MsgSend {
                 from_address: AccAddress::from_bech32(
                     "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
                 )?,

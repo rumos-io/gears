@@ -81,10 +81,6 @@ impl TxMessage for MsgSend {
         todo!()
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        todo!()
-    }
-
     fn type_url(&self) -> &'static str {
         "/cosmos.bank.v1beta1.MsgSend"
     }
