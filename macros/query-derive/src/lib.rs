@@ -1,3 +1,6 @@
+#![cfg(not(doctest))]
+#![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/","Readme.md"))]
+
 use darling::FromDeriveInput;
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, Type};
@@ -19,6 +22,9 @@ struct QueryAttr {
     pub url: Option<String>,
 }
 
+/// Generates impl for Query trait and add Protobuf.
+///
+/// _Note_: you still need to implement `From<Self> for Raw` and `TryFrom<Raw> for Self` manually
 #[proc_macro_derive(Query, attributes(query))]
 pub fn message_derive(input: TokenStream) -> TokenStream {
     expand_macro(parse_macro_input!(input))
