@@ -52,11 +52,6 @@ impl TxMessage for MsgCreateClient {
         vec![&self.signer]
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        //TODO: implement this
-        Ok(())
-    }
-
     fn type_url(&self) -> &'static str {
         "/ibc.core.client.v1.MsgCreateClient"
     }

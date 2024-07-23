@@ -5,7 +5,6 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::types::tx::TxMessage;
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     context::{query::QueryContext, simple::SimpleContext},
@@ -18,7 +17,7 @@ use crate::{
 };
 use bytes::Bytes;
 use database::Database;
-use errors::{QueryError, TxValidation};
+use errors::QueryError;
 use kv_store::{
     types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore,
@@ -123,19 +122,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn validate_basic_tx_msgs(msgs: &Vec<H::Message>) -> Result<(), TxValidation> {
-        if msgs.is_empty() {
-            return Err(TxValidation::Empty);
-        }
-
-        for msg in msgs {
-            msg.validate_basic()
-                .map_err(|e| TxValidation::Validation(e.to_string()))?
-        }
-
-        Ok(())
-    }
-
     fn run_tx<MD: ExecutionMode<DB, H>>(
         &self,
         raw: Bytes,
@@ -145,9 +131,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             TxWithRaw::from_bytes(raw.clone()).map_err(|e: core_types::errors::CoreError| {
                 RunTxError::InvalidTransaction(e.to_string())
             })?;
-
-        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
-            .map_err(|e| RunTxError::InvalidMessage(e.to_string()))?;
 
         let header = self
             .get_block_header()

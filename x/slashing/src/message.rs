@@ -20,10 +20,6 @@ impl TxMessage for Message {
         }
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        Ok(())
-    }
-
     fn type_url(&self) -> &'static str {
         match self {
             Message::Unjail(_) => "/cosmos.slashing.v1beta1.Unjail",

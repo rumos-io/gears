@@ -33,12 +33,6 @@ impl TxMessage for Message {
         }
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        match &self {
-            Message::Send(_) => Ok(()),
-        }
-    }
-
     fn type_url(&self) -> &'static str {
         match self {
             Message::Send(_) => "/cosmos.bank.v1beta1.MsgSend",

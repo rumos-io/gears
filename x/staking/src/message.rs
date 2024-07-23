@@ -33,16 +33,6 @@ impl TxMessage for Message {
         }
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        match &self {
-            Message::CreateValidator(_) => Ok(()),
-            Message::EditValidator(_) => Ok(()),
-            Message::Delegate(_) => Ok(()),
-            Message::Redelegate(_) => Ok(()),
-            Message::Undelegate(_) => Ok(()),
-        }
-    }
-
     fn type_url(&self) -> &'static str {
         match self {
             Message::CreateValidator(_) => "/cosmos.staking.v1beta1.CreateValidator",

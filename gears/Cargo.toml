@@ -17,7 +17,7 @@ database = { path = "../database" }
 gears-derive = { path = "../gears-derive" }
 
 #newtypes
-vec1 = { version = "1.12.0", features = [ "serde" ] }
+vec1 = { workspace = true, features = [ "serde" ] }
 secp256k1 = { workspace = true, features = ["hashes"] }
 bytes = { workspace = true }
 url = { workspace = true }
