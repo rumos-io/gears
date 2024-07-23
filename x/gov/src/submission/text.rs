@@ -10,7 +10,7 @@ use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use super::handler::SubmissionHandler;
+use super::handler::{SubmissionHandler, SubmissionHandlingError};
 
 #[derive(Clone, PartialEq, Message)]
 pub struct RawTextProposal {
@@ -85,7 +85,7 @@ impl<PSK: ParamsSubspaceKey, PK: ParamsKeeper<PSK>> SubmissionHandler<PK, PSK, T
         _proposal: TextProposal,
         _ctx: &mut CTX,
         _keeper: &PSK,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), SubmissionHandlingError> {
         Ok(())
     }
 }

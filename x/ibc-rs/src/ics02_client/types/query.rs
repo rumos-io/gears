@@ -1,4 +1,4 @@
-use gears::error::AppError;
+use gears::core::errors::CoreError;
 use ibc::{
     core::{
         client::types::proto::v1::IdentifiedClientState as RawIdentifiedClientState,
@@ -17,7 +17,7 @@ pub struct QueryClientStatesResponse {
 }
 
 impl TryFrom<RawQueryClientStatesResponse> for QueryClientStatesResponse {
-    type Error = AppError;
+    type Error = CoreError;
 
     fn try_from(raw: RawQueryClientStatesResponse) -> Result<Self, Self::Error> {
         let client_states: Result<Vec<IdentifiedClientState>, Self::Error> = raw
@@ -80,7 +80,7 @@ impl From<IdentifiedClientState> for RawIdentifiedClientState {
 }
 
 impl TryFrom<RawIdentifiedClientState> for IdentifiedClientState {
-    type Error = AppError;
+    type Error = CoreError;
 
     fn try_from(value: RawIdentifiedClientState) -> Result<Self, Self::Error> {
         Ok(IdentifiedClientState {

@@ -1,9 +1,11 @@
-use crate::{DelegatorStartingInfo, SlashEventIterator, ValidatorOutstandingRewards};
-
 use super::*;
+use crate::{
+    errors::DistributionError, DelegatorStartingInfo, SlashEventIterator,
+    ValidatorOutstandingRewards,
+};
 use gears::{
     context::QueryableContext,
-    error::AppError,
+    error::{MathOperation, NumericError},
     tendermint::types::proto::event::{Event, EventAttribute},
     types::{
         base::coins::DecimalCoins,
@@ -27,12 +29,12 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         validator_address: &ValAddress,
         delegator_address: &AccAddress,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionError> {
         // period has already been incremented - we want to store the period ended by this delegation action
         let previous_period = self
             .validator_current_rewards(ctx, validator_address)?
-            .ok_or(AppError::Custom(
-                "validator current rewards are not found".to_string(),
+            .ok_or(DistributionError::ValidatorCurrentRewardsNotFound(
+                validator_address.clone(),
             ))?
             .period
             - 1;
@@ -42,11 +44,16 @@ impl<
         let validator = self
             .staking_keeper
             .validator(ctx, validator_address)?
-            .ok_or(AppError::Custom("validator is not found".to_string()))?;
+            .ok_or(DistributionError::AccountNotFound(
+                validator_address.clone().into(),
+            ))?;
         let delegation = self
             .staking_keeper
             .delegation(ctx, delegator_address, validator_address)?
-            .ok_or(AppError::Custom("delegation is not found".to_string()))?;
+            .ok_or(DistributionError::DelegationNotFound(
+                delegator_address.clone(),
+                validator_address.clone(),
+            ))?;
 
         // calculate delegation stake in tokens
         // we don't store directly, so multiply delegation shares * (tokens per share)
@@ -69,10 +76,13 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         validator: impl StakingValidator,
         delegation: impl StakingDelegation,
-    ) -> Result<Option<UnsignedCoins>, AppError> {
+    ) -> Result<Option<UnsignedCoins>, DistributionError> {
         // check existence of delegator starting info
         if !self.has_delegator_starting_info(ctx, delegation.validator(), delegation.delegator())? {
-            return Err(AppError::Custom("delegation is not found".to_string()));
+            return Err(DistributionError::DelegationNotFound(
+                delegation.delegator().clone(),
+                delegation.validator().clone(),
+            ));
         }
         // end current period and calculate rewards
         let ending_period =
@@ -85,11 +95,14 @@ impl<
                 validator.tokens_from_shares(*delegation.shares())?,
                 ending_period,
             )?
-            .ok_or(AppError::Custom("Can't get delegation rewards".to_string()))?;
+            .ok_or(DistributionError::DelegationRewardsNotFound(
+                delegation.delegator().clone(),
+                validator.operator().clone(),
+            ))?;
         let outstanding = self
             .validator_outstanding_rewards(ctx, delegation.validator())?
-            .ok_or(AppError::Custom(
-                "cant find validator outstanding rewards".to_string(),
+            .ok_or(DistributionError::ValidatorOutstandingRewardsNotFound(
+                delegation.validator().clone(),
             ))?
             .rewards;
 
@@ -116,7 +129,9 @@ impl<
         if final_rewards.is_some() {
             let withdraw_address = self
                 .delegator_withdraw_addr(ctx, delegation.delegator())?
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(DistributionError::AccountNotFound(
+                    delegation.delegator().clone().into(),
+                ))?;
             self.bank_keeper.send_coins_from_module_to_account(
                 ctx,
                 &withdraw_address,
@@ -133,27 +148,21 @@ impl<
             ctx,
             delegation.validator(),
             &ValidatorOutstandingRewards {
-                rewards: outstanding
-                    .checked_sub(&rewards)
-                    .map_err(|e| AppError::Coins(e.to_string()))?,
+                rewards: outstanding.checked_sub(&rewards)?,
             },
         )?;
-        let mut fee_pool = self
-            .fee_pool(ctx)?
-            .ok_or(AppError::Custom("fee pool is not set".to_string()))?;
+        let mut fee_pool = self.fee_pool(ctx)?.ok_or(DistributionError::FeePoolNone)?;
         if let Some(rem) = remainder {
-            fee_pool.community_pool = fee_pool
-                .community_pool
-                .checked_add(&rem)
-                .map_err(|e| AppError::Coins(e.to_string()))?;
+            fee_pool.community_pool = fee_pool.community_pool.checked_add(&rem)?;
             self.set_fee_pool(ctx, &fee_pool)?;
         }
 
         // decrement reference count of starting period
         let starting_info = self
             .delegator_starting_info(ctx, delegation.validator(), delegation.delegator())?
-            .ok_or(AppError::Custom(
-                "delegator starting info is not found".to_string(),
+            .ok_or(DistributionError::DelegatorStartingInfoNotFound(
+                delegation.delegator().clone(),
+                delegation.validator().clone(),
             ))?;
         let starting_period = starting_info.previous_period;
         self.decrement_reference_count(ctx, delegation.validator(), starting_period)?;
@@ -204,12 +213,13 @@ impl<
         delegator_address: &AccAddress,
         tokens: Decimal256,
         ending_period: u64,
-    ) -> Result<Option<DecimalCoins>, AppError> {
+    ) -> Result<Option<DecimalCoins>, DistributionError> {
         // fetch starting info for delegation
         let starting_info = self
             .delegator_starting_info(ctx, validator_address, delegator_address)?
-            .ok_or(AppError::Custom(
-                "delegation starting info is not found".to_string(),
+            .ok_or(DistributionError::DelegatorStartingInfoNotFound(
+                delegator_address.clone(),
+                validator_address.clone(),
             ))?;
 
         if starting_info.height == ctx.height() as u64 {
@@ -256,22 +266,19 @@ impl<
                         stake,
                     )?;
                     rewards = if let Some(r) = rewards {
-                        Some(
-                            r.checked_add(&addition)
-                                .map_err(|e| AppError::Coins(e.to_string()))?,
-                        )
+                        Some(r.checked_add(&addition)?)
                     } else {
                         Some(addition)
                     };
                     // Note: It is necessary to truncate so we don't allow withdrawing
                     // more rewards than owed.
                     stake = stake
-                        .checked_mul(
-                            ONE_DEC
-                                .checked_sub(event.fraction)
-                                .map_err(|e| AppError::Custom(e.to_string()))?,
-                        )
-                        .map_err(|e| AppError::Custom(e.to_string()))?
+                        .checked_mul(ONE_DEC.checked_sub(event.fraction).map_err(|_e| {
+                            DistributionError::Numeric(NumericError::Overflow(MathOperation::Sub))
+                        })?)
+                        .map_err(|_e| {
+                            DistributionError::Numeric(NumericError::Overflow(MathOperation::Mul))
+                        })?
                         .floor();
                     starting_period = ending_period;
                 }
@@ -311,9 +318,9 @@ impl<
                     "smallest decimal is a valid decimal < 1.0. The multiplication cannot fail",
                 );
             if stake
-                <= (current_stake
-                    .checked_add(margin_of_err)
-                    .map_err(|e| AppError::Custom(e.to_string()))?)
+                <= (current_stake.checked_add(margin_of_err).map_err(|_e| {
+                    DistributionError::Numeric(NumericError::Overflow(MathOperation::Add))
+                })?)
             {
                 stake = current_stake;
             } else {
@@ -337,10 +344,7 @@ impl<
             stake,
         )?;
         rewards = if let Some(r) = rewards {
-            Some(
-                r.checked_add(&addition)
-                    .map_err(|e| AppError::Coins(e.to_string()))?,
-            )
+            Some(r.checked_add(&addition)?)
         } else {
             Some(addition)
         };
@@ -355,7 +359,7 @@ impl<
         starting_period: u64,
         ending_period: u64,
         stake: Decimal256,
-    ) -> Result<DecimalCoins, AppError> {
+    ) -> Result<DecimalCoins, DistributionError> {
         // sanity check
         if starting_period > ending_period {
             panic!("starting_period cannot be greater than ending_period");
@@ -364,23 +368,20 @@ impl<
         // return staking * (ending - starting)
         let starting = self
             .validator_historical_rewards(ctx, validator_address, starting_period)?
-            .ok_or(AppError::Custom(
-                "cant find validator historical info".to_string(),
+            .ok_or(DistributionError::ValidatorHistoricalRewardsNotFound(
+                validator_address.clone(),
             ))?;
         let ending = self
             .validator_historical_rewards(ctx, validator_address, ending_period)?
-            .ok_or(AppError::Custom(
-                "cant find validator historical info".to_string(),
+            .ok_or(DistributionError::ValidatorHistoricalRewardsNotFound(
+                validator_address.clone(),
             ))?;
         // TODO: panics if there are some negative values
         let difference = ending
             .cumulative_reward_ratio
-            .checked_sub(&starting.cumulative_reward_ratio)
-            .map_err(|e| AppError::Coins(e.to_string()))?;
+            .checked_sub(&starting.cumulative_reward_ratio)?;
 
         // note: necessary to truncate so we don't allow withdrawing more rewards than owed
-        difference
-            .checked_mul_dec_truncate(stake)
-            .map_err(|e| AppError::Coins(e.to_string()))
+        Ok(difference.checked_mul_dec_truncate(stake)?)
     }
 }

@@ -15,6 +15,7 @@ thiserror = { workspace = true }
 #utils
 clap = { workspace = true }
 anyhow = { workspace = true }
+nz = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }

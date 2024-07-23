@@ -4,9 +4,8 @@ use anyhow::Result;
 use tendermint::informal::genesis::Genesis;
 
 use crate::{
-    baseapp::genesis::Genesis as SDKGenesis,
+    baseapp::genesis::{Genesis as SDKGenesis, GenesisError},
     config::ConfigDirectory,
-    error::AppError,
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
 
@@ -18,16 +17,16 @@ pub struct GenesisCommand {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum GenesisError {
+pub enum GenesisInitError {
     #[error("{0}")]
     Io(#[from] std::io::Error),
     #[error("{0}")]
     Serde(#[from] serde_json::Error),
     #[error("{0}")]
-    AppError(#[from] AppError),
+    Genesis(#[from] GenesisError),
 }
 
-pub fn genesis_account_add<G: SDKGenesis>(cmd: GenesisCommand) -> Result<(), GenesisError> {
+pub fn genesis_account_add<G: SDKGenesis>(cmd: GenesisCommand) -> Result<(), GenesisInitError> {
     let GenesisCommand {
         home,
         address,

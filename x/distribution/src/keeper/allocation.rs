@@ -1,8 +1,11 @@
 use super::*;
-use crate::{ValidatorAccumulatedCommission, ValidatorCurrentRewards, ValidatorOutstandingRewards};
+use crate::{
+    errors::TokenAllocationError, ValidatorAccumulatedCommission, ValidatorCurrentRewards,
+    ValidatorOutstandingRewards,
+};
 use gears::{
     context::block::BlockContext,
-    error::AppError,
+    error::{MathOperation, NumericError},
     tendermint::types::proto::{
         event::{Event, EventAttribute},
         info::VoteInfo,
@@ -12,6 +15,7 @@ use gears::{
         base::coins::{DecimalCoins, UnsignedCoins},
         decimal256::{Decimal256, ONE_DEC},
     },
+    x::errors::AccountNotFound,
 };
 
 impl<
@@ -33,7 +37,7 @@ impl<
         total_previous_power: u64,
         previous_proposer: &ConsAddress,
         bonded_votes: &[VoteInfo],
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), TokenAllocationError> {
         // fetch and clear the collected fees for distribution, since this is
         // called in begin_block, collected fees will be from the previous block
         // (and distributed to the previous proposer)
@@ -53,9 +57,10 @@ impl<
 
         // temporary workaround to keep CanWithdrawInvariant happy
         // general discussions here: https://github.com/cosmos/cosmos-sdk/issues/2906#issuecomment-441867634
-        let mut fee_pool = self.fee_pool(ctx).unwrap_gas().ok_or(AppError::Custom(
-            "Stored fee pool should not have been none".to_string(),
-        ))?;
+        let mut fee_pool = self
+            .fee_pool(ctx)
+            .unwrap_gas()
+            .ok_or(TokenAllocationError::FeePoolNone)?;
         if total_previous_power == 0 {
             fee_pool.community_pool = fee_pool.community_pool.checked_add(&fees_collected)?;
             self.set_fee_pool(ctx, &fee_pool).unwrap_gas();
@@ -64,19 +69,26 @@ impl<
 
         // calculate fraction votes
         // TODO: reduce conversions
-        let previous_fraction_votes = Decimal256::from_atomics(sum_previous_precommit_power, 0)?
-            .checked_div(Decimal256::from_atomics(total_previous_power, 0)?)?;
+        let previous_fraction_votes = Decimal256::from_atomics(sum_previous_precommit_power, 0)
+            .map_err(NumericError::from)?
+            .checked_div(
+                Decimal256::from_atomics(total_previous_power, 0).map_err(NumericError::from)?,
+            )
+            .map_err(|_| NumericError::Overflow(MathOperation::Div))?;
 
         let params = self.params_keeper.get(ctx);
         // calculate previous proposer reward
         let base_proposer_reward = params.base_proposer_reward;
         let bonus_proposer_reward = params.bonus_proposer_reward;
-        let proposer_multiplier = base_proposer_reward.checked_add(
-            bonus_proposer_reward
-                .checked_mul(previous_fraction_votes)?
-                // TODO: check the operation
-                .floor(),
-        )?;
+        let proposer_multiplier = base_proposer_reward
+            .checked_add(
+                bonus_proposer_reward
+                    .checked_mul(previous_fraction_votes)
+                    .map_err(|_| NumericError::Overflow(MathOperation::Mul))?
+                    // TODO: check the operation
+                    .floor(),
+            )
+            .map_err(|_| NumericError::Overflow(MathOperation::Add))?;
         let proposer_reward = fees_collected.checked_mul_dec_truncate(proposer_multiplier)?;
 
         // pay previous proposer
@@ -126,8 +138,10 @@ impl<
         // calculate fraction allocated to validators
         let community_tax = params.community_tax;
         let vote_multiplier = ONE_DEC
-            .checked_sub(proposer_multiplier)?
-            .checked_sub(community_tax)?;
+            .checked_sub(proposer_multiplier)
+            .map_err(|_| NumericError::Overflow(MathOperation::Sub))?
+            .checked_sub(community_tax)
+            .map_err(|_| NumericError::Overflow(MathOperation::Sub))?;
         let fee_multiplier = fees_collected.checked_mul_dec_truncate(vote_multiplier)?;
 
         // allocate tokens proportionally to voting power
@@ -139,13 +153,18 @@ impl<
                 .staking_keeper
                 .validator_by_cons_addr(ctx, &ConsAddress::from(vote.validator.address.clone()))
                 .unwrap_gas()
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(AccountNotFound::from(vote.validator.address.to_owned()))?;
             // TODO: Consider micro-slashing for missing votes.
             //
             // Ref: https://github.com/cosmos/cosmos-sdk/issues/2525#issuecomment-430838701
 
-            let power_fraction = Decimal256::from_atomics(u64::from(vote.validator.power), 0)?
-                .checked_div(Decimal256::from_atomics(total_previous_power, 0)?)?
+            let power_fraction = Decimal256::from_atomics(u64::from(vote.validator.power), 0)
+                .map_err(NumericError::from)?
+                .checked_div(
+                    Decimal256::from_atomics(total_previous_power, 0)
+                        .map_err(NumericError::from)?,
+                )
+                .map_err(|_| NumericError::Overflow(MathOperation::Div))?
                 .floor();
             let reward = fee_multiplier.checked_mul_dec_truncate(power_fraction)?;
             self.allocate_tokens_to_validator(
@@ -172,7 +191,7 @@ impl<
         validator_operator_addr: &ValAddress,
         validator_commission_rate: Decimal256,
         tokens: &DecimalCoins,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), TokenAllocationError> {
         // split tokens between validator and delegators according to commission
         let commission = tokens.checked_mul_dec(validator_commission_rate)?;
         let shared = tokens.checked_sub(&commission)?;

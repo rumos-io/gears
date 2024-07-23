@@ -8,6 +8,7 @@ use crate::{
     QueryWithdrawAllRewardsResponse, SlashEventIterator,
 };
 use gears::{
+    baseapp::errors::QueryError,
     context::query::QueryContext,
     ext::{IteratorPaginate, Pagination},
     types::pagination::response::PaginationResponse,
@@ -83,7 +84,7 @@ impl<
             delegator_address,
             validator_address,
         }: QueryDelegationRewardsRequest,
-    ) -> Result<QueryDelegationRewardsResponse, AppError> {
+    ) -> Result<QueryDelegationRewardsResponse, QueryError> {
         // TODO: original logic, can't implement and it's wrong idea to modify state via query
         //       do we have a way to have isolated transactional context that doesn't affect state?
         //     // branch the context to isolate state changes
@@ -116,19 +117,23 @@ impl<
                 .staking_keeper
                 .validator(ctx, &validator_address)
                 .unwrap_gas()
-                .ok_or(AppError::AccountNotFound)?;
+                .ok_or(QueryError::TODO(anyhow!("account is not found")))?;
             let delegation = self
                 .staking_keeper
                 .delegation(ctx, &delegator_address, &validator_address)
                 .unwrap_gas()
-                .ok_or(AppError::Custom("delegation is not found".to_string()))?;
-            let rewards = self.calculate_delegation_rewards(
-                ctx,
-                &validator_address,
-                &delegator_address,
-                validator.tokens_from_shares(*delegation.shares())?,
-                rew.period,
-            )?;
+                .ok_or(QueryError::TODO(anyhow!("delegation is not found")))?;
+            let rewards = self
+                .calculate_delegation_rewards(
+                    ctx,
+                    &validator_address,
+                    &delegator_address,
+                    validator
+                        .tokens_from_shares(*delegation.shares())
+                        .map_err(|e| QueryError::TODO(anyhow!(e.to_string())))?,
+                    rew.period,
+                )
+                .map_err(|e| QueryError::TODO(anyhow!(e.to_string())))?;
             Ok(QueryDelegationRewardsResponse { rewards })
         } else {
             Ok(QueryDelegationRewardsResponse { rewards: None })

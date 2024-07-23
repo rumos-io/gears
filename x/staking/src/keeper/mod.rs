@@ -10,7 +10,6 @@ use gears::{
         block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
         TransactionalContext,
     },
-    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -426,10 +425,9 @@ impl<
                 .expect("validator should be presented in store");
 
             if validator.jailed {
-                return Err(AppError::Custom(
+                return Err(anyhow::anyhow!(
                     "should never retrieve a jailed validator from the power store".to_string(),
-                )
-                .into());
+                ));
             }
             // if we get to a zero-power validator (which we don't bond),
             // there are no more possible bonded validators

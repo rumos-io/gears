@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 pub use cosmwasm_std::Decimal256;
+pub use cosmwasm_std::Decimal256RangeExceeded;
 use cosmwasm_std::{StdError, Uint256};
 
 pub const ONE_DEC: Decimal256 = Decimal256::one();

@@ -50,16 +50,14 @@ impl<
         &self,
         ctx: &QueryContext<DB, SK>,
         delegation: Delegation,
-    ) -> Result<DelegationResponse, AppError> {
+    ) -> Result<DelegationResponse, anyhow::Error> {
         let validator = self
             .validator(ctx, &delegation.validator_address)
             .unwrap_gas()
-            .ok_or(AppError::AccountNotFound)?;
+            .ok_or(anyhow::anyhow!("account not found"))?;
 
         let params = self.staking_params_keeper.get(ctx);
-        let tokens = validator
-            .tokens_from_shares(delegation.shares)
-            .map_err(|e| AppError::Coins(e.to_string()))?;
+        let tokens = validator.tokens_from_shares(delegation.shares)?;
         let balance = UnsignedCoin {
             denom: params.bond_denom().clone(),
             amount: tokens.to_uint_floor(),

@@ -4,7 +4,6 @@ use crate::consts::{
 };
 use chrono::Utc;
 use gears::{
-    error::AppError,
     tendermint::types::time::Timestamp,
     types::address::{AccAddress, ValAddress},
 };
@@ -58,9 +57,9 @@ pub(super) fn parse_validator_queue_key(
 ) -> anyhow::Result<(chrono::DateTime<Utc>, u32)> {
     let prefix_len = VALIDATOR_QUEUE_KEY.len();
     if key[..prefix_len] != VALIDATOR_QUEUE_KEY {
-        return Err(
-            AppError::Custom("Invalid validators queue key. Invalid prefix.".into()).into(),
-        );
+        return Err(anyhow::anyhow!(
+            "Invalid validators queue key. Invalid prefix."
+        ));
     }
     let time_len = u64::from_le_bytes(key[prefix_len..prefix_len + 8].try_into()?);
     let time = chrono::DateTime::from_timestamp_nanos(i64::from_le_bytes(

@@ -1,17 +1,17 @@
 use crate::{
-    GenesisState, Keeper, Message, QueryCommunityPoolRequest, QueryCommunityPoolResponse,
-    QueryDelegationRewardsRequest, QueryParamsRequest, QueryParamsResponse,
-    QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
+    errors::DistributionTxError, GenesisState, Keeper, Message, QueryCommunityPoolRequest,
+    QueryCommunityPoolResponse, QueryDelegationRewardsRequest, QueryParamsRequest,
+    QueryParamsResponse, QueryValidatorCommissionRequest, QueryValidatorCommissionResponse,
     QueryValidatorOutstandingRewardsRequest, QueryValidatorOutstandingRewardsResponse,
     QueryValidatorSlashesRequest, QueryValidatorSlashesResponse, QueryWithdrawAllRewardsRequest,
 };
 use gears::{
+    baseapp::errors::QueryError,
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         QueryableContext,
     },
-    core::{errors::CoreError, Protobuf},
-    error::AppError,
+    core::Protobuf,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
@@ -77,13 +77,13 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionTxError> {
         match msg {
-            Message::WithdrawRewards(msg) => self
+            Message::WithdrawRewards(msg) => Ok(self
                 .keeper
-                .withdraw_delegator_reward_and_commission(ctx, msg),
-            Message::SetWithdrawAddr(msg) => self.keeper.set_withdraw_address(ctx, msg),
-            Message::FundCommunityPool(msg) => self.keeper.fund_community_pool_cmd(ctx, msg),
+                .withdraw_delegator_reward_and_commission(ctx, msg)?),
+            Message::SetWithdrawAddr(msg) => Ok(self.keeper.set_withdraw_address(ctx, msg)?),
+            Message::FundCommunityPool(msg) => Ok(self.keeper.fund_community_pool_cmd(ctx, msg)?),
         }
     }
 
@@ -91,11 +91,10 @@ impl<
         &self,
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
-    ) -> Result<prost::bytes::Bytes, AppError> {
+    ) -> Result<prost::bytes::Bytes, QueryError> {
         match query.path.as_str() {
             "/cosmos.distribution.v1beta1.Query/ValidatorOutstandingRewards" => {
-                let req = QueryValidatorOutstandingRewardsRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryValidatorOutstandingRewardsRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -104,8 +103,7 @@ impl<
                     .into())
             }
             "/cosmos.distribution.v1beta1.Query/ValidatorCommission" => {
-                let req = QueryValidatorCommissionRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryValidatorCommissionRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -114,8 +112,7 @@ impl<
                     .into())
             }
             "/cosmos.distribution.v1beta1.Query/ValidatorSlashes" => {
-                let req = QueryValidatorSlashesRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryValidatorSlashesRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -124,8 +121,7 @@ impl<
                     .into())
             }
             "/cosmos.distribution.v1beta1.Query/DelegationRewards" => {
-                let req = QueryDelegationRewardsRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryDelegationRewardsRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -134,8 +130,7 @@ impl<
                     .into())
             }
             "/cosmos.distribution.v1beta1.Query/DelegatorValidators" => {
-                let req = QueryWithdrawAllRewardsRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryWithdrawAllRewardsRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -144,8 +139,7 @@ impl<
                     .into())
             }
             "/cosmos.distribution.v1beta1.Query/CommunityPool" => {
-                let req = QueryCommunityPoolRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryCommunityPoolRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -154,12 +148,11 @@ impl<
                     .into())
             }
             "/cosmos.distribution.v1beta1.Query/Params" => {
-                let req = QueryParamsRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryParamsRequest::decode(query.data)?;
 
                 Ok(self.keeper.query_params(ctx, req).encode_vec().into())
             }
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            _ => Err(QueryError::PathNotFound),
         }
     }
 

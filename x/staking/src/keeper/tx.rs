@@ -20,30 +20,27 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &CreateValidator,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         let params = self.staking_params_keeper.try_get(ctx)?;
 
         if self.validator(ctx, &msg.validator_address)?.is_some() {
-            return Err(AppError::Custom(format!(
-                "Account {} exists",
-                msg.validator_address
-            )));
+            return Err(anyhow::anyhow!("Account {} exists", msg.validator_address));
         };
 
         let cons_addr: ConsAddress = msg.pub_key.clone().into();
         if self.validator_by_cons_addr(ctx, &cons_addr)?.is_some() {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "Public key {} exists",
                 ConsAddress::from(msg.pub_key.clone())
-            )));
+            ));
         }
 
         if &msg.value.denom != params.bond_denom() {
-            return Err(AppError::InvalidRequest(format!(
+            return Err(anyhow::anyhow!(
                 "invalid coin denomination: got {}, expected {}",
                 msg.value.denom,
                 params.bond_denom()
-            )));
+            ));
         }
 
         msg.description.ensure_length()?;
@@ -55,7 +52,7 @@ impl<
             .iter()
             .any(|key_type| pub_key_type == key_type)
         {
-            return Err(AppError::InvalidPublicKey);
+            return Err(anyhow::anyhow!("invalid public key"));
         }
 
         let mut validator = Validator::new_with_defaults(
@@ -131,14 +128,11 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &EditValidator,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         // validator must already be registered
-        let mut validator =
-            self.validator(ctx, &msg.validator_address)?
-                .ok_or(AppError::Custom(format!(
-                    "Account {} exists",
-                    msg.validator_address
-                )))?;
+        let mut validator = self
+            .validator(ctx, &msg.validator_address)?
+            .ok_or(anyhow::anyhow!("Account {} exists", msg.validator_address))?;
 
         // replace all editable fields (clients should autofill existing values)
         let description = validator
@@ -149,7 +143,7 @@ impl<
         if let Some(rate) = msg.commission_rate {
             let commission = self
                 .create_updated_validator_commission(ctx, &validator, rate)
-                .map_err(|e| AppError::Custom(e.to_string()))?;
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
             // call the before-modification hook since we're about to update the commission
             self.before_validator_modified(ctx, &validator);
             validator.commission = commission;
@@ -157,14 +151,14 @@ impl<
 
         if let Some(min_self_delegation) = msg.min_self_delegation {
             if min_self_delegation > validator.min_self_delegation {
-                return Err(AppError::Custom(
-                    "trying to decrease validator minimal self delegation".to_string(),
+                return Err(anyhow::anyhow!(
+                    "trying to decrease validator minimal self delegation",
                 ));
             }
 
             if min_self_delegation > validator.tokens {
-                return Err(AppError::Custom(
-                    "validator has not enough tokens to delegate".to_string(),
+                return Err(anyhow::anyhow!(
+                    "validator has not enough tokens to delegate"
                 ));
             }
 
@@ -221,21 +215,21 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &DelegateMsg,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         let mut validator = if let Some(validator) = self.validator(ctx, &msg.validator_address)? {
             validator
         } else {
-            return Err(AppError::AccountNotFound);
+            return Err(anyhow::anyhow!("account not found"));
         };
         let params = self.staking_params_keeper.try_get(ctx)?;
         let delegator_address = msg.delegator_address.clone();
 
         if &msg.amount.denom != params.bond_denom() {
-            return Err(AppError::InvalidRequest(format!(
+            return Err(anyhow::anyhow!(
                 "invalid coin denomination: got {}, expected {}",
                 msg.amount.denom,
                 params.bond_denom()
-            )));
+            ));
         }
 
         // NOTE: source funds are always unbonded
@@ -296,7 +290,7 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &RedelegateMsg,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         let shares = self
             .validate_unbond_amount(
                 ctx,
@@ -304,16 +298,16 @@ impl<
                 &msg.src_validator_address,
                 msg.amount.amount,
             )
-            .map_err(|e| AppError::Coins(e.to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         let params = self.staking_params_keeper.try_get(ctx)?;
 
         if &msg.amount.denom != params.bond_denom() {
-            return Err(AppError::InvalidRequest(format!(
+            return Err(anyhow::anyhow!(
                 "invalid coin denomination: got {}, expected {}",
                 msg.amount.denom,
                 params.bond_denom()
-            )));
+            ));
         }
 
         let completion_time = self
@@ -324,7 +318,7 @@ impl<
                 &msg.dst_validator_address,
                 shares,
             )
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         ctx.append_events(vec![
             Event {
@@ -381,7 +375,7 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &UndelegateMsg,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         let shares = self
             .validate_unbond_amount(
                 ctx,
@@ -389,20 +383,20 @@ impl<
                 &msg.validator_address,
                 msg.amount.amount,
             )
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         let params = self.staking_params_keeper.try_get(ctx)?;
         if &msg.amount.denom != params.bond_denom() {
-            return Err(AppError::InvalidRequest(format!(
+            return Err(anyhow::anyhow!(
                 "invalid coin denomination: got {}, expected {}",
                 msg.amount.denom,
                 params.bond_denom()
-            )));
+            ));
         }
 
         let completion_time = self
             .undelegate(ctx, &msg.delegator_address, &msg.validator_address, shares)
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
         ctx.append_events(vec![
             Event {

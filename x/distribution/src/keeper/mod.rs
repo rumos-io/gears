@@ -1,6 +1,6 @@
 use crate::{
-    params::DistributionParamsKeeper, GenesisState, ValidatorAccumulatedCommission,
-    ValidatorOutstandingRewards,
+    errors::DistributionError, params::DistributionParamsKeeper, GenesisState,
+    ValidatorAccumulatedCommission, ValidatorOutstandingRewards,
 };
 use anyhow::anyhow;
 pub use gears::{
@@ -17,7 +17,6 @@ pub use gears::{
 };
 use gears::{
     context::{tx::TxContext, TransactionalContext},
-    error::AppError,
     tendermint::types::proto::event::{Event, EventAttribute},
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
@@ -209,13 +208,13 @@ impl<
         ctx: &mut TxContext<DB, SK>,
         delegator_address: &AccAddress,
         validator_address: &ValAddress,
-    ) -> Result<Option<UnsignedCoins>, AppError> {
+    ) -> Result<Option<UnsignedCoins>, DistributionError> {
         let validator = if let Some(val) = self.staking_keeper.validator(ctx, validator_address)? {
             val
         } else {
-            return Err(AppError::Custom(format!(
-                "Validator {validator_address} is not found"
-            )));
+            return Err(DistributionError::AccountNotFound(
+                validator_address.clone().into(),
+            ));
         };
         let delegation = if let Some(del) =
             self.staking_keeper
@@ -223,7 +222,10 @@ impl<
         {
             del
         } else {
-            return Err(AppError::Custom("Delegation is not found".to_string()));
+            return Err(DistributionError::DelegationNotFound(
+                delegator_address.clone(),
+                validator_address.clone(),
+            ));
         };
 
         // withdraw rewards
@@ -239,16 +241,16 @@ impl<
         &self,
         ctx: &mut TxContext<DB, SK>,
         validator_address: &ValAddress,
-    ) -> Result<Option<UnsignedCoins>, AppError> {
+    ) -> Result<Option<UnsignedCoins>, DistributionError> {
         // fetch validator accumulated commission
         let accumulated_commission = self
             .validator_accumulated_commission(ctx, validator_address)?
-            .ok_or(AppError::Custom(
-                "validator accumulated commission is not found".to_string(),
+            .ok_or(DistributionError::ValidatorAccumulatedCommissionNotFound(
+                validator_address.clone(),
             ))?;
         if accumulated_commission.commission.is_empty() {
-            return Err(AppError::Coins(
-                "validator commission is not added".to_string(),
+            return Err(DistributionError::ValidatorAccumulatedCommissionNotSet(
+                validator_address.clone(),
             ));
         }
 
@@ -266,17 +268,13 @@ impl<
         // update outstanding
         let outstanding = self
             .validator_outstanding_rewards(ctx, validator_address)?
-            .ok_or(AppError::Custom(
-                "validator outstanding rewards are not found".to_string(),
+            .ok_or(DistributionError::ValidatorOutstandingRewardsNotFound(
+                validator_address.clone(),
             ))?;
         let rewards = if let Some(commission) = &commission {
             outstanding
                 .rewards
-                .checked_sub(
-                    &DecimalCoins::try_from(commission.inner().clone())
-                        .map_err(|e| AppError::Coins(e.to_string()))?,
-                )
-                .map_err(|e| AppError::Coins(e.to_string()))?
+                .checked_sub(&DecimalCoins::try_from(commission.inner().clone())?)?
         } else {
             outstanding.rewards
         };
@@ -321,25 +319,18 @@ impl<
         ctx: &mut TxContext<DB, SK>,
         amount: UnsignedCoins,
         sender: &AccAddress,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionError> {
         self.bank_keeper.send_coins_from_account_to_module(
             ctx,
             sender.clone(),
             &self.distribution_module,
             amount.clone(),
         )?;
-        let mut fee_pool = self
-            .fee_pool(ctx)?
-            .ok_or(AppError::Custom("fee pool is not found".to_string()))?;
+        let mut fee_pool = self.fee_pool(ctx)?.ok_or(DistributionError::FeePoolNone)?;
         fee_pool.community_pool = fee_pool
             .community_pool
-            .checked_add(
-                &DecimalCoins::try_from(amount.into_inner())
-                    .map_err(|e| AppError::Coins(e.to_string()))?,
-            )
-            .map_err(|e| AppError::Coins(e.to_string()))?;
+            .checked_add(&DecimalCoins::try_from(amount.into_inner())?)?;
         self.set_fee_pool(ctx, &fee_pool)?;
-
         Ok(())
     }
 }

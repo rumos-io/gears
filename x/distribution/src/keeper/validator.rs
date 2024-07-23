@@ -1,9 +1,6 @@
 use super::*;
 use crate::{ValidatorCurrentRewards, ValidatorHistoricalRewards};
-use gears::{
-    error::AppError,
-    types::{decimal256::Decimal256, uint::Uint256},
-};
+use gears::types::{decimal256::Decimal256, uint::Uint256};
 
 impl<
         SK: StoreKey,
@@ -20,11 +17,11 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         validator_address: &ValAddress,
         period: u64,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionError> {
         let mut historical = self
             .validator_historical_rewards(ctx, validator_address, period)?
-            .ok_or(AppError::Custom(
-                "historical rewards are not found".to_string(),
+            .ok_or(DistributionError::ValidatorHistoricalRewardsNotFound(
+                validator_address.clone(),
             ))?;
         if historical.reference_count > 2 {
             // TODO: sdk behaviour, seems to be correct
@@ -40,12 +37,12 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         validator_operator_addr: &ValAddress,
         validator_tokens: Uint256,
-    ) -> Result<u64, AppError> {
+    ) -> Result<u64, DistributionError> {
         // fetch current rewards
         let rewards = self
             .validator_current_rewards(ctx, validator_operator_addr)?
-            .ok_or(AppError::Custom(
-                "validator rewards are not found".to_string(),
+            .ok_or(DistributionError::ValidatorCurrentRewardsNotFound(
+                validator_operator_addr.clone(),
             ))?;
 
         // calculate current ratio
@@ -53,35 +50,24 @@ impl<
         let current = if validator_tokens.is_zero() {
             // can't calculate ratio for zero-token validators
             // ergo we instead add to the community pool
-            let mut fee_pool = self
-                .fee_pool(ctx)?
-                .ok_or(AppError::Custom("fee pool is not found".to_string()))?;
+            let mut fee_pool = self.fee_pool(ctx)?.ok_or(DistributionError::FeePoolNone)?;
             let mut outstanding = self
                 .validator_outstanding_rewards(ctx, validator_operator_addr)?
-                .ok_or(AppError::Custom(
-                    "validator outstanding rewards are not found".to_string(),
+                .ok_or(DistributionError::ValidatorOutstandingRewardsNotFound(
+                    validator_operator_addr.clone(),
                 ))?;
-            fee_pool.community_pool = fee_pool
-                .community_pool
-                .checked_add(&rewards.rewards)
-                .map_err(|e| AppError::Custom(e.to_string()))?;
-            outstanding.rewards = outstanding
-                .rewards
-                .checked_sub(&rewards.rewards)
-                .map_err(|e| AppError::Custom(e.to_string()))?;
+            fee_pool.community_pool = fee_pool.community_pool.checked_add(&rewards.rewards)?;
+            outstanding.rewards = outstanding.rewards.checked_sub(&rewards.rewards)?;
             self.set_fee_pool(ctx, &fee_pool)?;
             self.set_validator_outstanding_rewards(ctx, validator_operator_addr, &outstanding)?;
             None
         } else {
             // note: necessary to truncate so we don't allow withdrawing more rewards than owed
             Some(
-                rewards
-                    .rewards
-                    .checked_quo_dec_truncate(
-                        Decimal256::from_atomics(validator_tokens, 0)
-                            .map_err(|e| AppError::Coins(e.to_string()))?,
-                    )
-                    .map_err(|e| AppError::Coins(e.to_string()))?,
+                rewards.rewards.checked_quo_dec_truncate(
+                    Decimal256::from_atomics(validator_tokens, 0)
+                        .map_err(|e| DistributionError::Numeric(e.into()))?,
+                )?,
             )
         };
 
@@ -91,8 +77,8 @@ impl<
         {
             rewards.cumulative_reward_ratio
         } else {
-            return Err(AppError::Custom(
-                "cannot find historical rewards".to_string(),
+            return Err(DistributionError::ValidatorHistoricalRewardsNotFound(
+                validator_operator_addr.clone(),
             ));
         };
 
@@ -101,9 +87,7 @@ impl<
 
         // set new historical rewards with reference count of 1
         let cumulative_reward_ratio = if let Some(current) = current {
-            historical
-                .checked_add(&current)
-                .map_err(|e| AppError::Coins(e.to_string()))?
+            historical.checked_add(&current)?
         } else {
             historical
         };
@@ -137,21 +121,19 @@ impl<
         ctx: &mut TxContext<'_, DB, SK>,
         validator_operator_addr: &ValAddress,
         period: u64,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionError> {
         let mut historical = if let Some(rewards) =
             self.validator_historical_rewards(ctx, validator_operator_addr, period)?
         {
             rewards
         } else {
-            return Err(AppError::Custom(
-                "cannot find historical rewards".to_string(),
+            return Err(DistributionError::ValidatorHistoricalRewardsNotFound(
+                validator_operator_addr.clone(),
             ));
         };
         if historical.reference_count == 0 {
             // TODO: panics in sdk
-            return Err(AppError::Custom(
-                "cannot set negative reference count".to_string(),
-            ));
+            return Err(DistributionError::NegativeHistoricalInfoCount);
         }
 
         historical.reference_count -= 1;

@@ -16,7 +16,7 @@ impl<
         &self,
         ctx: &mut TxContext<DB, SK>,
         msg: &MsgWithdrawDelegatorReward,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionError> {
         self.withdraw_delegation_rewards(ctx, &msg.delegator_address, &msg.validator_address)?;
 
         ctx.push_event(Event {
@@ -61,7 +61,7 @@ impl<
         &self,
         ctx: &mut TxContext<DB, SK>,
         msg: &MsgSetWithdrawAddr,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionError> {
         self.set_delegator_withdraw_addr(ctx, &msg.delegator_address, &msg.withdraw_address)?;
 
         ctx.push_event(Event {
@@ -87,7 +87,7 @@ impl<
         &self,
         ctx: &mut TxContext<DB, SK>,
         msg: &MsgFundCommunityPool,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), DistributionError> {
         self.fund_community_pool(ctx, msg.amount.clone(), &msg.depositor)?;
 
         ctx.push_event(Event {

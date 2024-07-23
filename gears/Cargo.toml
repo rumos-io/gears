@@ -36,7 +36,7 @@ tracing-subscriber = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
 derive_more = { workspace = true }
-itertools = "0.13.0"
+itertools = "0.13.0" 
 
 #serialization
 prost = { workspace = true }
