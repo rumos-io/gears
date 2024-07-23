@@ -382,17 +382,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         let min_self_bond = validator.min_self_delegation();
         // TODO: check equation
         if tokens.to_uint_ceil() < min_self_bond {
-<<<<<<< Updated upstream
-            return Err(AppError::Custom(format!(
-                "SelfDelegationTooLowToUnjail:\n{} less than {}",
-                tokens, min_self_bond
-            )));
-=======
             return Err(UnjailError::LowDelegation {
                 lower: tokens,
-                bigger: min_self_bond.clone(),
+                bigger: min_self_bond,
             });
->>>>>>> Stashed changes
         }
 
         // cannot be unjailed if not jailed
