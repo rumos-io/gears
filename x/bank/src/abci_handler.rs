@@ -32,7 +32,7 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, 
     phantom_data: PhantomData<MI>,
 }
 
-#[derive(Clone, Query)]
+#[derive(Clone, Debug, Query)]
 pub enum BankNodeQueryRequest {
     Balance(QueryBalanceRequest),
     AllBalances(QueryAllBalancesRequest),
@@ -41,7 +41,7 @@ pub enum BankNodeQueryRequest {
     DenomMetadata(QueryDenomMetadataRequest),
 }
 
-#[derive(Clone, Serialize, Query)]
+#[derive(Clone, Debug, Serialize, Query)]
 #[serde(untagged)]
 pub enum BankNodeQueryResponse {
     Balance(QueryBalanceResponse),

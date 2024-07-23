@@ -328,7 +328,7 @@ impl From<QueryDenomsMetadataResponse> for RawQueryDenomsMetadataResponse {
     }
 }
 
-#[derive(Clone, PartialEq, Query)]
+#[derive(Clone,Debug,  PartialEq, Query)]
 #[query(
     url = "/cosmos.bank.v1beta1.Query/DenomsMetadata",
     raw = "inner::QueryDenomMetadataRequest"
@@ -369,7 +369,7 @@ pub struct RawQueryDenomMetadataResponse {
     pub metadata: Option<inner::Metadata>,
 }
 
-#[derive(Clone, Serialize, Query)]
+#[derive(Clone,Debug,  Serialize, Query)]
 #[query(raw = "RawQueryDenomMetadataResponse")]
 pub struct QueryDenomMetadataResponse {
     /// metadata describes and provides all the client information for the requested token.
