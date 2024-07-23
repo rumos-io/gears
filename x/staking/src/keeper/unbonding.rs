@@ -269,8 +269,7 @@ impl<
                         "unexpected validator in unbonding queue; status was not unbonding"
                     );
 
-                    self.unbonding_to_unbonded(ctx, &mut validator)
-                        .expect(CTX_NO_GAS_UNWRAP);
+                    self.unbonding_to_unbonded(ctx, &mut validator).unwrap_gas();
                     if validator.delegator_shares.is_zero() {
                         self.remove_validator(ctx, &validator)?;
                     }

@@ -21,14 +21,9 @@ impl<
         ctx: &CTX,
     ) -> Option<Uint256> {
         let store = InfallibleContext::infallible_store(ctx, &self.store_key);
-        store.get(&LAST_TOTAL_POWER_KEY).map(|bytes| {
-            Uint256::from_be_bytes(bytes.try_into().expect(
-                "The method from_be_bytes accepts array of bytes.
-                The store returns owned value of stored array.
-                Error can happen when vector has invalid length.
-                Please, check the store methods",
-            ))
-        })
+        store
+            .get(&LAST_TOTAL_POWER_KEY)
+            .map(|bytes| Uint256::from_be_bytes(bytes.try_into().unwrap_or_corrupt()))
     }
 
     pub fn set_last_total_power<DB: Database, CTX: TransactionalContext<DB, SK>>(
