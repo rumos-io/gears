@@ -17,7 +17,7 @@ use crate::{
 };
 use bytes::Bytes;
 use database::Database;
-use errors::{QueryError, TxValidation};
+use errors::QueryError;
 use kv_store::{
     types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore,

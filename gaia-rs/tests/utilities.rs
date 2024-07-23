@@ -9,11 +9,10 @@ use gaia_rs::{
 };
 use gears::{
     application::node::NodeApplication,
-    baseapp::genesis::Genesis,
+    baseapp::genesis::{Genesis, GenesisError},
     commands::{
         client::keys::{keys, AddKeyCommand, KeyCommand, KeyringBackend},
         node::{
-            genesis::GenesisInitError,
             run::{LogLevel, RunCommand},
             AppCommands,
         },
@@ -94,7 +93,7 @@ impl Genesis for MockGenesis {
         &mut self,
         address: AccAddress,
         coins: UnsignedCoins,
-    ) -> Result<(), GenesisInitError> {
+    ) -> Result<(), GenesisError> {
         self.0.add_genesis_account(address, coins)
     }
 }
