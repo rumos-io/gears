@@ -1,5 +1,6 @@
 use gears::{
-    core::{errors::CoreError, query::request::PageRequest, Protobuf},
+    core::{errors::CoreError, query::request::PageRequest},
+    derive::Query,
     types::{
         address::{AddressError, ConsAddress},
         pagination::{request::PaginationRequest, response::PaginationResponse},
@@ -30,7 +31,11 @@ impl From<QuerySigningInfoRequest> for QuerySigningInfoRequestRaw {
 
 /// QuerySigningInfoRequest is the request type for the Query/SigningInfo RPC
 /// method
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Query)]
+#[query(
+    raw = "QuerySigningInfoRequestRaw",
+    url = "/cosmos.slashing.v1beta1.Query/SigningInfo"
+)]
 pub struct QuerySigningInfoRequest {
     /// cons_address is the address to query signing info of
     pub cons_address: ConsAddress,
@@ -45,8 +50,6 @@ impl TryFrom<QuerySigningInfoRequestRaw> for QuerySigningInfoRequest {
         })
     }
 }
-
-impl Protobuf<QuerySigningInfoRequestRaw> for QuerySigningInfoRequest {}
 
 #[derive(Clone, PartialEq, Message)]
 pub struct QuerySigningInfosRequestRaw {
@@ -65,7 +68,11 @@ impl From<QuerySigningInfosRequest> for QuerySigningInfosRequestRaw {
 
 /// QuerySigningInfosRequest is the request type for the Query/SigningInfos RPC
 /// method
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Query)]
+#[query(
+    raw = "QuerySigningInfosRequestRaw",
+    url = "/cosmos.slashing.v1beta1.Query/SigningInfos"
+)]
 pub struct QuerySigningInfosRequest {
     /// pagination defines an optional pagination for the request.
     pub pagination: PaginationRequest,
@@ -87,11 +94,12 @@ impl TryFrom<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {
     }
 }
 
-impl Protobuf<QuerySigningInfosRequestRaw> for QuerySigningInfosRequest {}
-
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Message, Query)]
+#[query(
+    raw = "QueryParamsRequest",
+    url = "/cosmos.slashing.v1beta1.Query/Params"
+)]
 pub struct QueryParamsRequest {}
-impl Protobuf<QueryParamsRequest> for QueryParamsRequest {}
 
 // =====
 // Responses
@@ -113,7 +121,8 @@ impl From<QuerySigningInfoResponse> for QuerySigningInfoResponseRaw {
 
 /// QuerySigningInfoResponse is the response type for the Query/SigningInfo RPC
 /// method
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Query)]
+#[query(raw = "QuerySigningInfoResponseRaw")]
 pub struct QuerySigningInfoResponse {
     /// val_signing_info is the signing info of requested val cons address
     pub val_signing_info: ValidatorSigningInfo,
@@ -134,8 +143,6 @@ impl TryFrom<QuerySigningInfoResponseRaw> for QuerySigningInfoResponse {
     }
 }
 
-impl Protobuf<QuerySigningInfoResponseRaw> for QuerySigningInfoResponse {}
-
 #[derive(Clone, PartialEq, Message)]
 pub struct QuerySigningInfosResponseRaw {
     #[prost(message, repeated)]
@@ -155,7 +162,8 @@ impl From<QuerySigningInfosResponse> for QuerySigningInfosResponseRaw {
 
 /// QuerySigningInfosResponse is the response type for the Query/SigningInfos RPC
 /// method
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "QuerySigningInfosResponseRaw")]
 pub struct QuerySigningInfosResponse {
     /// Info is the signing info of all validators
     pub info: Vec<ValidatorSigningInfo>,
@@ -178,8 +186,6 @@ impl TryFrom<QuerySigningInfosResponseRaw> for QuerySigningInfosResponse {
     }
 }
 
-impl Protobuf<QuerySigningInfosResponseRaw> for QuerySigningInfosResponse {}
-
 /// QueryParamsResponse is the response type for the Query/Params RPC method
 #[derive(Clone, Serialize, Message)]
 pub struct QueryParamsResponseRaw {
@@ -196,7 +202,8 @@ impl From<QueryParamsResponse> for QueryParamsResponseRaw {
 }
 
 /// QueryParamsResponse is the response type for the Query/Params RPC method
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "QueryParamsResponseRaw")]
 pub struct QueryParamsResponse {
     pub params: SlashingParams,
 }
@@ -215,5 +222,3 @@ impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
         })
     }
 }
-
-impl Protobuf<QueryParamsResponseRaw> for QueryParamsResponse {}

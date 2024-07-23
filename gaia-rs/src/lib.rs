@@ -219,7 +219,11 @@ impl TryFrom<GaiaNodeQueryResponse> for StakingNodeQueryResponse {
     }
 }
 
-impl QueryResponse for GaiaNodeQueryResponse {}
+impl QueryResponse for GaiaNodeQueryResponse {
+    fn into_bytes(self) -> Vec<u8> {
+        todo!()
+    }
+}
 
 impl Node for GaiaCore {
     type ParamsSubspaceKey = GaiaParamsStoreKey;

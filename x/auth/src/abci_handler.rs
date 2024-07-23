@@ -1,24 +1,27 @@
 use gears::baseapp::errors::QueryError;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
+use gears::derive::Query;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::tendermint::types::proto::Protobuf;
+use gears::tendermint::types::proto::Protobuf as _;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::query::account::{QueryAccountRequest, QueryAccountResponse};
 use gears::x::module::Module;
 use serde::Serialize;
 
+use crate::query::{QueryAccountRequest, QueryAccountResponse};
 use crate::{GenesisState, Keeper};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Query)]
+#[query(kind = "request")]
 pub enum AuthNodeQueryRequest {
     Account(QueryAccountRequest),
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Query)]
+#[query(kind = "response")]
 #[serde(untagged)]
 pub enum AuthNodeQueryResponse {
     Account(QueryAccountResponse),

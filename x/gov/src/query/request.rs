@@ -1,6 +1,6 @@
 use gears::{
     core::errors::CoreError,
-    tendermint::types::proto::Protobuf,
+    derive::Query,
     types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 
@@ -26,13 +26,13 @@ pub mod inner {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Proposal",
+    raw = "inner::QueryProposalRequest"
+)]
 pub struct QueryProposalRequest {
     pub proposal_id: u64,
-}
-
-impl QueryProposalRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Proposal";
 }
 
 impl TryFrom<inner::QueryProposalRequest> for QueryProposalRequest {
@@ -51,18 +51,16 @@ impl From<QueryProposalRequest> for inner::QueryProposalRequest {
     }
 }
 
-impl Protobuf<inner::QueryProposalRequest> for QueryProposalRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Proposals",
+    raw = "inner::QueryProposalsRequest"
+)]
 pub struct QueryProposalsRequest {
     pub voter: Option<AccAddress>,
     pub depositor: Option<AccAddress>,
     pub proposal_status: Option<ProposalStatus>,
     pub pagination: Option<PaginationRequest>,
-}
-
-impl QueryProposalsRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Proposals";
 }
 
 impl TryFrom<inner::QueryProposalsRequest> for QueryProposalsRequest {
@@ -118,16 +116,14 @@ impl From<QueryProposalsRequest> for inner::QueryProposalsRequest {
     }
 }
 
-impl Protobuf<inner::QueryProposalsRequest> for QueryProposalsRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Vote",
+    raw = "inner::QueryVoteRequest"
+)]
 pub struct QueryVoteRequest {
     pub proposal_id: u64,
     pub voter: AccAddress,
-}
-
-impl QueryVoteRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Vote";
 }
 
 impl TryFrom<inner::QueryVoteRequest> for QueryVoteRequest {
@@ -153,16 +149,14 @@ impl From<QueryVoteRequest> for inner::QueryVoteRequest {
     }
 }
 
-impl Protobuf<inner::QueryVoteRequest> for QueryVoteRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Votes",
+    raw = "inner::QueryVotesRequest"
+)]
 pub struct QueryVotesRequest {
     pub proposal_id: u64,
     pub pagination: Option<PaginationRequest>,
-}
-
-impl QueryVotesRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Votes";
 }
 
 impl TryFrom<inner::QueryVotesRequest> for QueryVotesRequest {
@@ -195,15 +189,13 @@ impl From<QueryVotesRequest> for inner::QueryVotesRequest {
     }
 }
 
-impl Protobuf<inner::QueryVotesRequest> for QueryVotesRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Param",
+    raw = "inner::QueryParamsRequest"
+)]
 pub struct QueryParamsRequest {
     pub kind: ParamsQuery,
-}
-
-impl QueryParamsRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Param";
 }
 
 #[derive(Clone, PartialEq, Debug, strum::EnumString, strum::Display)]
@@ -238,16 +230,14 @@ impl From<QueryParamsRequest> for inner::QueryParamsRequest {
     }
 }
 
-impl Protobuf<inner::QueryParamsRequest> for QueryParamsRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Deposit",
+    raw = "inner::QueryDepositRequest"
+)]
 pub struct QueryDepositRequest {
     pub proposal_id: u64,
     pub depositor: AccAddress,
-}
-
-impl QueryDepositRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Deposit";
 }
 
 impl TryFrom<inner::QueryDepositRequest> for QueryDepositRequest {
@@ -281,16 +271,14 @@ impl From<QueryDepositRequest> for inner::QueryDepositRequest {
     }
 }
 
-impl Protobuf<inner::QueryDepositRequest> for QueryDepositRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Deposits",
+    raw = "inner::QueryDepositsRequest"
+)]
 pub struct QueryDepositsRequest {
     pub proposal_id: u64,
     pub pagination: Option<PaginationRequest>,
-}
-
-impl QueryDepositsRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Deposits";
 }
 
 impl TryFrom<inner::QueryDepositsRequest> for QueryDepositsRequest {
@@ -323,15 +311,13 @@ impl From<QueryDepositsRequest> for inner::QueryDepositsRequest {
     }
 }
 
-impl Protobuf<inner::QueryDepositsRequest> for QueryDepositsRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Tally",
+    raw = "inner::QueryTallyResultRequest"
+)]
 pub struct QueryTallyResultRequest {
     pub proposal_id: u64,
-}
-
-impl QueryTallyResultRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Tally";
 }
 
 impl TryFrom<inner::QueryTallyResultRequest> for QueryTallyResultRequest {
@@ -350,14 +336,12 @@ impl From<QueryTallyResultRequest> for inner::QueryTallyResultRequest {
     }
 }
 
-impl Protobuf<inner::QueryTallyResultRequest> for QueryTallyResultRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Params",
+    raw = "inner::QueryAllParamsRequest"
+)]
 pub struct QueryAllParamsRequest;
-
-impl QueryAllParamsRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Params";
-}
 
 impl TryFrom<inner::QueryAllParamsRequest> for QueryAllParamsRequest {
     type Error = CoreError;
@@ -375,15 +359,13 @@ impl From<QueryAllParamsRequest> for inner::QueryAllParamsRequest {
     }
 }
 
-impl Protobuf<inner::QueryAllParamsRequest> for QueryAllParamsRequest {}
-
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Query)]
+#[query(
+    url = "/cosmos.gov.v1beta1.Query/Proposer",
+    raw = "inner::QueryProposerRequest"
+)]
 pub struct QueryProposerRequest {
     pub proposal_id: u64,
-}
-
-impl QueryProposerRequest {
-    pub const QUERY_URL: &'static str = "/cosmos.gov.v1beta1.Query/Proposer";
 }
 
 impl TryFrom<inner::QueryProposerRequest> for QueryProposerRequest {
@@ -401,5 +383,3 @@ impl From<QueryProposerRequest> for inner::QueryProposerRequest {
         Self { proposal_id }
     }
 }
-
-impl Protobuf<inner::QueryProposerRequest> for QueryProposerRequest {}

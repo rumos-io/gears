@@ -18,8 +18,7 @@ gears = { path = "../gears", features = [
     "xmods",
     "rocksdb",
     "governance",
-] }
-gears-derive = { path = "../gears-derive" }
+] } 
 staking = { path = "../x/staking" }
 
 #newtypes

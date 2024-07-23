@@ -3,6 +3,7 @@ use std::marker::PhantomData;
 use gears::application::handlers::node::{ModuleInfo, TxError};
 use gears::baseapp::errors::QueryError;
 use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
+use gears::derive::Query;
 use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ext::Pagination;
 use gears::params::ParamsSubspaceKey;
@@ -11,9 +12,6 @@ use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::pagination::response::PaginationResponse;
-use gears::types::query::metadata::{
-    QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
-};
 use gears::types::store::gas::ext::GasResultExt;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::keepers::bank::BankKeeper;
@@ -23,6 +21,7 @@ use serde::Serialize;
 use crate::errors::BankTxError;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
+    QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
     QueryDenomsMetadataResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
@@ -33,7 +32,7 @@ pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, 
     phantom_data: PhantomData<MI>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, Query)]
 pub enum BankNodeQueryRequest {
     Balance(QueryBalanceRequest),
     AllBalances(QueryAllBalancesRequest),
@@ -42,7 +41,7 @@ pub enum BankNodeQueryRequest {
     DenomMetadata(QueryDenomMetadataRequest),
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Debug, Serialize, Query)]
 #[serde(untagged)]
 pub enum BankNodeQueryResponse {
     Balance(QueryBalanceResponse),
@@ -117,14 +116,14 @@ impl<
         query: RequestQuery,
     ) -> std::result::Result<bytes::Bytes, QueryError> {
         match query.path.as_str() {
-            QueryAllBalancesRequest::TYPE_URL => {
+            QueryAllBalancesRequest::QUERY_URL => {
                 let req = QueryAllBalancesRequest::decode(query.data)?;
 
                 let result = self.query_balances(ctx, req);
 
                 Ok(result.encode_vec().expect(IBC_ENCODE_UNWRAP).into())
             }
-            QueryTotalSupplyRequest::TYPE_URL => {
+            QueryTotalSupplyRequest::QUERY_URL => {
                 let req = QueryTotalSupplyRequest::decode(query.data)?;
 
                 Ok(self
@@ -143,7 +142,7 @@ impl<
                     .expect(IBC_ENCODE_UNWRAP)
                     .into())
             }
-            QueryDenomsMetadataRequest::TYPE_URL => {
+            QueryDenomsMetadataRequest::QUERY_URL => {
                 let req = QueryDenomsMetadataRequest::decode(query.data)?;
 
                 let result = self

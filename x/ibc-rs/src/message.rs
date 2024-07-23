@@ -1,4 +1,4 @@
-use gears_derive::RoutingMessage;
+use gears::derive::RoutingMessage;
 
 use crate::ics02_client::message::MsgCreateClient;
 
