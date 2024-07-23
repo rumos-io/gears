@@ -6,9 +6,9 @@ use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
     cli::pagination::CliPaginationRequest,
-    core::Protobuf,
-    tendermint::types::proto::crypto::PublicKey,
-    types::{address::ConsAddress, pagination::request::PaginationRequest, query::Query},
+    derive::Query,
+    tendermint::types::proto::{crypto::PublicKey, Protobuf as _},
+    types::{address::ConsAddress, pagination::request::PaginationRequest},
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -91,32 +91,14 @@ impl QueryHandler for SlashingQueryHandler {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Query)]
 pub enum SlashingQueryRequest {
     SigningInfo(QuerySigningInfoRequest),
     SigningInfos(QuerySigningInfosRequest),
     Params(QueryParamsRequest),
 }
 
-impl Query for SlashingQueryRequest {
-    fn query_url(&self) -> &'static str {
-        match self {
-            SlashingQueryRequest::SigningInfo(_) => "/cosmos.slashing.v1beta1.Query/SigningInfo",
-            SlashingQueryRequest::SigningInfos(_) => "/cosmos.slashing.v1beta1.Query/SigningInfos",
-            SlashingQueryRequest::Params(_) => "/cosmos.slashing.v1beta1.Query/Params",
-        }
-    }
-
-    fn into_bytes(self) -> Vec<u8> {
-        match self {
-            SlashingQueryRequest::SigningInfo(var) => var.encode_vec(),
-            SlashingQueryRequest::SigningInfos(var) => var.encode_vec(),
-            SlashingQueryRequest::Params(var) => var.encode_vec(),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum SlashingQueryResponse {

@@ -1,3 +1,4 @@
+use crate::query::{QueryAccountRequest, QueryAccountResponse};
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
@@ -9,13 +10,9 @@ use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf as _;
+use gears::types::account::{Account, BaseAccount, ModuleAccount};
 use gears::types::address::AccAddress;
-use gears::types::query::account::QueryAccountRequest;
 use gears::types::store::gas::errors::GasStoreErrors;
-use gears::types::{
-    account::{Account, BaseAccount, ModuleAccount},
-    query::account::QueryAccountResponse,
-};
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use prost::Message;

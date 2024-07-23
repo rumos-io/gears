@@ -36,5 +36,6 @@ pub mod store {
 }
 
 pub mod derive {
-    pub use gears_derive::*;
+    pub use query_derive::*;
+    pub use tx_derive::*;
 }

@@ -26,10 +26,6 @@ impl TxMessage for Message {
         }
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        Ok(())
-    }
-
     fn type_url(&self) -> &'static str {
         match self {
             Message::WithdrawRewards(_) => "/cosmos.distribution.v1beta1.WithdrawRewards",

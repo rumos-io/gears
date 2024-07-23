@@ -4,6 +4,7 @@ use crate::{
 };
 use gears::{
     core::{errors::CoreError, query::request::PageRequest, Protobuf},
+    derive::Query,
     error::IBC_ENCODE_UNWRAP,
     store::database::ext::UnwrapCorrupt,
     tendermint::types::proto::Protobuf as TendermintProtobuf,
@@ -23,7 +24,11 @@ use serde::{Deserialize, Serialize};
 // ===
 
 /// QueryValidatorRequest is the request type for the Query/Validator RPC method.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Query)]
+#[query(
+    url = "/cosmos.staking.v1beta1.Query/Validator",
+    raw = "QueryValidatorRequestRaw"
+)]
 pub struct QueryValidatorRequest {
     /// Address of queried validator.
     pub address: ValAddress,
@@ -54,11 +59,25 @@ impl From<QueryValidatorRequest> for QueryValidatorRequestRaw {
     }
 }
 
-impl Protobuf<QueryValidatorRequestRaw> for QueryValidatorRequest {}
-
 /// QueryDelegationRequest is request type for the Query/Delegation RPC method.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Query)]
+#[query(
+    url = "/cosmos.staking.v1beta1.Query/Delegation",
+    raw = "QueryDelegationRequestRaw"
+)]
 pub struct QueryDelegationRequest {
+    /// delegator_addr defines the delegator address to query for.
+    pub delegator_address: AccAddress,
+    /// validator_addr defines the validator address to query for.
+    pub validator_address: ValAddress,
+}
+
+#[derive(Clone, Debug, PartialEq, Query)]
+#[query(
+    url = "/cosmos.staking.v1beta1.Query/UnbondingDelegation",
+    raw = "QueryDelegationRequestRaw"
+)]
+pub struct QueryUnboundingDelegationRequest {
     /// delegator_addr defines the delegator address to query for.
     pub delegator_address: AccAddress,
     /// validator_addr defines the validator address to query for.
@@ -75,6 +94,22 @@ impl TryFrom<QueryDelegationRequestRaw> for QueryDelegationRequest {
             .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
 
         Ok(QueryDelegationRequest {
+            delegator_address,
+            validator_address,
+        })
+    }
+}
+
+impl TryFrom<QueryDelegationRequestRaw> for QueryUnboundingDelegationRequest {
+    type Error = CoreError;
+
+    fn try_from(raw: QueryDelegationRequestRaw) -> Result<Self, Self::Error> {
+        let delegator_address = AccAddress::from_bech32(&raw.delegator_address)
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
+        let validator_address = ValAddress::from_bech32(&raw.validator_address)
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
+
+        Ok(Self {
             delegator_address,
             validator_address,
         })
@@ -98,10 +133,21 @@ impl From<QueryDelegationRequest> for QueryDelegationRequestRaw {
     }
 }
 
-impl Protobuf<QueryDelegationRequestRaw> for QueryDelegationRequest {}
+impl From<QueryUnboundingDelegationRequest> for QueryDelegationRequestRaw {
+    fn from(query: QueryUnboundingDelegationRequest) -> QueryDelegationRequestRaw {
+        Self {
+            delegator_address: query.delegator_address.to_string(),
+            validator_address: query.validator_address.to_string(),
+        }
+    }
+}
 
 /// QueryRedelegationRequest is request type for the Query/Redelegation RPC method.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Query)]
+#[query(
+    url = "/cosmos.staking.v1beta1.Query/Redelegation",
+    raw = "QueryRedelegationRequestRaw"
+)]
 pub struct QueryRedelegationRequest {
     /// delegator_addr defines the delegator address to query for.
     pub delegator_address: Option<AccAddress>,
@@ -174,14 +220,13 @@ impl From<QueryRedelegationRequest> for QueryRedelegationRequestRaw {
     }
 }
 
-impl Protobuf<QueryRedelegationRequestRaw> for QueryRedelegationRequest {}
-
 // ===
 // responses
 // ===
 
 /// QueryValidatorResponse is the response type for the Query/Validator RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "QueryValidatorResponseRaw")]
 pub struct QueryValidatorResponse {
     /// Full data about validator.
     pub validator: Option<Validator>,
@@ -218,11 +263,10 @@ impl From<QueryValidatorResponse> for QueryValidatorResponseRaw {
     }
 }
 
-impl Protobuf<QueryValidatorResponseRaw> for QueryValidatorResponse {}
-
 /// DelegationResponse is equivalent to Delegation except that it contains a
 /// balance in addition to shares which is more suitable for client responses.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "DelegationResponseRaw")]
 pub struct DelegationResponse {
     pub delegation: Delegation,
     pub balance: UnsignedCoin,
@@ -261,10 +305,9 @@ impl From<DelegationResponse> for DelegationResponseRaw {
     }
 }
 
-impl Protobuf<DelegationResponseRaw> for DelegationResponse {}
-
 /// QueryDelegationResponse is the response type for the Query/Delegation RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "QueryDelegationResponseRaw")]
 pub struct QueryDelegationResponse {
     /// Delegation with balance.
     pub delegation_response: Option<DelegationResponse>,
@@ -300,12 +343,11 @@ impl From<QueryDelegationResponse> for QueryDelegationResponseRaw {
     }
 }
 
-impl Protobuf<QueryDelegationResponseRaw> for QueryDelegationResponse {}
-
 /// RedelegationEntryResponse is equivalent to a RedelegationEntry except that it
 /// contains a balance in addition to shares which is more suitable for client
 /// responses.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "RedelegationEntryResponseRaw")]
 pub struct RedelegationEntryResponse {
     pub redelegation_entry: RedelegationEntry,
     pub balance: Uint256,
@@ -347,7 +389,8 @@ impl From<RedelegationEntryResponse> for RedelegationEntryResponseRaw {
 
 /// RedelegationResponse is equivalent to a Redelegation except that its entries
 /// contain a balance in addition to shares which is more suitable for client responses.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "RedelegationResponseRaw")]
 pub struct RedelegationResponse {
     pub redelegation: Redelegation,
     pub entries: Vec<RedelegationEntryResponse>,
@@ -388,7 +431,8 @@ impl From<RedelegationResponse> for RedelegationResponseRaw {
 }
 
 /// QueryRedelegationResponse is the response type for the Query/Redelegation RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "QueryRedelegationResponseRaw")]
 pub struct QueryRedelegationResponse {
     /// Redelegation with balance.
     pub redelegation_responses: Vec<RedelegationResponse>,
@@ -434,10 +478,9 @@ impl From<QueryRedelegationResponse> for QueryRedelegationResponseRaw {
     }
 }
 
-impl Protobuf<QueryRedelegationResponseRaw> for QueryRedelegationResponse {}
-
 /// QueryUnbondingDelegationResponse is the response type for the Query/UnbondingDelegation RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "QueryUnbondingDelegationResponseRaw")]
 pub struct QueryUnbondingDelegationResponse {
     /// UnbondingDelegation with balance.
     pub unbond: Option<UnbondingDelegation>,
@@ -473,10 +516,9 @@ impl From<QueryUnbondingDelegationResponse> for QueryUnbondingDelegationResponse
     }
 }
 
-impl Protobuf<QueryUnbondingDelegationResponseRaw> for QueryUnbondingDelegationResponse {}
-
 /// QueryParamsResponse is the response type for the Query/Params RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "QueryParamsResponseRaw")]
 pub struct QueryParamsResponse {
     pub params: Params,
 }
@@ -524,5 +566,3 @@ impl From<QueryParamsResponse> for QueryParamsResponseRaw {
         }
     }
 }
-
-impl Protobuf<QueryParamsResponseRaw> for QueryParamsResponse {}

@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use bytes::Bytes;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
-    baseapp::errors::QueryError,
+    baseapp::{errors::QueryError, QueryResponse},
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         TransactionalContext,
@@ -267,7 +267,7 @@ impl<
 
         let result = self.keeper.query(ctx, query).unwrap_gas();
 
-        Ok(result.encode_to_vec())
+        Ok(result.into_bytes().into())
     }
 
     fn end_block<'a, DB: Database>(

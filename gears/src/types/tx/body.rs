@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 use tendermint::types::proto::Protobuf;
+use vec1::Vec1;
 
 mod inner {
     pub use core_types::tx::body::TxBody;
@@ -21,7 +22,7 @@ pub struct TxBody<M> {
     /// By convention, the first required signer (usually from the first message)
     /// is referred to as the primary signer and pays the fee for the whole
     /// transaction.
-    pub messages: Vec<M>,
+    pub messages: Vec1<M>,
     /// memo is any arbitrary note/comment to be added to the transaction.
     /// WARNING: in clients, any publicly exposed text should not be called memo,
     /// but should be called `note` instead (see <https://github.com/cosmos/cosmos-sdk/issues/9122>).
@@ -41,7 +42,7 @@ pub struct TxBody<M> {
 }
 
 impl<M> TxBody<M> {
-    pub fn new_with_defaults(messages: Vec<M>) -> Self {
+    pub fn new_with_defaults(messages: Vec1<M>) -> Self {
         Self {
             messages,
             memo: String::new(),
@@ -63,7 +64,8 @@ impl<M: TxMessage> TryFrom<inner::TxBody> for TxBody<M> {
         }
 
         Ok(TxBody {
-            messages,
+            messages: Vec1::try_from(messages)
+                .map_err(|_| CoreError::DecodeGeneral("messages is empty".to_owned()))?,
             memo: raw.memo,
             timeout_height: raw.timeout_height.try_into().map_err(|_| {
                 CoreError::DecodeGeneral(format!(

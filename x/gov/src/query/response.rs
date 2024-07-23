@@ -1,7 +1,7 @@
 use gears::{
     core::errors::CoreError,
+    derive::Query,
     ext::FallibleMapExt,
-    tendermint::types::proto::Protobuf,
     types::{address::AccAddress, pagination::response::PaginationResponse},
 };
 use serde::{Deserialize, Serialize};
@@ -25,7 +25,8 @@ mod inner {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryProposalResponse")]
 pub struct QueryProposalResponse {
     pub proposal: Option<Proposal>,
 }
@@ -53,9 +54,8 @@ impl From<QueryProposalResponse> for inner::QueryProposalResponse {
     }
 }
 
-impl Protobuf<inner::QueryProposalResponse> for QueryProposalResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryProposalsResponse")]
 pub struct QueryProposalsResponse {
     pub proposals: Vec<Proposal>,
     pub pagination: Option<PaginationResponse>,
@@ -99,9 +99,8 @@ impl From<QueryProposalsResponse> for inner::QueryProposalsResponse {
     }
 }
 
-impl Protobuf<inner::QueryProposalsResponse> for QueryProposalsResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryVoteResponse")]
 pub struct QueryVoteResponse {
     pub vote: Option<MsgVoteWeighted>,
 }
@@ -129,9 +128,8 @@ impl From<QueryVoteResponse> for inner::QueryVoteResponse {
     }
 }
 
-impl Protobuf<inner::QueryVoteResponse> for QueryVoteResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryVotesResponse")]
 pub struct QueryVotesResponse {
     pub votes: Vec<MsgVoteWeighted>,
     pub pagination: Option<PaginationResponse>,
@@ -167,9 +165,8 @@ impl From<QueryVotesResponse> for inner::QueryVotesResponse {
     }
 }
 
-impl Protobuf<inner::QueryVotesResponse> for QueryVotesResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryParamsResponse")]
 pub struct QueryParamsResponse {
     pub voting_params: Option<VotingParams>,
     pub deposit_params: Option<DepositParams>,
@@ -210,9 +207,8 @@ impl From<QueryParamsResponse> for inner::QueryParamsResponse {
     }
 }
 
-impl Protobuf<inner::QueryParamsResponse> for QueryParamsResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryDepositResponse")]
 pub struct QueryDepositResponse {
     pub deposit: Option<Deposit>,
 }
@@ -237,9 +233,8 @@ impl From<QueryDepositResponse> for inner::QueryDepositResponse {
     }
 }
 
-impl Protobuf<inner::QueryDepositResponse> for QueryDepositResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryDepositsResponse")]
 pub struct QueryDepositsResponse {
     pub deposits: Vec<Deposit>,
     pub pagination: Option<PaginationResponse>,
@@ -286,9 +281,8 @@ impl From<QueryDepositsResponse> for inner::QueryDepositsResponse {
     }
 }
 
-impl Protobuf<inner::QueryDepositsResponse> for QueryDepositsResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryTallyResultResponse")]
 pub struct QueryTallyResultResponse {
     pub tally: Option<TallyResult>,
 }
@@ -313,9 +307,8 @@ impl From<QueryTallyResultResponse> for inner::QueryTallyResultResponse {
     }
 }
 
-impl Protobuf<inner::QueryTallyResultResponse> for QueryTallyResultResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryParamsResponse")]
 pub struct QueryAllParamsResponse {
     pub voting_params: VotingParams,
     pub deposit_params: DepositParams,
@@ -368,9 +361,8 @@ impl From<QueryAllParamsResponse> for inner::QueryParamsResponse {
     }
 }
 
-impl Protobuf<inner::QueryParamsResponse> for QueryAllParamsResponse {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(raw = "inner::QueryProposerResponse")]
 pub struct QueryProposerResponse {
     proposer: AccAddress,
 }
@@ -395,5 +387,3 @@ impl From<QueryProposerResponse> for inner::QueryProposerResponse {
         }
     }
 }
-
-impl Protobuf<inner::QueryProposerResponse> for QueryProposerResponse {}

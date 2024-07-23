@@ -32,10 +32,6 @@ impl TxMessage for MsgSubmitProposal {
         vec![&self.proposer]
     }
 
-    fn validate_basic(&self) -> Result<(), String> {
-        Ok(())
-    }
-
     fn type_url(&self) -> &'static str {
         MsgSubmitProposal::TYPE_URL
     }

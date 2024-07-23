@@ -10,7 +10,6 @@ use gears::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
         decimal256::Decimal256,
-        tx::TxMessage,
         uint::Uint256,
     },
 };
@@ -150,8 +149,7 @@ pub fn run_staking_tx_command(
                 pub_key: pubkey.clone(),
                 value: amount.clone(),
             });
-            msg.validate_basic()
-                .map_err(|_| anyhow::anyhow!("tx validation"))?;
+
             Ok(msg)
 
             // genOnly, _ := fs.GetBool(flags.FlagGenerateOnly)
@@ -191,8 +189,7 @@ pub fn run_staking_tx_command(
                 validator_address,
                 from_address: delegator_address,
             });
-            msg.validate_basic()
-                .map_err(|_| anyhow::anyhow!("tx validation"))?;
+
             Ok(msg)
         }
         StakingCommands::Delegate {

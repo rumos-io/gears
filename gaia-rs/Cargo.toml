@@ -18,8 +18,7 @@ gears = { path = "../gears", features = [
     "xmods",
     "rocksdb",
     "governance",
-] }
-gears-derive = { path = "../gears-derive" }
+] } 
 staking = { path = "../x/staking" }
 
 #newtypes
@@ -54,3 +53,4 @@ rayon = "1.10.0"
 hex = { workspace = true }
 bip32 = { workspace = true }
 keyring = { path = "../keyring" }
+vec1 = { workspace = true }

@@ -1,11 +1,13 @@
 use gears::application::handlers::client::QueryHandler;
+use ibc::primitives::proto::Protobuf as _;
 
 use crate::ics02_client::client::cli::query::query_handler::ClientQueryHandler;
 
 use std::borrow::Cow;
 
 use clap::{Args, Subcommand};
-use gears::types::query::Query;
+use gears::baseapp::Query;
+use prost::Message;
 use serde::{Deserialize, Serialize};
 
 use crate::ics02_client::client::cli::query::{ClientQuery, ClientQueryCli, ClientQueryResponse};
@@ -45,6 +47,22 @@ impl Query for IbcQuery {
 #[serde(untagged)]
 pub enum IbcQueryResponse {
     Client(ClientQueryResponse),
+}
+
+impl IbcQueryResponse {
+    pub fn into_bytes(self) -> Vec<u8> {
+        match self {
+            IbcQueryResponse::Client(q) => match q {
+                ClientQueryResponse::ClientParams(q) => q.encode_to_vec(),
+                ClientQueryResponse::ClientState(q) => q.encode_to_vec(),
+                ClientQueryResponse::ClientStates(q) => q.encode_vec(),
+                ClientQueryResponse::ClientStatus(q) => q.encode_to_vec(),
+                ClientQueryResponse::ConsensusState(q) => q.encode_to_vec(),
+                ClientQueryResponse::ConsensusStates(q) => q.encode_to_vec(),
+                ClientQueryResponse::ConsensusStateHeights(q) => q.encode_to_vec(),
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

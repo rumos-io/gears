@@ -1,4 +1,5 @@
 use crate::{
+    baseapp::Query,
     commands::client::{
         query::execute_query,
         tx::{broadcast_tx_commit, ClientTxContext},
@@ -15,14 +16,6 @@ use crate::{
         auth::fee::Fee,
         base::coins::UnsignedCoins,
         denom::Denom,
-        query::{
-            account::{QueryAccountRequest, QueryAccountResponse},
-            metadata::{
-                QueryDenomMetadataRequest, QueryDenomMetadataResponse,
-                RawQueryDenomMetadataResponse,
-            },
-            Query,
-        },
         tx::{body::TxBody, Messages, TxMessage},
     },
 };
@@ -39,6 +32,11 @@ use tendermint::{
         response::tx::broadcast::Response,
     },
     types::{chain_id::ChainId, proto::block::Height},
+};
+
+use super::types::{
+    QueryAccountRequest, QueryAccountResponse, QueryDenomMetadataRequest,
+    QueryDenomMetadataResponse, RawQueryDenomMetadataResponse,
 };
 
 pub trait TxHandler {

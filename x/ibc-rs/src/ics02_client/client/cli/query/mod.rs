@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use clap::{Args, Subcommand};
-use gears::types::query::Query;
+use gears::baseapp::Query;
 use ibc::core::client::types::proto::v1::{
     QueryClientParamsRequest, QueryClientParamsResponse, QueryClientStateRequest,
     QueryClientStateResponse, QueryClientStatesRequest, QueryClientStatusRequest,
