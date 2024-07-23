@@ -193,3 +193,9 @@ pub trait SlashingStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 
     ) -> Result<u32, GasStoreErrors>;
     // MaxValidators(sdk.Context) uint32
 }
+
+/// Staking keeper which used in distribution xmod
+pub trait DistributionStakingKeeper<SK: StoreKey, M: Module>:
+    GovStakingKeeper<SK, M> + SlashingStakingKeeper<SK, M>
+{
+}

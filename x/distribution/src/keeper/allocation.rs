@@ -1,3 +1,8 @@
+use super::*;
+use crate::{
+    errors::TokenAllocationError, ValidatorAccumulatedCommission, ValidatorCurrentRewards,
+    ValidatorOutstandingRewards,
+};
 use gears::{
     context::block::BlockContext,
     error::{MathOperation, NumericError},
@@ -13,21 +18,14 @@ use gears::{
     x::errors::AccountNotFound,
 };
 
-use crate::{
-    errors::TokenAllocationError, ValidatorAccumulatedCommission, ValidatorCurrentRewards,
-    ValidatorOutstandingRewards,
-};
-
-use super::*;
-
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
         AK: AuthKeeper<SK, M>,
         BK: BankKeeper<SK, M>,
-        SSK: SlashingStakingKeeper<SK, M>,
+        DSK: DistributionStakingKeeper<SK, M>,
         M: Module,
-    > Keeper<SK, PSK, AK, BK, SSK, M>
+    > Keeper<SK, PSK, AK, BK, DSK, M>
 {
     /// allocate_tokens handles distribution of the collected fees
     /// bonded_votes is a list of (validator address, validator voted on last block flag) for all
@@ -61,10 +59,11 @@ impl<
         // general discussions here: https://github.com/cosmos/cosmos-sdk/issues/2906#issuecomment-441867634
         let mut fee_pool = self
             .fee_pool(ctx)
+            .unwrap_gas()
             .ok_or(TokenAllocationError::FeePoolNone)?;
         if total_previous_power == 0 {
             fee_pool.community_pool = fee_pool.community_pool.checked_add(&fees_collected)?;
-            self.set_fee_pool(ctx, &fee_pool);
+            self.set_fee_pool(ctx, &fee_pool).unwrap_gas();
             return Ok(());
         }
 
@@ -179,7 +178,7 @@ impl<
 
         // allocate community funding
         fee_pool.community_pool = fee_pool.community_pool.checked_add(&remaining)?;
-        self.set_fee_pool(ctx, &fee_pool);
+        self.set_fee_pool(ctx, &fee_pool).unwrap_gas();
 
         Ok(())
     }
@@ -215,8 +214,9 @@ impl<
             ],
         });
 
-        let current_commission = if let Some(mut current_commission) =
-            self.validator_accumulated_commission(ctx, validator_operator_addr)
+        let current_commission = if let Some(mut current_commission) = self
+            .validator_accumulated_commission(ctx, validator_operator_addr)
+            .unwrap_gas()
         {
             current_commission.commission =
                 current_commission.commission.checked_add(&commission)?;
@@ -228,11 +228,13 @@ impl<
             ctx,
             validator_operator_addr,
             &current_commission,
-        );
+        )
+        .unwrap_gas();
 
         // update current rewards
-        let current_rewards = if let Some(mut cur_reward) =
-            self.validator_current_rewards(ctx, validator_operator_addr)
+        let current_rewards = if let Some(mut cur_reward) = self
+            .validator_current_rewards(ctx, validator_operator_addr)
+            .unwrap_gas()
         {
             cur_reward.rewards = cur_reward.rewards.checked_add(&shared)?;
             cur_reward
@@ -243,7 +245,8 @@ impl<
                 period: 0,
             }
         };
-        self.set_validator_current_rewards(ctx, validator_operator_addr, &current_rewards);
+        self.set_validator_current_rewards(ctx, validator_operator_addr, &current_rewards)
+            .unwrap_gas();
 
         // update outstanding rewards
         ctx.push_event(Event {
@@ -263,8 +266,9 @@ impl<
             ],
         });
 
-        let outstanding = if let Some(mut outstanding_rewards) =
-            self.validator_outstanding_rewards(ctx, validator_operator_addr)
+        let outstanding = if let Some(mut outstanding_rewards) = self
+            .validator_outstanding_rewards(ctx, validator_operator_addr)
+            .unwrap_gas()
         {
             outstanding_rewards.rewards = outstanding_rewards.rewards.checked_add(tokens)?;
             outstanding_rewards
@@ -274,7 +278,8 @@ impl<
                 rewards: tokens.clone(),
             }
         };
-        self.set_validator_outstanding_rewards(ctx, validator_operator_addr, &outstanding);
+        self.set_validator_outstanding_rewards(ctx, validator_operator_addr, &outstanding)
+            .unwrap_gas();
         Ok(())
     }
 }
