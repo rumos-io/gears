@@ -1,7 +1,6 @@
 use crate::consts::proto::*;
 use gears::{
     core::{errors::CoreError, Protobuf},
-    error::AppError,
     tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
     types::{
         address::{AccAddress, ValAddress},
@@ -55,7 +54,7 @@ impl CommissionRates {
         rate: Decimal256,
         max_rate: Decimal256,
         max_change_rate: Decimal256,
-    ) -> Result<CommissionRates, AppError> {
+    ) -> Result<CommissionRates, anyhow::Error> {
         CommissionRates::validate(rate, max_rate, max_change_rate)?;
         Ok(CommissionRates {
             rate,
@@ -80,20 +79,18 @@ impl CommissionRates {
         rate: Decimal256,
         max_rate: Decimal256,
         max_change_rate: Decimal256,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         if max_rate > ONE_DEC {
             // max rate cannot be greater than 1
-            return Err(AppError::Send("max_rate too huge".into()));
+            return Err(anyhow::anyhow!("max_rate too huge"));
         }
         if rate > max_rate {
             // rate cannot be greater than the max rate
-            return Err(AppError::Send("rate is bigger than max_rate".into()));
+            return Err(anyhow::anyhow!("rate is bigger than max_rate"));
         }
         if max_change_rate > max_rate {
             // change rate cannot be greater than the max rate
-            return Err(AppError::Send(
-                "max_change_rate is bigger than max_rate".into(),
-            ));
+            return Err(anyhow::anyhow!("max_change_rate is bigger than max_rate"));
         }
         Ok(())
     }
@@ -152,7 +149,7 @@ impl Commission {
         &self,
         commission_rates: CommissionRates,
         update_time: Timestamp,
-    ) -> Result<Commission, AppError> {
+    ) -> Result<Commission, anyhow::Error> {
         // TODO: consider to move the DateTime type and work with timestamps into Gears
         // The timestamp is provided by context and conversion won't fail.
         let self_time = chrono::DateTime::from_timestamp(
@@ -164,8 +161,8 @@ impl Commission {
             chrono::DateTime::from_timestamp(update_time.seconds, update_time.nanos as u32)
                 .unwrap();
         if (new_update_time - self_time).num_hours() < 24 {
-            return Err(AppError::Custom(
-                "new rate cannot be changed more than once within 24 hours".to_string(),
+            return Err(anyhow::anyhow!(
+                "new rate cannot be changed more than once within 24 hours"
             ));
         }
         Ok(Commission {
@@ -228,7 +225,7 @@ impl Description {
     pub fn create_updated_description(
         &self,
         other: &DescriptionUpdate,
-    ) -> Result<Description, AppError> {
+    ) -> Result<Description, anyhow::Error> {
         let mut description = self.clone();
         if let Some(moniker) = &other.moniker {
             description.moniker.clone_from(moniker);
@@ -249,7 +246,7 @@ impl Description {
         Ok(description)
     }
 
-    pub fn ensure_length(&self) -> Result<(), AppError> {
+    pub fn ensure_length(&self) -> Result<(), anyhow::Error> {
         if self.moniker.len() > MAX_MONIKER_LENGTH {
             return Err(self.form_ensure_length_err(
                 "moniker",
@@ -288,8 +285,8 @@ impl Description {
         Ok(())
     }
 
-    fn form_ensure_length_err(&self, name: &str, got: usize, max: usize) -> AppError {
-        AppError::InvalidRequest(format!("invalid {name} length; got: {got}, max: {max}"))
+    fn form_ensure_length_err(&self, name: &str, got: usize, max: usize) -> anyhow::Error {
+        anyhow::anyhow!("invalid {name} length; got: {got}, max: {max}")
     }
 }
 

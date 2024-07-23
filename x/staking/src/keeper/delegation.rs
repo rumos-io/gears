@@ -24,14 +24,12 @@ impl<
         token_src: BondStatus,
         validator: &mut Validator,
         subtract_account: bool,
-    ) -> Result<Decimal256, AppError> {
+    ) -> Result<Decimal256, anyhow::Error> {
         // In some situations, the exchange rate becomes invalid, e.g. if
         // Validator loses all tokens due to slashing. In this case,
         // make all future delegations invalid.
         if validator.invalid_ex_rate() {
-            return Err(AppError::Custom(
-                "invalid delegation_share exchange rate ".into(),
-            ));
+            return Err(anyhow::anyhow!("invalid delegation_share exchange rate "));
         }
 
         // Get or create the delegation object
@@ -54,9 +52,7 @@ impl<
         // all non bonded
         if subtract_account {
             if token_src == BondStatus::Bonded {
-                return Err(AppError::Custom(
-                    "delegation token source cannot be bonded".to_string(),
-                ));
+                return Err(anyhow::anyhow!("delegation token source cannot be bonded"));
             }
 
             let send_module = match validator.status {
@@ -73,7 +69,7 @@ impl<
                 denom,
                 amount: bond_amount,
             }])
-            .map_err(|e| AppError::Coins(e.to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
 
             self.bank_keeper
                 .delegate_coins_from_account_to_module::<DB, CTX>(
@@ -81,7 +77,8 @@ impl<
                     delegation.delegator_address.clone(),
                     send_module,
                     coins,
-                )?;
+                )
+                .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         } else {
             // potentially transfer tokens between pools, if
 
@@ -101,12 +98,12 @@ impl<
 
         let new_shares = self
             .add_validator_tokens_and_shares(ctx, validator, bond_amount)
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         // Update delegation
         delegation.shares = delegation
             .shares
             .checked_add(new_shares)
-            .map_err(|e| AppError::Custom(e.to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         self.set_delegation(ctx, &delegation)?;
 
         // Call the after-modification hook

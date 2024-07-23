@@ -8,7 +8,7 @@ use std::{
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     context::{query::QueryContext, simple::SimpleContext},
-    error::{AppError, POISONED_LOCK},
+    error::POISONED_LOCK,
     params::ParamsSubspaceKey,
     types::{
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
@@ -17,6 +17,7 @@ use crate::{
 };
 use bytes::Bytes;
 use database::Database;
+use errors::{QueryError, TxValidation};
 use kv_store::{
     types::{multi::MultiBank, query::QueryMultiStore},
     ApplicationStore,
@@ -106,11 +107,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.multi_store.read().expect(POISONED_LOCK).head_version()
     }
 
-    fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
+    fn run_query(&self, request: &RequestQuery) -> Result<Bytes, QueryError> {
         //TODO: request height u32
-        let version: u32 = request.height.try_into().map_err(|_| {
-            AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
-        })?;
+        let version: u32 = request
+            .height
+            .try_into()
+            .map_err(|_| QueryError::InvalidHeight)?;
 
         let query_store =
             QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;

@@ -1,5 +1,7 @@
 use crate::types::{auth::gas::GasError, gas::GasMeteringErrors};
 
+use super::ext::UnwrapGasError;
+
 // TODO: this error should have two variants, out of gas and gas overflow
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 pub enum GasStoreErrorKinds {
@@ -24,3 +26,5 @@ impl GasStoreErrors {
         }
     }
 }
+
+impl UnwrapGasError for GasStoreErrors {}

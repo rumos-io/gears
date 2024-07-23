@@ -1,7 +1,8 @@
+use std::{borrow::Cow, num::NonZero};
+
 use crate::{
-    baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
+    baseapp::{errors::QueryError, genesis::Genesis, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    error::AppError,
     types::tx::{raw::TxWithRaw, TxMessage},
 };
 use database::Database;
@@ -12,27 +13,6 @@ use tendermint::types::{
 };
 use thiserror::Error;
 
-#[derive(Debug, Error)]
-#[error("error code must be greater than 0")]
-pub struct ErrorCodeError;
-
-#[derive(Debug, Clone)]
-pub struct ErrorCode(u16);
-
-impl ErrorCode {
-    pub const fn try_new(code: u16) -> Result<Self, ErrorCodeError> {
-        if code > 0 {
-            Ok(Self(code))
-        } else {
-            Err(ErrorCodeError)
-        }
-    }
-
-    pub fn value(&self) -> u16 {
-        self.0
-    }
-}
-
 pub trait ModuleInfo {
     const NAME: &'static str;
 }
@@ -40,9 +20,19 @@ pub trait ModuleInfo {
 #[derive(Error, Debug, Clone)]
 #[error("{msg}")]
 pub struct TxError {
-    pub msg: String,
-    pub code: ErrorCode,
+    pub msg: Cow<'static, str>,
+    pub code: NonZero<u16>,
     pub codespace: &'static str,
+}
+
+impl TxError {
+    pub fn new<MI: ModuleInfo>(msg: impl Into<Cow<'static, str>>, code: NonZero<u16>) -> Self {
+        Self {
+            msg: msg.into(),
+            code,
+            codespace: MI::NAME,
+        }
+    }
 }
 
 pub trait ABCIHandler: Clone + Send + Sync + 'static {
@@ -98,5 +88,5 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, AppError>;
+    ) -> Result<bytes::Bytes, QueryError>;
 }

@@ -6,14 +6,14 @@ use crate::{
     store_keys::{GaiaParamsStoreKey, GaiaStoreKey},
     GaiaNodeQueryRequest, GaiaNodeQueryResponse,
 };
-use gears::context::query::QueryContext;
 use gears::store::database::Database;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::tx::raw::TxWithRaw;
 use gears::{application::handlers::node::ABCIHandler, x::ante::BaseAnteHandler};
 use gears::{application::handlers::node::ModuleInfo, context::init::InitContext};
 use gears::{application::handlers::node::TxError, config::Config};
-use gears::{context::tx::TxContext, error::AppError, x::ante::DefaultSignGasConsumer};
+use gears::{baseapp::errors::QueryError, context::query::QueryContext};
+use gears::{context::tx::TxContext, x::ante::DefaultSignGasConsumer};
 
 #[derive(Debug, Clone)]
 struct BankModuleInfo;
@@ -173,7 +173,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &QueryContext<DB, GaiaStoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, AppError> {
+    ) -> Result<bytes::Bytes, QueryError> {
         if query.path.starts_with("/cosmos.auth") {
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {
@@ -183,7 +183,7 @@ impl ABCIHandler for GaiaABCIHandler {
         } else if query.path.starts_with("/ibc.core.client") {
             self.ibc_abci_handler.query(ctx, query)
         } else {
-            Err(AppError::InvalidRequest("query path not found".into()))
+            Err(QueryError::PathNotFound)
         }
     }
 

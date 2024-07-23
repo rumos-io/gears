@@ -4,6 +4,7 @@ use gears::{
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
 };
+use submission::handler::SubmissionHandlingError;
 
 pub mod abci_handler;
 pub mod errors;
@@ -20,7 +21,7 @@ pub trait ProposalHandler<PSK: ParamsSubspaceKey, P> {
         &self,
         proposal: &P,
         ctx: &mut CTX,
-    ) -> anyhow::Result<()>;
+    ) -> Result<(), SubmissionHandlingError>;
 
     fn check(proposal: &P) -> bool;
 }

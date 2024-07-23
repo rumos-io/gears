@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use tendermint::types::proto::Protobuf;
 
-use crate::types::{base::errors::CoinError, denom::Denom, errors::Error};
+use crate::types::{base::errors::CoinError, denom::Denom, errors::DenomError};
 
 use super::Coin;
 
@@ -39,7 +39,7 @@ impl TryFrom<inner::Coin> for UnsignedCoin {
         let denom = value
             .denom
             .try_into()
-            .map_err(|e: Error| CoinError::Denom(e.to_string()))?;
+            .map_err(|e: DenomError| CoinError::Denom(e.to_string()))?;
         let amount =
             Uint256::from_str(&value.amount).map_err(|e| CoinError::Uint(e.to_string()))?;
 
