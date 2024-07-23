@@ -12,6 +12,7 @@ use super::{unsigned::UnsignedCoins, Coins};
 pub type DecimalCoins = Coins<Decimal256, DecimalCoin>;
 
 impl DecimalCoins {
+    /// Checks that all coins amount of the structure are bigger or equal to other coins.
     pub fn is_all_gte(&self, other: &[DecimalCoin]) -> bool {
         let other = other.iter().collect::<Vec<_>>();
 
@@ -32,6 +33,7 @@ impl DecimalCoins {
         true
     }
 
+    /// Adds matching coins amounts and creates new from unmatching coins.
     pub fn checked_add(&self, other: &DecimalCoins) -> Result<Self, CoinsError> {
         let coins = self.checked_calculate_iterate(other.inner(), Decimal256::checked_add)?;
         Self::new(coins)
@@ -81,6 +83,9 @@ impl DecimalCoins {
         Ok(result)
     }
 
+    /// Substracts matching coins. If the other coins have bigger values or the coins that don't
+    /// exists in original set, method returns error. If all coins are identical method returns
+    /// error.
     pub fn checked_sub(&self, other: &DecimalCoins) -> Result<Self, CoinsError> {
         if self.is_all_gte(other.inner()) {
             let coins: Vec<DecimalCoin> = self
@@ -95,6 +100,7 @@ impl DecimalCoins {
         }
     }
 
+    /// Multiplies each coin by a number and truncates decimal part from the result.
     pub fn checked_mul_dec_truncate(&self, multiplier: Decimal256) -> Result<Self, CoinsError> {
         let mut coins = vec![];
         for coin in self.inner().iter() {
@@ -111,14 +117,14 @@ impl DecimalCoins {
         Self::new(coins)
     }
 
+    /// Multiplies each coin by a number and rounds decimal part for the result.
     pub fn checked_mul_dec(&self, multiplier: Decimal256) -> Result<Self, CoinsError> {
         let mut coins = vec![];
         for coin in self.inner().iter() {
             let normal = DecimalCoin::new(
                 coin.amount
                     .checked_mul(multiplier)
-                    .map_err(|_| CoinsError::InvalidAmount)?
-                    .floor(),
+                    .map_err(|_| CoinsError::InvalidAmount)?,
                 coin.denom.clone(),
             );
             let mut floored = DecimalCoin::new(
@@ -140,12 +146,13 @@ impl DecimalCoins {
         Self::new(coins)
     }
 
-    pub fn checked_quo_dec_truncate(&self, multiplier: Decimal256) -> Result<Self, CoinsError> {
+    /// Divides each coin by a number and truncates decimal part from the result.
+    pub fn checked_quo_dec_truncate(&self, divider: Decimal256) -> Result<Self, CoinsError> {
         let mut coins = vec![];
         for coin in self.inner().iter() {
             coins.push(DecimalCoin::new(
                 coin.amount
-                    .checked_div(multiplier)
+                    .checked_div(divider)
                     .map_err(|_| CoinsError::InvalidAmount)?
                     .floor(),
                 coin.denom.clone(),
@@ -155,6 +162,8 @@ impl DecimalCoins {
         Self::new(coins)
     }
 
+    /// split the coins into two parts: unsigned truncated coins and decimal change. Returns None for
+    /// the part that contains only zeros.
     pub fn truncate_decimal(&self) -> (Option<UnsignedCoins>, Option<DecimalCoins>) {
         let (truncated, change): (Vec<UnsignedCoin>, Vec<DecimalCoin>) = self
             .storage
@@ -194,7 +203,7 @@ impl DecimalCoins {
     /// are not added to the final set. In other words, trim any denom amount from
     /// coin which exceeds that of coinB, such that (coin.Intersect(coinB)).IsLTE(coinB).
     /// See also Coins.Min().
-    pub fn intersect(&self, other: &DecimalCoins) -> DecimalCoins {
+    pub fn intersect(&self, other: &DecimalCoins) -> Result<Self, CoinsError> {
         let coins: Vec<_> = self
             .inner()
             .iter()
@@ -205,7 +214,6 @@ impl DecimalCoins {
             .filter(|coin| !coin.amount.is_zero())
             .collect();
         DecimalCoins::new(coins)
-            .expect("inner structure is unchanged except that some coins are filtered")
     }
 }
 
@@ -311,16 +319,12 @@ mod tests {
             ]
         );
 
-        let dec_coins_inner_1 = vec![DecimalCoin {
+        let dec_coins_inner = vec![DecimalCoin {
             denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
             amount: Decimal256::new(Uint256::MAX),
         }];
-        let dec_coins_1 = DecimalCoins::new(dec_coins_inner_1).unwrap();
-        let dec_coins_inner_2 = vec![DecimalCoin {
-            denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
-            amount: Decimal256::new(Uint256::MAX),
-        }];
-        let dec_coins_2 = DecimalCoins::new(dec_coins_inner_2.clone()).unwrap();
+        let dec_coins_1 = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let dec_coins_2 = DecimalCoins::new(dec_coins_inner).unwrap();
 
         assert!(dec_coins_1.checked_add(&dec_coins_2).is_err());
 
@@ -359,6 +363,202 @@ mod tests {
                 },
             ]
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn checked_mul_dec_truncate() -> anyhow::Result<()> {
+        let dec_coins = generate_coins(vec![100, 90]);
+        let dec_coins_mul_truncated = dec_coins.checked_mul_dec_truncate(
+            Decimal256::from_atomics(31u64, 3).expect("hardcoded value can't fail"),
+        )?;
+        assert_eq!(
+            dec_coins_mul_truncated.inner(),
+            &vec![
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    // 3.03
+                    amount: Decimal256::from_atomics(3u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
+                    // 2.73
+                    amount: Decimal256::from_atomics(2u64, 0).unwrap(),
+                },
+            ]
+        );
+
+        let dec_coins_inner = vec![DecimalCoin {
+            denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+            amount: Decimal256::new(Uint256::MAX),
+        }];
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let dec_coins_mul_truncated =
+            dec_coins.checked_mul_dec_truncate(Decimal256::new(Uint256::MAX));
+        assert!(dec_coins_mul_truncated.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn checked_mul_dec() -> anyhow::Result<()> {
+        let dec_coins = generate_coins(vec![110, 100, 90]);
+        let dec_coins_mul = dec_coins.checked_mul_dec(
+            Decimal256::from_atomics(25u64, 3).expect("hardcoded value can't fail"),
+        )?;
+        assert_eq!(
+            dec_coins_mul.inner(),
+            &vec![
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    // > 2.5
+                    amount: Decimal256::from_atomics(3u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
+                    // == 2.5
+                    amount: Decimal256::from_atomics(3u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
+                    // < 2.5
+                    amount: Decimal256::from_atomics(2u64, 0).unwrap(),
+                },
+            ]
+        );
+
+        let dec_coins_inner = vec![DecimalCoin {
+            denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+            amount: Decimal256::new(Uint256::MAX),
+        }];
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let dec_coins_mul = dec_coins.checked_mul_dec(Decimal256::new(Uint256::MAX));
+        assert!(dec_coins_mul.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn checked_quo_dec_truncate() -> anyhow::Result<()> {
+        let dec_coins = generate_coins(vec![17, 12]);
+        let dec_coins_quo_truncated = dec_coins.checked_quo_dec_truncate(
+            Decimal256::from_atomics(10u64, 0).expect("hardcoded value can't fail"),
+        )?;
+        assert_eq!(
+            dec_coins_quo_truncated.inner(),
+            &vec![
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    // 1.7
+                    amount: Decimal256::from_atomics(1u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[1].clone(),
+                    // 1.2
+                    amount: Decimal256::from_atomics(1u64, 0).unwrap(),
+                },
+            ]
+        );
+
+        let dec_coins = generate_coins(vec![1]);
+        let dec_coins_quo_truncated =
+            dec_coins.checked_quo_dec_truncate(Decimal256::new(Uint256::from(0u64)));
+        assert!(dec_coins_quo_truncated.is_err());
+
+        Ok(())
+    }
+
+    #[test]
+    fn truncate_decimal() -> anyhow::Result<()> {
+        let dec_coins = generate_coins(vec![17]);
+        let (truncated, change) = dec_coins.truncate_decimal();
+        assert_eq!(
+            truncated,
+            Some(
+                UnsignedCoins::new(vec![UnsignedCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    amount: Uint256::from(17u64),
+                },])
+                .unwrap()
+            )
+        );
+        assert!(change.is_none());
+
+        let dec_coins_inner = vec![DecimalCoin {
+            denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+            amount: Decimal256::from_atomics(5u64, 1).expect("hardcoded value cannot fail"),
+        }];
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let (truncated, change) = dec_coins.truncate_decimal();
+        assert!(truncated.is_none());
+        assert_eq!(
+            change,
+            Some(
+                DecimalCoins::new(vec![DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    amount: Decimal256::from_atomics(5u64, 1).unwrap(),
+                },])
+                .unwrap()
+            )
+        );
+
+        let dec_coins_inner = vec![DecimalCoin {
+            denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+            amount: Decimal256::from_atomics(175u64, 1).expect("hardcoded value cannot fail"),
+        }];
+        let dec_coins = DecimalCoins::new(dec_coins_inner.clone()).unwrap();
+        let (truncated, change) = dec_coins.truncate_decimal();
+        assert_eq!(
+            truncated,
+            Some(
+                UnsignedCoins::new(vec![UnsignedCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    amount: Uint256::from(17u64),
+                },])
+                .unwrap()
+            )
+        );
+        assert_eq!(
+            change,
+            Some(
+                DecimalCoins::new(vec![DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    amount: Decimal256::from_atomics(5u64, 1).unwrap(),
+                },])
+                .unwrap()
+            )
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn intersects() -> anyhow::Result<()> {
+        /* has intersections */
+        let dec_coins_1 = generate_coins(vec![90, 0, 100, 30]);
+        let dec_coins_2 = generate_coins(vec![100, 50, 20]);
+        let dec_intersects = dec_coins_1.intersect(&dec_coins_2)?;
+        assert_eq!(
+            dec_intersects.inner(),
+            &vec![
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[0].clone(),
+                    amount: Decimal256::from_atomics(90u64, 0).unwrap(),
+                },
+                DecimalCoin {
+                    denom: DENOMS.get().expect("cannot fail initialized variable")[2].clone(),
+                    // 1.2
+                    amount: Decimal256::from_atomics(20u64, 0).unwrap(),
+                },
+            ]
+        );
+
+        /* don't have intersections */
+        let dec_coins_1 = generate_coins(vec![90, 0]);
+        let dec_coins_2 = generate_coins(vec![0, 50]);
+        let dec_intersects = dec_coins_1.intersect(&dec_coins_2);
+        assert!(dec_intersects.is_err());
 
         Ok(())
     }

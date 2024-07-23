@@ -108,7 +108,7 @@ impl<
 
         // defensive edge case may happen on the very final digits
         // of the DecimalCoins due to operation order of the distribution mechanism.
-        let rewards = rewards_raw.intersect(&outstanding);
+        let rewards = rewards_raw.intersect(&outstanding)?;
 
         if rewards.ne(&rewards_raw) {
             tracing::info!(
