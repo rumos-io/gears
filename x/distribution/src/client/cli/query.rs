@@ -8,13 +8,13 @@ use crate::{
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
+    baseapp::Query,
     cli::pagination::CliPaginationRequest,
     core::Protobuf,
     ext::FallibleMapExt,
     types::{
         address::{AccAddress, ValAddress},
         pagination::request::PaginationRequest,
-        query::Query,
     },
 };
 use serde::{Deserialize, Serialize};
