@@ -141,10 +141,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
     pub fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
+        mut genesis: GenesisState,
     ) {
-        //TODO: sdk sanitizes accounts
         self.auth_params_keeper.set(ctx, genesis.params);
+
+        // sanitazing
+        genesis
+            .accounts
+            .sort_by(|a, b| a.account_number.cmp(&b.account_number));
 
         for mut acct in genesis.accounts {
             acct.account_number = self
