@@ -1,4 +1,4 @@
-use crate::types::time::Duration;
+use crate::types::duration::Duration;
 
 use super::params::{BlockParams, EvidenceParams, ValidatorParams, VersionParams};
 

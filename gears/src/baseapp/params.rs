@@ -4,6 +4,7 @@ use database::Database;
 use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use tendermint::types::time::Duration;
 
 use crate::{
     application::keepers::params::ParamsKeeper,
@@ -171,13 +172,13 @@ impl Default for EvidenceParams {
 
 impl From<inner::EvidenceParams> for EvidenceParams {
     fn from(params: inner::EvidenceParams) -> EvidenceParams {
-        let duration = params
-            .max_age_duration
-            .map(|dur| dur.seconds * SEC_TO_NANO + i64::from(dur.nanos));
+        // let duration = params
+        //     .max_age_duration
+        //     .map(|dur| dur.seconds * SEC_TO_NANO + i64::from(dur.nanos));
 
         EvidenceParams {
             max_age_num_blocks: params.max_age_num_blocks.to_string(),
-            max_age_duration: duration.map(|val| val.to_string()),
+            max_age_duration: params.max_age_duration.map(|d| Duration::to_string(&d)),
             max_bytes: params.max_bytes.to_string(),
         }
     }
@@ -275,10 +276,7 @@ mod tests {
     fn evidence_params_serialize_works() {
         let params: EvidenceParams = RawEvidenceParams {
             max_age_num_blocks: 0,
-            max_age_duration: Some(Duration {
-                seconds: 10,
-                nanos: 30,
-            }),
+            max_age_duration: Some(Duration::try_new(10, 30).unwrap()),
             max_bytes: 0,
         }
         .into();

@@ -68,7 +68,7 @@ fn setup_mock_node() -> (
         .expect("won't fail since there's no existing account");
 
     let init_state = InitState {
-        time: Timestamp::ZERO,
+        time: Timestamp::UNIX_EPOCH,
         chain_id: chain_id.clone(),
         consensus_params: ConsensusParams::default(),
         validators: vec![ValidatorUpdate {

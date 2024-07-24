@@ -111,17 +111,11 @@ impl Validator {
             jailed: false,
             tokens: Uint256::zero(),
             unbonding_height: 0,
-            unbonding_time: Timestamp {
-                seconds: 0,
-                nanos: 0,
-            },
+            unbonding_time: Timestamp::UNIX_EPOCH,
             commission: Commission::new(
                 CommissionRates::new(Decimal256::zero(), Decimal256::zero(), Decimal256::zero())
                     .expect("creation of hardcoded commission rates won't fail"),
-                Timestamp {
-                    seconds: 0,
-                    nanos: 0,
-                },
+                Timestamp::UNIX_EPOCH,
             ),
             min_self_delegation: Uint256::one(),
             status: BondStatus::Unbonded,

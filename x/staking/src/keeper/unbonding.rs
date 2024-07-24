@@ -244,11 +244,6 @@ impl<
         //     })
         //     .collect();
 
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let block_time =
-            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
-
         for (k, v) in &unbonding_val_map {
             let (time, height) =
                 parse_validator_queue_key(k).expect("failed to parse unbonding key");

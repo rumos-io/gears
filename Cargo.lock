@@ -4913,7 +4913,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bank",
- "chrono",
  "clap",
  "gears",
  "ibc-proto 0.33.0",
@@ -5103,6 +5102,7 @@ version = "0.1.0"
 dependencies = [
  "address",
  "bytes",
+ "chrono",
  "ed25519-consensus",
  "handlebars",
  "prost 0.11.9",

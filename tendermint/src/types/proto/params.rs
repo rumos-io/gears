@@ -1,4 +1,4 @@
-use crate::types::time::Duration;
+use crate::types::duration::Duration;
 
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
 pub struct BlockParams {

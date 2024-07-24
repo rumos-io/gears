@@ -3,7 +3,6 @@ use crate::{
     Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
-use chrono::Utc;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -17,7 +16,7 @@ use gears::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
         },
-        time::Timestamp,
+        time::{Duration, Timestamp},
     },
     types::{
         address::{AccAddress, ValAddress},
@@ -574,27 +573,13 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.try_get(ctx)?;
-                let duration = chrono::TimeDelta::nanoseconds(params.unbonding_time());
-                let time = ctx.get_time();
-                // TODO: consider to work with time in Gears
-                let time =
-                    chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-                let completion_time = time + duration;
+                let duration = Duration::new_from_nanos(params.unbonding_time());
+
+                let completion_time = ctx.get_time().checked_add(duration).unwrap();
                 let height = ctx.height();
-                let completion_time = Timestamp {
-                    seconds: completion_time.timestamp(),
-                    nanos: completion_time.timestamp_subsec_nanos() as i32,
-                };
                 Ok((completion_time, height, false))
             }
-            BondStatus::Unbonded => Ok((
-                Timestamp {
-                    seconds: 0,
-                    nanos: 0,
-                },
-                0,
-                true,
-            )),
+            BondStatus::Unbonded => Ok((Timestamp::UNIX_EPOCH, 0, true)),
             BondStatus::Unbonding => {
                 let validator = validator.unwrap();
                 Ok((validator.unbonding_time, validator.unbonding_height, false))

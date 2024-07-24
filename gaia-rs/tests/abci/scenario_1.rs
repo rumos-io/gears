@@ -9,14 +9,14 @@ use crate::{generate_txs, setup_mock_node};
 fn scenario_1() {
     let (mut node, user) = setup_mock_node();
 
-    let app_hash = node.step(vec![], Timestamp::ZERO);
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
         "d0254da38fc9c97292f65f4e8af3276209c6d6f8a922bbad8fc4a8f36af55f67"
     );
 
-    node.step(vec![], Timestamp::ZERO);
-    node.step(vec![], Timestamp::ZERO);
+    node.step(vec![], Timestamp::UNIX_EPOCH);
+    node.step(vec![], Timestamp::UNIX_EPOCH);
 
     let to_address = "cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut"
         .parse()
@@ -32,7 +32,7 @@ fn scenario_1() {
 
     let txs = generate_txs(msg, &user, 0, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::ZERO);
+    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
         "7bc0e95da6ba637bddaade5e6911fdb20030956a4bb8e305fb1c390ff7bcea20"

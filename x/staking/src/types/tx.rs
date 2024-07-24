@@ -150,17 +150,8 @@ impl Commission {
         commission_rates: CommissionRates,
         update_time: Timestamp,
     ) -> Result<Commission, anyhow::Error> {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let self_time = chrono::DateTime::from_timestamp(
-            self.update_time.seconds,
-            self.update_time.nanos as u32,
-        )
-        .unwrap();
-        let new_update_time =
-            chrono::DateTime::from_timestamp(update_time.seconds, update_time.nanos as u32)
-                .unwrap();
-        if (new_update_time - self_time).num_hours() < 24 {
+        let diff = update_time.checked_sub(&self.update_time).unwrap();
+        if diff.num_hours() < 24 {
             return Err(anyhow::anyhow!(
                 "new rate cannot be changed more than once within 24 hours"
             ));
