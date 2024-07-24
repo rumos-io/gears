@@ -1,12 +1,14 @@
+use crate::query::{
+    QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
+};
 use bytes::Bytes;
 use clap::{Args, Subcommand};
-use gears::application::handlers::client::QueryHandler;
 use gears::derive::Query;
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::address::AccAddress;
+use gears::types::pagination::request::PaginationRequest;
+use gears::{application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest};
 use serde::{Deserialize, Serialize};
-
-use crate::query::{QueryAccountRequest, QueryAccountResponse};
 
 #[derive(Args, Debug)]
 pub struct AuthQueryCli {
@@ -17,6 +19,7 @@ pub struct AuthQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum AuthCommands {
     Account(AccountCommand),
+    Accounts(AccountsCommand),
 }
 
 /// Query for account by address
@@ -26,10 +29,18 @@ pub struct AccountCommand {
     pub address: AccAddress,
 }
 
+/// Query all the accounts
+#[derive(Args, Debug, Clone)]
+pub struct AccountsCommand {
+    #[command(flatten)]
+    pub pagination: CliPaginationRequest,
+}
+
 #[derive(Clone, PartialEq, Query)]
 #[query(kind = "request")]
 pub enum AuthQuery {
     Account(QueryAccountRequest),
+    Accounts(QueryAccountsRequest),
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
@@ -37,6 +48,7 @@ pub enum AuthQuery {
 #[serde(untagged)]
 pub enum AuthQueryResponse {
     Account(QueryAccountResponse),
+    Accounts(QueryAccountsResponse),
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +71,10 @@ impl QueryHandler for AuthQueryHandler {
                     address: address.clone(),
                 })
             }
+            AuthCommands::Accounts(cmd) => {
+                let pagination = PaginationRequest::try_from(cmd.to_owned().pagination)?;
+                AuthQuery::Accounts(QueryAccountsRequest { pagination })
+            }
         };
 
         Ok(res)
@@ -73,6 +89,9 @@ impl QueryHandler for AuthQueryHandler {
             match command.command {
                 AuthCommands::Account(_) => AuthQueryResponse::Account(
                     QueryAccountResponse::decode::<Bytes>(query_bytes.into())?,
+                ),
+                AuthCommands::Accounts(_) => AuthQueryResponse::Accounts(
+                    QueryAccountsResponse::decode::<Bytes>(query_bytes.into())?,
                 ),
             };
 

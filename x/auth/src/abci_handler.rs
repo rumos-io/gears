@@ -11,13 +11,16 @@ use gears::tendermint::types::request::query::RequestQuery;
 use gears::x::module::Module;
 use serde::Serialize;
 
-use crate::query::{QueryAccountRequest, QueryAccountResponse};
+use crate::query::{
+    QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
+};
 use crate::{GenesisState, Keeper};
 
 #[derive(Clone, Debug, Query)]
 #[query(kind = "request")]
 pub enum AuthNodeQueryRequest {
     Account(QueryAccountRequest),
+    Accounts(QueryAccountsRequest),
 }
 
 #[derive(Clone, Serialize, Query)]
@@ -25,6 +28,7 @@ pub enum AuthNodeQueryRequest {
 #[serde(untagged)]
 pub enum AuthNodeQueryResponse {
     Account(QueryAccountResponse),
+    Accounts(QueryAccountsResponse),
 }
 
 #[derive(Debug, Clone)]
@@ -47,6 +51,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                 let res = self.keeper.query_account(ctx, req);
                 AuthNodeQueryResponse::Account(res)
             }
+            AuthNodeQueryRequest::Accounts(req) => {
+                let res = self.keeper.query_accounts(ctx, req);
+                AuthNodeQueryResponse::Accounts(res)
+            }
         }
     }
 
@@ -62,6 +70,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                 Ok(self
                     .keeper
                     .query_account(ctx, req)
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into())
+            }
+            "/cosmos.auth.v1beta1.Query/Accounts" => {
+                let req = QueryAccountsRequest::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_accounts(ctx, req)
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
                     .into())

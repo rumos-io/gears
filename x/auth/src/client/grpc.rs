@@ -33,9 +33,17 @@ where
 {
     async fn accounts(
         &self,
-        _request: Request<QueryAccountsRequest>,
+        request: Request<QueryAccountsRequest>,
     ) -> Result<Response<QueryAccountsResponse>, Status> {
-        unimplemented!() //TODO: implement
+        info!("Received a gRPC request auth::accounts");
+        let req = AuthNodeQueryRequest::Accounts(request.into_inner().try_into()?);
+        let response = self.app.typed_query(req)?;
+        let response: AuthNodeQueryResponse = response.try_into()?;
+        // TODO: do we need to make full match?
+        let AuthNodeQueryResponse::Accounts(response) = response else {
+            return Err(Status::unknown("invalid response enum variant"));
+        };
+        Ok(Response::new(response.into()))
     }
 
     async fn account(
@@ -46,7 +54,9 @@ where
         let req = AuthNodeQueryRequest::Account(request.into_inner().try_into()?);
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
-        let AuthNodeQueryResponse::Account(response) = response;
+        let AuthNodeQueryResponse::Account(response) = response else {
+            return Err(Status::unknown("invalid response enum variant"));
+        };
         Ok(Response::new(response.into()))
     }
 

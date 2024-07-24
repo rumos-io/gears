@@ -1,4 +1,6 @@
-use crate::query::{QueryAccountRequest, QueryAccountResponse};
+use crate::query::{
+    QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
+};
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
@@ -6,12 +8,14 @@ use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
 use gears::context::{QueryableContext, TransactionalContext};
 use gears::error::IBC_ENCODE_UNWRAP;
+use gears::ext::{IteratorPaginate, Pagination};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::account::{Account, BaseAccount, ModuleAccount};
 use gears::types::address::AccAddress;
+use gears::types::pagination::response::PaginationResponse;
 use gears::types::store::gas::errors::GasStoreErrors;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
@@ -182,6 +186,24 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
             QueryAccountResponse { account }
         } else {
             QueryAccountResponse { account: None }
+        }
+    }
+
+    pub fn query_accounts<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        req: QueryAccountsRequest,
+    ) -> QueryAccountsResponse {
+        let auth_store = ctx.kv_store(&self.store_key);
+        let (p_res, iter) = auth_store
+            .into_range(..)
+            .maybe_paginate(Some(Pagination::from(req.pagination)));
+
+        QueryAccountsResponse {
+            accounts: iter
+                .map(|(_k, bytes)| Account::decode_vec(&bytes).unwrap_or_corrupt())
+                .collect(),
+            pagination: p_res.map(PaginationResponse::from),
         }
     }
 
