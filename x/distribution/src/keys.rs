@@ -1,4 +1,4 @@
-use gears::types::address::{AccAddress, ValAddress};
+use gears::types::address::{AccAddress, AddressError, ValAddress};
 
 use crate::{
     DELEGATOR_STARTING_INFO_PREFIX, DELEGATOR_WITHDRAW_ADDR_PREFIX,
@@ -66,12 +66,49 @@ pub fn validator_current_rewards_key(addr: ValAddress) -> Vec<u8> {
     .concat()
 }
 
-/// validator_slash_event_key creates the key for a validator's slash fraction
-pub fn validator_slash_event_key(addr: ValAddress, height: u64, period: u64) -> Vec<u8> {
+/// validator_slash_event_key_prefix creates the prefix key for a validator's slash fraction (ValidatorSlashEventPrefix + height)
+pub fn validator_slash_event_key_prefix(addr: ValAddress, height: u64) -> Vec<u8> {
     [
         VALIDATOR_SLASH_EVENT_PREFIX.to_vec(),
         length_prefixed(addr.len(), addr),
         height.to_be_bytes().to_vec(),
+    ]
+    .concat()
+}
+
+#[allow(dead_code)]
+/// validator_slash_event_address_height creates the height from a validator's slash event key
+pub fn validator_slash_event_address_height(key: &[u8]) -> Result<(ValAddress, u64), AddressError> {
+    // key is in the format:
+    // 0x08<valAddrLen (1 Byte)><valAddr_Bytes><height>: ValidatorSlashEvent
+
+    assert!(key.len() > 2, "Expected key with length > 2");
+    let val_addr_len = key[1] as usize;
+    assert!(
+        key.len() > 3 + val_addr_len,
+        "Expected key with len > {}",
+        3 + val_addr_len
+    );
+    let start_b = 2 + val_addr_len;
+    let val_addr_bytes = &key[2..start_b];
+    assert!(
+        key.len() > start_b + 9,
+        "Expected key with length > {}",
+        start_b + 9
+    );
+    let b = &key[start_b..start_b + 8];
+    let height = u64::from_be_bytes(
+        b.try_into()
+            .expect("slice of 8 bytes should convert into byte array of 8 bytes"),
+    );
+    let val_addr = ValAddress::try_from(val_addr_bytes.to_vec())?;
+    Ok((val_addr, height))
+}
+
+/// validator_slash_event_key creates the key for a validator's slash fraction
+pub fn validator_slash_event_key(addr: ValAddress, height: u64, period: u64) -> Vec<u8> {
+    [
+        validator_slash_event_key_prefix(addr, height),
         period.to_be_bytes().to_vec(),
     ]
     .concat()

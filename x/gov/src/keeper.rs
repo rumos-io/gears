@@ -473,7 +473,7 @@ impl<
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
             submit_time: submit_date,
-            deposit_end_time: submit_date.add(deposit_period),
+            deposit_end_time: submit_date.add(deposit_period), // TODO: consider using checked_add_signed
             total_deposit: initial_deposit,
             voting_start_time: None,
             voting_end_time: None,
@@ -616,8 +616,8 @@ impl<
                 validator.operator().clone(),
                 ValidatorGovInfo {
                     address: validator.operator().clone(),
-                    bounded_tokens: *validator.bonded_tokens(),
-                    delegator_shares: *validator.delegator_shares(),
+                    bounded_tokens: validator.bonded_tokens(),
+                    delegator_shares: validator.delegator_shares(),
                     delegator_deduction: Decimal256::zero(),
                     vote: Vec::new(),
                 },
