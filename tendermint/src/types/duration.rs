@@ -5,7 +5,7 @@
 /// as a count of seconds and fractions of seconds at nanosecond
 /// resolution. It is independent of any calendar and concepts like "day"
 /// or "month". It is related to Timestamp in that the difference between
-/// two Timestamp values is a Duration and it can be added or subtracted
+/// two Timestamp values is a Duration and it can be added
 /// from a Timestamp. Range is approximately +-10,000 years.
 ///
 /// TODO: make the statement below true!
@@ -94,6 +94,7 @@ impl Duration {
         self.seconds / 3600
     }
 
+    // TODO: check std implementation - should negative durations be rounded towards zero? Probably not since nanos have the same sign
     pub fn duration_seconds(&self) -> i64 {
         self.seconds
     }

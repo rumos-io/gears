@@ -277,7 +277,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                     ?min_height,
                     treshold = min_signed_per_window,
                     slashed = params.slash_fraction_downtime.to_string(),
-                    jailed_until = jailed_until.format_string(),
+                    jailed_until = jailed_until.format_string_rounded(),
                 );
             } else {
                 // TODO: how do we log?

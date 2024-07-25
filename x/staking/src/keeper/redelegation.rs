@@ -273,7 +273,7 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
-        let key = completion_time.format_timestamp_bytes(); //TODO: check if this is correct
+        let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
         if let Some(bytes) = store.get(&key)? {
             Ok(serde_json::from_slice(&bytes).unwrap_or_corrupt())
         } else {
@@ -290,7 +290,7 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
-        let key = completion_time.format_timestamp_bytes(); //TODO: check if this is correct
+        let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
         let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
         store.set(key, value)
     }

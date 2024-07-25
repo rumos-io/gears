@@ -131,23 +131,23 @@ impl From<Proposal> for inner::Proposal {
             status: status as i32,
             final_tally_result: final_tally_result.map(|e| e.into()),
             submit_time: Some(ibc_proto::google::protobuf::Timestamp {
-                seconds: submit_time.timestamp_seconds(),
-                nanos: submit_time.nanoseconds(),
+                seconds: submit_time.timestamp_seconds().into(),
+                nanos: submit_time.nanoseconds().into(),
             }),
             deposit_end_time: Some(ibc_proto::google::protobuf::Timestamp {
-                seconds: deposit_end_time.timestamp_seconds(),
-                nanos: deposit_end_time.nanoseconds(),
+                seconds: deposit_end_time.timestamp_seconds().into(),
+                nanos: deposit_end_time.nanoseconds().into(),
             }),
             total_deposit: total_deposit.into_iter().map(|this| this.into()).collect(),
             voting_start_time: voting_start_time.map(|this| {
                 ibc_proto::google::protobuf::Timestamp {
-                    seconds: this.timestamp_seconds(),
-                    nanos: this.nanoseconds(),
+                    seconds: this.timestamp_seconds().into(),
+                    nanos: this.nanoseconds().into(),
                 }
             }),
             voting_end_time: voting_end_time.map(|this| ibc_proto::google::protobuf::Timestamp {
-                seconds: this.timestamp_seconds(),
-                nanos: this.nanoseconds(),
+                seconds: this.timestamp_seconds().into(),
+                nanos: this.nanoseconds().into(),
             }),
         }
     }
@@ -238,7 +238,7 @@ impl Proposal {
     }
 
     fn queue_key(prefix: &[u8], proposal_id: u64, deposit_end_time: &Timestamp) -> Vec<u8> {
-        let date_key = deposit_end_time.format_timestamp_bytes();
+        let date_key = deposit_end_time.format_bytes_rounded();
 
         [prefix, date_key.as_slice(), &proposal_id.to_be_bytes()].concat()
     }

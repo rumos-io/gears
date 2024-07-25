@@ -20,7 +20,7 @@ impl<'a, DB: Database> InactiveProposalIterator<'a, DB> {
                 Bound::Excluded(
                     [
                         Proposal::KEY_INACTIVE_QUEUE_PREFIX.as_slice(),
-                        end_time.format_timestamp_bytes().as_slice(),
+                        end_time.format_bytes_rounded().as_slice(),
                     ]
                     .concat()
                     .to_vec(),
