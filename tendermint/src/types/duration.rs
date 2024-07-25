@@ -1,8 +1,6 @@
 // The Duration struct is defined in gogoproto v1.3.1 at https://github.com/gogo/protobuf/blob/v1.3.1/protobuf/google/protobuf/duration.proto
 // and https://github.com/protocolbuffers/protobuf-go/blob/v1.34.2/types/known/durationpb/duration.pb.go
 
-use std::fmt::Display;
-
 /// A Duration represents a signed, fixed-length span of time represented
 /// as a count of seconds and fractions of seconds at nanosecond
 /// resolution. It is independent of any calendar and concepts like "day"
@@ -124,12 +122,6 @@ impl Duration {
 
     pub fn to_nanoseconds(&self) -> i128 {
         i128::from(self.seconds) * 1_000_000_000 + i128::from(self.nanos)
-    }
-}
-
-impl Display for Duration {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}s", self.to_nanoseconds())
     }
 }
 
