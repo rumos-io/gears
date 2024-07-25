@@ -34,6 +34,30 @@ pub struct AuthsParams {
     pub sig_verify_cost_secp256k1: u64,
 }
 
+impl From<ibc_proto::cosmos::auth::v1beta1::Params> for AuthsParams {
+    fn from(value: ibc_proto::cosmos::auth::v1beta1::Params) -> Self {
+        Self {
+            max_memo_characters: value.max_memo_characters,
+            tx_sig_limit: value.tx_sig_limit,
+            tx_size_cost_per_byte: value.tx_size_cost_per_byte,
+            sig_verify_cost_ed25519: value.sig_verify_cost_ed25519,
+            sig_verify_cost_secp256k1: value.sig_verify_cost_secp256k1,
+        }
+    }
+}
+
+impl From<AuthsParams> for ibc_proto::cosmos::auth::v1beta1::Params {
+    fn from(value: AuthsParams) -> Self {
+        Self {
+            max_memo_characters: value.max_memo_characters,
+            tx_sig_limit: value.tx_sig_limit,
+            tx_size_cost_per_byte: value.tx_size_cost_per_byte,
+            sig_verify_cost_ed25519: value.sig_verify_cost_ed25519,
+            sig_verify_cost_secp256k1: value.sig_verify_cost_secp256k1,
+        }
+    }
+}
+
 impl Default for AuthsParams {
     fn default() -> Self {
         DEFAULT_PARAMS.clone()
