@@ -197,6 +197,11 @@ impl From<ValAddress> for ConsAddress {
         Self(value.0)
     }
 }
+impl From<ValAddress> for AccAddress {
+    fn from(value: ValAddress) -> Self {
+        Self(value.0)
+    }
+}
 
 #[derive(thiserror::Error, Debug, Clone, PartialEq, Eq)]
 pub enum AddressError {

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
-    QueryDenomsMetadataResponse,
+    QueryDenomsMetadataResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 
 #[derive(Args, Debug)]
@@ -27,7 +27,13 @@ pub struct BankQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum BankCommands {
     Balances(BalancesCommand),
+    /// Query the client metadata for coin denominations
     DenomMetadata {
+        #[command(flatten)]
+        pagination: Option<CliPaginationRequest>,
+    },
+    /// Query the total supply of coins of the chain
+    Total {
         #[command(flatten)]
         pagination: Option<CliPaginationRequest>,
     },
@@ -69,6 +75,9 @@ impl QueryHandler for BankQueryHandler {
                     pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
                 })
             }
+            BankCommands::Total { pagination } => BankQuery::Total(QueryTotalSupplyRequest {
+                pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
+            }),
         };
 
         Ok(res)
@@ -86,6 +95,9 @@ impl QueryHandler for BankQueryHandler {
             BankCommands::DenomMetadata { pagination: _ } => BankQueryResponse::DenomMetadata(
                 QueryDenomsMetadataResponse::decode::<Bytes>(query_bytes.into())?,
             ),
+            BankCommands::Total { pagination: _ } => BankQueryResponse::Total(
+                QueryTotalSupplyResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
         };
 
         Ok(res)
@@ -97,6 +109,7 @@ impl QueryHandler for BankQueryHandler {
 pub enum BankQuery {
     Balances(QueryAllBalancesRequest),
     DenomMetadata(QueryDenomsMetadataRequest),
+    Total(QueryTotalSupplyRequest),
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
@@ -104,4 +117,5 @@ pub enum BankQuery {
 pub enum BankQueryResponse {
     Balances(QueryAllBalancesResponse),
     DenomMetadata(QueryDenomsMetadataResponse),
+    Total(QueryTotalSupplyResponse),
 }

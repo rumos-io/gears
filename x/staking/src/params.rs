@@ -12,7 +12,7 @@ const KEY_MAX_ENTRIES: &str = "MaxEntries";
 const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
 const KEY_BOND_DENOM: &str = "BondDenom";
 
-/// ['Params'] defines the parameters for the staking module. The params are guraanteed to be valid:
+/// ['Params'] defines the parameters for the staking module. The params are guaranteed to be valid:
 /// - unbonding_time is non negative
 /// - max_validators is positive
 /// - max_entries is positive

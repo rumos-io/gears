@@ -37,8 +37,6 @@ use std::{cmp::Ordering, collections::HashMap};
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
 // validator types.
 
-const CTX_NO_GAS_UNWRAP: &str = "Context doesn't have any gas";
-
 mod bonded;
 mod delegation;
 mod gov;
@@ -120,17 +118,16 @@ impl<
         // ctx = ctx.WithBlockHeight(1 - sdk.ValidatorUpdateDelay)
 
         self.set_last_total_power(ctx, genesis.last_total_power)
-            .expect(CTX_NO_GAS_UNWRAP);
+            .unwrap_gas();
         self.staking_params_keeper.set(ctx, genesis.params.clone());
 
         for validator in genesis.validators {
-            self.set_validator(ctx, &validator)
-                .expect(CTX_NO_GAS_UNWRAP);
+            self.set_validator(ctx, &validator).unwrap_gas();
             // Manually set indices for the first time
             self.set_validator_by_cons_addr(ctx, &validator)
-                .expect(CTX_NO_GAS_UNWRAP);
+                .unwrap_gas();
             self.set_validator_by_power_index(ctx, &validator)
-                .expect(CTX_NO_GAS_UNWRAP);
+                .unwrap_gas();
 
             if !genesis.exported {
                 self.after_validator_created(ctx, &validator);
@@ -138,7 +135,7 @@ impl<
 
             if validator.status == BondStatus::Unbonding {
                 self.insert_unbonding_validator_queue(ctx, &validator)
-                    .expect(CTX_NO_GAS_UNWRAP);
+                    .unwrap_gas();
             }
 
             match validator.status {
@@ -160,8 +157,7 @@ impl<
                 );
             }
 
-            self.set_delegation(ctx, &delegation)
-                .expect(CTX_NO_GAS_UNWRAP);
+            self.set_delegation(ctx, &delegation).unwrap_gas();
 
             if !genesis.exported {
                 self.after_delegation_modified(
@@ -182,11 +178,10 @@ impl<
         }
 
         for redelegation in genesis.redelegations {
-            self.set_redelegation(ctx, &redelegation)
-                .expect("setting of redelegation won't fail because used infallable context");
+            self.set_redelegation(ctx, &redelegation).unwrap_gas();
             for entry in &redelegation.entries {
                 self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time.clone())
-                    .expect("setting of redelegation won't fail because used infallable context");
+                    .unwrap_gas();
             }
         }
 
@@ -256,10 +251,10 @@ impl<
         if genesis.exported {
             for last_validator in genesis.last_validator_powers {
                 self.set_last_validator_power(ctx, &last_validator)
-                    .expect(CTX_NO_GAS_UNWRAP);
+                    .unwrap_gas();
                 let validator = self
                     .validator(ctx, &last_validator.address)
-                    .expect("Init ctx doesn't have any gas")
+                    .unwrap_gas()
                     .expect("validator in the store was not found");
                 // TODO: check unwraps and update types to omit conversion
                 let mut update = validator
@@ -296,8 +291,7 @@ impl<
         };
 
         // unbond all mature validators from the unbonding queue
-        self.unbond_all_mature_validators(ctx)
-            .expect(CTX_NO_GAS_UNWRAP);
+        self.unbond_all_mature_validators(ctx).unwrap_gas();
 
         // Remove all mature unbonding delegations from the ubd queue.
         let time = ctx.get_time();

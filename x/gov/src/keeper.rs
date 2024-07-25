@@ -609,8 +609,8 @@ impl<
                 validator.operator().clone(),
                 ValidatorGovInfo {
                     address: validator.operator().clone(),
-                    bounded_tokens: *validator.bonded_tokens(),
-                    delegator_shares: *validator.delegator_shares(),
+                    bounded_tokens: validator.bonded_tokens(),
+                    delegator_shares: validator.delegator_shares(),
                     delegator_deduction: Decimal256::zero(),
                     vote: Vec::new(),
                 },
