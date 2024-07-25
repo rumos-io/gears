@@ -1,5 +1,6 @@
 use crate::query::{
     QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
+    QueryParamsRequest, QueryParamsResponse,
 };
 use crate::{AuthParamsKeeper, AuthsParams, GenesisState};
 use bytes::Bytes;
@@ -204,6 +205,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
                 .map(|(_k, bytes)| Account::decode_vec(&bytes).unwrap_or_corrupt())
                 .collect(),
             pagination: p_res.map(PaginationResponse::from),
+        }
+    }
+
+    pub fn query_params<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        _req: QueryParamsRequest,
+    ) -> QueryParamsResponse {
+        QueryParamsResponse {
+            params: self.auth_params_keeper.get(ctx),
         }
     }
 

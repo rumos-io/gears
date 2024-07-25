@@ -41,7 +41,7 @@ where
         let response: AuthNodeQueryResponse = response.try_into()?;
         // TODO: do we need to make full match?
         let AuthNodeQueryResponse::Accounts(response) = response else {
-            return Err(Status::unknown("invalid response enum variant"));
+            return Err(Status::internal("invalid response enum variant"));
         };
         Ok(Response::new(response.into()))
     }
@@ -55,7 +55,7 @@ where
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
         let AuthNodeQueryResponse::Account(response) = response else {
-            return Err(Status::unknown("invalid response enum variant"));
+            return Err(Status::internal("invalid response enum variant"));
         };
         Ok(Response::new(response.into()))
     }
@@ -69,9 +69,16 @@ where
 
     async fn params(
         &self,
-        _request: Request<AuthQueryParamsRequest>,
+        request: Request<AuthQueryParamsRequest>,
     ) -> Result<Response<AuthQueryParamsResponse>, Status> {
-        unimplemented!() //TODO: implement
+        info!("Received a gRPC request auth::params");
+        let req = AuthNodeQueryRequest::Params(request.into_inner().into());
+        let response = self.app.typed_query(req)?;
+        let response: AuthNodeQueryResponse = response.try_into()?;
+        let AuthNodeQueryResponse::Params(response) = response else {
+            return Err(Status::internal("invalid response enum variant"));
+        };
+        Ok(Response::new(response.into()))
     }
 
     async fn module_accounts(

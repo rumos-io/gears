@@ -1,17 +1,33 @@
+use crate::AuthsParams;
 use gears::{
     core::errors::CoreError,
     derive::Query,
-    types::pagination::{request::PaginationRequest, response::PaginationResponse},
+    types::{
+        account::Account,
+        address::AccAddress,
+        pagination::{request::PaginationRequest, response::PaginationResponse},
+    },
 };
+use prost::Message;
 use serde::{Deserialize, Serialize};
 
-use gears::types::{account::Account, address::AccAddress};
-
 mod inner {
-    pub use gears::core::query::request::account::QueryAccountRequest;
-    pub use gears::core::query::request::account::QueryAccountsRequest;
-    pub use gears::core::query::response::account::QueryAccountResponse;
-    pub use gears::core::query::response::account::QueryAccountsResponse;
+    pub use gears::core::query::request::auth::QueryAccountRequest;
+    pub use gears::core::query::request::auth::QueryAccountsRequest;
+    pub use gears::core::query::request::auth::QueryParamsRequest;
+    pub use gears::core::query::response::auth::QueryAccountResponse;
+    pub use gears::core::query::response::auth::QueryAccountsResponse;
+    pub use gears::core::query::response::auth::QueryParamsResponse;
+}
+
+#[derive(Clone, PartialEq, Message, Query)]
+#[query(raw = "QueryParamsRequest", url = "/cosmos.auth.v1beta1.Query/Params")]
+pub struct QueryParamsRequest {}
+
+impl From<inner::QueryParamsRequest> for QueryParamsRequest {
+    fn from(_value: inner::QueryParamsRequest) -> Self {
+        QueryParamsRequest {}
+    }
 }
 
 /// QueryAccountResponse is the response type for the Query/Account RPC method.
@@ -149,5 +165,35 @@ impl From<QueryAccountsRequest> for inner::QueryAccountsRequest {
         Self {
             pagination: Some(pagination.into()),
         }
+    }
+}
+
+/// QueryParamsResponse is the response type for the Query/Params RPC method
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query)]
+#[query(raw = "inner::QueryParamsResponse")]
+pub struct QueryParamsResponse {
+    pub params: AuthsParams,
+}
+
+impl From<QueryParamsResponse> for inner::QueryParamsResponse {
+    fn from(QueryParamsResponse { params }: QueryParamsResponse) -> Self {
+        Self {
+            params: Some(params.into()),
+        }
+    }
+}
+
+impl TryFrom<inner::QueryParamsResponse> for QueryParamsResponse {
+    type Error = CoreError;
+
+    fn try_from(
+        inner::QueryParamsResponse { params }: inner::QueryParamsResponse,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            params: params
+                .ok_or(CoreError::MissingField("Missing field 'params'.".into()))?
+                .try_into()
+                .map_err(|e| CoreError::DecodeGeneral(format!("{e}")))?,
+        })
     }
 }

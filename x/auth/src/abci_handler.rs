@@ -13,6 +13,7 @@ use serde::Serialize;
 
 use crate::query::{
     QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
+    QueryParamsRequest, QueryParamsResponse,
 };
 use crate::{GenesisState, Keeper};
 
@@ -21,6 +22,7 @@ use crate::{GenesisState, Keeper};
 pub enum AuthNodeQueryRequest {
     Account(QueryAccountRequest),
     Accounts(QueryAccountsRequest),
+    Params(QueryParamsRequest),
 }
 
 #[derive(Clone, Serialize, Query)]
@@ -29,6 +31,7 @@ pub enum AuthNodeQueryRequest {
 pub enum AuthNodeQueryResponse {
     Account(QueryAccountResponse),
     Accounts(QueryAccountsResponse),
+    Params(QueryParamsResponse),
 }
 
 #[derive(Debug, Clone)]
@@ -55,6 +58,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                 let res = self.keeper.query_accounts(ctx, req);
                 AuthNodeQueryResponse::Accounts(res)
             }
+            AuthNodeQueryRequest::Params(req) => {
+                let res = self.keeper.query_params(ctx, req);
+                AuthNodeQueryResponse::Params(res)
+            }
         }
     }
 
@@ -80,6 +87,16 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                 Ok(self
                     .keeper
                     .query_accounts(ctx, req)
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into())
+            }
+            "/cosmos.auth.v1beta1.Query/Params" => {
+                let req = QueryParamsRequest::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_params(ctx, req)
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
                     .into())
