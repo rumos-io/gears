@@ -171,7 +171,7 @@ pub trait QueryHandler {
 }
 
 mod inner {
-    pub use core_types::query::response::account::QueryAccountResponse;
+    pub use core_types::query::response::auth::QueryAccountResponse;
 }
 
 // TODO: we're assuming here that the app has an auth module which handles this query

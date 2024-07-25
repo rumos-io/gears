@@ -33,9 +33,18 @@ where
 {
     async fn accounts(
         &self,
-        _request: Request<QueryAccountsRequest>,
+        request: Request<QueryAccountsRequest>,
     ) -> Result<Response<QueryAccountsResponse>, Status> {
-        unimplemented!() //TODO: implement
+        info!("Received a gRPC request auth::accounts");
+        let req = AuthNodeQueryRequest::Accounts(request.into_inner().try_into()?);
+        let response = self.app.typed_query(req)?;
+        let response: AuthNodeQueryResponse = response.try_into()?;
+        let AuthNodeQueryResponse::Accounts(response) = response else {
+            return Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ));
+        };
+        Ok(Response::new(response.into()))
     }
 
     async fn account(
@@ -46,7 +55,11 @@ where
         let req = AuthNodeQueryRequest::Account(request.into_inner().try_into()?);
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
-        let AuthNodeQueryResponse::Account(response) = response;
+        let AuthNodeQueryResponse::Account(response) = response else {
+            return Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ));
+        };
         Ok(Response::new(response.into()))
     }
 
@@ -59,9 +72,18 @@ where
 
     async fn params(
         &self,
-        _request: Request<AuthQueryParamsRequest>,
+        request: Request<AuthQueryParamsRequest>,
     ) -> Result<Response<AuthQueryParamsResponse>, Status> {
-        unimplemented!() //TODO: implement
+        info!("Received a gRPC request auth::params");
+        let req = AuthNodeQueryRequest::Params(request.into_inner().into());
+        let response = self.app.typed_query(req)?;
+        let response: AuthNodeQueryResponse = response.try_into()?;
+        let AuthNodeQueryResponse::Params(response) = response else {
+            return Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ));
+        };
+        Ok(Response::new(response.into()))
     }
 
     async fn module_accounts(
