@@ -39,9 +39,10 @@ where
         let req = AuthNodeQueryRequest::Accounts(request.into_inner().try_into()?);
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
-        // TODO: do we need to make full match?
         let AuthNodeQueryResponse::Accounts(response) = response else {
-            return Err(Status::internal("invalid response enum variant"));
+            return Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ));
         };
         Ok(Response::new(response.into()))
     }
@@ -55,7 +56,9 @@ where
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
         let AuthNodeQueryResponse::Account(response) = response else {
-            return Err(Status::internal("invalid response enum variant"));
+            return Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ));
         };
         Ok(Response::new(response.into()))
     }
@@ -76,7 +79,9 @@ where
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
         let AuthNodeQueryResponse::Params(response) = response else {
-            return Err(Status::internal("invalid response enum variant"));
+            return Err(Status::internal(
+                "An internal error occurred while querying the application state.",
+            ));
         };
         Ok(Response::new(response.into()))
     }

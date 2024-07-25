@@ -13,11 +13,11 @@ use serde::{Deserialize, Serialize};
 
 mod inner {
     pub use gears::core::query::request::auth::QueryAccountRequest;
-    pub use gears::core::query::request::auth::QueryAccountsRequest;
-    pub use gears::core::query::request::auth::QueryParamsRequest;
     pub use gears::core::query::response::auth::QueryAccountResponse;
-    pub use gears::core::query::response::auth::QueryAccountsResponse;
-    pub use gears::core::query::response::auth::QueryParamsResponse;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountsRequest;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountsResponse;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryParamsRequest;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryParamsResponse;
 }
 
 #[derive(Clone, PartialEq, Message, Query)]
