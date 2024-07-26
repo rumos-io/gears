@@ -1,3 +1,5 @@
+use address::AddressError;
+use core_types::errors::CoreError;
 use cosmwasm_std::Decimal256RangeExceeded;
 
 pub const IBC_ENCODE_UNWRAP: &str = "Should be okay. In future versions of IBC they removed Result";
@@ -26,4 +28,18 @@ pub enum MathOperation {
     Sub,
     Div,
     Mul,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ProtobufError {
+    #[error(transparent)]
+    Core(#[from] CoreError),
+    #[error("decode adress error: {0}")]
+    AddressError(#[from] AddressError),
+}
+
+impl From<ProtobufError> for tonic::Status {
+    fn from(e: ProtobufError) -> Self {
+        tonic::Status::invalid_argument(format!("{:?}", e))
+    }
 }

@@ -89,7 +89,7 @@ pub fn expand_raw_existing(
             let try_from = quote! {
 
                 impl TryFrom<#raw> for #ident {
-                    type Error = ::gears::core::errors::CoreError;
+                    type Error = ::gears::error::ProtobufError;
 
                     fn try_from(value: #raw) -> ::std::result::Result<Self, Self::Error> {
                         ::std::result::Result::Ok(Self {
