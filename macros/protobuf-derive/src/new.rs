@@ -2,13 +2,13 @@ use darling::FromAttributes;
 use quote::quote;
 use syn::{DataStruct, DeriveInput, Field};
 
-#[derive(FromAttributes, Default)]
-#[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
+#[derive(FromAttributes)]
+#[darling(attributes(proto), forward_attrs(allow, doc, cfg))]
 struct ProtobufAttr {
     raw: Option<syn::TypePath>,
     kind: String,
-    optional: bool,
-    repeated: bool,
+    optional: Option<bool>,
+    repeated: Option<bool>,
     tag: Option<u32>,
 }
 
@@ -41,7 +41,7 @@ pub fn extend_new_structure(
                     .inspect(|this| tag_counter = *this)
                     .unwrap_or(tag_counter);
 
-                let result = match (optional, repeated) {
+                let result = match (optional.unwrap_or_default(), repeated.unwrap_or_default()) {
                     (true, true) => Err(syn::Error::new(
                         proc_macro2::Span::call_site(),
                         "repeated and optional is exclusive",
@@ -64,11 +64,14 @@ pub fn extend_new_structure(
                 tag_counter += 1;
             }
 
-            let new_name = format!("Raw{}", ident.to_string());
+            let new_name = syn::Ident::new(
+                &format!("Raw{}", ident.to_string()),
+                proc_macro2::Span::call_site(),
+            );
             let gen = quote! {
 
                 #[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::prost::Message)]
-                #vis struct #new_name
+                #vis struct  #new_name
                 {
                     #(#result_fields),*
                 }
