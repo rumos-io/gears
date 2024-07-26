@@ -28,16 +28,31 @@ pub fn expand_raw_existing(
                         proc_macro2::Span::call_site(),
                         "Can't derive on tuple structures",
                     ))?,
+                    field.ty,
                 ))
             }
 
-            let from_fields_iter_gen = raw_fields.iter().map(|(other_name, field_ident)| {
-                let other_name = other_name.clone().unwrap_or(field_ident.clone());
+            let from_fields_iter_gen =
+                raw_fields
+                    .iter()
+                    .map(|(other_name, field_ident, field_type)| {
+                        let other_name = other_name.clone().unwrap_or(field_ident.clone());
 
-                quote! {
-                    #other_name : ::std::convert::Into::into(value.#field_ident)
-                }
-            });
+                        match is_option(&field_type) {
+                            true => {
+                                quote! {
+                                    #other_name : match value.#field_ident
+                                    {
+                                        Some(var) => Some( ::std::convert::Into::into(var)),
+                                        None => None,
+                                    }
+                                }
+                            }
+                            false => quote! {
+                                #other_name : ::std::convert::Into::into(value.#field_ident)
+                            },
+                        }
+                    });
 
             let from_impl = quote! {
                 impl ::std::convert::From<#ident> for #raw {
@@ -50,13 +65,26 @@ pub fn expand_raw_existing(
                 }
             };
 
-            let try_from_fields_iter_gen = raw_fields.iter().map(|(other_name, field_ident)| {
-                let other_name = other_name.clone().unwrap_or(field_ident.clone());
+            let try_from_fields_iter_gen =
+                raw_fields
+                    .iter()
+                    .map(|(other_name, field_ident, field_type)| {
+                        let other_name = other_name.clone().unwrap_or(field_ident.clone());
 
-                quote! {
-                    #field_ident : ::std::convert::TryFrom::try_from(value.#other_name)?
-                }
-            });
+                        match is_option(&field_type) {
+                            true => {
+                                quote! {
+                                    #field_ident : match value.#other_name {
+                                        Some(var) => Some(::std::convert::TryFrom::try_from(var)?),
+                                        None => None,
+                                    }
+                                }
+                            }
+                            false => quote! {
+                                #field_ident : ::std::convert::TryFrom::try_from(value.#other_name)?
+                            },
+                        }
+                    });
 
             let try_from = quote! {
 
@@ -87,4 +115,29 @@ pub fn expand_raw_existing(
             "Protobuf can be derived only for `struct`",
         )),
     }
+}
+
+fn is_option(ty: &syn::Type) -> bool {
+    let opt = match ty {
+        syn::Type::Path(typepath) if typepath.qself.is_none() => Some(typepath.path.clone()),
+        _ => None,
+    };
+
+    if let Some(o) = opt {
+        check_for_option(&o).is_some()
+    } else {
+        false
+    }
+}
+
+fn check_for_option(path: &syn::Path) -> Option<&syn::PathSegment> {
+    let idents_of_path = path.segments.iter().fold(String::new(), |mut acc, v| {
+        acc.push_str(&v.ident.to_string());
+        acc.push(':');
+        acc
+    });
+    vec!["Option:", "std:option:Option:", "core:option:Option:"]
+        .into_iter()
+        .find(|s| idents_of_path == *s)
+        .and_then(|_| path.segments.last())
 }
