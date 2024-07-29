@@ -36,11 +36,11 @@ pub fn extend_new_structure(
 
                 result_fields.push(match raw_attributes.is_empty() {
                     true => quote! {
-                        #vis #ident : Option<#raw>
+                        #vis #ident : #raw
                     },
                     false => quote! {
                         #[#(#raw_attributes), *]
-                        #vis #ident : Option<#raw>
+                        #vis #ident : #raw
                     },
                 });
             }
