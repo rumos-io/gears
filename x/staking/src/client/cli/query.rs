@@ -137,7 +137,7 @@ impl QueryHandler for StakingQueryHandler {
 }
 
 #[derive(Clone, PartialEq, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum StakingQuery {
     Validator(QueryValidatorRequest),
     Delegation(QueryDelegationRequest),

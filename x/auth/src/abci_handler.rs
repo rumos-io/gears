@@ -18,7 +18,7 @@ use crate::query::{
 use crate::{GenesisState, Keeper};
 
 #[derive(Clone, Debug, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum AuthNodeQueryRequest {
     Account(QueryAccountRequest),
     Accounts(QueryAccountsRequest),
@@ -26,7 +26,7 @@ pub enum AuthNodeQueryRequest {
 }
 
 #[derive(Clone, Serialize, Query)]
-#[query(kind = "response")]
+#[query(response)]
 #[serde(untagged)]
 pub enum AuthNodeQueryResponse {
     Account(QueryAccountResponse),

@@ -39,7 +39,7 @@ pub struct AccountsCommand {
 }
 
 #[derive(Clone, PartialEq, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum AuthQuery {
     Account(QueryAccountRequest),
     Accounts(QueryAccountsRequest),
@@ -47,7 +47,7 @@ pub enum AuthQuery {
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
-#[query(kind = "response")]
+#[query(response)]
 #[serde(untagged)]
 pub enum AuthQueryResponse {
     Account(QueryAccountResponse),
