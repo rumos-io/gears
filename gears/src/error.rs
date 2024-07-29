@@ -42,6 +42,8 @@ pub enum ProtobufError {
     Core(#[from] CoreError),
     #[error("decode adress error: {0}")]
     AddressError(#[from] AddressError),
+    #[error("{0}")]
+    Custom(#[from] anyhow::Error),
 }
 
 impl From<ProtobufError> for tonic::Status {
