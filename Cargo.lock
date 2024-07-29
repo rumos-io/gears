@@ -450,6 +450,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bank"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum 0.7.5",
+ "bytes",
+ "clap",
+ "gears",
+ "hex 0.4.3",
+ "ibc-proto",
+ "nz",
+ "prost",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tonic",
+ "tracing",
+]
+
+[[package]]
 name = "base16ct"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2855,6 +2875,12 @@ dependencies = [
  "syn 2.0.72",
  "urlencoding",
 ]
+
+[[package]]
+name = "nz"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ef6851b8e9dc0c2b4ebe0551ff127d9c58a0959f45142cf60a4121a6e5667070"
 
 [[package]]
 name = "object"

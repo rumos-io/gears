@@ -1,13 +1,11 @@
 use gears::{
-    core::errors::CoreError,
-    derive::Query,
-    types::{
+    core::errors::CoreError, derive::{Protobuf, Query}, tendermint::types::proto::Protobuf, types::{
         address::AccAddress,
         base::{coin::UnsignedCoin, errors::CoinError},
         denom::Denom,
         pagination::{request::PaginationRequest, response::PaginationResponse},
         tx::metadata::{Metadata, MetadataParseError},
-    },
+    }
 };
 use serde::{Deserialize, Serialize};
 
@@ -25,70 +23,28 @@ mod inner {
     pub use gears::core::query::response::PageResponse;
 }
 
-#[derive(Clone, PartialEq, Debug, Query)]
-#[query(
-    url = "/cosmos.bank.v1beta1.Query/TotalSupply",
-    raw = "inner::QueryTotalSupplyRequest"
-)]
+#[derive(Clone, PartialEq, Debug, Query, Protobuf)]
+#[query(url = "/cosmos.bank.v1beta1.Query/TotalSupply")]
+#[proto(raw = "inner::QueryTotalSupplyRequest")]
 pub struct QueryTotalSupplyRequest {
     pub pagination: Option<PaginationRequest>,
 }
+ 
 
-impl TryFrom<inner::QueryTotalSupplyRequest> for QueryTotalSupplyRequest {
-    type Error = CoreError;
-
-    fn try_from(
-        inner::QueryTotalSupplyRequest { pagination }: inner::QueryTotalSupplyRequest,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            pagination: pagination.map(PaginationRequest::from),
-        })
-    }
-}
-
-impl From<QueryTotalSupplyRequest> for inner::QueryTotalSupplyRequest {
-    fn from(QueryTotalSupplyRequest { pagination }: QueryTotalSupplyRequest) -> Self {
-        Self {
-            pagination: pagination.map(PaginationRequest::into),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Debug, Query)]
-#[query(
-    url = "/cosmos.bank.v1beta1.Query/DenomsMetadata",
-    raw = "inner::QueryDenomsMetadataRequest"
-)]
+#[derive(Clone, PartialEq, Debug, Query, Protobuf)]
+#[query(url = "/cosmos.bank.v1beta1.Query/DenomsMetadata")]
+#[proto(raw = "inner::QueryDenomsMetadataRequest")]
 pub struct QueryDenomsMetadataRequest {
     pub pagination: Option<PaginationRequest>,
 }
 
-impl TryFrom<inner::QueryDenomsMetadataRequest> for QueryDenomsMetadataRequest {
-    type Error = CoreError;
-
-    fn try_from(
-        inner::QueryDenomsMetadataRequest { pagination }: inner::QueryDenomsMetadataRequest,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            pagination: pagination.map(PaginationRequest::from),
-        })
-    }
-}
-
-impl From<QueryDenomsMetadataRequest> for inner::QueryDenomsMetadataRequest {
-    fn from(QueryDenomsMetadataRequest { pagination }: QueryDenomsMetadataRequest) -> Self {
-        Self {
-            pagination: pagination.map(PaginationRequest::into),
-        }
-    }
-}
-
 /// QueryBalanceRequest is the request type for the Query/Balance RPC method.
-#[derive(Clone, PartialEq, Debug, Query)]
+#[derive(Clone, PartialEq, Debug, Query, Protobuf)]
 #[query(
     url = "/cosmos.bank.v1beta1.Query/Balance", // TODO: are u sure?
-    raw = "inner::QueryBalanceRequest"
+   
 )]
+#[proto( raw = "inner::QueryBalanceRequest")]
 pub struct QueryBalanceRequest {
     /// address is the address to query balances for.
     pub address: AccAddress,
@@ -96,71 +52,27 @@ pub struct QueryBalanceRequest {
     pub denom: Denom,
 }
 
-impl TryFrom<inner::QueryBalanceRequest> for QueryBalanceRequest {
-    type Error = CoreError;
-
-    fn try_from(raw: inner::QueryBalanceRequest) -> Result<Self, Self::Error> {
-        let address = AccAddress::from_bech32(&raw.address)
-            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
-
-        let denom = raw
-            .denom
-            .try_into()
-            .map_err(|_| CoreError::Coin(String::from("invalid denom")))?;
-
-        Ok(QueryBalanceRequest { address, denom })
-    }
-}
-
-impl From<QueryBalanceRequest> for inner::QueryBalanceRequest {
-    fn from(query: QueryBalanceRequest) -> inner::QueryBalanceRequest {
-        Self {
-            address: query.address.to_string(),
-            denom: query.denom.to_string(),
-        }
-    }
-}
+ 
 
 /// QueryAllBalanceRequest is the request type for the Query/AllBalances RPC method.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Query)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Query, Protobuf)]
 #[query(
     url = "/cosmos.bank.v1beta1.Query/AllBalances",
-    raw = "inner::QueryAllBalancesRequest"
+    
 )]
+#[proto(raw = "inner::QueryAllBalancesRequest")]
 pub struct QueryAllBalancesRequest {
     /// address is the address to query balances for.
     pub address: AccAddress,
     /// pagination defines an optional pagination for the request.
     pub pagination: Option<PaginationRequest>,
 }
-
-impl TryFrom<inner::QueryAllBalancesRequest> for QueryAllBalancesRequest {
-    type Error = CoreError;
-
-    fn try_from(raw: inner::QueryAllBalancesRequest) -> Result<Self, Self::Error> {
-        let address = AccAddress::from_bech32(&raw.address)
-            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
-
-        Ok(Self {
-            address,
-            pagination: raw.pagination.map(PaginationRequest::from),
-        })
-    }
-}
-
-impl From<QueryAllBalancesRequest> for inner::QueryAllBalancesRequest {
-    fn from(query: QueryAllBalancesRequest) -> inner::QueryAllBalancesRequest {
-        Self {
-            address: query.address.to_string(),
-            pagination: query.pagination.map(PaginationRequest::into),
-        }
-    }
-}
+ 
 
 /// QueryAllBalancesResponse is the response type for the Query/AllBalances RPC
 /// method.
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Query)]
-#[query(raw = "inner::QueryAllBalancesResponse")]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Query, )] //Protobuf TODO
+// #[proto(raw = "inner::QueryAllBalancesResponse")]
 pub struct QueryAllBalancesResponse {
     /// balances is the balances of all the coins.
     pub balances: Vec<UnsignedCoin>,
@@ -202,9 +114,11 @@ impl From<QueryAllBalancesResponse> for inner::QueryAllBalancesResponse {
     }
 }
 
+impl Protobuf<inner::QueryAllBalancesResponse> for QueryAllBalancesResponse{}
+
 /// QueryBalanceResponse is the response type for the Query/Balance RPC method.
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Query)]
-#[query(raw = "inner::QueryBalanceResponse")]
+// #[query(raw = "inner::QueryBalanceResponse")]
 pub struct QueryBalanceResponse {
     /// balance is the balance of the coin.
     pub balance: Option<UnsignedCoin>,
@@ -230,10 +144,12 @@ impl From<QueryBalanceResponse> for inner::QueryBalanceResponse {
     }
 }
 
+impl Protobuf<inner::QueryBalanceResponse> for QueryBalanceResponse{}
+
 /// QueryTotalSupplyResponse is the response type for the Query/TotalSupply RPC
 /// method
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
-#[query(raw = "inner::QueryTotalSupplyResponse")]
+// #[query(raw = "inner::QueryTotalSupplyResponse")]
 pub struct QueryTotalSupplyResponse {
     /// supply is the supply of the coins
     pub supply: Vec<UnsignedCoin>,
@@ -273,6 +189,8 @@ impl From<QueryTotalSupplyResponse> for inner::QueryTotalSupplyResponse {
     }
 }
 
+impl Protobuf<inner::QueryTotalSupplyResponse> for QueryTotalSupplyResponse{}
+
 /// We use our own version of the DenomsMetadataResponse struct because the
 /// Metadata struct in ibc_proto has additional fields that were added in SDK
 /// v46 (uri and uri_hash).
@@ -289,7 +207,7 @@ pub struct RawQueryDenomsMetadataResponse {
 /// QueryDenomsMetadataResponse is the response type for the
 /// Query/DenomsMetadata RPC method.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
-#[query(raw = "RawQueryDenomsMetadataResponse")]
+// #[query(raw = "RawQueryDenomsMetadataResponse")]
 pub struct QueryDenomsMetadataResponse {
     // metadata provides the client information for all the registered tokens.
     pub metadatas: Vec<Metadata>,
@@ -328,36 +246,20 @@ impl From<QueryDenomsMetadataResponse> for RawQueryDenomsMetadataResponse {
     }
 }
 
-#[derive(Clone,Debug,  PartialEq, Query)]
+impl Protobuf<RawQueryDenomsMetadataResponse> for QueryDenomsMetadataResponse{}
+
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
 #[query(
     url = "/cosmos.bank.v1beta1.Query/DenomsMetadata",
-    raw = "inner::QueryDenomMetadataRequest"
+   
 )]
+#[proto( raw = "inner::QueryDenomMetadataRequest")]
 pub struct QueryDenomMetadataRequest {
     /// denom is the coin denom to query metadata for.
     pub denom: Denom,
 }
 
-impl TryFrom<inner::QueryDenomMetadataRequest> for QueryDenomMetadataRequest {
-    type Error = CoreError;
-
-    fn try_from(raw: inner::QueryDenomMetadataRequest) -> Result<Self, Self::Error> {
-        let denom = raw
-            .denom
-            .try_into()
-            .map_err(|_| Self::Error::Coin(String::from("invalid denom")))?;
-
-        Ok(QueryDenomMetadataRequest { denom })
-    }
-}
-
-impl From<QueryDenomMetadataRequest> for inner::QueryDenomMetadataRequest {
-    fn from(query: QueryDenomMetadataRequest) -> inner::QueryDenomMetadataRequest {
-        Self {
-            denom: query.denom.to_string(),
-        }
-    }
-}
+// impl 
 
 /// We use our own version of the QueryDenomMetadataResponse struct because the
 /// Metadata struct in ibc_proto has additional fields that were added in SDK
@@ -369,31 +271,10 @@ pub struct RawQueryDenomMetadataResponse {
     pub metadata: Option<inner::Metadata>,
 }
 
-#[derive(Clone,Debug,  Serialize, Query)]
-#[query(raw = "RawQueryDenomMetadataResponse")]
+#[derive(Clone, Debug, Serialize, Query, Protobuf)]
+#[proto(raw = "RawQueryDenomMetadataResponse")]
 pub struct QueryDenomMetadataResponse {
     /// metadata describes and provides all the client information for the requested token.
     pub metadata: Option<Metadata>,
 }
 
-impl TryFrom<RawQueryDenomMetadataResponse> for QueryDenomMetadataResponse {
-    type Error = CoreError;
-
-    fn try_from(raw: RawQueryDenomMetadataResponse) -> Result<Self, Self::Error> {
-        let metadata = raw
-            .metadata
-            .map(Metadata::try_from)
-            .transpose()
-            .map_err(|_| CoreError::Coin(String::from("invalid metadata")))?;
-
-        Ok(QueryDenomMetadataResponse { metadata })
-    }
-}
-
-impl From<QueryDenomMetadataResponse> for RawQueryDenomMetadataResponse {
-    fn from(query: QueryDenomMetadataResponse) -> RawQueryDenomMetadataResponse {
-        RawQueryDenomMetadataResponse {
-            metadata: query.metadata.map(inner::Metadata::from),
-        }
-    }
-}
