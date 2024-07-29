@@ -23,7 +23,7 @@ members = [
   # xmodules
   "x/auth",
   "x/bank",
-  # "x/distribution",
+  "x/distribution",
   # "x/gov",
   # "x/ibc-rs",
   # "x/slashing",
