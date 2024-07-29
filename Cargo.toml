@@ -25,7 +25,7 @@ members = [
   "x/bank",
   "x/distribution",
   "x/gov",
-  # "x/ibc-rs",
+  "x/ibc-rs",
   # "x/slashing",
   # "x/staking",
 
