@@ -3,10 +3,9 @@ use quote::quote;
 use syn::{DataStruct, DeriveInput, Field, TypePath};
 
 #[derive(FromAttributes, Default)]
-#[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
+#[darling(default, attributes(proto))]
 struct ProtobufAttr {
     raw: Option<syn::Path>,
-    #[darling(default)]
     attr: PathList,
 }
 
@@ -35,9 +34,14 @@ pub fn extend_new_structure(
                     .map(|path| syn::Type::Path(TypePath { qself: None, path }))
                     .unwrap_or(ty);
 
-                result_fields.push(quote! {
-                    #[#(#raw_attributes,)*]
-                    #vis #ident : Option<#raw>
+                result_fields.push(match raw_attributes.is_empty() {
+                    true => quote! {
+                        #vis #ident : Option<#raw>
+                    },
+                    false => quote! {
+                        #[#(#raw_attributes), *]
+                        #vis #ident : Option<#raw>
+                    },
                 });
             }
 

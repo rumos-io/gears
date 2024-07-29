@@ -6,7 +6,7 @@ mod new;
 mod raw;
 
 #[derive(FromDeriveInput, Default)]
-#[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
+#[darling(default, attributes(proto))]
 struct ProtobufArg {
     raw: Option<syn::Type>,
     derive: PathList,
@@ -20,7 +20,10 @@ pub fn message_derive(input: TokenStream) -> TokenStream {
 }
 
 fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-    let ProtobufArg { raw, derive: raw_derives } = ProtobufArg::from_derive_input(&input)?;
+    let ProtobufArg {
+        raw,
+        derive: raw_derives,
+    } = ProtobufArg::from_derive_input(&input)?;
 
     match raw {
         Some(raw) => crate::raw::expand_raw_existing(raw, input),
