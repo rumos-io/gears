@@ -93,7 +93,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
 
         tx_responses.push(TxResponse {
             height: tx.height.into(),
-            txhash: tx.hash.to_string(),
+            tx_hash: tx.hash.to_string(),
             codespace: tx.tx_result.codespace,
             code: tx.tx_result.code.value(),
             data: hex::encode(tx.tx_result.data),
