@@ -11,7 +11,7 @@ use crate::types::store::kv::{mutable::StoreMut, Store};
 use tendermint::types::{
     chain_id::ChainId,
     proto::{event::Event, header::Header},
-    time::Timestamp,
+    time::timestamp::Timestamp,
 };
 
 use super::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext};

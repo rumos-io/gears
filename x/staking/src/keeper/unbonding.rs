@@ -7,7 +7,7 @@ use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     error::IBC_ENCODE_UNWRAP,
     store::database::ext::UnwrapCorrupt,
-    tendermint::types::{proto::Protobuf, time::Timestamp},
+    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
 };
 use std::ops::Bound;
 

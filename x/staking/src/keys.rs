@@ -1,6 +1,6 @@
 use crate::consts::keeper::{HISTORICAL_INFO_KEY, UNBONDING_QUEUE_KEY, VALIDATOR_QUEUE_KEY};
 use gears::{
-    tendermint::types::time::Timestamp,
+    tendermint::types::time::timestamp::Timestamp,
     types::address::{AccAddress, ValAddress},
 };
 

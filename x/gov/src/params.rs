@@ -7,7 +7,7 @@ use gears::{
     application::keepers::params::ParamsKeeper,
     core::errors::CoreError,
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
-    tendermint::types::{proto::Protobuf, time::Duration},
+    tendermint::types::{proto::Protobuf, time::duration::Duration},
     types::{
         base::{
             coin::UnsignedCoin,
@@ -199,8 +199,8 @@ impl From<DepositParams> for inner::DepositParams {
         Self {
             min_deposit: min_deposit.into_iter().map(|e| e.into()).collect(),
             max_deposit_period: Some(inner::Duration {
-                seconds: max_deposit_period.duration_seconds(),
-                nanos: max_deposit_period.nanoseconds(),
+                seconds: max_deposit_period.duration_seconds().into(),
+                nanos: max_deposit_period.nanoseconds().into(),
             }),
         }
     }
@@ -256,8 +256,8 @@ impl From<VotingParams> for inner::VotingParams {
     fn from(VotingParams { voting_period }: VotingParams) -> Self {
         Self {
             voting_period: Some(inner::Duration {
-                seconds: voting_period.duration_seconds(),
-                nanos: voting_period.nanoseconds(),
+                seconds: voting_period.duration_seconds().into(),
+                nanos: voting_period.nanoseconds().into(),
             }),
         }
     }

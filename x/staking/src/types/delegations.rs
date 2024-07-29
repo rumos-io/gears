@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use gears::{
     ext::PaginationKey,
-    tendermint::types::time::Timestamp,
+    tendermint::types::time::timestamp::Timestamp,
     types::{
         address::{AccAddress, ValAddress},
         decimal256::Decimal256,

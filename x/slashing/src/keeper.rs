@@ -26,7 +26,7 @@ use gears::{
             validator::VotingPower,
             Protobuf,
         },
-        time::Duration,
+        time::duration::Duration,
     },
     types::{
         address::{AccAddress, ConsAddress, ValAddress},

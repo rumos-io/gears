@@ -16,7 +16,7 @@ use gears::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
         },
-        time::{Duration, Timestamp},
+        time::{duration::Duration, timestamp::Timestamp},
     },
     types::{
         address::{AccAddress, ValAddress},

@@ -4,7 +4,7 @@ use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     core::errors::CoreError,
     store::database::Database,
-    tendermint::types::{proto::Protobuf, time::Timestamp},
+    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
     types::{
         base::coins::UnsignedCoins,
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},

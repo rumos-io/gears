@@ -1,12 +1,13 @@
 // The Timestamp struct is defined in gogoproto v1.3.1 at https://github.com/gogo/protobuf/blob/v1.3.1/protobuf/google/protobuf/timestamp.proto
 // and https://github.com/protocolbuffers/protobuf-go/blob/v1.34.2/types/known/timestamppb/timestamp.pb.go
 
-use super::time::Duration;
+use super::duration::Duration;
 use chrono::SubsecRound;
 use tendermint_proto::Protobuf;
 
 // Slight modification of the RFC3339Nano but it right pads all zeros and drops the time zone info
 const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.000000000";
+const NANOS_PER_SECOND: i32 = 1_000_000_000;
 
 /// A Timestamp represents a point in time independent of any time zone or local
 /// calendar, encoded as a count of seconds and fractions of seconds at
@@ -47,8 +48,8 @@ const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.000000000";
     PartialOrd,
 )]
 #[serde(
-    from = "crate::types::serializers::timestamp::Rfc3339",
-    into = "crate::types::serializers::timestamp::Rfc3339"
+    from = "super::serializers::Rfc3339",
+    into = "super::serializers::Rfc3339"
 )]
 pub struct Timestamp {
     /// Represents seconds of UTC time since Unix epoch
@@ -67,9 +68,9 @@ pub struct Timestamp {
 /// Errors that can occur when creating a `Timestamp`
 #[derive(Debug, thiserror::Error)]
 pub enum NewTimestampError {
-    #[error("timestamp before 0001-01-01")]
+    #[error("timestamp is before 0001-01-01T00:00:00Z")]
     Underflow,
-    #[error("timestamp after 9999-12-31")]
+    #[error("timestamp is after 9999-12-31T23:59:59.999999999Z")]
     Overflow,
     #[error("{0}")]
     Nanoseconds(#[from] NewNanosecondsError),
@@ -82,7 +83,7 @@ pub enum TimestampParseError {
     Utf8(#[from] std::str::Utf8Error),
     #[error("{0}")]
     Format(String),
-    #[error("timestamp before 0001-01-01 or timestamp after 9999-12-31")]
+    #[error("timestamp is before 0001-01-01T00:00:00Z or after 9999-12-31T23:59:59.999999999Z")]
     OutOfRange,
 }
 
@@ -112,7 +113,7 @@ impl From<NewTimestampSecondsError> for TimestampParseError {
 
 /// Represents seconds of UTC time since Unix epoch,
 /// 1970-01-01T00:00:00Z. Guaranteed to be from 0001-01-01T00:00:00Z to
-/// 9999-12-31T23:59:59Z inclusive which corresponds to the range -62135596800..253402300800
+/// 9999-12-31T23:59:59Z inclusive which corresponds to the range [-62,135,596,800, 253,402,300,799] inclusive.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct TimestampSeconds(i64);
 
@@ -121,6 +122,7 @@ impl TimestampSeconds {
     pub const MAX: Self = Self(253402300799); // Seconds between 1970-01-01T00:00:00Z and 9999-12-31T23:59:59Z, inclusive
 }
 
+/// Errors that can occur when creating a `TimestampSeconds`
 #[derive(Debug, thiserror::Error)]
 pub enum NewTimestampSecondsError {
     #[error("timestamp seconds must be greater than or equal to -62135596800")]
@@ -150,18 +152,19 @@ impl From<TimestampSeconds> for i64 {
     }
 }
 
-/// Represents non-negative fractions of a second at nanosecond resolution. Guaranteed to be in the range 0..1_000_000_000
+/// Represents non-negative fractions of a second at nanosecond resolution. Guaranteed to be in the range [0, 999,999,999] inclusive.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Nanoseconds(u32);
 
 impl Nanoseconds {
     pub const MIN: Self = Self(0);
-    pub const MAX: Self = Self(999_999_999);
+    pub const MAX: Self = Self(NANOS_PER_SECOND as u32 - 1);
     pub const ZERO: Self = Self(0);
 }
 
+/// Errors that can occur when creating a `Nanoseconds`
 #[derive(Debug, thiserror::Error)]
-#[error("nanoseconds must be less than 1,000,000,000 and non-negative")]
+#[error("nanoseconds must be in the range [0, 999_999_999] inclusive")]
 pub struct NewNanosecondsError;
 
 impl TryFrom<u32> for Nanoseconds {
@@ -197,13 +200,15 @@ impl From<Nanoseconds> for i32 {
 
 /// Represents nanoseconds of UTC time since Unix epoch,
 /// 1970-01-01T00:00:00Z. Guaranteed to be from 0001-01-01T00:00:00Z to
-/// 9999-12-31T23:59:59Z inclusive which corresponds to the range --62135596800_000_000_000..253402300799_999_999_999
+/// 9999-12-31T23:59:59.999999999Z inclusive which corresponds to the range [-62,135,596,800,000,000,000, 253,402,300,799,999,999,999] inclusive.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct TimestampNanoseconds(i128);
 
 impl TimestampNanoseconds {
-    pub const MIN: Self = Self(-62135596800_000_000_000); // Nanoseconds between 1970-01-01T00:00:00Z and 0001-01-01T00:00:00Z, inclusive
-    pub const MAX: Self = Self(253402300799_999_999_999); // Nanoseconds between 1970-01-01T00:00:00Z and 9999-12-31T23:59:59Z, inclusive
+    pub const MIN: Self = Self(TimestampSeconds::MIN.0 as i128 * NANOS_PER_SECOND as i128); // Nanoseconds between 1970-01-01T00:00:00Z and 0001-01-01T00:00:00Z, inclusive
+    pub const MAX: Self = Self(
+        TimestampSeconds::MAX.0 as i128 * NANOS_PER_SECOND as i128 + Nanoseconds::MAX.0 as i128,
+    ); // Nanoseconds between 1970-01-01T00:00:00Z and 9999-12-31T23:59:59.999999999Z, inclusive
 }
 
 impl From<TimestampNanoseconds> for i128 {
@@ -222,7 +227,7 @@ impl Timestamp {
     /// Creates a new `Timestamp` from the given seconds and nanoseconds.
     /// `seconds` represents seconds of UTC time since Unix epoch
     /// 1970-01-01T00:00:00Z. Must be from 0001-01-01T00:00:00Z to
-    /// 9999-12-31T23:59:59Z inclusive which corresponds to the range -62135596800..253402300800
+    /// 9999-12-31T23:59:59Z inclusive which corresponds to the range [-62,135,596,800, 253,402,300,799] inclusive.
     /// `nanos` represents non-negative fractions of a second at nanosecond resolution. Negative
     /// second values with fractions must still have non-negative nanos values
     /// that count forward in time. Must be from 0 to 999,999,999
@@ -252,7 +257,7 @@ impl Timestamp {
 
     /// Returns the number of nanoseconds since Unix epoch
     pub fn timestamp_nanoseconds(&self) -> TimestampNanoseconds {
-        TimestampNanoseconds(self.nanos as i128 + self.seconds as i128 * 1_000_000_000)
+        TimestampNanoseconds(self.nanos as i128 + self.seconds as i128 * NANOS_PER_SECOND as i128)
     }
 
     /// Returns the number of nanoseconds since the last second boundary
@@ -293,12 +298,12 @@ impl Timestamp {
         let mut seconds = self.seconds.checked_add(rhs.seconds)?;
         let mut nanos = self.nanos.checked_add(rhs.nanos)?;
 
-        if nanos >= 1_000_000_000 {
+        if nanos >= NANOS_PER_SECOND {
             seconds = seconds.checked_add(1)?;
-            nanos -= 1_000_000_000;
+            nanos -= NANOS_PER_SECOND;
         } else if nanos < 0 {
             seconds = seconds.checked_sub(1)?;
-            nanos += 1_000_000_000;
+            nanos += NANOS_PER_SECOND;
         }
 
         Timestamp::try_new(seconds, nanos).ok()
@@ -317,9 +322,11 @@ impl Timestamp {
     }
 }
 
-impl From<inner::Timestamp> for Timestamp {
-    fn from(inner::Timestamp { seconds, nanos }: inner::Timestamp) -> Self {
-        Self { seconds, nanos }
+impl TryFrom<inner::Timestamp> for Timestamp {
+    type Error = NewTimestampError;
+
+    fn try_from(ts: inner::Timestamp) -> Result<Self, Self::Error> {
+        Self::try_new(ts.seconds, ts.nanos)
     }
 }
 
@@ -464,5 +471,15 @@ mod tests {
         let bytes = b"-9999999-01-01T23:59:59.000000000";
         let ts2 = Timestamp::try_from_formatted_bytes(bytes.as_slice()).unwrap_err();
         assert!(matches!(ts2, TimestampParseError::OutOfRange));
+    }
+
+    #[test]
+    fn test_serialization() {
+        let ts = Timestamp::try_new(1484443815, 10_000_000).unwrap();
+        let serialized = serde_json::to_string(&ts).unwrap();
+        assert_eq!(serialized, r#""2017-01-15T01:30:15.01Z""#);
+
+        let deserialized: Timestamp = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, ts);
     }
 }

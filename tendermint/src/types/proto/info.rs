@@ -1,4 +1,4 @@
-use crate::types::time::Timestamp;
+use crate::types::time::timestamp::Timestamp;
 
 use super::validator::Validator;
 
@@ -107,7 +107,12 @@ impl TryFrom<inner::Evidence> for Evidence {
                 .try_into()
                 .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             height,
-            time: time.map(Into::into),
+            time: time
+                .map(|t| {
+                    t.try_into()
+                        .map_err(|e| Self::Error::InvalidData(format!("{e}")))
+                })
+                .transpose()?,
             total_voting_power,
         })
     }

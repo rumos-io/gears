@@ -15,7 +15,7 @@ use crate::{
             begin_block::RequestBeginBlock, deliver_tx::RequestDeliverTx,
             end_block::RequestEndBlock, init_chain::RequestInitChain,
         },
-        time::Timestamp,
+        time::timestamp::Timestamp,
     },
 };
 

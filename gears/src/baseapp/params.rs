@@ -175,7 +175,7 @@ impl From<inner::EvidenceParams> for EvidenceParams {
             max_age_num_blocks: params.max_age_num_blocks.to_string(),
             max_age_duration: params
                 .max_age_duration
-                .map(|d| d.to_nanoseconds().to_string()),
+                .map(|d| i128::from(d.duration_nanoseconds()).to_string()),
             max_bytes: params.max_bytes.to_string(),
         }
     }
@@ -267,7 +267,9 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
 #[cfg(test)]
 mod tests {
     use super::EvidenceParams;
-    use tendermint::types::{proto::params::EvidenceParams as RawEvidenceParams, time::Duration};
+    use tendermint::types::{
+        proto::params::EvidenceParams as RawEvidenceParams, time::duration::Duration,
+    };
 
     #[test]
     fn evidence_params_serialize_works() {

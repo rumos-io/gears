@@ -1,7 +1,7 @@
 use crate::consts::proto::*;
 use gears::{
     core::{errors::CoreError, Protobuf},
-    tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
+    tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::{
         address::{AccAddress, ValAddress},
         auth::fee::inner::Coin as CoinRaw,
@@ -151,7 +151,7 @@ impl Commission {
         update_time: Timestamp,
     ) -> Result<Commission, anyhow::Error> {
         let diff = update_time.checked_sub(&self.update_time).unwrap();
-        if diff.num_hours() < 24 {
+        if i64::from(diff.duration_hours()) < 24 {
             return Err(anyhow::anyhow!(
                 "new rate cannot be changed more than once within 24 hours"
             ));

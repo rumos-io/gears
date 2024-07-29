@@ -10,7 +10,7 @@ use gears::{
             crypto::PublicKey,
             validator::{ValidatorUpdate, VotingPower},
         },
-        time::Timestamp,
+        time::timestamp::Timestamp,
     },
     types::{
         address::{ConsAddress, ValAddress},

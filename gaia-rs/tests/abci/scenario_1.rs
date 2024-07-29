@@ -1,4 +1,4 @@
-use gears::tendermint::types::time::Timestamp;
+use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::types::base::coins::Coins;
 use gears::types::msg::send::MsgSend;
 

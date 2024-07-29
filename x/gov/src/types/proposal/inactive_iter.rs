@@ -3,7 +3,7 @@ use std::{borrow::Cow, ops::Bound};
 use chrono::{DateTime, Utc};
 use gears::{
     store::database::Database,
-    tendermint::types::time::Timestamp,
+    tendermint::types::time::timestamp::Timestamp,
     types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
 };
 
