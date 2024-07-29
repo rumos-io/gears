@@ -6,6 +6,7 @@ use syn::{DataStruct, DeriveInput, Field, TypePath};
 #[darling(default, attributes(proto))]
 struct ProtobufAttr {
     raw: Option<syn::Path>,
+    #[darling(default)]
     attr: PathList,
 }
 
@@ -49,10 +50,16 @@ pub fn extend_new_structure(
                 &format!("Raw{}", ident.to_string()),
                 proc_macro2::Span::call_site(),
             ); // ::std::clone::Clone, ::std::cmp::PartialEq,
+
+            let raw_derives = match raw_derives.is_empty() {
+                true => quote! {},
+                false => quote! { #[derive(#(#raw_derives,)*)] },
+            };
+
             let gen = quote! {
 
                 #[derive(::prost::Message)]
-                #[derive(#(#raw_derives,)*)]
+                #raw_derives
                 #vis struct  #new_name
                 {
                     #(#result_fields),*

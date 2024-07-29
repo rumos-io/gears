@@ -9,6 +9,7 @@ mod raw;
 #[darling(default, attributes(proto))]
 struct ProtobufArg {
     raw: Option<syn::Type>,
+    #[darling(default)]
     derive: PathList,
 }
 
