@@ -1,13 +1,66 @@
-use darling::{util::PathList, FromAttributes};
+use darling::{
+    util::{Flag, PathList},
+    FromAttributes, FromMeta,
+};
 use quote::quote;
 use syn::{DataStruct, DeriveInput, Field, TypePath};
 
-#[derive(FromAttributes, Default)]
-#[darling(default, attributes(proto))]
+#[derive(FromMeta)]
+#[darling(rename_all = "lowercase")]
+enum Kind {
+    Sint32,
+    Int64,
+    Uint32,
+    Uint64,
+    Bool,
+    String,
+    Bytes,
+}
+
+impl Kind {
+    fn to_prost_token(&self) -> proc_macro2::TokenStream {
+        match self {
+            Kind::Sint32 => quote! { int32 },
+            Kind::Int64 => quote! { int64 },
+            Kind::Uint32 => quote! { uint32 },
+            Kind::Uint64 => quote! { uint64 },
+            Kind::Bool => quote! { r#bool },
+            Kind::String => quote! { string },
+            Kind::Bytes => quote! { bytes },
+        }
+    }
+}
+
+#[derive(FromMeta, Default)]
+#[darling(and_then = Self::not_both)]
+struct OptionalOrRequired {
+    optional: Flag,
+    repeated: Flag,
+}
+
+impl OptionalOrRequired {
+    fn not_both(self) -> darling::Result<Self> {
+        if self.optional.is_present() && self.repeated.is_present() {
+            Err(
+                darling::Error::custom("Cannot set `optional` and `repeated`")
+                    .with_span(&self.repeated.span()),
+            )
+        } else {
+            Ok(self)
+        }
+    }
+}
+
+#[derive(FromAttributes)]
+#[darling(attributes(proto))]
 struct ProtobufAttr {
-    raw: Option<syn::Path>,
     #[darling(default)]
-    attr: PathList,
+    raw: Option<syn::Path>,
+    #[darling(flatten, default)]
+    opt: OptionalOrRequired,
+    kind: Kind,
+    #[darling(default)]
+    tag: Option<u32>,
 }
 
 pub fn extend_new_structure(
@@ -19,6 +72,8 @@ pub fn extend_new_structure(
     match data {
         syn::Data::Struct(DataStruct { fields, .. }) => {
             let mut result_fields = Vec::with_capacity(fields.len());
+            let mut counter = 1;
+
             for Field {
                 attrs,
                 vis,
@@ -29,27 +84,44 @@ pub fn extend_new_structure(
             {
                 let ProtobufAttr {
                     raw,
-                    attr: raw_attributes,
+                    opt: OptionalOrRequired { optional, repeated },
+                    kind,
+                    tag,
                 } = ProtobufAttr::from_attributes(&attrs)?;
+
                 let raw = raw
                     .map(|path| syn::Type::Path(TypePath { qself: None, path }))
                     .unwrap_or(ty);
+                let tag = tag.unwrap_or(counter);
 
-                result_fields.push(match raw_attributes.is_empty() {
-                    true => quote! {
+                let kind = kind.to_prost_token();
+
+                let result = match (optional.is_present(), repeated.is_present()) {
+                    (true, true) => unreachable!("we validated structure to omit such case"),
+                    (true, false) => quote! {
+                        #[prost( #kind, optional, tag = #tag )]
+                        #vis #ident : ::std::option::Option<#raw>,
+                    },
+                    (false, true) => quote! {
+                       #[prost( #kind, repeated, tag = #tag )]
+                       #vis #ident : std::vec::Vec<#raw>,
+                    },
+                    (false, false) => quote! {
+                        #[prost( #kind, required, tag = #tag )]
                         #vis #ident : #raw
                     },
-                    false => quote! {
-                        #[#(#raw_attributes), *]
-                        #vis #ident : #raw
-                    },
-                });
+                };
+
+                result_fields.push(result);
+
+                counter = tag;
+                counter += 1;
             }
 
             let new_name = syn::Ident::new(
                 &format!("Raw{}", ident.to_string()),
                 proc_macro2::Span::call_site(),
-            ); // ::std::clone::Clone, ::std::cmp::PartialEq,
+            );
 
             let raw_derives = match raw_derives.is_empty() {
                 true => quote! {},
