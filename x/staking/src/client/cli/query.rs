@@ -145,28 +145,6 @@ pub enum StakingQuery {
     UnbondingDelegation(QueryDelegationRequest),
 }
 
-// impl Query for StakingQuery {
-//     fn query_url(&self) -> &'static str {
-//         match self {
-//             StakingQuery::Validator(_) => ,
-//             StakingQuery::Delegation(_) => ,
-//             StakingQuery::Redelegation(_) => ,
-//             StakingQuery::UnbondingDelegation(_) => {
-//
-//             }
-//         }
-//     }
-
-//     fn into_bytes(self) -> Vec<u8> {
-//         match self {
-//             StakingQuery::Validator(var) => var.encode_vec(),
-//             StakingQuery::Delegation(var) => var.encode_vec(),
-//             StakingQuery::Redelegation(var) => var.encode_vec(),
-//             StakingQuery::UnbondingDelegation(var) => var.encode_vec(),
-//         }
-//     }
-// }
-
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
