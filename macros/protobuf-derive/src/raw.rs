@@ -2,11 +2,7 @@ use darling::FromAttributes;
 use quote::quote;
 use syn::{DataStruct, DeriveInput};
 
-#[derive(FromAttributes, Default)]
-#[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
-struct RawProtobufAttr {
-    name: Option<syn::Ident>,
-}
+use crate::{is_option, RawProtobufAttr};
 
 pub fn expand_raw_existing(
     raw: syn::Type,
@@ -115,29 +111,4 @@ pub fn expand_raw_existing(
             "Protobuf can be derived only for `struct`",
         )),
     }
-}
-
-fn is_option(ty: &syn::Type) -> bool {
-    let opt = match ty {
-        syn::Type::Path(typepath) if typepath.qself.is_none() => Some(typepath.path.clone()),
-        _ => None,
-    };
-
-    if let Some(o) = opt {
-        check_for_option(&o).is_some()
-    } else {
-        false
-    }
-}
-
-fn check_for_option(path: &syn::Path) -> Option<&syn::PathSegment> {
-    let idents_of_path = path.segments.iter().fold(String::new(), |mut acc, v| {
-        acc.push_str(&v.ident.to_string());
-        acc.push(':');
-        acc
-    });
-    vec!["Option:", "std:option:Option:", "core:option:Option:"]
-        .into_iter()
-        .find(|s| idents_of_path == *s)
-        .and_then(|_| path.segments.last())
 }
