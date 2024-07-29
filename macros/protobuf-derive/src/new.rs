@@ -2,11 +2,12 @@ use darling::{util::PathList, FromAttributes};
 use quote::quote;
 use syn::{DataStruct, DeriveInput, Field, TypePath};
 
-#[derive(FromAttributes)]
-#[darling(attributes(proto), forward_attrs(allow, doc, cfg))]
+#[derive(FromAttributes, Default)]
+#[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
 struct ProtobufAttr {
     raw: Option<syn::Path>,
-    raw_attributes: PathList,
+    #[darling(default)]
+    attr: PathList,
 }
 
 pub fn extend_new_structure(
@@ -28,14 +29,14 @@ pub fn extend_new_structure(
             {
                 let ProtobufAttr {
                     raw,
-                    raw_attributes,
+                    attr: raw_attributes,
                 } = ProtobufAttr::from_attributes(&attrs)?;
                 let raw = raw
                     .map(|path| syn::Type::Path(TypePath { qself: None, path }))
                     .unwrap_or(ty);
 
                 result_fields.push(quote! {
-                    #(#raw_attributes,)*
+                    #[#(#raw_attributes,)*]
                     #vis #ident : Option<#raw>
                 });
             }
@@ -43,11 +44,11 @@ pub fn extend_new_structure(
             let new_name = syn::Ident::new(
                 &format!("Raw{}", ident.to_string()),
                 proc_macro2::Span::call_site(),
-            );
+            ); // ::std::clone::Clone, ::std::cmp::PartialEq,
             let gen = quote! {
 
-                #[derive(::std::clone::Clone, ::std::cmp::PartialEq, ::prost::Message)]
-                #(#raw_derives,)*
+                #[derive(::prost::Message)]
+                #[derive(#(#raw_derives,)*)]
                 #vis struct  #new_name
                 {
                     #(#result_fields),*
