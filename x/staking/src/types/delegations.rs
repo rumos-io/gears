@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use gears::{
+    core::errors::CoreError,
     ext::PaginationKey,
     tendermint::types::time::Timestamp,
     types::{
@@ -11,6 +12,8 @@ use gears::{
     x::types::delegation::StakingDelegation,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::consts::error::SERDE_ENCODING_DOMAIN_TYPE;
 
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
@@ -33,6 +36,20 @@ impl StakingDelegation for Delegation {
 
     fn shares(&self) -> &Decimal256 {
         &self.shares
+    }
+}
+
+impl TryFrom<Vec<u8>> for Delegation {
+    type Error = CoreError;
+
+    fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
+        serde_json::from_slice(&raw).map_err(|e| CoreError::DecodeGeneral(e.to_string()))
+    }
+}
+
+impl From<Delegation> for Vec<u8> {
+    fn from(value: Delegation) -> Self {
+        serde_json::to_vec(&value).expect(SERDE_ENCODING_DOMAIN_TYPE)
     }
 }
 
