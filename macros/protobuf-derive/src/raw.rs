@@ -90,11 +90,11 @@ pub fn extend_new_structure(input: DeriveInput) -> syn::Result<proc_macro2::Toke
                     (true, true) => unreachable!("we validated structure to omit such case"),
                     (true, false) => quote! {
                         #[prost( #kind, optional, tag = #tag )]
-                        #vis #ident : ::std::option::Option<#raw>,
+                        #vis #ident : ::std::option::Option<#raw>
                     },
                     (false, true) => quote! {
                        #[prost( #kind, repeated, tag = #tag )]
-                       #vis #ident : std::vec::Vec<#raw>,
+                       #vis #ident : ::prost::alloc::vec::Vec<#raw>
                     },
                     (false, false) => quote! {
                         #[prost( #kind, required, tag = #tag )]
