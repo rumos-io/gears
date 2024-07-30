@@ -2,7 +2,7 @@ use address::AddressError;
 use core_types::errors::CoreError;
 use cosmwasm_std::Decimal256RangeExceeded;
 
-use crate::types::{errors::DenomError, tx::metadata::MetadataParseError};
+use crate::types::{base::errors::CoinError, errors::DenomError, tx::metadata::MetadataParseError};
 
 pub const IBC_ENCODE_UNWRAP: &str = "Should be okay. In future versions of IBC they removed Result";
 pub const POISONED_LOCK: &str = "poisoned lock";
@@ -34,6 +34,8 @@ pub enum MathOperation {
 
 #[derive(Debug, thiserror::Error)]
 pub enum ProtobufError {
+    #[error("{0}")]
+    Coins(#[from] CoinError),
     #[error("{0}")]
     MissingField(String),
     #[error("{0}")]
