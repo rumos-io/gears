@@ -27,6 +27,7 @@ mod inner {
 #[query(url = "/cosmos.bank.v1beta1.Query/TotalSupply")]
 #[proto(raw = "inner::QueryTotalSupplyRequest")]
 pub struct QueryTotalSupplyRequest {
+    #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
 }
  
@@ -35,6 +36,7 @@ pub struct QueryTotalSupplyRequest {
 #[query(url = "/cosmos.bank.v1beta1.Query/DenomsMetadata")]
 #[proto(raw = "inner::QueryDenomsMetadataRequest")]
 pub struct QueryDenomsMetadataRequest {
+    #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
 }
 
@@ -62,6 +64,7 @@ pub struct QueryAllBalancesRequest {
     /// address is the address to query balances for.
     pub address: AccAddress,
     /// pagination defines an optional pagination for the request.
+    #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
 }
  
@@ -272,6 +275,7 @@ pub struct RawQueryDenomMetadataResponse {
 #[proto(raw = "RawQueryDenomMetadataResponse")]
 pub struct QueryDenomMetadataResponse {
     /// metadata describes and provides all the client information for the requested token.
+    #[proto(optional)]
     pub metadata: Option<Metadata>,
 }
 

@@ -1,4 +1,4 @@
-use darling::{FromAttributes, FromDeriveInput};
+use darling::{util::Flag, FromAttributes, FromDeriveInput};
 use quote::quote;
 use syn::{DataStruct, DeriveInput};
 
@@ -13,6 +13,7 @@ struct ProtobufArg {
 #[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
 struct ProtobufAttr {
     name: Option<syn::Ident>,
+    optional: Flag,
 }
 
 pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
@@ -39,39 +40,46 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
         syn::Data::Struct(DataStruct { fields, .. }) => {
             let mut raw_fields = Vec::new();
             for field in fields {
-                let ProtobufAttr { name } = ProtobufAttr::from_attributes(&field.attrs)?;
+                let ProtobufAttr { name, optional } = ProtobufAttr::from_attributes(&field.attrs)?;
+                let field_indent = field.ident.ok_or(syn::Error::new(
+                    proc_macro2::Span::call_site(),
+                    "Can't derive on tuple structures",
+                ))?;
 
-                raw_fields.push((
-                    name,
-                    field.ident.ok_or(syn::Error::new(
-                        proc_macro2::Span::call_site(),
-                        "Can't derive on tuple structures",
-                    ))?,
-                    field.ty,
-                ))
+                let name = name.clone().unwrap_or(field_indent.clone());
+
+                raw_fields.push((name, field_indent, field.ty, optional.is_present()))
             }
 
-            let from_fields_iter_gen =
-                raw_fields
-                    .iter()
-                    .map(|(other_name, field_ident, field_type)| {
-                        let other_name = other_name.clone().unwrap_or(field_ident.clone());
+            let from_fields_iter_gen = {
+                let mut from_fields = Vec::with_capacity(raw_fields.len());
 
-                        match is_option(&field_type) {
-                            true => {
-                                quote! {
-                                    #other_name : match value.#field_ident
-                                    {
-                                        Some(var) => Some( ::std::convert::Into::into(var)),
-                                        None => None,
-                                    }
-                                }
+                for (other_name, field_ident, field_type, is_optional) in &raw_fields {
+                    let result = match (is_option(&field_type), is_optional) {
+                        (true, true) => quote! {
+                            #other_name : match value.#field_ident
+                            {
+                                ::std::option::Option::Some(var) => ::std::option::Option::Some( ::std::convert::Into::into(var)),
+                                ::std::option::Option::None => ::std::option::Option::None,
                             }
-                            false => quote! {
-                                #other_name : ::std::convert::Into::into(value.#field_ident)
-                            },
-                        }
-                    });
+                        },
+                        (true, false) => quote! {
+                            #other_name : ::std::option::Option::Some(::std::convert::Into::into(value.#field_ident))
+                        },
+                        (false, true) => Err(syn::Error::new(
+                            proc_macro2::Span::call_site(),
+                            "Can't have optional raw while raw is required",
+                        ))?,
+                        (false, false) => quote! {
+                            #other_name : ::std::convert::Into::into(value.#field_ident)
+                        },
+                    };
+
+                    from_fields.push(result);
+                }
+
+                from_fields
+            };
 
             let from_impl = quote! {
                 impl ::std::convert::From<#ident> for #raw {
@@ -87,19 +95,25 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
             let try_from_fields_iter_gen =
                 raw_fields
                     .iter()
-                    .map(|(other_name, field_ident, field_type)| {
-                        let other_name = other_name.clone().unwrap_or(field_ident.clone());
-
-                        match is_option(&field_type) {
-                            true => {
-                                quote! {
-                                    #field_ident : match value.#other_name {
-                                        Some(var) => Some(::std::convert::TryFrom::try_from(var)?),
-                                        None => None,
-                                    }
+                    .map(|(other_name, field_ident, field_type, is_optional)| {
+                        match (is_option(&field_type), is_optional) {
+                            (true, true) => quote! {
+                                #field_ident : match value.#other_name {
+                                    Some(var) => Some(::std::convert::TryFrom::try_from(var)?),
+                                    None => None,
                                 }
-                            }
-                            false => quote! {
+                            },
+                            (true, false) => quote! {
+                                #field_ident : ::std::option::Option::Some(::std::convert::Into::into(value.#other_name))
+                            },
+                            (false, true) => quote! {
+                                #field_ident : match value.#other_name
+                                {
+                                    ::std::option::Option::Some(var) => ::std::Result::Ok( ::std::convert::Into::into(var)),
+                                    ::std::option::Option::None => ::std::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name ))),
+                                }?
+                            },
+                            (false, false) => quote! {
                                 #field_ident : ::std::convert::TryFrom::try_from(value.#other_name)?
                             },
                         }

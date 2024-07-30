@@ -35,12 +35,12 @@ impl Kind {
 
 #[derive(FromMeta, Default)]
 #[darling(and_then = Self::not_both)]
-struct OptionalOrRequired {
+struct OptionalOrRepeated {
     optional: Flag,
     repeated: Flag,
 }
 
-impl OptionalOrRequired {
+impl OptionalOrRepeated {
     fn not_both(self) -> darling::Result<Self> {
         if self.optional.is_present() && self.repeated.is_present() {
             Err(
@@ -59,7 +59,7 @@ struct RawAttr {
     #[darling(default)]
     raw: Option<syn::Path>,
     #[darling(flatten, default)]
-    opt: OptionalOrRequired,
+    opt: OptionalOrRepeated,
     kind: Kind,
     #[darling(default)]
     tag: Option<u32>,
@@ -95,7 +95,7 @@ pub fn extend_new_structure(input: DeriveInput) -> syn::Result<proc_macro2::Toke
             {
                 let RawAttr {
                     raw,
-                    opt: OptionalOrRequired { optional, repeated },
+                    opt: OptionalOrRepeated { optional, repeated },
                     kind,
                     tag,
                 } = RawAttr::from_attributes(&attrs)?;

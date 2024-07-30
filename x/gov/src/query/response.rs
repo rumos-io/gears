@@ -28,6 +28,7 @@ mod inner {
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryProposalResponse")]
 pub struct QueryProposalResponse {
+    #[proto(optional)]
     pub proposal: Option<Proposal>,
 }
 
@@ -81,6 +82,7 @@ impl Protobuf<inner::QueryProposalsResponse> for QueryProposalsResponse {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryVoteResponse")]
 pub struct QueryVoteResponse {
+    #[proto(optional)]
     pub vote: Option<MsgVoteWeighted>,
 }
 
@@ -126,14 +128,18 @@ impl Protobuf<inner::QueryVotesResponse> for QueryVotesResponse {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryParamsResponse")]
 pub struct QueryParamsResponse {
+    #[proto(optional)]
     pub voting_params: Option<VotingParams>,
+    #[proto(optional)]
     pub deposit_params: Option<DepositParams>,
+    #[proto(optional)]
     pub tally_params: Option<TallyParams>,
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryDepositResponse")]
 pub struct QueryDepositResponse {
+    #[proto(optional)]
     pub deposit: Option<Deposit>,
 }
 
@@ -190,6 +196,7 @@ impl Protobuf<inner::QueryDepositsResponse> for QueryDepositsResponse {}
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryTallyResultResponse")]
 pub struct QueryTallyResultResponse {
+    #[proto(optional)]
     pub tally: Option<TallyResult>,
 }
 

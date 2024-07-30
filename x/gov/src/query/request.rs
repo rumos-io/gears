@@ -114,6 +114,7 @@ pub struct QueryVoteRequest {
 #[proto(raw = "inner::QueryVotesRequest")]
 pub struct QueryVotesRequest {
     pub proposal_id: u64,
+    #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
 }
 
@@ -162,6 +163,7 @@ pub struct QueryDepositRequest {
 #[proto(raw = "inner::QueryDepositsRequest")]
 pub struct QueryDepositsRequest {
     pub proposal_id: u64,
+    #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
 }
 

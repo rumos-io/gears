@@ -35,6 +35,8 @@ pub enum MathOperation {
 #[derive(Debug, thiserror::Error)]
 pub enum ProtobufError {
     #[error("{0}")]
+    MissingField(String),
+    #[error("{0}")]
     Metadata(#[from] MetadataParseError),
     #[error("{0}")]
     Denom(#[from] DenomError),
