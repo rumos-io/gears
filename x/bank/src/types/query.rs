@@ -56,10 +56,7 @@ pub struct QueryBalanceRequest {
 
 /// QueryAllBalanceRequest is the request type for the Query/AllBalances RPC method.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Query, Protobuf)]
-#[query(
-    url = "/cosmos.bank.v1beta1.Query/AllBalances",
-    
-)]
+#[query(url = "/cosmos.bank.v1beta1.Query/AllBalances")]
 #[proto(raw = "inner::QueryAllBalancesRequest")]
 pub struct QueryAllBalancesRequest {
     /// address is the address to query balances for.

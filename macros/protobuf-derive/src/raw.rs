@@ -6,12 +6,12 @@ use syn::{DataStruct, DeriveInput};
 #[darling(default, attributes(proto))]
 struct ProtobufArg {
     #[darling(default)]
-    raw: Option<syn::Ident>,
+    raw: Option<syn::TypePath>,
 }
 
 #[derive(FromAttributes, Default)]
 #[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
-struct RawProtobufAttr {
+struct ProtobufAttr {
     name: Option<syn::Ident>,
 }
 
@@ -19,10 +19,17 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
     let ProtobufArg { raw } = ProtobufArg::from_derive_input(&input)?;
     let DeriveInput { ident, data, .. } = input;
 
-    let raw = raw.unwrap_or(syn::Ident::new(
-        &format!("Raw{}", ident.to_string()),
-        proc_macro2::Span::call_site(),
-    ));
+    let raw = match raw {
+        Some(raw) => quote! { #raw },
+        None => {
+            let new_name = syn::Ident::new(
+                &format!("Raw{}", ident.to_string()),
+                proc_macro2::Span::call_site(),
+            );
+
+            quote! { #new_name }
+        }
+    };
 
     let protobuf_trait_impl = quote! {
         impl ::gears::tendermint::types::proto::Protobuf<#raw> for #ident {}
@@ -32,7 +39,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
         syn::Data::Struct(DataStruct { fields, .. }) => {
             let mut raw_fields = Vec::new();
             for field in fields {
-                let RawProtobufAttr { name } = RawProtobufAttr::from_attributes(&field.attrs)?;
+                let ProtobufAttr { name } = ProtobufAttr::from_attributes(&field.attrs)?;
 
                 raw_fields.push((
                     name,
