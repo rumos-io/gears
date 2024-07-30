@@ -15,7 +15,7 @@ pub mod request;
 pub mod response;
 
 #[derive(Debug, Clone, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum GovQuery {
     Deposit(QueryDepositRequest),
     Deposits(QueryDepositsRequest),

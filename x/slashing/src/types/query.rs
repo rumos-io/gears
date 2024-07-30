@@ -146,7 +146,7 @@ impl TryFrom<QuerySigningInfosResponseRaw> for QuerySigningInfosResponse {
     fn try_from(
         QuerySigningInfosResponseRaw { info, pagination }: QuerySigningInfosResponseRaw,
     ) -> Result<Self, Self::Error> {
-        let mut info_res = vec![];
+        let mut info_res = Vec::with_capacity(info.len());
         for inf in info {
             info_res.push(inf.try_into()?);
         }

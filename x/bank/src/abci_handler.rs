@@ -51,14 +51,8 @@ pub enum BankNodeQueryResponse {
     DenomMetadata(QueryDenomMetadataResponse),
 }
 
-impl<
-        'a,
-        SK: StoreKey,
-        PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M>,
-        M: Module,
-        MI: ModuleInfo,
-    > ABCIHandler<SK, PSK, AK, M, MI>
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI: ModuleInfo>
+    ABCIHandler<SK, PSK, AK, M, MI>
 {
     pub fn new(keeper: Keeper<SK, PSK, AK, M>) -> Self {
         ABCIHandler {

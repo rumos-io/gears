@@ -1,16 +1,27 @@
 use gears::derive::{Protobuf, Query};
 use serde::{Deserialize, Serialize};
 
-use gears::types::{account::Account, address::AccAddress};
-
 mod inner {
-    pub use gears::core::query::request::account::QueryAccountRequest;
-    pub use gears::core::query::response::account::QueryAccountResponse;
+    pub use gears::core::query::request::auth::QueryAccountRequest;
+    pub use gears::core::query::response::auth::QueryAccountResponse;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountsRequest;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryAccountsResponse;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryParamsRequest;
+    pub use ibc_proto::cosmos::auth::v1beta1::QueryParamsResponse;
+}
+
+#[derive(Clone, PartialEq, Message, Query)]
+#[query(raw = "QueryParamsRequest", url = "/cosmos.auth.v1beta1.Query/Params")]
+pub struct QueryParamsRequest {}
+
+impl From<inner::QueryParamsRequest> for QueryParamsRequest {
+    fn from(_value: inner::QueryParamsRequest) -> Self {
+        QueryParamsRequest {}
+    }
 }
 
 /// QueryAccountResponse is the response type for the Query/Account RPC method.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Protobuf, Query)]
-#[query(kind = "response")]
 #[proto(raw = "inner::QueryAccountResponse")]
 pub struct QueryAccountResponse {
     /// account defines the account of the corresponding address.
@@ -19,7 +30,6 @@ pub struct QueryAccountResponse {
 
 /// QueryAccountRequest is the request type for the Query/Account RPC method.
 #[derive(Clone, PartialEq, Debug, Protobuf, Query)]
-#[query(kind = "request", url = "/cosmos.auth.v1beta1.Query/Account")]
 #[proto(raw = "inner::QueryAccountRequest")]
 pub struct QueryAccountRequest {
     /// address defines the address to query for.

@@ -9,10 +9,10 @@ use crate::types::{
 
 mod inner {
     pub use core_types::bank::Metadata;
-    pub use core_types::query::request::account::QueryAccountRequest;
+    pub use core_types::query::request::auth::QueryAccountRequest;
     pub use core_types::query::request::bank::QueryDenomMetadataRequest;
     pub use core_types::query::request::bank::QueryDenomsMetadataRequest;
-    pub use core_types::query::response::account::QueryAccountResponse;
+    pub use core_types::query::response::auth::QueryAccountResponse;
 }
 
 #[derive(Clone, PartialEq, Debug)]
