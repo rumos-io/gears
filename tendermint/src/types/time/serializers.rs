@@ -127,7 +127,7 @@ pub fn fmt_as_rfc3339_nanos(t: OffsetDateTime, f: &mut impl fmt::Write) -> fmt::
     }
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug)]
 pub(crate) struct SerdeDuration {
     seconds: i64,
     nanos: i32,
@@ -160,25 +160,59 @@ impl Serialize for SerdeDuration {
         let nanos = if nanos == 0 {
             "".to_string()
         } else {
-            format!(".{:09}", nanos.abs())
+            let mut secfrac = nanos.abs();
+            let mut secfrac_width: usize = 9;
+            while secfrac % 10 == 0 {
+                secfrac /= 10;
+                secfrac_width -= 1;
+            }
+            format!(".{secfrac:00$}", secfrac_width)
         };
         serializer.serialize_str(&format!("{}{}s", seconds, nanos))
     }
 }
 
-// impl<'de> Deserialize<'de> for SerdeDuration {
-//     fn deserialize<D>(deserializer: D) -> Result<time::Duration, D::Error>
-//     where
-//         D: Deserializer<'de>,
-//     {
-//         let s = String::deserialize(deserializer)?;
-//         let mut s = s.splitn(2, '.');
-//         let seconds = s
-//             .next()
-//             .ok_or_else(|| D::Error::custom("missing seconds"))?;
-//         let nanos = s.next().unwrap_or("0");
-//         let nanos = format!("{:09}", nanos.parse::<u32>().map_err(D::Error::custom)?);
-//         let s = format!("{}{}", seconds, nanos);
-//         s.parse().map_err(D::Error::custom)
-//     }
-// }
+impl<'de> Deserialize<'de> for SerdeDuration {
+    fn deserialize<D>(deserializer: D) -> Result<SerdeDuration, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let mut s = String::deserialize(deserializer)?;
+        if s.pop() != Some('s') {
+            return Err(D::Error::custom("missing 's' suffix"));
+        }
+
+        let mut s = s.splitn(2, '.');
+
+        let seconds = s
+            .next()
+            .expect("splitn(2,...) always returns at least one element");
+        let seconds: i64 = seconds
+            .parse()
+            .map_err(|e| D::Error::custom(format!("invalid seconds, {e}")))?;
+
+        let nanos = s.next();
+        let nanos = match nanos {
+            Some(n) => {
+                if n.chars().last() == Some('0') {
+                    return Err(D::Error::custom(
+                        "invalid nanoseconds - contains trailing zero(s)",
+                    ));
+                } else {
+                    // pad with trailing zeros if there are fewer than 9 digits
+                    format!("{:0<9}", n)
+                }
+            }
+            None => "0".to_string(),
+        };
+
+        let mut nanos = nanos
+            .parse::<i32>()
+            .map_err(|e| D::Error::custom(format!("invalid nanoseconds, {e}")))?;
+        if seconds < 0 {
+            nanos = -nanos;
+        }
+
+        Ok(SerdeDuration { seconds, nanos })
+    }
+}

@@ -515,15 +515,14 @@ mod tests {
         assert_eq!(duration.duration_nanoseconds(), DurationNanoseconds::MIN);
     }
 
-    //TODO: broken test
     #[test]
     fn test_serialization() {
         let duration = Duration::try_new(3, 1).unwrap();
         let serialized = serde_json::to_string(&duration).unwrap();
         assert_eq!(serialized, r#""3.000000001s""#);
 
-        // let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
-        // assert_eq!(deserialized, duration);
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, duration);
 
         //--------------------------------------------
 
@@ -531,8 +530,8 @@ mod tests {
         let serialized = serde_json::to_string(&duration).unwrap();
         assert_eq!(serialized, r#""3s""#);
 
-        // let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
-        // assert_eq!(deserialized, duration);
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, duration);
 
         //--------------------------------------------
 
@@ -540,8 +539,8 @@ mod tests {
         let serialized = serde_json::to_string(&duration).unwrap();
         assert_eq!(serialized, r#""-3.000000001s""#);
 
-        // let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
-        // assert_eq!(deserialized, duration);
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, duration);
 
         //--------------------------------------------
 
@@ -549,7 +548,21 @@ mod tests {
         let serialized = serde_json::to_string(&duration).unwrap();
         assert_eq!(serialized, r#""3.000001s""#);
 
-        // let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
-        // assert_eq!(deserialized, duration);
+        let deserialized: Duration = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, duration);
+
+        //--------------------------------------------
+        // no trailing zeros
+
+        let serialized = r#""3.000001000s""#;
+
+        serde_json::from_str::<Duration>(&serialized).unwrap_err();
+
+        //--------------------------------------------
+        // too big
+
+        let serialized = r#""3.1234567891s""#;
+
+        serde_json::from_str::<Duration>(&serialized).unwrap_err();
     }
 }
