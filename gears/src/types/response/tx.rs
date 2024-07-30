@@ -123,6 +123,7 @@ impl<M: TxMessage> TryFrom<TxResponseRaw> for TxResponse<M> {
 
 impl<M: TxMessage> CoreProtobuf<TxResponseRaw> for TxResponse<M> {}
 
+// TODO: may be replaced with ibc_proto struct but has some type versions conflicts
 #[derive(Clone, PartialEq, Deserialize, Serialize, Message)]
 pub struct TxResponseRaw {
     #[prost(int64, tag = "1")]

@@ -13,15 +13,19 @@ use gears::derive::Query;
 use gears::tendermint::informal::Hash;
 use gears::tendermint::rpc::client::{Client, HttpClient};
 use gears::tendermint::rpc::response::{
-    block::Response as BlockResponse, tx::Response as CosmosTxResponse,
+    block::Response as BlockResponse, tx::search::Response as SearchResponse,
+    tx::Response as CosmosTxResponse,
 };
+use gears::tendermint::types::proto::block::Height;
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::address::AccAddress;
 use gears::types::pagination::request::PaginationRequest;
 use gears::types::response::tx::TxResponse;
+use gears::types::response::tx_event::SearchTxsResult;
 use gears::types::tx::TxMessage;
 use gears::{application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::marker::PhantomData;
 use std::str::FromStr;
@@ -129,6 +133,15 @@ pub struct TxQueryCli {
     pub command: TxCommands,
 }
 
+#[derive(Subcommand, Debug)]
+pub enum TxCommands {
+    Tx {
+        hash: String,
+        #[arg(long, default_value_t = TxQueryType::Hash)]
+        query_type: TxQueryType,
+    },
+}
+
 #[derive(Debug, Clone)]
 pub enum TxQueryType {
     Hash,
@@ -157,15 +170,6 @@ impl Display for TxQueryType {
             TxQueryType::Signature => write!(f, "signature"),
         }
     }
-}
-
-#[derive(Subcommand, Debug)]
-pub enum TxCommands {
-    Tx {
-        hash: String,
-        #[arg(long, default_value_t = TxQueryType::Hash)]
-        query_type: TxQueryType,
-    },
 }
 
 #[derive(Clone, PartialEq, Query)]
@@ -305,17 +309,55 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
                 query.push_str(prefix);
                 query.push_str(&query_str_events);
                 let query = gears::tendermint::rpc::query::Query::from_str(&query)?;
-                let res = runtime.block_on(
-                    client.tx_search(
-                        query,
-                        true,
-                        req.page,
-                        req.limit.try_into().unwrap_or(u8::MAX),
-                        gears::tendermint::rpc::Order::from_str(&req.order_by)?,
-                    ), // TODO: extend by the other logic
-                )?;
+                let res: anyhow::Result<(SearchResponse, HashMap<Height, BlockResponse>)> = runtime
+                    .block_on(async {
+                        let txs = client
+                            .tx_search(
+                                query,
+                                true,
+                                req.page,
+                                req.limit.try_into().unwrap_or(u8::MAX),
+                                gears::tendermint::rpc::Order::from_str(&req.order_by)?,
+                            )
+                            .await?;
+                        let mut blocks: HashMap<Height, BlockResponse> =
+                            HashMap::with_capacity(txs.txs.len());
+                        for tx in &txs.txs {
+                            blocks.insert(tx.height, client.block(tx.height).await?);
+                        }
 
-                Ok(serde_json::to_vec(&res)?)
+                        Ok((txs, blocks))
+                    });
+                let (search_res, blocks_res) = res?;
+                let mut tx_responses = vec![];
+                for cosmos_tx in &search_res.txs {
+                    tx_responses.push(
+                        self.make_tx_response(
+                            cosmos_tx.clone(),
+                            blocks_res
+                                .get(&cosmos_tx.height)
+                                .expect("map contains only heights from txs")
+                                .clone(),
+                        )?,
+                    );
+                }
+
+                let count = search_res
+                    .txs
+                    .len()
+                    .try_into()
+                    .map_err(|e| anyhow!("{e}"))?;
+
+                let res = SearchTxsResult {
+                    total_count: search_res.total_count as u64,
+                    count,
+                    page_number: req.page as u64,
+                    // sdk uses conversion to f64
+                    page_total: (search_res.total_count as f64 / req.limit as f64).ceil() as u64,
+                    limit: req.limit as u64,
+                    txs: tx_responses,
+                };
+                Ok(res.encode_vec())
             }
         }
     }
@@ -335,12 +377,18 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
                     Ok(Self::QueryResponse::Tx(QueryTxResponse { tx }))
                 }
                 _ => {
-                    todo!()
-                    // let res: gears::tendermint::rpc::response::tx::search::Response =
-                    //     serde_json::from_slice(&query_bytes)?;
-                    // Ok(Self::QueryResponse::Txs(QueryTxsResponse {
-                    //     txs: res.txs.into_iter().map(Into::into).collect(),
-                    // }))
+                    let txs: SearchTxsResult<M> = SearchTxsResult::decode_vec(&query_bytes)?;
+
+                    if txs.txs.is_empty() {
+                        return Err(anyhow!("found no txs matching given parameters"));
+                    }
+                    if txs.txs.len() > 1 {
+                        return Err(anyhow!(
+                            "found {} txs matching given parameters",
+                            txs.txs.len()
+                        ));
+                    }
+                    Ok(Self::QueryResponse::Txs(QueryTxsResponse { txs }))
                 }
             },
         }

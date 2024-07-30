@@ -7,7 +7,10 @@ use gears::{
         account::Account,
         address::AccAddress,
         pagination::{request::PaginationRequest, response::PaginationResponse},
-        response::tx::{TxResponse, TxResponseRaw},
+        response::{
+            tx::{TxResponse, TxResponseRaw},
+            tx_event::{SearchTxsResult, SearchTxsResultRaw},
+        },
         tx::TxMessage,
     },
 };
@@ -160,14 +163,14 @@ impl<M: TxMessage> Protobuf<QueryTxResponseRaw> for QueryTxResponse<M> {}
 
 #[derive(Clone, Message)]
 pub struct QueryTxsResponseRaw {
-    #[prost(message, repeated)]
-    pub txs: Vec<TxResponseRaw>,
+    #[prost(message, optional, tag = "1")]
+    pub txs: Option<SearchTxsResultRaw>,
 }
 
 impl<M: TxMessage> From<QueryTxsResponse<M>> for QueryTxsResponseRaw {
     fn from(QueryTxsResponse { txs }: QueryTxsResponse<M>) -> Self {
         Self {
-            txs: txs.into_iter().map(Into::into).collect(),
+            txs: Some(txs.into()),
         }
     }
 }
@@ -175,21 +178,18 @@ impl<M: TxMessage> From<QueryTxsResponse<M>> for QueryTxsResponseRaw {
 /// QueryTxsResponse is the response type for tendermint rpc query
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 pub struct QueryTxsResponse<M: TxMessage> {
-    pub txs: Vec<TxResponse<M>>,
+    pub txs: SearchTxsResult<M>,
 }
 
 impl<M: TxMessage> TryFrom<QueryTxsResponseRaw> for QueryTxsResponse<M> {
     type Error = CoreError;
 
     fn try_from(QueryTxsResponseRaw { txs }: QueryTxsResponseRaw) -> Result<Self, Self::Error> {
-        let mut txs_res = vec![];
-        for tx in txs {
-            txs_res.push(
-                tx.try_into()
-                    .map_err(|e| CoreError::DecodeGeneral(format!("{e}")))?,
-            )
-        }
-        Ok(Self { txs: txs_res })
+        Ok(Self {
+            txs: txs
+                .ok_or(CoreError::MissingField("Field 'txs' is missed".to_string()))?
+                .try_into()?,
+        })
     }
 }
 
