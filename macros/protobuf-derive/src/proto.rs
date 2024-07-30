@@ -63,13 +63,13 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                                 ::std::option::Option::None => ::std::option::Option::None,
                             }
                         },
-                        (true, false) => quote! {
-                            #other_name : ::std::option::Option::Some(::std::convert::Into::into(value.#field_ident))
-                        },
-                        (false, true) => Err(syn::Error::new(
+                        (true, false) => Err(syn::Error::new(
                             proc_macro2::Span::call_site(),
                             "Can't have optional raw while raw is required",
                         ))?,
+                        (false, true) => quote! {
+                            #other_name : ::std::option::Option::Some(::std::convert::Into::into(value.#field_ident))
+                        },
                         (false, false) => quote! {
                             #other_name : ::std::convert::Into::into(value.#field_ident)
                         },
@@ -109,8 +109,8 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                             (false, true) => quote! {
                                 #field_ident : match value.#other_name
                                 {
-                                    ::std::option::Option::Some(var) => ::std::Result::Ok( ::std::convert::Into::into(var)),
-                                    ::std::option::Option::None => ::std::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name ))),
+                                    ::std::option::Option::Some(var) => ::std::result::Result::Ok( ::std::convert::Into::into(var)),
+                                    ::std::option::Option::None => ::std::result::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name ))),
                                 }?
                             },
                             (false, false) => quote! {
