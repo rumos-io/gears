@@ -35,6 +35,8 @@ pub enum MathOperation {
 #[derive(Debug, thiserror::Error)]
 pub enum ProtobufError {
     #[error("{0}")]
+    StdError(#[from] cosmwasm_std::StdError),
+    #[error("{0}")]
     Coins(#[from] CoinError),
     #[error("{0}")]
     MissingField(String),
