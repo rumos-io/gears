@@ -1,13 +1,31 @@
 #![cfg(not(doctest))]
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/","Readme.md"))]
 
-use darling::FromDeriveInput;
+use darling::{util::Flag, FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, Type};
 
 use quote::quote;
 use syn::DeriveInput;
 
+#[derive(FromMeta, Default)]
+#[darling(and_then = Self::not_both)]
+struct RequestOrResponse {
+    request: Flag,
+    response: Flag,
+}
+
+impl RequestOrResponse {
+    fn not_both(self) -> darling::Result<Self> {
+        match (self.request.is_present(), self.response.is_present()) {
+            (true, true) => Err(
+                darling::Error::custom("Cannot set `request` and `response`")
+                    .with_span(&self.response.span()),
+            ),
+            _ => Ok(self),
+        }
+    }
+}
 enum Kind {
     Request,
     Response,
@@ -17,7 +35,8 @@ enum Kind {
 #[darling(default, attributes(query), forward_attrs(allow, doc, cfg))]
 #[darling(supports(struct_any, enum_tuple, enum_newtype))]
 struct QueryAttr {
-    pub kind: String,
+    #[darling(flatten, default)]
+    pub kind: RequestOrResponse,
     pub raw: Option<Type>,
     pub url: Option<String>,
 }
@@ -43,8 +62,11 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
         ))
     }
 
-    let kind = match kind.is_empty() {
-        true => {
+    let kind = match (kind.request.is_present(), kind.response.is_present()) {
+        (true, true) => unreachable!("We validated structure for such cases"),
+        (true, false) => Kind::Request,
+        (false, true) => Kind::Response,
+        (false, false) => {
             if ident.to_string().to_lowercase().contains("request") {
                 Kind::Request
             } else if ident.to_string().to_lowercase().contains("response") {
@@ -53,11 +75,6 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 error()?
             }
         }
-        false => match kind.as_str() {
-            "request" => Kind::Request,
-            "response" => Kind::Response,
-            _ => error()?,
-        },
     };
 
     match data {

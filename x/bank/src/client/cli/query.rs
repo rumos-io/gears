@@ -105,7 +105,7 @@ impl QueryHandler for BankQueryHandler {
 }
 
 #[derive(Clone, Debug, PartialEq, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum BankQuery {
     Balances(QueryAllBalancesRequest),
     DenomMetadata(QueryDenomsMetadataRequest),
