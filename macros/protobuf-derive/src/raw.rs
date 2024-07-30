@@ -1,9 +1,8 @@
-use darling::{
-    util::{Flag, PathList},
-    FromAttributes, FromDeriveInput, FromMeta,
-};
+use darling::{util::PathList, FromAttributes, FromDeriveInput, FromMeta};
 use quote::quote;
 use syn::{DataStruct, DeriveInput, Field, TypePath};
+
+use crate::OptionalOrRepeated;
 
 #[derive(FromMeta)]
 #[darling(rename_all = "lowercase")]
@@ -29,26 +28,6 @@ impl Kind {
             Kind::String => quote! { string },
             Kind::Bytes => quote! { bytes },
             Kind::Message => quote! { message },
-        }
-    }
-}
-
-#[derive(FromMeta, Default)]
-#[darling(and_then = Self::not_both)]
-struct OptionalOrRepeated {
-    optional: Flag,
-    repeated: Flag,
-}
-
-impl OptionalOrRepeated {
-    fn not_both(self) -> darling::Result<Self> {
-        if self.optional.is_present() && self.repeated.is_present() {
-            Err(
-                darling::Error::custom("Cannot set `optional` and `repeated`")
-                    .with_span(&self.repeated.span()),
-            )
-        } else {
-            Ok(self)
         }
     }
 }

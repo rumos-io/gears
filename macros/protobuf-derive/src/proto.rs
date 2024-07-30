@@ -1,6 +1,8 @@
-use darling::{util::Flag, FromAttributes, FromDeriveInput};
+use darling::{FromAttributes, FromDeriveInput};
 use quote::quote;
-use syn::{DataStruct, DeriveInput};
+use syn::{spanned::Spanned, DataStruct, DeriveInput};
+
+use crate::{FieldWrapper, OptionalOrRepeated};
 
 #[derive(FromDeriveInput, Default)]
 #[darling(default, attributes(proto))]
@@ -13,7 +15,8 @@ struct ProtobufArg {
 #[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
 struct ProtobufAttr {
     name: Option<syn::Ident>,
-    optional: Flag,
+    #[darling(flatten, default)]
+    opt: OptionalOrRepeated,
 }
 
 pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
@@ -40,37 +43,71 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
         syn::Data::Struct(DataStruct { fields, .. }) => {
             let mut raw_fields = Vec::new();
             for field in fields {
-                let ProtobufAttr { name, optional } = ProtobufAttr::from_attributes(&field.attrs)?;
-                let field_indent = field.ident.ok_or(syn::Error::new(
-                    proc_macro2::Span::call_site(),
+                let ProtobufAttr { name, opt } = ProtobufAttr::from_attributes(&field.attrs)?;
+
+                let field_indent = field.ident.clone().ok_or(syn::Error::new(
+                    field.span(),
                     "Can't derive on tuple structures",
                 ))?;
 
                 let name = name.clone().unwrap_or(field_indent.clone());
 
-                raw_fields.push((name, field_indent, field.ty, optional.is_present()))
+                raw_fields.push((
+                    name,
+                    field_indent,
+                    FieldWrapper::from_type(&field.ty)?,
+                    opt.kind(),
+                ))
             }
 
             let from_fields_iter_gen = {
                 let mut from_fields = Vec::with_capacity(raw_fields.len());
 
-                for (other_name, field_ident, field_type, is_optional) in &raw_fields {
-                    let result = match (is_option(&field_type), is_optional) {
-                        (true, true) => quote! {
+                for (other_name, field_ident, field_kind, other_field_kind) in &raw_fields {
+                    let result = match (field_kind, other_field_kind) {
+                        (FieldWrapper::Optional, FieldWrapper::Optional) => quote! {
                             #other_name : match value.#field_ident
                             {
                                 ::std::option::Option::Some(var) => ::std::option::Option::Some( ::std::convert::Into::into(var)),
                                 ::std::option::Option::None => ::std::option::Option::None,
                             }
                         },
-                        (true, false) => Err(syn::Error::new(
-                            proc_macro2::Span::call_site(),
-                            "Can't have optional raw while raw is required",
+                        (FieldWrapper::Optional, FieldWrapper::Vec) => {
+                            Err(syn::Error::new_spanned(field_ident, "Can't cast Option"))?
+                        }
+                        (FieldWrapper::Optional, FieldWrapper::None) => {
+                            Err(syn::Error::new_spanned(
+                                field_ident,
+                                "Can't have optional while raw is required",
+                            ))?
+                        }
+                        (FieldWrapper::Vec, FieldWrapper::Optional) => Err(
+                            syn::Error::new_spanned(field_ident, "Can't cast Vec to Option"),
+                        )?,
+                        (FieldWrapper::Vec, FieldWrapper::Vec) => quote! {
+                            #other_name : {
+                                let mut buffer = std::vec::Vec::with_capacity(value.#field_ident.len());
+
+                                for field in value.#field_ident
+                                {
+                                    buffer.push( ::std::convert::Into::into(field) );
+                                }
+
+                                buffer
+                            }
+                        },
+                        (FieldWrapper::Vec, FieldWrapper::None) => Err(syn::Error::new_spanned(
+                            field_ident,
+                            "Can't cast Vec to field",
                         ))?,
-                        (false, true) => quote! {
+                        (FieldWrapper::None, FieldWrapper::Optional) => quote! {
                             #other_name : ::std::option::Option::Some(::std::convert::Into::into(value.#field_ident))
                         },
-                        (false, false) => quote! {
+                        (FieldWrapper::None, FieldWrapper::Vec) => Err(syn::Error::new_spanned(
+                            field_ident,
+                            "Can't cast Vec to field",
+                        ))?,
+                        (FieldWrapper::None, FieldWrapper::None) => quote! {
                             #other_name : ::std::convert::Into::into(value.#field_ident)
                         },
                     };
@@ -92,32 +129,63 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                 }
             };
 
-            let try_from_fields_iter_gen =
-                raw_fields
-                    .iter()
-                    .map(|(other_name, field_ident, field_type, is_optional)| {
-                        match (is_option(&field_type), is_optional) {
-                            (true, true) => quote! {
-                                #field_ident : match value.#other_name {
-                                    Some(var) => Some(::std::convert::TryFrom::try_from(var)?),
-                                    None => None,
-                                }
-                            },
-                            (true, false) => quote! {
-                                #field_ident : ::std::option::Option::Some(::std::convert::Into::into(value.#other_name))
-                            },
-                            (false, true) => quote! {
-                                #field_ident : match value.#other_name
+            let try_from_fields_iter_gen = {
+                let mut from_fields = Vec::with_capacity(raw_fields.len());
+
+                for (other_name, field_ident, field_kind, other_field_kind) in raw_fields {
+                    let result = match (field_kind, other_field_kind) {
+                        (FieldWrapper::Optional, FieldWrapper::Optional) => quote! {
+                            #field_ident : match value.#other_name {
+                                Some(var) => Some(::std::convert::TryFrom::try_from(var)?),
+                                None => None,
+                            }
+                        },
+                        (FieldWrapper::Optional, FieldWrapper::Vec) => Err(
+                            syn::Error::new_spanned(field_ident, "Can't cast Vec to Option"),
+                        )?,
+                        (FieldWrapper::Optional, FieldWrapper::None) => quote! {
+                            #field_ident : ::std::option::Option::Some(::std::convert::TryFrom::try_from(value.#other_name))
+                        },
+                        (FieldWrapper::Vec, FieldWrapper::Optional) => Err(
+                            syn::Error::new_spanned(field_ident, "Can't cast Vec to Option"),
+                        )?,
+                        (FieldWrapper::Vec, FieldWrapper::Vec) => quote! {
+                            #field_ident : {
+                                let mut buffer = std::vec::Vec::with_capacity(value.#other_name.len());
+
+                                for field in value.#other_name
                                 {
-                                    ::std::option::Option::Some(var) => ::std::result::Result::Ok( ::std::convert::Into::into(var)),
-                                    ::std::option::Option::None => ::std::result::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name ))),
-                                }?
-                            },
-                            (false, false) => quote! {
-                                #field_ident : ::std::convert::TryFrom::try_from(value.#other_name)?
-                            },
-                        }
-                    });
+                                    buffer.push( ::std::convert::TryFrom::try_from(field)?);
+                                }
+
+                                buffer
+                            }
+                        },
+                        (FieldWrapper::Vec, FieldWrapper::None) => Err(syn::Error::new_spanned(
+                            field_ident,
+                            "Can't cast Vec to field",
+                        ))?,
+                        (FieldWrapper::None, FieldWrapper::Optional) => quote! {
+                            #field_ident : match value.#other_name
+                            {
+                                ::std::option::Option::Some(var) => ::std::result::Result::Ok( ::std::convert::TryFrom::try_from(var)?),
+                                ::std::option::Option::None => ::std::result::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name ))),
+                            }?
+                        },
+                        (FieldWrapper::None, FieldWrapper::Vec) => Err(syn::Error::new_spanned(
+                            field_ident,
+                            "Can't cast Vec to field",
+                        ))?,
+                        (FieldWrapper::None, FieldWrapper::None) => quote! {
+                            #field_ident : ::std::convert::TryFrom::try_from(value.#other_name)?
+                        },
+                    };
+
+                    from_fields.push(result);
+                }
+
+                from_fields
+            };
 
             let try_from = quote! {
 
@@ -148,29 +216,4 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
             "Protobuf can be derived only for `struct`",
         )),
     }
-}
-
-fn is_option(ty: &syn::Type) -> bool {
-    let opt = match ty {
-        syn::Type::Path(typepath) if typepath.qself.is_none() => Some(typepath.path.clone()),
-        _ => None,
-    };
-
-    if let Some(o) = opt {
-        check_for_option(&o).is_some()
-    } else {
-        false
-    }
-}
-
-fn check_for_option(path: &syn::Path) -> Option<&syn::PathSegment> {
-    let idents_of_path = path.segments.iter().fold(String::new(), |mut acc, v| {
-        acc.push_str(&v.ident.to_string());
-        acc.push(':');
-        acc
-    });
-    vec!["Option:", "std:option:Option:", "core:option:Option:"]
-        .into_iter()
-        .find(|s| idents_of_path == *s)
-        .and_then(|_| path.segments.last())
 }
