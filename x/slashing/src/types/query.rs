@@ -21,7 +21,7 @@ use crate::{SlashingParams, SlashingParamsRaw, ValidatorSigningInfo, ValidatorSi
 #[query(url = "/cosmos.slashing.v1beta1.Query/SigningInfo")]
 pub struct QuerySigningInfoRequest {
     /// cons_address is the address to query signing info of
-    #[raw(raw = Vec::<u8>, kind(bytes),  )]
+    #[raw(raw = String, kind(string))]
     pub cons_address: ConsAddress,
 }
 
