@@ -52,7 +52,7 @@ impl OptionalOrRequired {
 }
 
 #[derive(FromAttributes)]
-#[darling(attributes(proto))]
+#[darling(attributes(raw))]
 struct RawAttr {
     #[darling(default)]
     raw: Option<syn::Path>,
@@ -64,7 +64,7 @@ struct RawAttr {
 }
 
 #[derive(FromDeriveInput, Default)]
-#[darling(default, attributes(proto))]
+#[darling(default, attributes(raw))]
 struct RawArg {
     #[darling(default)]
     derive: PathList,
