@@ -1,6 +1,6 @@
 use crate::query::{QueryGetTxRequest, QueryGetTxsEventRequest, QueryTxResponse, QueryTxsResponse};
 use anyhow::anyhow;
-use clap::{Args, Subcommand};
+use clap::Args;
 use gears::{
     application::handlers::client::QueryHandler,
     baseapp::QueryResponse,
@@ -27,22 +27,22 @@ use std::{collections::HashMap, fmt::Display, marker::PhantomData, str::FromStr}
 
 // to have full match of cli in app
 // need to be added as a member of client cli
+/// Query for a transaction by hash, \"<addr>/<seq>\" combination or comma-separated signatures
+/// in a committed block
 #[derive(Args, Debug)]
 pub struct TxQueryCli {
-    #[command(subcommand)]
-    pub command: TxCommands,
+    pub hash: String,
+    #[arg(long, default_value_t = TxQueryType::Hash)]
+    pub query_type: TxQueryType,
 }
 
-#[derive(Subcommand, Debug)]
-pub enum TxCommands {
-    /// Query for a transaction by hash, \"<addr>/<seq>\" combination or comma-separated signatures
-    /// in a committed block
-    Tx {
-        hash: String,
-        #[arg(long, default_value_t = TxQueryType::Hash)]
-        query_type: TxQueryType,
-    },
-}
+// #[derive(Arg, Debug)]
+// pub enum TxCommands {
+//
+//     Tx {
+//
+//     },
+// }
 
 #[derive(Debug, Clone)]
 pub enum TxQueryType {
@@ -81,7 +81,7 @@ pub enum TxQuery {
     Txs(QueryGetTxsEventRequest),
 }
 
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum TxQueryResponse<M: TxMessage> {
     Tx(QueryTxResponse<M>),
@@ -104,7 +104,8 @@ pub struct TxQueryHandler<M: TxMessage> {
 
 impl<M: TxMessage> TxQueryHandler<M> {
     /// Constructor allows to handle tx messages received by query calls.
-    pub fn new(_msgs_type: M) -> TxQueryHandler<M> {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> TxQueryHandler<M> {
         TxQueryHandler {
             msgs_type: PhantomData,
         }
@@ -122,52 +123,49 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
         &self,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryRequest> {
-        match &command.command {
-            TxCommands::Tx { hash, query_type } => {
-                let res = match query_type {
-                    TxQueryType::Hash => Self::QueryRequest::Tx(QueryGetTxRequest {
-                        hash: Hash::from_str(hash)?,
-                    }),
-                    TxQueryType::Signature => {
-                        let events = if hash.is_empty() {
-                            return Err(anyhow!(
-                                "Signatures list is empty. Please, provide at least one signature."
-                            ));
-                        } else {
-                            hash.split(',')
-                                .map(|sig| format!("tx.signature={sig}"))
-                                .collect()
-                        };
-                        Self::QueryRequest::Txs(QueryGetTxsEventRequest {
-                            events,
-                            order_by: "asc".to_string(),
-                            // default page
-                            // TODO: may be part of gears constants
-                            page: 1,
-                            // default limit
-                            // TODO: may be part of gears constants
-                            limit: 100,
-                        })
-                    }
-                    TxQueryType::AccSeq => {
-                        let events = if hash.is_empty() {
-                            return Err(anyhow!(
-                                "Account sequence is not set. Please, provide correct value."
-                            ));
-                        } else {
-                            vec![format!("tx.acc_seq={hash}")]
-                        };
-                        Self::QueryRequest::Txs(QueryGetTxsEventRequest {
-                            events,
-                            order_by: "asc".to_string(),
-                            page: 1,
-                            limit: 100,
-                        })
-                    }
+        let TxQueryCli { hash, query_type } = command;
+        let res = match query_type {
+            TxQueryType::Hash => Self::QueryRequest::Tx(QueryGetTxRequest {
+                hash: Hash::from_str(hash)?,
+            }),
+            TxQueryType::Signature => {
+                let events = if hash.is_empty() {
+                    return Err(anyhow!(
+                        "Signatures list is empty. Please, provide at least one signature."
+                    ));
+                } else {
+                    hash.split(',')
+                        .map(|sig| format!("tx.signature={sig}"))
+                        .collect()
                 };
-                Ok(res)
+                Self::QueryRequest::Txs(QueryGetTxsEventRequest {
+                    events,
+                    order_by: "asc".to_string(),
+                    // default page
+                    // TODO: may be part of gears constants
+                    page: 1,
+                    // default limit
+                    // TODO: may be part of gears constants
+                    limit: 100,
+                })
             }
-        }
+            TxQueryType::AccSeq => {
+                let events = if hash.is_empty() {
+                    return Err(anyhow!(
+                        "Account sequence is not set. Please, provide correct value."
+                    ));
+                } else {
+                    vec![format!("tx.acc_seq={hash}")]
+                };
+                Self::QueryRequest::Txs(QueryGetTxsEventRequest {
+                    events,
+                    order_by: "asc".to_string(),
+                    page: 1,
+                    limit: 100,
+                })
+            }
+        };
+        Ok(res)
     }
 
     fn execute_query_request(
@@ -201,53 +199,41 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
-        match &command.command {
-            TxCommands::Tx {
-                query_type,
-                hash: _,
-            } => match query_type {
-                TxQueryType::Hash => {
-                    let tx: TxResponse<M> = TxResponse::decode_vec(&query_bytes)?;
-                    Ok(Self::QueryResponse::Tx(QueryTxResponse { tx }))
-                }
-                _ => {
-                    let txs: SearchTxsResult<M> = SearchTxsResult::decode_vec(&query_bytes)?;
+        let TxQueryCli { query_type, .. } = command;
+        match &query_type {
+            TxQueryType::Hash => {
+                let tx: TxResponse<M> = TxResponse::decode_vec(&query_bytes)?;
+                Ok(Self::QueryResponse::Tx(QueryTxResponse { tx }))
+            }
+            _ => {
+                let txs: SearchTxsResult<M> = SearchTxsResult::decode_vec(&query_bytes)?;
 
-                    if txs.txs.is_empty() {
-                        return Err(anyhow!("found no txs matching given parameters"));
-                    }
-                    if txs.txs.len() > 1 {
-                        return Err(anyhow!(
-                            "found {} txs matching given parameters",
-                            txs.txs.len()
-                        ));
-                    }
-                    Ok(Self::QueryResponse::Txs(QueryTxsResponse { txs }))
+                if txs.txs.is_empty() {
+                    return Err(anyhow!("found no txs matching given parameters"));
                 }
-            },
+                if txs.txs.len() > 1 {
+                    return Err(anyhow!(
+                        "found {} txs matching given parameters",
+                        txs.txs.len()
+                    ));
+                }
+                Ok(Self::QueryResponse::Txs(QueryTxsResponse { txs }))
+            }
         }
     }
 }
 
 // to have full match of cli in app
 // need to be added as a member of client cli
+/// Query for paginated transactions that match a set of events
 #[derive(Args, Debug)]
 pub struct TxsQueryCli {
-    #[command(subcommand)]
-    pub command: TxsCommands,
-}
-
-#[derive(Subcommand, Debug)]
-pub enum TxsCommands {
-    /// Query for paginated transactions that match a set of events
-    Txs {
-        #[arg(long)]
-        events: String,
-        #[arg(long, default_value_t = 1)]
-        page: u32,
-        #[arg(long, default_value_t = 30)]
-        limit: u32,
-    },
+    #[arg(long)]
+    pub events: String,
+    #[arg(long, default_value_t = 1)]
+    pub page: u32,
+    #[arg(long, default_value_t = 30)]
+    pub limit: u32,
 }
 
 #[derive(Debug, Clone)]
@@ -257,7 +243,8 @@ pub struct TxsQueryHandler<M: TxMessage> {
 
 impl<M: TxMessage> TxsQueryHandler<M> {
     /// Constructor allows to handle tx messages received by query calls.
-    pub fn new(_msgs_type: M) -> TxsQueryHandler<M> {
+    #[allow(clippy::new_without_default)]
+    pub fn new() -> TxsQueryHandler<M> {
         TxsQueryHandler {
             msgs_type: PhantomData,
         }
@@ -275,35 +262,33 @@ impl<M: TxMessage> QueryHandler for TxsQueryHandler<M> {
         &self,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryRequest> {
-        match &command.command {
-            TxsCommands::Txs {
-                events,
-                page,
-                limit,
-            } => {
-                let events_str = events.trim_start_matches('\'').trim_end_matches('\'');
-                let events = events_str.split('&');
+        let TxsQueryCli {
+            events,
+            page,
+            limit,
+        } = command;
 
-                let mut tm_events = Vec::with_capacity(events_str.matches('&').count() + 1);
-                for event in events {
-                    if !event.contains('=') || event.matches('=').count() > 1 {
-                        return Err(anyhow!("invalid event; event {event} should be of the format: {{eventType}}.{{eventAttribute}}={{value}}"));
-                    }
-                    let tokens = event.split('=').collect::<Vec<_>>();
-                    if tokens[0] == "tx.height" {
-                        tm_events.push(format!("{}={}", tokens[0], tokens[1]));
-                    } else {
-                        tm_events.push(format!("{}='{}'", tokens[0], tokens[1]));
-                    }
-                }
-                Ok(Self::QueryRequest::Txs(QueryGetTxsEventRequest {
-                    events: tm_events,
-                    order_by: "asc".to_string(),
-                    page: *page,
-                    limit: *limit,
-                }))
+        let events_str = events.trim_start_matches('\'').trim_end_matches('\'');
+        let events = events_str.split('&');
+
+        let mut tm_events = Vec::with_capacity(events_str.matches('&').count() + 1);
+        for event in events {
+            if !event.contains('=') || event.matches('=').count() > 1 {
+                return Err(anyhow!("invalid event; event {event} should be of the format: {{eventType}}.{{eventAttribute}}={{value}}"));
+            }
+            let tokens = event.split('=').collect::<Vec<_>>();
+            if tokens[0] == "tx.height" {
+                tm_events.push(format!("{}={}", tokens[0], tokens[1]));
+            } else {
+                tm_events.push(format!("{}='{}'", tokens[0], tokens[1]));
             }
         }
+        Ok(Self::QueryRequest::Txs(QueryGetTxsEventRequest {
+            events: tm_events,
+            order_by: "asc".to_string(),
+            page: *page,
+            limit: *limit,
+        }))
     }
 
     fn execute_query_request(
@@ -341,7 +326,7 @@ fn query_txs_by_event<M: TxMessage>(
     req: &QueryGetTxsEventRequest,
 ) -> anyhow::Result<Vec<u8>> {
     let query_str_events = req.events.join(" AND ");
-    let prefix = "tm.event='Tx'";
+    let prefix = "tm.event='Tx' AND ";
     let mut query = String::with_capacity(prefix.len() + query_str_events.len());
     query.push_str(prefix);
     query.push_str(&query_str_events);

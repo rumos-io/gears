@@ -18,7 +18,7 @@ gears = { path = "../gears", features = [
     "xmods",
     "rocksdb",
     "governance",
-] } 
+] }
 staking = { path = "../x/staking" }
 
 #newtypes
@@ -43,9 +43,9 @@ tonic = { workspace = true }
 tower-layer = { workspace = true }
 tonic-reflection = { workspace = true }
 ibc-proto = { workspace = true }
+url = { workspace = true }
 
 [dev-dependencies]
-url = { workspace = true }
 serde_json = { workspace = true }
 gears = { path = "../gears", features = ["cli", "utils"] }
 data-encoding = { workspace = true }

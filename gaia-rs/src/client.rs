@@ -1,5 +1,8 @@
 use anyhow::Result;
-use auth::cli::query::AuthQueryCli;
+use auth::cli::{
+    query::AuthQueryCli,
+    tx_query::{TxQueryCli, TxsQueryCli},
+};
 use bank::cli::{
     query::BankQueryCli,
     tx::{run_bank_tx_command, BankTxCli},
@@ -58,6 +61,10 @@ pub enum GaiaQueryCommands {
     Staking(StakingQueryCli),
     /// Querying commands for the ibc module
     Ibc(IbcQueryCli),
+    /// Querying tendermint for a transaction
+    Tx(TxQueryCli),
+    /// Querying tendermint for transactions by event
+    Txs(TxsQueryCli),
 }
 
 /// Wraps `GaiaTxCommands`. This structure exists to satisfy interface needs of TxHandler
