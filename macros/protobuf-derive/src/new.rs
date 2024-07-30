@@ -15,6 +15,7 @@ enum Kind {
     Bool,
     String,
     Bytes,
+    Message,
 }
 
 impl Kind {
@@ -27,6 +28,7 @@ impl Kind {
             Kind::Bool => quote! { r#bool },
             Kind::String => quote! { string },
             Kind::Bytes => quote! { bytes },
+            Kind::Message => quote! { message },
         }
     }
 }
