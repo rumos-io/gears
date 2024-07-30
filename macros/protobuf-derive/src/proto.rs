@@ -165,13 +165,17 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                             field_ident,
                             "Can't cast Vec to field",
                         ))?,
-                        (FieldWrapper::None, FieldWrapper::Optional) => quote! {
-                            #field_ident : match value.#other_name
-                            {
-                                ::std::option::Option::Some(var) => ::std::result::Result::Ok( ::std::convert::TryFrom::try_from(var)?),
-                                ::std::option::Option::None => ::std::result::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name ))),
-                            }?
-                        },
+                        (FieldWrapper::None, FieldWrapper::Optional) => {
+                            let other_name_str = other_name.to_string();
+
+                            quote! {
+                                #field_ident : match value.#other_name
+                                {
+                                    ::std::option::Option::Some(var) => ::std::result::Result::Ok( ::std::convert::TryFrom::try_from(var)?),
+                                    ::std::option::Option::None => ::std::result::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name_str ))),
+                                }?
+                            }
+                        }
                         (FieldWrapper::None, FieldWrapper::Vec) => Err(syn::Error::new_spanned(
                             field_ident,
                             "Can't cast Vec to field",
