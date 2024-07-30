@@ -1,130 +1,152 @@
-use darling::{FromAttributes, FromDeriveInput};
+use darling::{
+    util::{Flag, PathList},
+    FromAttributes, FromDeriveInput, FromMeta,
+};
 use quote::quote;
-use syn::{DataStruct, DeriveInput};
+use syn::{DataStruct, DeriveInput, Field, TypePath};
+
+#[derive(FromMeta)]
+#[darling(rename_all = "lowercase")]
+enum Kind {
+    Sint32,
+    Int64,
+    Uint32,
+    Uint64,
+    Bool,
+    String,
+    Bytes,
+    Message,
+}
+
+impl Kind {
+    fn to_prost_token(&self) -> proc_macro2::TokenStream {
+        match self {
+            Kind::Sint32 => quote! { int32 },
+            Kind::Int64 => quote! { int64 },
+            Kind::Uint32 => quote! { uint32 },
+            Kind::Uint64 => quote! { uint64 },
+            Kind::Bool => quote! { r#bool },
+            Kind::String => quote! { string },
+            Kind::Bytes => quote! { bytes },
+            Kind::Message => quote! { message },
+        }
+    }
+}
+
+#[derive(FromMeta, Default)]
+#[darling(and_then = Self::not_both)]
+struct OptionalOrRequired {
+    optional: Flag,
+    repeated: Flag,
+}
+
+impl OptionalOrRequired {
+    fn not_both(self) -> darling::Result<Self> {
+        if self.optional.is_present() && self.repeated.is_present() {
+            Err(
+                darling::Error::custom("Cannot set `optional` and `repeated`")
+                    .with_span(&self.repeated.span()),
+            )
+        } else {
+            Ok(self)
+        }
+    }
+}
+
+#[derive(FromAttributes)]
+#[darling(attributes(raw))]
+struct RawAttr {
+    #[darling(default)]
+    raw: Option<syn::Path>,
+    #[darling(flatten, default)]
+    opt: OptionalOrRequired,
+    kind: Kind,
+    #[darling(default)]
+    tag: Option<u32>,
+}
 
 #[derive(FromDeriveInput, Default)]
-#[darling(default, attributes(proto))]
-struct ProtobufArg {
+#[darling(default, attributes(raw))]
+struct RawArg {
     #[darling(default)]
-    raw: Option<syn::TypePath>,
+    derive: PathList,
 }
 
-#[derive(FromAttributes, Default)]
-#[darling(default, attributes(proto), forward_attrs(allow, doc, cfg))]
-struct ProtobufAttr {
-    name: Option<syn::Ident>,
-}
+pub fn extend_new_structure(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
+    let RawArg {
+        derive: raw_derives,
+    } = RawArg::from_derive_input(&input)?;
+    let DeriveInput {
+        vis, ident, data, ..
+    } = input;
 
-pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-    let ProtobufArg { raw } = ProtobufArg::from_derive_input(&input)?;
-    let DeriveInput { ident, data, .. } = input;
+    match data {
+        syn::Data::Struct(DataStruct { fields, .. }) => {
+            let mut result_fields = Vec::with_capacity(fields.len());
+            let mut counter = 1;
 
-    let raw = match raw {
-        Some(raw) => quote! { #raw },
-        None => {
+            for Field {
+                attrs,
+                vis,
+                ident,
+                ty,
+                ..
+            } in fields
+            {
+                let RawAttr {
+                    raw,
+                    opt: OptionalOrRequired { optional, repeated },
+                    kind,
+                    tag,
+                } = RawAttr::from_attributes(&attrs)?;
+
+                let raw = raw
+                    .map(|path| syn::Type::Path(TypePath { qself: None, path }))
+                    .unwrap_or(ty.clone());
+                let tag = tag.unwrap_or(counter);
+
+                let kind = kind.to_prost_token();
+
+                let result = match (optional.is_present(), repeated.is_present()) {
+                    (true, true) => unreachable!("we validated structure to omit such case"),
+                    (true, false) => quote! {
+                        #[prost( #kind, optional, tag = #tag )]
+                        #vis #ident : ::std::option::Option<#raw>,
+                    },
+                    (false, true) => quote! {
+                       #[prost( #kind, repeated, tag = #tag )]
+                       #vis #ident : std::vec::Vec<#raw>,
+                    },
+                    (false, false) => quote! {
+                        #[prost( #kind, required, tag = #tag )]
+                        #vis #ident : #raw
+                    },
+                };
+
+                result_fields.push(result);
+
+                counter = tag;
+                counter += 1;
+            }
+
             let new_name = syn::Ident::new(
                 &format!("Raw{}", ident.to_string()),
                 proc_macro2::Span::call_site(),
             );
 
-            quote! { #new_name }
-        }
-    };
-
-    let protobuf_trait_impl = quote! {
-        impl ::gears::tendermint::types::proto::Protobuf<#raw> for #ident {}
-    };
-
-    match data {
-        syn::Data::Struct(DataStruct { fields, .. }) => {
-            let mut raw_fields = Vec::new();
-            for field in fields {
-                let ProtobufAttr { name } = ProtobufAttr::from_attributes(&field.attrs)?;
-
-                raw_fields.push((
-                    name,
-                    field.ident.ok_or(syn::Error::new(
-                        proc_macro2::Span::call_site(),
-                        "Can't derive on tuple structures",
-                    ))?,
-                    field.ty,
-                ))
-            }
-
-            let from_fields_iter_gen =
-                raw_fields
-                    .iter()
-                    .map(|(other_name, field_ident, field_type)| {
-                        let other_name = other_name.clone().unwrap_or(field_ident.clone());
-
-                        match is_option(&field_type) {
-                            true => {
-                                quote! {
-                                    #other_name : match value.#field_ident
-                                    {
-                                        Some(var) => Some( ::std::convert::Into::into(var)),
-                                        None => None,
-                                    }
-                                }
-                            }
-                            false => quote! {
-                                #other_name : ::std::convert::Into::into(value.#field_ident)
-                            },
-                        }
-                    });
-
-            let from_impl = quote! {
-                impl ::std::convert::From<#ident> for #raw {
-                    fn from(value: #ident) -> Self {
-                        Self
-                        {
-                            #(#from_fields_iter_gen),*
-                        }
-                    }
-                }
-            };
-
-            let try_from_fields_iter_gen =
-                raw_fields
-                    .iter()
-                    .map(|(other_name, field_ident, field_type)| {
-                        let other_name = other_name.clone().unwrap_or(field_ident.clone());
-
-                        match is_option(&field_type) {
-                            true => {
-                                quote! {
-                                    #field_ident : match value.#other_name {
-                                        Some(var) => Some(::std::convert::TryFrom::try_from(var)?),
-                                        None => None,
-                                    }
-                                }
-                            }
-                            false => quote! {
-                                #field_ident : ::std::convert::TryFrom::try_from(value.#other_name)?
-                            },
-                        }
-                    });
-
-            let try_from = quote! {
-
-                impl TryFrom<#raw> for #ident {
-                    type Error = ::gears::error::ProtobufError;
-
-                    fn try_from(value: #raw) -> ::std::result::Result<Self, Self::Error> {
-                        ::std::result::Result::Ok(Self {
-                            #(#try_from_fields_iter_gen),*
-                        })
-                    }
-                }
-
+            let raw_derives = match raw_derives.is_empty() {
+                true => quote! {},
+                false => quote! { #[derive(#(#raw_derives,)*)] },
             };
 
             let gen = quote! {
-                #try_from
 
-                #from_impl
-
-                #protobuf_trait_impl
+                #[derive(::prost::Message)]
+                #raw_derives
+                #vis struct  #new_name
+                {
+                    #(#result_fields),*
+                }
             };
 
             Ok(gen.into())
@@ -134,29 +156,4 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
             "Protobuf can be derived only for `struct`",
         )),
     }
-}
-
-fn is_option(ty: &syn::Type) -> bool {
-    let opt = match ty {
-        syn::Type::Path(typepath) if typepath.qself.is_none() => Some(typepath.path.clone()),
-        _ => None,
-    };
-
-    if let Some(o) = opt {
-        check_for_option(&o).is_some()
-    } else {
-        false
-    }
-}
-
-fn check_for_option(path: &syn::Path) -> Option<&syn::PathSegment> {
-    let idents_of_path = path.segments.iter().fold(String::new(), |mut acc, v| {
-        acc.push_str(&v.ident.to_string());
-        acc.push(':');
-        acc
-    });
-    vec!["Option:", "std:option:Option:", "core:option:Option:"]
-        .into_iter()
-        .find(|s| idents_of_path == *s)
-        .and_then(|_| path.segments.last())
 }
