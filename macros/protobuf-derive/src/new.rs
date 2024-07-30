@@ -1,6 +1,6 @@
 use darling::{
     util::{Flag, PathList},
-    FromAttributes, FromMeta,
+    FromAttributes, FromDeriveInput, FromMeta,
 };
 use quote::quote;
 use syn::{DataStruct, DeriveInput, Field, TypePath};
@@ -71,13 +71,11 @@ struct RawArg {
 }
 
 pub fn extend_new_structure(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-    let RawArg { derive } = RawArg::from_derive_input(&input)?;
+    let RawArg {
+        derive: raw_derives,
+    } = RawArg::from_derive_input(&input)?;
     let DeriveInput {
-        attrs,
-        vis,
-        ident,
-        generics,
-        data,
+        vis, ident, data, ..
     } = input;
 
     match data {
