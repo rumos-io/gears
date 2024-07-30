@@ -36,9 +36,9 @@ pub struct QueryProposalRequest {
     pub proposal_id: u64,
 }
 
+// This structure hard to implement through macro
 #[derive(Clone, PartialEq, Debug, Query)]
 #[query(url = "/cosmos.gov.v1beta1.Query/Proposals")]
-// #[proto(raw = "inner::QueryProposalsRequest")]
 pub struct QueryProposalsRequest {
     pub voter: Option<AccAddress>,
     pub depositor: Option<AccAddress>,

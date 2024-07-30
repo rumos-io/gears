@@ -200,61 +200,16 @@ pub struct QueryTallyResultResponse {
     pub tally: Option<TallyResult>,
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
-// #[proto(raw = "inner::QueryParamsResponse")] // TODO Protobuf
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
+#[proto(raw = "inner::QueryParamsResponse")]
 pub struct QueryAllParamsResponse {
+    #[proto(optional)]
     pub voting_params: VotingParams,
+    #[proto(optional)]
     pub deposit_params: DepositParams,
+    #[proto(optional)]
     pub tally_params: TallyParams,
 }
-
-impl TryFrom<inner::QueryParamsResponse> for QueryAllParamsResponse {
-    type Error = CoreError;
-
-    fn try_from(
-        inner::QueryParamsResponse {
-            voting_params,
-            deposit_params,
-            tally_params,
-        }: inner::QueryParamsResponse,
-    ) -> Result<Self, Self::Error> {
-        Ok(Self {
-            voting_params: voting_params
-                .ok_or(CoreError::MissingField(
-                    "QueryAllParamsResponse: field `voting_params`".to_owned(),
-                ))?
-                .try_into()?,
-            deposit_params: deposit_params
-                .ok_or(CoreError::MissingField(
-                    "QueryAllParamsResponse: field `deposit_params`".to_owned(),
-                ))?
-                .try_into()?,
-            tally_params: tally_params
-                .ok_or(CoreError::MissingField(
-                    "QueryAllParamsResponse: field `tally_params`".to_owned(),
-                ))?
-                .try_into()?,
-        })
-    }
-}
-
-impl From<QueryAllParamsResponse> for inner::QueryParamsResponse {
-    fn from(
-        QueryAllParamsResponse {
-            voting_params,
-            deposit_params,
-            tally_params,
-        }: QueryAllParamsResponse,
-    ) -> Self {
-        Self {
-            voting_params: Some(voting_params.into()),
-            deposit_params: Some(deposit_params.into()),
-            tally_params: Some(tally_params.into()),
-        }
-    }
-}
-
-impl Protobuf<inner::QueryParamsResponse> for QueryAllParamsResponse {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query, Protobuf)]
 #[proto(raw = "inner::QueryProposerResponse")]
