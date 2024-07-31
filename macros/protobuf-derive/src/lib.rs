@@ -1,3 +1,6 @@
+#![cfg(not(doctest))]
+#![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/","Readme.md"))]
+
 use darling::{util::Flag, FromMeta};
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, spanned::Spanned};
@@ -5,6 +8,8 @@ use syn::{parse_macro_input, spanned::Spanned};
 mod proto;
 mod raw;
 
+#[cfg(not(doctest))]
+#[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/","proto.md"))]
 #[proc_macro_derive(Protobuf, attributes(proto))]
 pub fn proto_derive(input: TokenStream) -> TokenStream {
     proto::expand_raw_existing(parse_macro_input!(input))
@@ -12,6 +17,8 @@ pub fn proto_derive(input: TokenStream) -> TokenStream {
         .into()
 }
 
+#[cfg(not(doctest))]
+#[doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/","raw.md"))]
 #[proc_macro_derive(Raw, attributes(raw))]
 pub fn raw_derive(input: TokenStream) -> TokenStream {
     raw::extend_new_structure(parse_macro_input!(input))
