@@ -9,8 +9,10 @@ use serde::{Deserialize, Serialize};
 use tendermint::rpc::url::Url;
 
 use crate::defaults::{CONFIG_DIR, CONFIG_FILE_NAME, GENESIS_FILE_NAME};
+use crate::socket_addr;
 use crate::types::base::min_gas::MinGasPrices;
 
+pub const DEFAULT_GRPC_LISTEN_ADDR: SocketAddr = socket_addr!(127, 0, 0, 1, 8080);
 pub const DEFAULT_REST_LISTEN_ADDR: SocketAddr =
     SocketAddr::new(std::net::IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 1317);
 pub const DEFAULT_ADDRESS: SocketAddr =
@@ -43,6 +45,7 @@ impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T 
 pub struct Config<AC: Default + Clone> {
     pub tendermint_rpc_address: Url, // TODO: change to HttpClientUrl when Serialize and Deserialize are implemented
     pub rest_listen_addr: SocketAddr,
+    pub grpc_listen_addr: SocketAddr,
     pub address: SocketAddr,
     pub min_gas_prices: Option<MinGasPrices>,
     pub app_config: AC,
@@ -89,6 +92,7 @@ impl<AC: ApplicationConfig> Default for Config<AC> {
             address: DEFAULT_ADDRESS,
             app_config: AC::default(),
             min_gas_prices: None,
+            grpc_listen_addr: DEFAULT_GRPC_LISTEN_ADDR,
         }
     }
 }
@@ -105,6 +109,9 @@ address = "{{address}}"
 
 # REST service TCP socket address
 rest_listen_addr = "{{rest_listen_addr}}"
+
+# GRPC service TCP socket address
+grpc_listen_addr = "{{grpc_listen_addr}}"
 
 # Tendermint node RPC proxy address
 tendermint_rpc_address = "{{tendermint_rpc_address}}"
