@@ -11,8 +11,13 @@ use crate::{
 };
 
 use self::{
-    genesis::CliGenesisCommand, init::CliInitCommand, key::CliKeyCommand, query::CliQueryCommand,
-    run::CliRunCommand, tx::CliTxCommand,
+    genesis::CliGenesisCommand,
+    init::CliInitCommand,
+    key::CliKeyCommand,
+    query::CliQueryCommand,
+    query_txs::{CliQueryTxCommand, CliQueryTxsCommand},
+    run::CliRunCommand,
+    tx::CliTxCommand,
 };
 
 pub mod aux;
@@ -21,6 +26,7 @@ pub mod init;
 pub mod key;
 pub mod pagination;
 pub mod query;
+pub mod query_txs;
 pub mod run;
 pub mod tx;
 
@@ -155,6 +161,8 @@ where
     Aux(CliAUX),
     Tx(CliTxCommand<T, CliTX>),
     Query(CliQueryCommand<CliQue>),
+    QueryTx(CliQueryTxCommand),
+    QueryTxs(CliQueryTxsCommand),
     #[command(subcommand)]
     Keys(CliKeyCommand<T>),
 }
@@ -176,6 +184,8 @@ where
             CliClientCommands::Aux(cmd) => Self::Aux(cmd.try_into()?),
             CliClientCommands::Tx(cmd) => Self::Tx(cmd.try_into()?),
             CliClientCommands::Query(cmd) => Self::Query(cmd.try_into()?),
+            CliClientCommands::QueryTx(cmd) => Self::QueryTx(cmd.into()),
+            CliClientCommands::QueryTxs(cmd) => Self::QueryTxs(cmd.into()),
             CliClientCommands::Keys(cmd) => Self::Keys(cmd.into()),
         };
 

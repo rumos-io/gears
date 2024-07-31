@@ -1,7 +1,7 @@
 use crate::{
     application::handlers::client::QueryHandler,
     baseapp::{Query, QueryResponse},
-    cli::query::{TxQueryCli, TxQueryType, TxsQueryCli},
+    cli::query_txs::{TxQueryCli, TxQueryType, TxsQueryCli},
     core::{errors::CoreError, Protobuf},
     error::IBC_ENCODE_UNWRAP,
     tendermint::{
