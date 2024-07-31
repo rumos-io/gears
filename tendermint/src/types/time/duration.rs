@@ -45,7 +45,7 @@ pub struct Duration {
 
 /// Errors that can occur when creating a new `Duration`.
 #[derive(Debug, thiserror::Error)]
-pub enum NewDurationError {
+pub enum DurationError {
     #[error("duration exceeds -315,576,000,001 seconds (approx -10,000 years)")]
     Underflow,
     #[error("duration exceeds 315,576,000,001 seconds (approx 10,000 years")]
@@ -134,7 +134,7 @@ impl Duration {
     /// Returns an error if `seconds` is out of the range [-315,576,000,000, 315,576,000,000]
     /// or if `nanos` is out of the range [-999_999_999, 999_999_999]. Also returns an error
     /// if `nanos` is non-zero and has a different sign than `seconds`.
-    pub fn try_new(seconds: i64, nanos: i32) -> Result<Duration, NewDurationError> {
+    pub fn try_new(seconds: i64, nanos: i32) -> Result<Duration, DurationError> {
         let duration = Duration { seconds, nanos };
         duration.check()?;
         Ok(duration)
@@ -164,12 +164,12 @@ impl Duration {
 
     /// Creates a new `Duration` from the given number of nanoseconds
     /// Returns an error if the number of nanoseconds is out of the range [-315,576,000,000,999,999,999, 315,576,000,000,999,999,999,] inclusive.
-    pub fn try_new_from_nanos(nanos: i128) -> Result<Duration, NewDurationError> {
+    pub fn try_new_from_nanos(nanos: i128) -> Result<Duration, DurationError> {
         let seconds = i64::try_from(nanos / NANOS_PER_SECOND as i128).map_err(|_| {
             if nanos > 0 {
-                NewDurationError::Overflow
+                DurationError::Overflow
             } else {
-                NewDurationError::Underflow
+                DurationError::Underflow
             }
         })?;
 
@@ -195,15 +195,15 @@ impl Duration {
     }
 
     // based on https://github.com/protocolbuffers/protobuf-go/blob/c33baa8f3a0d35fd5a39e43c22a50a050f707d34/types/known/durationpb/duration.pb.go#L225C1-L244C2
-    fn check(&self) -> Result<(), NewDurationError> {
+    fn check(&self) -> Result<(), DurationError> {
         if self.seconds < -ABS_DURATION_SECONDS {
-            Err(NewDurationError::Underflow)
+            Err(DurationError::Underflow)
         } else if self.seconds > ABS_DURATION_SECONDS {
-            Err(NewDurationError::Overflow)
+            Err(DurationError::Overflow)
         } else if self.nanos <= -NANOS_PER_SECOND || self.nanos >= NANOS_PER_SECOND {
-            Err(NewDurationError::Nanoseconds)
+            Err(DurationError::Nanoseconds)
         } else if (self.seconds > 0 && self.nanos < 0) || (self.seconds < 0 && self.nanos > 0) {
-            Err(NewDurationError::Sign)
+            Err(DurationError::Sign)
         } else {
             Ok(())
         }
@@ -216,7 +216,7 @@ impl Duration {
 }
 
 impl TryFrom<tendermint_proto::google::protobuf::Duration> for Duration {
-    type Error = NewDurationError;
+    type Error = DurationError;
 
     fn try_from(
         duration: tendermint_proto::google::protobuf::Duration,
@@ -261,13 +261,13 @@ mod tests {
         assert_eq!(duration, Duration::MAX);
 
         let dur_error = Duration::try_new(i64::from(DurationSeconds::MIN) - 1, 0).unwrap_err();
-        assert!(matches!(dur_error, NewDurationError::Underflow));
+        assert!(matches!(dur_error, DurationError::Underflow));
 
         let dur_error = Duration::try_new(i64::from(DurationSeconds::MAX) + 1, 0).unwrap_err();
-        assert!(matches!(dur_error, NewDurationError::Overflow));
+        assert!(matches!(dur_error, DurationError::Overflow));
 
         let dur_error = Duration::try_new(0, i32::from(Nanoseconds::MIN) - 1).unwrap_err();
-        assert!(matches!(dur_error, NewDurationError::Nanoseconds));
+        assert!(matches!(dur_error, DurationError::Nanoseconds));
     }
 
     #[test]
@@ -412,11 +412,11 @@ mod tests {
 
         let dur_error =
             Duration::try_new_from_nanos(i128::from(DurationNanoseconds::MIN) - 1).unwrap_err();
-        assert!(matches!(dur_error, NewDurationError::Underflow));
+        assert!(matches!(dur_error, DurationError::Underflow));
 
         let dur_error =
             Duration::try_new_from_nanos(i128::from(DurationNanoseconds::MAX) + 1).unwrap_err();
-        assert!(matches!(dur_error, NewDurationError::Overflow));
+        assert!(matches!(dur_error, DurationError::Overflow));
     }
 
     #[test]

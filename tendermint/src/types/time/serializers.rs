@@ -10,7 +10,7 @@ use time::{
 
 use crate::types::time::timestamp::Timestamp;
 
-use super::duration::{Duration, NewDurationError};
+use super::duration::{Duration, DurationError};
 
 /// Helper struct to serialize and deserialize Timestamp into an RFC3339-compatible string
 /// This is required because the serde `with` attribute is only available to fields of a struct but
@@ -134,7 +134,7 @@ pub(crate) struct SerdeDuration {
 }
 
 impl TryFrom<SerdeDuration> for Duration {
-    type Error = NewDurationError;
+    type Error = DurationError;
 
     fn try_from(dur: SerdeDuration) -> Result<Duration, Self::Error> {
         Duration::try_new(dur.seconds, dur.nanos)
