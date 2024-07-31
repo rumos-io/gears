@@ -17,7 +17,7 @@ use gears::{
             AppCommands,
         },
     },
-    config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
+    config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
     store::database::rocks::RocksDBBuilder,
     types::base::coins::UnsignedCoins,
 };
@@ -72,6 +72,7 @@ pub fn run_gaia_and_tendermint(
             home: tmp_path,
             address: Some(DEFAULT_ADDRESS),
             rest_listen_addr: Some(DEFAULT_REST_LISTEN_ADDR),
+            grpc_listen_addr: Some(DEFAULT_GRPC_LISTEN_ADDR),
             read_buf_size: 1048576,
             log_level: LogLevel::Off,
             min_gas_prices: Default::default(),
