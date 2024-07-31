@@ -58,6 +58,4 @@ pub(crate) mod proto {
 pub(crate) mod error {
     pub(crate) const SERDE_ENCODING_DOMAIN_TYPE: &str =
         "serde_json should encode domain type that implements deserialization";
-    pub(crate) const TIMESTAMP_NANOS_EXPECT: &str =
-        "provided the date is between 1677-09-21T00:12:43.145224192 and 2262-04-11T23:47:16.854775807 the conversion won't fail";
 }

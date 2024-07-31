@@ -1,4 +1,4 @@
-use crate::types::time::Duration;
+use crate::types::time::duration::Duration;
 
 use super::params::{BlockParams, EvidenceParams, ValidatorParams, VersionParams};
 
@@ -70,7 +70,8 @@ impl TryFrom<inner::ConsensusParams> for ConsensusParams {
                 .into(),
             evidence: evidence
                 .ok_or_else(|| Self::Error::InvalidData("evidence params is missing".into()))?
-                .into(),
+                .try_into()
+                .map_err(|e: crate::error::Error| Self::Error::InvalidData(e.to_string()))?,
             validator: validator
                 .ok_or_else(|| Self::Error::InvalidData("validator params is missing".into()))?
                 .into(),

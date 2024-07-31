@@ -11,7 +11,7 @@ use kv_store::{
 use tendermint::types::{
     chain_id::ChainId,
     proto::{event::Event, header::Header},
-    time::Timestamp,
+    time::timestamp::Timestamp,
 };
 
 use crate::{

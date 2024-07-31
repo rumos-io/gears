@@ -171,13 +171,11 @@ impl Default for EvidenceParams {
 
 impl From<inner::EvidenceParams> for EvidenceParams {
     fn from(params: inner::EvidenceParams) -> EvidenceParams {
-        let duration = params
-            .max_age_duration
-            .map(|dur| dur.seconds * SEC_TO_NANO + i64::from(dur.nanos));
-
         EvidenceParams {
             max_age_num_blocks: params.max_age_num_blocks.to_string(),
-            max_age_duration: duration.map(|val| val.to_string()),
+            max_age_duration: params
+                .max_age_duration
+                .map(|d| i128::from(d.duration_nanoseconds()).to_string()),
             max_bytes: params.max_bytes.to_string(),
         }
     }
@@ -269,16 +267,15 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
 #[cfg(test)]
 mod tests {
     use super::EvidenceParams;
-    use tendermint::types::{proto::params::EvidenceParams as RawEvidenceParams, time::Duration};
+    use tendermint::types::{
+        proto::params::EvidenceParams as RawEvidenceParams, time::duration::Duration,
+    };
 
     #[test]
     fn evidence_params_serialize_works() {
         let params: EvidenceParams = RawEvidenceParams {
             max_age_num_blocks: 0,
-            max_age_duration: Some(Duration {
-                seconds: 10,
-                nanos: 30,
-            }),
+            max_age_duration: Some(Duration::new_from_nanos(10000000030)),
             max_bytes: 0,
         }
         .into();

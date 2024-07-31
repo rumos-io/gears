@@ -7,7 +7,7 @@ use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     error::IBC_ENCODE_UNWRAP,
     store::database::ext::UnwrapCorrupt,
-    tendermint::types::{proto::Protobuf, time::Timestamp},
+    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
 };
 use std::ops::Bound;
 
@@ -243,11 +243,6 @@ impl<
         //         (k.to_vec(), v)
         //     })
         //     .collect();
-
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let block_time =
-            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
 
         for (k, v) in &unbonding_val_map {
             let (time, height) =

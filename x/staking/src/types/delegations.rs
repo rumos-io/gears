@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use gears::{
     ext::PaginationKey,
-    tendermint::types::time::Timestamp,
+    tendermint::types::time::timestamp::Timestamp,
     types::{
         address::{AccAddress, ValAddress},
         decimal256::Decimal256,
@@ -57,15 +57,7 @@ pub struct UnbondingDelegationEntry {
 
 impl UnbondingDelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let completion_time = chrono::DateTime::from_timestamp(
-            self.completion_time.seconds,
-            self.completion_time.nanos as u32,
-        )
-        .unwrap();
-        completion_time <= time
+        self.completion_time <= *time
     }
 }
 
@@ -110,14 +102,6 @@ pub struct RedelegationEntry {
 
 impl RedelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let completion_time = chrono::DateTime::from_timestamp(
-            self.completion_time.seconds,
-            self.completion_time.nanos as u32,
-        )
-        .unwrap();
-        completion_time <= time
+        self.completion_time <= *time
     }
 }

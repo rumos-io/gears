@@ -19,6 +19,7 @@ sha2 = { workspace = true }
 ed25519-consensus = { version = "2" }
 bytes = { workspace = true }
 time = { workspace = true }
+chrono = { workspace = true }
 
 #utils
 thiserror = { workspace = true }
@@ -34,11 +35,13 @@ handlebars = { workspace = true }
 tracing = { workspace = true }
 
 #tendermint git
-tendermint-informal = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x", package = "tendermint"}
-tendermint-proto = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
-tendermint-abci = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
-tendermint-rpc = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x", features = ["http-client"] }
-tendermint-config = { git ="https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
+tendermint-informal = { git = "https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x", package = "tendermint" }
+tendermint-proto = { git = "https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
+tendermint-abci = { git = "https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
+tendermint-rpc = { git = "https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x", features = [
+    "http-client",
+] }
+tendermint-config = { git = "https://github.com/rumos-io/tendermint-rs", branch = "v0.29.x" }
 
 
 [dev-dependencies]

@@ -26,7 +26,7 @@ use gears::{
             validator::VotingPower,
             Protobuf,
         },
-        time::Timestamp,
+        time::duration::Duration,
     },
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
@@ -259,16 +259,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 self.staking_keeper.jail(ctx, &cons_addr).unwrap_gas();
 
                 let time = ctx.get_time();
-                // TODO: consider to move the DateTime type and work with timestamps into Gears
-                // The timestamp is provided by context and conversion won't fail.
-                let time =
-                    chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-                let delta = chrono::TimeDelta::nanoseconds(params.downtime_jail_duration);
-                let jailed_until = time + delta;
-                sign_info.jailed_until = Timestamp {
-                    seconds: jailed_until.timestamp(),
-                    nanos: jailed_until.timestamp_subsec_nanos() as i32,
-                };
+                let delta = Duration::try_new(params.downtime_jail_duration, 0).unwrap();
+                let jailed_until = time.checked_add(delta).unwrap();
+                sign_info.jailed_until = jailed_until.clone();
                 // We need to reset the counter & array so that the validator won't be immediately slashed for downtime upon rebonding.
                 sign_info.missed_blocks_counter = 0;
                 sign_info.index_offset = 0;
@@ -284,8 +277,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                     ?min_height,
                     treshold = min_signed_per_window,
                     slashed = params.slash_fraction_downtime.to_string(),
-                    // TODO: what is better way to print time?
-                    jailed_until = jailed_until.format("%Y-%m-%d %H:%M:%S").to_string(),
+                    jailed_until = jailed_until.format_string_rounded(),
                 );
             } else {
                 // TODO: how do we log?
@@ -410,17 +402,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
             }
 
             // cannot be unjailed until out of jail
-            let time = ctx.get_time();
-            // TODO: consider to move the DateTime type and work with timestamps into Gears
-            // The timestamp is provided by context and conversion won't fail.
-            let ctx_time =
-                chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-            let jailed_until_time = chrono::DateTime::from_timestamp(
-                info.jailed_until.seconds,
-                info.jailed_until.nanos as u32,
-            )
-            .unwrap();
-            if ctx_time < jailed_until_time {
+            if ctx.get_time() < info.jailed_until {
                 return Err(UnjailError::Jailed(cons_addr.to_owned()));
             }
         }
