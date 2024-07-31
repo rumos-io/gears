@@ -1,4 +1,4 @@
-# Protobuf macroses
+# Protobuf macros
 
 Read about [proto](proto.md) macro documentation for more details.
 
