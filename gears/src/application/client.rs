@@ -1,13 +1,10 @@
-use crate::{
-    commands::client::{
-        keys::keys, query::run_query, tx::run_tx, ClientCommands, ExtendedQueryCommand,
-    },
-    x::query::tx_query::{TxQueryHandler, TxsQueryHandler},
-};
-
 use super::handlers::{
     client::{QueryHandler, TxHandler},
     AuxHandler,
+};
+use crate::{
+    commands::client::{keys::keys, query::run_query, tx::run_tx, ClientCommands},
+    x::query::tx_query::{TxQueryHandler, TxsQueryHandler},
 };
 
 /// A Gears client application.
@@ -38,21 +35,19 @@ impl<Core: Client> ClientApplication<Core> {
                 println!("{}", serde_json::to_string_pretty(&tx)?);
             }
             ClientCommands::Query(cmd) => {
-                let query = match cmd {
-                    ExtendedQueryCommand::QueryCmd(cmd) => {
-                        serde_json::to_string_pretty(&run_query(cmd, &self.core)?)?
-                    }
-                    ExtendedQueryCommand::Tx(cmd) => serde_json::to_string_pretty(&run_query(
-                        cmd,
-                        &TxQueryHandler::<Core::Message>::new(),
-                    )?)?,
-                    ExtendedQueryCommand::Txs(cmd) => serde_json::to_string_pretty(&run_query(
-                        cmd,
-                        &TxsQueryHandler::<Core::Message>::new(),
-                    )?)?,
-                };
+                let query = run_query(cmd, &self.core)?;
 
-                println!("{}", query);
+                println!("{}", serde_json::to_string_pretty(&query)?);
+            }
+            ClientCommands::QueryTx(cmd) => {
+                let query = run_query(cmd, &TxQueryHandler::<Core::Message>::new())?;
+
+                println!("{}", serde_json::to_string_pretty(&query)?);
+            }
+            ClientCommands::QueryTxs(cmd) => {
+                let query = run_query(cmd, &TxsQueryHandler::<Core::Message>::new())?;
+
+                println!("{}", serde_json::to_string_pretty(&query)?);
             }
             ClientCommands::Keys(cmd) => keys(cmd)?,
         };
