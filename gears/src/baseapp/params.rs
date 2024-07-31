@@ -275,7 +275,7 @@ mod tests {
     fn evidence_params_serialize_works() {
         let params: EvidenceParams = RawEvidenceParams {
             max_age_num_blocks: 0,
-            max_age_duration: Some(Duration::try_new(10, 30).unwrap()),
+            max_age_duration: Some(Duration::new_from_nanos(10000000030)),
             max_bytes: 0,
         }
         .into();
