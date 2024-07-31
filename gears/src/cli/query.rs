@@ -1,7 +1,9 @@
+use crate::{
+    commands::client::{query::QueryCommand, ExtendedQueryCommand},
+    config::DEFAULT_TENDERMINT_RPC_ADDRESS,
+};
 use clap::{ArgAction, Subcommand, ValueHint};
 use tendermint::types::proto::block::Height;
-
-use crate::{commands::client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
 
 /// Querying subcommands
 #[derive(Debug, Clone, ::clap::Args)]
@@ -14,10 +16,48 @@ pub struct CliQueryCommand<C: Subcommand> {
     pub height: Option<Height>,
 
     #[command(subcommand)]
-    pub command: C,
+    pub command: QueryCommands<C>,
 }
 
-impl<C, AC, ERR> TryFrom<CliQueryCommand<C>> for QueryCommand<AC>
+#[derive(Debug, Clone, Subcommand)]
+pub enum QueryCommands<S: Subcommand> {
+    #[command(flatten)]
+    QueryCmd(S),
+    Tx(TxQueryCli),
+    Txs(TxsQueryCli),
+}
+
+/// Query for a transaction by hash, "<addr>/<seq>" combination or comma-separated signatures
+/// in a committed block
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct TxQueryCli {
+    pub hash: String,
+    #[arg(long, default_value_t = TxQueryType::Hash)]
+    pub query_type: TxQueryType,
+}
+
+/// Query for paginated transactions that match a set of events
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct TxsQueryCli {
+    #[arg(long)]
+    pub events: String,
+    #[arg(long, default_value_t = 1)]
+    pub page: u32,
+    #[arg(long, default_value_t = 30)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Clone, strum::EnumString, strum::Display)]
+pub enum TxQueryType {
+    #[strum(serialize = "hash")]
+    Hash,
+    #[strum(serialize = "acc_seq")]
+    AccSeq,
+    #[strum(serialize = "signature")]
+    Signature,
+}
+
+impl<C, AC, ERR> TryFrom<CliQueryCommand<C>> for ExtendedQueryCommand<AC, TxQueryCli, TxsQueryCli>
 where
     C: Subcommand,
     AC: TryFrom<C, Error = ERR>,
@@ -31,10 +71,23 @@ where
             command,
         } = value;
 
-        Ok(Self {
-            node,
-            height,
-            inner: command.try_into()?,
-        })
+        let query = match command {
+            QueryCommands::QueryCmd(c) => ExtendedQueryCommand::QueryCmd(QueryCommand {
+                node,
+                height,
+                inner: c.try_into()?,
+            }),
+            QueryCommands::Tx(c) => ExtendedQueryCommand::Tx(QueryCommand {
+                node,
+                height,
+                inner: c,
+            }),
+            QueryCommands::Txs(c) => ExtendedQueryCommand::Txs(QueryCommand {
+                node,
+                height,
+                inner: c,
+            }),
+        };
+        Ok(query)
     }
 }

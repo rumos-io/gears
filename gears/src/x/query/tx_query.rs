@@ -1,18 +1,16 @@
-use crate::query::{QueryGetTxRequest, QueryGetTxsEventRequest, QueryTxResponse, QueryTxsResponse};
-use anyhow::anyhow;
-use clap::Args;
-use gears::{
+use crate::{
     application::handlers::client::QueryHandler,
-    baseapp::QueryResponse,
+    baseapp::{Query, QueryResponse},
+    cli::query::{TxQueryCli, TxQueryType, TxsQueryCli},
     core::{errors::CoreError, Protobuf},
-    derive::Query,
+    error::IBC_ENCODE_UNWRAP,
     tendermint::{
         informal::Hash,
         rpc::{
             client::{Client, HttpClient},
             response::{
-                block::Response as BlockResponse, tx::search::Response as SearchResponse,
-                tx::Response as CosmosTxResponse,
+                block::Response as BlockResponse,
+                tx::{search::Response as SearchResponse, Response as CosmosTxResponse},
             },
         },
         types::proto::{block::Height, Protobuf as _},
@@ -21,64 +19,34 @@ use gears::{
         response::{tx::TxResponse, tx_event::SearchTxsResult},
         tx::TxMessage,
     },
+    x::query::types::{
+        QueryGetTxRequest, QueryGetTxsEventRequest, QueryTxResponse, QueryTxsResponse,
+    },
 };
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, fmt::Display, marker::PhantomData, str::FromStr};
+use std::{collections::HashMap, marker::PhantomData, str::FromStr};
 
-// to have full match of cli in app
-// need to be added as a member of client cli
-/// Query for a transaction by hash, \"<addr>/<seq>\" combination or comma-separated signatures
-/// in a committed block
-#[derive(Args, Debug)]
-pub struct TxQueryCli {
-    pub hash: String,
-    #[arg(long, default_value_t = TxQueryType::Hash)]
-    pub query_type: TxQueryType,
-}
-
-// #[derive(Arg, Debug)]
-// pub enum TxCommands {
-//
-//     Tx {
-//
-//     },
-// }
-
-#[derive(Debug, Clone)]
-pub enum TxQueryType {
-    Hash,
-    AccSeq,
-    Signature,
-}
-
-impl FromStr for TxQueryType {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "hash" => Ok(TxQueryType::Hash),
-            "acc_seq" => Ok(TxQueryType::AccSeq),
-            "signature" => Ok(TxQueryType::Signature),
-            _ => Err("Unknown transaction type".to_string()),
-        }
-    }
-}
-
-impl Display for TxQueryType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TxQueryType::Hash => write!(f, "hash"),
-            TxQueryType::AccSeq => write!(f, "acc_seq"),
-            TxQueryType::Signature => write!(f, "signature"),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Query)]
-#[query(kind = "request")]
+#[derive(Clone, PartialEq)]
 pub enum TxQuery {
     Tx(QueryGetTxRequest),
     Txs(QueryGetTxsEventRequest),
+}
+
+impl Query for TxQuery {
+    fn query_url(&self) -> &'static str {
+        match self {
+            TxQuery::Tx(req) => req.query_url(),
+            TxQuery::Txs(req) => req.query_url(),
+        }
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        match self {
+            TxQuery::Tx(req) => req.into_bytes(),
+            TxQuery::Txs(req) => req.into_bytes(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -91,8 +59,8 @@ pub enum TxQueryResponse<M: TxMessage> {
 impl<M: TxMessage> QueryResponse for TxQueryResponse<M> {
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            TxQueryResponse::Tx(msg) => msg.encode_vec(),
-            TxQueryResponse::Txs(msg) => msg.encode_vec(),
+            TxQueryResponse::Tx(msg) => msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            TxQueryResponse::Txs(msg) => msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
         }
     }
 }
@@ -172,7 +140,7 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
         &self,
         query: Self::QueryRequest,
         node: url::Url,
-        _height: Option<gears::tendermint::types::proto::block::Height>,
+        _height: Option<crate::tendermint::types::proto::block::Height>,
     ) -> anyhow::Result<Vec<u8>> {
         let client = HttpClient::new(node.as_str())?;
         let runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
@@ -223,17 +191,33 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
     }
 }
 
-// to have full match of cli in app
-// need to be added as a member of client cli
-/// Query for paginated transactions that match a set of events
-#[derive(Args, Debug)]
-pub struct TxsQueryCli {
-    #[arg(long)]
-    pub events: String,
-    #[arg(long, default_value_t = 1)]
-    pub page: u32,
-    #[arg(long, default_value_t = 30)]
-    pub limit: u32,
+struct StrEventsHandler<'a> {
+    events_str: &'a str,
+}
+
+impl<'a> StrEventsHandler<'a> {
+    pub fn new(events_str: &'a str) -> Self {
+        let events_str = events_str.trim_start_matches('\'').trim_end_matches('\'');
+        Self { events_str }
+    }
+
+    pub fn try_parse_tendermint_events_vec(&self) -> anyhow::Result<Vec<String>> {
+        let events = self.events_str.split('&');
+
+        let mut tm_events = Vec::with_capacity(self.events_str.matches('&').count() + 1);
+        for event in events {
+            if !event.contains('=') || event.matches('=').count() > 1 {
+                return Err(anyhow!("invalid event; event {event} should be of the format: {{eventType}}.{{eventAttribute}}={{value}}"));
+            }
+            let tokens = event.split('=').collect::<Vec<_>>();
+            if tokens[0] == "tx.height" {
+                tm_events.push(format!("{}={}", tokens[0], tokens[1]));
+            } else {
+                tm_events.push(format!("{}='{}'", tokens[0], tokens[1]));
+            }
+        }
+        Ok(tm_events)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -252,7 +236,7 @@ impl<M: TxMessage> TxsQueryHandler<M> {
 }
 
 impl<M: TxMessage> QueryHandler for TxsQueryHandler<M> {
-    type QueryRequest = TxQuery;
+    type QueryRequest = QueryGetTxsEventRequest;
 
     type QueryCommands = TxsQueryCli;
 
@@ -268,42 +252,23 @@ impl<M: TxMessage> QueryHandler for TxsQueryHandler<M> {
             limit,
         } = command;
 
-        let events_str = events.trim_start_matches('\'').trim_end_matches('\'');
-        let events = events_str.split('&');
-
-        let mut tm_events = Vec::with_capacity(events_str.matches('&').count() + 1);
-        for event in events {
-            if !event.contains('=') || event.matches('=').count() > 1 {
-                return Err(anyhow!("invalid event; event {event} should be of the format: {{eventType}}.{{eventAttribute}}={{value}}"));
-            }
-            let tokens = event.split('=').collect::<Vec<_>>();
-            if tokens[0] == "tx.height" {
-                tm_events.push(format!("{}={}", tokens[0], tokens[1]));
-            } else {
-                tm_events.push(format!("{}='{}'", tokens[0], tokens[1]));
-            }
-        }
-        Ok(Self::QueryRequest::Txs(QueryGetTxsEventRequest {
-            events: tm_events,
+        Ok(QueryGetTxsEventRequest {
+            events: StrEventsHandler::new(events).try_parse_tendermint_events_vec()?,
             order_by: "asc".to_string(),
             page: *page,
             limit: *limit,
-        }))
+        })
     }
 
     fn execute_query_request(
         &self,
         query: Self::QueryRequest,
         node: url::Url,
-        _height: Option<gears::tendermint::types::proto::block::Height>,
+        _height: Option<crate::tendermint::types::proto::block::Height>,
     ) -> anyhow::Result<Vec<u8>> {
         let client = HttpClient::new(node.as_str())?;
         let runtime = tokio::runtime::Runtime::new().expect("failed to create tokio runtime");
-
-        match query {
-            Self::QueryRequest::Tx(_) => unreachable!(),
-            Self::QueryRequest::Txs(req) => query_txs_by_event::<M>(client, runtime, &req),
-        }
+        query_txs_by_event::<M>(client, runtime, &query)
     }
 
     fn handle_raw_response(
@@ -330,7 +295,7 @@ fn query_txs_by_event<M: TxMessage>(
     let mut query = String::with_capacity(prefix.len() + query_str_events.len());
     query.push_str(prefix);
     query.push_str(&query_str_events);
-    let query = gears::tendermint::rpc::query::Query::from_str(&query)?;
+    let query = crate::tendermint::rpc::query::Query::from_str(&query)?;
     let res: anyhow::Result<(SearchResponse, HashMap<Height, BlockResponse>)> =
         runtime.block_on(async {
             let txs = client
@@ -339,7 +304,7 @@ fn query_txs_by_event<M: TxMessage>(
                     true,
                     req.page,
                     req.limit.try_into().unwrap_or(u8::MAX),
-                    gears::tendermint::rpc::Order::from_str(&req.order_by)?,
+                    crate::tendermint::rpc::Order::from_str(&req.order_by)?,
                 )
                 .await?;
             let mut blocks: HashMap<Height, BlockResponse> = HashMap::with_capacity(txs.txs.len());

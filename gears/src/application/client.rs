@@ -1,4 +1,9 @@
-use crate::commands::client::{keys::keys, query::run_query, tx::run_tx, ClientCommands};
+use crate::{
+    commands::client::{
+        keys::keys, query::run_query, tx::run_tx, ClientCommands, ExtendedQueryCommand,
+    },
+    x::query::tx_query::{TxQueryHandler, TxsQueryHandler},
+};
 
 use super::handlers::{
     client::{QueryHandler, TxHandler},
@@ -12,7 +17,7 @@ pub struct ClientApplication<Core: Client> {
     core: Core,
 }
 
-impl<'a, Core: Client> ClientApplication<Core> {
+impl<Core: Client> ClientApplication<Core> {
     pub fn new(core: Core) -> Self {
         Self { core }
     }
@@ -33,9 +38,21 @@ impl<'a, Core: Client> ClientApplication<Core> {
                 println!("{}", serde_json::to_string_pretty(&tx)?);
             }
             ClientCommands::Query(cmd) => {
-                let query = run_query(cmd, &self.core)?;
+                let query = match cmd {
+                    ExtendedQueryCommand::QueryCmd(cmd) => {
+                        serde_json::to_string_pretty(&run_query(cmd, &self.core)?)?
+                    }
+                    ExtendedQueryCommand::Tx(cmd) => serde_json::to_string_pretty(&run_query(
+                        cmd,
+                        &TxQueryHandler::<Core::Message>::new(),
+                    )?)?,
+                    ExtendedQueryCommand::Txs(cmd) => serde_json::to_string_pretty(&run_query(
+                        cmd,
+                        &TxsQueryHandler::<Core::Message>::new(),
+                    )?)?,
+                };
 
-                println!("{}", serde_json::to_string_pretty(&query)?);
+                println!("{}", query);
             }
             ClientCommands::Keys(cmd) => keys(cmd)?,
         };

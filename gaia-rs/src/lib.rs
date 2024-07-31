@@ -4,8 +4,6 @@ use crate::query::GaiaQueryResponse;
 use crate::store_keys::GaiaParamsStoreKey;
 use anyhow::Result;
 use auth::cli::query::AuthQueryHandler;
-use auth::cli::tx_query::TxQueryHandler;
-use auth::cli::tx_query::TxsQueryHandler;
 use auth::AuthNodeQueryRequest;
 use auth::AuthNodeQueryResponse;
 use axum::Router;
@@ -31,7 +29,6 @@ use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
 use gears::types::address::AccAddress;
 use gears::types::tx::Messages;
-use gears::types::tx::TxMessage;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
@@ -41,7 +38,6 @@ use staking::StakingNodeQueryResponse;
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;
-use url::Url;
 
 pub mod abci_handler;
 pub mod client;
@@ -64,21 +60,9 @@ impl ApplicationInfo for GaiaApplication {
 
 pub struct GaiaCore;
 
-pub struct GaiaCoreClient<M: TxMessage> {
-    tx_query_handler: TxQueryHandler<M>,
-    txs_query_handler: TxsQueryHandler<M>,
-}
+pub struct GaiaCoreClient;
 
-impl<M: TxMessage> GaiaCoreClient<M> {
-    pub fn new() -> Self {
-        Self {
-            tx_query_handler: TxQueryHandler::new(),
-            txs_query_handler: TxsQueryHandler::new(),
-        }
-    }
-}
-
-impl<M: TxMessage> TxHandler for GaiaCoreClient<M> {
+impl TxHandler for GaiaCoreClient {
     type Message = message::Message;
     type TxCommands = client::WrappedGaiaTxCommands;
 
@@ -92,12 +76,12 @@ impl<M: TxMessage> TxHandler for GaiaCoreClient<M> {
     }
 }
 
-impl<M: TxMessage> QueryHandler for GaiaCoreClient<M> {
+impl QueryHandler for GaiaCoreClient {
     type QueryRequest = GaiaQuery;
 
     type QueryCommands = WrappedGaiaQueryCommands;
 
-    type QueryResponse = GaiaQueryResponse<M>;
+    type QueryResponse = GaiaQueryResponse;
 
     fn prepare_query_request(
         &self,
@@ -116,40 +100,6 @@ impl<M: TxMessage> QueryHandler for GaiaCoreClient<M> {
             GaiaQueryCommands::Ibc(command) => {
                 Self::QueryRequest::Ibc(IbcQueryHandler.prepare_query_request(command)?)
             }
-            GaiaQueryCommands::Tx(command) => {
-                Self::QueryRequest::Tx(self.tx_query_handler.prepare_query_request(command)?)
-            }
-            GaiaQueryCommands::Txs(command) => {
-                Self::QueryRequest::Txs(self.txs_query_handler.prepare_query_request(command)?)
-            }
-        };
-
-        Ok(res)
-    }
-
-    fn execute_query_request(
-        &self,
-        query: Self::QueryRequest,
-        node: Url,
-        height: Option<gears::tendermint::types::proto::block::Height>,
-    ) -> anyhow::Result<Vec<u8>> {
-        let res = match query {
-            GaiaQuery::Bank(query) => {
-                BankQueryHandler.execute_query_request(query, node, height)?
-            }
-            GaiaQuery::Auth(query) => {
-                AuthQueryHandler.execute_query_request(query, node, height)?
-            }
-            GaiaQuery::Ibc(query) => IbcQueryHandler.execute_query_request(query, node, height)?,
-            GaiaQuery::Staking(query) => {
-                StakingQueryHandler.execute_query_request(query, node, height)?
-            }
-            GaiaQuery::Tx(query) => self
-                .tx_query_handler
-                .execute_query_request(query, node, height)?,
-            GaiaQuery::Txs(query) => self
-                .txs_query_handler
-                .execute_query_request(query, node, height)?,
         };
 
         Ok(res)
@@ -173,21 +123,13 @@ impl<M: TxMessage> QueryHandler for GaiaCoreClient<M> {
             GaiaQueryCommands::Ibc(command) => {
                 Self::QueryResponse::Ibc(IbcQueryHandler.handle_raw_response(query_bytes, command)?)
             }
-            GaiaQueryCommands::Tx(command) => Self::QueryResponse::Tx(
-                self.tx_query_handler
-                    .handle_raw_response(query_bytes, command)?,
-            ),
-            GaiaQueryCommands::Txs(command) => Self::QueryResponse::Tx(
-                self.txs_query_handler
-                    .handle_raw_response(query_bytes, command)?,
-            ),
         };
 
         Ok(res)
     }
 }
 
-impl<M: TxMessage> AuxHandler for GaiaCoreClient<M> {
+impl AuxHandler for GaiaCoreClient {
     type AuxCommands = NilAuxCommand;
     type Aux = NilAux;
 
@@ -197,7 +139,7 @@ impl<M: TxMessage> AuxHandler for GaiaCoreClient<M> {
     }
 }
 
-impl<M: TxMessage> Client for GaiaCoreClient<M> {}
+impl Client for GaiaCoreClient {}
 
 #[derive(Clone)]
 pub enum GaiaNodeQueryRequest {

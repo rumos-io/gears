@@ -1,12 +1,6 @@
-use auth::cli::{
-    query::{AuthQuery, AuthQueryResponse},
-    tx_query::{TxQuery, TxQueryResponse},
-};
+use auth::cli::query::{AuthQuery, AuthQueryResponse};
 use bank::cli::query::{BankQuery, BankQueryResponse};
-use gears::{
-    baseapp::{Query, QueryResponse},
-    types::tx::TxMessage,
-};
+use gears::{baseapp::Query, derive::Query};
 use ibc_rs::client::cli::query::{IbcQuery, IbcQueryResponse};
 use serde::{Deserialize, Serialize};
 use staking::cli::query::{StakingQuery, StakingQueryResponse};
@@ -17,8 +11,6 @@ pub enum GaiaQuery {
     Bank(BankQuery),
     Staking(StakingQuery),
     Ibc(IbcQuery),
-    Tx(TxQuery),
-    Txs(TxQuery),
 }
 
 impl Query for GaiaQuery {
@@ -28,8 +20,6 @@ impl Query for GaiaQuery {
             GaiaQuery::Bank(var) => var.query_url(),
             GaiaQuery::Staking(var) => var.query_url(),
             GaiaQuery::Ibc(var) => var.query_url(),
-            GaiaQuery::Tx(var) => var.query_url(),
-            GaiaQuery::Txs(var) => var.query_url(),
         }
     }
 
@@ -39,30 +29,15 @@ impl Query for GaiaQuery {
             GaiaQuery::Bank(var) => var.into_bytes(),
             GaiaQuery::Staking(var) => var.into_bytes(),
             GaiaQuery::Ibc(var) => var.into_bytes(),
-            GaiaQuery::Tx(var) => var.into_bytes(),
-            GaiaQuery::Txs(var) => var.into_bytes(),
         }
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
-pub enum GaiaQueryResponse<M: TxMessage> {
+pub enum GaiaQueryResponse {
     Auth(AuthQueryResponse),
     Bank(BankQueryResponse),
     Staking(StakingQueryResponse),
     Ibc(IbcQueryResponse),
-    Tx(TxQueryResponse<M>),
-}
-
-impl<M: TxMessage> QueryResponse for GaiaQueryResponse<M> {
-    fn into_bytes(self) -> Vec<u8> {
-        match self {
-            GaiaQueryResponse::Auth(msg) => msg.into_bytes(),
-            GaiaQueryResponse::Bank(msg) => msg.into_bytes(),
-            GaiaQueryResponse::Staking(msg) => msg.into_bytes(),
-            GaiaQueryResponse::Ibc(msg) => msg.into_bytes(),
-            GaiaQueryResponse::Tx(msg) => msg.into_bytes(),
-        }
-    }
 }
