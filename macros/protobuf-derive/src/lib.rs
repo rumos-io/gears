@@ -99,10 +99,15 @@ impl FieldWrapper {
             acc.push(':');
             acc
         });
-        vec!["Option:", "std:option:Option:", "core:option:Option:"]
-            .into_iter()
-            .find(|s| idents_of_path == *s)
-            .and_then(|_| path.segments.last())
+        vec![
+            "Option:",
+            "std:option:Option:",
+            "core:option:Option:",
+            "option:Option:",
+        ]
+        .into_iter()
+        .find(|s| idents_of_path == *s)
+        .and_then(|_| path.segments.last())
     }
 
     fn check_for_vec(path: &syn::Path) -> Option<&syn::PathSegment> {
@@ -111,7 +116,7 @@ impl FieldWrapper {
             acc.push(':');
             acc
         });
-        vec!["Vec:", "std:vec:Vec:"]
+        vec!["Vec:", "std:vec:Vec:", "vec:Vec:"]
             .into_iter()
             .find(|s| idents_of_path == *s)
             .and_then(|_| path.segments.last())
