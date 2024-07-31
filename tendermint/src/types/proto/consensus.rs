@@ -71,7 +71,7 @@ impl TryFrom<inner::ConsensusParams> for ConsensusParams {
             evidence: evidence
                 .ok_or_else(|| Self::Error::InvalidData("evidence params is missing".into()))?
                 .try_into()
-                .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
+                .map_err(|e: crate::error::Error| Self::Error::InvalidData(e.to_string()))?,
             validator: validator
                 .ok_or_else(|| Self::Error::InvalidData("validator params is missing".into()))?
                 .into(),
