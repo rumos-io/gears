@@ -63,6 +63,20 @@ pub struct Validator {
     pub status: BondStatus,
 }
 
+impl TryFrom<Vec<u8>> for Validator {
+    type Error = CoreError;
+
+    fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
+        Validator::decode_vec(&raw).map_err(|e| CoreError::DecodeGeneral(e.to_string()))
+    }
+}
+
+impl From<Validator> for Vec<u8> {
+    fn from(value: Validator) -> Self {
+        value.encode_vec()
+    }
+}
+
 impl StakingValidator for Validator {
     fn operator(&self) -> &ValAddress {
         &self.operator_address

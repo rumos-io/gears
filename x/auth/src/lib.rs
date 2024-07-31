@@ -10,8 +10,6 @@ pub use genesis::*;
 pub use keeper::*;
 pub use params::*;
 
-//
-
 pub fn new_module_addr(module_name: &str) -> gears::types::address::AccAddress {
     use sha2::Digest;
     let hash = sha2::Sha256::digest(module_name);

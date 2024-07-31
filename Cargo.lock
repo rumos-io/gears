@@ -1934,6 +1934,7 @@ dependencies = [
  "num-format",
  "nutype",
  "prost 0.11.9",
+ "protobuf-derive",
  "query-derive",
  "regex",
  "ripemd",
@@ -4139,6 +4140,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9091c90b0a32608e984ff2fa4091273cbdd755d54935c51d520887f4a1dbd5b0"
 dependencies = [
  "prost 0.12.6",
+]
+
+[[package]]
+name = "protobuf-derive"
+version = "0.1.0"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.72",
 ]
 
 [[package]]

@@ -3,7 +3,7 @@
 
 use darling::{util::Flag, FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, Type};
+use syn::parse_macro_input;
 
 use quote::quote;
 use syn::DeriveInput;
@@ -37,7 +37,6 @@ enum Kind {
 struct QueryAttr {
     #[darling(flatten, default)]
     pub kind: RequestOrResponse,
-    pub raw: Option<Type>,
     pub url: Option<String>,
 }
 
@@ -53,7 +52,7 @@ pub fn message_derive(input: TokenStream) -> TokenStream {
 
 fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let DeriveInput { ident, data, .. } = &input;
-    let QueryAttr { kind, raw, url } = QueryAttr::from_derive_input(&input)?;
+    let QueryAttr { kind, url } = QueryAttr::from_derive_input(&input)?;
 
     fn error() -> syn::Result<Kind> {
         Err(syn::Error::new(
@@ -78,86 +77,70 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     };
 
     match data {
-        syn::Data::Struct(_) => {
-            // TODO:MAYBE support of other serialization?
-            let protobuf = match raw {
-                Some(protobuf) => quote! {
-                    impl ::gears::tendermint::types::proto::Protobuf<#protobuf> for #ident {}
-                },
-                None => Err(syn::Error::new(
-                    proc_macro2::Span::call_site(),
-                    "Query requires `raw` attribute for serialization from protobuf".to_string(),
-                ))?,
-            };
-
-            match kind {
-                Kind::Request => {
-                    let url = match url {
-                        Some(url) => quote! {
-                            impl #ident
-                            {
-                               pub const QUERY_URL : &'static str = #url;
-                            }
-                        },
-                        None => Err(syn::Error::new(
-                            proc_macro2::Span::call_site(),
-                            "Request query requires `url` attribute".to_string(),
-                        ))?,
-                    };
-
-                    let query_trait = quote! {
-                        impl  ::gears::baseapp::Query for #ident {
-                            fn query_url(&self) -> &'static str  {
-                                Self::QUERY_URL
-                            }
-
-                            fn into_bytes(self) -> ::std::vec::Vec<u8> {
-                                gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
-                            }
+        syn::Data::Struct(_) => match kind {
+            Kind::Request => {
+                let url = match url {
+                    Some(url) => quote! {
+                        impl #ident
+                        {
+                           pub const QUERY_URL : &'static str = #url;
                         }
-                    };
+                    },
+                    None => Err(syn::Error::new(
+                        proc_macro2::Span::call_site(),
+                        "Request query requires `url` attribute".to_string(),
+                    ))?,
+                };
 
-                    let gen = quote! {
-                        #query_trait
-
-                        #protobuf
-
-                        #url
-                    };
-
-                    Ok(gen)
-                }
-                Kind::Response => {
-                    let url = match url {
-                        Some(_) => quote! {
-                            impl #ident
-                            {
-                               pub const QUERY_URL : &'static str = #url;
-                            }
-                        },
-                        None => quote! {},
-                    };
-
-                    let trait_impl = quote! {
-                        impl  ::gears::baseapp::QueryResponse for #ident {
-                            fn into_bytes(self) -> std::vec::Vec<u8> {
-                                gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
-                            }
+                let query_trait = quote! {
+                    impl  ::gears::baseapp::Query for #ident {
+                        fn query_url(&self) -> &'static str  {
+                            Self::QUERY_URL
                         }
-                    };
 
-                    let gen = quote! {
-                        #protobuf
+                        fn into_bytes(self) -> ::std::vec::Vec<u8> {
+                            gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                        }
+                    }
+                };
 
-                        #url
+                let gen = quote! {
+                    #query_trait
 
-                        #trait_impl
-                    };
+                    #url
+                };
 
-                    Ok(gen)
-                }
+                Ok(gen)
             }
-        }
+            Kind::Response => {
+                let url = match url {
+                    Some(_) => quote! {
+                        impl #ident
+                        {
+                           pub const QUERY_URL : &'static str = #url;
+                        }
+                    },
+                    None => quote! {},
+                };
+
+                let trait_impl = quote! {
+                    impl  ::gears::baseapp::QueryResponse for #ident {
+                        fn into_bytes(self) -> std::vec::Vec<u8> {
+                            gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                        }
+                    }
+                };
+
+                let gen = quote! {
+
+                    #url
+
+                    #trait_impl
+                };
+
+                Ok(gen)
+            }
+        },
         syn::Data::Union(_) => Err(syn::Error::new(
             proc_macro2::Span::call_site(),
             "Query can't be derived for `Union`",

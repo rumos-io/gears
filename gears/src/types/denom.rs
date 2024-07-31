@@ -76,6 +76,12 @@ impl FromStr for Denom {
     }
 }
 
+impl From<Denom> for String {
+    fn from(value: Denom) -> Self {
+        value.0
+    }
+}
+
 impl Display for Denom {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)

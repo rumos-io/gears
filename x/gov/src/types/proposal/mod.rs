@@ -278,6 +278,12 @@ impl TryFrom<i32> for ProposalStatus {
     }
 }
 
+impl From<ProposalStatus> for i32 {
+    fn from(value: ProposalStatus) -> Self {
+        value as i32
+    }
+}
+
 fn parse_proposal_key_bytes(bytes: impl AsRef<[u8]>) -> (u64, DateTime<Utc>) {
     static KEY_LENGTH: OnceLock<usize> = OnceLock::new();
 
