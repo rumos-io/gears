@@ -125,7 +125,7 @@ mod tests {
     use super::*;
     use vec1::vec1;
 
-    const VALUE_VALID: &'static str = "default value for test if valid";
+    const VALUE_VALID: &str = "default value for test if valid";
 
     #[test]
     fn all_values() {

@@ -1,7 +1,7 @@
 use crate::{
     baseapp::Query,
     core::errors::CoreError,
-    error::IBC_ENCODE_UNWRAP,
+    core::Protobuf,
     tendermint::informal::Hash,
     types::{
         response::{
@@ -11,22 +11,22 @@ use crate::{
         tx::TxMessage,
     },
 };
-use prost::Message;
+use protobuf_derive::Raw;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use tendermint::types::proto::Protobuf;
 
 mod inner {
     pub use ibc_proto::cosmos::tx::v1beta1::GetTxRequest;
 }
 
-#[derive(Clone, Message)]
-pub struct QueryTxResponseRaw {
-    #[prost(message, optional)]
-    pub tx: Option<TxResponseRaw>,
+/// QueryTxResponse is the response type for tendermint rpc query
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Raw)]
+pub struct QueryTxResponse<M: TxMessage> {
+    #[raw(kind(message), raw = TxResponseRaw, optional)]
+    pub tx: TxResponse<M>,
 }
 
-impl<M: TxMessage> From<QueryTxResponse<M>> for QueryTxResponseRaw {
+impl<M: TxMessage> From<QueryTxResponse<M>> for RawQueryTxResponse {
     fn from(QueryTxResponse { tx }: QueryTxResponse<M>) -> Self {
         Self {
             tx: Some(tx.into()),
@@ -34,16 +34,10 @@ impl<M: TxMessage> From<QueryTxResponse<M>> for QueryTxResponseRaw {
     }
 }
 
-/// QueryTxResponse is the response type for tendermint rpc query
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct QueryTxResponse<M: TxMessage> {
-    pub tx: TxResponse<M>,
-}
-
-impl<M: TxMessage> TryFrom<QueryTxResponseRaw> for QueryTxResponse<M> {
+impl<M: TxMessage> TryFrom<RawQueryTxResponse> for QueryTxResponse<M> {
     type Error = CoreError;
 
-    fn try_from(QueryTxResponseRaw { tx }: QueryTxResponseRaw) -> Result<Self, Self::Error> {
+    fn try_from(RawQueryTxResponse { tx }: RawQueryTxResponse) -> Result<Self, Self::Error> {
         Ok(Self {
             tx: tx
                 .ok_or(CoreError::MissingField("Missed field 'tx'".to_string()))?
@@ -53,15 +47,16 @@ impl<M: TxMessage> TryFrom<QueryTxResponseRaw> for QueryTxResponse<M> {
     }
 }
 
-impl<M: TxMessage> Protobuf<QueryTxResponseRaw> for QueryTxResponse<M> {}
+impl<M: TxMessage> Protobuf<RawQueryTxResponse> for QueryTxResponse<M> {}
 
-#[derive(Clone, Message)]
-pub struct QueryTxsResponseRaw {
-    #[prost(message, optional, tag = "1")]
-    pub txs: Option<SearchTxsResultRaw>,
+/// QueryTxsResponse is the response type for tendermint rpc query
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Raw)]
+pub struct QueryTxsResponse<M: TxMessage> {
+    #[raw(kind(message), raw = SearchTxsResultRaw, optional)]
+    pub txs: SearchTxsResult<M>,
 }
 
-impl<M: TxMessage> From<QueryTxsResponse<M>> for QueryTxsResponseRaw {
+impl<M: TxMessage> From<QueryTxsResponse<M>> for RawQueryTxsResponse {
     fn from(QueryTxsResponse { txs }: QueryTxsResponse<M>) -> Self {
         Self {
             txs: Some(txs.into()),
@@ -69,16 +64,10 @@ impl<M: TxMessage> From<QueryTxsResponse<M>> for QueryTxsResponseRaw {
     }
 }
 
-/// QueryTxsResponse is the response type for tendermint rpc query
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-pub struct QueryTxsResponse<M: TxMessage> {
-    pub txs: SearchTxsResult<M>,
-}
-
-impl<M: TxMessage> TryFrom<QueryTxsResponseRaw> for QueryTxsResponse<M> {
+impl<M: TxMessage> TryFrom<RawQueryTxsResponse> for QueryTxsResponse<M> {
     type Error = CoreError;
 
-    fn try_from(QueryTxsResponseRaw { txs }: QueryTxsResponseRaw) -> Result<Self, Self::Error> {
+    fn try_from(RawQueryTxsResponse { txs }: RawQueryTxsResponse) -> Result<Self, Self::Error> {
         Ok(Self {
             txs: txs
                 .ok_or(CoreError::MissingField("Field 'txs' is missed".to_string()))?
@@ -87,7 +76,7 @@ impl<M: TxMessage> TryFrom<QueryTxsResponseRaw> for QueryTxsResponse<M> {
     }
 }
 
-impl<M: TxMessage> Protobuf<QueryTxsResponseRaw> for QueryTxsResponse<M> {}
+impl<M: TxMessage> Protobuf<RawQueryTxsResponse> for QueryTxsResponse<M> {}
 
 #[derive(Clone, PartialEq)]
 pub struct QueryGetTxRequest {
@@ -100,7 +89,7 @@ impl Query for QueryGetTxRequest {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        self.encode_vec().expect(IBC_ENCODE_UNWRAP)
+        self.encode_vec()
     }
 }
 
@@ -124,15 +113,17 @@ impl TryFrom<inner::GetTxRequest> for QueryGetTxRequest {
 
 impl Protobuf<inner::GetTxRequest> for QueryGetTxRequest {}
 
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Raw, protobuf_derive::Protobuf)]
+#[proto(gears)]
 pub struct QueryGetTxsEventRequest {
-    #[prost(string, repeated, tag = "1")]
+    #[raw(raw = String, kind(string), repeated)]
+    #[proto(repeated)]
     pub events: Vec<String>,
-    #[prost(string, tag = "2")]
+    #[raw(raw = String, kind(string))]
     pub order_by: String,
-    #[prost(uint32, tag = "4")]
+    #[raw(raw = u32, kind(uint32))]
     pub page: u32,
-    #[prost(uint32, tag = "5")]
+    #[raw(raw = u32, kind(uint32))]
     pub limit: u32,
 }
 
@@ -142,8 +133,6 @@ impl Query for QueryGetTxsEventRequest {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        self.encode_vec().expect(IBC_ENCODE_UNWRAP)
+        self.encode_vec()
     }
 }
-
-impl Protobuf<QueryGetTxsEventRequest> for QueryGetTxsEventRequest {}

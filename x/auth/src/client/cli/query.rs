@@ -4,8 +4,8 @@ use crate::query::{
 };
 use bytes::Bytes;
 use clap::{Args, Subcommand};
+use gears::core::Protobuf;
 use gears::derive::Query;
-use gears::tendermint::types::proto::Protobuf;
 use gears::types::address::AccAddress;
 use gears::types::pagination::request::PaginationRequest;
 use gears::{application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest};
@@ -39,7 +39,7 @@ pub struct AccountsCommand {
 }
 
 #[derive(Clone, PartialEq, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum AuthQuery {
     Account(QueryAccountRequest),
     Accounts(QueryAccountsRequest),
@@ -47,7 +47,7 @@ pub enum AuthQuery {
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
-#[query(kind = "response")]
+#[query(response)]
 #[serde(untagged)]
 pub enum AuthQueryResponse {
     Account(QueryAccountResponse),

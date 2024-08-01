@@ -63,7 +63,7 @@ pub struct SlashingParams {
     pub min_signed_per_window: Decimal256,
     #[serde(serialize_with = "serialize_number_to_string")]
     #[serde(deserialize_with = "deserialize_number_from_string")]
-    pub downtime_jail_duration: i64,
+    pub downtime_jail_duration: i64, //TODO: why isn't this a Duration?
     pub slash_fraction_double_sign: Decimal256,
     pub slash_fraction_downtime: Decimal256,
 }

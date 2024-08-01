@@ -5,9 +5,9 @@ use crate::{
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
-    error::IBC_ENCODE_UNWRAP,
+    core::Protobuf,
     store::database::ext::UnwrapCorrupt,
-    tendermint::types::{proto::Protobuf, time::Timestamp},
+    tendermint::types::time::timestamp::Timestamp,
 };
 use std::ops::Bound;
 
@@ -165,7 +165,7 @@ impl<
         addrs.push(validator.operator_address.clone());
         self.set_unbonding_validators_queue(
             ctx,
-            validator.unbonding_time.clone(),
+            validator.unbonding_time,
             validator.unbonding_height,
             addrs,
         )?;
@@ -180,7 +180,7 @@ impl<
     ) -> Result<Option<Vec<DvPair>>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UNBONDING_QUEUE_KEY);
-        if let Some(bz) = store.get(&time.encode_vec().expect(IBC_ENCODE_UNWRAP))? {
+        if let Some(bz) = store.get(&time.encode_vec())? {
             Ok(serde_json::from_slice(&bz).unwrap_or_default())
         } else {
             Ok(None)
@@ -195,7 +195,7 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(UNBONDING_QUEUE_KEY);
-        let key = time.encode_vec().expect(IBC_ENCODE_UNWRAP);
+        let key = time.encode_vec();
         store.set(
             key,
             serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),
@@ -243,11 +243,6 @@ impl<
         //         (k.to_vec(), v)
         //     })
         //     .collect();
-
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let block_time =
-            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
 
         for (k, v) in &unbonding_val_map {
             let (time, height) =
@@ -501,13 +496,13 @@ impl<
         if new_addrs.is_empty() {
             self.delete_validator_queue_time_slice(
                 ctx,
-                validator.unbonding_time.clone(),
+                validator.unbonding_time,
                 validator.unbonding_height,
             )?;
         } else {
             self.set_unbonding_validators_queue(
                 ctx,
-                validator.unbonding_time.clone(),
+                validator.unbonding_time,
                 validator.unbonding_height,
                 new_addrs,
             )?;

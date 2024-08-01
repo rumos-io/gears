@@ -5,7 +5,6 @@ use prost::Message;
 use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
-use tendermint::types::proto::Protobuf;
 
 use crate::application::handlers::client::TxHandler;
 use crate::commands::client::query::execute_query;
@@ -35,10 +34,7 @@ pub struct ClientTxContext {
 }
 
 impl ClientTxContext {
-    pub fn query<
-        Response: Protobuf<Raw> + std::convert::TryFrom<Raw>,
-        Raw: Message + Default + std::convert::From<Response>,
-    >(
+    pub fn query<Response: TryFrom<Raw>, Raw: Message + Default + std::convert::From<Response>>(
         &self,
         path: String,
         query_bytes: Vec<u8>,

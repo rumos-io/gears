@@ -1,4 +1,4 @@
-use crate::types::{chain_id::ChainId, time::Timestamp};
+use crate::types::{chain_id::ChainId, time::timestamp::Timestamp};
 
 use super::{block::BlockId, consensus::Consensus};
 
@@ -119,7 +119,8 @@ impl TryFrom<inner::Header> for Header {
             })?,
             time: time
                 .ok_or_else(|| Self::Error::InvalidData("time is missing".into()))?
-                .into(),
+                .try_into()
+                .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             last_block_id: last_block_id
                 .ok_or_else(|| Self::Error::InvalidData("last_block_id is missing".into()))?
                 .into(),

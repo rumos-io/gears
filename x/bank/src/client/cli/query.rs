@@ -6,9 +6,9 @@ use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
     cli::pagination::CliPaginationRequest,
+    core::Protobuf,
     derive::Query,
     ext::FallibleMapExt,
-    tendermint::types::proto::Protobuf,
     types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 use serde::{Deserialize, Serialize};
@@ -105,7 +105,7 @@ impl QueryHandler for BankQueryHandler {
 }
 
 #[derive(Clone, Debug, PartialEq, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum BankQuery {
     Balances(QueryAllBalancesRequest),
     DenomMetadata(QueryDenomsMetadataRequest),

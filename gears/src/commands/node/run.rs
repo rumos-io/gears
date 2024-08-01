@@ -21,6 +21,7 @@ use tracing::{error, info};
 pub struct RunCommand {
     pub home: PathBuf,
     pub address: Option<SocketAddr>,
+    pub grpc_listen_addr: Option<SocketAddr>,
     pub rest_listen_addr: Option<SocketAddr>,
     pub read_buf_size: usize,
     pub log_level: LogLevel,
@@ -98,6 +99,7 @@ pub fn run<
         home,
         address,
         rest_listen_addr,
+        grpc_listen_addr,
         read_buf_size,
         log_level,
         min_gas_prices,
@@ -137,7 +139,10 @@ pub fn run<
         config.tendermint_rpc_address.try_into()?,
     );
 
-    run_grpc_server(router_builder.build_grpc_router::<BaseApp<DB, PSK, H, AI>>(app.clone()));
+    run_grpc_server(
+        router_builder.build_grpc_router::<BaseApp<DB, PSK, H, AI>>(app.clone()),
+        grpc_listen_addr.unwrap_or(config.grpc_listen_addr),
+    );
 
     let server = ServerBuilder::new(read_buf_size)
         .bind(address.unwrap_or(config.address), ABCI::from(app))?;

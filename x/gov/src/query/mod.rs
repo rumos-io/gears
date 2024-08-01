@@ -1,4 +1,4 @@
-use gears::{baseapp::QueryRequest, derive::Query, tendermint::types::proto::Protobuf};
+use gears::{baseapp::QueryRequest, derive::Query};
 use request::{
     QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
     QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest, QueryTallyResultRequest,
@@ -15,7 +15,7 @@ pub mod request;
 pub mod response;
 
 #[derive(Debug, Clone, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum GovQuery {
     Deposit(QueryDepositRequest),
     Deposits(QueryDepositsRequest),

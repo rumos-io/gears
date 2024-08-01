@@ -1,7 +1,6 @@
 use gears::{
-    core::errors::CoreError,
-    error::IBC_ENCODE_UNWRAP,
-    tendermint::types::{proto::Protobuf, time::Timestamp},
+    core::{errors::CoreError, Protobuf},
+    tendermint::types::time::timestamp::Timestamp,
     types::address::ConsAddress,
 };
 use prost::Message;
@@ -29,7 +28,7 @@ impl From<ValidatorSigningInfo> for ValidatorSigningInfoRaw {
             address: src.address.as_ref().to_vec(),
             start_height: src.start_height,
             index_offset: src.index_offset,
-            jailed_until: src.jailed_until.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            jailed_until: src.jailed_until.encode_vec(),
             tombstoned: src.tombstoned,
             missed_blocks_counter: src.missed_blocks_counter,
         }
@@ -88,10 +87,7 @@ impl From<SignerInfo> for SignerInfoRaw {
     fn from(src: SignerInfo) -> Self {
         Self {
             address: src.address.as_ref().to_vec(),
-            validator_signing_info: src
-                .validator_signing_info
-                .encode_vec()
-                .expect(IBC_ENCODE_UNWRAP),
+            validator_signing_info: src.validator_signing_info.encode_vec(),
         }
     }
 }

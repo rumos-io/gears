@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
+use core_types::Protobuf;
 use cosmwasm_std::Uint256;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
-use tendermint::types::proto::Protobuf;
 
 use crate::types::address::AccAddress;
 use crate::types::address::AddressError;

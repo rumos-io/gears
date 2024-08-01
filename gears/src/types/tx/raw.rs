@@ -1,8 +1,7 @@
-use core_types::errors::CoreError;
+use core_types::{errors::CoreError, Protobuf};
 use prost::{bytes::Bytes, Message as ProstMessage};
 
 use serde::{Deserialize, Serialize};
-use tendermint::types::proto::Protobuf;
 
 use super::{Tx, TxMessage};
 

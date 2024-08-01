@@ -3,7 +3,7 @@ use database::Database;
 use kv_store::types::kv::immutable::KVStore;
 use kv_store::types::{kv::mutable::KVStoreMut, multi::MultiBank};
 use kv_store::{ApplicationStore, StoreKey};
-use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
+use tendermint::types::{chain_id::ChainId, proto::event::Event, time::timestamp::Timestamp};
 
 use crate::types::store::kv::mutable::StoreMut;
 use crate::types::store::kv::Store;
@@ -86,7 +86,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_
     }
 
     fn get_time(&self) -> Timestamp {
-        self.time.clone()
+        self.time
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {

@@ -1,14 +1,13 @@
 use std::{
     collections::{HashMap, HashSet},
     str::FromStr,
-    time::Duration,
 };
 
 use gears::{
     application::keepers::params::ParamsKeeper,
-    core::errors::CoreError,
+    core::{errors::CoreError, Protobuf},
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
-    tendermint::types::proto::Protobuf,
+    tendermint::types::time::duration::Duration,
     types::{
         base::{
             coin::UnsignedCoin,
@@ -25,7 +24,7 @@ const KEY_DEPOSIT_PARAMS: &str = "depositparams";
 const KEY_VOTING_PARAMS: &str = "votingparams";
 const KEY_TALLY_PARAMS: &str = "tallyparams";
 
-const DEFAULT_PERIOD: Duration = Duration::from_secs(172800); // 2 days
+const DEFAULT_PERIOD: Duration = Duration::new_from_secs(172800); // 2 days
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DepositParams {
@@ -179,7 +178,12 @@ impl TryFrom<inner::DepositParams> for DepositParams {
                     "DepositParams: field `max_deposit_period`".to_owned(),
                 ))?;
 
-                Duration::new(duration.seconds as u64, duration.nanos as u32) // TODO:NOW
+                Duration::try_new(duration.seconds, duration.nanos).map_err(|e| {
+                    CoreError::MissingField(format!(
+                        "DepositParams: field `max_deposit_period`: {}",
+                        e,
+                    ))
+                })?
             },
         })
     }
@@ -195,9 +199,9 @@ impl From<DepositParams> for inner::DepositParams {
         Self {
             min_deposit: min_deposit.into_iter().map(|e| e.into()).collect(),
             max_deposit_period: Some(inner::Duration {
-                seconds: max_deposit_period.as_secs() as i64,
-                nanos: max_deposit_period.subsec_nanos() as i32,
-            }), // TODO:NOW
+                seconds: max_deposit_period.duration_seconds().into(),
+                nanos: max_deposit_period.nanoseconds().into(),
+            }),
         }
     }
 }
@@ -242,7 +246,7 @@ impl TryFrom<inner::VotingParams> for VotingParams {
                     "VotingParams: field `voting_period`".to_owned(),
                 ))?;
 
-                Duration::new(duration.seconds as u64, duration.nanos as u32) // TODO:NOW
+                Duration::try_new(duration.seconds, duration.nanos).unwrap() // TODO:NOW
             },
         })
     }
@@ -252,9 +256,9 @@ impl From<VotingParams> for inner::VotingParams {
     fn from(VotingParams { voting_period }: VotingParams) -> Self {
         Self {
             voting_period: Some(inner::Duration {
-                seconds: voting_period.as_secs() as i64,
-                nanos: voting_period.subsec_nanos() as i32,
-            }), // TODO:NOW
+                seconds: voting_period.duration_seconds().into(),
+                nanos: voting_period.nanoseconds().into(),
+            }),
         }
     }
 }

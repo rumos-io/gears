@@ -1,10 +1,10 @@
 use super::TxMessage;
 use core_types::any::google::Any;
 use core_types::errors::CoreError;
+use core_types::Protobuf;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
-use tendermint::types::proto::Protobuf;
 use vec1::Vec1;
 
 mod inner {

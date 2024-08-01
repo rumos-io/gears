@@ -6,5 +6,3 @@ pub mod header;
 pub mod info;
 pub mod params;
 pub mod validator;
-
-pub use tendermint_proto::Protobuf;

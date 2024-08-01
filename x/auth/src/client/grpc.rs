@@ -75,7 +75,7 @@ where
         request: Request<AuthQueryParamsRequest>,
     ) -> Result<Response<AuthQueryParamsResponse>, Status> {
         info!("Received a gRPC request auth::params");
-        let req = AuthNodeQueryRequest::Params(request.into_inner().into());
+        let req = AuthNodeQueryRequest::Params(request.into_inner().try_into()?);
         let response = self.app.typed_query(req)?;
         let response: AuthNodeQueryResponse = response.try_into()?;
         let AuthNodeQueryResponse::Params(response) = response else {

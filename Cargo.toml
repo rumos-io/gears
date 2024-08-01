@@ -15,6 +15,7 @@ members = [
   # macros
   "macros/tx-derive",
   "macros/query-derive",
+  "macros/protobuf-derive",
 
   # GAIA
   "gaia-rs",

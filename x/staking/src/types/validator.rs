@@ -10,7 +10,7 @@ use gears::{
             crypto::PublicKey,
             validator::{ValidatorUpdate, VotingPower},
         },
-        time::Timestamp,
+        time::timestamp::Timestamp,
     },
     types::{
         address::{ConsAddress, ValAddress},
@@ -61,6 +61,20 @@ pub struct Validator {
     pub commission: Commission,
     pub min_self_delegation: Uint256,
     pub status: BondStatus,
+}
+
+impl TryFrom<Vec<u8>> for Validator {
+    type Error = CoreError;
+
+    fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
+        Validator::decode_vec(&raw).map_err(|e| CoreError::DecodeGeneral(e.to_string()))
+    }
+}
+
+impl From<Validator> for Vec<u8> {
+    fn from(value: Validator) -> Self {
+        value.encode_vec()
+    }
 }
 
 impl StakingValidator for Validator {
@@ -115,17 +129,11 @@ impl Validator {
             jailed: false,
             tokens: Uint256::zero(),
             unbonding_height: 0,
-            unbonding_time: Timestamp {
-                seconds: 0,
-                nanos: 0,
-            },
+            unbonding_time: Timestamp::UNIX_EPOCH,
             commission: Commission::new(
                 CommissionRates::new(Decimal256::zero(), Decimal256::zero(), Decimal256::zero())
                     .expect("creation of hardcoded commission rates won't fail"),
-                Timestamp {
-                    seconds: 0,
-                    nanos: 0,
-                },
+                Timestamp::UNIX_EPOCH,
             ),
             min_self_delegation: Uint256::one(),
             status: BondStatus::Unbonded,

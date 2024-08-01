@@ -16,6 +16,7 @@ kv_store = { path = "../kv_store" }
 database = { path = "../database" }
 tx-derive = { path = "../macros/tx-derive" }
 query-derive = { path = "../macros/query-derive" }
+protobuf-derive ={ path = "../macros/protobuf-derive"}
 
 #newtypes
 vec1 = { workspace = true, features = [ "serde" ] }
@@ -84,6 +85,7 @@ assert_fs = { workspace = true, optional = true }
 dircpy = { workspace = true, optional = true }
 
 [dev-dependencies]
+trybuild = "1.0.99"
 
 [features]
 default = ["cli",  "xmods"] 

@@ -3,7 +3,6 @@ use crate::{
     baseapp::{Query, QueryResponse},
     cli::query_txs::{TxQueryCli, TxQueryType, TxsQueryCli},
     core::{errors::CoreError, Protobuf},
-    error::IBC_ENCODE_UNWRAP,
     tendermint::{
         informal::Hash,
         rpc::{
@@ -13,7 +12,7 @@ use crate::{
                 tx::{search::Response as SearchResponse, Response as CosmosTxResponse},
             },
         },
-        types::proto::{block::Height, Protobuf as _},
+        types::proto::block::Height,
     },
     types::{
         response::{tx::TxResponse, tx_event::SearchTxsResult},
@@ -59,8 +58,8 @@ pub enum TxQueryResponse<M: TxMessage> {
 impl<M: TxMessage> QueryResponse for TxQueryResponse<M> {
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            TxQueryResponse::Tx(msg) => msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
-            TxQueryResponse::Txs(msg) => msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            TxQueryResponse::Tx(msg) => msg.encode_vec(),
+            TxQueryResponse::Txs(msg) => msg.encode_vec(),
         }
     }
 }
@@ -103,7 +102,7 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
                     ));
                 } else {
                     hash.split(',')
-                        .map(|sig| format!("tx.signature={sig}"))
+                        .map(|sig| format!("tx.signature='{sig}'"))
                         .collect()
                 };
                 Self::QueryRequest::Txs(QueryGetTxsEventRequest {
@@ -123,7 +122,7 @@ impl<M: TxMessage> QueryHandler for TxQueryHandler<M> {
                         "Account sequence is not set. Please, provide correct value."
                     ));
                 } else {
-                    vec![format!("tx.acc_seq={hash}")]
+                    vec![format!("tx.acc_seq='{hash}'")]
                 };
                 Self::QueryRequest::Txs(QueryGetTxsEventRequest {
                     events,
@@ -206,14 +205,16 @@ impl<'a> StrEventsHandler<'a> {
 
         let mut tm_events = Vec::with_capacity(self.events_str.matches('&').count() + 1);
         for event in events {
-            if !event.contains('=') || event.matches('=').count() > 1 {
+            if !event.contains('=') {
                 return Err(anyhow!("invalid event; event {event} should be of the format: {{eventType}}.{{eventAttribute}}={{value}}"));
             }
-            let tokens = event.split('=').collect::<Vec<_>>();
-            if tokens[0] == "tx.height" {
-                tm_events.push(format!("{}={}", tokens[0], tokens[1]));
+            let tokens = event
+                .split_once('=')
+                .expect("the condition is checked above");
+            if tokens.0 == "tx.height" {
+                tm_events.push(format!("{}={}", tokens.0, tokens.1));
             } else {
-                tm_events.push(format!("{}='{}'", tokens[0], tokens[1]));
+                tm_events.push(format!("{}='{}'", tokens.0, tokens.1));
             }
         }
         Ok(tm_events)
@@ -291,11 +292,7 @@ fn query_txs_by_event<M: TxMessage>(
     req: &QueryGetTxsEventRequest,
 ) -> anyhow::Result<Vec<u8>> {
     let query_str_events = req.events.join(" AND ");
-    let prefix = "tm.event='Tx' AND ";
-    let mut query = String::with_capacity(prefix.len() + query_str_events.len());
-    query.push_str(prefix);
-    query.push_str(&query_str_events);
-    let query = crate::tendermint::rpc::query::Query::from_str(&query)?;
+    let query = crate::tendermint::rpc::query::Query::from_str(&query_str_events)?;
     let res: anyhow::Result<(SearchResponse, HashMap<Height, BlockResponse>)> =
         runtime.block_on(async {
             let txs = client

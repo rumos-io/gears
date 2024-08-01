@@ -6,8 +6,8 @@ use crate::{
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
+    core::Protobuf,
     derive::Query,
-    tendermint::types::proto::Protobuf as _,
     types::address::{AccAddress, ValAddress},
 };
 use serde::{Deserialize, Serialize};
@@ -137,35 +137,13 @@ impl QueryHandler for StakingQueryHandler {
 }
 
 #[derive(Clone, PartialEq, Query)]
-#[query(kind = "request")]
+#[query(request)]
 pub enum StakingQuery {
     Validator(QueryValidatorRequest),
     Delegation(QueryDelegationRequest),
     Redelegation(QueryRedelegationRequest),
     UnbondingDelegation(QueryDelegationRequest),
 }
-
-// impl Query for StakingQuery {
-//     fn query_url(&self) -> &'static str {
-//         match self {
-//             StakingQuery::Validator(_) => ,
-//             StakingQuery::Delegation(_) => ,
-//             StakingQuery::Redelegation(_) => ,
-//             StakingQuery::UnbondingDelegation(_) => {
-//
-//             }
-//         }
-//     }
-
-//     fn into_bytes(self) -> Vec<u8> {
-//         match self {
-//             StakingQuery::Validator(var) => var.encode_vec(),
-//             StakingQuery::Delegation(var) => var.encode_vec(),
-//             StakingQuery::Redelegation(var) => var.encode_vec(),
-//             StakingQuery::UnbondingDelegation(var) => var.encode_vec(),
-//         }
-//     }
-// }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]

@@ -1,5 +1,5 @@
 use crate::{commands::client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
-use clap::{ArgAction, Args, Subcommand, ValueHint};
+use clap::{ArgAction, Args, ValueHint};
 use tendermint::types::proto::block::Height;
 
 #[derive(Debug, Clone, strum::EnumString, strum::Display)]

@@ -1,7 +1,6 @@
 use bytes::Bytes;
-use core_types::any::google::Any;
+use core_types::{any::google::Any, Protobuf};
 use serde::{Deserialize, Serialize};
-use tendermint::types::proto::Protobuf;
 
 use crate::types::{
     address::AccAddress,
@@ -71,7 +70,7 @@ impl From<MsgSend> for Any {
     fn from(msg: MsgSend) -> Self {
         Any {
             type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-            value: msg.encode_vec().expect("msg"), // TODO
+            value: msg.encode_vec(),
         }
     }
 }

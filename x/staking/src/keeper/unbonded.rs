@@ -112,28 +112,22 @@ impl<
             self.bonded_tokens_to_not_bonded(ctx, return_amount)?;
         }
 
-        let block_time = ctx.get_time();
         let params = self.staking_params_keeper.try_get(ctx)?;
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let completion_time =
-            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
-        let completion_time =
-            completion_time + chrono::TimeDelta::nanoseconds(params.unbonding_time());
-        let completion_time = Timestamp {
-            seconds: completion_time.timestamp(),
-            nanos: completion_time.timestamp_subsec_nanos() as i32,
-        };
+        let completion_time = ctx
+            .get_time()
+            .checked_add(Duration::new_from_nanos(params.unbonding_time()))
+            .unwrap();
+
         let entry = UnbondingDelegationEntry {
             creation_height: ctx.height(),
-            completion_time: completion_time.clone(),
+            completion_time,
             initial_balance: return_amount,
             balance: return_amount,
         };
         let unbonding_delegation =
             self.set_unbonding_delegation_entry(ctx, del_addr, val_addr, entry)?;
 
-        self.insert_ubd_queue(ctx, &unbonding_delegation, completion_time.clone())?;
+        self.insert_ubd_queue(ctx, &unbonding_delegation, completion_time)?;
         Ok(completion_time)
     }
 

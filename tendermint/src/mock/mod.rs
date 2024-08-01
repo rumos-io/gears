@@ -15,7 +15,7 @@ use crate::{
             begin_block::RequestBeginBlock, deliver_tx::RequestDeliverTx,
             end_block::RequestEndBlock, init_chain::RequestInitChain,
         },
-        time::Timestamp,
+        time::timestamp::Timestamp,
     },
 };
 
@@ -114,7 +114,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             version: Consensus { block: 11, app: 10 },
             chain_id: self.chain_id.clone(),
             height: self.height,
-            time: self.time.clone(),
+            time: self.time,
             last_block_id: self.last_block_id.clone(),
             //TODO: need to calculate this
             last_commit_hash: vec![

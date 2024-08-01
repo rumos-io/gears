@@ -1,10 +1,9 @@
 use std::{
     collections::HashMap,
     marker::PhantomData,
-    ops::{Add, Div, Mul},
+    ops::{Div, Mul},
 };
 
-use chrono::DateTime;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -457,23 +456,20 @@ impl<
         }: MsgSubmitProposal,
     ) -> Result<u64, GovKeeperError> {
         let proposal_id = proposal_id_get(ctx, &self.store_key)?;
-        let submit_time = ctx.header().time.clone();
+        let submit_time = ctx.header().time;
         let deposit_period = self
             .gov_params_keeper
             .try_get(ctx)?
             .deposit
             .max_deposit_period;
 
-        let submit_date =
-            DateTime::from_timestamp(submit_time.seconds, submit_time.nanos as u32).unwrap(); // TODO
-
         let proposal = Proposal {
             proposal_id,
             content,
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
-            submit_time: submit_date,
-            deposit_end_time: submit_date.add(deposit_period), // TODO: consider using checked_add_signed
+            submit_time,
+            deposit_end_time: submit_time.checked_add(deposit_period).unwrap(), // TODO: HANDLE THIS
             total_deposit: initial_deposit,
             voting_start_time: None,
             voting_end_time: None,
@@ -510,13 +506,10 @@ impl<
     pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) -> Vec<Event> {
         let mut events = Vec::new();
 
-        let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
-            .unwrap(); // TODO
-
         {
             let inactive_iter = {
                 let store = ctx.kv_store(&self.store_key);
-                InactiveProposalIterator::new(store.into(), &time)
+                InactiveProposalIterator::new(store.into(), &ctx.header.time)
                     .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
                     .collect::<Vec<_>>()
             };
@@ -549,7 +542,7 @@ impl<
         {
             let active_iter = {
                 let store = ctx.kv_store(&self.store_key).into();
-                ActiveProposalIterator::new(store, &time)
+                ActiveProposalIterator::new(store, &ctx.header.time)
                     .map(|this| this.map(|((_, _), proposal)| proposal))
                     .collect::<Vec<_>>()
             };

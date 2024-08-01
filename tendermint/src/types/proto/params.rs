@@ -1,4 +1,4 @@
-use crate::types::time::Duration;
+use crate::{error::Error, types::time::duration::Duration};
 
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
 pub struct BlockParams {
@@ -61,20 +61,25 @@ impl From<EvidenceParams> for inner::EvidenceParams {
     }
 }
 
-impl From<inner::EvidenceParams> for EvidenceParams {
-    fn from(
+impl TryFrom<inner::EvidenceParams> for EvidenceParams {
+    fn try_from(
         inner::EvidenceParams {
             max_age_num_blocks,
             max_age_duration,
             max_bytes,
         }: inner::EvidenceParams,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
             max_age_num_blocks,
-            max_age_duration: max_age_duration.map(|e| e.into()),
+            max_age_duration: max_age_duration
+                .map(|e| e.try_into())
+                .transpose()
+                .map_err(|e| Error::InvalidData(format!("{e}")))?,
             max_bytes,
-        }
+        })
     }
+
+    type Error = Error;
 }
 
 #[derive(Clone, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
