@@ -4,7 +4,12 @@ use crate::{
 };
 use clap::{Args, Subcommand};
 use gears::{
-    application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest, core::Protobuf, derive::Query, tendermint::types::proto::crypto::PublicKey, types::{address::ConsAddress, pagination::request::PaginationRequest}
+    application::handlers::client::QueryHandler,
+    cli::pagination::CliPaginationRequest,
+    core::Protobuf,
+    derive::Query,
+    tendermint::types::proto::crypto::PublicKey,
+    types::{address::ConsAddress, pagination::request::PaginationRequest},
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;

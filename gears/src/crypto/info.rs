@@ -1,6 +1,7 @@
 use core_types::{
     signing::SignDoc,
-    tx::mode_info::{ModeInfo, SignMode}, Protobuf,
+    tx::mode_info::{ModeInfo, SignMode},
+    Protobuf,
 };
 use prost::Message;
 use tendermint::types::chain_id::ChainId;
