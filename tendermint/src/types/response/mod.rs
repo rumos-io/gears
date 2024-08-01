@@ -9,6 +9,7 @@ pub mod query;
 pub mod snapshot;
 
 pub(crate) mod inner {
+    pub use tendermint_informal::abci::response::DeliverTx;
     pub use tendermint_proto::abci::ResponseApplySnapshotChunk;
     pub use tendermint_proto::abci::ResponseBeginBlock;
     pub use tendermint_proto::abci::ResponseCheckTx;

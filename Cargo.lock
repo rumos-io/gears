@@ -328,10 +328,13 @@ dependencies = [
  "rand",
  "serde",
  "serde-aux",
+ "serde_json",
  "sha2 0.10.8",
  "strum",
+ "tokio",
  "tonic",
  "tracing",
+ "url",
 ]
 
 [[package]]

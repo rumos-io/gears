@@ -1,7 +1,6 @@
+use crate::{commands::client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
 use clap::{ArgAction, Subcommand, ValueHint};
 use tendermint::types::proto::block::Height;
-
-use crate::{commands::client::query::QueryCommand, config::DEFAULT_TENDERMINT_RPC_ADDRESS};
 
 /// Querying subcommands
 #[derive(Debug, Clone, ::clap::Args)]
@@ -31,7 +30,7 @@ where
             command,
         } = value;
 
-        Ok(Self {
+        Ok(QueryCommand {
             node,
             height,
             inner: command.try_into()?,
