@@ -1,5 +1,9 @@
 use database::{prefix::PrefixDB, Database};
-use kv::{bank::multi::ApplicationMultiBank, store::kv::{immutable::KVStore, mutable::KVStoreMut}, StoreKey};
+use kv::{
+    bank::multi::ApplicationMultiBank,
+    store::kv::{immutable::KVStore, mutable::KVStoreMut},
+    StoreKey,
+};
 
 use crate::types::store::kv::{mutable::StoreMut, Store};
 use tendermint::types::{

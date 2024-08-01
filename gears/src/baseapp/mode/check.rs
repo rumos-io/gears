@@ -49,7 +49,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
         handler: &AH,
         tx_with_raw: &TxWithRaw<AH::Message>,
     ) -> Result<(), RunTxError> {
-        let result =  handler
+        let result = handler
             .run_ante_checks(ctx, tx_with_raw)
             .inspect_err(|_| ctx.multi_store_mut().clear_cache());
 

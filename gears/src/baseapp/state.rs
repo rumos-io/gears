@@ -38,8 +38,6 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         }
     }
 
-    
-
     pub fn append_block_cache(&mut self, other: &mut ApplicationMultiBank<DB, AH::StoreKey>) {
         self.check_mode.multi_store.append_block_cache(other);
         self.deliver_mode.multi_store.append_block_cache(other);

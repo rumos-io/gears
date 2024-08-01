@@ -92,10 +92,8 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
         hash
     }
 
-    pub fn clear_cache(&mut self)
-    {
-        for store in self.backend.0.values_mut()
-        {
+    pub fn clear_cache(&mut self) {
+        for store in self.backend.0.values_mut() {
             store.cache_clear();
         }
     }
