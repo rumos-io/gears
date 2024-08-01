@@ -1,12 +1,10 @@
 use bytes::Bytes;
 use gears::{
-    core::{any::google::Any, errors::CoreError},
-    error::IBC_ENCODE_UNWRAP,
+    core::{any::google::Any, errors::CoreError, Protobuf},
     signing::{
         handler::MetadataGetter,
         renderer::value_renderer::{RenderError, ValueRenderer},
     },
-    tendermint::types::proto::Protobuf,
     types::{address::AccAddress, msg::send::MsgSend, rendering::screen::Screen, tx::TxMessage},
 };
 use serde::Serialize;
@@ -45,7 +43,7 @@ impl From<Message> for Any {
         match msg {
             Message::Send(msg) => Any {
                 type_url: "/cosmos.bank.v1beta1.MsgSend".to_string(),
-                value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+                value: msg.encode_vec(),
             },
         }
     }

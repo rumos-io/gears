@@ -6,14 +6,14 @@ use crate::{
 };
 use gears::{
     application::handlers::node::{ModuleInfo, TxError},
-    baseapp::errors::QueryError,
-    baseapp::QueryResponse,
+    baseapp::{errors::QueryError, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
+    core::Protobuf,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
-        proto::{validator::ValidatorUpdate, Protobuf as _},
+        proto::validator::ValidatorUpdate,
         request::{
             begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery,
         },

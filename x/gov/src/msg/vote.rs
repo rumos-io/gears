@@ -1,8 +1,6 @@
 use bytes::Bytes;
 use gears::{
-    core::errors::CoreError,
-    error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
+    core::{errors::CoreError, Protobuf},
     types::{
         address::AccAddress,
         decimal256::{CosmosDecimalProtoString, Decimal256},
@@ -173,7 +171,7 @@ impl From<Vote> for Any {
     fn from(msg: Vote) -> Self {
         Any {
             type_url: Vote::TYPE_URL.to_string(),
-            value: <Vote as Protobuf<inner::Vote>>::encode_vec(&msg).expect(IBC_ENCODE_UNWRAP),
+            value: <Vote as Protobuf<inner::Vote>>::encode_vec(&msg),
         }
     }
 }

@@ -483,11 +483,6 @@ impl TryFrom<QueryWithdrawAllRewardsResponseRaw> for QueryWithdrawAllRewardsResp
 }
 
 impl Protobuf<QueryWithdrawAllRewardsResponseRaw> for QueryWithdrawAllRewardsResponse {}
-// TODO: For compatibility with the version in method. Use single Protobuf for module
-impl gears::tendermint::types::proto::Protobuf<QueryWithdrawAllRewardsResponseRaw>
-    for QueryWithdrawAllRewardsResponse
-{
-}
 
 #[derive(Clone, Serialize, Message)]
 pub struct QueryCommunityPoolResponseRaw {

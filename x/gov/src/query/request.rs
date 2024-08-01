@@ -1,9 +1,9 @@
 use anyhow::anyhow;
 use gears::{
     core::errors::CoreError,
+    core::Protobuf,
     derive::{Protobuf, Query},
     error::ProtobufError,
-    tendermint::types::proto::Protobuf,
     types::{address::AccAddress, pagination::request::PaginationRequest},
 };
 

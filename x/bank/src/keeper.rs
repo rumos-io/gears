@@ -5,7 +5,7 @@ use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
 use gears::context::{QueryableContext, TransactionalContext};
-use gears::error::IBC_ENCODE_UNWRAP;
+use gears::core::Protobuf;
 use gears::ext::{IteratorPaginate, Pagination, PaginationResult};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::ext::UnwrapCorrupt;
@@ -13,7 +13,6 @@ use gears::store::database::prefix::PrefixDB;
 use gears::store::database::Database;
 use gears::store::StoreKey;
 use gears::tendermint::types::proto::event::{Event, EventAttribute};
-use gears::tendermint::types::proto::Protobuf;
 use gears::types::address::AccAddress;
 use gears::types::base::coin::UnsignedCoin;
 use gears::types::base::coins::UnsignedCoins;
@@ -291,10 +290,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
                 ctx.kv_store_mut(&self.store_key).prefix_store_mut(prefix);
 
             for coin in balance.coins {
-                denom_balance_store.set(
-                    coin.denom.to_string().into_bytes(),
-                    coin.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-                );
+                denom_balance_store.set(coin.denom.to_string().into_bytes(), coin.encode_vec());
                 let zero = Uint256::zero();
                 let current_balance = total_supply.get(&coin.denom).unwrap_or(&zero);
                 total_supply.insert(coin.denom, coin.amount + current_balance);
@@ -379,7 +375,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         } else {
             account_store.set(
                 amount.denom.to_string().as_bytes().to_vec(),
-                amount.encode_vec().expect(IBC_ENCODE_UNWRAP),
+                amount.encode_vec(),
             )
         }
     }
@@ -556,7 +552,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
             from_account_store.set(
                 send_coin.denom.clone().to_string().into_bytes(),
-                from_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                from_balance.encode_vec(),
             )?;
 
             //TODO: if balance == 0 then denom should be removed from store
@@ -578,7 +574,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
             to_account_store.set(
                 send_coin.denom.to_string().into_bytes(),
-                to_balance.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+                to_balance.encode_vec(),
             )?;
 
             events.push(Event::new(
@@ -665,7 +661,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
 
         denom_metadata_store.set(
             denom_metadata.base.clone().into_bytes(),
-            denom_metadata.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+            denom_metadata.encode_vec(),
         );
     }
 

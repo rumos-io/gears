@@ -1,12 +1,11 @@
 use bytes::Bytes;
-use core_types::any::google::Any;
+use core_types::{any::google::Any, Protobuf};
 use keyring::error::DecodeError;
 use prost::Message as ProstMessage;
 pub use secp256k1::PublicKey;
 use secp256k1::{ecdsa::Signature, hashes::sha256, Message, Secp256k1};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
-use tendermint::types::proto::Protobuf;
 
 use super::public::SigningError;
 

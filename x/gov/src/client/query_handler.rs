@@ -1,6 +1,5 @@
 use bytes::Bytes;
-use gears::application::handlers::client::QueryHandler;
-use gears::tendermint::types::proto::Protobuf;
+use gears::{application::handlers::client::QueryHandler, core::Protobuf};
 
 use crate::query::{
     request::{

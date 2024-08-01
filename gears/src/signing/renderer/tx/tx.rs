@@ -1,5 +1,4 @@
 use crate::crypto::public::PublicKey;
-use crate::error::IBC_ENCODE_UNWRAP;
 use crate::signing::handler::MetadataGetter;
 use crate::signing::{
     hasher::hash_get,
@@ -16,8 +15,8 @@ use crate::types::{
     tx::{data::TxData, signer::SignerData, TxMessage},
 };
 
+use core_types::Protobuf;
 use tendermint::types::chain_id::ChainId;
-use tendermint::types::proto::Protobuf;
 
 /// Envelope is an internal data structure used to generate the tx envelope
 /// screens. Used in the same way as the Cosmos SDK Envelope type:
@@ -46,16 +45,8 @@ pub struct Envelope<M> {
 
 impl<M: TxMessage> Envelope<M> {
     pub fn new(signer_data: SignerData, tx_data: TxData<M>) -> Self {
-        let body_bytes = tx_data
-            .body
-            .to_owned()
-            .encode_vec()
-            .expect(IBC_ENCODE_UNWRAP); // TODO:IBC
-        let auth_info_bytes = tx_data
-            .auth_info
-            .to_owned()
-            .encode_vec()
-            .expect(IBC_ENCODE_UNWRAP); // TODO:IBC
+        let body_bytes = tx_data.body.to_owned().encode_vec();
+        let auth_info_bytes = tx_data.auth_info.to_owned().encode_vec();
 
         let (tip, tipper) = match tx_data.auth_info.tip {
             Some(Tip { amount, tipper }) => (amount, Some(tipper)),

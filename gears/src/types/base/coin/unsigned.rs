@@ -1,8 +1,7 @@
-use core_types::errors::CoreError;
+use core_types::{errors::CoreError, Protobuf};
 use cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use tendermint::types::proto::Protobuf;
 
 use crate::types::{base::errors::CoinError, denom::Denom, errors::DenomError};
 
@@ -88,7 +87,7 @@ impl TryFrom<Vec<u8>> for UnsignedCoin {
 
 impl From<UnsignedCoin> for Vec<u8> {
     fn from(value: UnsignedCoin) -> Self {
-        value.encode_vec().expect(crate::error::IBC_ENCODE_UNWRAP)
+        value.encode_vec()
     }
 }
 

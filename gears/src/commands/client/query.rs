@@ -1,10 +1,12 @@
+use std::fmt::Display;
+
 use crate::application::handlers::client::QueryHandler;
 use crate::runtime::runtime;
-use anyhow::{anyhow, Result};
+use anyhow::anyhow;
 use prost::Message;
 use tendermint::{
     rpc::client::{Client, HttpClient},
-    types::proto::{block::Height, Protobuf},
+    types::proto::block::Height,
 };
 
 #[derive(Debug, Clone, former::Former)]
@@ -36,16 +38,16 @@ where
 
 /// Convenience method for running queries
 pub fn execute_query<
-    Response: Protobuf<Raw> + std::convert::TryFrom<Raw>,
+    Response: std::convert::TryFrom<Raw>,
     Raw: Message + Default + std::convert::From<Response>,
 >(
     path: String,
     query_bytes: Vec<u8>,
     node: &str,
     height: Option<Height>,
-) -> Result<Response>
+) -> anyhow::Result<Response>
 where
-    <Response as TryFrom<Raw>>::Error: std::fmt::Display,
+    <Response as TryFrom<Raw>>::Error: Display,
 {
     let client = HttpClient::new(node)?;
 
@@ -55,5 +57,5 @@ where
         return Err(anyhow!("node returned an error: {}", res.log));
     }
 
-    Response::decode(&*res.value).map_err(|e| e.into())
+    Response::try_from(Raw::decode(&*res.value)?).map_err(|e| anyhow!(e.to_string()))
 }

@@ -8,13 +8,13 @@ use gears::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         TransactionalContext,
     },
+    core::Protobuf,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
         proto::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
-            Protobuf,
         },
         request::{end_block::RequestEndBlock, query::RequestQuery},
     },
