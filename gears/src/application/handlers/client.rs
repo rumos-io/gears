@@ -8,7 +8,6 @@ use crate::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
     },
-    error::IBC_ENCODE_UNWRAP,
     runtime::runtime,
     signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
@@ -20,10 +19,8 @@ use crate::{
     },
 };
 
-use tendermint::types::proto::Protobuf as TMProtobuf;
-
 use anyhow::anyhow;
-use core_types::tx::mode_info::SignMode;
+use core_types::{tx::mode_info::SignMode, Protobuf};
 use serde::Serialize;
 
 use tendermint::{
@@ -98,7 +95,7 @@ pub trait TxHandler {
                 chain_id,
                 fee,
                 tip,
-                tx_body.encode_vec().expect(IBC_ENCODE_UNWRAP),
+                tx_body.encode_vec(),
             )
             .map_err(|e| anyhow!(e.to_string()))?,
             SignMode::Textual => create_signed_transaction_textual(
@@ -183,7 +180,7 @@ pub(crate) fn get_account_latest(
 
     execute_query::<QueryAccountResponse, inner::QueryAccountResponse>(
         "/cosmos.auth.v1beta1.Query/Account".into(),
-        query.encode_vec()?,
+        query.encode_vec(),
         node,
         None,
     )
@@ -198,7 +195,7 @@ pub(crate) fn get_denom_metadata(
 
     execute_query::<QueryDenomMetadataResponse, RawQueryDenomMetadataResponse>(
         "/cosmos.bank.v1beta1.Query/DenomMetadata".into(),
-        query.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
+        query.encode_vec(),
         node,
         None,
     )

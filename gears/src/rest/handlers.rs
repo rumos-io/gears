@@ -7,6 +7,7 @@ use crate::types::tx::{Tx, TxMessage};
 use axum::extract::{Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
+use core_types::Protobuf;
 use serde::{Deserialize, Serialize};
 use tendermint::informal::node::Info;
 use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
@@ -14,7 +15,6 @@ use tendermint::rpc::query::Query;
 use tendermint::rpc::response::tx::search::Response;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
-use tendermint::types::proto::Protobuf;
 
 use super::{parse_pagination, Pagination};
 
