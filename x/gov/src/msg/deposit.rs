@@ -1,10 +1,9 @@
 use bytes::Bytes;
+use gears::core::Protobuf;
 use gears::types::address::AccAddress;
 use gears::types::base::coins::UnsignedCoins;
 use gears::{
     core::{any::google::Any, errors::CoreError},
-    error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
     types::{base::errors::CoinError, tx::TxMessage},
 };
 use serde::{Deserialize, Serialize};
@@ -116,7 +115,7 @@ impl From<Deposit> for Any {
     fn from(msg: Deposit) -> Self {
         Any {
             type_url: Deposit::TYPE_URL.to_string(),
-            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            value: msg.encode_vec(),
         }
     }
 }

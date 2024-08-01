@@ -3,7 +3,6 @@ use crate::{
     baseapp::{Query, QueryResponse},
     cli::query_txs::{TxQueryCli, TxQueryType, TxsQueryCli},
     core::{errors::CoreError, Protobuf},
-    error::IBC_ENCODE_UNWRAP,
     tendermint::{
         informal::Hash,
         rpc::{
@@ -13,7 +12,7 @@ use crate::{
                 tx::{search::Response as SearchResponse, Response as CosmosTxResponse},
             },
         },
-        types::proto::{block::Height, Protobuf as _},
+        types::proto::block::Height,
     },
     types::{
         response::{tx::TxResponse, tx_event::SearchTxsResult},
@@ -59,8 +58,8 @@ pub enum TxQueryResponse<M: TxMessage> {
 impl<M: TxMessage> QueryResponse for TxQueryResponse<M> {
     fn into_bytes(self) -> Vec<u8> {
         match self {
-            TxQueryResponse::Tx(msg) => msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
-            TxQueryResponse::Txs(msg) => msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            TxQueryResponse::Tx(msg) => msg.encode_vec(),
+            TxQueryResponse::Txs(msg) => msg.encode_vec(),
         }
     }
 }

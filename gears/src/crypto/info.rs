@@ -1,9 +1,10 @@
 use core_types::{
     signing::SignDoc,
     tx::mode_info::{ModeInfo, SignMode},
+    Protobuf,
 };
 use prost::Message;
-use tendermint::types::{chain_id::ChainId, proto::Protobuf};
+use tendermint::types::chain_id::ChainId;
 
 use std::{
     error::Error,
@@ -12,7 +13,6 @@ use std::{
 
 use crate::{
     application::handlers::client::MetadataViaRPC,
-    error::IBC_ENCODE_UNWRAP,
     signing::{
         errors::SigningErrors, handler::SignModeHandler, renderer::value_renderer::ValueRenderer,
     },
@@ -39,9 +39,7 @@ pub fn create_signed_transaction_direct<K: SigningKey + GearsPublicKey>(
     tip: Option<Tip>,
     body_bytes: Vec<u8>,
 ) -> Result<TxRaw, K::Error> {
-    let auth_info_bytes = auth_info(&signing_infos, fee, tip, Mode::Direct)
-        .encode_vec()
-        .expect(IBC_ENCODE_UNWRAP);
+    let auth_info_bytes = auth_info(&signing_infos, fee, tip, Mode::Direct).encode_vec();
 
     let mut sign_doc = SignDoc {
         body_bytes: body_bytes.clone(),
@@ -95,9 +93,9 @@ pub fn create_signed_transaction_textual<
     node: url::Url,
     tx_body: TxBody<M>,
 ) -> Result<TxRaw, TextualSigningError<K>> {
-    let body_bytes = tx_body.encode_vec().expect(IBC_ENCODE_UNWRAP);
+    let body_bytes = tx_body.encode_vec();
     let auth_info = auth_info(&signing_infos, fee, tip, Mode::Textual);
-    let auth_info_bytes = auth_info.encode_vec().expect(IBC_ENCODE_UNWRAP);
+    let auth_info_bytes = auth_info.encode_vec();
     let tx_data = TxData {
         body: tx_body,
         auth_info,

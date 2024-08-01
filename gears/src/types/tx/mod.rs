@@ -2,10 +2,9 @@ pub mod data;
 pub mod errors;
 pub mod metadata;
 pub mod signer;
-use core_types::{any::google::Any, errors::CoreError, tx::signature::SignatureData};
+use core_types::{any::google::Any, errors::CoreError, tx::signature::SignatureData, Protobuf};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use tendermint::types::proto::Protobuf;
 use vec1::{vec1, Vec1};
 
 use crate::crypto::public::PublicKey;

@@ -1,12 +1,11 @@
 use gears::baseapp::errors::QueryError;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
+use gears::core::Protobuf as _;
 use gears::derive::Query;
-use gears::error::IBC_ENCODE_UNWRAP;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::tendermint::types::proto::Protobuf as _;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::x::module::Module;
 use serde::Serialize;
@@ -74,32 +73,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
             "/cosmos.auth.v1beta1.Query/Account" => {
                 let req = QueryAccountRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_account(ctx, req)
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into())
+                Ok(self.keeper.query_account(ctx, req).encode_vec().into())
             }
             "/cosmos.auth.v1beta1.Query/Accounts" => {
                 let req = QueryAccountsRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_accounts(ctx, req)
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into())
+                Ok(self.keeper.query_accounts(ctx, req).encode_vec().into())
             }
             "/cosmos.auth.v1beta1.Query/Params" => {
                 let req = QueryParamsRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_params(ctx, req)
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into())
+                Ok(self.keeper.query_params(ctx, req).encode_vec().into())
             }
             _ => Err(QueryError::PathNotFound),
         }

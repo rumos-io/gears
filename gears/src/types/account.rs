@@ -1,14 +1,13 @@
 use core_types::errors::CoreError as IbcError;
+use core_types::Protobuf;
 use core_types::{any::google::Any, serializers::serialize_number_to_string};
 use keyring::error::DecodeError;
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
-use tendermint::types::proto::Protobuf;
 
 use crate::crypto::public::PublicKey;
 use crate::crypto::secp256k1::{RawSecp256k1PubKey, Secp256k1PubKey};
-use crate::error::IBC_ENCODE_UNWRAP;
 
 use super::address::AccAddress;
 
@@ -209,11 +208,11 @@ impl From<Account> for Any {
         match account {
             Account::Base(base) => Any {
                 type_url: "/cosmos.auth.v1beta1.BaseAccount".to_string(),
-                value: base.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
+                value: base.encode_vec(),
             },
             Account::Module(module) => Any {
                 type_url: "/cosmos.auth.v1beta1.ModuleAccount".to_string(),
-                value: module.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
+                value: module.encode_vec(),
             },
         }
     }
@@ -223,7 +222,8 @@ impl Protobuf<Any> for Account {}
 
 #[cfg(test)]
 mod tests {
-    use tendermint::types::proto::Protobuf;
+
+    use core_types::Protobuf;
 
     use crate::types::{account::BaseAccount, address::AccAddress};
 
@@ -239,9 +239,6 @@ mod tests {
 
         let exp = "0a2d636f736d6f73317379617679326e706679743974636e63647473647a66376b6e79396c68373737706168757578";
 
-        assert_eq!(
-            exp,
-            data_encoding::HEXLOWER.encode(&account.encode_vec().expect("Encode should be valid"))
-        )
+        assert_eq!(exp, data_encoding::HEXLOWER.encode(&account.encode_vec()))
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     baseapp::Query,
     core::errors::CoreError,
-    error::IBC_ENCODE_UNWRAP,
+    core::Protobuf,
     tendermint::informal::Hash,
     types::{
         response::{
@@ -14,7 +14,6 @@ use crate::{
 use protobuf_derive::Raw;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-use tendermint::types::proto::Protobuf;
 
 mod inner {
     pub use ibc_proto::cosmos::tx::v1beta1::GetTxRequest;
@@ -90,7 +89,7 @@ impl Query for QueryGetTxRequest {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        self.encode_vec().expect(IBC_ENCODE_UNWRAP)
+        self.encode_vec()
     }
 }
 
@@ -134,6 +133,6 @@ impl Query for QueryGetTxsEventRequest {
     }
 
     fn into_bytes(self) -> Vec<u8> {
-        self.encode_vec().expect(IBC_ENCODE_UNWRAP)
+        self.encode_vec()
     }
 }

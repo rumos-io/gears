@@ -1,13 +1,12 @@
 use super::any::AnyTx;
 use crate::{
-    core::{errors::CoreError, Protobuf as CoreProtobuf},
+    core::{errors::CoreError, Protobuf},
     tendermint::{rpc::response::tx::Response, types::proto::event::Event},
     types::tx::{Tx, TxMessage},
 };
 use core_types::any::google::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use tendermint::types::proto::Protobuf;
 
 /// TxResponse defines a structure containing relevant tx data and metadata. The
 /// tags are stringified and the log is JSON decoded.
@@ -121,7 +120,7 @@ impl<M: TxMessage> TryFrom<TxResponseRaw> for TxResponse<M> {
     }
 }
 
-impl<M: TxMessage> CoreProtobuf<TxResponseRaw> for TxResponse<M> {}
+impl<M: TxMessage> Protobuf<TxResponseRaw> for TxResponse<M> {}
 
 // TODO: may be replaced with ibc_proto struct but has some type versions conflicts
 #[derive(Clone, PartialEq, Deserialize, Serialize, Message)]

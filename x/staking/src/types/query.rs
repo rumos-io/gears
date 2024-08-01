@@ -10,7 +10,6 @@ use gears::{
     },
     derive::{Protobuf, Query, Raw},
     store::database::ext::UnwrapCorrupt,
-    tendermint::types::proto::Protobuf as TendermintProtobuf,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
@@ -150,7 +149,7 @@ impl From<RedelegationEntryResponse> for RawRedelegationEntryResponse {
     }
 }
 
-impl TendermintProtobuf<RawRedelegationEntryResponse> for RedelegationEntryResponse {}
+impl Protobuf<RawRedelegationEntryResponse> for RedelegationEntryResponse {}
 
 /// RedelegationResponse is equivalent to a Redelegation except that its entries
 /// contain a balance in addition to shares which is more suitable for client responses.
@@ -188,7 +187,7 @@ impl From<RedelegationResponse> for RawRedelegationResponse {
     }
 }
 
-impl TendermintProtobuf<RawRedelegationResponse> for RedelegationResponse {}
+impl Protobuf<RawRedelegationResponse> for RedelegationResponse {}
 
 /// QueryRedelegationResponse is the response type for the Query/Redelegation RPC method.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Raw, Protobuf)]
@@ -234,7 +233,7 @@ impl From<QueryUnbondingDelegationResponse> for RawQueryUnbondingDelegationRespo
     }
 }
 
-impl TendermintProtobuf<RawQueryUnbondingDelegationResponse> for QueryUnbondingDelegationResponse {}
+impl Protobuf<RawQueryUnbondingDelegationResponse> for QueryUnbondingDelegationResponse {}
 
 /// QueryParamsResponse is the response type for the Query/Params RPC method.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
@@ -287,5 +286,3 @@ impl From<QueryParamsResponse> for QueryParamsResponseRaw {
 }
 
 impl Protobuf<QueryParamsResponseRaw> for QueryParamsResponse {}
-
-impl TendermintProtobuf<QueryParamsResponseRaw> for QueryParamsResponse {}

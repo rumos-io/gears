@@ -1,5 +1,5 @@
+use core_types::Protobuf;
 use serde::{Deserialize, Serialize};
-use tendermint::types::proto::Protobuf;
 
 use crate::types::{
     address::{AccAddress, AddressError},

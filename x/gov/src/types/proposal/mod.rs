@@ -2,9 +2,9 @@ use std::{str::FromStr, sync::OnceLock};
 
 use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
-    core::errors::CoreError,
+    core::{errors::CoreError, Protobuf},
     store::database::Database,
-    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
+    tendermint::types::time::timestamp::Timestamp,
     types::{
         base::coins::UnsignedCoins,
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},

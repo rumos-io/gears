@@ -4,16 +4,13 @@ use crate::{
     QuerySigningInfosResponse,
 };
 use gears::{
-    baseapp::errors::QueryError,
-    baseapp::QueryResponse,
+    baseapp::{errors::QueryError, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
+    core::Protobuf,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::{
-        proto::Protobuf as _,
-        request::{begin_block::RequestBeginBlock, query::RequestQuery},
-    },
+    tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
     types::pagination::response::PaginationResponse,
     x::{keepers::staking::SlashingStakingKeeper, module::Module},
 };
