@@ -456,7 +456,7 @@ impl<
         }: MsgSubmitProposal,
     ) -> Result<u64, GovKeeperError> {
         let proposal_id = proposal_id_get(ctx, &self.store_key)?;
-        let submit_time = ctx.header().time.clone();
+        let submit_time = ctx.header().time;
         let deposit_period = self
             .gov_params_keeper
             .try_get(ctx)?
@@ -468,7 +468,7 @@ impl<
             content,
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
-            submit_time: submit_time.clone(),
+            submit_time,
             deposit_end_time: submit_time.checked_add(deposit_period).unwrap(), // TODO: HANDLE THIS
             total_deposit: initial_deposit,
             voting_start_time: None,

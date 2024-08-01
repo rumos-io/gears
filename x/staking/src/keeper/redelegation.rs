@@ -78,12 +78,12 @@ impl<
                 val_dst_addr: val_dst_addr.clone(),
             },
             height,
-            completion_time.clone(),
+            completion_time,
             return_amount,
             shares_created,
         )?;
 
-        self.insert_redelegation_queue(ctx, &redelegation, completion_time.clone())?;
+        self.insert_redelegation_queue(ctx, &redelegation, completion_time)?;
         Ok(completion_time)
     }
 
@@ -219,7 +219,7 @@ impl<
         let mut balances = vec![];
         let params = self.staking_params_keeper.get(ctx);
         let denom = params.bond_denom();
-        let ctx_time = ctx.header.time.clone();
+        let ctx_time = ctx.header.time;
 
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
