@@ -38,6 +38,8 @@ struct QueryAttr {
     #[darling(flatten, default)]
     pub kind: RequestOrResponse,
     pub url: Option<String>,
+    #[darling(default)]
+    gears: Flag,
 }
 
 /// Generates impl for Query trait and add Protobuf.
@@ -52,7 +54,12 @@ pub fn message_derive(input: TokenStream) -> TokenStream {
 
 fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
     let DeriveInput { ident, data, .. } = &input;
-    let QueryAttr { kind, url } = QueryAttr::from_derive_input(&input)?;
+    let QueryAttr { kind, url, gears } = QueryAttr::from_derive_input(&input)?;
+
+    let crate_prefix = match gears.is_present() {
+        true => quote! { crate },
+        false => quote! { ::gears },
+    };
 
     fn error() -> syn::Result<Kind> {
         Err(syn::Error::new(
@@ -93,13 +100,13 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 };
 
                 let query_trait = quote! {
-                    impl  ::gears::baseapp::Query for #ident {
+                    impl  #crate_prefix ::baseapp::Query for #ident {
                         fn query_url(&self) -> &'static str  {
                             Self::QUERY_URL
                         }
 
                         fn into_bytes(self) -> ::std::vec::Vec<u8> {
-                            gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                            #crate_prefix ::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
                         }
                     }
                 };
@@ -124,9 +131,9 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 };
 
                 let trait_impl = quote! {
-                    impl  ::gears::baseapp::QueryResponse for #ident {
+                    impl  #crate_prefix ::baseapp::QueryResponse for #ident {
                         fn into_bytes(self) -> std::vec::Vec<u8> {
-                            gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                            #crate_prefix ::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
                         }
                     }
                 };
@@ -169,7 +176,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                             });
 
                     let gen = quote! {
-                        impl  ::gears::baseapp::Query for #ident {
+                        impl  #crate_prefix ::baseapp::Query for #ident {
                             fn query_url(&self) -> &'static str  {
                                 match self {
                                     #(#query_url),*
@@ -194,7 +201,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                     });
 
                     let gen = quote! {
-                        impl  ::gears::baseapp::QueryResponse for #ident {
+                        impl  #crate_prefix ::baseapp::QueryResponse for #ident {
                             fn into_bytes(self) -> std::vec::Vec<u8> {
                                 match self {
                                     #(#into_bytes),*
