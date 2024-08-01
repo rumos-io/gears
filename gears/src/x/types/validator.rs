@@ -19,10 +19,13 @@ pub trait StakingValidator {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Enumeration, strum::Display)]
 pub enum BondStatus {
+    #[serde(rename = "BOND_STATUS_UNBONDED")]
     #[strum(to_string = "Unbonded")]
     Unbonded = 0,
+    #[serde(rename = "BOND_STATUS_UNBONDING")]
     #[strum(to_string = "Unbonding")]
     Unbonding = 1,
+    #[serde(rename = "BOND_STATUS_BONDED")]
     #[strum(to_string = "Bonded")]
     Bonded = 2,
 }

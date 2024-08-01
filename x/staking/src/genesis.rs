@@ -60,7 +60,7 @@ mod tests {
         "update_time": "1970-01-01T00:00:10.0000001Z"
     },
     "min_self_delegation": "1",
-    "status": "Bonded"
+    "status": "BOND_STATUS_BONDED"
 }
             ],
             "last_total_power": "0",
@@ -113,7 +113,7 @@ mod tests {
         "update_time": "1970-01-01T00:00:10.0000001Z"
     },
     "min_self_delegation": "1",
-    "status": "Bonded"
+    "status": "BOND_STATUS_BONDED"
 }
             ],
             "last_total_power": "0",
@@ -167,7 +167,7 @@ mod tests {
         "update_time": "1970-01-01T00:00:10.0000001Z"
     },
     "min_self_delegation": "1",
-    "status": "Bonded"
+    "status": "BOND_STATUS_BONDED"
 }
             ],
             "last_total_power": "0",
