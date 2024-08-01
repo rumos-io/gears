@@ -556,34 +556,34 @@ mod tests {
 
         let serialized = r#""3.000001000s""#;
 
-        serde_json::from_str::<Duration>(&serialized).unwrap_err();
+        serde_json::from_str::<Duration>(serialized).unwrap_err();
 
         //--------------------------------------------
         // too big
 
         let serialized = r#""3.1234567891s""#;
 
-        serde_json::from_str::<Duration>(&serialized).unwrap_err();
+        serde_json::from_str::<Duration>(serialized).unwrap_err();
 
         //--------------------------------------------
         // empty apart from 's' suffix
 
         let serialized = r#""s""#;
 
-        serde_json::from_str::<Duration>(&serialized).unwrap_err();
+        serde_json::from_str::<Duration>(serialized).unwrap_err();
 
         //--------------------------------------------
         // empty
 
         let serialized = r#""""#;
 
-        serde_json::from_str::<Duration>(&serialized).unwrap_err();
+        serde_json::from_str::<Duration>(serialized).unwrap_err();
 
         //--------------------------------------------
         // (really) empty
 
         let serialized = r#""#;
 
-        serde_json::from_str::<Duration>(&serialized).unwrap_err();
+        serde_json::from_str::<Duration>(serialized).unwrap_err();
     }
 }

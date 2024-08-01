@@ -120,14 +120,14 @@ impl<
 
         let entry = UnbondingDelegationEntry {
             creation_height: ctx.height(),
-            completion_time: completion_time.clone(),
+            completion_time,
             initial_balance: return_amount,
             balance: return_amount,
         };
         let unbonding_delegation =
             self.set_unbonding_delegation_entry(ctx, del_addr, val_addr, entry)?;
 
-        self.insert_ubd_queue(ctx, &unbonding_delegation, completion_time.clone())?;
+        self.insert_ubd_queue(ctx, &unbonding_delegation, completion_time)?;
         Ok(completion_time)
     }
 

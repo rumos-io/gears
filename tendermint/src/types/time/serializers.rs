@@ -194,7 +194,7 @@ impl<'de> Deserialize<'de> for SerdeDuration {
         let nanos = s.next();
         let nanos = match nanos {
             Some(n) => {
-                if n.chars().last() == Some('0') {
+                if n.ends_with('0') {
                     return Err(D::Error::custom(
                         "invalid nanoseconds - contains trailing zero(s)",
                     ));

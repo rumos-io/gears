@@ -108,10 +108,8 @@ pub fn extend_new_structure(input: DeriveInput) -> syn::Result<proc_macro2::Toke
                 counter += 1;
             }
 
-            let new_name = syn::Ident::new(
-                &format!("Raw{}", ident.to_string()),
-                proc_macro2::Span::call_site(),
-            );
+            let new_name =
+                syn::Ident::new(&format!("Raw{}", ident), proc_macro2::Span::call_site());
 
             let raw_derives = match raw_derives.is_empty() {
                 true => quote! {},
@@ -128,7 +126,7 @@ pub fn extend_new_structure(input: DeriveInput) -> syn::Result<proc_macro2::Toke
                 }
             };
 
-            Ok(gen.into())
+            Ok(gen)
         }
         _ => Err(syn::Error::new(
             proc_macro2::Span::call_site(),

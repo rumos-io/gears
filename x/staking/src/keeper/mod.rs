@@ -172,7 +172,7 @@ impl<
             self.set_unbonding_delegation(ctx, &unbonding_delegation)
                 .unwrap_gas();
             for entry in unbonding_delegation.entries.as_slice() {
-                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time.clone())
+                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time)
                     .unwrap_gas();
             }
         }
@@ -180,7 +180,7 @@ impl<
         for redelegation in genesis.redelegations {
             self.set_redelegation(ctx, &redelegation).unwrap_gas();
             for entry in &redelegation.entries {
-                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time.clone())
+                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)
                     .unwrap_gas();
             }
         }
