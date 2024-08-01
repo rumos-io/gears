@@ -21,7 +21,7 @@ const KEY_BOND_DENOM: &str = "BondDenom";
 pub struct Params {
     // sdk counts duration as simple i64 type that represents difference
     // between two instants
-    unbonding_time: i64,
+    unbonding_time: i64, //TODO: doesn't the SDK use a Duration type? https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/staking.pb.go#L837
     max_validators: u32,
     max_entries: u32,
     historical_entries: u32,

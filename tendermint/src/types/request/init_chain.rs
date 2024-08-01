@@ -5,7 +5,7 @@ use crate::{
     types::{
         chain_id::ChainId,
         proto::{consensus::ConsensusParams, validator::ValidatorUpdate},
-        time::Timestamp,
+        time::timestamp::Timestamp,
     },
 };
 
@@ -38,7 +38,7 @@ impl<G: DeserializeOwned> TryFrom<super::inner::RequestInitChain> for RequestIni
         Ok(Self {
             time: time
                 .ok_or(Error::InvalidData("time is empty".to_string()))?
-                .into(),
+                .try_into().map_err(|e| Error::InvalidData(format!("{e}")))?,
             chain_id: chain_id
                 .parse()
                 .map_err(|e| Self::Error::InvalidData(format!("invalid chain_id: {e}")))?,

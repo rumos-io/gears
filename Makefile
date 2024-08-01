@@ -25,7 +25,7 @@ init-second:
 	./gaia-rs/scripts/init_second.sh
 
 tendermint-start-second:
-	tendermint start --home ~/.gaia-rs-second
+	tendermint start --home ~/.gaia-rs-second  --p2p.laddr tcp://0.0.0.0:26659 --rpc.laddr tcp://127.0.0.1:26660 --proxy_app tcp://127.0.0.1:26661
 
 run-second:
 	cargo run -- run --home ~/.gaia-rs-second --address "127.0.0.1:26661" --rest-listen-addr "127.0.0.1:1318" --min-gas-prices 0uatom

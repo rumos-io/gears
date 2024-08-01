@@ -5,7 +5,7 @@ use clap::{ArgAction, ValueHint};
 use crate::{
     application::ApplicationInfo,
     commands::node::run::{LogLevel, RunCommand},
-    config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
+    config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
     types::base::min_gas::MinGasPrices,
 };
 
@@ -18,6 +18,8 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub address: Option<SocketAddr>,
     #[arg(long, action = ArgAction::Set, help = format!("Bind the REST server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_REST_LISTEN_ADDR))]
     pub rest_listen_addr: Option<SocketAddr>,
+    #[arg(long, action = ArgAction::Set, help = format!("Bind the GRPC server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_GRPC_LISTEN_ADDR))]
+    pub grpc_listen_addr: Option<SocketAddr>,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
     pub read_buf_size: usize,
     /// The logging level
@@ -41,12 +43,14 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             _marker,
             log_level,
             min_gas_prices,
+            grpc_listen_addr,
         }: CliRunCommand<T>,
     ) -> Self {
         Self {
             home,
             address,
             rest_listen_addr,
+            grpc_listen_addr,
             read_buf_size,
             log_level,
             min_gas_prices,

@@ -1937,6 +1937,7 @@ dependencies = [
  "num-format",
  "nutype",
  "prost 0.11.9",
+ "protobuf-derive",
  "query-derive",
  "regex",
  "ripemd",
@@ -4139,6 +4140,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "protobuf-derive"
+version = "0.1.0"
+dependencies = [
+ "darling",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.72",
+]
+
+[[package]]
 name = "query-derive"
 version = "0.1.0"
 dependencies = [
@@ -4911,7 +4922,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bank",
- "chrono",
  "clap",
  "gears",
  "ibc-proto 0.33.0",
@@ -5101,6 +5111,7 @@ version = "0.1.0"
 dependencies = [
  "address",
  "bytes",
+ "chrono",
  "ed25519-consensus",
  "handlebars",
  "prost 0.11.9",

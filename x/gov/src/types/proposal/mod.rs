@@ -4,14 +4,14 @@ use chrono::{DateTime, SubsecRound, Utc};
 use gears::{
     core::errors::CoreError,
     store::database::Database,
-    tendermint::types::proto::Protobuf,
+    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
     types::{
         base::coins::UnsignedCoins,
         store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
         uint::Uint256,
     },
 };
-use ibc_proto::google::protobuf::{Any, Timestamp};
+use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
 
 use crate::{errors::SERDE_JSON_CONVERSION, keeper::KEY_PROPOSAL_PREFIX};
@@ -33,11 +33,11 @@ pub struct Proposal {
     pub content: Any,
     pub status: ProposalStatus,
     pub final_tally_result: Option<TallyResult>,
-    pub submit_time: DateTime<Utc>,
-    pub deposit_end_time: DateTime<Utc>,
+    pub submit_time: Timestamp,
+    pub deposit_end_time: Timestamp,
     pub total_deposit: UnsignedCoins,
-    pub voting_start_time: Option<DateTime<Utc>>,
-    pub voting_end_time: Option<DateTime<Utc>>,
+    pub voting_start_time: Option<Timestamp>,
+    pub voting_end_time: Option<Timestamp>,
 }
 
 impl TryFrom<inner::Proposal> for Proposal {
@@ -74,17 +74,13 @@ impl TryFrom<inner::Proposal> for Proposal {
                 Some(var) => Some(var.try_into()?),
                 None => None,
             },
-            submit_time: DateTime::from_timestamp(submit_time.seconds, submit_time.nanos as u32)
-                .ok_or(CoreError::DecodeGeneral(
-                    "Proposal: invalid `deposit_end_time`".to_owned(),
-                ))?,
-            deposit_end_time: DateTime::from_timestamp(
-                deposit_end_time.seconds,
-                deposit_end_time.nanos as u32,
-            )
-            .ok_or(CoreError::DecodeGeneral(
-                "Proposal: invalid `deposit_end_time`".to_owned(),
-            ))?,
+            submit_time: Timestamp::try_new(submit_time.seconds, submit_time.nanos).map_err(
+                |e| CoreError::DecodeGeneral(format!("Proposal: invalid `submit_time`: {e}")),
+            )?,
+            deposit_end_time: Timestamp::try_new(deposit_end_time.seconds, deposit_end_time.nanos)
+                .map_err(|e| {
+                    CoreError::DecodeGeneral(format!("Proposal: invalid `deposit_end_time`: {e}"))
+                })?,
             total_deposit: UnsignedCoins::new({
                 let mut result = Vec::with_capacity(total_deposit.len());
 
@@ -99,21 +95,15 @@ impl TryFrom<inner::Proposal> for Proposal {
             })
             .map_err(|e| CoreError::Coins(e.to_string()))?,
             voting_start_time: match voting_start_time {
-                Some(var) => Some(
-                    DateTime::from_timestamp(var.seconds, var.nanos as u32).ok_or(
-                        CoreError::DecodeGeneral(
-                            "Proposal: invalid `voting_start_time`".to_owned(),
-                        ),
-                    )?,
-                ),
+                Some(var) => Some(Timestamp::try_new(var.seconds, var.nanos).map_err(|e| {
+                    CoreError::DecodeGeneral(format!("Proposal: invalid `voting_start_time`: {e}"))
+                })?),
                 None => None,
             },
             voting_end_time: match voting_end_time {
-                Some(var) => Some(
-                    DateTime::from_timestamp(var.seconds, var.nanos as u32).ok_or(
-                        CoreError::DecodeGeneral("Proposal: invalid `voting_end_time`".to_owned()),
-                    )?,
-                ),
+                Some(var) => Some(Timestamp::try_new(var.seconds, var.nanos).map_err(|e| {
+                    CoreError::DecodeGeneral(format!("Proposal: invalid `voting_end_time`: {e}"))
+                })?),
                 None => None,
             },
         })
@@ -140,22 +130,24 @@ impl From<Proposal> for inner::Proposal {
             content: Some(content),
             status: status as i32,
             final_tally_result: final_tally_result.map(|e| e.into()),
-            submit_time: Some(Timestamp {
-                seconds: submit_time.timestamp(),
-                nanos: submit_time.timestamp_subsec_nanos() as i32,
+            submit_time: Some(ibc_proto::google::protobuf::Timestamp {
+                seconds: submit_time.timestamp_seconds().into(),
+                nanos: submit_time.nanoseconds().into(),
             }),
-            deposit_end_time: Some(Timestamp {
-                seconds: deposit_end_time.timestamp(),
-                nanos: deposit_end_time.timestamp_subsec_nanos() as i32,
+            deposit_end_time: Some(ibc_proto::google::protobuf::Timestamp {
+                seconds: deposit_end_time.timestamp_seconds().into(),
+                nanos: deposit_end_time.nanoseconds().into(),
             }),
             total_deposit: total_deposit.into_iter().map(|this| this.into()).collect(),
-            voting_start_time: voting_start_time.map(|this| Timestamp {
-                seconds: this.timestamp(),
-                nanos: this.timestamp_subsec_nanos() as i32,
+            voting_start_time: voting_start_time.map(|this| {
+                ibc_proto::google::protobuf::Timestamp {
+                    seconds: this.timestamp_seconds().into(),
+                    nanos: this.nanoseconds().into(),
+                }
             }),
-            voting_end_time: voting_end_time.map(|this| Timestamp {
-                seconds: this.timestamp(),
-                nanos: this.timestamp_subsec_nanos() as i32,
+            voting_end_time: voting_end_time.map(|this| ibc_proto::google::protobuf::Timestamp {
+                seconds: this.timestamp_seconds().into(),
+                nanos: this.nanoseconds().into(),
             }),
         }
     }
@@ -229,7 +221,7 @@ impl Proposal {
         .concat()
     }
 
-    pub fn inactive_queue_key(proposal_id: u64, deposit_end_time: &DateTime<Utc>) -> Vec<u8> {
+    pub fn inactive_queue_key(proposal_id: u64, deposit_end_time: &Timestamp) -> Vec<u8> {
         Self::queue_key(
             &Self::KEY_INACTIVE_QUEUE_PREFIX,
             proposal_id,
@@ -237,7 +229,7 @@ impl Proposal {
         )
     }
 
-    pub fn active_queue_key(proposal_id: u64, deposit_end_time: &DateTime<Utc>) -> Vec<u8> {
+    pub fn active_queue_key(proposal_id: u64, deposit_end_time: &Timestamp) -> Vec<u8> {
         Self::queue_key(
             &Self::KEY_ACTIVE_QUEUE_PREFIX,
             proposal_id,
@@ -245,13 +237,10 @@ impl Proposal {
         )
     }
 
-    fn queue_key(prefix: &[u8], proposal_id: u64, deposit_end_time: &DateTime<Utc>) -> Vec<u8> {
-        let date_key = deposit_end_time
-            .round_subsecs(0)
-            .format(SORTABLE_DATE_TIME_FORMAT)
-            .to_string();
+    fn queue_key(prefix: &[u8], proposal_id: u64, deposit_end_time: &Timestamp) -> Vec<u8> {
+        let date_key = deposit_end_time.format_bytes_rounded();
 
-        [prefix, date_key.as_bytes(), &proposal_id.to_be_bytes()].concat()
+        [prefix, date_key.as_slice(), &proposal_id.to_be_bytes()].concat()
     }
 }
 
@@ -286,6 +275,12 @@ impl TryFrom<i32> for ProposalStatus {
                 "Proposal status option bigger than possible value".to_owned(),
             ))?,
         })
+    }
+}
+
+impl From<ProposalStatus> for i32 {
+    fn from(value: ProposalStatus) -> Self {
+        value as i32
     }
 }
 

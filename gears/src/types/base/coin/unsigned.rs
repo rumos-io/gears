@@ -1,3 +1,4 @@
+use core_types::errors::CoreError;
 use cosmwasm_std::Uint256;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -74,6 +75,20 @@ impl FromStr for UnsignedCoin {
             .map_err(|e| CoinError::Denom(e.to_string()))?;
 
         Ok(UnsignedCoin { denom, amount })
+    }
+}
+
+impl TryFrom<Vec<u8>> for UnsignedCoin {
+    type Error = CoreError;
+
+    fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
+        Self::decode_vec(&raw).map_err(|e| CoreError::DecodeProtobuf(e.to_string()))
+    }
+}
+
+impl From<UnsignedCoin> for Vec<u8> {
+    fn from(value: UnsignedCoin) -> Self {
+        value.encode_vec().expect(crate::error::IBC_ENCODE_UNWRAP)
     }
 }
 

@@ -17,7 +17,7 @@ use gears::tendermint::types::chain_id::ChainId;
 use gears::tendermint::types::proto::consensus::ConsensusParams;
 use gears::tendermint::types::proto::validator::{ValidatorUpdate, VotingPower};
 use gears::tendermint::types::proto::Protobuf;
-use gears::tendermint::types::time::Timestamp;
+use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::types::address::AccAddress;
 use gears::types::auth::fee::Fee;
 use gears::types::base::coins::Coins;
@@ -68,7 +68,7 @@ fn setup_mock_node() -> (
         .expect("won't fail since there's no existing account");
 
     let init_state = InitState {
-        time: Timestamp::ZERO,
+        time: Timestamp::UNIX_EPOCH,
         chain_id: chain_id.clone(),
         consensus_params: ConsensusParams::default(),
         validators: vec![ValidatorUpdate {

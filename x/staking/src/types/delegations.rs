@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
 use gears::{
+    core::errors::CoreError,
     ext::PaginationKey,
-    tendermint::types::time::Timestamp,
+    tendermint::types::time::timestamp::Timestamp,
     types::{
         address::{AccAddress, ValAddress},
         decimal256::Decimal256,
@@ -11,6 +12,8 @@ use gears::{
     x::types::delegation::StakingDelegation,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::consts::error::SERDE_ENCODING_DOMAIN_TYPE;
 
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
@@ -36,6 +39,20 @@ impl StakingDelegation for Delegation {
     }
 }
 
+impl TryFrom<Vec<u8>> for Delegation {
+    type Error = CoreError;
+
+    fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
+        serde_json::from_slice(&raw).map_err(|e| CoreError::DecodeGeneral(e.to_string()))
+    }
+}
+
+impl From<Delegation> for Vec<u8> {
+    fn from(value: Delegation) -> Self {
+        serde_json::to_vec(&value).expect(SERDE_ENCODING_DOMAIN_TYPE)
+    }
+}
+
 /// Delegation represents the bond with tokens held by an account. It is
 /// owned by one delegator, and is associated with the voting power of one
 /// validator.
@@ -57,15 +74,7 @@ pub struct UnbondingDelegationEntry {
 
 impl UnbondingDelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let completion_time = chrono::DateTime::from_timestamp(
-            self.completion_time.seconds,
-            self.completion_time.nanos as u32,
-        )
-        .unwrap();
-        completion_time <= time
+        self.completion_time <= *time
     }
 }
 
@@ -110,14 +119,6 @@ pub struct RedelegationEntry {
 
 impl RedelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let time = chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-        let completion_time = chrono::DateTime::from_timestamp(
-            self.completion_time.seconds,
-            self.completion_time.nanos as u32,
-        )
-        .unwrap();
-        completion_time <= time
+        self.completion_time <= *time
     }
 }
