@@ -11,7 +11,6 @@ use crate::{
         tx::TxMessage,
     },
 };
-use prost::Message;
 use protobuf_derive::Raw;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -115,15 +114,17 @@ impl TryFrom<inner::GetTxRequest> for QueryGetTxRequest {
 
 impl Protobuf<inner::GetTxRequest> for QueryGetTxRequest {}
 
-#[derive(Clone, PartialEq, Message)]
+#[derive(Clone, PartialEq, Raw, protobuf_derive::Protobuf)]
+#[proto(gears)]
 pub struct QueryGetTxsEventRequest {
-    #[prost(string, repeated, tag = "1")]
+    #[raw(raw = String, kind(string), repeated)]
+    #[proto(repeated)]
     pub events: Vec<String>,
-    #[prost(string, tag = "2")]
+    #[raw(raw = String, kind(string))]
     pub order_by: String,
-    #[prost(uint32, tag = "4")]
+    #[raw(raw = u32, kind(uint32))]
     pub page: u32,
-    #[prost(uint32, tag = "5")]
+    #[raw(raw = u32, kind(uint32))]
     pub limit: u32,
 }
 
@@ -136,5 +137,3 @@ impl Query for QueryGetTxsEventRequest {
         self.encode_vec().expect(IBC_ENCODE_UNWRAP)
     }
 }
-
-impl Protobuf<QueryGetTxsEventRequest> for QueryGetTxsEventRequest {}
