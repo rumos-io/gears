@@ -99,7 +99,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         }
 
                         fn into_bytes(self) -> ::std::vec::Vec<u8> {
-                            gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                            ::gears::core::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
                         }
                     }
                 };
@@ -126,7 +126,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 let trait_impl = quote! {
                     impl  ::gears::baseapp::QueryResponse for #ident {
                         fn into_bytes(self) -> std::vec::Vec<u8> {
-                            gears::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                            gears::core::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
                         }
                     }
                 };
