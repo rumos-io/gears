@@ -1,4 +1,4 @@
-use darling::{FromAttributes, FromDeriveInput};
+use darling::{util::Flag, FromAttributes, FromDeriveInput};
 use quote::quote;
 use syn::{spanned::Spanned, DataStruct, DeriveInput};
 
@@ -9,6 +9,8 @@ use crate::{FieldWrapper, OptionalOrRepeated};
 struct ProtobufArg {
     #[darling(default)]
     raw: Option<syn::TypePath>,
+    #[darling(default)]
+    gears: Flag,
 }
 
 #[derive(FromAttributes, Default)]
@@ -20,23 +22,26 @@ struct ProtobufAttr {
 }
 
 pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-    let ProtobufArg { raw } = ProtobufArg::from_derive_input(&input)?;
+    let ProtobufArg { raw, gears } = ProtobufArg::from_derive_input(&input)?;
     let DeriveInput { ident, data, .. } = input;
+
+    let crate_prefix = match gears.is_present() {
+        true => quote! { crate },
+        false => quote! { ::gears },
+    };
 
     let raw = match raw {
         Some(raw) => quote! { #raw },
         None => {
-            let new_name = syn::Ident::new(
-                &format!("Raw{}", ident.to_string()),
-                proc_macro2::Span::call_site(),
-            );
+            let new_name =
+                syn::Ident::new(&format!("Raw{}", ident), proc_macro2::Span::call_site());
 
             quote! { #new_name }
         }
     };
 
     let protobuf_trait_impl = quote! {
-        impl ::gears::core::Protobuf<#raw> for #ident {}
+        impl  #crate_prefix ::core::Protobuf<#raw> for #ident {}
     };
 
     match data {
@@ -172,7 +177,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                                 #field_ident : match value.#other_name
                                 {
                                     ::std::option::Option::Some(var) => ::std::result::Result::Ok( ::std::convert::TryFrom::try_from(var)?),
-                                    ::std::option::Option::None => ::std::result::Result::Err( ::gears::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name_str ))),
+                                    ::std::option::Option::None => ::std::result::Result::Err( #crate_prefix ::error::ProtobufError::MissingField( ::std::format!( "Missing field: {}", #other_name_str ))),
                                 }?
                             }
                         }
@@ -194,7 +199,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
             let try_from = quote! {
 
                 impl TryFrom<#raw> for #ident {
-                    type Error = ::gears::error::ProtobufError;
+                    type Error = #crate_prefix ::error::ProtobufError;
 
                     fn try_from(value: #raw) -> ::std::result::Result<Self, Self::Error> {
                         ::std::result::Result::Ok(Self {
@@ -213,7 +218,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
                 #protobuf_trait_impl
             };
 
-            Ok(gen.into())
+            Ok(gen)
         }
         _ => Err(syn::Error::new(
             proc_macro2::Span::call_site(),

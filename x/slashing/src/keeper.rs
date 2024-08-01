@@ -260,7 +260,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 let time = ctx.get_time();
                 let delta = Duration::try_new(params.downtime_jail_duration, 0).unwrap();
                 let jailed_until = time.checked_add(delta).unwrap();
-                sign_info.jailed_until = jailed_until.clone();
+                sign_info.jailed_until = jailed_until;
                 // We need to reset the counter & array so that the validator won't be immediately slashed for downtime upon rebonding.
                 sign_info.missed_blocks_counter = 0;
                 sign_info.index_offset = 0;

@@ -165,7 +165,7 @@ impl<
         addrs.push(validator.operator_address.clone());
         self.set_unbonding_validators_queue(
             ctx,
-            validator.unbonding_time.clone(),
+            validator.unbonding_time,
             validator.unbonding_height,
             addrs,
         )?;
@@ -496,13 +496,13 @@ impl<
         if new_addrs.is_empty() {
             self.delete_validator_queue_time_slice(
                 ctx,
-                validator.unbonding_time.clone(),
+                validator.unbonding_time,
                 validator.unbonding_height,
             )?;
         } else {
             self.set_unbonding_validators_queue(
                 ctx,
-                validator.unbonding_time.clone(),
+                validator.unbonding_time,
                 validator.unbonding_height,
                 new_addrs,
             )?;

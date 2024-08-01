@@ -181,7 +181,7 @@ impl TryFrom<inner::DepositParams> for DepositParams {
                 Duration::try_new(duration.seconds, duration.nanos).map_err(|e| {
                     CoreError::MissingField(format!(
                         "DepositParams: field `max_deposit_period`: {}",
-                        e.to_string(),
+                        e,
                     ))
                 })?
             },
