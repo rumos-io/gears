@@ -1,8 +1,5 @@
 use bytes::Bytes;
-use gears::{
-    core::errors::CoreError, error::IBC_ENCODE_UNWRAP, params::ParamsSubspaceKey,
-    tendermint::types::proto::Protobuf,
-};
+use gears::{core::errors::CoreError, core::Protobuf, params::ParamsSubspaceKey};
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
 use serde::{Deserialize, Serialize};
@@ -83,7 +80,7 @@ impl<PSK: ParamsSubspaceKey> From<ParamChange<PSK>> for Any {
     fn from(msg: ParamChange<PSK>) -> Self {
         Any {
             type_url: ParamChange::<PSK>::TYPE_URL.to_string(),
-            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            value: msg.encode_vec(),
         }
     }
 }
@@ -178,7 +175,7 @@ impl<PSK: ParamsSubspaceKey> From<ParameterChangeProposal<PSK>> for Any {
     fn from(msg: ParameterChangeProposal<PSK>) -> Self {
         Any {
             type_url: ParameterChangeProposal::<PSK>::TYPE_URL.to_string(),
-            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            value: msg.encode_vec(),
         }
     }
 }

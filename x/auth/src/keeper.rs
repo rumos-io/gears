@@ -8,12 +8,11 @@ use gears::application::keepers::params::ParamsKeeper;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
 use gears::context::{QueryableContext, TransactionalContext};
-use gears::error::IBC_ENCODE_UNWRAP;
+use gears::core::Protobuf as _;
 use gears::ext::{IteratorPaginate, Pagination};
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::{ext::UnwrapCorrupt, Database};
 use gears::store::StoreKey;
-use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::account::{Account, BaseAccount, ModuleAccount};
 use gears::types::address::AccAddress;
 use gears::types::pagination::response::PaginationResponse;
@@ -83,7 +82,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> AuthKeeper<SK, M> for Keep
         let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP))?; // TODO:IBC
+        auth_store.set(key, acct.encode_vec())?;
 
         Ok(())
     }
@@ -248,7 +247,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         let mut auth_store = ctx.kv_store_mut(&self.store_key);
         let key = create_auth_store_key(acct.get_address().to_owned());
 
-        auth_store.set(key, acct.encode_vec().expect(IBC_ENCODE_UNWRAP))?; // TODO:IBC
+        auth_store.set(key, acct.encode_vec())?;
 
         Ok(())
     }

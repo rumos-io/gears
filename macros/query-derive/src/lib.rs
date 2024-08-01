@@ -164,7 +164,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
 
                     let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                         quote! {
-                            Self::#i(q) => q.encode_vec()
+                            Self::#i(q) => ::gears::core::Protobuf::encode_vec(&q)
                         }
                     });
 

@@ -1,5 +1,5 @@
 use gears::{
-    tendermint::types::proto::Protobuf,
+    core::Protobuf,
     types::address::{AddressError, ConsAddress},
 };
 use prost::Message;

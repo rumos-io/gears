@@ -3,13 +3,12 @@ use std::marker::PhantomData;
 use gears::application::handlers::node::{ModuleInfo, TxError};
 use gears::baseapp::errors::QueryError;
 use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
+use gears::core::Protobuf;
 use gears::derive::Query;
-use gears::error::IBC_ENCODE_UNWRAP;
 use gears::ext::Pagination;
 use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::request::query::RequestQuery;
 use gears::types::pagination::response::PaginationResponse;
 use gears::types::store::gas::ext::GasResultExt;
@@ -115,34 +114,22 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
 
                 let result = self.query_balances(ctx, req);
 
-                Ok(result.encode_vec().expect(IBC_ENCODE_UNWRAP).into())
+                Ok(result.encode_vec().into())
             }
             QueryTotalSupplyRequest::QUERY_URL => {
                 let req = QueryTotalSupplyRequest::decode(query.data)?;
 
-                Ok(self
-                    .query_total_supply(ctx, req)
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into())
+                Ok(self.query_total_supply(ctx, req).encode_vec().into())
             }
             "/cosmos.bank.v1beta1.Query/Balance" => {
                 let req = QueryBalanceRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_balance(ctx, req)
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into())
+                Ok(self.keeper.query_balance(ctx, req).encode_vec().into())
             }
             QueryDenomsMetadataRequest::QUERY_URL => {
                 let req = QueryDenomsMetadataRequest::decode(query.data)?;
 
-                let result = self
-                    .query_denoms(ctx, req)
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP);
+                let result = self.query_denoms(ctx, req).encode_vec();
 
                 Ok(result.into())
             }
@@ -152,10 +139,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
                     .keeper
                     .get_denom_metadata(ctx, &req.denom)
                     .expect("Query ctx doesn't have any gas");
-                Ok(QueryDenomMetadataResponse { metadata }
-                    .encode_vec()
-                    .expect(IBC_ENCODE_UNWRAP)
-                    .into())
+                Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
             }
             _ => Err(QueryError::PathNotFound),
         }

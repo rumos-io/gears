@@ -1,7 +1,7 @@
 use gears::{
     core::errors::CoreError,
+    core::Protobuf,
     derive::{Protobuf, Query},
-    tendermint::types::proto::Protobuf,
     types::{address::AccAddress, pagination::response::PaginationResponse},
 };
 use serde::{Deserialize, Serialize};

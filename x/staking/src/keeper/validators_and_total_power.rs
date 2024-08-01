@@ -1,8 +1,6 @@
 use super::*;
-use gears::error::IBC_ENCODE_UNWRAP;
-use gears::tendermint::types::proto::Protobuf;
 use gears::{
-    context::InfallibleContext, store::database::ext::UnwrapCorrupt,
+    context::InfallibleContext, core::Protobuf, store::database::ext::UnwrapCorrupt,
     types::base::coin::Uint256Proto,
 };
 
@@ -35,8 +33,7 @@ impl<
         let val = Uint256Proto {
             uint: last_total_power,
         }
-        .encode_vec()
-        .expect(IBC_ENCODE_UNWRAP); // TODO:IBC;
+        .encode_vec();
         store.set(LAST_TOTAL_POWER_KEY, val)
     }
 

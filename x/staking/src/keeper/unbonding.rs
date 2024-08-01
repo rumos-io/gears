@@ -5,9 +5,9 @@ use crate::{
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
-    error::IBC_ENCODE_UNWRAP,
+    core::Protobuf,
     store::database::ext::UnwrapCorrupt,
-    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
+    tendermint::types::time::timestamp::Timestamp,
 };
 use std::ops::Bound;
 
@@ -180,7 +180,7 @@ impl<
     ) -> Result<Option<Vec<DvPair>>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(UNBONDING_QUEUE_KEY);
-        if let Some(bz) = store.get(&time.encode_vec().expect(IBC_ENCODE_UNWRAP))? {
+        if let Some(bz) = store.get(&time.encode_vec())? {
             Ok(serde_json::from_slice(&bz).unwrap_or_default())
         } else {
             Ok(None)
@@ -195,7 +195,7 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(UNBONDING_QUEUE_KEY);
-        let key = time.encode_vec().expect(IBC_ENCODE_UNWRAP);
+        let key = time.encode_vec();
         store.set(
             key,
             serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),

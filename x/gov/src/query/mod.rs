@@ -1,4 +1,4 @@
-use gears::{baseapp::QueryRequest, derive::Query, tendermint::types::proto::Protobuf};
+use gears::{baseapp::QueryRequest, derive::Query};
 use request::{
     QueryAllParamsRequest, QueryDepositRequest, QueryDepositsRequest, QueryParamsRequest,
     QueryProposalRequest, QueryProposalsRequest, QueryProposerRequest, QueryTallyResultRequest,

@@ -4,8 +4,8 @@ use crate::query::{
 };
 use bytes::Bytes;
 use clap::{Args, Subcommand};
+use gears::core::Protobuf;
 use gears::derive::Query;
-use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::address::AccAddress;
 use gears::types::pagination::request::PaginationRequest;
 use gears::{application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest};

@@ -6,8 +6,8 @@ use crate::{
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
+    core::Protobuf,
     derive::Query,
-    tendermint::types::proto::Protobuf as _,
     types::address::{AccAddress, ValAddress},
 };
 use serde::{Deserialize, Serialize};

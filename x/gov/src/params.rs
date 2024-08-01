@@ -5,9 +5,9 @@ use std::{
 
 use gears::{
     application::keepers::params::ParamsKeeper,
-    core::errors::CoreError,
+    core::{errors::CoreError, Protobuf},
     params::{ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
-    tendermint::types::{proto::Protobuf, time::duration::Duration},
+    tendermint::types::time::duration::Duration,
     types::{
         base::{
             coin::UnsignedCoin,

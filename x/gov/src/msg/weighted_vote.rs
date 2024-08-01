@@ -2,9 +2,7 @@ use std::str::FromStr;
 
 use bytes::Bytes;
 use gears::{
-    core::errors::CoreError,
-    error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
+    core::{errors::CoreError, Protobuf},
     types::{
         address::AccAddress,
         decimal256::{CosmosDecimalProtoString, Decimal256},
@@ -224,8 +222,7 @@ impl From<MsgVoteWeighted> for Any {
     fn from(msg: MsgVoteWeighted) -> Self {
         Any {
             type_url: MsgVoteWeighted::TYPE_URL.to_string(),
-            value: <MsgVoteWeighted as Protobuf<inner::MsgVoteWeighted>>::encode_vec(&msg)
-                .expect(IBC_ENCODE_UNWRAP),
+            value: <MsgVoteWeighted as Protobuf<inner::MsgVoteWeighted>>::encode_vec(&msg),
         }
     }
 }

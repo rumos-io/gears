@@ -12,7 +12,7 @@ use gears::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         InfallibleContextMut, QueryableContext, TransactionalContext,
     },
-    error::IBC_ENCODE_UNWRAP,
+    core::Protobuf,
     ext::{IteratorPaginate, Pagination, PaginationResult},
     params::ParamsSubspaceKey,
     store::{
@@ -24,7 +24,6 @@ use gears::{
             crypto::PublicKey,
             event::{Event, EventAttribute},
             validator::VotingPower,
-            Protobuf,
         },
         time::duration::Duration,
     },
@@ -480,7 +479,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     ) {
         let mut store = ctx.infallible_store_mut(&self.store_key);
         let key = validator_signing_info_key(addr.clone());
-        let value = signing_info.encode_vec().expect(IBC_ENCODE_UNWRAP);
+        let value = signing_info.encode_vec();
         store.set(key, value)
     }
 
