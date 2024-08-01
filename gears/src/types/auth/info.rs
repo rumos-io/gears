@@ -1,6 +1,5 @@
-use core_types::errors::CoreError;
+use core_types::{errors::CoreError, Protobuf};
 use serde::{Deserialize, Serialize};
-use tendermint::types::proto::Protobuf;
 
 use crate::types::signing::SignerInfo;
 

@@ -1,8 +1,8 @@
 use bytes::Bytes;
+use core_types::Protobuf;
 use nutype::nutype;
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use tendermint::types::proto::Protobuf;
 
 use crate::types::{denom::Denom, errors::DenomError};
 

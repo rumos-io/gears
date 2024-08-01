@@ -1,11 +1,11 @@
 use core_types::any::google::Any;
 use core_types::errors::CoreError as IbcError;
 use core_types::tx::mode_info::ModeInfo;
+use core_types::Protobuf;
 use keyring::error::DecodeError;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
-use tendermint::types::proto::Protobuf;
 
 use crate::crypto::public::PublicKey;
 use crate::crypto::secp256k1::RawSecp256k1PubKey;

@@ -9,6 +9,7 @@ use gears::baseapp::options::NodeOptions;
 use gears::baseapp::BaseApp;
 use gears::config::Config;
 use gears::core::tx::raw::TxRaw;
+use gears::core::Protobuf;
 use gears::crypto::info::SigningInfo;
 use gears::crypto::keys::ReadAccAddress;
 use gears::store::database::MemDB;
@@ -16,7 +17,6 @@ use gears::tendermint::mock::{InitState, MockNode};
 use gears::tendermint::types::chain_id::ChainId;
 use gears::tendermint::types::proto::consensus::ConsensusParams;
 use gears::tendermint::types::proto::validator::{ValidatorUpdate, VotingPower};
-use gears::tendermint::types::proto::Protobuf;
 use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::types::address::AccAddress;
 use gears::types::auth::fee::Fee;
@@ -114,9 +114,7 @@ fn generate_txs(
         account_number: user.account_number,
     };
 
-    let body_bytes = TxBody::new_with_defaults(vec1::vec1![msg])
-        .encode_vec()
-        .expect("can't fail fixed in later versions of dependency");
+    let body_bytes = TxBody::new_with_defaults(vec1::vec1![msg]).encode_vec();
 
     let raw_tx = gears::crypto::info::create_signed_transaction_direct(
         vec![signing_info],

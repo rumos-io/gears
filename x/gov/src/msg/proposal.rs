@@ -1,8 +1,6 @@
 use bytes::Bytes;
 use gears::{
-    core::errors::CoreError,
-    error::IBC_ENCODE_UNWRAP,
-    tendermint::types::proto::Protobuf,
+    core::{errors::CoreError, Protobuf},
     types::{
         address::AccAddress,
         base::{coins::UnsignedCoins, errors::CoinError},
@@ -109,7 +107,7 @@ impl From<MsgSubmitProposal> for Any {
     fn from(msg: MsgSubmitProposal) -> Self {
         Any {
             type_url: MsgSubmitProposal::TYPE_URL.to_string(),
-            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            value: msg.encode_vec(),
         }
     }
 }

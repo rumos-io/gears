@@ -106,7 +106,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                         }
 
                         fn into_bytes(self) -> ::std::vec::Vec<u8> {
-                            #crate_prefix ::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                            #crate_prefix ::core::Protobuf::encode_vec(&self)
                         }
                     }
                 };
@@ -133,7 +133,7 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                 let trait_impl = quote! {
                     impl  #crate_prefix ::baseapp::QueryResponse for #ident {
                         fn into_bytes(self) -> std::vec::Vec<u8> {
-                            #crate_prefix ::tendermint::types::proto::Protobuf::encode_vec(&self).expect("Should be okay. In future versions of IBC they removed Result")
+                            #crate_prefix ::core::Protobuf::encode_vec(&self)
                         }
                     }
                 };
@@ -170,10 +170,10 @@ fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
                     });
 
                     let into_bytes = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
-                                quote! {
-                                    Self::#i(q) => q.encode_vec().expect("Should be okay. In future versions of IBC they removed Result")
-                                }
-                            });
+                        quote! {
+                            Self::#i(q) =>  #crate_prefix ::core::Protobuf::encode_vec(&q)
+                        }
+                    });
 
                     let gen = quote! {
                         impl  #crate_prefix ::baseapp::Query for #ident {

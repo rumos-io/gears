@@ -41,7 +41,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
     };
 
     let protobuf_trait_impl = quote! {
-        impl #crate_prefix ::tendermint::types::proto::Protobuf<#raw> for #ident {}
+        impl  #crate_prefix ::core::Protobuf<#raw> for #ident {}
     };
 
     match data {

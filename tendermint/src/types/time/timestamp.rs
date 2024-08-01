@@ -3,7 +3,6 @@
 
 use super::duration::Duration;
 use chrono::SubsecRound;
-use tendermint_proto::Protobuf;
 
 // Slight modification of the RFC3339Nano but it right pads all zeros and drops the time zone info
 const SORTABLE_DATE_TIME_FORMAT: &str = "%Y-%m-%dT%H:%M:%S.000000000";
@@ -336,7 +335,8 @@ impl From<Timestamp> for inner::Timestamp {
     }
 }
 
-impl Protobuf<Timestamp> for Timestamp {}
+impl tendermint_proto::Protobuf<Timestamp> for Timestamp {}
+impl ibc_proto::protobuf::Protobuf<Timestamp> for Timestamp {}
 
 pub mod inner {
     pub use tendermint_proto::google::protobuf::Timestamp;

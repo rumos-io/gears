@@ -3,8 +3,7 @@ use std::marker::PhantomData;
 use bytes::Bytes;
 use gears::{
     application::keepers::params::ParamsKeeper, context::InfallibleContextMut,
-    core::errors::CoreError, error::IBC_ENCODE_UNWRAP, params::ParamsSubspaceKey,
-    tendermint::types::proto::Protobuf,
+    core::errors::CoreError, core::Protobuf, params::ParamsSubspaceKey,
 };
 use ibc_proto::google::protobuf::Any;
 use prost::Message;
@@ -66,7 +65,7 @@ impl From<TextProposal> for Any {
     fn from(msg: TextProposal) -> Self {
         Any {
             type_url: TextProposal::TYPE_URL.to_string(),
-            value: msg.encode_vec().expect(IBC_ENCODE_UNWRAP),
+            value: msg.encode_vec(),
         }
     }
 }
