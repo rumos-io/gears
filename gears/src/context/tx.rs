@@ -9,7 +9,7 @@ use kv::{
 use tendermint::types::{
     chain_id::ChainId,
     proto::{event::Event, header::Header},
-    time::Timestamp,
+    time::timestamp::Timestamp,
 };
 
 use crate::{
@@ -135,7 +135,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
     }
 
     fn get_time(&self) -> Timestamp {
-        self.header.time.clone()
+        self.header.time
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {

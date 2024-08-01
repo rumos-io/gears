@@ -149,6 +149,14 @@ impl<const PREFIX: u8> Display for BaseAddress<PREFIX> {
     }
 }
 
+impl<const PREFIX: u8> TryFrom<String> for BaseAddress<PREFIX> {
+    type Error = AddressError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_bech32(&value)
+    }
+}
+
 impl<const PREFIX: u8> From<BaseAddress<PREFIX>> for String {
     fn from(v: BaseAddress<PREFIX>) -> String {
         format!("{}", v)
@@ -193,6 +201,11 @@ impl From<AccAddress> for ValAddress {
     }
 }
 impl From<ValAddress> for ConsAddress {
+    fn from(value: ValAddress) -> Self {
+        Self(value.0)
+    }
+}
+impl From<ValAddress> for AccAddress {
     fn from(value: ValAddress) -> Self {
         Self(value.0)
     }

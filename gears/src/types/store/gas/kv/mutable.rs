@@ -50,8 +50,11 @@ impl<DB: Database> GasKVStoreMut<'_, DB> {
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Result<Option<Vec<u8>>, GasStoreErrors> {
         let value = self.inner.get(&k);
 
-        self.guard
-            .get(k.as_ref().len(), value.as_ref().map(|this| this.len()))?;
+        self.guard.get(
+            k.as_ref().len(),
+            value.as_ref().map(|this| this.len()),
+            k.as_ref(),
+        )?;
 
         Ok(value)
     }
@@ -64,7 +67,7 @@ impl<DB: Database> GasKVStoreMut<'_, DB> {
         let key = key.into_iter().collect::<Vec<_>>();
         let value = value.into_iter().collect::<Vec<_>>();
 
-        self.guard.set(key.len(), value.len())?;
+        self.guard.set(key.len(), value.len(), &key)?;
 
         self.inner.set(key, value);
 
@@ -72,7 +75,7 @@ impl<DB: Database> GasKVStoreMut<'_, DB> {
     }
 
     pub fn delete(&mut self, k: &[u8]) -> Result<Option<Vec<u8>>, GasStoreErrors> {
-        self.guard.delete()?;
+        self.guard.delete(k)?;
 
         Ok(self.inner.delete(k))
     }

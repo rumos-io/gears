@@ -5,7 +5,7 @@ use crate::types::store::kv::{mutable::StoreMut, Store};
 use tendermint::types::{
     chain_id::ChainId,
     proto::{event::Event, header::Header},
-    time::Timestamp,
+    time::timestamp::Timestamp,
 };
 
 use super::{InfallibleContext, InfallibleContextMut, QueryableContext, TransactionalContext};
@@ -83,7 +83,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for BlockContext<'
     }
 
     fn get_time(&self) -> Timestamp {
-        self.header.time.clone()
+        self.header.time
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {

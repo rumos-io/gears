@@ -11,7 +11,11 @@ members = [
   "kv",
   "keyring",
   "gears",
-  "gears-derive",
+
+  # macros
+  "macros/tx-derive",
+  "macros/query-derive",
+  "macros/protobuf-derive",
 
   # GAIA
   "gaia-rs",
@@ -19,10 +23,11 @@ members = [
   # xmodules
   "x/auth",
   "x/bank",
+  "x/distribution",
+  "x/gov",
   "x/ibc-rs",
   "x/slashing",
   "x/staking",
-  "x/gov",
 
   # new unsorted
 ]
@@ -46,6 +51,7 @@ url = { version = "2.5.0" }
 time = "0.3.34"
 ux = "0.1.6"
 chrono = "0.4.38"
+vec1 = { version = "1.12.0" }
 
 # serialization
 serde = { version = "1.0", default-features = false }
@@ -84,6 +90,7 @@ dircpy = { version = "0.3.15" }
 constcat = { version = "0.5.0" }                      # upgraded std::concat! which accepts const
 derive_more = "0.99.17"
 former = "0.16.0"
+nz = "0.4.1"
 
 # log
 log = { version = "0.4.21" }

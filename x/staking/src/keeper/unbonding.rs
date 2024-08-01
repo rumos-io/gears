@@ -7,7 +7,7 @@ use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     error::IBC_ENCODE_UNWRAP,
     store::database::ext::UnwrapCorrupt,
-    tendermint::types::{proto::Protobuf, time::Timestamp},
+    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
 };
 use std::ops::Bound;
 
@@ -165,7 +165,7 @@ impl<
         addrs.push(validator.operator_address.clone());
         self.set_unbonding_validators_queue(
             ctx,
-            validator.unbonding_time.clone(),
+            validator.unbonding_time,
             validator.unbonding_height,
             addrs,
         )?;
@@ -244,11 +244,6 @@ impl<
         //     })
         //     .collect();
 
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let block_time =
-            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
-
         for (k, v) in &unbonding_val_map {
             let (time, height) =
                 parse_validator_queue_key(k).expect("failed to parse unbonding key");
@@ -269,8 +264,7 @@ impl<
                         "unexpected validator in unbonding queue; status was not unbonding"
                     );
 
-                    self.unbonding_to_unbonded(ctx, &mut validator)
-                        .expect(CTX_NO_GAS_UNWRAP);
+                    self.unbonding_to_unbonded(ctx, &mut validator).unwrap_gas();
                     if validator.delegator_shares.is_zero() {
                         self.remove_validator(ctx, &validator)?;
                     }
@@ -293,11 +287,10 @@ impl<
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonding {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "bad state transition unbonding to bonded, validator: {}",
                 validator.operator_address
-            ))
-            .into());
+            ));
         }
         self.bond_validator(ctx, validator)?;
         Ok(())
@@ -322,12 +315,12 @@ impl<
         ctx: &mut BlockContext<'_, DB, SK>,
         val_addr: &ValAddress,
         del_addr: &AccAddress,
-    ) -> anyhow::Result<Vec<Coin>> {
+    ) -> anyhow::Result<Vec<UnsignedCoin>> {
         let params = self.staking_params_keeper.get(ctx);
         let ubd = if let Some(delegation) = self.unbonding_delegation(ctx, del_addr, val_addr)? {
             delegation
         } else {
-            return Err(AppError::Custom("No unbonding delegation".into()).into());
+            return Err(anyhow::anyhow!("No unbonding delegation"));
         };
         let bond_denom = params.bond_denom();
         let mut balances = vec![];
@@ -340,11 +333,11 @@ impl<
                 // track undelegation only when remaining or truncated shares are non-zero
                 let amount = entry.balance;
                 if amount.is_zero() {
-                    let coin = Coin {
+                    let coin = UnsignedCoin {
                         denom: bond_denom.clone(),
                         amount,
                     };
-                    let amount = SendCoins::new(vec![coin.clone()])?;
+                    let amount = UnsignedCoins::new(vec![coin.clone()])?;
                     self.bank_keeper
                         .undelegate_coins_from_module_to_account::<DB, BlockContext<'_, DB, SK>>(
                             ctx,
@@ -387,11 +380,10 @@ impl<
         self.delete_validator_by_power_index(ctx, validator)?;
         // sanity check
         if validator.status != BondStatus::Bonded {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "should not already be unbonded or unbonding, validator: {}",
                 validator.operator_address
-            ))
-            .into());
+            ));
         }
         validator.update_status(BondStatus::Unbonding);
 
@@ -504,13 +496,13 @@ impl<
         if new_addrs.is_empty() {
             self.delete_validator_queue_time_slice(
                 ctx,
-                validator.unbonding_time.clone(),
+                validator.unbonding_time,
                 validator.unbonding_height,
             )?;
         } else {
             self.set_unbonding_validators_queue(
                 ctx,
-                validator.unbonding_time.clone(),
+                validator.unbonding_time,
                 validator.unbonding_height,
                 new_addrs,
             )?;

@@ -15,7 +15,7 @@ use gears::{
     tendermint::{rpc::response::tx::broadcast::Response, types::chain_id::ChainId},
     types::{
         address::{AccAddress, ValAddress},
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         decimal256::Decimal256,
         uint::Uint256,
     },
@@ -43,7 +43,7 @@ fn run_tx_local(
     command: GaiaTxCommands,
 ) -> anyhow::Result<Response> {
     // a comment
-    run_tx(
+    let mut responses = run_tx(
         TxCommand {
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
@@ -52,11 +52,13 @@ fn run_tx_local(
             }),
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
+            fees: None,
             inner: WrappedGaiaTxCommands(command),
         },
         &GaiaCoreClient,
-    )
+    )?;
+    assert_eq!(responses.len(), 1);
+    Ok(responses.pop().expect("vector has exactly single element"))
 }
 
 fn run_query_local(command: GaiaQueryCommands) -> anyhow::Result<GaiaQueryResponse> {
@@ -74,7 +76,7 @@ fn new_validator(
     from_key: &str,
     home: PathBuf,
     pubkey: &str,
-    amount: Coin,
+    amount: UnsignedCoin,
     moniker: &str,
 ) -> anyhow::Result<Response> {
     let pubkey = serde_json::from_str(pubkey)?;
@@ -99,7 +101,7 @@ fn new_delegation(
     from_key: &str,
     home: PathBuf,
     validator_address: &str,
-    amount: Coin,
+    amount: UnsignedCoin,
 ) -> anyhow::Result<Response> {
     let tx_cmd = StakingCommands::Delegate {
         validator_address: ValAddress::from_bech32(validator_address)?,
@@ -111,7 +113,7 @@ fn new_delegation(
 
 fn create_validator_tx(home: PathBuf) -> anyhow::Result<Response> {
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
@@ -147,7 +149,7 @@ fn create_validator() -> anyhow::Result<()> {
 fn delegate_tx(home: PathBuf) -> anyhow::Result<Response> {
     create_validator_tx(home.clone())?;
 
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
@@ -189,7 +191,7 @@ fn delegate() -> anyhow::Result<()> {
 fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
     // create source validator
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
@@ -198,7 +200,7 @@ fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
     // send coins to another account to register it in the chain
     let tx_cmd = BankCommands::Send {
         to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
-        amount: Coin::from_str("30uatom")?,
+        amount: UnsignedCoin::from_str("30uatom")?,
     };
     let command = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
     run_tx_local(KEY_NAME, home.clone(), command)?;
@@ -210,14 +212,14 @@ fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
 
     // create destination validator
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
     new_validator(name, home.clone(), pubkey, amount, name)?;
 
     // create delegation to source validator
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
@@ -230,7 +232,7 @@ fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
 
     /* test */
 
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
@@ -288,7 +290,7 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
 
     // create source validator
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(100u64),
     };
@@ -297,7 +299,7 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
     // send coins to another account to register it in the chain
     let tx_cmd = BankCommands::Send {
         to_address: AccAddress::from_bech32("cosmos15jlqmacda2pzerhw48gvvxskweg8sz2saadn99")?,
-        amount: Coin::from_str("30uatom")?,
+        amount: UnsignedCoin::from_str("30uatom")?,
     };
     let command = GaiaTxCommands::Bank(BankTxCli { command: tx_cmd });
     run_tx_local(KEY_NAME, tendermint.1.to_path_buf(), command)?;
@@ -309,14 +311,14 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
 
     // create destination validator
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"AAAAC3NzaC1lZDI1NTE5AAAAIFFTUWrymqRbtqMGhZACRrr7sWUnqGB8DR+6ob9d0Fhz\"}";
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
     new_validator(name, tendermint.1.to_path_buf(), pubkey, amount, name)?;
 
     // create delegation to source validator
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
     };
@@ -329,7 +331,7 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
 
     /* test */
 
-    let amount = Coin {
+    let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(11u64),
     };
@@ -450,7 +452,7 @@ fn query_delegation() -> anyhow::Result<()> {
                     validator_address,
                     shares: Decimal256::from_atomics(110u64, 0).unwrap(),
                 },
-                balance: Coin {
+                balance: UnsignedCoin {
                     denom: "uatom".try_into().unwrap(),
                     amount: Uint256::from(110u64),
                 },

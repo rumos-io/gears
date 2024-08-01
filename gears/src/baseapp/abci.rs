@@ -48,15 +48,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
-        info!("Got init chain request"); // TODO: should we move logs to proxy?
-
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         //TODO: handle request height > 1 as is done in SDK
 
         let mut ctx = InitContext::new(
             &mut multi_store,
-            request.initial_height as u32, // TODO: make request height u32
+            request.initial_height,
             request.time,
             request.chain_id,
         );
@@ -79,12 +77,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         }
     }
 
-    fn info(&self, request: RequestInfo) -> ResponseInfo {
-        info!(
-            "Got info request. Tendermint version: {}; Block version: {}; P2P version: {}",
-            request.version, request.block_version, request.p2p_version
-        );
-
+    fn info(&self, _request: RequestInfo) -> ResponseInfo {
         ResponseInfo {
             data: AI::APP_NAME.to_owned(),
             version: AI::APP_VERSION.to_owned(),
@@ -95,8 +88,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn query(&self, request: RequestQuery) -> ResponseQuery {
-        info!("Got query request to: {}", request.path);
-
         match self.run_query(&request) {
             Ok(res) => ResponseQuery {
                 code: 0,
@@ -124,8 +115,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
-        info!("Got check tx request");
-
         let mut state = self.state.write().expect(POISONED_LOCK);
 
         let result = match r#type {
@@ -157,14 +146,14 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             Err(e) => {
                 error!("check err: {e}");
                 ResponseCheckTx {
-                    code: 1,
+                    code: e.code(),
                     data: Default::default(),
                     log: e.to_string(),
                     info: "".to_string(),
                     gas_wanted: 1,
                     gas_used: 0,
                     events: vec![],
-                    codespace: "".to_string(),
+                    codespace: e.codespace().to_string(),
                     mempool_error: "".to_string(),
                     priority: 0,
                     sender: "".to_string(),
@@ -174,8 +163,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn deliver_tx(&self, RequestDeliverTx { tx }: RequestDeliverTx) -> ResponseDeliverTx {
-        info!("Got deliver tx request");
-
         let mut state = self.state.write().expect(POISONED_LOCK);
 
         let result = self.run_tx(tx.clone(), &mut state.deliver_mode);
@@ -205,15 +192,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
                     gas_wanted: 0,
                     gas_used: 0,
                     events: vec![],
-                    codespace: "".to_string(),
+                    codespace: e.codespace().to_string(),
                 }
             }
         }
     }
 
     fn commit(&self) -> ResponseCommit {
-        info!("Got commit request");
-
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
 
         let height = self.get_block_header().unwrap().height;
@@ -238,15 +223,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn echo(&self, request: RequestEcho) -> ResponseEcho {
-        info!("Got echo request");
         ResponseEcho {
             message: request.message,
         }
     }
 
     fn begin_block(&self, request: RequestBeginBlock) -> ResponseBeginBlock {
-        info!("Got begin block request");
-
         //TODO: Cosmos SDK validates the request height here
 
         self.set_block_header(request.header.clone());
@@ -282,8 +264,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
-        info!("Got end block request");
-
         let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
         let header = self
             .get_block_header()
@@ -312,25 +292,21 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
     /// Signals that messages queued on the client should be flushed to the server.
     fn flush(&self) -> ResponseFlush {
-        info!("Got flush request");
         ResponseFlush {}
     }
 
     /// Used during state sync to discover available snapshots on peers.
     fn list_snapshots(&self) -> ResponseListSnapshots {
-        info!("Got list snapshots request");
         Default::default()
     }
 
     /// Called when bootstrapping the node using state sync.
     fn offer_snapshot(&self, _request: RequestOfferSnapshot) -> ResponseOfferSnapshot {
-        info!("Got offer snapshot request");
         Default::default()
     }
 
     /// Used during state sync to retrieve chunks of snapshots from peers.
     fn load_snapshot_chunk(&self, _request: RequestLoadSnapshotChunk) -> ResponseLoadSnapshotChunk {
-        info!("Got load snapshot chunk request");
         Default::default()
     }
 
@@ -339,7 +315,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         &self,
         _request: RequestApplySnapshotChunk,
     ) -> ResponseApplySnapshotChunk {
-        info!("Got apply snapshot chunk request");
         Default::default()
     }
 }

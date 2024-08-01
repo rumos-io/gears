@@ -3,14 +3,12 @@ use crate::{
     Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
-use chrono::Utc;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
         block::BlockContext, init::InitContext, InfallibleContext, QueryableContext,
         TransactionalContext,
     },
-    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -18,11 +16,11 @@ use gears::{
             event::{Event, EventAttribute},
             validator::ValidatorUpdate,
         },
-        time::Timestamp,
+        time::{duration::Duration, timestamp::Timestamp},
     },
     types::{
         address::{AccAddress, ValAddress},
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
         decimal256::Decimal256,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
         uint::Uint256,
@@ -38,8 +36,6 @@ use std::{cmp::Ordering, collections::HashMap};
 
 // Each module contains methods of keeper with logic related to its name. It can be delegation and
 // validator types.
-
-const CTX_NO_GAS_UNWRAP: &str = "Context doesn't have any gas";
 
 mod bonded;
 mod delegation;
@@ -122,17 +118,16 @@ impl<
         // ctx = ctx.WithBlockHeight(1 - sdk.ValidatorUpdateDelay)
 
         self.set_last_total_power(ctx, genesis.last_total_power)
-            .expect(CTX_NO_GAS_UNWRAP);
+            .unwrap_gas();
         self.staking_params_keeper.set(ctx, genesis.params.clone());
 
         for validator in genesis.validators {
-            self.set_validator(ctx, &validator)
-                .expect(CTX_NO_GAS_UNWRAP);
+            self.set_validator(ctx, &validator).unwrap_gas();
             // Manually set indices for the first time
             self.set_validator_by_cons_addr(ctx, &validator)
-                .expect(CTX_NO_GAS_UNWRAP);
+                .unwrap_gas();
             self.set_validator_by_power_index(ctx, &validator)
-                .expect(CTX_NO_GAS_UNWRAP);
+                .unwrap_gas();
 
             if !genesis.exported {
                 self.after_validator_created(ctx, &validator);
@@ -140,7 +135,7 @@ impl<
 
             if validator.status == BondStatus::Unbonding {
                 self.insert_unbonding_validator_queue(ctx, &validator)
-                    .expect(CTX_NO_GAS_UNWRAP);
+                    .unwrap_gas();
             }
 
             match validator.status {
@@ -162,8 +157,7 @@ impl<
                 );
             }
 
-            self.set_delegation(ctx, &delegation)
-                .expect(CTX_NO_GAS_UNWRAP);
+            self.set_delegation(ctx, &delegation).unwrap_gas();
 
             if !genesis.exported {
                 self.after_delegation_modified(
@@ -178,22 +172,21 @@ impl<
             self.set_unbonding_delegation(ctx, &unbonding_delegation)
                 .unwrap_gas();
             for entry in unbonding_delegation.entries.as_slice() {
-                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time.clone())
+                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time)
                     .unwrap_gas();
             }
         }
 
         for redelegation in genesis.redelegations {
-            self.set_redelegation(ctx, &redelegation)
-                .expect("setting of redelegation won't fail because used infallable context");
+            self.set_redelegation(ctx, &redelegation).unwrap_gas();
             for entry in &redelegation.entries {
-                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time.clone())
-                    .expect("setting of redelegation won't fail because used infallable context");
+                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)
+                    .unwrap_gas();
             }
         }
 
         let bonded_coins = if !bonded_tokens.is_zero() {
-            vec![Coin {
+            vec![UnsignedCoin {
                 denom: genesis.params.bond_denom().clone(),
                 amount: bonded_tokens,
             }]
@@ -201,7 +194,7 @@ impl<
             vec![]
         };
         let not_bonded_coins = if !not_bonded_tokens.is_zero() {
-            vec![Coin {
+            vec![UnsignedCoin {
                 denom: genesis.params.bond_denom().clone(),
                 amount: not_bonded_tokens,
             }]
@@ -258,13 +251,16 @@ impl<
         if genesis.exported {
             for last_validator in genesis.last_validator_powers {
                 self.set_last_validator_power(ctx, &last_validator)
-                    .expect(CTX_NO_GAS_UNWRAP);
+                    .unwrap_gas();
                 let validator = self
                     .validator(ctx, &last_validator.address)
-                    .expect("Init ctx doesn't have any gas")
+                    .unwrap_gas()
                     .expect("validator in the store was not found");
-                let mut update = validator.abci_validator_update(self.power_reduction(ctx));
-                update.power = last_validator.power;
+                // TODO: check unwraps and update types to omit conversion
+                let mut update = validator
+                    .abci_validator_update(self.power_reduction(ctx))
+                    .unwrap();
+                update.power = (last_validator.power as u64).try_into().unwrap();
                 res.push(update);
             }
         } else {
@@ -295,8 +291,7 @@ impl<
         };
 
         // unbond all mature validators from the unbonding queue
-        self.unbond_all_mature_validators(ctx)
-            .expect(CTX_NO_GAS_UNWRAP);
+        self.unbond_all_mature_validators(ctx).unwrap_gas();
 
         // Remove all mature unbonding delegations from the ubd queue.
         let time = ctx.get_time();
@@ -423,10 +418,9 @@ impl<
                 .expect("validator should be presented in store");
 
             if validator.jailed {
-                return Err(AppError::Custom(
+                return Err(anyhow::anyhow!(
                     "should never retrieve a jailed validator from the power store".to_string(),
-                )
-                .into());
+                ));
             }
             // if we get to a zero-power validator (which we don't bond),
             // there are no more possible bonded validators
@@ -458,13 +452,15 @@ impl<
             if old_power_bytes.is_none()
                 || old_power_bytes.map(|v| v.as_slice()) != Some(&new_power_bytes)
             {
-                updates.push(validator.abci_validator_update(power_reduction));
+                // TODO: check unwraps and update types to omit conversion
+                updates.push(validator.abci_validator_update(power_reduction).unwrap());
 
                 self.set_last_validator_power(
                     ctx,
                     &LastValidatorPower {
                         address: val_addr.clone(),
-                        power: new_power,
+                        // TODO: update types to omit conversion
+                        power: new_power as i64,
                     },
                 )?;
             }
@@ -521,7 +517,7 @@ impl<
         Ok(updates)
     }
 
-    pub fn power_reduction<DB: Database, CTX: QueryableContext<DB, SK>>(&self, _ctx: &CTX) -> i64 {
+    pub fn power_reduction<DB: Database, CTX: QueryableContext<DB, SK>>(&self, _ctx: &CTX) -> u64 {
         // TODO: sdk constant in cosmos
         1_000_000
     }
@@ -534,7 +530,7 @@ impl<
         // original routine is infallible, it means that the amount should be a valid number.
         // All errors in sdk panics in this method
         let params = self.staking_params_keeper.try_get(ctx)?;
-        let coins = SendCoins::new(vec![Coin {
+        let coins = UnsignedCoins::new(vec![UnsignedCoin {
             denom: params.bond_denom().clone(),
             amount,
         }])
@@ -571,27 +567,13 @@ impl<
             BondStatus::Bonded => {
                 // the longest wait - just unbonding period from now
                 let params = self.staking_params_keeper.try_get(ctx)?;
-                let duration = chrono::TimeDelta::nanoseconds(params.unbonding_time());
-                let time = ctx.get_time();
-                // TODO: consider to work with time in Gears
-                let time =
-                    chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-                let completion_time = time + duration;
+                let duration = Duration::new_from_nanos(params.unbonding_time());
+
+                let completion_time = ctx.get_time().checked_add(duration).unwrap();
                 let height = ctx.height();
-                let completion_time = Timestamp {
-                    seconds: completion_time.timestamp(),
-                    nanos: completion_time.timestamp_subsec_nanos() as i32,
-                };
                 Ok((completion_time, height, false))
             }
-            BondStatus::Unbonded => Ok((
-                Timestamp {
-                    seconds: 0,
-                    nanos: 0,
-                },
-                0,
-                true,
-            )),
+            BondStatus::Unbonded => Ok((Timestamp::UNIX_EPOCH, 0, true)),
             BondStatus::Unbonding => {
                 let validator = validator.unwrap();
                 Ok((validator.unbonding_time, validator.unbonding_height, false))

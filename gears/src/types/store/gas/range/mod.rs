@@ -49,9 +49,10 @@ impl<'a, DB: Database> Iterator for GasRange<'a, DB> {
             RangeBackend::Prefix(var) => var.next(),
         };
 
-        let err = self
-            .guard
-            .range(next.as_ref().map(|(key, val)| (key.len(), val.len())));
+        let err = self.guard.range(
+            next.as_ref()
+                .map(|(key, val)| (key.len(), val.len(), &***key)),
+        );
 
         match err {
             Ok(_) => next.map(Ok),

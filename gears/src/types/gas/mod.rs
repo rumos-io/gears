@@ -23,9 +23,9 @@ pub type FiniteGas = super::auth::gas::Gas;
 
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
 pub enum GasMeteringErrors {
-    #[error("Out of gas: {0}")]
+    #[error("out of gas: {0}")]
     ErrorOutOfGas(String),
-    #[error("Gas overflow: {0}")]
+    #[error("gas overflow: {0}")]
     ErrorGasOverflow(String),
 }
 

@@ -4,10 +4,13 @@ use crate::{
 };
 use gears::{
     core::{errors::CoreError, Protobuf},
-    error::AppError,
+    error::{MathOperation, NumericError},
     tendermint::types::{
-        proto::{crypto::PublicKey, validator::ValidatorUpdate},
-        time::Timestamp,
+        proto::{
+            crypto::PublicKey,
+            validator::{ValidatorUpdate, VotingPower},
+        },
+        time::timestamp::Timestamp,
     },
     types::{
         address::{ConsAddress, ValAddress},
@@ -60,17 +63,35 @@ pub struct Validator {
     pub status: BondStatus,
 }
 
+impl TryFrom<Vec<u8>> for Validator {
+    type Error = CoreError;
+
+    fn try_from(raw: Vec<u8>) -> Result<Self, Self::Error> {
+        Validator::decode_vec(&raw).map_err(|e| CoreError::DecodeGeneral(e.to_string()))
+    }
+}
+
+impl From<Validator> for Vec<u8> {
+    fn from(value: Validator) -> Self {
+        value.encode_vec()
+    }
+}
+
 impl StakingValidator for Validator {
     fn operator(&self) -> &ValAddress {
         &self.operator_address
     }
 
-    fn bonded_tokens(&self) -> &Uint256 {
-        &self.tokens
+    fn tokens(&self) -> Uint256 {
+        self.tokens
     }
 
-    fn delegator_shares(&self) -> &Decimal256 {
-        &self.delegator_shares
+    fn bonded_tokens(&self) -> Uint256 {
+        self.bonded_tokens()
+    }
+
+    fn delegator_shares(&self) -> Decimal256 {
+        self.delegator_shares
     }
 
     fn cons_pub_key(&self) -> &PublicKey {
@@ -81,13 +102,16 @@ impl StakingValidator for Validator {
         self.jailed
     }
 
-    fn min_self_delegation(&self) -> &Uint256 {
-        &self.min_self_delegation
+    fn min_self_delegation(&self) -> Uint256 {
+        self.min_self_delegation
     }
 
-    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, AppError> {
+    fn commission(&self) -> Decimal256 {
+        self.commission.commission_rates().rate()
+    }
+
+    fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, NumericError> {
         self.tokens_from_shares(shares)
-            .map_err(|e| AppError::Custom(e.to_string()))
     }
 }
 
@@ -105,31 +129,34 @@ impl Validator {
             jailed: false,
             tokens: Uint256::zero(),
             unbonding_height: 0,
-            unbonding_time: Timestamp {
-                seconds: 0,
-                nanos: 0,
-            },
+            unbonding_time: Timestamp::UNIX_EPOCH,
             commission: Commission::new(
                 CommissionRates::new(Decimal256::zero(), Decimal256::zero(), Decimal256::zero())
                     .expect("creation of hardcoded commission rates won't fail"),
-                Timestamp {
-                    seconds: 0,
-                    nanos: 0,
-                },
+                Timestamp::UNIX_EPOCH,
             ),
             min_self_delegation: Uint256::one(),
             status: BondStatus::Unbonded,
         }
     }
 
-    pub fn abci_validator_update(&self, power: i64) -> ValidatorUpdate {
-        ValidatorUpdate {
+    pub fn abci_validator_update(&self, power: u64) -> anyhow::Result<ValidatorUpdate> {
+        Ok(ValidatorUpdate {
             pub_key: self.consensus_pubkey.clone(),
-            power: self.consensus_power(power),
-        }
+            power: VotingPower::new(self.consensus_power(power))?,
+        })
     }
     pub fn abci_validator_update_zero(&self) -> ValidatorUpdate {
         self.abci_validator_update(0)
+            .expect("hardcoded value is less than max voting power")
+    }
+
+    pub fn bonded_tokens(&self) -> Uint256 {
+        if self.status == BondStatus::Bonded {
+            self.tokens
+        } else {
+            Uint256::zero()
+        }
     }
 
     pub fn set_initial_commission(&mut self, commission: Commission) {
@@ -138,7 +165,7 @@ impl Validator {
 
     pub fn shares_from_tokens(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
-            return Err(AppError::Custom("insufficient shares".into()).into());
+            return Err(anyhow::anyhow!("insufficient shares"));
         }
         Ok(self
             .delegator_shares
@@ -148,7 +175,7 @@ impl Validator {
 
     pub fn shares_from_tokens_truncated(&self, amount: Uint256) -> anyhow::Result<Decimal256> {
         if self.tokens.is_zero() {
-            return Err(AppError::Custom("insufficient shares".into()).into());
+            return Err(anyhow::anyhow!("insufficient shares"));
         }
         let mul = self
             .delegator_shares
@@ -159,10 +186,12 @@ impl Validator {
     }
 
     /// calculate the token worth of provided shares
-    pub fn tokens_from_shares(&self, shares: Decimal256) -> anyhow::Result<Decimal256> {
-        Ok(shares
-            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)?
-            .checked_div(self.delegator_shares)?)
+    pub fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, NumericError> {
+        shares
+            .checked_mul(Decimal256::from_atomics(self.tokens, 0)?)
+            .map_err(|_| NumericError::Overflow(MathOperation::Mul))?
+            .checked_div(self.delegator_shares)
+            .map_err(|_| NumericError::Overflow(MathOperation::Div))
     }
 
     /// add_tokens_from_del adds tokens to a validator
@@ -231,22 +260,22 @@ impl Validator {
             .expect("Unexpected conversion error")
     }
 
-    pub fn consensus_power(&self, power: i64) -> i64 {
+    pub fn consensus_power(&self, power: u64) -> u64 {
         match self.status {
             BondStatus::Bonded => self.potential_consensus_power(power),
             _ => 0,
         }
     }
 
-    pub fn potential_consensus_power(&self, power: i64) -> i64 {
+    pub fn potential_consensus_power(&self, power: u64) -> u64 {
         self.tokens_to_consensus_power(power)
     }
 
-    pub fn tokens_to_consensus_power(&self, power: i64) -> i64 {
-        let amount = self.tokens / Uint256::from(power as u64);
+    pub fn tokens_to_consensus_power(&self, power: u64) -> u64 {
+        let amount = self.tokens / Uint256::from(power);
         amount
             .to_string()
-            .parse::<i64>()
+            .parse::<u64>()
             .expect("Unexpected conversion error")
     }
 
@@ -254,7 +283,7 @@ impl Validator {
     /// Power index is the key used in the power-store, and represents the relative
     /// power ranking of the validator.
     /// VALUE: validator operator address ([]byte)
-    pub fn key_by_power_index_key(&self, power_reduction: i64) -> Vec<u8> {
+    pub fn key_by_power_index_key(&self, power_reduction: u64) -> Vec<u8> {
         // NOTE the address doesn't need to be stored because counter bytes must always be different
         // NOTE the larger values are of higher value
         let consensus_power = self.tokens_to_consensus_power(power_reduction);

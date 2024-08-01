@@ -1,6 +1,5 @@
 use gears::{
     application::keepers::params::ParamsKeeper,
-    error::AppError,
     params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey},
     types::denom::Denom,
 };
@@ -13,7 +12,7 @@ const KEY_MAX_ENTRIES: &str = "MaxEntries";
 const KEY_HISTORICAL_ENTRIES: &str = "HistoricalEntries";
 const KEY_BOND_DENOM: &str = "BondDenom";
 
-/// ['Params'] defines the parameters for the staking module. The params are guraanteed to be valid:
+/// ['Params'] defines the parameters for the staking module. The params are guaranteed to be valid:
 /// - unbonding_time is non negative
 /// - max_validators is positive
 /// - max_entries is positive
@@ -22,7 +21,7 @@ const KEY_BOND_DENOM: &str = "BondDenom";
 pub struct Params {
     // sdk counts duration as simple i64 type that represents difference
     // between two instants
-    unbonding_time: i64,
+    unbonding_time: i64, //TODO: doesn't the SDK use a Duration type? https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/staking.pb.go#L837
     max_validators: u32,
     max_entries: u32,
     historical_entries: u32,
@@ -40,7 +39,7 @@ struct RawParams {
 }
 
 impl TryFrom<RawParams> for Params {
-    type Error = AppError;
+    type Error = anyhow::Error;
 
     fn try_from(params: RawParams) -> Result<Self, Self::Error> {
         Params::new(
@@ -152,23 +151,23 @@ impl Params {
         max_entries: u32,
         historical_entries: u32,
         bond_denom: Denom,
-    ) -> Result<Self, AppError> {
+    ) -> Result<Self, anyhow::Error> {
         if unbonding_time < 0 {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(format!(
                 "unbonding time must be non negative: {}",
                 unbonding_time
             )));
         }
 
         if max_validators == 0 {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(format!(
                 "max validators must be positive: {}",
                 max_validators
             )));
         }
 
         if max_entries == 0 {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(format!(
                 "max entries must be positive: {}",
                 max_entries
             )));

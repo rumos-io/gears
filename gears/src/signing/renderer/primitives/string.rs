@@ -12,7 +12,7 @@ impl TryPrimitiveValueRenderer<&str> for DefaultPrimitiveRenderer {
                 "cannot render empty string".to_string(),
             ))
         } else {
-            Ok(Content::new(value).expect("slice is not empty"))
+            Ok(Content::try_new(value).expect("slice is not empty"))
         }
     }
 }
@@ -24,7 +24,7 @@ impl TryPrimitiveValueRenderer<String> for DefaultPrimitiveRenderer {
                 "cannot render empty string".to_string(),
             ))
         } else {
-            Ok(Content::new(value).expect("String is not empty"))
+            Ok(Content::try_new(value).expect("String is not empty"))
         }
     }
 }

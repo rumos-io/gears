@@ -1,11 +1,13 @@
+use std::marker::PhantomData;
+
 use bytes::Bytes;
 use gears::{
-    application::handlers::node::ABCIHandler,
+    application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
+    baseapp::{errors::QueryError, QueryResponse},
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         TransactionalContext,
     },
-    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -24,6 +26,7 @@ use gears::{
 };
 
 use crate::{
+    errors::GovTxError,
     genesis::GovGenesisState,
     keeper::GovKeeper,
     msg::{deposit::Deposit, GovMsg},
@@ -47,8 +50,10 @@ pub struct GovAbciHandler<
     BK: GovernanceBankKeeper<SK, M>,
     STK: GovStakingKeeper<SK, M>,
     PH: ProposalHandler<PSK, Proposal>,
+    MI,
 > {
     keeper: GovKeeper<SK, PSK, M, BK, STK, PH>,
+    _marker: PhantomData<MI>,
 }
 
 impl<
@@ -58,10 +63,14 @@ impl<
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         PH: ProposalHandler<PSK, Proposal>,
-    > GovAbciHandler<SK, PSK, M, BK, STK, PH>
+        MI: ModuleInfo,
+    > GovAbciHandler<SK, PSK, M, BK, STK, PH, MI>
 {
     pub fn new(keeper: GovKeeper<SK, PSK, M, BK, STK, PH>) -> Self {
-        Self { keeper }
+        Self {
+            keeper,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -72,7 +81,8 @@ impl<
         BK: GovernanceBankKeeper<SK, M>,
         STK: GovStakingKeeper<SK, M>,
         PH: ProposalHandler<PSK, Proposal> + Clone + Send + Sync + 'static,
-    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, PH>
+        MI: ModuleInfo + Clone + Send + Sync + 'static,
+    > ABCIHandler for GovAbciHandler<SK, PSK, M, BK, STK, PH, MI>
 {
     type Message = GovMsg;
 
@@ -96,15 +106,15 @@ impl<
         &self,
         _ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         _tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         Ok(())
     }
 
-    fn tx<DB: Database>(
+    fn msg<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         enum EmitEvent {
             Regular,
             Deposit(u64),
@@ -113,41 +123,32 @@ impl<
 
         let (address_str, proposal) = match msg {
             GovMsg::Deposit(msg) => {
-                let is_voting_started = self
-                    .keeper
+                self.keeper
                     .deposit_add(ctx, msg.clone())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
-
-                match is_voting_started {
-                    true => (
-                        msg.depositor.to_string(),
-                        EmitEvent::Deposit(msg.proposal_id),
-                    ),
-                    false => (msg.depositor.to_string(), EmitEvent::Regular),
-                }
+                    .map(|is_voting_started| match is_voting_started {
+                        true => (
+                            msg.depositor.to_string(),
+                            EmitEvent::Deposit(msg.proposal_id),
+                        ),
+                        false => (msg.depositor.to_string(), EmitEvent::Regular),
+                    })
             }
-            GovMsg::Vote(msg) => {
-                self.keeper
-                    .vote_add(ctx, msg.clone().into())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
-
-                (msg.voter.to_string(), EmitEvent::Regular)
-            }
-            GovMsg::Weighted(msg) => {
-                self.keeper
-                    .vote_add(ctx, msg.clone())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
-
-                (msg.voter.to_string(), EmitEvent::Regular)
-            }
+            GovMsg::Vote(msg) => self
+                .keeper
+                .vote_add(ctx, msg.clone().into())
+                .map(|_| (msg.voter.to_string(), EmitEvent::Regular)),
+            GovMsg::Weighted(msg) => self
+                .keeper
+                .vote_add(ctx, msg.clone())
+                .map(|_| (msg.voter.to_string(), EmitEvent::Regular)),
             GovMsg::Proposal(msg) => {
                 let proposal_id = self
                     .keeper
                     .submit_proposal(ctx, msg.clone())
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
+                    .map_err(GovTxError::from)
+                    .map_err(|e| e.into::<MI>())?;
 
-                let is_voting_started = self
-                    .keeper
+                self.keeper
                     .deposit_add(
                         ctx,
                         Deposit {
@@ -156,20 +157,20 @@ impl<
                             amount: msg.initial_deposit.clone(),
                         },
                     )
-                    .map_err(|e| AppError::Custom(e.to_string()))?;
-
-                match is_voting_started {
-                    true => (
-                        msg.proposer.to_string(),
-                        EmitEvent::Proposal((msg.content.type_url.clone(), Some(proposal_id))),
-                    ),
-                    false => (
-                        msg.proposer.to_string(),
-                        EmitEvent::Proposal((msg.content.type_url.clone(), None)),
-                    ),
-                }
+                    .map(|is_voting_started| match is_voting_started {
+                        true => (
+                            msg.proposer.to_string(),
+                            EmitEvent::Proposal((msg.content.type_url.clone(), Some(proposal_id))),
+                        ),
+                        false => (
+                            msg.proposer.to_string(),
+                            EmitEvent::Proposal((msg.content.type_url.clone(), None)),
+                        ),
+                    })
             }
-        };
+        }
+        .map_err(GovTxError::from)
+        .map_err(|e| e.into::<MI>())?;
 
         ctx.push_event(Event::new(
             "message",
@@ -237,7 +238,7 @@ impl<
             height: _,
             prove: _,
         }: RequestQuery,
-    ) -> Result<Bytes, AppError> {
+    ) -> Result<Bytes, QueryError> {
         let query = match path.as_str() {
             QueryDepositRequest::QUERY_URL => GovQuery::Deposit(QueryDepositRequest::decode(data)?),
             QueryDepositsRequest::QUERY_URL => {
@@ -261,12 +262,12 @@ impl<
             QueryProposerRequest::QUERY_URL => {
                 GovQuery::Proposer(QueryProposerRequest::decode(data)?)
             }
-            _ => Err(AppError::Query("Path not found".to_string()))?,
+            _ => Err(QueryError::PathNotFound)?,
         };
 
         let result = self.keeper.query(ctx, query).unwrap_gas();
 
-        Ok(result.encode_to_vec())
+        Ok(result.into_bytes().into())
     }
 
     fn end_block<'a, DB: Database>(

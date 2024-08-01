@@ -11,7 +11,7 @@ use crate::{
         tx::{Keyring as TxKeyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
-    types::base::send::SendCoins,
+    types::base::coins::UnsignedCoins,
 };
 
 /// Transaction subcommands
@@ -25,7 +25,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     pub chain_id: ChainId,
     /// TODO
     #[arg(long, global = true, action = ArgAction::Set)]
-    pub fee: Option<SendCoins>,
+    pub fees: Option<UnsignedCoins>,
 
     #[arg(long, short, default_value_t = Keyring::Local)]
     pub keyring: Keyring,
@@ -93,7 +93,7 @@ where
         let CliTxCommand {
             node,
             chain_id,
-            fee,
+            fees: fee,
             _marker,
             keyring,
             local,
@@ -123,7 +123,7 @@ where
         Ok(Self {
             node,
             chain_id,
-            fee,
+            fees: fee,
             keyring,
             inner: command.try_into()?,
         })

@@ -1,7 +1,7 @@
 use gears::{
     core::errors::CoreError,
     error::IBC_ENCODE_UNWRAP,
-    tendermint::types::{proto::Protobuf, time::Timestamp},
+    tendermint::types::{proto::Protobuf, time::timestamp::Timestamp},
     types::address::ConsAddress,
 };
 use prost::Message;

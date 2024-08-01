@@ -1,17 +1,32 @@
-use serde::Deserialize;
+use crate::types::pagination::request::{PaginationKind, PaginationRequest, QUERY_DEFAULT_LIMIT};
 
-const QUERY_DEFAULT_LIMIT: u8 = 100;
-
-//#[derive(FromForm, Debug)]
-#[derive(Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Eq, PartialEq)]
 pub struct Pagination {
+    /*
+    ! NOTE: this lines of code https://github.com/NYBACHOK/gears/blob/81883ecfd28c65c8b90460fd9515b18ed33094a4/gears/src/rest/handlers.rs#L69-L76
+    ! doesn't have any way to use key instead of offset, so I assume it not possible at all for this moment
+    */
+    /// offset is a numeric offset that can be used when key is unavailable.
+    /// It is less efficient than using key. Only one of offset or key should
+    /// be set.
     offset: Option<u32>,
     /// limit is the total number of results to be returned in the result page.
     /// If left empty it will default to a value to be set by each app.
     limit: Option<u8>,
 }
 
-// ParsePagination validate PageRequest and returns page number & limit.
+impl From<Pagination> for PaginationRequest {
+    fn from(pagination: Pagination) -> Self {
+        let (offset, limit) = parse_pagination(pagination);
+
+        Self {
+            limit,
+            kind: PaginationKind::Offset { offset },
+        }
+    }
+}
+
+// ParsePagination validate Pagination and returns page number & limit.
 pub fn parse_pagination(pagination: Pagination) -> (u32, u8) {
     let offset = pagination.offset.unwrap_or(0);
     let mut limit = pagination.limit.unwrap_or(QUERY_DEFAULT_LIMIT);
@@ -23,23 +38,6 @@ pub fn parse_pagination(pagination: Pagination) -> (u32, u8) {
     let page = offset / (limit as u32) + 1;
 
     (page, limit)
-}
-
-impl From<core_types::query::request::PageRequest> for Pagination {
-    fn from(
-        core_types::query::request::PageRequest {
-            key: _,
-            offset,
-            limit,
-            count_total: _,
-            reverse: _,
-        }: core_types::query::request::PageRequest,
-    ) -> Self {
-        Self {
-            offset: Some(offset.try_into().unwrap_or(u32::MAX)),
-            limit: Some(limit.try_into().unwrap_or(u8::MAX)),
-        }
-    }
 }
 
 #[cfg(test)]

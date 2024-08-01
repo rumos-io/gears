@@ -5,13 +5,13 @@ use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, PrimitiveValueRenderer, RenderError,
     TryPrimitiveValueRendererWithMetadata,
 };
-use crate::types::base::coin::Coin;
+use crate::types::base::coin::UnsignedCoin;
 use crate::types::rendering::screen::Content;
 use crate::types::tx::metadata::Metadata;
 
-impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
+impl TryPrimitiveValueRendererWithMetadata<UnsignedCoin> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<MG: MetadataGetter>(
-        coin: Coin,
+        coin: UnsignedCoin,
         get_metadata: &MG,
     ) -> Result<Content, RenderError> {
         let metadata = get_metadata.metadata(&coin.denom).map_err(|e| {
@@ -19,7 +19,7 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
         })?;
         let Some(metadata) = metadata else {
             let display = coin.denom.to_string();
-            return Ok(Content::new(format!(
+            return Ok(Content::try_new(format!(
                 "{} {display}",
                 DefaultPrimitiveRenderer::format(coin.amount).into_inner()
             ))
@@ -34,7 +34,7 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
 
         if display.is_empty() || coin.denom.to_string() == display {
             let display = coin.denom.to_string();
-            return Ok(Content::new(format!(
+            return Ok(Content::try_new(format!(
                 "{} {display}",
                 DefaultPrimitiveRenderer::format(coin.amount).into_inner()
             ))
@@ -44,7 +44,7 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
         let coin_exp = denom_units.iter().find(|this| this.denom == coin.denom);
         let denom_exp = denom_units
             .iter()
-            .find(|this| this.denom.as_ref() == display);
+            .find(|this| this.denom.as_str() == display);
 
         match (coin_exp, denom_exp) {
             (Some(coin_exp), Some(denom_exp)) => {
@@ -95,12 +95,12 @@ impl TryPrimitiveValueRendererWithMetadata<Coin> for DefaultPrimitiveRenderer {
                     }
                 };
 
-                Ok(Content::new(format!("{formatted_amount} {display}"))
+                Ok(Content::try_new(format!("{formatted_amount} {display}"))
                     .expect("this String is not empty so it will never fail to parse"))
             }
             _ => {
                 let display = coin.denom.to_string();
-                Ok(Content::new(format!(
+                Ok(Content::try_new(format!(
                     "{} {display}",
                     DefaultPrimitiveRenderer::format(coin.amount).into_inner()
                 ))
@@ -116,18 +116,18 @@ mod tests {
     use crate::signing::renderer::value_renderer::{
         DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
-    use crate::types::{base::coin::Coin, rendering::screen::Content};
+    use crate::types::{base::coin::UnsignedCoin, rendering::screen::Content};
     use anyhow::Ok;
     use cosmwasm_std::Uint256;
 
     #[test]
     fn coin_formatting() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(10000000_u64),
         };
 
-        let expected_content = Content::new("10 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("10 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
@@ -139,12 +139,12 @@ mod tests {
 
     #[test]
     fn coin_formatting_small_amounts_works() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(1u8),
         };
 
-        let expected_content = Content::new("0.000001 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.000001 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
@@ -156,12 +156,12 @@ mod tests {
 
     #[test]
     fn coin_formatting_zero_amount_works() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(0u8),
         };
 
-        let expected_content = Content::new("0 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);
@@ -173,12 +173,12 @@ mod tests {
 
     #[test]
     fn coin_formatting_large_amount_works() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "ATOM".try_into()?,
             amount: Uint256::from(10_000u16),
         };
 
-        let expected_content = Content::new("10'000 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("10'000 ATOM".to_string()).unwrap();
 
         let actual_content =
             DefaultPrimitiveRenderer::try_format_with_metadata(coin, &TestMetadataGetter);

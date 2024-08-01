@@ -88,7 +88,7 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for InitContext<'_
     }
 
     fn get_time(&self) -> Timestamp {
-        self.time.clone()
+        self.time
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {

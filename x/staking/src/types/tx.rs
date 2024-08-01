@@ -1,12 +1,11 @@
 use crate::consts::proto::*;
 use gears::{
     core::{errors::CoreError, Protobuf},
-    error::AppError,
-    tendermint::types::{proto::crypto::PublicKey, time::Timestamp},
+    tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::{
         address::{AccAddress, ValAddress},
         auth::fee::inner::Coin as CoinRaw,
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         decimal256::{CosmosDecimalProtoString, Decimal256, ONE_DEC},
         errors::StdError,
         uint::Uint256,
@@ -55,7 +54,7 @@ impl CommissionRates {
         rate: Decimal256,
         max_rate: Decimal256,
         max_change_rate: Decimal256,
-    ) -> Result<CommissionRates, AppError> {
+    ) -> Result<CommissionRates, anyhow::Error> {
         CommissionRates::validate(rate, max_rate, max_change_rate)?;
         Ok(CommissionRates {
             rate,
@@ -80,20 +79,18 @@ impl CommissionRates {
         rate: Decimal256,
         max_rate: Decimal256,
         max_change_rate: Decimal256,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), anyhow::Error> {
         if max_rate > ONE_DEC {
             // max rate cannot be greater than 1
-            return Err(AppError::Send("max_rate too huge".into()));
+            return Err(anyhow::anyhow!("max_rate too huge"));
         }
         if rate > max_rate {
             // rate cannot be greater than the max rate
-            return Err(AppError::Send("rate is bigger than max_rate".into()));
+            return Err(anyhow::anyhow!("rate is bigger than max_rate"));
         }
         if max_change_rate > max_rate {
             // change rate cannot be greater than the max rate
-            return Err(AppError::Send(
-                "max_change_rate is bigger than max_rate".into(),
-            ));
+            return Err(anyhow::anyhow!("max_change_rate is bigger than max_rate"));
         }
         Ok(())
     }
@@ -152,20 +149,11 @@ impl Commission {
         &self,
         commission_rates: CommissionRates,
         update_time: Timestamp,
-    ) -> Result<Commission, AppError> {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let self_time = chrono::DateTime::from_timestamp(
-            self.update_time.seconds,
-            self.update_time.nanos as u32,
-        )
-        .unwrap();
-        let new_update_time =
-            chrono::DateTime::from_timestamp(update_time.seconds, update_time.nanos as u32)
-                .unwrap();
-        if (new_update_time - self_time).num_hours() < 24 {
-            return Err(AppError::Custom(
-                "new rate cannot be changed more than once within 24 hours".to_string(),
+    ) -> Result<Commission, anyhow::Error> {
+        let diff = update_time.checked_sub(&self.update_time).unwrap();
+        if i64::from(diff.duration_hours()) < 24 {
+            return Err(anyhow::anyhow!(
+                "new rate cannot be changed more than once within 24 hours"
             ));
         }
         Ok(Commission {
@@ -228,7 +216,7 @@ impl Description {
     pub fn create_updated_description(
         &self,
         other: &DescriptionUpdate,
-    ) -> Result<Description, AppError> {
+    ) -> Result<Description, anyhow::Error> {
         let mut description = self.clone();
         if let Some(moniker) = &other.moniker {
             description.moniker.clone_from(moniker);
@@ -249,7 +237,7 @@ impl Description {
         Ok(description)
     }
 
-    pub fn ensure_length(&self) -> Result<(), AppError> {
+    pub fn ensure_length(&self) -> Result<(), anyhow::Error> {
         if self.moniker.len() > MAX_MONIKER_LENGTH {
             return Err(self.form_ensure_length_err(
                 "moniker",
@@ -288,8 +276,8 @@ impl Description {
         Ok(())
     }
 
-    fn form_ensure_length_err(&self, name: &str, got: usize, max: usize) -> AppError {
-        AppError::InvalidRequest(format!("invalid {name} length; got: {got}, max: {max}"))
+    fn form_ensure_length_err(&self, name: &str, got: usize, max: usize) -> anyhow::Error {
+        anyhow::anyhow!("invalid {name} length; got: {got}, max: {max}")
     }
 }
 
@@ -352,7 +340,7 @@ pub struct CreateValidator {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
     pub pub_key: PublicKey,
-    pub value: Coin,
+    pub value: UnsignedCoin,
 }
 
 impl TryFrom<CreateValidatorRaw> for CreateValidator {
@@ -484,7 +472,7 @@ impl From<DelegateMsg> for DelegateMsgRaw {
 pub struct DelegateMsg {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
-    pub amount: Coin,
+    pub amount: UnsignedCoin,
 }
 
 impl TryFrom<DelegateMsgRaw> for DelegateMsg {
@@ -536,7 +524,7 @@ pub struct RedelegateMsg {
     pub delegator_address: AccAddress,
     pub src_validator_address: ValAddress,
     pub dst_validator_address: ValAddress,
-    pub amount: Coin,
+    pub amount: UnsignedCoin,
 }
 
 impl TryFrom<RedelegateMsgRaw> for RedelegateMsg {
@@ -586,7 +574,7 @@ impl From<UndelegateMsg> for UndelegateMsgRaw {
 pub struct UndelegateMsg {
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
-    pub amount: Coin,
+    pub amount: UnsignedCoin,
 }
 
 impl TryFrom<UndelegateMsgRaw> for UndelegateMsg {

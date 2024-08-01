@@ -28,7 +28,7 @@ impl PrimitiveValueRenderer<i64> for DefaultPrimitiveRenderer {
         let mut buf = Buffer::new();
         buf.write_formatted(&value, format_get());
 
-        Content::new(buf.to_string()).expect("String will never be empty")
+        Content::try_new(buf.to_string()).expect("String will never be empty")
     }
 }
 

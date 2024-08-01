@@ -5,13 +5,11 @@ use crate::{
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use gears::{
-    error::AppError,
     tendermint::types::proto::crypto::PublicKey as TendermintPublicKey,
     types::{
         address::{AccAddress, ValAddress},
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         decimal256::Decimal256,
-        tx::TxMessage,
         uint::Uint256,
     },
 };
@@ -30,7 +28,7 @@ pub enum StakingCommands {
         /// The validator's Protobuf JSON encoded public key
         pubkey: TendermintPublicKey,
         /// Amount of coins to bond
-        amount: Coin,
+        amount: UnsignedCoin,
         /// The validator's name
         moniker: String,
         /// The optional identity signature (ex. UPort or Keybase)
@@ -89,7 +87,7 @@ pub enum StakingCommands {
         /// The validator account address
         validator_address: ValAddress,
         /// Amount of coins to bond
-        amount: Coin,
+        amount: UnsignedCoin,
     },
     /// Redelegate illiquid tokens from one validator to another
     Redelegate {
@@ -98,14 +96,14 @@ pub enum StakingCommands {
         /// The validator account address that receives coins
         dst_validator_address: ValAddress,
         /// Amount of coins to redelegate
-        amount: Coin,
+        amount: UnsignedCoin,
     },
     /// Unbond shares from a validator
     Unbond {
         /// The validator account address
         validator_address: ValAddress,
         /// Amount of coins to unbond
-        amount: Coin,
+        amount: UnsignedCoin,
     },
 }
 
@@ -151,7 +149,7 @@ pub fn run_staking_tx_command(
                 pub_key: pubkey.clone(),
                 value: amount.clone(),
             });
-            msg.validate_basic().map_err(AppError::TxValidation)?;
+
             Ok(msg)
 
             // genOnly, _ := fs.GetBool(flags.FlagGenerateOnly)
@@ -191,7 +189,7 @@ pub fn run_staking_tx_command(
                 validator_address,
                 from_address: delegator_address,
             });
-            msg.validate_basic().map_err(AppError::TxValidation)?;
+
             Ok(msg)
         }
         StakingCommands::Delegate {

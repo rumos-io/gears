@@ -27,11 +27,11 @@ pub struct Indent(u8);
 
 impl Indent {
     pub fn one() -> Indent {
-        Indent::new(1).expect("indent is less than 16")
+        Indent::try_new(1).expect("indent is less than 16")
     }
 
     pub fn two() -> Indent {
-        Indent::new(2).expect("indent is less than 16")
+        Indent::try_new(2).expect("indent is less than 16")
     }
 }
 

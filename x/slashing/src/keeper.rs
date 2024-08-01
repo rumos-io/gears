@@ -1,18 +1,19 @@
 use crate::{
+    errors::{UnjailError, ValidatorHandlingError},
     keys::{
         addr_pubkey_relation_key, validator_missed_block_bit_array_key,
         validator_missed_block_bit_array_prefix_key, validator_signing_info_key,
     },
-    utils, GenesisState, MsgUnjail, QueryParamsRequest, QueryParamsResponse,
-    QuerySigningInfoRequest, QuerySigningInfoResponse, QuerySigningInfosRequest,
-    QuerySigningInfosResponse, SlashingParamsKeeper, ValidatorSigningInfo,
+    GenesisState, MsgUnjail, QueryParamsRequest, QueryParamsResponse, QuerySigningInfoRequest,
+    QuerySigningInfoResponse, SlashingParamsKeeper, ValidatorSigningInfo,
 };
 use gears::{
     context::{
         block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext,
         InfallibleContextMut, QueryableContext, TransactionalContext,
     },
-    error::{AppError, IBC_ENCODE_UNWRAP},
+    error::IBC_ENCODE_UNWRAP,
+    ext::{IteratorPaginate, Pagination, PaginationResult},
     params::ParamsSubspaceKey,
     store::{
         database::{ext::UnwrapCorrupt, Database},
@@ -22,17 +23,18 @@ use gears::{
         proto::{
             crypto::PublicKey,
             event::{Event, EventAttribute},
+            validator::VotingPower,
             Protobuf,
         },
-        time::Timestamp,
+        time::duration::Duration,
     },
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
         decimal256::Decimal256,
-        response::PageResponse,
         store::gas::{errors::GasStoreErrors, ext::GasResultExt},
     },
     x::{
+        errors::AccountNotFound,
         keepers::staking::{SlashingStakingKeeper, VALIDATOR_UPDATE_DELAY},
         module::Module,
         types::{delegation::StakingDelegation, validator::StakingValidator},
@@ -114,23 +116,20 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
         cons_addr: ConsAddress,
-        power: u32,
+        power: VotingPower,
         signed: bool,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), ValidatorHandlingError> {
         let height = ctx.height();
 
         // fetch the validator public key
-        self.get_pub_key(ctx, &cons_addr).ok_or(AppError::Custom(
-            "validator consensus address not found".to_string(),
-        ))?;
+        self.get_pub_key(ctx, &cons_addr)
+            .ok_or(ValidatorHandlingError::ConsensusNotFound)?;
 
         // fetch signing info
         let mut sign_info = self
             .validator_signing_info(ctx, &cons_addr)
             .unwrap_gas()
-            .ok_or(AppError::Custom(
-                "Expected signing info for validator but it is not found".to_string(),
-            ))?;
+            .ok_or(ValidatorHandlingError::SigningInfoNotFound)?;
 
         // this is a relative index, so it counts blocks the validator *should* have signed
         // will use the 0-value default signing info if not present, except for start height
@@ -260,16 +259,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                 self.staking_keeper.jail(ctx, &cons_addr).unwrap_gas();
 
                 let time = ctx.get_time();
-                // TODO: consider to move the DateTime type and work with timestamps into Gears
-                // The timestamp is provided by context and conversion won't fail.
-                let time =
-                    chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-                let delta = chrono::TimeDelta::nanoseconds(params.downtime_jail_duration);
-                let jailed_until = time + delta;
-                sign_info.jailed_until = Timestamp {
-                    seconds: jailed_until.timestamp(),
-                    nanos: jailed_until.timestamp_subsec_nanos() as i32,
-                };
+                let delta = Duration::try_new(params.downtime_jail_duration, 0).unwrap();
+                let jailed_until = time.checked_add(delta).unwrap();
+                sign_info.jailed_until = jailed_until;
                 // We need to reset the counter & array so that the validator won't be immediately slashed for downtime upon rebonding.
                 sign_info.missed_blocks_counter = 0;
                 sign_info.index_offset = 0;
@@ -285,8 +277,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
                     ?min_height,
                     treshold = min_signed_per_window,
                     slashed = params.slash_fraction_downtime.to_string(),
-                    // TODO: what is better way to print time?
-                    jailed_until = jailed_until.format("%Y-%m-%d %H:%M:%S").to_string(),
+                    jailed_until = jailed_until.format_string_rounded(),
                 );
             } else {
                 // TODO: how do we log?
@@ -313,7 +304,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &MsgUnjail,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), UnjailError> {
         self.unjail(ctx, &msg.from_address, &msg.validator_address)?;
 
         ctx.push_event(Event {
@@ -340,40 +331,13 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &QueryContext<DB, SK>,
         query: QuerySigningInfoRequest,
-    ) -> Result<QuerySigningInfoResponse, AppError> {
+    ) -> Result<QuerySigningInfoResponse, anyhow::Error> {
         self.validator_signing_info(ctx, &query.cons_address)?
-            .ok_or(AppError::Custom(format!(
+            .ok_or(anyhow::anyhow!(
                 "signing info of validator {} is not found",
                 query.cons_address
-            )))
+            ))
             .map(|val_signing_info| QuerySigningInfoResponse { val_signing_info })
-    }
-
-    pub fn query_signing_infos<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        query: QuerySigningInfosRequest,
-    ) -> QuerySigningInfosResponse {
-        let signing_infos = self.validator_signing_infos(ctx);
-        let signing_infos = if let Some((start, end)) = utils::paginate(
-            signing_infos.len() as u64,
-            query.pagination.offset,
-            query.pagination.limit,
-            self.staking_keeper.max_validators(ctx).unwrap_gas() as u64,
-        ) {
-            signing_infos[start as usize..end as usize].to_vec()
-        } else {
-            vec![]
-        };
-        let total = signing_infos.len() as u64;
-        QuerySigningInfosResponse {
-            info: signing_infos,
-            // TODO: make correct pagination struct
-            pagination: Some(PageResponse {
-                next_key: vec![],
-                total,
-            }),
-        }
     }
 
     pub fn query_params<DB: Database>(
@@ -393,32 +357,32 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         ctx: &mut TxContext<'_, DB, SK>,
         delegator_address: &AccAddress,
         validator_address: &ValAddress,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), UnjailError> {
         let validator = self
             .staking_keeper
             .validator(ctx, validator_address)?
-            .ok_or(AppError::AccountNotFound)?;
+            .ok_or(AccountNotFound::from(validator_address.to_owned()))?;
         // cannot be unjailed if no self-delegation exists
         let self_delegation = self
             .staking_keeper
             .delegation(ctx, delegator_address, validator_address)?
-            .ok_or(AppError::Custom("self delegation is not found".to_string()))?;
-        let tokens = validator.tokens_from_shares(
-            Decimal256::from_atomics(self_delegation.shares().to_uint_floor(), 0)
-                .map_err(|e| AppError::Custom(e.to_string()))?,
-        )?;
+            .ok_or(UnjailError::DelegationNotFound)?;
+        let tokens = validator.tokens_from_shares(Decimal256::from_atomics(
+            self_delegation.shares().to_uint_floor(),
+            0,
+        )?)?;
         let min_self_bond = validator.min_self_delegation();
         // TODO: check equation
-        if tokens.to_uint_ceil() < *min_self_bond {
-            return Err(AppError::Custom(format!(
-                "SelfDelegationTooLowToUnjail:\n{} less than {}",
-                tokens, min_self_bond
-            )));
+        if tokens.to_uint_ceil() < min_self_bond {
+            return Err(UnjailError::LowDelegation {
+                lower: tokens,
+                bigger: min_self_bond,
+            });
         }
 
         // cannot be unjailed if not jailed
         if !validator.is_jailed() {
-            return Err(AppError::Custom("validator is not jailed".to_string()));
+            return Err(UnjailError::NotJailed(validator_address.to_owned()));
         }
 
         // TODO: do we need it?
@@ -434,22 +398,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         if let Some(info) = self.validator_signing_info(ctx, &cons_addr)? {
             // cannot be unjailed if tombstoned
             if info.tombstoned {
-                return Err(AppError::Custom("validator is jailed".to_string()));
+                return Err(UnjailError::Jailed(cons_addr.to_owned()));
             }
 
             // cannot be unjailed until out of jail
-            let time = ctx.get_time();
-            // TODO: consider to move the DateTime type and work with timestamps into Gears
-            // The timestamp is provided by context and conversion won't fail.
-            let ctx_time =
-                chrono::DateTime::from_timestamp(time.seconds, time.nanos as u32).unwrap();
-            let jailed_until_time = chrono::DateTime::from_timestamp(
-                info.jailed_until.seconds,
-                info.jailed_until.nanos as u32,
-            )
-            .unwrap();
-            if ctx_time < jailed_until_time {
-                return Err(AppError::Custom("validator is jailed".to_string()));
+            if ctx.get_time() < info.jailed_until {
+                return Err(UnjailError::Jailed(cons_addr.to_owned()));
             }
         }
 
@@ -504,13 +458,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     pub fn validator_signing_infos<DB: Database>(
         &self,
         ctx: &QueryContext<DB, SK>,
-    ) -> Vec<ValidatorSigningInfo> {
+        pagination: Option<Pagination>,
+    ) -> (Option<PaginationResult>, Vec<ValidatorSigningInfo>) {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(VALIDATOR_SIGNING_INFO_KEY_PREFIX);
-        store
-            .into_range(..)
-            .map(|(_k, v)| ValidatorSigningInfo::decode_vec(&v).unwrap_or_corrupt())
-            .collect::<Vec<_>>()
+        let (p_result, iter) = store.into_range(..).maybe_paginate(pagination);
+
+        (
+            p_result,
+            iter.map(|(_k, v)| ValidatorSigningInfo::decode_vec(&v).unwrap_or_corrupt())
+                .collect::<Vec<_>>(),
+        )
     }
 
     /// set_validator_signing_info sets the validator signing info to a consensus address key

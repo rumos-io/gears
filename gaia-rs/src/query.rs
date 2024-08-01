@@ -1,6 +1,6 @@
 use auth::cli::query::{AuthQuery, AuthQueryResponse};
 use bank::cli::query::{BankQuery, BankQueryResponse};
-use gears::types::query::Query;
+use gears::{baseapp::Query, derive::Query};
 use ibc_rs::client::cli::query::{IbcQuery, IbcQueryResponse};
 use serde::{Deserialize, Serialize};
 use staking::cli::query::{StakingQuery, StakingQueryResponse};
@@ -33,7 +33,7 @@ impl Query for GaiaQuery {
     }
 }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
 pub enum GaiaQueryResponse {
     Auth(AuthQueryResponse),

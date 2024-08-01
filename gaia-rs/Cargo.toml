@@ -13,12 +13,17 @@ auth = { path = "../x/auth" }
 bank = { path = "../x/bank" }
 ibc-rs = { path = "../x/ibc-rs" }
 gov = { path = "../x/gov" }
-gears = { path = "../gears", features = ["cli", "xmods", "rocksdb", "governance"] }
-gears-derive = { path = "../gears-derive" }
+gears = { path = "../gears", features = [
+    "cli",
+    "xmods",
+    "rocksdb",
+    "governance",
+] } 
 staking = { path = "../x/staking" }
 
 #newtypes
 bytes = { workspace = true }
+thiserror = { workspace = true }
 
 #utils
 anyhow = { workspace = true }
@@ -48,3 +53,4 @@ rayon = "1.10.0"
 hex = { workspace = true }
 bip32 = { workspace = true }
 keyring = { path = "../keyring" }
+vec1 = { workspace = true }

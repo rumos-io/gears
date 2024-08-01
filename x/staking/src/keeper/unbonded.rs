@@ -22,7 +22,7 @@ impl<
         let mut delegation = if let Some(delegation) = self.delegation(ctx, del_addr, val_addr)? {
             delegation
         } else {
-            return Err(AppError::Custom("no delegator for address".to_string()).into());
+            return Err(anyhow::anyhow!("no delegator for address"));
         };
 
         // call the before-delegation-modified hook
@@ -30,14 +30,14 @@ impl<
 
         // ensure that we have enough shares to remove
         if delegation.shares < shares {
-            return Err(AppError::Custom("not enough delegation shares".to_string()).into());
+            return Err(anyhow::anyhow!("not enough delegation shares"));
         }
 
         // get validator
         let mut validator = if let Some(validator) = self.validator(ctx, val_addr)? {
             validator
         } else {
-            return Err(AppError::Custom("no validator found".to_string()).into());
+            return Err(anyhow::anyhow!("no validator found"));
         };
 
         // subtract shares from delegation
@@ -96,14 +96,13 @@ impl<
         let validator = if let Some(validator) = self.validator(ctx, val_addr)? {
             validator
         } else {
-            return Err(AppError::Custom("no validator found".to_string()).into());
+            return Err(anyhow::anyhow!("no validator found"));
         };
 
         if self.has_max_unbonding_delegation_entries(ctx, del_addr, val_addr)? {
-            return Err(AppError::Custom(
-                "unbonding delegation max entries limit exceeded".to_string(),
-            )
-            .into());
+            return Err(anyhow::anyhow!(
+                "unbonding delegation max entries limit exceeded"
+            ));
         }
 
         let return_amount = self.unbond(ctx, del_addr, val_addr, shares)?;
@@ -113,28 +112,22 @@ impl<
             self.bonded_tokens_to_not_bonded(ctx, return_amount)?;
         }
 
-        let block_time = ctx.get_time();
         let params = self.staking_params_keeper.try_get(ctx)?;
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let completion_time =
-            chrono::DateTime::from_timestamp(block_time.seconds, block_time.nanos as u32).unwrap();
-        let completion_time =
-            completion_time + chrono::TimeDelta::nanoseconds(params.unbonding_time());
-        let completion_time = Timestamp {
-            seconds: completion_time.timestamp(),
-            nanos: completion_time.timestamp_subsec_nanos() as i32,
-        };
+        let completion_time = ctx
+            .get_time()
+            .checked_add(Duration::new_from_nanos(params.unbonding_time()))
+            .unwrap();
+
         let entry = UnbondingDelegationEntry {
             creation_height: ctx.height(),
-            completion_time: completion_time.clone(),
+            completion_time,
             initial_balance: return_amount,
             balance: return_amount,
         };
         let unbonding_delegation =
             self.set_unbonding_delegation_entry(ctx, del_addr, val_addr, entry)?;
 
-        self.insert_ubd_queue(ctx, &unbonding_delegation, completion_time.clone())?;
+        self.insert_ubd_queue(ctx, &unbonding_delegation, completion_time)?;
         Ok(completion_time)
     }
 
@@ -144,11 +137,10 @@ impl<
         validator: &mut Validator,
     ) -> anyhow::Result<()> {
         if validator.status != BondStatus::Unbonded {
-            return Err(AppError::Custom(format!(
+            return Err(anyhow::anyhow!(
                 "bad state transition unbonded to bonded, validator: {}",
                 validator.operator_address
-            ))
-            .into());
+            ));
         }
         self.bond_validator(ctx, validator)?;
         Ok(())
@@ -166,16 +158,16 @@ impl<
     ) -> anyhow::Result<Decimal256> {
         let validator = self
             .validator(ctx, val_addr)?
-            .ok_or(AppError::AccountNotFound)?;
+            .ok_or(anyhow::anyhow!("account not found"))?;
         let delegation = self
             .delegation(ctx, del_addr, val_addr)?
-            .ok_or(AppError::Custom("Delegation is not found.".to_string()))?;
+            .ok_or(anyhow::anyhow!("Delegation is not found."))?;
         let mut shares = validator.shares_from_tokens(amount)?;
         let truncated_shares = validator.shares_from_tokens_truncated(amount)?;
         let delegation_shares = delegation.shares;
 
         if truncated_shares > delegation_shares {
-            return Err(AppError::Custom("invalid shares amount".to_string()).into());
+            return Err(anyhow::anyhow!("invalid shares amount"));
         }
 
         // Cap the shares at the delegation's shares. Shares being greater could occur

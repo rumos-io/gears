@@ -9,10 +9,10 @@ use tendermint::types::proto::Protobuf;
 
 use crate::types::address::AccAddress;
 use crate::types::address::AddressError;
-use crate::types::base::coin::Coin;
+use crate::types::base::coin::UnsignedCoin;
+use crate::types::base::coins::UnsignedCoins;
+use crate::types::base::errors::CoinError;
 use crate::types::base::errors::CoinsError;
-use crate::types::base::errors::SendCoinsError;
-use crate::types::base::send::SendCoins;
 
 use super::gas::{Gas, GasError};
 
@@ -28,7 +28,7 @@ pub mod inner {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Fee {
     /// amount is the amount of coins to be paid as a fee
-    pub amount: Option<SendCoins>,
+    pub amount: Option<UnsignedCoins>,
     /// gas_limit is the maximum gas that can be used in transaction processing
     /// before an out of gas error occurs
     #[serde_as(as = "DisplayFromStr")]
@@ -48,11 +48,11 @@ pub enum FeeError {
     #[error("{0}")]
     Gas(#[from] GasError),
     #[error("{0}")]
-    Coins(#[from] CoinsError),
+    Coins(#[from] CoinError),
     #[error("{0}")]
     Address(#[from] AddressError),
     #[error("{0}")]
-    SendCoins(#[from] SendCoinsError),
+    SendCoins(#[from] CoinsError),
     #[error("parse error {0}")]
     Parse(String),
 }
@@ -66,7 +66,7 @@ impl TryFrom<inner::Fee> for Fee {
         let mut all_zero = true;
         for coin in &raw.amount {
             let amount =
-                Uint256::from_str(&coin.amount).map_err(|e| CoinsError::Uint(e.to_string()))?;
+                Uint256::from_str(&coin.amount).map_err(|e| CoinError::Uint(e.to_string()))?;
 
             if !amount.is_zero() {
                 all_zero = false;
@@ -91,11 +91,11 @@ impl TryFrom<inner::Fee> for Fee {
             });
         }
 
-        let coins: Result<Vec<Coin>, CoinsError> =
-            raw.amount.into_iter().map(Coin::try_from).collect();
+        let coins: Result<Vec<UnsignedCoin>, CoinError> =
+            raw.amount.into_iter().map(UnsignedCoin::try_from).collect();
 
         Ok(Fee {
-            amount: Some(SendCoins::new(coins?)?),
+            amount: Some(UnsignedCoins::new(coins?)?),
             gas_limit: raw.gas_limit.try_into()?,
             payer,
             granter: raw.granter,
@@ -111,7 +111,7 @@ impl From<Fee> for inner::Fee {
         };
         match fee.amount {
             Some(amount) => {
-                let coins: Vec<Coin> = amount.into();
+                let coins: Vec<UnsignedCoin> = amount.into();
                 let coins = coins.into_iter().map(inner::Coin::from).collect();
 
                 Self {

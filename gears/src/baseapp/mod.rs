@@ -5,11 +5,10 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use crate::types::tx::TxMessage;
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
     context::{query::QueryContext, simple::SimpleContext},
-    error::{AppError, POISONED_LOCK},
+    error::POISONED_LOCK,
     params::ParamsSubspaceKey,
     types::{
         gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
@@ -104,11 +103,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.multi_store.read().expect(POISONED_LOCK).head_version()
     }
 
-    fn run_query(&self, request: &RequestQuery) -> Result<Bytes, AppError> {
+    fn run_query(&self, request: &RequestQuery) -> Result<Bytes, QueryError> {
         //TODO: request height u32
-        let version: u32 = request.height.try_into().map_err(|_| {
-            AppError::InvalidRequest("Block height must be greater than or equal to zero".into())
-        })?;
+        let version: u32 = request
+            .height
+            .try_into()
+            .map_err(|_| QueryError::InvalidHeight)?;
 
         let query_store =
             QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;
@@ -118,31 +118,15 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.abci_handler.query(&ctx, request.clone())
     }
 
-    fn validate_basic_tx_msgs(msgs: &Vec<H::Message>) -> Result<(), AppError> {
-        if msgs.is_empty() {
-            return Err(AppError::InvalidRequest(
-                "must contain at least one message".into(),
-            ));
-        }
-
-        for msg in msgs {
-            msg.validate_basic()
-                .map_err(|e| AppError::TxValidation(e.to_string()))?
-        }
-
-        Ok(())
-    }
-
     fn run_tx<MD: ExecutionMode<DB, H>>(
         &self,
         raw: Bytes,
         mode: &mut MD,
     ) -> Result<RunTxInfo, RunTxError> {
-        let tx_with_raw: TxWithRaw<H::Message> = TxWithRaw::from_bytes(raw.clone())
-            .map_err(|e: core_types::errors::CoreError| RunTxError::TxParseError(e.to_string()))?;
-
-        Self::validate_basic_tx_msgs(tx_with_raw.tx.get_msgs())
-            .map_err(|e| RunTxError::Validation(e.to_string()))?;
+        let tx_with_raw: TxWithRaw<H::Message> =
+            TxWithRaw::from_bytes(raw.clone()).map_err(|e: core_types::errors::CoreError| {
+                RunTxError::InvalidTransaction(e.to_string())
+            })?;
 
         let header = self
             .get_block_header()

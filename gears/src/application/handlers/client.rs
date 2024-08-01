@@ -1,5 +1,9 @@
 use crate::{
-    commands::client::{query::execute_query, tx::broadcast_tx_commit},
+    baseapp::Query,
+    commands::client::{
+        query::execute_query,
+        tx::{broadcast_tx_commit, ClientTxContext},
+    },
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
@@ -10,17 +14,9 @@ use crate::{
     types::{
         address::AccAddress,
         auth::fee::Fee,
-        base::send::SendCoins,
+        base::coins::UnsignedCoins,
         denom::Denom,
-        query::{
-            account::{QueryAccountRequest, QueryAccountResponse},
-            metadata::{
-                QueryDenomMetadataRequest, QueryDenomMetadataResponse,
-                RawQueryDenomMetadataResponse,
-            },
-            Query,
-        },
-        tx::{body::TxBody, TxMessage},
+        tx::{body::TxBody, Messages, TxMessage},
     },
 };
 
@@ -38,27 +34,33 @@ use tendermint::{
     types::{chain_id::ChainId, proto::block::Height},
 };
 
+use super::types::{
+    QueryAccountRequest, QueryAccountResponse, QueryDenomMetadataRequest,
+    QueryDenomMetadataResponse, RawQueryDenomMetadataResponse,
+};
+
 pub trait TxHandler {
     type Message: TxMessage + ValueRenderer;
     type TxCommands;
 
     fn prepare_tx(
         &self,
+        client_tx_context: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
-    ) -> anyhow::Result<Self::Message>;
+    ) -> anyhow::Result<Messages<Self::Message>>;
 
     fn handle_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
-        msg: Self::Message,
-        key: K,
+        msgs: Messages<Self::Message>,
+        key: &K,
         node: url::Url,
         chain_id: ChainId,
-        fee: Option<SendCoins>,
+        fees: Option<UnsignedCoins>,
         mode: SignMode,
     ) -> anyhow::Result<Response> {
         let fee = Fee {
-            amount: fee,
+            amount: fees,
             gas_limit: 200_000_u64
                 .try_into()
                 .expect("hard coded gas limit is valid"), //TODO: remove hard coded gas limit
@@ -81,7 +83,7 @@ pub trait TxHandler {
         }];
 
         let tx_body = TxBody {
-            messages: vec![msg],
+            messages: msgs.into_msgs(),
             memo: String::new(),                    // TODO: remove hard coded
             timeout_height: 0,                      // TODO: remove hard coded
             extension_options: vec![],              // TODO: remove hard coded
@@ -169,7 +171,7 @@ pub trait QueryHandler {
 }
 
 mod inner {
-    pub use core_types::query::response::account::QueryAccountResponse;
+    pub use core_types::query::response::auth::QueryAccountResponse;
 }
 
 // TODO: we're assuming here that the app has an auth module which handles this query

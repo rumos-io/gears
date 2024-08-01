@@ -4,7 +4,7 @@ use database::Database;
 
 use crate::range::Range;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PrefixRange<'a, DB> {
     pub(crate) parent_range: Range<'a, DB>,
     pub(crate) prefix_length: usize,

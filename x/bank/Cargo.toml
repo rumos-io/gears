@@ -5,16 +5,17 @@ edition = "2021"
 
 [dependencies]
 #local
-gears = { path = "../../gears", features = ["cli", "export", "xmods", "governance" ] }
+gears = { path = "../../gears", features = ["cli", "xmods", "governance"] }
 
 #newtypes
 bytes = { workspace = true }
 ibc-proto = { workspace = true }
+thiserror = { workspace = true }
 
 #utils
 clap = { workspace = true }
 anyhow = { workspace = true }
-strum = { workspace = true }
+nz = { workspace = true }
 
 #serialization
 serde = { workspace = true, default-features = false }
@@ -25,7 +26,6 @@ prost = { workspace = true }
 tracing = { workspace = true }
 
 #other
-tokio = { workspace = true }
 axum = { workspace = true }
 tonic = { workspace = true }
 

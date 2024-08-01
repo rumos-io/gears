@@ -5,7 +5,7 @@ use clap::{ArgAction, ValueHint};
 use crate::{
     application::ApplicationInfo,
     commands::node::run::{LogLevel, RunCommand},
-    config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
+    config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
     types::base::min_gas::MinGasPrices,
 };
 
@@ -14,10 +14,12 @@ use crate::{
 pub struct CliRunCommand<T: ApplicationInfo> {
     #[arg(long,  global = true, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = T::home_dir(), help = "directory for config and data")]
     pub home: PathBuf,
-    #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_ADDRESS, help = "Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided" )]
-    pub address: SocketAddr,
-    #[arg(long, action = ArgAction::Set, default_value_t = DEFAULT_REST_LISTEN_ADDR, help = "Bind the REST server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided")]
-    pub rest_listen_addr: SocketAddr,
+    #[arg(long, action = ArgAction::Set, help = format!( "Application listen address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_ADDRESS) )]
+    pub address: Option<SocketAddr>,
+    #[arg(long, action = ArgAction::Set, help = format!("Bind the REST server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_REST_LISTEN_ADDR))]
+    pub rest_listen_addr: Option<SocketAddr>,
+    #[arg(long, action = ArgAction::Set, help = format!("Bind the GRPC server to this address. Overrides any listen address in the config. Default value is used if neither this argument nor a config value is provided [default: {}]", DEFAULT_GRPC_LISTEN_ADDR))]
+    pub grpc_listen_addr: Option<SocketAddr>,
     #[arg(short, long, action = ArgAction::Set, default_value_t = 1048576, help = "The default server read buffer size, in bytes, for each incoming client connection")]
     pub read_buf_size: usize,
     /// The logging level
@@ -25,7 +27,7 @@ pub struct CliRunCommand<T: ApplicationInfo> {
     pub log_level: LogLevel,
     /// Minimum gas prices to accept for transactions; Any fee in a tx must meet this minimum (e.g. 0.01photino,0.0001stake)
     #[arg(long, action = ArgAction::Set)]
-    pub min_gas_prices: MinGasPrices,
+    pub min_gas_prices: Option<MinGasPrices>,
 
     #[arg(skip)]
     pub _marker: PhantomData<T>,
@@ -41,12 +43,14 @@ impl<T: ApplicationInfo> From<CliRunCommand<T>> for RunCommand {
             _marker,
             log_level,
             min_gas_prices,
+            grpc_listen_addr,
         }: CliRunCommand<T>,
     ) -> Self {
         Self {
             home,
             address,
             rest_listen_addr,
+            grpc_listen_addr,
             read_buf_size,
             log_level,
             min_gas_prices,

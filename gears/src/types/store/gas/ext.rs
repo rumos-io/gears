@@ -1,4 +1,4 @@
-use super::errors::GasStoreErrors;
+use std::fmt::Debug;
 
 pub const NO_GAS_IN_CTX: &str = "Context shouldn't have any gas so it's safe to unwrap";
 
@@ -8,7 +8,9 @@ pub trait GasResultExt {
     fn unwrap_gas(self) -> Self::Output;
 }
 
-impl<T> GasResultExt for Result<T, GasStoreErrors> {
+pub trait UnwrapGasError: Debug {}
+
+impl<T, U: UnwrapGasError> GasResultExt for Result<T, U> {
     type Output = T;
 
     fn unwrap_gas(self) -> Self::Output {

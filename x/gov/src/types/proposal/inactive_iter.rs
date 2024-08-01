@@ -1,29 +1,26 @@
 use std::{borrow::Cow, ops::Bound};
 
-use chrono::{DateTime, SubsecRound, Utc};
+use chrono::{DateTime, Utc};
 use gears::{
     store::database::Database,
+    tendermint::types::time::timestamp::Timestamp,
     types::store::{gas::errors::GasStoreErrors, kv::Store, range::StoreRange},
 };
 
-use super::{parse_proposal_key_bytes, Proposal, SORTABLE_DATE_TIME_FORMAT};
+use super::{parse_proposal_key_bytes, Proposal};
 
 #[derive(Debug)]
 pub struct InactiveProposalIterator<'a, DB>(StoreRange<'a, DB>);
 
 impl<'a, DB: Database> InactiveProposalIterator<'a, DB> {
-    pub fn new(store: Store<'a, DB>, end_time: &DateTime<Utc>) -> InactiveProposalIterator<'a, DB> {
+    pub fn new(store: Store<'a, DB>, end_time: &Timestamp) -> InactiveProposalIterator<'a, DB> {
         Self(
             store.into_range((
                 Bound::Included(Proposal::KEY_INACTIVE_QUEUE_PREFIX.to_vec()),
                 Bound::Excluded(
                     [
                         Proposal::KEY_INACTIVE_QUEUE_PREFIX.as_slice(),
-                        end_time
-                            .round_subsecs(0)
-                            .format(SORTABLE_DATE_TIME_FORMAT)
-                            .to_string()
-                            .as_bytes(),
+                        end_time.format_bytes_rounded().as_slice(),
                     ]
                     .concat()
                     .to_vec(),

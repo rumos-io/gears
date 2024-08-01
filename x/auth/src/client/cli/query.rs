@@ -1,13 +1,14 @@
+use crate::query::{
+    QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
+    QueryParamsRequest, QueryParamsResponse,
+};
 use bytes::Bytes;
 use clap::{Args, Subcommand};
-use gears::error::IBC_ENCODE_UNWRAP;
+use gears::derive::Query;
 use gears::tendermint::types::proto::Protobuf as _;
 use gears::types::address::AccAddress;
-use gears::types::query::account::QueryAccountRequest;
-use gears::{
-    application::handlers::client::QueryHandler,
-    types::query::{account::QueryAccountResponse, Query},
-};
+use gears::types::pagination::request::PaginationRequest;
+use gears::{application::handlers::client::QueryHandler, cli::pagination::CliPaginationRequest};
 use serde::{Deserialize, Serialize};
 
 #[derive(Args, Debug)]
@@ -19,6 +20,8 @@ pub struct AuthQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum AuthCommands {
     Account(AccountCommand),
+    Accounts(AccountsCommand),
+    Params,
 }
 
 /// Query for account by address
@@ -28,29 +31,28 @@ pub struct AccountCommand {
     pub address: AccAddress,
 }
 
-#[derive(Clone, PartialEq)]
+/// Query all the accounts
+#[derive(Args, Debug, Clone)]
+pub struct AccountsCommand {
+    #[command(flatten)]
+    pub pagination: CliPaginationRequest,
+}
+
+#[derive(Clone, PartialEq, Query)]
+#[query(request)]
 pub enum AuthQuery {
     Account(QueryAccountRequest),
+    Accounts(QueryAccountsRequest),
+    Params(QueryParamsRequest),
 }
 
-impl Query for AuthQuery {
-    fn query_url(&self) -> &'static str {
-        match self {
-            AuthQuery::Account(_) => "/cosmos.auth.v1beta1.Query/Account",
-        }
-    }
-
-    fn into_bytes(self) -> Vec<u8> {
-        match self {
-            AuthQuery::Account(cmd) => cmd.encode_vec().expect(IBC_ENCODE_UNWRAP), //TODO:IBC
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
+#[query(response)]
 #[serde(untagged)]
 pub enum AuthQueryResponse {
     Account(QueryAccountResponse),
+    Accounts(QueryAccountsResponse),
+    Params(QueryParamsResponse),
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +75,11 @@ impl QueryHandler for AuthQueryHandler {
                     address: address.clone(),
                 })
             }
+            AuthCommands::Accounts(cmd) => {
+                let pagination = PaginationRequest::try_from(cmd.to_owned().pagination)?;
+                AuthQuery::Accounts(QueryAccountsRequest { pagination })
+            }
+            AuthCommands::Params => AuthQuery::Params(QueryParamsRequest {}),
         };
 
         Ok(res)
@@ -83,12 +90,19 @@ impl QueryHandler for AuthQueryHandler {
         query_bytes: Vec<u8>,
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryResponse> {
-        let res =
-            match command.command {
-                AuthCommands::Account(_) => AuthQueryResponse::Account(
-                    QueryAccountResponse::decode::<Bytes>(query_bytes.into())?,
-                ),
-            };
+        let res = match command.command {
+            AuthCommands::Account(_) => {
+                AuthQueryResponse::Account(QueryAccountResponse::decode::<Bytes>(
+                    query_bytes.into(),
+                )?)
+            }
+            AuthCommands::Accounts(_) => AuthQueryResponse::Accounts(
+                QueryAccountsResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            AuthCommands::Params => {
+                AuthQueryResponse::Params(QueryParamsResponse::decode::<Bytes>(query_bytes.into())?)
+            }
+        };
 
         Ok(res)
     }

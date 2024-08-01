@@ -14,7 +14,8 @@ impl PrimitiveValueRenderer<Decimal256> for DefaultPrimitiveRenderer {
 
         if let Some(dec_part) = dec_part {
             let formatted_int = int_part_content.into_inner();
-            Content::new(format!("{formatted_int}.{dec_part}")).expect("this String is not empty")
+            Content::try_new(format!("{formatted_int}.{dec_part}"))
+                .expect("this String is not empty")
         } else {
             int_part_content
         }
@@ -51,7 +52,7 @@ mod tests {
         for (i, expected) in test_data {
             let actual = DefaultPrimitiveRenderer::format(Decimal256::from_str(i).unwrap());
 
-            assert_eq!(Content::new(expected).unwrap(), actual);
+            assert_eq!(Content::try_new(expected).unwrap(), actual);
         }
     }
 }

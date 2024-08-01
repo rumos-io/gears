@@ -20,17 +20,14 @@ pub mod utils;
 #[cfg(feature = "xmods")]
 pub mod x;
 
-#[cfg(feature = "export")]
 pub mod core {
     pub use core_types::*;
 }
 
-#[cfg(feature = "export")]
 pub mod tendermint {
     pub use tendermint::*;
 }
 
-#[cfg(feature = "export")]
 pub mod store {
     pub use kv::*;
     pub mod database {
@@ -39,5 +36,8 @@ pub mod store {
 }
 
 pub mod derive {
-    pub use gears_derive::*;
+    #[doc(inline)]
+    pub use protobuf_derive::*;
+    pub use query_derive::*;
+    pub use tx_derive::*;
 }

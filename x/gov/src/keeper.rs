@@ -1,11 +1,9 @@
 use std::{
     collections::HashMap,
     marker::PhantomData,
-    ops::{Add, Div, Mul},
+    ops::{Div, Mul},
 };
 
-use anyhow::anyhow;
-use chrono::DateTime;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -29,7 +27,7 @@ use gears::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    errors::SERDE_JSON_CONVERSION,
+    errors::{GovKeeperError, SERDE_JSON_CONVERSION},
     genesis::GovGenesisState,
     msg::{
         deposit::Deposit,
@@ -223,8 +221,7 @@ impl<
             }) => {
                 let deposits = DepositIterator::new(ctx.kv_store(&self.store_key))
                     .map(|this| this.map(|(_key, value)| value))
-                    .filter(|this| this.is_ok())
-                    .map(|this| this.expect("we filtered invalid values out"))
+                    .filter_map(|this| this.ok())
                     .filter(|this| this.proposal_id == proposal_id)
                     .collect::<Vec<_>>();
 
@@ -278,8 +275,7 @@ impl<
             }) => {
                 let iterator = ProposalsIterator::new(ctx.kv_store(&self.store_key))
                     .map(|this| this.map(|(_key, value)| value))
-                    .filter(|this| this.is_ok())
-                    .map(|this| this.expect("we filtered invalid values out"));
+                    .filter_map(|this| this.ok());
 
                 let mut proposals = Vec::new();
                 for proposal in iterator {
@@ -316,7 +312,7 @@ impl<
                 let proposal = proposal_get(ctx, &self.store_key, proposal_id)?;
 
                 GovQueryResponse::Tally(QueryTallyResultResponse {
-                    tally: proposal.map(|this| this.final_tally_result).flatten(),
+                    tally: proposal.and_then(|this| this.final_tally_result),
                 })
             }
             GovQuery::Vote(QueryVoteRequest { proposal_id, voter }) => {
@@ -330,8 +326,7 @@ impl<
             }) => {
                 let votes = WeightedVoteIterator::new(ctx.kv_store(&self.store_key), proposal_id)
                     .map(|this| this.map(|(_key, value)| value))
-                    .filter(|this| this.is_ok())
-                    .map(|this| this.expect("we filtered invalid values out"))
+                    .filter_map(|this| this.ok())
                     .collect::<Vec<_>>();
 
                 GovQueryResponse::Votes(QueryVotesResponse {
@@ -353,13 +348,13 @@ impl<
             depositor,
             amount,
         }: Deposit,
-    ) -> anyhow::Result<bool> {
+    ) -> Result<bool, GovKeeperError> {
         let mut proposal = proposal_get(ctx, &self.store_key, proposal_id)?
-            .ok_or(anyhow!("unknown proposal {proposal_id}"))?;
+            .ok_or(GovKeeperError::ProposalUnknown(proposal_id))?;
 
         match proposal.status {
             ProposalStatus::DepositPeriod | ProposalStatus::VotingPeriod => Ok(()),
-            _ => Err(anyhow!("inactive proposal {proposal_id}")),
+            _ => Err(GovKeeperError::InactiveProposal(proposal_id)),
         }?;
 
         self.bank_keeper.send_coins_from_account_to_module(
@@ -369,7 +364,7 @@ impl<
             amount.clone(),
         )?;
 
-        proposal.total_deposit = proposal.total_deposit.checked_add(amount.clone())?;
+        proposal.total_deposit = proposal.total_deposit.checked_add(&amount)?;
         proposal_set(ctx, &self.store_key, &proposal)?;
 
         let deposit_params = self.gov_params_keeper.try_get(ctx)?.deposit;
@@ -377,7 +372,7 @@ impl<
             ProposalStatus::DepositPeriod
                 if proposal
                     .total_deposit
-                    .is_all_gte(deposit_params.min_deposit.inner()) =>
+                    .is_all_gte(Vec::from(deposit_params.min_deposit.clone()).iter()) =>
             {
                 true
             }
@@ -386,7 +381,7 @@ impl<
 
         let deposit = match deposit_get(ctx, &self.store_key, proposal_id, &depositor)? {
             Some(mut deposit) => {
-                deposit.amount = deposit.amount.checked_add(amount)?;
+                deposit.amount = deposit.amount.checked_add(&amount)?;
                 deposit
             }
             None => Deposit {
@@ -423,13 +418,13 @@ impl<
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         vote: MsgVoteWeighted,
-    ) -> anyhow::Result<()> {
+    ) -> Result<(), GovKeeperError> {
         let proposal = proposal_get(ctx, &self.store_key, vote.proposal_id)?
-            .ok_or(anyhow!("unknown proposal {}", vote.proposal_id))?;
+            .ok_or(GovKeeperError::ProposalUnknown(vote.proposal_id))?;
 
         match proposal.status {
             ProposalStatus::VotingPeriod => Ok(()),
-            _ => Err(anyhow!("inactive proposal {}", vote.proposal_id)),
+            _ => Err(GovKeeperError::InactiveProposal(vote.proposal_id)),
         }?;
 
         vote_set(ctx, &self.store_key, &vote)?;
@@ -459,32 +454,29 @@ impl<
             initial_deposit,
             proposer: _proposer,
         }: MsgSubmitProposal,
-    ) -> anyhow::Result<u64> {
+    ) -> Result<u64, GovKeeperError> {
         let proposal_id = proposal_id_get(ctx, &self.store_key)?;
-        let submit_time = ctx.header().time.clone();
+        let submit_time = ctx.header().time;
         let deposit_period = self
             .gov_params_keeper
             .try_get(ctx)?
             .deposit
             .max_deposit_period;
 
-        let submit_date =
-            DateTime::from_timestamp(submit_time.seconds, submit_time.nanos as u32).unwrap(); // TODO
-
         let proposal = Proposal {
             proposal_id,
             content,
             status: ProposalStatus::DepositPeriod,
             final_tally_result: None,
-            submit_time: submit_date,
-            deposit_end_time: submit_date.add(deposit_period),
+            submit_time,
+            deposit_end_time: submit_time.checked_add(deposit_period).unwrap(), // TODO: HANDLE THIS
             total_deposit: initial_deposit,
             voting_start_time: None,
             voting_end_time: None,
         };
 
         if !PH::check(&proposal) {
-            return Err(anyhow::anyhow!("gov: no handler exists for proposal type"));
+            return Err(GovKeeperError::NoHandler);
         }
 
         proposal_set(ctx, &self.store_key, &proposal)?;
@@ -514,13 +506,10 @@ impl<
     pub fn end_block<DB: Database>(&self, ctx: &mut BlockContext<'_, DB, SK>) -> Vec<Event> {
         let mut events = Vec::new();
 
-        let time = DateTime::from_timestamp(ctx.header.time.seconds, ctx.header.time.nanos as u32)
-            .unwrap(); // TODO
-
         {
             let inactive_iter = {
                 let store = ctx.kv_store(&self.store_key);
-                InactiveProposalIterator::new(store.into(), &time)
+                InactiveProposalIterator::new(store.into(), &ctx.header.time)
                     .map(|this| this.map(|((proposal_id, _), _)| proposal_id))
                     .collect::<Vec<_>>()
             };
@@ -553,7 +542,7 @@ impl<
         {
             let active_iter = {
                 let store = ctx.kv_store(&self.store_key).into();
-                ActiveProposalIterator::new(store, &time)
+                ActiveProposalIterator::new(store, &ctx.header.time)
                     .map(|this| this.map(|((_, _), proposal)| proposal))
                     .collect::<Vec<_>>()
             };
@@ -620,8 +609,8 @@ impl<
                 validator.operator().clone(),
                 ValidatorGovInfo {
                     address: validator.operator().clone(),
-                    bounded_tokens: *validator.bonded_tokens(),
-                    delegator_shares: *validator.delegator_shares(),
+                    bounded_tokens: validator.bonded_tokens(),
+                    delegator_shares: validator.delegator_shares(),
                     delegator_deduction: Decimal256::zero(),
                     vote: Vec::new(),
                 },

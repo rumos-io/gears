@@ -1,4 +1,4 @@
-use cosmwasm_std::Uint256;
+use cosmwasm_std::{Decimal256, Uint256};
 use derive_more::{Add, Deref, Display, From, Into, Mul, Sub};
 use std::{num::ParseIntError, str::FromStr};
 use ux::u63;
@@ -49,6 +49,16 @@ impl Gas {
         } else {
             None
         }
+    }
+
+    // TODO: write a test for this
+    pub fn checked_sub(self, rhs: Self) -> Option<Self> {
+        let self_inner: u64 = self.0.into();
+        let rhs_inner: u64 = rhs.0.into();
+
+        let result = self_inner.checked_sub(rhs_inner)?;
+
+        Some(Gas::new(u63::new(result)))
     }
 
     // TODO: write a test for this
@@ -140,6 +150,14 @@ impl From<Gas> for Uint256 {
     fn from(val: Gas) -> Uint256 {
         let u_64: u64 = val.0.into();
         Uint256::from(u_64)
+    }
+}
+
+impl From<Gas> for Decimal256 {
+    fn from(val: Gas) -> Decimal256 {
+        let u_64: u64 = val.0.into();
+        Decimal256::from_atomics(u_64, 0)
+            .expect("u64::MAX < Decimal256::MAX so this will never fail")
     }
 }
 

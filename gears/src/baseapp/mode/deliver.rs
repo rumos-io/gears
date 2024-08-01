@@ -2,6 +2,10 @@ use database::Database;
 use kv::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::event::Event;
 
+use super::{build_tx_gas_meter, ExecutionMode};
+use crate::baseapp::options::NodeOptions;
+use crate::baseapp::ConsensusParams;
+use crate::types::auth::fee::Fee;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
@@ -41,9 +45,9 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, 
     ) -> Result<Vec<Event>, RunTxError> {
         for msg in msgs {
             handler
-                .tx(ctx, msg)
+                .msg(ctx, msg)
                 .inspect_err(|_| ctx.multi_store_mut().clear_cache())
-                .map_err(|e| RunTxError::Custom(e.to_string()))?;
+                ?;
         }
 
         let events = ctx.events_drain();
@@ -60,14 +64,14 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, 
             Ok(_) => Ok(()),
             Err(e) => {
                 ctx.multi_store_mut().clear_cache();
-                Err(RunTxError::Custom(e.to_string()))
+                Err(e.into())
             }
         }
     }
 
     fn runnable(ctx: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError> {
         if ctx.block_gas_meter.is_out_of_gas() {
-            Err(RunTxError::OutOfGas)
+            Err(RunTxError::OutOfBlockGas)
         } else {
             Ok(())
         }

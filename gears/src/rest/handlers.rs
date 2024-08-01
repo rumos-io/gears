@@ -1,20 +1,22 @@
-use super::pagination::parse_pagination;
-use crate::rest::{error::HTTPError, pagination::Pagination};
+use crate::rest::error::HTTPError;
+use crate::types::pagination::response::PaginationResponse;
 use crate::types::response::any::AnyTx;
 use crate::types::response::tx::TxResponse;
 use crate::types::response::tx_event::GetTxsEventResponse;
-use crate::types::response::PageResponse;
 use crate::types::tx::{Tx, TxMessage};
 use axum::extract::{Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use tendermint::informal::node::Info;
-use tendermint::rpc::client::{Client, HttpClient};
+use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
 use tendermint::rpc::query::Query;
 use tendermint::rpc::response::tx::search::Response;
+use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 use tendermint::types::proto::Protobuf;
+
+use super::{parse_pagination, Pagination};
 
 // TODO:
 // 1. handle multiple events in /cosmos/tx/v1beta1/txs request
@@ -29,9 +31,9 @@ pub struct NodeInfoResponse {
 }
 
 pub async fn node_info(
-    State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
 ) -> Result<Json<NodeInfoResponse>, HTTPError> {
-    let client = HttpClient::new(tendermint_rpc_address).expect("hard coded URL is valid");
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
     let res = client.status().await.map_err(|e| {
         tracing::error!("Error connecting to Tendermint: {e}");
@@ -52,9 +54,9 @@ pub struct RawEvents {
 pub async fn txs<M: TxMessage>(
     events: AxumQuery<RawEvents>,
     pagination: AxumQuery<Pagination>,
-    State(tendermint_rpc_address): State<tendermint::rpc::url::Url>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
 ) -> Result<Json<GetTxsEventResponse<M>>, HTTPError> {
-    let client = HttpClient::new(tendermint_rpc_address).expect("hard coded URL is valid");
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
 
     let query: Query = events
         .0
@@ -109,7 +111,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
     let total = txs.len().try_into().map_err(|_| HTTPError::bad_gateway())?;
 
     Ok(GetTxsEventResponse {
-        pagination: Some(PageResponse {
+        pagination: Some(PaginationResponse {
             next_key: vec![],
             total,
         }),
@@ -135,4 +137,16 @@ pub async fn staking_params() -> &'static str {
         }
       }
     "#
+}
+
+pub async fn block_latest(
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<tendermint::rpc::endpoint::Response>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let res = client.latest_block().await.map_err(|e| {
+        tracing::error!("Error connecting to Tendermint: {e}");
+        HTTPError::gateway_timeout()
+    })?;
+    Ok(Json(res))
 }

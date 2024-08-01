@@ -5,7 +5,7 @@ use gears::{
     tendermint::types::proto::Protobuf,
     types::{
         address::AccAddress,
-        base::{errors::CoinsError, send::SendCoins},
+        base::{coins::UnsignedCoins, errors::CoinError},
         tx::TxMessage,
     },
 };
@@ -19,7 +19,7 @@ mod inner {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MsgSubmitProposal {
     pub content: Any,
-    pub initial_deposit: SendCoins,
+    pub initial_deposit: UnsignedCoins,
     pub proposer: AccAddress,
 }
 
@@ -30,10 +30,6 @@ impl MsgSubmitProposal {
 impl TxMessage for MsgSubmitProposal {
     fn get_signers(&self) -> Vec<&AccAddress> {
         vec![&self.proposer]
-    }
-
-    fn validate_basic(&self) -> Result<(), String> {
-        Ok(())
     }
 
     fn type_url(&self) -> &'static str {
@@ -57,12 +53,12 @@ impl TryFrom<inner::MsgSubmitProposal> for MsgSubmitProposal {
             content: content.ok_or(CoreError::MissingField(
                 "MsgSubmitProposal missing content".to_owned(),
             ))?,
-            initial_deposit: SendCoins::new({
+            initial_deposit: UnsignedCoins::new({
                 let mut coins = Vec::with_capacity(initial_deposit.len());
                 for coin in initial_deposit {
                     coins.push(
                         coin.try_into()
-                            .map_err(|e: CoinsError| CoreError::Coin(e.to_string()))?,
+                            .map_err(|e: CoinError| CoreError::Coin(e.to_string()))?,
                     )
                 }
 

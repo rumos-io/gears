@@ -5,7 +5,7 @@ use tendermint::types::proto::Protobuf;
 
 use crate::types::{
     address::AccAddress,
-    base::{coin::Coin, errors::CoinsError, send::SendCoins},
+    base::{coin::UnsignedCoin, coins::UnsignedCoins, errors::CoinError},
     tx::TxMessage,
 };
 
@@ -23,7 +23,7 @@ pub struct MsgSendParseError(pub String);
 pub struct MsgSend {
     pub from_address: AccAddress,
     pub to_address: AccAddress,
-    pub amount: SendCoins,
+    pub amount: UnsignedCoins,
 }
 
 impl TryFrom<inner::MsgSend> for MsgSend {
@@ -39,21 +39,21 @@ impl TryFrom<inner::MsgSend> for MsgSend {
         let coins = raw
             .amount
             .into_iter()
-            .map(Coin::try_from)
-            .collect::<Result<Vec<_>, CoinsError>>()
+            .map(UnsignedCoin::try_from)
+            .collect::<Result<Vec<_>, CoinError>>()
             .map_err(|e| MsgSendParseError(e.to_string()))?;
 
         Ok(MsgSend {
             from_address,
             to_address,
-            amount: SendCoins::new(coins).map_err(|e| MsgSendParseError(e.to_string()))?,
+            amount: UnsignedCoins::new(coins).map_err(|e| MsgSendParseError(e.to_string()))?,
         })
     }
 }
 
 impl From<MsgSend> for inner::MsgSend {
     fn from(msg: MsgSend) -> inner::MsgSend {
-        let coins: Vec<Coin> = msg.amount.into();
+        let coins: Vec<UnsignedCoin> = msg.amount.into();
         let coins = coins.into_iter().map(inner::Coin::from).collect();
 
         Self {
@@ -78,10 +78,6 @@ impl From<MsgSend> for Any {
 
 impl TxMessage for MsgSend {
     fn get_signers(&self) -> Vec<&AccAddress> {
-        todo!()
-    }
-
-    fn validate_basic(&self) -> Result<(), String> {
         todo!()
     }
 

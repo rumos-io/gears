@@ -26,8 +26,18 @@ pub enum CoreError {
     InvalidSignMode(i32),
 }
 
+impl From<std::convert::Infallible> for CoreError {
+    fn from(_: std::convert::Infallible) -> Self {
+        unreachable!("such conversion should never occur, but may be required")
+    }
+}
+
 impl From<CoreError> for tonic::Status {
     fn from(e: CoreError) -> Self {
         tonic::Status::invalid_argument(format!("{:?}", e))
     }
+}
+
+pub mod ibc {
+    pub use ibc_proto::protobuf::Error;
 }

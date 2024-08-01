@@ -5,7 +5,10 @@ use bank::cli::{
     tx::{run_bank_tx_command, BankTxCli},
 };
 use clap::Subcommand;
-use gears::types::address::AccAddress;
+use gears::{
+    commands::client::tx::ClientTxContext,
+    types::{address::AccAddress, tx::Messages},
+};
 use ibc_rs::client::cli::{
     query::IbcQueryCli,
     tx::{run_ibc_tx_command, IbcTxCli},
@@ -27,13 +30,21 @@ pub enum GaiaTxCommands {
     IBC(IbcTxCli),
 }
 
-pub fn tx_command_handler(command: GaiaTxCommands, from_address: AccAddress) -> Result<Message> {
+pub fn tx_command_handler(
+    _ctx: &ClientTxContext,
+    command: GaiaTxCommands,
+    from_address: AccAddress,
+) -> Result<Messages<Message>> {
     match command {
-        GaiaTxCommands::Bank(args) => run_bank_tx_command(args, from_address).map(Message::Bank),
-        GaiaTxCommands::Staking(args) => {
-            run_staking_tx_command(args, from_address).map(Message::Staking)
-        }
-        GaiaTxCommands::IBC(args) => run_ibc_tx_command(args, from_address).map(Message::IBC),
+        GaiaTxCommands::Bank(args) => run_bank_tx_command(args, from_address)
+            .map(Message::Bank)
+            .map(Into::into),
+        GaiaTxCommands::Staking(args) => run_staking_tx_command(args, from_address)
+            .map(Message::Staking)
+            .map(Into::into),
+        GaiaTxCommands::IBC(args) => run_ibc_tx_command(args, from_address)
+            .map(Message::IBC)
+            .map(Into::into),
     }
 }
 

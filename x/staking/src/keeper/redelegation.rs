@@ -1,8 +1,5 @@
 use super::*;
-use crate::{
-    consts::error::TIMESTAMP_NANOS_EXPECT, length_prefixed_val_del_addrs_key,
-    unbonding_delegation_time_key, RedelegationEntry,
-};
+use crate::{length_prefixed_val_del_addrs_key, unbonding_delegation_time_key, RedelegationEntry};
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     store::database::ext::UnwrapCorrupt,
@@ -27,34 +24,34 @@ impl<
         shares: Decimal256,
     ) -> anyhow::Result<Timestamp> {
         if val_src_addr == val_dst_addr {
-            return Err(AppError::Custom("self redelegation".to_string()).into());
+            return Err(anyhow::anyhow!("self redelegation".to_string()));
         }
 
         let mut dst_validator = if let Some(validator) = self.validator(ctx, val_dst_addr)? {
             validator
         } else {
-            return Err(AppError::Custom(format!("bad redelegation dst: {}", val_dst_addr)).into());
+            return Err(anyhow::anyhow!("bad redelegation dst: {}", val_dst_addr));
         };
 
         let src_validator = if let Some(validator) = self.validator(ctx, val_src_addr)? {
             validator
         } else {
-            return Err(AppError::Custom(format!("bad redelegation src: {}", val_dst_addr)).into());
+            return Err(anyhow::anyhow!("bad redelegation src: {}", val_dst_addr));
         };
 
         // check if this is a transitive redelegation
         if self.has_receiving_redelegation(ctx, del_addr, val_src_addr)? {
-            return Err(AppError::Custom("transitive redelegation".to_string()).into());
+            return Err(anyhow::anyhow!("transitive redelegation"));
         }
 
         if self.has_max_redelegation_entries(ctx, del_addr, val_src_addr, val_dst_addr)? {
-            return Err(AppError::Custom("max redelegation entries".to_string()).into());
+            return Err(anyhow::anyhow!("max redelegation entries"));
         }
 
         let return_amount = self.unbond(ctx, del_addr, val_src_addr, shares)?;
 
         if return_amount.is_zero() {
-            return Err(AppError::Custom("tiny redelegation amount".to_string()).into());
+            return Err(anyhow::anyhow!("tiny redelegation amount"));
         }
 
         let shares_created = self.delegate(
@@ -81,12 +78,12 @@ impl<
                 val_dst_addr: val_dst_addr.clone(),
             },
             height,
-            completion_time.clone(),
+            completion_time,
             return_amount,
             shares_created,
         )?;
 
-        self.insert_redelegation_queue(ctx, &redelegation, completion_time.clone())?;
+        self.insert_redelegation_queue(ctx, &redelegation, completion_time)?;
         Ok(completion_time)
     }
 
@@ -213,21 +210,21 @@ impl<
         del_addr: AccAddress,
         val_src_addr: ValAddress,
         val_dst_addr: ValAddress,
-    ) -> anyhow::Result<Vec<Coin>> {
+    ) -> anyhow::Result<Vec<UnsignedCoin>> {
         let redelegation = self
             .redelegation(ctx, &del_addr, &val_src_addr, &val_dst_addr)
-            .map_err(|e| AppError::Custom(e.to_string()))?
-            .ok_or(AppError::Custom("no redelegation found".to_string()))?;
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?
+            .ok_or(anyhow::anyhow!("no redelegation found"))?;
 
         let mut balances = vec![];
         let params = self.staking_params_keeper.get(ctx);
         let denom = params.bond_denom();
-        let ctx_time = ctx.header.time.clone();
+        let ctx_time = ctx.header.time;
 
         // loop through all the entries and complete mature redelegation entries
         let mut new_redelegations = vec![];
         for entry in &redelegation.entries {
-            let coin = Coin {
+            let coin = UnsignedCoin {
                 denom: denom.clone(),
                 amount: entry.initial_balance,
             };
@@ -253,11 +250,6 @@ impl<
         redelegation: &Redelegation,
         completion_time: Timestamp,
     ) -> Result<(), GasStoreErrors> {
-        // TODO: consider to move the DateTime type and work with timestamps into Gears
-        // The timestamp is provided by context and conversion won't fail.
-        let completion_time =
-            chrono::DateTime::from_timestamp(completion_time.seconds, completion_time.nanos as u32)
-                .unwrap();
         let mut time_slice = self.redelegation_queue_time_slice(ctx, completion_time)?;
         let dvv_triplet = DvvTriplet {
             del_addr: redelegation.delegator_address.clone(),
@@ -276,15 +268,12 @@ impl<
     pub fn redelegation_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        completion_time: chrono::DateTime<Utc>,
+        completion_time: Timestamp,
     ) -> Result<Vec<DvvTriplet>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(REDELEGATION_QUEUE_KEY);
 
-        let key = completion_time
-            .timestamp_nanos_opt()
-            .expect(TIMESTAMP_NANOS_EXPECT)
-            .to_le_bytes();
+        let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
         if let Some(bytes) = store.get(&key)? {
             Ok(serde_json::from_slice(&bytes).unwrap_or_corrupt())
         } else {
@@ -295,16 +284,13 @@ impl<
     pub fn set_redelegation_queue_time_slice<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
         ctx: &mut CTX,
-        completion_time: chrono::DateTime<Utc>,
+        completion_time: Timestamp,
         redelegations: Vec<DvvTriplet>,
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
-        let key = completion_time
-            .timestamp_nanos_opt()
-            .expect(TIMESTAMP_NANOS_EXPECT)
-            .to_le_bytes();
+        let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
         let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
         store.set(key, value)
     }

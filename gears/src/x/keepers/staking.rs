@@ -6,7 +6,7 @@ use crate::{
     context::{QueryableContext, TransactionalContext},
     types::{
         address::{AccAddress, ConsAddress, ValAddress},
-        base::coin::Coin,
+        base::coin::UnsignedCoin,
         store::gas::errors::GasStoreErrors,
     },
     x::{
@@ -124,7 +124,7 @@ pub trait GovStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 'stat
     fn total_bonded_tokens<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
         ctx: &CTX,
-    ) -> Result<Coin, GasStoreErrors>;
+    ) -> Result<UnsignedCoin, GasStoreErrors>;
 }
 
 /// Staking keeper which used in slashing xmod
@@ -158,7 +158,7 @@ pub trait SlashingStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 
         ctx: &mut CTX,
         addr: &ConsAddress,
         height: u32,
-        power: u32,
+        power: VotingPower,
         slash_fraction_downtime: Decimal256,
     ) -> Result<(), GasStoreErrors>;
 
@@ -191,4 +191,10 @@ pub trait SlashingStakingKeeper<SK: StoreKey, M: Module>: Clone + Send + Sync + 
         ctx: &CTX,
     ) -> Result<u32, GasStoreErrors>;
     // MaxValidators(sdk.Context) uint32
+}
+
+/// Staking keeper which used in distribution xmod
+pub trait DistributionStakingKeeper<SK: StoreKey, M: Module>:
+    GovStakingKeeper<SK, M> + SlashingStakingKeeper<SK, M>
+{
 }

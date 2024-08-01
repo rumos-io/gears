@@ -1,26 +1,37 @@
+use gears::baseapp::errors::QueryError;
 use gears::context::init::InitContext;
 use gears::context::query::QueryContext;
+use gears::derive::Query;
 use gears::error::IBC_ENCODE_UNWRAP;
+use gears::params::ParamsSubspaceKey;
 use gears::store::database::Database;
 use gears::store::StoreKey;
-use gears::tendermint::types::proto::Protobuf;
+use gears::tendermint::types::proto::Protobuf as _;
 use gears::tendermint::types::request::query::RequestQuery;
-use gears::types::query::account::{QueryAccountRequest, QueryAccountResponse};
 use gears::x::module::Module;
-use gears::{error::AppError, params::ParamsSubspaceKey};
 use serde::Serialize;
 
+use crate::query::{
+    QueryAccountRequest, QueryAccountResponse, QueryAccountsRequest, QueryAccountsResponse,
+    QueryParamsRequest, QueryParamsResponse,
+};
 use crate::{GenesisState, Keeper};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Query)]
+#[query(request)]
 pub enum AuthNodeQueryRequest {
     Account(QueryAccountRequest),
+    Accounts(QueryAccountsRequest),
+    Params(QueryParamsRequest),
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Query)]
+#[query(response)]
 #[serde(untagged)]
 pub enum AuthNodeQueryResponse {
     Account(QueryAccountResponse),
+    Accounts(QueryAccountsResponse),
+    Params(QueryParamsResponse),
 }
 
 #[derive(Debug, Clone)]
@@ -43,6 +54,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                 let res = self.keeper.query_account(ctx, req);
                 AuthNodeQueryResponse::Account(res)
             }
+            AuthNodeQueryRequest::Accounts(req) => {
+                let res = self.keeper.query_accounts(ctx, req);
+                AuthNodeQueryResponse::Accounts(res)
+            }
+            AuthNodeQueryRequest::Params(req) => {
+                let res = self.keeper.query_params(ctx, req);
+                AuthNodeQueryResponse::Params(res)
+            }
         }
     }
 
@@ -50,11 +69,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
         &self,
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
-    ) -> std::result::Result<bytes::Bytes, AppError> {
+    ) -> std::result::Result<bytes::Bytes, QueryError> {
         match query.path.as_str() {
             "/cosmos.auth.v1beta1.Query/Account" => {
-                let req = QueryAccountRequest::decode(query.data)
-                    .map_err(|e| AppError::InvalidRequest(e.to_string()))?;
+                let req = QueryAccountRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
@@ -62,9 +80,28 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler<SK, PSK, M> {
                     .encode_vec()
                     .expect(IBC_ENCODE_UNWRAP)
                     .into())
-                // TODO:IBC
             }
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            "/cosmos.auth.v1beta1.Query/Accounts" => {
+                let req = QueryAccountsRequest::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_accounts(ctx, req)
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into())
+            }
+            "/cosmos.auth.v1beta1.Query/Params" => {
+                let req = QueryParamsRequest::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_params(ctx, req)
+                    .encode_vec()
+                    .expect(IBC_ENCODE_UNWRAP)
+                    .into())
+            }
+            _ => Err(QueryError::PathNotFound),
         }
     }
 

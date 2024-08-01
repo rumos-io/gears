@@ -56,7 +56,7 @@ mod tests {
     use crate::types::denom::Denom;
     use crate::types::{
         auth::{fee::Fee, info::AuthInfo},
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
         msg::send::MsgSend,
         rendering::{
             cbor::Cbor,
@@ -70,6 +70,7 @@ mod tests {
     use cosmwasm_std::Uint256;
     use std::{collections::BTreeMap, str::FromStr};
     use tendermint::types::chain_id::ChainId;
+    use vec1::vec1;
 
     #[test]
     fn test_sign_bytes_with_fmt() -> anyhow::Result<()> {
@@ -88,7 +89,7 @@ mod tests {
             signer_infos: vec![signer_info],
             fee: Fee {
                 amount: Some(
-                    SendCoins::new(vec![Coin {
+                    UnsignedCoins::new(vec![UnsignedCoin {
                         denom: Denom::try_from("uatom".to_owned())?,
                         amount: Uint256::from(2000u32),
                     }])
@@ -115,14 +116,14 @@ mod tests {
         };
 
         let tx_body = TxBody::<MsgSend> {
-            messages: vec![MsgSend {
+            messages: vec1![MsgSend {
                 from_address: AccAddress::from_bech32(
                     "cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs",
                 )?,
                 to_address: AccAddress::from_bech32(
                     "cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t",
                 )?,
-                amount: SendCoins::new(vec![Coin {
+                amount: UnsignedCoins::new(vec![UnsignedCoin {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(10000000u32),
                 }])
@@ -157,91 +158,91 @@ mod tests {
         let screens = vec![
             Screen {
                 title: "Chain id".to_string(),
-                content: Content::new("my-chain".to_string())?,
+                content: Content::try_new("my-chain".to_string())?,
                 indent: None,
                 expert: false,
             },
             Screen {
                 title: "Account number".to_string(),
-                content: Content::new(1.to_string())?,
+                content: Content::try_new(1.to_string())?,
                 indent: None,
                 expert: false,
             },
             Screen {
                 title: "Sequence".to_string(),
-                content: Content::new(2.to_string())?,
+                content: Content::try_new(2.to_string())?,
                 indent: None,
                 expert: false,
             },
             Screen {
                 title: "Address".to_string(),
-                content: Content::new("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
+                content: Content::try_new("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
                 indent: None,
                 expert: true,
             },
             Screen {
                 title: "Public key".to_string(),
-                content: Content::new("/cosmos.crypto.secp256k1.PubKey")?,
+                content: Content::try_new("/cosmos.crypto.secp256k1.PubKey")?,
                 indent: None,
                 expert: true,
             },
             Screen {
                 title: "Key".to_string(),
-                content: Content::new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
-                indent: Some(Indent::new(1)?),
+                content: Content::try_new( "02EB DD7F E4FD EB76 DC8A 205E F65D 790C D30E 8A37 5A5C 2528 EB3A 923A F1FB 4D79 4D" )?,
+                indent: Some(Indent::try_new(1)?),
                 expert: true,
             },
             Screen {
                 title: String::new(),
-                content: Content::new("This transaction has 1 Message")?,
+                content: Content::try_new("This transaction has 1 Message")?,
                 indent: None,
                 expert: false,
             },
             Screen {
                 title: "Message (1/1)".to_string(),
-                content: Content::new("/cosmos.bank.v1beta1.MsgSend")?,
-                indent: Some(Indent::new(1)?),
+                content: Content::try_new("/cosmos.bank.v1beta1.MsgSend")?,
+                indent: Some(Indent::try_new(1)?),
                 expert: false,
             },
             Screen {
                 title: "From address".to_string(),
-                content: Content::new("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
-                indent: Some(Indent::new(2)?),
+                content: Content::try_new("cosmos1ulav3hsenupswqfkw2y3sup5kgtqwnvqa8eyhs")?,
+                indent: Some(Indent::try_new(2)?),
                 expert: false,
             },
             Screen {
                 title: "To address".to_string(),
-                content: Content::new("cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t")?,
-                indent: Some(Indent::new(2)?),
+                content: Content::try_new("cosmos1ejrf4cur2wy6kfurg9f2jppp2h3afe5h6pkh5t")?,
+                indent: Some(Indent::try_new(2)?),
                 expert: false,
             },
             Screen {
                 title: "Amount".to_string(),
-                content: Content::new("10 ATOM")?,
-                indent: Some(Indent::new(2)?),
+                content: Content::try_new("10 ATOM")?,
+                indent: Some(Indent::try_new(2)?),
                 expert: false,
             },
             Screen {
                 title: String::new(),
-                content: Content::new("End of Message")?,
+                content: Content::try_new("End of Message")?,
                 indent: None,
                 expert: false,
             },
             Screen {
                 title: "Fees".to_string(),
-                content: Content::new("0.002 ATOM".to_string())?,
+                content: Content::try_new("0.002 ATOM".to_string())?,
                 indent: None,
                 expert: false,
             },
             Screen {
                 title: "Gas limit".to_string(),
-                content: Content::new("100'000".to_string())?,
+                content: Content::try_new("100'000".to_string())?,
                 indent: None,
                 expert: true,
             },
             Screen {
                 title: "Hash of raw bytes".to_string(),
-                content: Content::new(
+                content: Content::try_new(
                     "785bd306ea8962cdb9600089bdd65f3dc029e1aea112dee69e19546c9adad86e",
                 )?,
                 indent: None,
@@ -308,14 +309,14 @@ mod tests {
         };
 
         let tx_body = TxBody::<MsgSend> {
-            messages: vec![MsgSend {
+            messages: vec1![MsgSend {
                 from_address: AccAddress::from_bech32(
                     "cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z",
                 )?,
                 to_address: AccAddress::from_bech32(
                     "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
                 )?,
-                amount: SendCoins::new(vec![Coin {
+                amount: UnsignedCoins::new(vec![UnsignedCoin {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(1u8),
                 }])
@@ -414,14 +415,14 @@ mod tests {
         };
 
         let tx_body = TxBody::<MsgSend> {
-            messages: vec![MsgSend {
+            messages: vec1![MsgSend {
                 from_address: AccAddress::from_bech32(
                     "cosmos12vrgunwvszgzpykdrqlx3m6puedvcajlxcyw8z",
                 )?,
                 to_address: AccAddress::from_bech32(
                     "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
                 )?,
-                amount: SendCoins::new(vec![Coin {
+                amount: UnsignedCoins::new(vec![UnsignedCoin {
                     denom: Denom::try_from("uatom".to_string())?,
                     amount: Uint256::from(1u8),
                 }])

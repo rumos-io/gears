@@ -3,9 +3,10 @@ use crate::{
     message::Message, types::genesis::GenesisState,
 };
 use gears::{
+    application::handlers::node::TxError,
+    baseapp::errors::QueryError,
     context::{init::InitContext, query::QueryContext, tx::TxContext},
     core::errors::CoreError,
-    error::AppError,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
 };
@@ -35,11 +36,11 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         Self { keeper }
     }
 
-    pub fn tx<DB: Database + Sync + Send>(
+    pub fn msg<DB: Database + Sync + Send>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), TxError> {
         match msg {
             Message::ClientCreate(msg) => {
                 // let MsgCreateClient {
@@ -107,7 +108,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
         &self,
         ctx: &QueryContext<DB, SK>,
         query: gears::tendermint::types::request::query::RequestQuery,
-    ) -> Result<bytes::Bytes, AppError> {
+    ) -> Result<bytes::Bytes, QueryError> {
         match query.path.as_str() {
             // "/ibc.core.client.v1.Query/ClientParams" => {
             //     //Ok(self.query_keeper.client_params(ctx)?.encode_vec().into())
@@ -123,7 +124,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
                 .client_states(
                     ctx,
                     ProstMessage::decode(query.data)
-                        .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?,
+                        .map_err(|e| QueryError::Proto(e.to_string()))?,
                 )
                 .encode_vec()
                 .into()),
@@ -147,7 +148,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey> ABCIHandler<SK, PSK> {
             //     .consensus_states(ctx, ProstMessage::decode(query.data)?)?
             //     .encode_vec()
             //     .into()),
-            _ => Err(errors::query::client::ClientErrors::PathNotFound.into()),
+            _ => Err(QueryError::PathNotFound),
         }
     }
 

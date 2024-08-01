@@ -1,8 +1,8 @@
+use std::{borrow::Cow, num::NonZero};
+
 use crate::{
-    baseapp::{genesis::Genesis, QueryRequest, QueryResponse},
+    baseapp::{errors::QueryError, genesis::Genesis, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    error::AppError,
-    signing::renderer::value_renderer::ValueRenderer,
     types::tx::{raw::TxWithRaw, TxMessage},
 };
 use database::Database;
@@ -11,13 +11,28 @@ use tendermint::types::{
     proto::validator::ValidatorUpdate,
     request::{begin_block::RequestBeginBlock, end_block::RequestEndBlock, query::RequestQuery},
 };
+use thiserror::Error;
 
-pub trait AnteHandlerTrait<SK: StoreKey>: Clone + Send + Sync + 'static {
-    fn run<DB: Database, M: TxMessage + ValueRenderer>(
-        &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        tx: &TxWithRaw<M>,
-    ) -> Result<(), AppError>;
+pub trait ModuleInfo {
+    const NAME: &'static str;
+}
+
+#[derive(Error, Debug, Clone)]
+#[error("{msg}")]
+pub struct TxError {
+    pub msg: Cow<'static, str>,
+    pub code: NonZero<u16>,
+    pub codespace: &'static str,
+}
+
+impl TxError {
+    pub fn new<MI: ModuleInfo>(msg: impl Into<Cow<'static, str>>, code: NonZero<u16>) -> Self {
+        Self {
+            msg: msg.into(),
+            code,
+            codespace: MI::NAME,
+        }
+    }
 }
 
 pub trait ABCIHandler: Clone + Send + Sync + 'static {
@@ -38,13 +53,13 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         tx: &TxWithRaw<Self::Message>,
-    ) -> Result<(), AppError>;
+    ) -> Result<(), TxError>;
 
-    fn tx<DB: Database>(
+    fn msg<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         msg: &Self::Message,
-    ) -> Result<(), AppError>;
+    ) -> Result<(), TxError>;
 
     #[allow(unused_variables)]
     fn begin_block<'a, DB: Database>(
@@ -73,5 +88,5 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, AppError>;
+    ) -> Result<bytes::Bytes, QueryError>;
 }

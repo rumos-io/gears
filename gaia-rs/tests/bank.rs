@@ -27,7 +27,7 @@ use gears::{
         types::chain_id::ChainId,
     },
     types::address::AccAddress,
-    types::{base::coin::Coin, denom::Denom},
+    types::{base::coin::UnsignedCoin, denom::Denom},
 };
 use utilities::run_gaia_and_tendermint;
 
@@ -45,6 +45,7 @@ fn balances_query() -> anyhow::Result<()> {
 
     let query = BalancesCommand {
         address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")?,
+        pagination: None,
     };
 
     let result = run_query(
@@ -60,7 +61,7 @@ fn balances_query() -> anyhow::Result<()> {
 
     let expected = GaiaQueryResponse::Bank(bank::cli::query::BankQueryResponse::Balances(
         QueryAllBalancesResponse {
-            balances: vec![Coin {
+            balances: vec![UnsignedCoin {
                 denom: Denom::from_str("uatom")?,
                 amount: 34_u32.into(),
             }],
@@ -83,7 +84,7 @@ fn denom_query() -> anyhow::Result<()> {
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             height: None,
             inner: WrappedGaiaQueryCommands(GaiaQueryCommands::Bank(BankQueryCli {
-                command: BankQueryCommands::DenomMetadata,
+                command: BankQueryCommands::DenomMetadata { pagination: None },
             })),
         },
         &GaiaCoreClient,
@@ -109,15 +110,10 @@ fn send_tx() -> anyhow::Result<()> {
 
     let tx_cmd = BankCommands::Send {
         to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
-        amount: Coin::from_str("10uatom")?,
+        amount: UnsignedCoin::from_str("10uatom")?,
     };
 
-    let Response {
-        check_tx: _,
-        deliver_tx,
-        hash,
-        height: _,
-    } = run_tx(
+    let responses = run_tx(
         TxCommand {
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
@@ -126,11 +122,18 @@ fn send_tx() -> anyhow::Result<()> {
             }),
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             chain_id: ChainId::from_str("test-chain")?,
-            fee: None,
+            fees: None,
             inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
         },
         &GaiaCoreClient,
     )?;
+    assert_eq!(responses.len(), 1);
+    let Response {
+        check_tx: _,
+        deliver_tx,
+        hash,
+        height: _,
+    } = &responses[0];
 
     let expected_hash = data_encoding::HEXUPPER
         .decode("13BB2C6817D0EDA960EDB0C6D6D5CB752D341BB603EF4BCE990F4EA5A99500C1".as_bytes())?;
@@ -178,18 +181,13 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
     (0..10).into_par_iter().try_for_each(|_| {
         let tx_cmd = BankCommands::Send {
             to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
-            amount: Coin::from_str(&format!(
+            amount: UnsignedCoin::from_str(&format!(
                 "{}uatom",
                 COUNTER.fetch_add(10, std::sync::atomic::Ordering::Relaxed)
             ))?,
         };
 
-        let Response {
-            check_tx,
-            deliver_tx,
-            hash: _,
-            height: _,
-        } = run_tx(
+        let responses = run_tx(
             TxCommand {
                 keyring: Keyring::Local(LocalInfo {
                     keyring_backend: KeyringBackend::Test,
@@ -198,11 +196,18 @@ fn send_tx_in_parallel() -> anyhow::Result<()> {
                 }),
                 node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
                 chain_id: ChainId::from_str("test-chain")?,
-                fee: None,
+                fees: None,
                 inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
             },
             &GaiaCoreClient,
         )?;
+        assert_eq!(responses.len(), 1);
+        let Response {
+            check_tx,
+            deliver_tx,
+            hash: _,
+            height: _,
+        } = &responses[0];
 
         assert!(check_tx.code.is_ok());
         assert!(deliver_tx.code.is_ok());

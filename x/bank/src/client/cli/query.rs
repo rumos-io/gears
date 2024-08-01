@@ -5,16 +5,17 @@ use clap::{Args, Subcommand};
 
 use gears::{
     application::handlers::client::QueryHandler,
-    core::query::request::bank::QueryDenomsMetadataRequest,
-    error::IBC_ENCODE_UNWRAP,
+    cli::pagination::CliPaginationRequest,
+    derive::Query,
+    ext::FallibleMapExt,
     tendermint::types::proto::Protobuf,
-    types::{address::AccAddress, query::Query},
+    types::{address::AccAddress, pagination::request::PaginationRequest},
 };
-use prost::Message;
 use serde::{Deserialize, Serialize};
 
 use crate::types::query::{
-    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataResponse,
+    QueryAllBalancesRequest, QueryAllBalancesResponse, QueryDenomsMetadataRequest,
+    QueryDenomsMetadataResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 
 #[derive(Args, Debug)]
@@ -26,7 +27,16 @@ pub struct BankQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum BankCommands {
     Balances(BalancesCommand),
-    DenomMetadata,
+    /// Query the client metadata for coin denominations
+    DenomMetadata {
+        #[command(flatten)]
+        pagination: Option<CliPaginationRequest>,
+    },
+    /// Query the total supply of coins of the chain
+    Total {
+        #[command(flatten)]
+        pagination: Option<CliPaginationRequest>,
+    },
 }
 
 /// Query for account balances by address
@@ -34,6 +44,8 @@ pub enum BankCommands {
 pub struct BalancesCommand {
     /// address
     pub address: AccAddress,
+    #[command(flatten)]
+    pub pagination: Option<CliPaginationRequest>,
 }
 
 #[derive(Debug, Clone)]
@@ -51,15 +63,21 @@ impl QueryHandler for BankQueryHandler {
         command: &Self::QueryCommands,
     ) -> anyhow::Result<Self::QueryRequest> {
         let res = match &command.command {
-            BankCommands::Balances(BalancesCommand { address }) => {
-                BankQuery::Balances(QueryAllBalancesRequest {
-                    address: address.clone(),
-                    pagination: None,
+            BankCommands::Balances(BalancesCommand {
+                address,
+                pagination,
+            }) => BankQuery::Balances(QueryAllBalancesRequest {
+                address: address.clone(),
+                pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
+            }),
+            BankCommands::DenomMetadata { pagination } => {
+                BankQuery::DenomMetadata(QueryDenomsMetadataRequest {
+                    pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
                 })
             }
-            BankCommands::DenomMetadata => {
-                BankQuery::DenomMetadata(QueryDenomsMetadataRequest { pagination: None })
-            }
+            BankCommands::Total { pagination } => BankQuery::Total(QueryTotalSupplyRequest {
+                pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
+            }),
         };
 
         Ok(res)
@@ -74,8 +92,11 @@ impl QueryHandler for BankQueryHandler {
             BankCommands::Balances(_) => BankQueryResponse::Balances(
                 QueryAllBalancesResponse::decode::<Bytes>(query_bytes.into())?,
             ),
-            BankCommands::DenomMetadata => BankQueryResponse::DenomMetadata(
+            BankCommands::DenomMetadata { pagination: _ } => BankQueryResponse::DenomMetadata(
                 QueryDenomsMetadataResponse::decode::<Bytes>(query_bytes.into())?,
+            ),
+            BankCommands::Total { pagination: _ } => BankQueryResponse::Total(
+                QueryTotalSupplyResponse::decode::<Bytes>(query_bytes.into())?,
             ),
         };
 
@@ -83,31 +104,18 @@ impl QueryHandler for BankQueryHandler {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Query)]
+#[query(request)]
 pub enum BankQuery {
     Balances(QueryAllBalancesRequest),
     DenomMetadata(QueryDenomsMetadataRequest),
+    Total(QueryTotalSupplyRequest),
 }
 
-impl Query for BankQuery {
-    fn query_url(&self) -> &'static str {
-        match self {
-            BankQuery::Balances(_) => "/cosmos.bank.v1beta1.Query/AllBalances",
-            BankQuery::DenomMetadata(_) => "/cosmos.bank.v1beta1.Query/DenomsMetadata",
-        }
-    }
-
-    fn into_bytes(self) -> Vec<u8> {
-        match self {
-            BankQuery::Balances(var) => var.encode_vec().expect(IBC_ENCODE_UNWRAP), // TODO:IBC
-            BankQuery::DenomMetadata(var) => var.encode_to_vec(),
-        }
-    }
-}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Debug)]
+#[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
 #[serde(untagged)]
 pub enum BankQueryResponse {
     Balances(QueryAllBalancesResponse),
     DenomMetadata(QueryDenomsMetadataResponse),
+    Total(QueryTotalSupplyResponse),
 }

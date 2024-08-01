@@ -26,8 +26,8 @@ use crate::{
 use super::keys::{GearsPublicKey, ReadAccAddress, SigningKey};
 
 /// Contains info required to sign a Tx
-pub struct SigningInfo<K> {
-    pub key: K,
+pub struct SigningInfo<'a, K> {
+    pub key: &'a K,
     pub sequence: u64,
     pub account_number: u64,
 }
@@ -100,7 +100,7 @@ pub fn create_signed_transaction_textual<
     let auth_info_bytes = auth_info.encode_vec().expect(IBC_ENCODE_UNWRAP);
     let tx_data = TxData {
         body: tx_body,
-        auth_info: auth_info,
+        auth_info,
     };
 
     let sign_mode_handler = SignModeHandler;

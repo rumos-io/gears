@@ -10,7 +10,7 @@ pub mod denom;
 pub mod errors;
 pub mod gas;
 pub mod msg;
-pub mod query;
+pub mod pagination;
 pub mod rendering;
 pub mod response;
 pub mod signing;

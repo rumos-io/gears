@@ -2,11 +2,11 @@ use crate::signing::handler::MetadataGetter;
 use crate::signing::renderer::value_renderer::{
     DefaultPrimitiveRenderer, RenderError, TryPrimitiveValueRendererWithMetadata,
 };
-use crate::types::{base::send::SendCoins, rendering::screen::Content};
+use crate::types::{base::coins::UnsignedCoins, rendering::screen::Content};
 
-impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRenderer {
+impl TryPrimitiveValueRendererWithMetadata<UnsignedCoins> for DefaultPrimitiveRenderer {
     fn try_format_with_metadata<MG: MetadataGetter>(
-        coins: SendCoins,
+        coins: UnsignedCoins,
         get_metadata: &MG,
     ) -> Result<Content, RenderError> {
         let inner_coins = coins.clone().into_inner();
@@ -29,7 +29,7 @@ impl TryPrimitiveValueRendererWithMetadata<SendCoins> for DefaultPrimitiveRender
             acc
         });
 
-        Ok(Content::new(formatted_coins).expect("send coins are never empty"))
+        Ok(Content::try_new(formatted_coins).expect("send coins are never empty"))
     }
 }
 
@@ -42,21 +42,21 @@ mod tests {
         DefaultPrimitiveRenderer, TryPrimitiveValueRendererWithMetadata,
     };
     use crate::types::{
-        base::{coin::Coin, send::SendCoins},
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
         rendering::screen::Content,
     };
 
     #[test]
     fn send_coins_check_format() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2000u32),
         };
 
-        let expected_content = Content::new("0.002 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin]).unwrap(),
+            UnsignedCoins::new(vec![coin]).unwrap(),
             &TestMetadataGetter,
         );
 
@@ -67,20 +67,20 @@ mod tests {
 
     #[test]
     fn send_coins_check_format_multi_denom_alphabetical() -> anyhow::Result<()> {
-        let coin1 = Coin {
+        let coin1 = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2000u32),
         };
 
-        let coin2 = Coin {
+        let coin2 = UnsignedCoin {
             denom: "uon".try_into()?,
             amount: Uint256::from(2000u32),
         };
 
-        let expected_content = Content::new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002 AAUON, 0.002 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin1, coin2]).unwrap(),
+            UnsignedCoins::new(vec![coin1, coin2]).unwrap(),
             &TestMetadataGetter,
         );
 
@@ -91,15 +91,15 @@ mod tests {
 
     #[test]
     fn send_coins_check_format_more_sig_figs() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2047u32),
         };
 
-        let expected_content = Content::new("0.002047 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("0.002047 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin]).unwrap(),
+            UnsignedCoins::new(vec![coin]).unwrap(),
             &TestMetadataGetter,
         );
 
@@ -110,15 +110,15 @@ mod tests {
 
     #[test]
     fn send_coins_check_format_int_and_dec_part() -> anyhow::Result<()> {
-        let coin = Coin {
+        let coin = UnsignedCoin {
             denom: "uatom".try_into()?,
             amount: Uint256::from(2_123_456u32),
         };
 
-        let expected_content = Content::new("2.123456 ATOM".to_string()).unwrap();
+        let expected_content = Content::try_new("2.123456 ATOM".to_string()).unwrap();
 
         let actual_content = DefaultPrimitiveRenderer::try_format_with_metadata(
-            SendCoins::new(vec![coin]).unwrap(),
+            UnsignedCoins::new(vec![coin]).unwrap(),
             &TestMetadataGetter,
         );
 

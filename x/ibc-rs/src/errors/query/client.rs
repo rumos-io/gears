@@ -1,4 +1,3 @@
-use gears::error::AppError;
 //use gears::error::SearchError;
 use ibc::core::{client::types::error::ClientError, host::types::error::IdentifierError};
 use prost::DecodeError;
@@ -40,12 +39,6 @@ pub enum ClientErrors {
     DecodeError(#[from] DecodeError),
     #[error("query path not found")]
     PathNotFound,
-}
-
-impl From<ClientErrors> for AppError {
-    fn from(e: ClientErrors) -> Self {
-        AppError::Query(e.to_string())
-    }
 }
 
 #[derive(Debug, thiserror::Error)]

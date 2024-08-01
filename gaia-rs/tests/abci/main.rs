@@ -15,12 +15,12 @@ use gears::store::database::MemDB;
 use gears::tendermint::mock::{InitState, MockNode};
 use gears::tendermint::types::chain_id::ChainId;
 use gears::tendermint::types::proto::consensus::ConsensusParams;
-use gears::tendermint::types::proto::validator::ValidatorUpdate;
+use gears::tendermint::types::proto::validator::{ValidatorUpdate, VotingPower};
 use gears::tendermint::types::proto::Protobuf;
-use gears::tendermint::types::time::Timestamp;
+use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::types::address::AccAddress;
 use gears::types::auth::fee::Fee;
-use gears::types::base::send::SendCoins;
+use gears::types::base::coins::Coins;
 use gears::types::tx::body::TxBody;
 use keyring::key::pair::KeyPair;
 use prost::Message;
@@ -68,14 +68,14 @@ fn setup_mock_node() -> (
         .expect("won't fail since there's no existing account");
 
     let init_state = InitState {
-        time: Timestamp::ZERO,
+        time: Timestamp::UNIX_EPOCH,
         chain_id: chain_id.clone(),
         consensus_params: ConsensusParams::default(),
         validators: vec![ValidatorUpdate {
             pub_key: consensus_key
                 .try_into()
                 .expect("ed25519 key conversion is supported"),
-            power: 10,
+            power: VotingPower::new(10).expect("hardcoded power is less the max voting power"),
         }],
         app_genesis: genesis,
         initial_height: 1,
@@ -98,7 +98,7 @@ fn generate_txs(
 ) -> Vec<Bytes> {
     let fee = Fee {
         amount: Some(
-            SendCoins::new(vec!["1uatom".parse().expect("hard coded coin is valid")])
+            Coins::new(vec!["1uatom".parse().expect("hard coded coin is valid")])
                 .expect("hard coded coins are valid"),
         ),
         gas_limit: 200_000_u64
@@ -109,12 +109,12 @@ fn generate_txs(
     };
 
     let signing_info = SigningInfo {
-        key: user.key_pair.clone(),
+        key: &user.key_pair,
         sequence,
         account_number: user.account_number,
     };
 
-    let body_bytes = TxBody::new_with_defaults(vec![msg])
+    let body_bytes = TxBody::new_with_defaults(vec1::vec1![msg])
         .encode_vec()
         .expect("can't fail fixed in later versions of dependency");
 

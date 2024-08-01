@@ -1,14 +1,20 @@
 use crate::{
-    GenesisState, Keeper, Message, QueryParamsRequest, QueryParamsResponse,
-    QuerySigningInfoRequest, QuerySigningInfosRequest, QuerySigningInfosResponse,
+    errors::SlashingTxError, GenesisState, Keeper, Message, QueryParamsRequest,
+    QueryParamsResponse, QuerySigningInfoRequest, QuerySigningInfosRequest,
+    QuerySigningInfosResponse,
 };
 use gears::{
+    baseapp::errors::QueryError,
+    baseapp::QueryResponse,
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
-    core::{errors::CoreError, Protobuf},
-    error::AppError,
+    ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
-    tendermint::types::request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    tendermint::types::{
+        proto::Protobuf as _,
+        request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    },
+    types::pagination::response::PaginationResponse,
     x::{keepers::staking::SlashingStakingKeeper, module::Module},
 };
 
@@ -51,9 +57,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         msg: &Message,
-    ) -> Result<(), AppError> {
+    ) -> Result<(), SlashingTxError> {
         match msg {
-            Message::Unjail(msg) => self.keeper.unjail_tx_handler(ctx, msg),
+            Message::Unjail(msg) => Ok(self.keeper.unjail_tx_handler(ctx, msg)?),
         }
     }
 
@@ -61,35 +67,28 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         &self,
         ctx: &QueryContext<DB, SK>,
         query: RequestQuery,
-    ) -> Result<prost::bytes::Bytes, AppError> {
+    ) -> Result<prost::bytes::Bytes, QueryError> {
         match query.path.as_str() {
             "/cosmos.slashing.v1beta1.Query/SigningInfo" => {
-                let req = QuerySigningInfoRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QuerySigningInfoRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
                     .query_signing_info(ctx, req)?
-                    .encode_vec()
+                    .into_bytes()
                     .into())
             }
             "/cosmos.slashing.v1beta1.Query/SigningInfos" => {
-                let req = QuerySigningInfosRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QuerySigningInfosRequest::decode(query.data)?;
 
-                Ok(self
-                    .keeper
-                    .query_signing_infos(ctx, req)
-                    .encode_vec()
-                    .into())
+                Ok(self.query_signing_infos(ctx, req).into_bytes().into())
             }
             "/cosmos.slashing.v1beta1.Query/Params" => {
-                let req = QueryParamsRequest::decode(query.data)
-                    .map_err(|e| CoreError::DecodeProtobuf(e.to_string()))?;
+                let req = QueryParamsRequest::decode(query.data)?;
 
-                Ok(self.keeper.query_params(ctx, req).encode_vec().into())
+                Ok(self.keeper.query_params(ctx, req).into_bytes().into())
             }
-            _ => Err(AppError::InvalidRequest("query path not found".into())),
+            _ => Err(QueryError::PathNotFound),
         }
     }
 
@@ -100,7 +99,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
     ) -> SlashingNodeQueryResponse {
         match query {
             SlashingNodeQueryRequest::SigningInfos(req) => {
-                SlashingNodeQueryResponse::SigningInfos(self.keeper.query_signing_infos(ctx, req))
+                SlashingNodeQueryResponse::SigningInfos(self.query_signing_infos(ctx, req))
             }
             SlashingNodeQueryRequest::Params(req) => {
                 SlashingNodeQueryResponse::Params(self.keeper.query_params(ctx, req))
@@ -118,20 +117,33 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, SSK: SlashingStakingKeeper<SK, M>, M:
         // Iterate over all the validators which *should* have signed this block
         // store whether or not they have actually signed it and slash/unbond any
         // which have missed too many blocks in a row (downtime slashing)
-        if let Some(vote_info) = request.last_commit_info {
-            for vote in vote_info.votes {
-                self.keeper
-                    .handle_validator_signature(
-                        ctx,
-                        vote.validator.address.into(),
-                        vote.validator.power as u32,
-                        vote.signed_last_block,
-                    )
-                    .expect(
-                        "method `handle_validator_signature` is called from infallible method.
+        for vote in request.last_commit_info.votes {
+            self.keeper
+                .handle_validator_signature(
+                    ctx,
+                    vote.validator.address.into(),
+                    vote.validator.power,
+                    vote.signed_last_block,
+                )
+                .expect(
+                    "method `handle_validator_signature` is called from infallible method.
                          Something wrong in the handler.",
-                    );
-            }
+                );
+        }
+    }
+
+    fn query_signing_infos<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QuerySigningInfosRequest { pagination }: QuerySigningInfosRequest,
+    ) -> QuerySigningInfosResponse {
+        let (p_result, info) = self
+            .keeper
+            .validator_signing_infos(ctx, Some(Pagination::from(pagination)));
+
+        QuerySigningInfosResponse {
+            info,
+            pagination: p_result.map(PaginationResponse::from),
         }
     }
 }

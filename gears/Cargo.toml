@@ -14,10 +14,12 @@ core-types = { path = "../core-types" }
 keyring = { path = "../keyring" }
 kv = { path = "../kv" }
 database = { path = "../database" }
-gears-derive = { path = "../gears-derive" }
+tx-derive = { path = "../macros/tx-derive" }
+query-derive = { path = "../macros/query-derive" }
+protobuf-derive ={ path = "../macros/protobuf-derive"}
 
 #newtypes
-# vec1 = "1.12.0"
+vec1 = { workspace = true, features = [ "serde" ] }
 secp256k1 = { workspace = true, features = ["hashes"] }
 bytes = { workspace = true }
 url = { workspace = true }
@@ -33,10 +35,10 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-integer-encoding = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
 derive_more = { workspace = true }
+itertools = "0.13.0" 
 
 #serialization
 prost = { workspace = true }
@@ -64,7 +66,6 @@ former = { workspace = true }
 axum = { workspace = true }
 tower-http = { workspace = true, features = ["cors"] }
 tonic = { workspace = true }
-tonic-reflection = { workspace = true }
 tower-service = { workspace = true }
 tower-layer = { workspace = true }
 http = { workspace = true }
@@ -75,7 +76,6 @@ clap_complete = { workspace = true, optional = true }
 
 # crypto
 k256 = { workspace = true, features = ["ecdsa", "ecdsa-core", "pkcs8", "pem"] }
-pkcs8 = { workspace = true, features = ["pem", "alloc", "std", "encryption"] }
 ripemd = { workspace = true }
 data-encoding = { workspace = true }
 
@@ -85,10 +85,10 @@ assert_fs = { workspace = true, optional = true }
 dircpy = { workspace = true, optional = true }
 
 [dev-dependencies]
+trybuild = "1.0.99"
 
 [features]
-default = ["cli", "export", "xmods"]
-export = []
+default = ["cli",  "xmods"] 
 xmods = []
 governance = []
 utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy"]

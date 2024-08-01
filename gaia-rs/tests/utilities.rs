@@ -9,7 +9,7 @@ use gaia_rs::{
 };
 use gears::{
     application::node::NodeApplication,
-    baseapp::genesis::Genesis,
+    baseapp::genesis::{Genesis, GenesisError},
     commands::{
         client::keys::{keys, AddKeyCommand, KeyCommand, KeyringBackend},
         node::{
@@ -17,12 +17,12 @@ use gears::{
             AppCommands,
         },
     },
-    config::{DEFAULT_ADDRESS, DEFAULT_REST_LISTEN_ADDR},
+    config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
     store::database::rocks::RocksDBBuilder,
+    types::base::coins::UnsignedCoins,
 };
 use gears::{
     types::address::AccAddress,
-    types::base::send::SendCoins,
     utils::{TempDir, TmpChild},
 };
 
@@ -61,17 +61,18 @@ pub fn run_gaia_and_tendermint(
     std::thread::sleep(Duration::from_secs(10));
 
     let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<'_, GaiaCore, _, _>::new(
+        let node = NodeApplication::<GaiaCore, _, _, _>::new(
             GaiaCore,
             RocksDBBuilder,
-            &GaiaABCIHandler::new,
+            GaiaABCIHandler::new,
             GaiaParamsStoreKey::BaseApp,
         );
 
         let cmd = RunCommand {
             home: tmp_path,
-            address: DEFAULT_ADDRESS,
-            rest_listen_addr: DEFAULT_REST_LISTEN_ADDR,
+            address: Some(DEFAULT_ADDRESS),
+            rest_listen_addr: Some(DEFAULT_REST_LISTEN_ADDR),
+            grpc_listen_addr: Some(DEFAULT_GRPC_LISTEN_ADDR),
             read_buf_size: 1048576,
             log_level: LogLevel::Off,
             min_gas_prices: Default::default(),
@@ -92,8 +93,8 @@ impl Genesis for MockGenesis {
     fn add_genesis_account(
         &mut self,
         address: AccAddress,
-        coins: SendCoins,
-    ) -> Result<(), gears::error::AppError> {
+        coins: UnsignedCoins,
+    ) -> Result<(), GenesisError> {
         self.0.add_genesis_account(address, coins)
     }
 }
