@@ -1928,7 +1928,7 @@ dependencies = [
  "itertools 0.13.0",
  "k256",
  "keyring",
- "kv_store",
+ "kv",
  "ledger-cosmos",
  "num-bigint",
  "num-format",
@@ -3287,7 +3287,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kv_store"
+name = "kv"
 version = "0.1.0"
 dependencies = [
  "database",

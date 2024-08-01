@@ -1,6 +1,7 @@
 use cosmwasm_std::Decimal256;
 use database::Database;
 use kv::StoreKey;
+use tendermint::types::proto::validator::VotingPower;
 
 use crate::{
     context::{QueryableContext, TransactionalContext},

@@ -17,6 +17,7 @@ use crate::{
 };
 use bytes::Bytes;
 use database::Database;
+use errors::QueryError;
 use kv::{bank::multi::ApplicationMultiBank, query::QueryMultiStore};
 use tendermint::types::{
     proto::{event::Event, header::Header},

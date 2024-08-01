@@ -30,6 +30,12 @@ pub struct MultiBank<DB, SK, SB> {
     _marker: PhantomData<(DB, SK)>,
 }
 
+impl<DB, SK, SB: MultiBankBackend<DB, SK>> MultiBank<DB, SK, SB> {
+    pub(crate) fn kv_stores(&self) -> &HashMap<SK, SB::Bank> {
+        self.backend.stores()
+    }
+}
+
 impl<DB: Database, SK: StoreKey, SB: MultiBankBackend<DB, SK>> MultiBank<DB, SK, SB> {
     pub fn kv_store(&self, store_key: &SK) -> &SB::Bank {
         self.backend.stores().get(store_key).expect(KEY_EXISTS_MSG)

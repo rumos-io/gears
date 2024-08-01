@@ -1,6 +1,6 @@
 use database::prefix::PrefixDB;
 use kv::store::kv::{immutable::KVStore, mutable::KVStoreMut};
-use tendermint::types::{proto::event::Event, time::Timestamp};
+use tendermint::types::{proto::event::Event, time::timestamp::Timestamp};
 
 use crate::types::store::kv::{mutable::StoreMut, Store};
 

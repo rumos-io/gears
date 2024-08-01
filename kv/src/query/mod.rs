@@ -17,14 +17,18 @@ use super::store::kv::immutable::{KVStore, KVStoreBackend};
 pub mod kv;
 
 pub struct QueryStoreOptions<'a, DB, SK>(
-    &'a HashMap<SK, ApplicationKVBank<PrefixDB<DB>, ApplicationStore>>,
+    &'a HashMap<SK, ApplicationKVBank<PrefixDB<DB>>>,
     u32,
     [u8; 32],
 );
 
-impl<'a, DB, SK> From<&'a ApplicationMultiBank<DB, SK, ApplicationStore>> for QueryStoreOptions<'a, DB, SK> {
-    fn from(value: &'a ApplicationMultiBank<DB, SK, ApplicationStore>) -> Self {
-        Self(&value.stores, value.head_version, value.head_commit_hash)
+impl<'a, DB, SK> From<&'a ApplicationMultiBank<DB, SK>> for QueryStoreOptions<'a, DB, SK> {
+    fn from(value: &'a ApplicationMultiBank<DB, SK>) -> Self {
+        Self(
+            &value.kv_stores(),
+            value.head_version,
+            value.head_commit_hash,
+        )
     }
 }
 

@@ -5,7 +5,7 @@ use kv::{
     store::kv::{immutable::KVStore, mutable::KVStoreMut},
     StoreKey,
 };
-use tendermint::types::{chain_id::ChainId, proto::event::Event, time::Timestamp};
+use tendermint::types::{chain_id::ChainId, proto::event::Event, time::timestamp::Timestamp};
 
 use crate::types::store::kv::mutable::StoreMut;
 use crate::types::store::kv::Store;

@@ -2,10 +2,6 @@ use database::Database;
 use kv::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::event::Event;
 
-use super::{build_tx_gas_meter, ExecutionMode};
-use crate::baseapp::options::NodeOptions;
-use crate::baseapp::ConsensusParams;
-use crate::types::auth::fee::Fee;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
@@ -46,8 +42,7 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, 
         for msg in msgs {
             handler
                 .msg(ctx, msg)
-                .inspect_err(|_| ctx.multi_store_mut().clear_cache())
-                ?;
+                .inspect_err(|_| ctx.multi_store_mut().clear_cache())?;
         }
 
         let events = ctx.events_drain();
