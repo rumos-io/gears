@@ -36,7 +36,7 @@ pub fn expand_raw_existing(input: DeriveInput) -> syn::Result<proc_macro2::Token
     };
 
     let protobuf_trait_impl = quote! {
-        impl ::gears::tendermint::types::proto::Protobuf<#raw> for #ident {}
+        impl ::gears::core::Protobuf<#raw> for #ident {}
     };
 
     match data {
