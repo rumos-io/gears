@@ -93,8 +93,12 @@ impl<
         result.map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())
     }
 
-    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        self.keeper.init_genesis(ctx, genesis);
+    pub fn genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) -> Vec<ValidatorUpdate> {
+        self.keeper.init_genesis(ctx, genesis)
     }
 
     pub fn query<DB: Database + Send + Sync>(

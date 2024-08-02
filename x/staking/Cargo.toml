@@ -18,3 +18,4 @@ ibc-proto = { workspace = true }
 tracing = { workspace = true }
 tonic = { workspace = true }
 tower-layer = { workspace = true }
+serde-aux = { workspace = true }

@@ -2,6 +2,7 @@ use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::VALIDATORS_BY_POWER_INDEX_KEY},
     Commission, CommissionRates, CommissionRaw, Description,
 };
+use gears::core::serializers::serialize_number_to_string;
 use gears::{
     core::{errors::CoreError, Protobuf},
     error::{MathOperation, NumericError},
@@ -21,6 +22,7 @@ use gears::{
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
+use serde_aux::prelude::deserialize_number_from_string;
 use std::{collections::HashSet, str::FromStr};
 use thiserror::Error;
 
@@ -28,6 +30,8 @@ use thiserror::Error;
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct LastValidatorPower {
     pub address: ValAddress,
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub power: i64,
 }
 
@@ -54,6 +58,8 @@ pub struct Validator {
     /// tokens define the delegated tokens (incl. self-delegation).
     pub tokens: Uint256,
     /// unbonding_height defines, if unbonding, the height at which this validator has begun unbonding.
+    #[serde(serialize_with = "serialize_number_to_string")]
+    #[serde(deserialize_with = "deserialize_number_from_string")]
     pub unbonding_height: u32,
     /// unbonding_time defines, if unbonding, the min time for the validator to complete unbonding.
     pub unbonding_time: Timestamp,

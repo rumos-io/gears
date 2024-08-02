@@ -49,7 +49,7 @@ mod tests {
     },
     "jailed": false,
     "tokens": "1",
-    "unbonding_height": 0,
+    "unbonding_height": "0",
     "unbonding_time": "1970-01-01T00:00:10.0000001Z",
     "commission": {
         "commission_rates": {
@@ -102,7 +102,7 @@ mod tests {
     },
     "jailed": true,
     "tokens": "1",
-    "unbonding_height": 0,
+    "unbonding_height": "0",
     "unbonding_time": "1970-01-01T00:00:10.0000001Z",
     "commission": {
         "commission_rates": {
@@ -156,7 +156,7 @@ mod tests {
     },
     "jailed": true,
     "tokens": "1",
-    "unbonding_height": 0,
+    "unbonding_height": "0",
     "unbonding_time": "1970-01-01T00:00:10.0000001Z",
     "commission": {
         "commission_rates": {

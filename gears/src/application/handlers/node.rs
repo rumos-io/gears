@@ -82,7 +82,7 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
-    );
+    ) -> Vec<ValidatorUpdate>;
 
     fn query<DB: Database + Send + Sync>(
         &self,

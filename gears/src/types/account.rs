@@ -124,8 +124,11 @@ impl From<ModuleAccount> for inner::ModuleAccount {
 impl Protobuf<inner::ModuleAccount> for ModuleAccount {}
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[serde(tag = "@type")]
 pub enum Account {
+    #[serde(rename = "/cosmos.auth.v1beta1.BaseAccount")]
     Base(BaseAccount),
+    #[serde(rename = "/cosmos.auth.v1beta1.ModuleAccount")]
     Module(ModuleAccount),
 }
 
@@ -148,6 +151,13 @@ impl Account {
         match self {
             Account::Base(acct) => acct.pub_key = Some(key),
             Account::Module(acct) => acct.base_account.pub_key = Some(key),
+        }
+    }
+
+    pub fn set_account_number(&mut self, number: u64) {
+        match self {
+            Account::Base(acct) => acct.account_number = number,
+            Account::Module(acct) => acct.base_account.account_number = number,
         }
     }
 
