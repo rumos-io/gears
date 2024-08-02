@@ -1,8 +1,10 @@
-use crate::commands::client::{keys::keys, query::run_query, tx::run_tx, ClientCommands};
-
 use super::handlers::{
     client::{QueryHandler, TxHandler},
     AuxHandler,
+};
+use crate::{
+    commands::client::{keys::keys, query::run_query, tx::run_tx, ClientCommands},
+    x::query::tx_query::{TxQueryHandler, TxsQueryHandler},
 };
 
 /// A Gears client application.
@@ -12,7 +14,7 @@ pub struct ClientApplication<Core: Client> {
     core: Core,
 }
 
-impl<'a, Core: Client> ClientApplication<Core> {
+impl<Core: Client> ClientApplication<Core> {
     pub fn new(core: Core) -> Self {
         Self { core }
     }
@@ -34,6 +36,16 @@ impl<'a, Core: Client> ClientApplication<Core> {
             }
             ClientCommands::Query(cmd) => {
                 let query = run_query(cmd, &self.core)?;
+
+                println!("{}", serde_json::to_string_pretty(&query)?);
+            }
+            ClientCommands::QueryTx(cmd) => {
+                let query = run_query(cmd, &TxQueryHandler::<Core::Message>::new())?;
+
+                println!("{}", serde_json::to_string_pretty(&query)?);
+            }
+            ClientCommands::QueryTxs(cmd) => {
+                let query = run_query(cmd, &TxsQueryHandler::<Core::Message>::new())?;
 
                 println!("{}", serde_json::to_string_pretty(&query)?);
             }

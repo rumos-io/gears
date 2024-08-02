@@ -49,6 +49,12 @@ impl From<ResponseDeliverTx> for super::inner::ResponseDeliverTx {
     }
 }
 
+impl From<super::inner::DeliverTx> for ResponseDeliverTx {
+    fn from(value: super::inner::DeliverTx) -> Self {
+        super::inner::ResponseDeliverTx::from(value).into()
+    }
+}
+
 impl From<super::inner::ResponseDeliverTx> for ResponseDeliverTx {
     fn from(
         super::inner::ResponseDeliverTx {
