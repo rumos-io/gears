@@ -36,8 +36,10 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let request = request.into();
         let version = request.height();
 
-        let query_store =
-            QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;
+        let query_store = QueryMultiStore::new(
+            &self.state.read().expect(POISONED_LOCK).multi_store,
+            version,
+        )?;
 
         let ctx = QueryContext::new(query_store, version)?;
 

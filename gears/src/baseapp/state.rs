@@ -12,13 +12,15 @@ use super::mode::{check::CheckTxMode, deliver::DeliverTxMode};
 pub struct ApplicationState<DB, AH: ABCIHandler> {
     pub(super) check_mode: CheckTxMode<DB, AH>,
     pub(super) deliver_mode: DeliverTxMode<DB, AH>,
+    pub multi_store: ApplicationMultiBank<DB, AH::StoreKey>,
 }
 
 impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
-    pub fn new(max_gas: Gas, global_ms: &ApplicationMultiBank<DB, AH::StoreKey>) -> Self {
+    pub fn new(max_gas: Gas, multi_store: ApplicationMultiBank<DB, AH::StoreKey>) -> Self {
         Self {
-            check_mode: CheckTxMode::new(max_gas, global_ms.to_tx_kind()),
-            deliver_mode: DeliverTxMode::new(max_gas, global_ms.to_tx_kind()),
+            check_mode: CheckTxMode::new(max_gas, multi_store.to_tx_kind()),
+            deliver_mode: DeliverTxMode::new(max_gas, multi_store.to_tx_kind()),
+            multi_store,
         }
     }
 

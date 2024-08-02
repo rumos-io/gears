@@ -48,7 +48,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
     fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut multi_store = &mut self.state.write().expect(POISONED_LOCK).multi_store;
 
         //TODO: handle request height > 1 as is done in SDK
 
@@ -199,7 +199,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn commit(&self) -> ResponseCommit {
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut multi_store = &mut self.state.write().expect(POISONED_LOCK).multi_store;
 
         let height = self.get_block_header().unwrap().height;
 
@@ -233,7 +233,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         self.set_block_header(request.header.clone());
 
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut multi_store = &mut self.state.write().expect(POISONED_LOCK).multi_store;
         let mut state = self.state.write().expect(POISONED_LOCK);
 
         let mut ctx = BlockContext::new(
@@ -264,7 +264,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut multi_store = &mut self.state.write().expect(POISONED_LOCK).multi_store;
         let header = self
             .get_block_header()
             .expect("block header is set in begin block");

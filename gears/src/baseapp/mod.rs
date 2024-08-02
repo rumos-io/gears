@@ -44,7 +44,6 @@ pub use query::*;
 #[derive(Debug, Clone)]
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
     state: Arc<RwLock<ApplicationState<DB, H>>>,
-    multi_store: Arc<RwLock<ApplicationMultiBank<DB, H::StoreKey>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
@@ -76,9 +75,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             baseapp_params_keeper,
             state: Arc::new(RwLock::new(ApplicationState::new(
                 Gas::from(max_gas),
-                &multi_store,
+                multi_store,
             ))),
-            multi_store: Arc::new(RwLock::new(multi_store)),
             options,
             _info_marker: PhantomData,
         }
@@ -94,14 +92,19 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn get_last_commit_hash(&self) -> [u8; 32] {
-        self.multi_store
+        self.state
             .read()
             .expect(POISONED_LOCK)
+            .multi_store
             .head_commit_hash()
     }
 
     fn get_last_commit_height(&self) -> u32 {
-        self.multi_store.read().expect(POISONED_LOCK).head_version()
+        self.state
+            .read()
+            .expect(POISONED_LOCK)
+            .multi_store
+            .head_version()
     }
 
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, QueryError> {
@@ -111,8 +114,10 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .try_into()
             .map_err(|_| QueryError::InvalidHeight)?;
 
-        let query_store =
-            QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;
+        let query_store = QueryMultiStore::new(
+            &self.state.read().expect(POISONED_LOCK).multi_store,
+            version,
+        )?;
 
         let ctx = QueryContext::new(query_store, version)?;
 
@@ -135,7 +140,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let height = header.height;
 
         let consensus_params = {
-            let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
+            let multi_store = &mut self.state.write().expect(POISONED_LOCK).multi_store;
             let ctx = SimpleContext::new(multi_store.into(), height);
             self.baseapp_params_keeper.consensus_params(&ctx)
         };

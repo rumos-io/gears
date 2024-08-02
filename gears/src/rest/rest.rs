@@ -11,6 +11,7 @@ use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
+use tracing::error;
 
 pub fn run_rest_server<
     M: TxMessage,
@@ -31,6 +32,7 @@ pub fn run_rest_server<
             tendermint_rpc_address,
         ));
         if let Err(err) = result {
+            error!("Failed to run rest server with err: {}", err);
             panic!("Failed to run rest server with err: {}", err)
         }
     });

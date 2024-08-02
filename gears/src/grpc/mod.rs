@@ -18,6 +18,7 @@ pub fn run_grpc_server(router: Router<Identity>, listen_addr: SocketAddr) {
     std::thread::spawn(move || {
         let result = runtime().block_on(launch(router, listen_addr));
         if let Err(err) = result {
+            tracing::error!("Failed to run gRPC server with err: {}", err);
             panic!("Failed to run gRPC server with err: {}", err)
         }
     });
