@@ -124,152 +124,150 @@ impl<
         for validator in genesis.validators {
             self.set_validator(ctx, &validator).unwrap_gas();
             // Manually set indices for the first time
-            // self.set_validator_by_cons_addr(ctx, &validator)
-            //     .unwrap_gas();
-            // self.set_validator_by_power_index(ctx, &validator)
-            //     .unwrap_gas();
+            self.set_validator_by_cons_addr(ctx, &validator)
+                .unwrap_gas();
+            self.set_validator_by_power_index(ctx, &validator)
+                .unwrap_gas();
 
-            // if !genesis.exported {
-            //     self.after_validator_created(ctx, &validator);
-            // }
+            if !genesis.exported {
+                self.after_validator_created(ctx, &validator);
+            }
 
-            // if validator.status == BondStatus::Unbonding {
-            //     self.insert_unbonding_validator_queue(ctx, &validator)
-            //         .unwrap_gas();
-            // }
+            if validator.status == BondStatus::Unbonding {
+                self.insert_unbonding_validator_queue(ctx, &validator)
+                    .unwrap_gas();
+            }
 
-            // match validator.status {
-            //     BondStatus::Bonded => {
-            //         bonded_tokens += validator.tokens;
-            //     }
-            //     BondStatus::Unbonding | BondStatus::Unbonded => {
-            //         not_bonded_tokens += validator.tokens;
-            //     }
-            // }
+            match validator.status {
+                BondStatus::Bonded => {
+                    bonded_tokens += validator.tokens;
+                }
+                BondStatus::Unbonding | BondStatus::Unbonded => {
+                    not_bonded_tokens += validator.tokens;
+                }
+            }
         }
 
-        // for delegation in genesis.delegations {
-        //     if !genesis.exported {
-        //         self.before_delegation_created(
-        //             ctx,
-        //             &delegation.delegator_address,
-        //             &delegation.validator_address,
-        //         );
-        //     }
+        for delegation in genesis.delegations {
+            if !genesis.exported {
+                self.before_delegation_created(
+                    ctx,
+                    &delegation.delegator_address,
+                    &delegation.validator_address,
+                );
+            }
 
-        //     self.set_delegation(ctx, &delegation).unwrap_gas();
+            self.set_delegation(ctx, &delegation).unwrap_gas();
 
-        //     if !genesis.exported {
-        //         self.after_delegation_modified(
-        //             ctx,
-        //             &delegation.delegator_address,
-        //             &delegation.validator_address,
-        //         );
-        //     }
-        // }
+            if !genesis.exported {
+                self.after_delegation_modified(
+                    ctx,
+                    &delegation.delegator_address,
+                    &delegation.validator_address,
+                );
+            }
+        }
 
-        // for unbonding_delegation in genesis.unbonding_delegations {
-        //     self.set_unbonding_delegation(ctx, &unbonding_delegation)
-        //         .unwrap_gas();
-        //     for entry in unbonding_delegation.entries.as_slice() {
-        //         self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time)
-        //             .unwrap_gas();
-        //     }
-        // }
+        for unbonding_delegation in genesis.unbonding_delegations {
+            self.set_unbonding_delegation(ctx, &unbonding_delegation)
+                .unwrap_gas();
+            for entry in unbonding_delegation.entries.as_slice() {
+                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time)
+                    .unwrap_gas();
+            }
+        }
 
-        // for redelegation in genesis.redelegations {
-        //     self.set_redelegation(ctx, &redelegation).unwrap_gas();
-        //     for entry in &redelegation.entries {
-        //         self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)
-        //             .unwrap_gas();
-        //     }
-        // }
+        for redelegation in genesis.redelegations {
+            self.set_redelegation(ctx, &redelegation).unwrap_gas();
+            for entry in &redelegation.entries {
+                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)
+                    .unwrap_gas();
+            }
+        }
 
-        // let bonded_coins = if !bonded_tokens.is_zero() {
-        //     vec![UnsignedCoin {
-        //         denom: genesis.params.bond_denom().clone(),
-        //         amount: bonded_tokens,
-        //     }]
-        // } else {
-        //     vec![]
-        // };
-        // let not_bonded_coins = if !not_bonded_tokens.is_zero() {
-        //     vec![UnsignedCoin {
-        //         denom: genesis.params.bond_denom().clone(),
-        //         amount: not_bonded_tokens,
-        //     }]
-        // } else {
-        //     vec![]
-        // };
+        let bonded_coins = if !bonded_tokens.is_zero() {
+            vec![UnsignedCoin {
+                denom: genesis.params.bond_denom().clone(),
+                amount: bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
+        let not_bonded_coins = if !not_bonded_tokens.is_zero() {
+            vec![UnsignedCoin {
+                denom: genesis.params.bond_denom().clone(),
+                amount: not_bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
 
-        // let bonded_balance = self
-        //     .bank_keeper
-        //     .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
-        //     .unwrap_gas();
-        // if bonded_balance
-        //     .clone()
-        //     .into_iter()
-        //     .all(|e| e.amount.is_zero())
-        // {
-        //     self.auth_keeper
-        //         .check_create_new_module_account(ctx, &self.bonded_module)
-        //         .unwrap_gas();
-        // }
-        // // if balance is different from bonded coins panic because genesis is most likely malformed
-        // assert_eq!(
-        //     bonded_balance, bonded_coins,
-        //     "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
-        //     bonded_balance, bonded_coins
-        // );
+        let bonded_balance = self
+            .bank_keeper
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
+            .unwrap_gas();
+        if bonded_balance
+            .clone()
+            .into_iter()
+            .all(|e| e.amount.is_zero())
+        {
+            self.auth_keeper
+                .check_create_new_module_account(ctx, &self.bonded_module)
+                .unwrap_gas();
+        }
+        // if balance is different from bonded coins panic because genesis is most likely malformed
+        assert_eq!(
+            bonded_balance, bonded_coins,
+            "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
+            bonded_balance, bonded_coins
+        );
 
-        // let not_bonded_balance = self
-        //     .bank_keeper
-        //     .get_all_balances::<DB, InitContext<'_, DB, SK>>(
-        //         ctx,
-        //         self.not_bonded_module.get_address(),
-        //     )
-        //     .unwrap_gas();
-        // if not_bonded_balance
-        //     .clone()
-        //     .into_iter()
-        //     .all(|e| e.amount.is_zero())
-        // {
-        //     self.auth_keeper
-        //         .check_create_new_module_account(ctx, &self.not_bonded_module)
-        //         .unwrap_gas();
-        // }
+        let not_bonded_balance = self
+            .bank_keeper
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(
+                ctx,
+                self.not_bonded_module.get_address(),
+            )
+            .unwrap_gas();
+        if not_bonded_balance
+            .clone()
+            .into_iter()
+            .all(|e| e.amount.is_zero())
+        {
+            self.auth_keeper
+                .check_create_new_module_account(ctx, &self.not_bonded_module)
+                .unwrap_gas();
+        }
 
-        // // if balance is different from non bonded coins panic because genesis is most likely malformed
-        // assert_eq!(
-        //     not_bonded_balance, not_bonded_coins,
-        //     "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
-        //     not_bonded_balance, not_bonded_coins,
-        // );
+        // if balance is different from non bonded coins panic because genesis is most likely malformed
+        assert_eq!(
+            not_bonded_balance, not_bonded_coins,
+            "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
+            not_bonded_balance, not_bonded_coins,
+        );
 
-        // let mut res = vec![];
-        // // don't need to run Tendermint updates if we exported
-        // if genesis.exported {
-        //     for last_validator in genesis.last_validator_powers {
-        //         self.set_last_validator_power(ctx, &last_validator)
-        //             .unwrap_gas();
-        //         let validator = self
-        //             .validator(ctx, &last_validator.address)
-        //             .unwrap_gas()
-        //             .expect("validator in the store was not found");
-        //         // TODO: check unwraps and update types to omit conversion
-        //         let mut update = validator
-        //             .abci_validator_update(self.power_reduction(ctx))
-        //             .unwrap();
-        //         update.power = (last_validator.power as u64).try_into().unwrap();
-        //         res.push(update);
-        //     }
-        // } else {
-        //     // TODO: exit in sdk
-        //     res = self.apply_and_return_validator_set_updates(ctx).unwrap();
-        // }
-        // res;
-
-        vec![]
+        let mut res = vec![];
+        // don't need to run Tendermint updates if we exported
+        if genesis.exported {
+            for last_validator in genesis.last_validator_powers {
+                self.set_last_validator_power(ctx, &last_validator)
+                    .unwrap_gas();
+                let validator = self
+                    .validator(ctx, &last_validator.address)
+                    .unwrap_gas()
+                    .expect("validator in the store was not found");
+                // TODO: check unwraps and update types to omit conversion
+                let mut update = validator
+                    .abci_validator_update(self.power_reduction(ctx))
+                    .unwrap();
+                update.power = (last_validator.power as u64).try_into().unwrap();
+                res.push(update);
+            }
+        } else {
+            // TODO: exit in sdk
+            res = self.apply_and_return_validator_set_updates(ctx).unwrap();
+        }
+        res
     }
 
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block
