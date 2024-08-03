@@ -1,7 +1,5 @@
-use bytes::Bytes;
-use core_types::{any::google::Any, Protobuf};
+use core_types::Protobuf;
 use keyring::error::DecodeError;
-use prost::Message as ProstMessage;
 pub use secp256k1::PublicKey;
 use secp256k1::{ecdsa::Signature, hashes::sha256, Message, Secp256k1};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -9,74 +7,11 @@ use std::fmt;
 
 use super::public::SigningError;
 
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct RawSecp256k1PubKey {
-    #[prost(bytes = "vec", tag = "1")]
-    pub key: Vec<u8>,
-}
-
-impl TryFrom<Any> for RawSecp256k1PubKey {
-    type Error = DecodeError;
-
-    fn try_from(any: Any) -> Result<Self, Self::Error> {
-        match any.type_url.as_str() {
-            "/cosmos.crypto.secp256k1.PubKey" => {
-                let key = RawSecp256k1PubKey::decode::<Bytes>(any.value.into())
-                    .map_err(|e| DecodeError(e.to_string()))?;
-                Ok(key)
-            }
-            _ => Err(DecodeError(format!(
-                "Key type not recognized: {}",
-                any.type_url
-            ))),
-        }
-    }
-}
-
-impl From<RawSecp256k1PubKey> for Any {
-    fn from(key: RawSecp256k1PubKey) -> Self {
-        Any {
-            type_url: "/cosmos.crypto.secp256k1.PubKey".to_string(),
-            value: key.encode_to_vec(),
-        }
-    }
-}
-
-impl TryFrom<RawSecp256k1PubKey> for Secp256k1PubKey {
-    type Error = DecodeError;
-
-    fn try_from(raw: RawSecp256k1PubKey) -> Result<Self, Self::Error> {
-        Secp256k1PubKey::try_from(raw.key)
-    }
-}
-
-impl From<Secp256k1PubKey> for RawSecp256k1PubKey {
-    fn from(key: Secp256k1PubKey) -> RawSecp256k1PubKey {
-        RawSecp256k1PubKey {
-            key: Vec::from(key),
-        }
-    }
-}
-
-impl Protobuf<RawSecp256k1PubKey> for Secp256k1PubKey {}
-
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct Secp256k1PubKey {
     // a custom serde is needed since the Secp256k1 serde uses hex encoding and not base64
     #[serde(serialize_with = "serialize_key", deserialize_with = "deserialize_key")]
     key: PublicKey,
-}
-
-impl From<PublicKey> for Secp256k1PubKey {
-    fn from(key: PublicKey) -> Self {
-        Secp256k1PubKey { key }
-    }
-}
-
-impl From<Secp256k1PubKey> for PublicKey {
-    fn from(value: Secp256k1PubKey) -> Self {
-        value.key
-    }
 }
 
 impl Secp256k1PubKey {
@@ -92,11 +27,46 @@ impl Secp256k1PubKey {
     }
 }
 
+impl TryFrom<Vec<u8>> for Secp256k1PubKey {
+    type Error = DecodeError;
+
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        let key =
+            PublicKey::from_slice(&value).map_err(|e| DecodeError(format!("invalid key: {e}")))?;
+
+        Ok(Secp256k1PubKey { key })
+    }
+}
+
 impl From<Secp256k1PubKey> for Vec<u8> {
     fn from(key: Secp256k1PubKey) -> Vec<u8> {
         key.key.serialize().to_vec()
     }
 }
+
+mod inner {
+    #[derive(Clone, PartialEq, ::prost::Message)]
+    pub struct Secp256k1PubKey {
+        #[prost(bytes = "vec", tag = "1")]
+        pub key: Vec<u8>,
+    }
+}
+
+impl TryFrom<inner::Secp256k1PubKey> for Secp256k1PubKey {
+    type Error = DecodeError;
+
+    fn try_from(raw: inner::Secp256k1PubKey) -> Result<Self, Self::Error> {
+        raw.key.try_into()
+    }
+}
+
+impl From<Secp256k1PubKey> for inner::Secp256k1PubKey {
+    fn from(key: Secp256k1PubKey) -> inner::Secp256k1PubKey {
+        inner::Secp256k1PubKey { key: key.into() }
+    }
+}
+
+impl Protobuf<inner::Secp256k1PubKey> for Secp256k1PubKey {}
 
 fn serialize_key<S>(key: &PublicKey, s: S) -> Result<S::Ok, S::Error>
 where
@@ -131,17 +101,6 @@ impl<'de> de::Visitor<'de> for Secp256k1Visitor {
 
         PublicKey::from_slice(&key)
             .map_err(|e| E::custom(format!("Error parsing public key '{}': {}", v, e)))
-    }
-}
-
-impl TryFrom<Vec<u8>> for Secp256k1PubKey {
-    type Error = DecodeError;
-
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        let key =
-            PublicKey::from_slice(&value).map_err(|e| DecodeError(format!("invalid key: {e}")))?;
-
-        Ok(Secp256k1PubKey { key })
     }
 }
 

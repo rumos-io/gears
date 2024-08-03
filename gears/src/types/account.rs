@@ -1,13 +1,11 @@
 use core_types::errors::CoreError as IbcError;
 use core_types::Protobuf;
 use core_types::{any::google::Any, serializers::serialize_number_to_string};
-use keyring::error::DecodeError;
 use prost::bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_aux::prelude::deserialize_number_from_string;
 
-use crate::crypto::public::PublicKey;
-use crate::crypto::secp256k1::{RawSecp256k1PubKey, Secp256k1PubKey};
+use crate::crypto::public::{DecodeError, PublicKey};
 
 use super::address::AccAddress;
 
@@ -38,22 +36,15 @@ impl TryFrom<inner::BaseAccount> for BaseAccount {
         let address = AccAddress::from_bech32(&raw.address)
             .map_err(|e| core_types::errors::CoreError::DecodeAddress(e.to_string()))?;
 
-        let pub_key: Option<Secp256k1PubKey> = match raw.pub_key {
-            Some(key) => {
-                let key: RawSecp256k1PubKey = key
-                    .try_into()
-                    .map_err(|e: DecodeError| IbcError::DecodeAny(e.to_string()))?;
-                Some(
-                    key.try_into()
-                        .map_err(|e: DecodeError| IbcError::DecodeAny(e.to_string()))?,
-                )
-            }
-            None => None,
-        };
+        let pub_key = raw
+            .pub_key
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(|e: DecodeError| IbcError::DecodeAny(e.to_string()))?;
 
         Ok(BaseAccount {
             address,
-            pub_key: pub_key.map(Into::into),
+            pub_key,
             account_number: raw.account_number,
             sequence: raw.sequence,
         })
@@ -71,9 +62,7 @@ impl From<BaseAccount> for inner::BaseAccount {
     ) -> inner::BaseAccount {
         Self {
             address: address.into(),
-            pub_key: pub_key.map(|key| match key {
-                PublicKey::Secp256k1(key) => RawSecp256k1PubKey::from(key).into(),
-            }),
+            pub_key: pub_key.map(Into::into),
             account_number,
             sequence,
         }

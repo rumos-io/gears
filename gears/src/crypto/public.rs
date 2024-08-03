@@ -1,8 +1,15 @@
+use bytes::Bytes;
+use core_types::any::google::Any;
+use core_types::Protobuf;
 use serde::{Deserialize, Serialize};
 
 use super::secp256k1::Secp256k1PubKey;
 
 pub type SigningError = secp256k1::Error;
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, thiserror::Error)]
+#[error("invalid key: {0}")]
+pub struct DecodeError(pub String);
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 #[serde(tag = "@type")]
@@ -26,8 +33,31 @@ impl PublicKey {
     }
 }
 
-impl From<Secp256k1PubKey> for PublicKey {
-    fn from(value: Secp256k1PubKey) -> Self {
-        Self::Secp256k1(value)
+impl TryFrom<Any> for PublicKey {
+    type Error = DecodeError;
+
+    fn try_from(any: Any) -> Result<Self, Self::Error> {
+        match any.type_url.as_str() {
+            "/cosmos.crypto.secp256k1.PubKey" => {
+                let key = Secp256k1PubKey::decode::<Bytes>(any.value.into())
+                    .map_err(|e| DecodeError(e.to_string()))?;
+                Ok(Self::Secp256k1(key))
+            }
+            _ => Err(DecodeError(format!(
+                "Key type not recognized: {}",
+                any.type_url
+            ))),
+        }
+    }
+}
+
+impl From<PublicKey> for Any {
+    fn from(key: PublicKey) -> Self {
+        match key {
+            PublicKey::Secp256k1(key) => Any {
+                type_url: "/cosmos.crypto.secp256k1.PubKey".to_string(),
+                value: key.encode_vec(),
+            },
+        }
     }
 }
