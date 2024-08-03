@@ -1,5 +1,4 @@
 use crate::application::handlers::node::TxError;
-use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
@@ -65,6 +64,7 @@ impl SignGasConsumer for DefaultSignGasConsumer {
                     .consume_gas(amount, ANTE_SECKP251K1_DESCRIPTOR)
                     .map_err(|e| GasStoreErrors::new(&[], e))?; // TODO: Should be okay for now, but needs to be changed
             }
+            PublicKey::Ed25519(_) => todo!(), //TODO: implement
         }
 
         Ok(())

@@ -1,6 +1,7 @@
+use address::AccAddress;
 use core_types::Protobuf;
 use keyring::error::DecodeError;
-pub use secp256k1::PublicKey;
+use secp256k1::PublicKey;
 use secp256k1::{ecdsa::Signature, hashes::sha256, Message, Secp256k1};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt;
@@ -24,6 +25,11 @@ impl Secp256k1PubKey {
         let signature = Signature::from_compact(signature.as_ref())?;
         let message = Message::from_hashed_data::<sha256::Hash>(message.as_ref());
         Secp256k1::verification_only().verify_ecdsa(&message, &signature, &self.key)
+    }
+
+    pub fn get_address(&self) -> AccAddress {
+        let key_bytes = Vec::from(self.to_owned());
+        super::public::get_address(key_bytes)
     }
 }
 
