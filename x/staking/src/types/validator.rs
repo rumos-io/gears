@@ -312,6 +312,71 @@ impl Validator {
     }
 }
 
+// mod inner {
+//     pub use ibc_proto::cosmos::staking::v1beta1::Description;
+//     pub use ibc_proto::cosmos::staking::v1beta1::Validator;
+// }
+
+// impl From<Validator> for inner::Validator {
+//     fn from(value: Validator) -> Self {
+//         Self {
+//             operator_address: value.operator_address.to_string(),
+//             delegator_shares: value.delegator_shares.to_string(),
+//             description: Some(inner::Description {
+//                 moniker: value.description.moniker,
+//                 identity: value.description.identity,
+//                 website: value.description.website,
+//                 security_contact: value.description.security_contact,
+//                 details: value.description.details,
+//             }),
+//             consensus_pubkey: Some(value.consensus_pubkey.into()),
+//             jailed: value.jailed,
+//             tokens: value.tokens.to_string(),
+//             unbonding_height: value.unbonding_height,
+//             unbonding_time: Some(value.unbonding_time),
+//             commission: Some(value.commission.into()),
+//             min_self_delegation: value.min_self_delegation.to_string(),
+//             status: value.status.into(),
+//         }
+//     }
+// }
+
+// impl TryFrom<inner::Validator> for Validator {
+//     type Error = CoreError;
+//     fn try_from(value: inner::Validator) -> Result<Self, Self::Error> {
+//         let status = value.status();
+//         Ok(Self {
+//             operator_address: ValAddress::from_bech32(&value.operator_address)
+//                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+//             delegator_shares: Decimal256::from_str(&value.delegator_shares)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             description: value.description.ok_or(CoreError::MissingField(
+//                 "Missing field 'description'.".into(),
+//             ))?,
+//             consensus_pubkey: serde_json::from_slice(&value.consensus_pubkey)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             jailed: value.jailed,
+//             tokens: Uint256::from_str(&value.tokens)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             unbonding_height: value.unbonding_height,
+//             unbonding_time: value.unbonding_time.ok_or(CoreError::MissingField(
+//                 "Missing field 'unbonding_time'.".into(),
+//             ))?,
+//             commission: value
+//                 .commission
+//                 .ok_or(CoreError::MissingField(
+//                     "Missing field 'description'.".into(),
+//                 ))?
+//                 .try_into()?,
+//             min_self_delegation: Uint256::from_str(&value.min_self_delegation)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             status,
+//         })
+//     }
+// }
+
+// impl Protobuf<inner::Validator> for Validator {}
+
 impl TryFrom<ValidatorRaw> for Validator {
     type Error = CoreError;
     fn try_from(value: ValidatorRaw) -> Result<Self, Self::Error> {
