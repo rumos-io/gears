@@ -72,6 +72,14 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
             .expect("MAX_ADDR_LEN is a u8 so this can't fail")
     }
 
+    /// Returns the address bytes prefixed with the length of the address.
+    pub fn prefix_len_bytes(&self) -> Vec<u8> {
+        let len = self.len();
+        let mut prefixed = vec![len];
+        prefixed.extend_from_slice(&self.0);
+        prefixed
+    }
+
     pub fn as_hex(&self) -> String {
         data_encoding::HEXLOWER.encode(&self.0)
     }
@@ -379,5 +387,15 @@ mod tests {
             addr,
             AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux").unwrap()
         )
+    }
+
+    #[test]
+    fn prefix_len_bytes_works() {
+        let addr = vec![0x00, 0x01, 0x02];
+        let acc_addr = AccAddress::try_from(addr.as_slice()).unwrap();
+
+        let prefixed = acc_addr.prefix_len_bytes();
+
+        assert_eq!(vec![3, 0x00, 0x01, 0x02], prefixed);
     }
 }
