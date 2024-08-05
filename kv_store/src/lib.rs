@@ -3,8 +3,11 @@ use strum::IntoEnumIterator;
 pub mod error;
 pub mod ext;
 mod hash;
+pub mod kv;
+pub mod multi;
+pub mod prefix;
+pub mod query;
 pub mod range;
-pub mod types;
 mod utils;
 
 use std::hash::Hash;
