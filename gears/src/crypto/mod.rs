@@ -1,3 +1,4 @@
+pub mod ed25519;
 pub mod errors;
 pub mod info;
 pub mod keys;

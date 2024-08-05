@@ -165,6 +165,10 @@ impl Commission {
     pub fn commission_rates(&self) -> &CommissionRates {
         &self.commission_rates
     }
+
+    pub fn update_time(&self) -> &Timestamp {
+        &self.update_time
+    }
 }
 
 /// Commission defines commission parameters for a given validator.

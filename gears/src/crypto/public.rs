@@ -6,7 +6,7 @@ use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use super::{keys::SIZE_ERR_MSG, secp256k1::Secp256k1PubKey};
+use super::{ed25519::Ed25519PubKey, keys::SIZE_ERR_MSG, secp256k1::Secp256k1PubKey};
 
 pub type SigningError = secp256k1::Error;
 
@@ -20,7 +20,7 @@ pub enum PublicKey {
     #[serde(rename = "/cosmos.crypto.secp256k1.PubKey")]
     Secp256k1(Secp256k1PubKey),
     //Secp256r1(Vec<u8>),
-    Ed25519(Vec<u8>),
+    Ed25519(Ed25519PubKey),
     //Multisig(Vec<u8>),
 }
 
@@ -32,14 +32,14 @@ impl PublicKey {
     ) -> Result<(), SigningError> {
         match self {
             PublicKey::Secp256k1(key) => key.verify_signature(message, signature),
-            PublicKey::Ed25519(_) => todo!(), //TODO: implement
+            PublicKey::Ed25519(key) => key.verify_signature(message, signature),
         }
     }
 
     pub fn get_address(&self) -> AccAddress {
         match self {
             PublicKey::Secp256k1(key) => key.get_address(),
-            PublicKey::Ed25519(key) => get_address(key),
+            PublicKey::Ed25519(key) => key.get_address(),
         }
     }
 }
@@ -68,7 +68,11 @@ impl TryFrom<Any> for PublicKey {
                     .map_err(|e| DecodeError(e.to_string()))?;
                 Ok(Self::Secp256k1(key))
             }
-            "/cosmos.crypto.ed25519.PubKey" => Ok(Self::Ed25519(any.value)),
+            "/cosmos.crypto.ed25519.PubKey" => {
+                let key = Ed25519PubKey::decode::<Bytes>(any.value.into())
+                    .map_err(|e| DecodeError(e.to_string()))?;
+                Ok(Self::Ed25519(key))
+            }
 
             _ => Err(DecodeError(format!(
                 "Key type not recognized: {}",
@@ -85,10 +89,34 @@ impl From<PublicKey> for Any {
                 type_url: "/cosmos.crypto.secp256k1.PubKey".to_string(),
                 value: key.encode_vec(),
             },
-            PublicKey::Ed25519(value) => Any {
+            PublicKey::Ed25519(key) => Any {
                 type_url: "/cosmos.crypto.ed25519.PubKey".to_string(),
-                value,
+                value: key.encode_vec(),
             },
+        }
+    }
+}
+
+use tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
+
+/// This is needed for compatibility with the Cosmos SDK which uses the application
+/// key in some modules instead of the consensus key.
+impl From<TendermintPublicKey> for PublicKey {
+    fn from(key: TendermintPublicKey) -> Self {
+        match key {
+            TendermintPublicKey::Ed25519(value) => PublicKey::Ed25519(value.try_into().unwrap()), //TODO: unwrap can be removed once tendermint type checks are in place (probably the safest thing to do is to expose the underlying key type)
+            TendermintPublicKey::Secp256k1(value) => {
+                PublicKey::Secp256k1(value.try_into().unwrap()) //TODO: unwrap can be removed once tendermint type checks are in place (probably the safest thing to do is to expose the underlying key type)
+            }
+        }
+    }
+}
+
+impl From<PublicKey> for TendermintPublicKey {
+    fn from(key: PublicKey) -> Self {
+        match key {
+            PublicKey::Ed25519(value) => TendermintPublicKey::Ed25519(value.into()),
+            PublicKey::Secp256k1(value) => TendermintPublicKey::Secp256k1(value.into()),
         }
     }
 }
