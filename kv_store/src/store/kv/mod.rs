@@ -1,2 +1,2 @@
-pub mod imutable;
+pub mod immutable;
 pub mod mutable;

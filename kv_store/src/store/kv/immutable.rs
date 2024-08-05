@@ -3,18 +3,17 @@ use std::ops::RangeBounds;
 use database::Database;
 
 use crate::{
+    bank::kv::{application::ApplicationKVBank, transaction::TransactionKVBank},
+    query::kv::QueryKVStore,
     range::Range,
-    ApplicationStore, TransactionStore,
-    {prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore},
+    store::prefix::immutable::ImmutablePrefixStore,
 };
-
-use super::KVBank;
 
 /// Internal structure which holds different stores
 #[derive(Debug, Clone)]
 pub(crate) enum KVStoreBackend<'a, DB> {
-    Commit(&'a KVBank<DB, ApplicationStore>),
-    Cache(&'a KVBank<DB, TransactionStore>),
+    App(&'a ApplicationKVBank<DB>),
+    Tx(&'a TransactionKVBank<DB>),
     Query(&'a QueryKVStore<DB>),
 }
 
@@ -25,8 +24,8 @@ pub struct KVStore<'a, DB>(pub(crate) KVStoreBackend<'a, DB>);
 impl<'a, DB: Database> KVStore<'a, DB> {
     pub fn into_range<R: RangeBounds<Vec<u8>> + Clone>(self, range: R) -> Range<'a, DB> {
         match self.0 {
-            KVStoreBackend::Commit(var) => var.range(range),
-            KVStoreBackend::Cache(var) => var.range(range),
+            KVStoreBackend::App(var) => var.range(range),
+            KVStoreBackend::Tx(var) => var.range(range),
             KVStoreBackend::Query(var) => var.range(range),
         }
     }
@@ -36,8 +35,8 @@ impl<'a, DB: Database> KVStore<'a, DB> {
         prefix: I,
     ) -> ImmutablePrefixStore<'a, DB> {
         match self.0 {
-            KVStoreBackend::Commit(var) => var.prefix_store(prefix),
-            KVStoreBackend::Cache(var) => var.prefix_store(prefix),
+            KVStoreBackend::App(var) => var.prefix_store(prefix),
+            KVStoreBackend::Tx(var) => var.prefix_store(prefix),
             KVStoreBackend::Query(var) => var.prefix_store(prefix),
         }
     }
@@ -46,22 +45,22 @@ impl<'a, DB: Database> KVStore<'a, DB> {
 impl<DB: Database> KVStore<'_, DB> {
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
         match self.0 {
-            KVStoreBackend::Commit(var) => var.get(k),
-            KVStoreBackend::Cache(var) => var.get(k),
+            KVStoreBackend::App(var) => var.get(k),
+            KVStoreBackend::Tx(var) => var.get(k),
             KVStoreBackend::Query(var) => var.get(k),
         }
     }
 }
 
-impl<'a, DB> From<&'a KVBank<DB, ApplicationStore>> for KVStore<'a, DB> {
-    fn from(value: &'a KVBank<DB, ApplicationStore>) -> Self {
-        Self(KVStoreBackend::Commit(value))
+impl<'a, DB> From<&'a ApplicationKVBank<DB>> for KVStore<'a, DB> {
+    fn from(value: &'a ApplicationKVBank<DB>) -> Self {
+        Self(KVStoreBackend::App(value))
     }
 }
 
-impl<'a, DB> From<&'a KVBank<DB, TransactionStore>> for KVStore<'a, DB> {
-    fn from(value: &'a KVBank<DB, TransactionStore>) -> Self {
-        Self(KVStoreBackend::Cache(value))
+impl<'a, DB> From<&'a TransactionKVBank<DB>> for KVStore<'a, DB> {
+    fn from(value: &'a TransactionKVBank<DB>) -> Self {
+        Self(KVStoreBackend::Tx(value))
     }
 }
 
