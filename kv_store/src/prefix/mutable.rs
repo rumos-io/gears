@@ -1,6 +1,6 @@
 use database::Database;
 
-use crate::types::kv::mutable::KVStoreMut;
+use crate::kv::mutable::KVStoreMut;
 
 use super::immutable::ImmutablePrefixStore;
 

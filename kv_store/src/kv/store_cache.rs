@@ -72,7 +72,7 @@ impl<SK> IntoIterator for CacheCommitList<SK> {
 #[cfg(test)]
 mod tests {
 
-    use crate::types::kv::store_cache::DeletedError;
+    use crate::kv::store_cache::DeletedError;
 
     use super::KVCache;
 

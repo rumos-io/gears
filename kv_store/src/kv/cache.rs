@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use database::Database;
 
-use crate::{types::prefix::immutable::ImmutablePrefixStore, TransactionStore};
+use crate::{prefix::immutable::ImmutablePrefixStore, TransactionStore};
 
 use super::{immutable::KVStore, KVBank};
 

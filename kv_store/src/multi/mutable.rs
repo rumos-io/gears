@@ -1,7 +1,7 @@
 use database::{prefix::PrefixDB, Database};
 
 use crate::{
-    types::kv::{
+    kv::{
         immutable::{KVStore, KVStoreBackend},
         mutable::{KVStoreBackendMut, KVStoreMut},
     },

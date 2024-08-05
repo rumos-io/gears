@@ -8,7 +8,7 @@ use trees::iavl::Tree;
 
 use crate::{
     error::{KVStoreError, POISONED_LOCK},
-    types::prefix::immutable::ImmutablePrefixStore,
+    prefix::immutable::ImmutablePrefixStore,
     ApplicationStore, TransactionStore, TREE_CACHE_SIZE,
 };
 

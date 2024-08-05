@@ -1,11 +1,11 @@
 use database::{prefix::PrefixDB, Database};
 
 use crate::{
-    types::{
+    ApplicationStore, StoreKey, TransactionStore,
+    {
         kv::immutable::{KVStore, KVStoreBackend},
         query::QueryMultiStore,
     },
-    ApplicationStore, StoreKey, TransactionStore,
 };
 
 use super::MultiBank;

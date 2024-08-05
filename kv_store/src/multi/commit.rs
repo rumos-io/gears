@@ -4,7 +4,7 @@ use database::{prefix::PrefixDB, Database};
 
 use crate::{
     hash::StoreInfo,
-    types::kv::{store_cache::CacheCommitList, KVBank},
+    kv::{store_cache::CacheCommitList, KVBank},
     ApplicationStore, StoreKey, TransactionStore,
 };
 

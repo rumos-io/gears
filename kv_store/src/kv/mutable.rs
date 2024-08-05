@@ -3,8 +3,8 @@ use std::ops::RangeBounds;
 use database::Database;
 
 use crate::{
+    prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     range::Range,
-    types::prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
     ApplicationStore, TransactionStore,
 };
 

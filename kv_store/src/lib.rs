@@ -1,3 +1,4 @@
+pub mod store;
 use strum::IntoEnumIterator;
 
 pub mod error;

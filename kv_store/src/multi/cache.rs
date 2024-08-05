@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashSet};
 
 use database::Database;
 
-use crate::{types::kv::store_cache::CacheCommitList, StoreKey, TransactionStore};
+use crate::{kv::store_cache::CacheCommitList, StoreKey, TransactionStore};
 
 use super::MultiBank;
 

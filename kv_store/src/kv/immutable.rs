@@ -4,8 +4,8 @@ use database::Database;
 
 use crate::{
     range::Range,
-    types::{prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore},
     ApplicationStore, TransactionStore,
+    {prefix::immutable::ImmutablePrefixStore, query::kv::QueryKVStore},
 };
 
 use super::KVBank;
