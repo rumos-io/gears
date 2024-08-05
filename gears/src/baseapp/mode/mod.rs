@@ -16,7 +16,6 @@ use crate::{
 
 pub mod check;
 pub mod deliver;
-pub mod re_check;
 
 pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
     fn runnable(ctx: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError>;
@@ -44,7 +43,6 @@ mod sealed {
     pub trait Sealed {}
 
     impl<DB, AH: ABCIHandler> Sealed for CheckTxMode<DB, AH> {}
-    // impl Sealed for ReCheckTxMode {}
     impl<DB, AH: ABCIHandler> Sealed for DeliverTxMode<DB, AH> {}
 }
 
