@@ -19,3 +19,6 @@ tracing = { workspace = true }
 tonic = { workspace = true }
 tower-layer = { workspace = true }
 serde-aux = { workspace = true }
+
+[dev-dependencies]
+hex = { workspace = true }

@@ -281,10 +281,7 @@ impl Validator {
 
     pub fn tokens_to_consensus_power(&self, power: u64) -> u64 {
         let amount = self.tokens / Uint256::from(power);
-        amount
-            .to_string()
-            .parse::<u64>()
-            .expect("Unexpected conversion error")
+        amount.to_string().parse::<u64>().unwrap() // TODO: unwrap
     }
 
     /// GetValidatorsByPowerIndexKey creates the validator by power index.
@@ -295,20 +292,15 @@ impl Validator {
         // NOTE the address doesn't need to be stored because counter bytes must always be different
         // NOTE the larger values are of higher value
         let consensus_power = self.tokens_to_consensus_power(power_reduction);
-        let consensus_power_bytes = consensus_power.to_le_bytes();
+        let consensus_power_bytes = consensus_power.to_be_bytes();
 
-        let oper_addr_invr = self
-            .operator_address
-            .to_string()
-            .as_bytes()
-            .iter()
-            .map(|b| 255 ^ b)
-            .collect::<Vec<_>>();
+        let oper_addr_invr: Vec<u8> = self.operator_address.clone().into();
+        let oper_addr_invr = oper_addr_invr.iter().map(|b| 255 ^ b).collect::<Vec<_>>();
 
         // key is of format prefix || powerbytes || addrLen (1byte) || addrBytes
         let mut key = VALIDATORS_BY_POWER_INDEX_KEY.to_vec();
         key.extend_from_slice(&consensus_power_bytes);
-        key.push(oper_addr_invr.len() as u8);
+        key.push(self.operator_address.len());
         key.extend_from_slice(&oper_addr_invr);
         key
     }
@@ -588,5 +580,86 @@ mod tests {
                 8, 243, 188, 164, 181, 6, 16, 183, 243, 199, 15, 90, 1, 49
             ]
         )
+    }
+
+    #[test]
+    fn test_key_by_power_index_key() {
+        let val_raw = r#"
+{
+    "operator_address": "cosmosvaloper1v0thzgvzp8vt6q7ystmfm7a9wvg0ppsfetur3d",
+    "consensus_pubkey": {
+        "type": "tendermint/PubKeyEd25519",
+        "value": "CiBO6qrfEwEg7eOTlqlaSKRjd+GoFQOxFhp3cRblbJyBdA=="
+    },
+    "jailed": false,
+    "status": "BOND_STATUS_UNBONDED",
+    "tokens": "1099511627776000000",
+    "delegator_shares": "0.000000000000000000",
+    "description": {
+        "moniker": "",
+        "identity": "",
+        "website": "",
+        "security_contact": "",
+        "details": ""
+    },
+    "unbonding_height": "0",
+    "unbonding_time": "1970-01-01T00:00:00Z",
+    "commission": {
+        "commission_rates": {
+            "rate": "0.000000000000000000",
+            "max_rate": "0.000000000000000000",
+            "max_change_rate": "0.000000000000000000"
+        },
+        "update_time": "1970-01-01T00:00:00Z"
+    },
+    "min_self_delegation": "1"
+}
+          "#;
+
+        let val: Validator = serde_json::from_str(val_raw).unwrap();
+
+        let res = hex::encode(val.key_by_power_index_key(1000000));
+        let expected = "230000010000000000149c288ede7df62742fc3b7d0962045a8cef0f79f6";
+
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn test_tokens_to_consensus_power() {
+        let val_raw = r#"
+{
+    "operator_address": "cosmosvaloper1v0thzgvzp8vt6q7ystmfm7a9wvg0ppsfetur3d",
+    "consensus_pubkey": {
+        "type": "tendermint/PubKeyEd25519",
+        "value": "CiBO6qrfEwEg7eOTlqlaSKRjd+GoFQOxFhp3cRblbJyBdA=="
+    },
+    "jailed": false,
+    "status": "BOND_STATUS_UNBONDED",
+    "tokens": "1099511627776000000",
+    "delegator_shares": "0.000000000000000000",
+    "description": {
+        "moniker": "",
+        "identity": "",
+        "website": "",
+        "security_contact": "",
+        "details": ""
+    },
+    "unbonding_height": "0",
+    "unbonding_time": "1970-01-01T00:00:00Z",
+    "commission": {
+        "commission_rates": {
+            "rate": "0.000000000000000000",
+            "max_rate": "0.000000000000000000",
+            "max_change_rate": "0.000000000000000000"
+        },
+        "update_time": "1970-01-01T00:00:00Z"
+    },
+    "min_self_delegation": "1"
+}
+          "#;
+
+        let val: Validator = serde_json::from_str(val_raw).unwrap();
+        let res = val.tokens_to_consensus_power(1000000);
+        assert_eq!(res, 1099511627776);
     }
 }

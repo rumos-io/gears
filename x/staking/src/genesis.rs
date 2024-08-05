@@ -125,7 +125,7 @@ mod tests {
         }"#;
 
         assert_eq!(serde_json::from_str::<GenesisState>(genesis).unwrap_err().to_string(),
-        "validator is bonded and jailed in genesis state: moniker validator1, address cosmosvalcons1skvfj3jt9npmce99zrvp9s59z54kx7vzw7p6lh at line 39 column 13".to_string());
+        "validator is bonded and jailed in genesis state: moniker validator1, address cosmosvalcons1u33k3satgu7ehms6q7379wuq3zq2w563y75hu0 at line 39 column 13".to_string());
     }
 
     #[test]

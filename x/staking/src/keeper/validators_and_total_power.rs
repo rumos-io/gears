@@ -58,15 +58,14 @@ impl<
         validator: &Validator,
     ) -> Result<(), GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
-        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
+        let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
 
         // jailed validators are not kept in the power index
         if validator.jailed {
             return Ok(());
         }
 
-        validators_store.set(
+        store.set(
             validator.key_by_power_index_key(power_reduction),
             Vec::from(validator.operator_address.clone()),
         )

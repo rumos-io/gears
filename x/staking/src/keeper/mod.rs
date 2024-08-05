@@ -126,8 +126,8 @@ impl<
             // Manually set indices for the first time
             self.set_validator_by_cons_addr(ctx, &validator)
                 .unwrap_gas();
-            // self.set_validator_by_power_index(ctx, &validator)
-            //     .unwrap_gas();
+            self.set_validator_by_power_index(ctx, &validator)
+                .unwrap_gas();
 
             // if !genesis.exported {
             //     self.after_validator_created(ctx, &validator);
