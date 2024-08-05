@@ -168,83 +168,82 @@ impl<
             }
         }
 
-        // for unbonding_delegation in genesis.unbonding_delegations {
-        //     self.set_unbonding_delegation(ctx, &unbonding_delegation)
-        //         .unwrap_gas();
-        //     for entry in unbonding_delegation.entries.as_slice() {
-        //         self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time)
-        //             .unwrap_gas();
-        //     }
-        // }
+        for unbonding_delegation in genesis.unbonding_delegations {
+            self.set_unbonding_delegation(ctx, &unbonding_delegation)
+                .unwrap_gas();
+            for entry in unbonding_delegation.entries.as_slice() {
+                self.insert_ubd_queue(ctx, &unbonding_delegation, entry.completion_time)
+                    .unwrap_gas();
+            }
+        }
 
-        // for redelegation in genesis.redelegations {
-        //     self.set_redelegation(ctx, &redelegation).unwrap_gas();
-        //     for entry in &redelegation.entries {
-        //         self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)
-        //             .unwrap_gas();
-        //     }
-        // }
+        for redelegation in genesis.redelegations {
+            self.set_redelegation(ctx, &redelegation).unwrap_gas();
+            for entry in &redelegation.entries {
+                self.insert_redelegation_queue(ctx, &redelegation, entry.completion_time)
+                    .unwrap_gas();
+            }
+        }
 
-        // let bonded_coins = if !bonded_tokens.is_zero() {
-        //     vec![UnsignedCoin {
-        //         denom: genesis.params.bond_denom().clone(),
-        //         amount: bonded_tokens,
-        //     }]
-        // } else {
-        //     vec![]
-        // };
-        // let not_bonded_coins = if !not_bonded_tokens.is_zero() {
-        //     vec![UnsignedCoin {
-        //         denom: genesis.params.bond_denom().clone(),
-        //         amount: not_bonded_tokens,
-        //     }]
-        // } else {
-        //     vec![]
-        // };
+        let bonded_coins = if !bonded_tokens.is_zero() {
+            vec![UnsignedCoin {
+                denom: genesis.params.bond_denom().clone(),
+                amount: bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
+        let not_bonded_coins = if !not_bonded_tokens.is_zero() {
+            vec![UnsignedCoin {
+                denom: genesis.params.bond_denom().clone(),
+                amount: not_bonded_tokens,
+            }]
+        } else {
+            vec![]
+        };
 
-        // let bonded_balance = self
-        //     .bank_keeper
-        //     .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
-        //     .unwrap_gas();
-        // if bonded_balance
-        //     .clone()
-        //     .into_iter()
-        //     .all(|e| e.amount.is_zero())
-        // {
-        //     self.auth_keeper
-        //         .check_create_new_module_account(ctx, &self.bonded_module)
-        //         .unwrap_gas();
-        // }
-        // // if balance is different from bonded coins panic because genesis is most likely malformed
-        // assert_eq!(
-        //     bonded_balance, bonded_coins,
-        //     "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
-        //     bonded_balance, bonded_coins
-        // );
+        let bonded_balance = self
+            .bank_keeper
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
+            .unwrap_gas();
 
-        // let not_bonded_balance = self
-        //     .bank_keeper
-        //     .get_all_balances::<DB, InitContext<'_, DB, SK>>(
-        //         ctx,
-        //         self.not_bonded_module.get_address(),
-        //     )
-        //     .unwrap_gas();
-        // if not_bonded_balance
-        //     .clone()
-        //     .into_iter()
-        //     .all(|e| e.amount.is_zero())
-        // {
-        //     self.auth_keeper
-        //         .check_create_new_module_account(ctx, &self.not_bonded_module)
-        //         .unwrap_gas();
-        // }
+        // there's a check in the cosmos SDK to ensure that a new module account is only created if the balance is zero
+        // (the logic being that the module account will be set in the genesis file and created by the auth module
+        // if the balance is non-zero)
+        // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/genesis.go#L107
+        // However the call here in the cosmos SDK https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/genesis.go#L101
+        // has a side effect of creating a new module account.
+        // So whatever the bonded balance a call is made to create a new module account.
+        self.auth_keeper
+            .check_create_new_module_account(ctx, &self.bonded_module)
+            .unwrap_gas();
 
-        // // if balance is different from non bonded coins panic because genesis is most likely malformed
-        // assert_eq!(
-        //     not_bonded_balance, not_bonded_coins,
-        //     "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
-        //     not_bonded_balance, not_bonded_coins,
-        // );
+        // if balance is different from bonded coins panic because genesis is most likely malformed
+        assert_eq!(
+            bonded_balance, bonded_coins,
+            "bonded pool balance is different from bonded coins: {:?} <-> {:?}",
+            bonded_balance, bonded_coins
+        );
+
+        let not_bonded_balance = self
+            .bank_keeper
+            .get_all_balances::<DB, InitContext<'_, DB, SK>>(
+                ctx,
+                self.not_bonded_module.get_address(),
+            )
+            .unwrap_gas();
+
+        // see comment above for the logic of creating a new module account
+        self.auth_keeper
+            .check_create_new_module_account(ctx, &self.not_bonded_module)
+            .unwrap_gas();
+
+        // if balance is different from non bonded coins panic because genesis is most likely malformed
+        assert_eq!(
+            not_bonded_balance, not_bonded_coins,
+            "not bonded pool balance is different from not bonded coins: {:?} <-> {:?}",
+            not_bonded_balance, not_bonded_coins,
+        );
 
         // let mut res = vec![];
         // // don't need to run Tendermint updates if we exported
