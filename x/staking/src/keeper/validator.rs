@@ -1,5 +1,5 @@
 use super::*;
-use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Commission, CommissionRates, Validator};
+use crate::{Commission, CommissionRates, Validator};
 use gears::{core::Protobuf, store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
@@ -103,11 +103,8 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_CONS_ADDR_KEY);
-
-        validators_store.set(
-            validator.cons_addr().to_string().as_bytes().to_vec(),
-            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        )
+        let val: Vec<u8> = validator.operator_address.clone().into();
+        validators_store.set(validator.cons_addr().prefix_len_bytes(), val)
     }
 
     /// Update the tokens of an existing validator, update the validators power index key

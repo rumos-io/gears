@@ -123,9 +123,9 @@ impl<
 
         for validator in genesis.validators {
             self.set_validator(ctx, &validator).unwrap_gas();
-            // // Manually set indices for the first time
-            // self.set_validator_by_cons_addr(ctx, &validator)
-            //     .unwrap_gas();
+            // Manually set indices for the first time
+            self.set_validator_by_cons_addr(ctx, &validator)
+                .unwrap_gas();
             // self.set_validator_by_power_index(ctx, &validator)
             //     .unwrap_gas();
 

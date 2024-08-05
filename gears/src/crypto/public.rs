@@ -2,11 +2,9 @@ use address::AccAddress;
 use bytes::Bytes;
 use core_types::any::google::Any;
 use core_types::Protobuf;
-use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 
-use super::{ed25519::Ed25519PubKey, keys::SIZE_ERR_MSG, secp256k1::Secp256k1PubKey};
+use super::{ed25519::Ed25519PubKey, secp256k1::Secp256k1PubKey};
 
 pub type SigningError = secp256k1::Error;
 
@@ -42,20 +40,6 @@ impl PublicKey {
             PublicKey::Ed25519(key) => key.get_address(),
         }
     }
-}
-
-pub fn get_address(key_bytes: impl AsRef<[u8]>) -> AccAddress {
-    let mut hasher = Sha256::new();
-    hasher.update(key_bytes);
-    let hash = hasher.finalize();
-
-    let mut hasher = Ripemd160::new();
-    hasher.update(hash);
-    let hash = hasher.finalize();
-
-    let res: AccAddress = hash.as_slice().try_into().expect(SIZE_ERR_MSG);
-
-    res
 }
 
 impl TryFrom<Any> for PublicKey {

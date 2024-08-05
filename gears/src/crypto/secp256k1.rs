@@ -1,9 +1,11 @@
 use address::AccAddress;
 use core_types::Protobuf;
 use keyring::error::DecodeError;
+use ripemd::Ripemd160;
 use secp256k1::PublicKey;
 use secp256k1::{ecdsa::Signature, hashes::sha256, Message, Secp256k1};
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use sha2::{Digest, Sha256};
 use std::fmt;
 
 use super::public::SigningError;
@@ -29,7 +31,20 @@ impl Secp256k1PubKey {
 
     pub fn get_address(&self) -> AccAddress {
         let key_bytes = Vec::from(self.to_owned());
-        super::public::get_address(key_bytes)
+
+        let mut hasher = Sha256::new();
+        hasher.update(key_bytes);
+        let hash = hasher.finalize();
+
+        let mut hasher = Ripemd160::new();
+        hasher.update(hash);
+        let hash = hasher.finalize();
+
+        let res: AccAddress = hash.as_slice().try_into().expect(
+            "ripemd160 digest size is 160 bytes which is less than AccAddress::MAX_ADDR_LEN",
+        );
+
+        res
     }
 }
 

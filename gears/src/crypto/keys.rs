@@ -7,9 +7,6 @@ use crate::types::address::AccAddress;
 
 use super::{public::PublicKey, secp256k1::Secp256k1PubKey};
 
-pub const SIZE_ERR_MSG: &str =
-    "ripemd160 digest size is 160 bytes which is less than AccAddress::MAX_ADDR_LEN";
-
 pub trait GearsPublicKey {
     /// Returns a Gears public key.
     fn get_gears_public_key(&self) -> PublicKey;

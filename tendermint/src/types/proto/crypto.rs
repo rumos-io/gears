@@ -62,23 +62,32 @@ impl TryFrom<inner::PublicKey> for PublicKey {
 
 impl From<PublicKey> for ConsAddress {
     fn from(pk: PublicKey) -> Self {
-        //TODO: check if this is the correct implementation for Tendermint keys - I copied the method we use for Cosmos keys
-        //TODO: avoid repeating the code for Cosmos keys
-        let pub_key = pk.raw();
+        match pk {
+            PublicKey::Ed25519(pk) => {
+                let mut hasher = Sha256::new();
+                hasher.update(pk);
+                let hash = hasher.finalize();
 
-        // sha256 hash
-        let mut hasher = Sha256::new();
-        hasher.update(pub_key);
-        let hash = hasher.finalize();
+                let address: ConsAddress = hash[..20].try_into().expect(
+                    "the slice is 20 bytes long which is less than AccAddress::MAX_ADDR_LEN",
+                );
 
-        // ripemd160 hash
-        let mut hasher = Ripemd160::new();
-        hasher.update(hash);
-        let hash = hasher.finalize();
+                address
+            }
+            PublicKey::Secp256k1(pk) => {
+                // sha256 hash
+                let mut hasher = Sha256::new();
+                hasher.update(pk);
+                let hash = hasher.finalize();
 
-        let size_err_msg: &str =
-            "ripemd160 digest size is 160 bytes which is less than AccAddress::MAX_ADDR_LEN";
-        hash.as_slice().try_into().expect(size_err_msg)
+                // ripemd160 hash
+                let mut hasher = Ripemd160::new();
+                hasher.update(hash);
+                let hash = hasher.finalize();
+
+                hash.as_slice().try_into().expect("ripemd160 digest size is 160 bytes which is less than AccAddress::MAX_ADDR_LEN")
+            }
+        }
     }
 }
 

@@ -2,6 +2,7 @@ use address::AccAddress;
 use core_types::Protobuf;
 use keyring::error::DecodeError;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use super::public::SigningError;
 
@@ -23,7 +24,17 @@ impl Ed25519PubKey {
     }
 
     pub fn get_address(&self) -> AccAddress {
-        super::public::get_address(&self.key)
+        let key_bytes = Vec::from(self.to_owned());
+
+        let mut hasher = Sha256::new();
+        hasher.update(key_bytes);
+        let hash = hasher.finalize();
+
+        let address: AccAddress = hash[..20]
+            .try_into()
+            .expect("the slice is 20 bytes long which is less than AccAddress::MAX_ADDR_LEN");
+
+        address
     }
 }
 
