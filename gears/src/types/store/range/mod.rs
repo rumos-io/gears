@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 use database::Database;
 use infallible::RangeIter;
-use kv_store::{range::Range, types::prefix::range::PrefixRange};
+use kv_store::{range::Range, store::prefix::range::PrefixRange};
 
 use super::gas::{errors::GasStoreErrors, range::GasRange};
 

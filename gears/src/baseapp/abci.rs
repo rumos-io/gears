@@ -1,8 +1,10 @@
-use super::BaseApp;
+use super::{
+    mode::{check::CheckTxMode, deliver::DeliverTxMode},
+    BaseApp,
+};
 use crate::application::handlers::node::ABCIHandler;
 use crate::application::ApplicationInfo;
 use crate::baseapp::RunTxInfo;
-use crate::context::{block::BlockContext, init::InitContext};
 use crate::error::POISONED_LOCK;
 use crate::params::ParamsSubspaceKey;
 use crate::types::gas::Gas;
@@ -44,38 +46,45 @@ use tracing::{debug, error, info};
 impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     ABCIApplication<H::Genesis> for BaseApp<DB, PSK, H, AI>
 {
-    fn init_chain(&self, request: RequestInitChain<H::Genesis>) -> ResponseInitChain {
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+    fn init_chain(
+        &self,
+        RequestInitChain {
+            time,
+            chain_id,
+            consensus_params,
+            validators,
+            app_genesis,
+            initial_height,
+        }: RequestInitChain<H::Genesis>,
+    ) -> ResponseInitChain {
+        let mut state = self.state.write().expect(POISONED_LOCK);
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let mut ctx = InitContext::new(
-            &mut multi_store,
-            request.initial_height,
-            request.time,
-            request.chain_id,
-        );
+        let mut ctx = state.init_ctx(initial_height, time, chain_id);
 
         self.baseapp_params_keeper
-            .set_consensus_params(&mut ctx, request.consensus_params.clone().into());
+            .set_consensus_params(&mut ctx, consensus_params.clone().into());
 
         self.abci_handler
-            .init_genesis(&mut ctx, request.app_genesis.clone());
+            .init_genesis(&mut ctx, app_genesis.clone());
 
         ResponseInitChain {
-            consensus_params: Some(request.consensus_params),
-            validators: request.validators,
+            consensus_params: Some(consensus_params),
+            validators: validators,
             app_hash: "hash_goes_here".into(), //TODO: set app hash - note this will be the hash of block 1
         }
     }
 
     fn info(&self, _request: RequestInfo) -> ResponseInfo {
+        let state = self.state.read().expect(POISONED_LOCK);
+
         ResponseInfo {
             data: AI::APP_NAME.to_owned(),
             version: AI::APP_VERSION.to_owned(),
             app_version: 1,
-            last_block_height: self.get_last_commit_height(),
-            last_block_app_hash: self.get_last_commit_hash().to_vec().into(),
+            last_block_height: state.last_height,
+            last_block_app_hash: state.head_hash.to_vec().into(),
         }
     }
 
@@ -109,8 +118,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn check_tx(&self, RequestCheckTx { tx, r#type }: RequestCheckTx) -> ResponseCheckTx {
         let mut state = self.state.write().expect(POISONED_LOCK);
 
+        let CheckTxMode {
+            block_gas_meter,
+            multi_store,
+        } = &mut state.check_mode;
+
         let result = match r#type {
-            0 | 1 => self.run_tx(tx.clone(), &mut state.check_mode), // TODO: ReCheckTxMode
+            0 | 1 => self.run_tx::<CheckTxMode<_, _>>(tx.clone(), multi_store, block_gas_meter),
             _ => panic!("unknown Request CheckTx type: {}", r#type),
         };
 
@@ -157,7 +171,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn deliver_tx(&self, RequestDeliverTx { tx }: RequestDeliverTx) -> ResponseDeliverTx {
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        let result = self.run_tx(tx.clone(), &mut state.deliver_mode);
+        let DeliverTxMode {
+            block_gas_meter,
+            multi_store,
+        } = &mut state.deliver_mode;
+
+        let result = self.run_tx::<DeliverTxMode<_, _>>(tx.clone(), multi_store, block_gas_meter);
 
         match result {
             Ok(RunTxInfo {
@@ -193,15 +212,13 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn commit(&self) -> ResponseCommit {
         let height = self.get_block_header().unwrap().height;
 
-        let hash = self.multi_store.write().expect(POISONED_LOCK).commit();
+        let hash = self.state.write().expect(POISONED_LOCK).commit();
 
         info!(
             "Committed state, block height: {} app hash: {}",
             height,
             hex::encode(hash)
         );
-
-        self.state.write().expect(POISONED_LOCK).cache_clear();
 
         ResponseCommit {
             data: hash.to_vec().into(),
@@ -220,16 +237,11 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         self.set_block_header(request.header.clone());
 
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        let mut ctx = BlockContext::new(
-            &mut multi_store,
-            request.header.height,
-            request.header.clone(),
-        );
-
         {
+            let mut ctx = state.simple_ctx(request.header.height);
+
             let max_gas = self
                 .baseapp_params_keeper
                 .block_params(&mut ctx)
@@ -239,11 +251,11 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             state.replace_meter(Gas::from(max_gas))
         }
 
+        let mut ctx = state.block_ctx(request.header.clone());
+
         self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
-
-        state.cache_update(&mut multi_store);
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
@@ -251,21 +263,19 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     }
 
     fn end_block(&self, request: RequestEndBlock) -> ResponseEndBlock {
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
+        let mut state = self.state.write().expect(POISONED_LOCK);
+
         let header = self
             .get_block_header()
             .expect("block header is set in begin block");
 
-        let mut ctx = BlockContext::new(&mut multi_store, header.height, header);
+        let mut ctx = state.block_ctx(header);
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 
         let events = ctx.events;
 
-        self.state
-            .write()
-            .expect(POISONED_LOCK)
-            .cache_update(&mut multi_store);
+        state.append_block_cache();
 
         ResponseEndBlock {
             events: events.into_iter().collect(),

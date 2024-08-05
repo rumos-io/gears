@@ -83,8 +83,12 @@ impl<DB: Database> TransactionKVBank<DB> {
     pub fn append_block_cache(&mut self, other: &mut ApplicationKVBank<DB>) {
         let (append, delete) = (other.cache.storage.clone(), other.cache.delete.clone());
 
-        self.block.storage.extend(append);
-        self.block.delete.extend(delete);
+        for (key, value) in append {
+            self.block.set(key, value);
+        }
+        for key in delete {
+            self.block.delete(&key);
+        }
     }
 
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {

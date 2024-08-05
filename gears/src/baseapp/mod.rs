@@ -7,21 +7,19 @@ use std::{
 
 use crate::{
     application::{handlers::node::ABCIHandler, ApplicationInfo},
-    context::{query::QueryContext, simple::SimpleContext},
+    context::{simple::SimpleContext, tx::TxContext},
     error::POISONED_LOCK,
     params::ParamsSubspaceKey,
     types::{
-        gas::{descriptor::BLOCK_GAS_DESCRIPTOR, FiniteGas, Gas},
+        gas::{descriptor::BLOCK_GAS_DESCRIPTOR, kind::BlockKind, FiniteGas, Gas, GasMeter},
         tx::raw::TxWithRaw,
     },
 };
 use bytes::Bytes;
 use database::Database;
 use errors::QueryError;
-use kv_store::{
-    types::{multi::MultiBank, query::QueryMultiStore},
-    ApplicationStore,
-};
+use kv_store::bank::multi::{ApplicationMultiBank, TransactionMultiBank};
+use mode::build_tx_gas_meter;
 use tendermint::types::{
     proto::{event::Event, header::Header},
     request::query::RequestQuery,
@@ -47,7 +45,6 @@ pub use query::*;
 #[derive(Debug, Clone)]
 pub struct BaseApp<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo> {
     state: Arc<RwLock<ApplicationState<DB, H>>>,
-    multi_store: Arc<RwLock<MultiBank<DB, H::StoreKey, ApplicationStore>>>,
     abci_handler: H,
     block_header: Arc<RwLock<Option<Header>>>, // passed by Tendermint in call to begin_block
     baseapp_params_keeper: BaseAppParamsKeeper<PSK>,
@@ -59,7 +56,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     BaseApp<DB, PSK, H, AI>
 {
     pub fn new(db: DB, params_subspace_key: PSK, abci_handler: H, options: NodeOptions) -> Self {
-        let mut multi_store = MultiBank::<_, _, ApplicationStore>::new(db);
+        let mut multi_store = ApplicationMultiBank::new(db);
 
         let baseapp_params_keeper = BaseAppParamsKeeper {
             params_subspace_key,
@@ -79,9 +76,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             baseapp_params_keeper,
             state: Arc::new(RwLock::new(ApplicationState::new(
                 Gas::from(max_gas),
-                &multi_store,
+                multi_store,
             ))),
-            multi_store: Arc::new(RwLock::new(multi_store)),
             options,
             _info_marker: PhantomData,
         }
@@ -96,17 +92,6 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         *current_header = Some(header);
     }
 
-    fn get_last_commit_hash(&self) -> [u8; 32] {
-        self.multi_store
-            .read()
-            .expect(POISONED_LOCK)
-            .head_commit_hash()
-    }
-
-    fn get_last_commit_height(&self) -> u32 {
-        self.multi_store.read().expect(POISONED_LOCK).head_version()
-    }
-
     fn run_query(&self, request: &RequestQuery) -> Result<Bytes, QueryError> {
         //TODO: request height u32
         let version: u32 = request
@@ -114,10 +99,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .try_into()
             .map_err(|_| QueryError::InvalidHeight)?;
 
-        let query_store =
-            QueryMultiStore::new(&*self.multi_store.read().expect(POISONED_LOCK), version)?;
-
-        let ctx = QueryContext::new(query_store, version)?;
+        let ctx = self.state.read().expect(POISONED_LOCK).query_ctx(version)?;
 
         self.abci_handler.query(&ctx, request.clone())
     }
@@ -125,7 +107,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
     fn run_tx<MD: ExecutionMode<DB, H>>(
         &self,
         raw: Bytes,
-        mode: &mut MD,
+        multi_store: &mut TransactionMultiBank<DB, H::StoreKey>,
+        gas_meter: &mut GasMeter<BlockKind>,
     ) -> Result<RunTxInfo, RunTxError> {
         let tx_with_raw: TxWithRaw<H::Message> =
             TxWithRaw::from_bytes(raw.clone()).map_err(|e: core_types::errors::CoreError| {
@@ -138,16 +121,18 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         let height = header.height;
 
         let consensus_params = {
-            let multi_store = &mut *self.multi_store.write().expect(POISONED_LOCK);
-            let ctx = SimpleContext::new(multi_store.into(), height);
-            self.baseapp_params_keeper.consensus_params(&ctx)
+            self.baseapp_params_keeper
+                .consensus_params(&SimpleContext::new(multi_store.into(), height))
         };
 
-        let mut ctx = mode.build_ctx(
+        let mut ctx = TxContext::new(
+            multi_store,
             height,
             header,
             consensus_params,
-            Some(&tx_with_raw.tx.auth_info.fee),
+            build_tx_gas_meter(height, Some(&tx_with_raw.tx.auth_info.fee)),
+            gas_meter,
+            true,
             self.options.clone(),
         );
 
@@ -166,8 +151,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         ctx.block_gas_meter
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
-        let mut multi_store = self.multi_store.write().expect(POISONED_LOCK);
-        MD::commit(ctx, &mut *multi_store);
+        MD::commit(ctx);
 
         Ok(RunTxInfo {
             events,

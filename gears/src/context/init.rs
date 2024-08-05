@@ -1,8 +1,10 @@
 use database::prefix::PrefixDB;
 use database::Database;
-use kv_store::types::kv::immutable::KVStore;
-use kv_store::types::{kv::mutable::KVStoreMut, multi::MultiBank};
-use kv_store::{ApplicationStore, StoreKey};
+use kv_store::{
+    bank::multi::ApplicationMultiBank,
+    store::kv::{immutable::KVStore, mutable::KVStoreMut},
+    StoreKey,
+};
 use tendermint::types::{chain_id::ChainId, proto::event::Event, time::timestamp::Timestamp};
 
 use crate::types::store::kv::mutable::StoreMut;
@@ -12,7 +14,7 @@ use super::{InfallibleContext, InfallibleContextMut, QueryableContext, Transacti
 
 #[derive(Debug)]
 pub struct InitContext<'a, DB, SK> {
-    multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
+    multi_store: &'a mut ApplicationMultiBank<DB, SK>,
     pub(crate) height: u32,
     pub(crate) time: Timestamp,
     pub events: Vec<Event>,
@@ -21,7 +23,7 @@ pub struct InitContext<'a, DB, SK> {
 
 impl<'a, DB, SK> InitContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, ApplicationStore>,
+        multi_store: &'a mut ApplicationMultiBank<DB, SK>,
         height: u32,
         time: Timestamp,
         chain_id: ChainId,

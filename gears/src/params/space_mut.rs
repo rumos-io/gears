@@ -1,5 +1,5 @@
 use database::Database;
-use kv_store::types::prefix::mutable::MutablePrefixStore;
+use kv_store::store::prefix::mutable::MutablePrefixStore;
 
 use super::{parsed::Params, space::ParamsSpace, ParamKind, ParamsDeserialize, ParamsSerialize};
 
