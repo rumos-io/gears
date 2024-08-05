@@ -1,5 +1,6 @@
 use super::*;
 use gears::{
+    core::Protobuf,
     store::database::ext::UnwrapCorrupt,
     types::{base::coins::UnsignedCoins, store::gas::errors::GasStoreErrors},
     x::types::validator::BondStatus,
@@ -138,12 +139,9 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
         let mut delegations_store = store.prefix_store_mut(DELEGATION_KEY);
-        let mut key = Vec::from(delegation.delegator_address.clone());
-        key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
-        delegations_store.set(
-            key,
-            serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        )?;
+        let mut key = Vec::from(delegation.delegator_address.prefix_len_bytes());
+        key.extend_from_slice(&Vec::from(delegation.validator_address.prefix_len_bytes()));
+        delegations_store.set(key, delegation.encode_vec())?;
 
         Ok(())
     }

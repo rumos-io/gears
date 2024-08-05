@@ -129,44 +129,44 @@ impl<
             self.set_validator_by_power_index(ctx, &validator)
                 .unwrap_gas();
 
-            // if !genesis.exported {
-            //     self.after_validator_created(ctx, &validator);
-            // }
+            if !genesis.exported {
+                self.after_validator_created(ctx, &validator);
+            }
 
-            // if validator.status == BondStatus::Unbonding {
-            //     self.insert_unbonding_validator_queue(ctx, &validator)
-            //         .unwrap_gas();
-            // }
+            if validator.status == BondStatus::Unbonding {
+                self.insert_unbonding_validator_queue(ctx, &validator)
+                    .unwrap_gas();
+            }
 
-            // match validator.status {
-            //     BondStatus::Bonded => {
-            //         bonded_tokens += validator.tokens;
-            //     }
-            //     BondStatus::Unbonding | BondStatus::Unbonded => {
-            //         not_bonded_tokens += validator.tokens;
-            //     }
-            // }
+            match validator.status {
+                BondStatus::Bonded => {
+                    bonded_tokens += validator.tokens;
+                }
+                BondStatus::Unbonding | BondStatus::Unbonded => {
+                    not_bonded_tokens += validator.tokens;
+                }
+            }
         }
 
-        // for delegation in genesis.delegations {
-        //     if !genesis.exported {
-        //         self.before_delegation_created(
-        //             ctx,
-        //             &delegation.delegator_address,
-        //             &delegation.validator_address,
-        //         );
-        //     }
+        for delegation in genesis.delegations {
+            if !genesis.exported {
+                self.before_delegation_created(
+                    ctx,
+                    &delegation.delegator_address,
+                    &delegation.validator_address,
+                );
+            }
 
-        //     self.set_delegation(ctx, &delegation).unwrap_gas();
+            self.set_delegation(ctx, &delegation).unwrap_gas();
 
-        //     if !genesis.exported {
-        //         self.after_delegation_modified(
-        //             ctx,
-        //             &delegation.delegator_address,
-        //             &delegation.validator_address,
-        //         );
-        //     }
-        // }
+            if !genesis.exported {
+                self.after_delegation_modified(
+                    ctx,
+                    &delegation.delegator_address,
+                    &delegation.validator_address,
+                );
+            }
+        }
 
         // for unbonding_delegation in genesis.unbonding_delegations {
         //     self.set_unbonding_delegation(ctx, &unbonding_delegation)
