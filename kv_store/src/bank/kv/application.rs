@@ -84,11 +84,11 @@ impl<DB: Database> ApplicationKVBank<DB> {
     ///
     /// _Note_: deleted keys wont be returned even before commit.
     pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        self.cache.get(k.as_ref()).ok()?.cloned().or(self
-            .persistent
-            .read()
-            .expect(POISONED_LOCK)
-            .get(k.as_ref()))
+        self.cache
+            .get(k.as_ref())
+            .ok()?
+            .cloned()
+            .or(self.persistent().get(k.as_ref()))
     }
 
     pub fn prefix_store<I: IntoIterator<Item = u8>>(
