@@ -31,7 +31,7 @@ pub struct TransactionKVBank<DB> {
 impl<DB: Database> TransactionKVBank<DB> {
     /// Read persistent database
     #[inline]
-    pub fn persistent(&self) -> std::sync::RwLockReadGuard<Tree<DB>> {
+    fn persistent(&self) -> std::sync::RwLockReadGuard<Tree<DB>> {
         self.persistent.read().expect(POISONED_LOCK)
     }
 
@@ -68,7 +68,7 @@ impl<DB: Database> TransactionKVBank<DB> {
         self.tx
             .delete(k)
             .or_else(|| self.block.storage.get(k).cloned())
-            .or_else(|| self.persistent.read().expect(POISONED_LOCK).get(k))
+            .or_else(|| self.persistent().get(k))
     }
 
     /// Set or append value
@@ -100,7 +100,7 @@ impl<DB: Database> TransactionKVBank<DB> {
                 .get(k.as_ref())
                 .ok()?
                 .cloned()
-                .or_else(|| self.persistent.read().expect(POISONED_LOCK).get(k.as_ref())),
+                .or_else(|| self.persistent().get(k.as_ref())),
         }
     }
 
@@ -133,7 +133,7 @@ impl<DB: Database> TransactionKVBank<DB> {
             .map(|(first, second)| (Cow::Borrowed(first), Cow::Borrowed(second)))
             .collect::<HashMap<_, _>>();
 
-        let tree = self.persistent.read().expect(POISONED_LOCK);
+        let tree = self.persistent();
         let persisted_values = tree
             .range(range)
             .filter(|(key, _)| {
