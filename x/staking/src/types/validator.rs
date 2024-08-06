@@ -378,11 +378,11 @@ impl TryFrom<inner::Validator> for Validator {
         ))?;
 
         let commission_rates = CommissionRates::new(
-            Decimal256::from_str(&commission_rates.rate)
+            Decimal256::from_cosmos_proto_string(&commission_rates.rate)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            Decimal256::from_str(&commission_rates.max_rate)
+            Decimal256::from_cosmos_proto_string(&commission_rates.max_rate)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            Decimal256::from_str(&commission_rates.max_change_rate)
+            Decimal256::from_cosmos_proto_string(&commission_rates.max_change_rate)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
         )
         .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
@@ -400,7 +400,7 @@ impl TryFrom<inner::Validator> for Validator {
         Ok(Self {
             operator_address: ValAddress::from_bech32(&value.operator_address)
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            delegator_shares: Decimal256::from_str(&value.delegator_shares)
+            delegator_shares: Decimal256::from_cosmos_proto_string(&value.delegator_shares)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             description: Description {
                 moniker: description.moniker,

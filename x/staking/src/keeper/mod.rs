@@ -213,7 +213,7 @@ impl<
         // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/genesis.go#L107
         // However the call here in the cosmos SDK https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/genesis.go#L101
         // has a side effect of creating a new module account.
-        // So whatever the bonded balance a call is made to create a new module account.
+        // So whatever the bonded balance a call is made in the staking module to create a new module account.
         self.auth_keeper
             .check_create_new_module_account(ctx, &self.bonded_module)
             .unwrap_gas();
@@ -245,30 +245,29 @@ impl<
             not_bonded_balance, not_bonded_coins,
         );
 
-        // let mut res = vec![];
-        // // don't need to run Tendermint updates if we exported
-        // if genesis.exported {
-        //     for last_validator in genesis.last_validator_powers {
-        //         self.set_last_validator_power(ctx, &last_validator)
-        //             .unwrap_gas();
-        //         let validator = self
-        //             .validator(ctx, &last_validator.address)
-        //             .unwrap_gas()
-        //             .expect("validator in the store was not found");
-        //         // TODO: check unwraps and update types to omit conversion
-        //         let mut update = validator
-        //             .abci_validator_update(self.power_reduction(ctx))
-        //             .unwrap();
-        //         update.power = (last_validator.power as u64).try_into().unwrap();
-        //         res.push(update);
-        //     }
-        // } else {
-        //     // TODO: exit in sdk
-        //     res = self.apply_and_return_validator_set_updates(ctx).unwrap();
-        // }
-        // res
+        let mut res = vec![];
+        // don't need to run Tendermint updates if we exported
+        if genesis.exported {
+            for last_validator in genesis.last_validator_powers {
+                self.set_last_validator_power(ctx, &last_validator)
+                    .unwrap_gas();
+                let validator = self.validator(ctx, &last_validator.address).unwrap_gas();
 
-        vec![]
+                let Some(validator) = validator else {
+                    panic!("invalid genesis file: validator in `last_validator_powers` list not found in `validators` list");
+                };
+
+                let update = ValidatorUpdate {
+                    pub_key: validator.consensus_pubkey,
+                    power: (last_validator.power as u64).try_into().unwrap(), //TODO: unwrap
+                };
+                res.push(update);
+            }
+        } else {
+            // TODO: exit in sdk
+            res = self.apply_and_return_validator_set_updates(ctx).unwrap();
+        }
+        res
     }
 
     /// BlockValidatorUpdates calculates the ValidatorUpdates for the current block

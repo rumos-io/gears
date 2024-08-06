@@ -3,6 +3,7 @@ use gears::{
     context::InfallibleContext, core::Protobuf, store::database::ext::UnwrapCorrupt,
     types::base::coin::Uint256Proto,
 };
+use prost::Message;
 
 impl<
         SK: StoreKey,
@@ -145,11 +146,9 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        let key = validator.address.to_string().as_bytes().to_vec();
-        delegations_store.set(
-            key,
-            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        )
+        let key = validator.address.prefix_len_bytes();
+        let value = i64::encode_to_vec(&validator.power);
+        delegations_store.set(key, value)
     }
 
     pub fn delete_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(

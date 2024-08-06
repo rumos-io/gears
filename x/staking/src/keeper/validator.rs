@@ -19,8 +19,8 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_KEY);
         Ok(validators_store
-            .get(key.to_string().as_bytes())?
-            .map(|e| serde_json::from_slice(&e).unwrap_or_corrupt()))
+            .get(&key.prefix_len_bytes())?
+            .map(|v| Protobuf::decode_vec(&v).unwrap_or_corrupt()))
     }
 
     pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
