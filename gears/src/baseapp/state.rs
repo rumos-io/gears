@@ -65,7 +65,7 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         self.check_mode.multi_store.block_cache_clear();
 
         self.multi_store
-            .consume_tx_cache(&mut self.deliver_mode.multi_store);
+            .consume_block_cache(&mut self.deliver_mode.multi_store);
 
         let hash = self.multi_store.commit();
 

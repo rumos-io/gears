@@ -68,9 +68,9 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
         }
     }
 
-    pub fn consume_tx_cache(&mut self, other: &mut TransactionMultiBank<DB, SK>) {
+    pub fn consume_block_cache(&mut self, other: &mut TransactionMultiBank<DB, SK>) {
         for (sk, store) in &mut self.backend.0 {
-            store.consume_tx_cache(other.kv_store_mut(sk))
+            store.consume_block_cache(other.kv_store_mut(sk))
         }
     }
 

@@ -128,8 +128,7 @@ impl<DB: Database> ApplicationKVBank<DB> {
         MergedRange::merge(cached_values, persisted_values).into()
     }
 
-    pub fn consume_tx_cache(&mut self, other: &mut TransactionKVBank<DB>) {
-        other.tx_cache_clear();
+    pub fn consume_block_cache(&mut self, other: &mut TransactionKVBank<DB>) {
         let (set_values, del_values) = other.block.take();
 
         for (key, value) in set_values {
