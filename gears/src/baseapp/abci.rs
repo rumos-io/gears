@@ -69,6 +69,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.abci_handler
             .init_genesis(&mut ctx, app_genesis.clone());
 
+        state.append_block_cache();
+
         ResponseInitChain {
             consensus_params: Some(consensus_params),
             validators: validators,
@@ -256,6 +258,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.abci_handler.begin_block(&mut ctx, request);
 
         let events = ctx.events;
+
+        state.append_block_cache();
 
         ResponseBeginBlock {
             events: events.into_iter().collect(),
