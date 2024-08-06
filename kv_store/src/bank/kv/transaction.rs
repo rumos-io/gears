@@ -67,7 +67,8 @@ impl<DB: Database> TransactionKVBank<DB> {
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
         self.tx
             .delete(k)
-            .or(self.persistent.read().expect(POISONED_LOCK).get(k))
+            .or_else(|| self.block.get(k).ok().flatten().cloned())
+            .or_else(|| self.persistent.read().expect(POISONED_LOCK).get(k))
     }
 
     /// Set or append value
