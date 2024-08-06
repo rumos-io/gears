@@ -74,7 +74,7 @@ pub fn run_gaia_and_tendermint(
             rest_listen_addr: Some(DEFAULT_REST_LISTEN_ADDR),
             grpc_listen_addr: Some(DEFAULT_GRPC_LISTEN_ADDR),
             read_buf_size: 1048576,
-            log_level: LogLevel::Info,
+            log_level: LogLevel::Off,
             min_gas_prices: Default::default(),
         };
 
