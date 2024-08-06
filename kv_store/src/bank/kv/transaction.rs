@@ -403,6 +403,59 @@ mod tests {
         assert_eq!(Some(vec![33]), get);
     }
 
+    /// # What
+    /// Test checks that we really overset value in tx
+    #[test]
+    fn set_then_get_then_set_then_get_in_tx() {
+        let mut store = tx_store_build([(1, 0)], [], [], [], []);
+
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![0]), get);
+
+        store.set(vec![1], vec![11]);
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![11]), get);
+
+        store.set(vec![1], vec![22]);
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![22]), get);
+
+        store.set(vec![1], vec![33]);
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![33]), get);
+    }
+
+    /// # What
+    /// Test checks that we really overset value with upgrades of cache.
+    #[test]
+    fn set_then_get_then_set_then_get_with_upgrades() {
+        let mut store = tx_store_build([(1, 0)], [], [], [], []);
+
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![0]), get);
+
+        store.set(vec![1], vec![11]);
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![11]), get);
+        store.upgrade_cache();
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![11]), get);
+
+        store.set(vec![1], vec![22]);
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![22]), get);
+        store.upgrade_cache();
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![22]), get);
+
+        store.set(vec![1], vec![33]);
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![33]), get);
+        store.upgrade_cache();
+        let get = store.get(&[1]);
+        assert_eq!(Some(vec![33]), get);
+    }
+
     /// ================================== OLD =============
 
     #[test]
