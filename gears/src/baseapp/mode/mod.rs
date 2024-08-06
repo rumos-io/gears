@@ -31,8 +31,6 @@ pub trait ExecutionMode<DB, AH: ABCIHandler>: Sealed {
         handler: &AH,
         msgs: impl Iterator<Item = &'m AH::Message>,
     ) -> Result<Vec<Event>, RunTxError>;
-
-    fn commit(ctx: TxContext<'_, DB, AH::StoreKey>);
 }
 
 mod sealed {

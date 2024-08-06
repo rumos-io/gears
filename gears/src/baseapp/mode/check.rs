@@ -57,8 +57,4 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for CheckTxMode<DB, AH
     fn runnable(_: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError> {
         Ok(())
     }
-
-    fn commit(mut ctx: TxContext<'_, DB, AH::StoreKey>) {
-        ctx.multi_store_mut().upgrade_cache();
-    }
 }

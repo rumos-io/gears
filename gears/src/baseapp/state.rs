@@ -60,14 +60,6 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
             .append_block_cache(&mut self.multi_store);
     }
 
-    // pub fn push_changes(&mut self) {
-    //     self.check_mode.multi_store.tx_cache_clear();
-    //     self.check_mode.multi_store.block_cache_clear();
-
-    //     self.multi_store
-    //         .consume_tx_cache(&mut self.deliver_mode.multi_store);
-    // }
-
     pub fn commit(&mut self) -> [u8; 32] {
         self.check_mode.multi_store.tx_cache_clear();
         self.check_mode.multi_store.block_cache_clear();
@@ -75,7 +67,12 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         self.multi_store
             .consume_tx_cache(&mut self.deliver_mode.multi_store);
 
-        self.multi_store.commit()
+        let hash = self.multi_store.commit();
+
+        self.head_hash = hash;
+        self.last_height = self.multi_store.head_version();
+
+        hash
     }
 
     pub fn query_ctx(&self, version: u32) -> Result<QueryContext<DB, AH::StoreKey>, KVStoreError> {

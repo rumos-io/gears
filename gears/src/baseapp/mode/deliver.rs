@@ -65,8 +65,4 @@ impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, 
             Ok(())
         }
     }
-
-    fn commit(mut ctx: TxContext<'_, DB, AH::StoreKey>) {
-        ctx.multi_store_mut().upgrade_cache();
-    }
 }

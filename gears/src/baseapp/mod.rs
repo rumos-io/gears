@@ -151,7 +151,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         ctx.block_gas_meter
             .consume_gas(gas_used, BLOCK_GAS_DESCRIPTOR)?;
 
-        MD::commit(ctx);
+        ctx.multi_store_mut().upgrade_cache();
 
         Ok(RunTxInfo {
             events,
