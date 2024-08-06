@@ -24,6 +24,7 @@ members = [
   "x/auth",
   "x/bank",
   "x/distribution",
+  "x/evidence",
   "x/gov",
   "x/ibc-rs",
   "x/slashing",
