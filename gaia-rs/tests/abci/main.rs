@@ -93,9 +93,8 @@ fn setup_mock_node() -> (
 }
 
 fn generate_txs(
-    msgs: impl IntoIterator<Item = gaia_rs::message::Message>,
+    msgs: impl IntoIterator<Item = (u64, gaia_rs::message::Message)>,
     user: &User,
-    sequence: u64,
     chain_id: ChainId,
 ) -> Vec<Bytes> {
     let fee = Fee {
@@ -112,7 +111,7 @@ fn generate_txs(
 
     let mut result = Vec::new();
 
-    for msg in msgs {
+    for (sequence, msg) in msgs {
         let signing_info = SigningInfo {
             key: &user.key_pair,
             sequence,

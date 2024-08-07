@@ -30,7 +30,7 @@ fn two_tx_in_different_block() {
         amount: amount.to_owned(),
     }));
 
-    let txs = generate_txs([msg], &user, 0, node.chain_id().clone());
+    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(
@@ -44,7 +44,7 @@ fn two_tx_in_different_block() {
         amount,
     }));
 
-    let txs = generate_txs([msg], &user, 0, node.chain_id().clone());
+    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(
@@ -85,7 +85,7 @@ fn two_tx_in_single_block() {
         amount,
     }));
 
-    let txs = generate_txs([msg1, msg2], &user, 0, node.chain_id().clone());
+    let txs = generate_txs([(0, msg1), (0, msg2)], &user, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(
