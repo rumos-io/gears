@@ -525,6 +525,8 @@ pub enum ValidatorsError {
 
 #[cfg(test)]
 mod tests {
+    use data_encoding::HEXLOWER;
+
     use super::*;
 
     #[test]
@@ -618,7 +620,7 @@ mod tests {
 
         let val: Validator = serde_json::from_str(val_raw).unwrap();
 
-        let res = hex::encode(val.key_by_power_index_key(1000000));
+        let res = HEXLOWER.encode(&val.key_by_power_index_key(1000000));
         let expected = "230000010000000000149c288ede7df62742fc3b7d0962045a8cef0f79f6";
 
         assert_eq!(res, expected);

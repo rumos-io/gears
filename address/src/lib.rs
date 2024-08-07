@@ -75,9 +75,7 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
     /// Returns the address bytes prefixed with the length of the address.
     pub fn prefix_len_bytes(&self) -> Vec<u8> {
         let len = self.len();
-        let mut prefixed = vec![len];
-        prefixed.extend_from_slice(&self.0);
-        prefixed
+        [&[len], self.0.as_slice()].concat()
     }
 
     pub fn as_hex(&self) -> String {

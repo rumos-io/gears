@@ -21,4 +21,4 @@ tower-layer = { workspace = true }
 serde-aux = { workspace = true }
 
 [dev-dependencies]
-hex = { workspace = true }
+data-encoding = { workspace = true }

@@ -21,7 +21,3 @@ gaiad tx staking create-validator \
 ```
 gaiad query staking validators
 ```
-
-```
-gaiad export
-```
