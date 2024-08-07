@@ -14,7 +14,7 @@ use gears::{
     types::address::AccAddress,
 };
 
-use utilities::run_gaia_and_tendermint;
+use utilities::{acc_address, run_gaia_and_tendermint};
 
 #[path = "./utilities.rs"]
 mod utilities;
@@ -22,7 +22,7 @@ mod utilities;
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn account_query() -> anyhow::Result<()> {
-    let (_tendermint, _server_thread) = run_gaia_and_tendermint(34)?;
+    let (_tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), 34)])?;
 
     let acc_adress = AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
         .expect("Valid value");

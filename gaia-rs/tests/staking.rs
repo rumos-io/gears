@@ -32,7 +32,7 @@ use staking::{
     CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
 };
 use std::{path::PathBuf, str::FromStr};
-use utilities::ACC_ADDRESS;
+use utilities::{acc_address, ACC_ADDRESS};
 
 #[path = "./utilities.rs"]
 mod utilities;
@@ -124,8 +124,7 @@ fn create_validator_tx(home: PathBuf) -> anyhow::Result<Response> {
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn create_validator() -> anyhow::Result<()> {
-    let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), 200_000_000_u32)])?;
     let Response {
         check_tx,
         deliver_tx,
@@ -167,8 +166,7 @@ fn delegate_tx(home: PathBuf) -> anyhow::Result<Response> {
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn delegate() -> anyhow::Result<()> {
-    let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), 200_000_000_u32)])?;
 
     let Response {
         check_tx,
@@ -254,7 +252,7 @@ fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn redelegate() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), coins)])?;
 
     let Response {
         check_tx,
@@ -286,7 +284,7 @@ fn redelegate() -> anyhow::Result<()> {
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), coins)])?;
 
     // create source validator
     let pubkey = "{\"type\":\"tendermint/PubKeyEd25519\",\"value\":\"+uo5x4+nFiCBt2MuhVwT5XeMfj6ttkjY/JC6WyHb+rE=\"}";
@@ -362,7 +360,7 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn query_validator() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), coins)])?;
     create_validator_tx(tendermint.1.to_path_buf())?;
 
     let query = ValidatorCommand {
@@ -425,7 +423,7 @@ fn query_validator() -> anyhow::Result<()> {
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn query_delegation() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), coins)])?;
 
     // function performs two self delegations:
     // first is a transaction with creation of a validator: amount 100 uatoms
@@ -469,7 +467,7 @@ fn query_delegation() -> anyhow::Result<()> {
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn query_redelegation() -> anyhow::Result<()> {
     let coins = 200_000_000_u32;
-    let (tendermint, _server_thread) = run_gaia_and_tendermint(coins)?;
+    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), coins)])?;
     redelegate_tx(tendermint.1.to_path_buf())?;
 
     let delegator_address = AccAddress::from_bech32(ACC_ADDRESS)?;
