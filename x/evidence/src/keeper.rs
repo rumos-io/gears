@@ -1,9 +1,10 @@
 use crate::{
-    types::{Evidence, Handler, Router},
-    GenesisState, RouterAlreadyExistsError,
+    types::{Evidence, EvidenceHandler},
+    GenesisState,
 };
 use gears::{
     context::{init::InitContext, QueryableContext, TransactionalContext},
+    core::any::google::Any,
     store::{
         database::{ext::UnwrapCorrupt, Database},
         StoreKey,
@@ -15,81 +16,72 @@ use gears::{
         module::Module,
     },
 };
-use std::{collections::HashMap, marker::PhantomData};
+use std::marker::PhantomData;
 
 const KEY_PREFIX_EVIDENCE: [u8; 1] = [0x0];
 
 /// Keeper of the evidence store
 #[derive(Debug, Clone)]
 pub struct Keeper<
-    'a,
     SK: StoreKey,
     StkK: SlashingStakingKeeper<SK, M>,
     SlsK: EvidenceSlashingKeeper<SK, M>,
-    DB: Database,
-    E: Evidence,
+    E: Evidence + Default,
+    EH: EvidenceHandler<E>,
     M: Module,
-> {
+> where
+    <E as std::convert::TryFrom<Any>>::Error: std::fmt::Debug,
+{
     store_key: SK,
     // TODO
     #[allow(dead_code)]
     staking_keeper: StkK,
     #[allow(dead_code)]
     slashing_keeper: SlsK,
-    router: Option<Router<'a, DB, SK, E>>,
-    _module: PhantomData<M>,
+    #[allow(dead_code)]
+    evidence_handler: Option<EH>,
+    _module: PhantomData<(M, E)>,
 }
 
 impl<
-        'a,
         SK: StoreKey,
         StkK: SlashingStakingKeeper<SK, M>,
         SlsK: EvidenceSlashingKeeper<SK, M>,
-        DB: Database,
         E: Evidence + Default,
+        EH: EvidenceHandler<E>,
         M: Module,
-    > Keeper<'a, SK, StkK, SlsK, DB, E, M>
+    > Keeper<SK, StkK, SlsK, E, EH, M>
+where
+    <E as std::convert::TryFrom<Any>>::Error: std::fmt::Debug,
 {
     pub fn new(
         store_key: SK,
         staking_keeper: StkK,
         slashing_keeper: SlsK,
-        routes: Option<HashMap<String, Handler<'a, DB, SK, E>>>,
+        evidence_handler: Option<EH>,
     ) -> Self {
         Self {
             store_key,
             staking_keeper,
             slashing_keeper,
-            router: routes.map(|routes| Router::new(routes)),
+            evidence_handler,
             _module: PhantomData,
-        }
-    }
-
-    /// set_router sets the Evidence Handler router for the x/evidence module. Note,
-    /// we allow the ability to set the router after the Keeper is constructed as a
-    /// given Handler may need access the Keeper before being constructed. The router
-    /// may only be set once.
-    pub fn set_router(
-        &mut self,
-        router: Router<'a, DB, SK, E>,
-    ) -> Result<(), RouterAlreadyExistsError> {
-        if self.router.is_some() {
-            Err(RouterAlreadyExistsError)
-        } else {
-            self.router = Some(router);
-            Ok(())
         }
     }
 
     /// genesis initializes the evidence module's state from a provided genesis
     /// state.
-    pub fn init_genesis(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
+    pub fn init_genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) {
         if let Err(e) = genesis.validate::<E>() {
             panic!("failed to validate evidence genesis state: {e}");
         }
 
         for e in genesis.evidence {
-            let evidence = E::decode(e.value.as_slice()).expect("validation of types is passed");
+            let evidence = E::try_from(e).expect("validation of types is passed");
             if self.evidence(ctx, evidence.hash()).unwrap_gas().is_some() {
                 panic!("evidence with hash {} already exists", evidence.hash());
             }
@@ -99,7 +91,7 @@ impl<
     }
 
     /// evidence gets Evidence by hash in the module's KVStore.
-    pub fn evidence<CTX: QueryableContext<DB, SK>>(
+    pub fn evidence<CTX: QueryableContext<DB, SK>, DB: Database>(
         &self,
         ctx: &mut CTX,
         evidence_hash: Hash,
@@ -112,7 +104,7 @@ impl<
     }
 
     /// set_evidence sets Evidence by hash in the module's KVStore.
-    pub fn set_evidence<CTX: TransactionalContext<DB, SK>>(
+    pub fn set_evidence<CTX: TransactionalContext<DB, SK>, DB: Database>(
         &self,
         ctx: &mut CTX,
         evidence: &E,

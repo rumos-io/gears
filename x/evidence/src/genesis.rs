@@ -12,7 +12,10 @@ pub struct GenesisState {
 
 impl GenesisState {
     // TODO: compatibility with sdk. Maybe we may omit it
-    pub fn validate<T: Evidence + Default>(&self) -> anyhow::Result<()> {
+    pub fn validate<T: Evidence + Default>(&self) -> anyhow::Result<()>
+    where
+        <T as std::convert::TryFrom<Any>>::Error: std::fmt::Debug,
+    {
         for e in &self.evidence {
             let evidence = T::decode(e.value.as_slice())?;
             evidence.validate_basic()?;
