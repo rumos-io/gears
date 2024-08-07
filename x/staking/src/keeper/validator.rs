@@ -1,6 +1,6 @@
 use super::*;
-use crate::{consts::error::SERDE_ENCODING_DOMAIN_TYPE, Commission, CommissionRates, Validator};
-use gears::{store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
+use crate::{Commission, CommissionRates, Validator};
+use gears::{core::Protobuf, store::database::ext::UnwrapCorrupt, types::address::ConsAddress};
 
 impl<
         SK: StoreKey,
@@ -19,8 +19,8 @@ impl<
         let store = ctx.kv_store(&self.store_key);
         let validators_store = store.prefix_store(VALIDATORS_KEY);
         Ok(validators_store
-            .get(key.to_string().as_bytes())?
-            .map(|e| serde_json::from_slice(&e).unwrap_or_corrupt()))
+            .get(&key.prefix_len_bytes())?
+            .map(|v| Protobuf::decode_vec(&v).unwrap_or_corrupt()))
     }
 
     pub fn set_validator<DB: Database, CTX: TransactionalContext<DB, SK>>(
@@ -31,8 +31,8 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_KEY);
         validators_store.set(
-            validator.operator_address.to_string().as_bytes().to_vec(),
-            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
+            validator.operator_address.prefix_len_bytes(),
+            validator.encode_vec(),
         )
     }
 
@@ -103,11 +103,8 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_CONS_ADDR_KEY);
-
-        validators_store.set(
-            validator.cons_addr().to_string().as_bytes().to_vec(),
-            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        )
+        let val: Vec<u8> = validator.operator_address.clone().into();
+        validators_store.set(validator.cons_addr().prefix_len_bytes(), val)
     }
 
     /// Update the tokens of an existing validator, update the validators power index key

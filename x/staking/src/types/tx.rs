@@ -82,7 +82,7 @@ impl CommissionRates {
     ) -> Result<(), anyhow::Error> {
         if max_rate > ONE_DEC {
             // max rate cannot be greater than 1
-            return Err(anyhow::anyhow!("max_rate too huge"));
+            return Err(anyhow::anyhow!("max_rate too big"));
         }
         if rate > max_rate {
             // rate cannot be greater than the max rate
@@ -164,6 +164,10 @@ impl Commission {
 
     pub fn commission_rates(&self) -> &CommissionRates {
         &self.commission_rates
+    }
+
+    pub fn update_time(&self) -> &Timestamp {
+        &self.update_time
     }
 }
 

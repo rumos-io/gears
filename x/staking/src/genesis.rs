@@ -49,7 +49,7 @@ mod tests {
     },
     "jailed": false,
     "tokens": "1",
-    "unbonding_height": 0,
+    "unbonding_height": "0",
     "unbonding_time": "1970-01-01T00:00:10.0000001Z",
     "commission": {
         "commission_rates": {
@@ -60,7 +60,7 @@ mod tests {
         "update_time": "1970-01-01T00:00:10.0000001Z"
     },
     "min_self_delegation": "1",
-    "status": "Bonded"
+    "status": "BOND_STATUS_BONDED"
 }
             ],
             "last_total_power": "0",
@@ -102,7 +102,7 @@ mod tests {
     },
     "jailed": true,
     "tokens": "1",
-    "unbonding_height": 0,
+    "unbonding_height": "0",
     "unbonding_time": "1970-01-01T00:00:10.0000001Z",
     "commission": {
         "commission_rates": {
@@ -113,7 +113,7 @@ mod tests {
         "update_time": "1970-01-01T00:00:10.0000001Z"
     },
     "min_self_delegation": "1",
-    "status": "Bonded"
+    "status": "BOND_STATUS_BONDED"
 }
             ],
             "last_total_power": "0",
@@ -125,7 +125,7 @@ mod tests {
         }"#;
 
         assert_eq!(serde_json::from_str::<GenesisState>(genesis).unwrap_err().to_string(),
-        "validator is bonded and jailed in genesis state: moniker validator1, address cosmosvalcons1skvfj3jt9npmce99zrvp9s59z54kx7vzw7p6lh at line 39 column 13".to_string());
+        "validator is bonded and jailed in genesis state: moniker validator1, address cosmosvalcons1u33k3satgu7ehms6q7379wuq3zq2w563y75hu0 at line 39 column 13".to_string());
     }
 
     #[test]
@@ -156,7 +156,7 @@ mod tests {
     },
     "jailed": true,
     "tokens": "1",
-    "unbonding_height": 0,
+    "unbonding_height": "0",
     "unbonding_time": "1970-01-01T00:00:10.0000001Z",
     "commission": {
         "commission_rates": {
@@ -167,7 +167,7 @@ mod tests {
         "update_time": "1970-01-01T00:00:10.0000001Z"
     },
     "min_self_delegation": "1",
-    "status": "Bonded"
+    "status": "BOND_STATUS_BONDED"
 }
             ],
             "last_total_power": "0",

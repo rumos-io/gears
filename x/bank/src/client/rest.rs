@@ -25,11 +25,11 @@ pub async fn supply<
     QRes: QueryResponse,
     App: NodeQueryHandler<QReq, QRes>,
 >(
-    pagination: Query<Option<Pagination>>,
+    _pagination: Query<Pagination>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::TotalSupply(QueryTotalSupplyRequest {
-        pagination: pagination.0.map(PaginationRequest::from),
+        pagination: None, //pagination.0.map(PaginationRequest::from), //TODO fix this
     });
 
     let res = rest_state.app.typed_query(req)?;

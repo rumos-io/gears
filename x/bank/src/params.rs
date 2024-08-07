@@ -40,7 +40,8 @@ impl ParamsSerialize for BankParams {
             self.default_send_enabled.to_string().into_bytes(),
         ));
 
-        // The send_enabled field is hard coded to the empty list for now
+        // TODO: The send_enabled field is hard coded to the empty list for now
+        // TODO: if params are missing in the cosmos SDK (from genesis at least) then they are set to "null" i.e. [110, 117, 108, 108] when stored
         hash_map.push((KEY_SEND_ENABLED, "[]".as_bytes().to_vec()));
 
         hash_map

@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
 use gears::{
-    core::errors::CoreError,
+    core::{errors::CoreError, Protobuf},
     ext::PaginationKey,
     tendermint::types::time::timestamp::Timestamp,
     types::{
         address::{AccAddress, ValAddress},
-        decimal256::Decimal256,
+        decimal256::{CosmosDecimalProtoString, Decimal256},
         uint::Uint256,
     },
     x::types::delegation::StakingDelegation,
@@ -51,6 +51,39 @@ impl From<Delegation> for Vec<u8> {
     fn from(value: Delegation) -> Self {
         serde_json::to_vec(&value).expect(SERDE_ENCODING_DOMAIN_TYPE)
     }
+}
+
+impl From<Delegation> for inner::Delegation {
+    fn from(value: Delegation) -> Self {
+        inner::Delegation {
+            delegator_address: value.delegator_address.to_string(),
+            validator_address: value.validator_address.to_string(),
+            shares: value.shares.to_cosmos_proto_string(),
+        }
+    }
+}
+
+impl TryFrom<inner::Delegation> for Delegation {
+    type Error = CoreError;
+
+    fn try_from(proto: inner::Delegation) -> Result<Self, Self::Error> {
+        Ok(Delegation {
+            delegator_address: AccAddress::from_bech32(&proto.delegator_address).map_err(|e| {
+                CoreError::DecodeGeneral(format!("delegator_address: {}", e.to_string()))
+            })?,
+            validator_address: ValAddress::from_bech32(&proto.validator_address).map_err(|e| {
+                CoreError::DecodeGeneral(format!("validator_address: {}", e.to_string()))
+            })?,
+            shares: Decimal256::from_cosmos_proto_string(&proto.shares)
+                .map_err(|e| CoreError::DecodeGeneral(format!("shares: {}", e.to_string())))?,
+        })
+    }
+}
+
+impl Protobuf<inner::Delegation> for Delegation {}
+
+mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::Delegation;
 }
 
 /// Delegation represents the bond with tokens held by an account. It is

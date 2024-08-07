@@ -17,6 +17,7 @@ use gears::types::account::{Account, BaseAccount, ModuleAccount};
 use gears::types::address::AccAddress;
 use gears::types::pagination::response::PaginationResponse;
 use gears::types::store::gas::errors::GasStoreErrors;
+use gears::types::store::gas::ext::GasResultExt;
 use gears::x::keepers::auth::AuthKeeper;
 use gears::x::module::Module;
 use prost::Message;
@@ -149,22 +150,19 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
     ) {
         self.auth_params_keeper.set(ctx, genesis.params);
 
-        // sanitazing
+        // sanitizing
         genesis
             .accounts
-            .sort_by(|a, b| a.account_number.cmp(&b.account_number));
+            .sort_by(|a, b| a.get_account_number().cmp(&b.get_account_number()));
 
         for mut acct in genesis.accounts {
-            acct.account_number = self
-                .get_next_account_number(ctx)
-                .expect("Init context doesn't have any gas");
-            self.set_account(ctx, Account::Base(acct))
-                .expect("Init context doesn't have any gas");
+            acct.set_account_number(self.get_next_account_number(ctx).unwrap_gas());
+            self.set_account(ctx, acct).unwrap_gas();
         }
 
         // Create the fee collector account
         self.check_create_new_module_account(ctx, &self.fee_collector_module)
-            .expect("Init context doesn't have any gas");
+            .unwrap_gas();
     }
 
     pub fn query_account<DB: Database>(

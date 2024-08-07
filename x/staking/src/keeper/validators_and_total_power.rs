@@ -3,6 +3,7 @@ use gears::{
     context::InfallibleContext, core::Protobuf, store::database::ext::UnwrapCorrupt,
     types::base::coin::Uint256Proto,
 };
+use prost::Message;
 
 impl<
         SK: StoreKey,
@@ -58,15 +59,14 @@ impl<
         validator: &Validator,
     ) -> Result<(), GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
-        let store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
-        let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
+        let mut store = TransactionalContext::kv_store_mut(ctx, &self.store_key);
 
         // jailed validators are not kept in the power index
         if validator.jailed {
             return Ok(());
         }
 
-        validators_store.set(
+        store.set(
             validator.key_by_power_index_key(power_reduction),
             Vec::from(validator.operator_address.clone()),
         )
@@ -146,11 +146,9 @@ impl<
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut delegations_store = store.prefix_store_mut(LAST_VALIDATOR_POWER_KEY);
-        let key = validator.address.to_string().as_bytes().to_vec();
-        delegations_store.set(
-            key,
-            serde_json::to_vec(&validator).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        )
+        let key = validator.address.prefix_len_bytes();
+        let value = i64::encode_to_vec(&validator.power);
+        delegations_store.set(key, value)
     }
 
     pub fn delete_last_validator_power<DB: Database, CTX: TransactionalContext<DB, SK>>(

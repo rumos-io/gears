@@ -59,12 +59,15 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         self.baseapp_params_keeper
             .set_consensus_params(&mut ctx, request.consensus_params.clone().into());
 
-        self.abci_handler
-            .init_genesis(&mut ctx, request.app_genesis.clone());
+        let val_updates = self
+            .abci_handler
+            .init_genesis(&mut ctx, request.app_genesis.clone()); //TODO: should also return consensus params
+
+        // TODO: there's sanity checking of val_updates here in the Cosmos SDK
 
         ResponseInitChain {
             consensus_params: Some(request.consensus_params),
-            validators: request.validators,
+            validators: val_updates,
             app_hash: "hash_goes_here".into(), //TODO: set app hash - note this will be the hash of block 1
         }
     }
