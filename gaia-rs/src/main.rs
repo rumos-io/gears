@@ -9,7 +9,10 @@ use gears::application::client::ClientApplication;
 use gears::application::node::NodeApplication;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
-use gears::store::database::sled::SledDb;
+#[cfg(all(feature = "rocksdb", not(feature = "sled")))]
+use gears::store::database::rocks::RocksDB as DB;
+#[cfg(all(feature = "sled", not(feature = "rocksdb")))]
+use gears::store::database::sled::SledDb as DB;
 use gears::store::database::DBBuilder;
 
 type Args = CliApplicationArgs<
@@ -26,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     args.execute_or_help(
         |command| ClientApplication::new(GaiaCoreClient).execute(command.try_into()?),
         |command| {
-            NodeApplication::<GaiaCore, SledDb, _, _>::new(
+            NodeApplication::<GaiaCore, DB, _, _>::new(
                 GaiaCore,
                 DBBuilder,
                 GaiaABCIHandler::new,
