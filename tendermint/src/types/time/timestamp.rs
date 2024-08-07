@@ -335,10 +335,28 @@ impl From<Timestamp> for inner::Timestamp {
     }
 }
 
+impl From<Timestamp> for inner::IBCProtoTimestamp {
+    fn from(ts: Timestamp) -> Self {
+        Self {
+            seconds: ts.seconds,
+            nanos: ts.nanos,
+        }
+    }
+}
+
+impl TryFrom<inner::IBCProtoTimestamp> for Timestamp {
+    type Error = NewTimestampError;
+
+    fn try_from(ts: inner::IBCProtoTimestamp) -> Result<Self, Self::Error> {
+        Self::try_new(ts.seconds, ts.nanos)
+    }
+}
+
 impl tendermint_proto::Protobuf<Timestamp> for Timestamp {}
 impl ibc_proto::protobuf::Protobuf<Timestamp> for Timestamp {}
 
 pub mod inner {
+    pub use ibc_proto::google::protobuf::Timestamp as IBCProtoTimestamp;
     pub use tendermint_proto::google::protobuf::Timestamp;
 }
 

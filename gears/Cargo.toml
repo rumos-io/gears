@@ -16,10 +16,10 @@ kv_store = { path = "../kv_store" }
 database = { path = "../database" }
 tx-derive = { path = "../macros/tx-derive" }
 query-derive = { path = "../macros/query-derive" }
-protobuf-derive ={ path = "../macros/protobuf-derive"}
+protobuf-derive = { path = "../macros/protobuf-derive" }
 
 #newtypes
-vec1 = { workspace = true, features = [ "serde" ] }
+vec1 = { workspace = true, features = ["serde"] }
 secp256k1 = { workspace = true, features = ["hashes"] }
 bytes = { workspace = true }
 url = { workspace = true }
@@ -38,7 +38,7 @@ tracing-subscriber = { workspace = true }
 sha2 = { workspace = true }
 regex = { workspace = true }
 derive_more = { workspace = true }
-itertools = "0.13.0" 
+itertools = "0.13.0"
 
 #serialization
 prost = { workspace = true }
@@ -89,9 +89,9 @@ rand = { workspace = true, optional = true }
 trybuild = "1.0.99"
 
 [features]
-default = ["cli", "xmods"] 
+default = ["cli", "xmods"]
 xmods = []
 governance = []
 utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy", "dep:rand"]
 cli = ["dep:clap", "dep:clap_complete"]
-rocksdb = [ "database/rocksdb"]
+rocksdb = ["database/rocksdb"]

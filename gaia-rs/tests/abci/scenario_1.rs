@@ -7,7 +7,7 @@ use crate::{generate_txs, setup_mock_node};
 #[test]
 /// In this scenario, we test the initialization of the application and submit a balance transfer on block three.
 fn scenario_1() {
-    let (mut node, user) = setup_mock_node();
+    let (mut node, user) = setup_mock_node(None::<&str>);
 
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(

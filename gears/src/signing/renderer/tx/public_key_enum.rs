@@ -7,6 +7,7 @@ impl ValueRenderer for PublicKey {
     fn format<MG: MetadataGetter>(&self, get_metadata: &MG) -> Result<Vec<Screen>, RenderError> {
         match self {
             PublicKey::Secp256k1(key) => ValueRenderer::format(key, get_metadata),
+            PublicKey::Ed25519(_) => Err(RenderError::NotImplemented),
         }
     }
 }
