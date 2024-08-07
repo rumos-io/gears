@@ -44,12 +44,12 @@ fn two_tx_in_different_block() {
         amount,
     }));
 
-    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
+    let txs = generate_txs([(1, msg)], &user, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
-        "7bc0e95da6ba637bddaade5e6911fdb20030956a4bb8e305fb1c390ff7bcea20"
+        "4a3c5881f63b8a97d8a93bf90d79beedc980a53df9adf0ccc27f3cdeb9c4485f"
     );
 }
 
@@ -85,11 +85,11 @@ fn two_tx_in_single_block() {
         amount,
     }));
 
-    let txs = generate_txs([(0, msg1), (0, msg2)], &user, node.chain_id().clone());
+    let txs = generate_txs([(0, msg1), (1, msg2)], &user, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
-        "7bc0e95da6ba637bddaade5e6911fdb20030956a4bb8e305fb1c390ff7bcea20"
+        "e98583af9577ef4cb691fe154289b74f8193d0d59721319d8b80d7b9217c1b1b"
     );
 }
