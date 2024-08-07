@@ -27,7 +27,6 @@ use gears::{
         types::chain_id::ChainId,
     },
     types::{address::AccAddress, base::coin::UnsignedCoin, denom::Denom},
-    utils::random_address,
 };
 use utilities::{acc_address, run_gaia_and_tendermint};
 
