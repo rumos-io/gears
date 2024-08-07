@@ -52,7 +52,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             time,
             chain_id,
             consensus_params,
-            validators,
+            validators: _, // TODO: should it be ignored?
             app_genesis,
             initial_height,
         }: RequestInitChain<H::Genesis>,
