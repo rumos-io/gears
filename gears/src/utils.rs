@@ -2,19 +2,13 @@ use std::{path::Path, process::Child, str::FromStr};
 
 use crate::{
     baseapp::genesis::Genesis,
-    commands::node::{
-        genesis::{genesis_account_add, GenesisCommand},
-        init::{init, InitCommand},
-    },
-    types::{
-        address::AccAddress,
-        base::{coin::UnsignedCoin, coins::Coins},
-        denom::Denom,
-    },
+    commands::node::init::{init, InitCommand},
+    types::address::AccAddress,
 };
 use anyhow::anyhow;
 pub use assert_fs::TempDir;
 
+use rand::{prelude::Distribution, rngs::ThreadRng};
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;
 
@@ -36,8 +30,6 @@ impl TmpChild {
         tmp_dir: TempDir,
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
         genesis: &G,
-        address: AccAddress,
-        coins: u32,
     ) -> anyhow::Result<Self> {
         dircpy::CopyBuilder::new(path_to_tendermint, &tmp_dir)
             .overwrite(true)
@@ -62,18 +54,6 @@ impl TmpChild {
 
         init::<_, AC>(opt, genesis)?;
 
-        let genesis_account_cmd = GenesisCommand {
-            home: tmp_dir.to_path_buf(),
-            address,
-            coins: Coins::new(vec![UnsignedCoin {
-                denom: Denom::from_str("uatom").expect("default denom should be valid"),
-                amount: coins.into(),
-            }])
-            .expect("not empty"),
-        };
-
-        genesis_account_add::<G>(genesis_account_cmd)?;
-
         let (_code, _output, _error) = run_script::run(
             r#"
                 tar -xf tendermint.tar.gz
@@ -93,4 +73,13 @@ impl TmpChild {
 
         Ok(Self(child, tmp_dir))
     }
+}
+
+pub fn random_address() -> AccAddress {
+    rand::distributions::Alphanumeric
+        .sample_iter(&mut ThreadRng::default())
+        .take(100)
+        .collect::<Vec<u8>>()
+        .try_into()
+        .expect("generated range is smaller than 255")
 }

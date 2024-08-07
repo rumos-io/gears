@@ -1968,6 +1968,7 @@ dependencies = [
  "prost 0.11.9",
  "protobuf-derive",
  "query-derive",
+ "rand",
  "regex",
  "ripemd",
  "run_script",

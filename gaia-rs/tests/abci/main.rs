@@ -29,6 +29,8 @@ use std::path::Path;
 
 mod scenario_1;
 mod scenario_2;
+#[cfg(test)]
+mod two_tx;
 
 struct User {
     key_pair: KeyPair,
@@ -106,9 +108,8 @@ fn setup_mock_node(
 }
 
 fn generate_txs(
-    msg: gaia_rs::message::Message,
+    msgs: impl IntoIterator<Item = (u64, gaia_rs::message::Message)>,
     user: &User,
-    sequence: u64,
     chain_id: ChainId,
 ) -> Vec<Bytes> {
     let fee = Fee {
@@ -123,22 +124,28 @@ fn generate_txs(
         granter: "".into(),
     };
 
-    let signing_info = SigningInfo {
-        key: &user.key_pair,
-        sequence,
-        account_number: user.account_number,
-    };
+    let mut result = Vec::new();
 
-    let body_bytes = TxBody::new_with_defaults(vec1::vec1![msg]).encode_vec();
+    for (sequence, msg) in msgs {
+        let signing_info = SigningInfo {
+            key: &user.key_pair,
+            sequence,
+            account_number: user.account_number,
+        };
 
-    let raw_tx = gears::crypto::info::create_signed_transaction_direct(
-        vec![signing_info],
-        chain_id,
-        fee,
-        None,
-        body_bytes,
-    )
-    .expect("returns infallible result");
+        let body_bytes = TxBody::new_with_defaults(vec1::vec1![msg]).encode_vec();
 
-    vec![TxRaw::from(raw_tx).encode_to_vec().into()]
+        let raw_tx = gears::crypto::info::create_signed_transaction_direct(
+            vec![signing_info],
+            chain_id.to_owned(),
+            fee.to_owned(),
+            None,
+            body_bytes,
+        )
+        .expect("returns infallible result");
+
+        result.push(TxRaw::from(raw_tx).encode_to_vec().into())
+    }
+
+    result
 }

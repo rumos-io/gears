@@ -1,9 +1,9 @@
 use database::prefix::PrefixDB;
 use database::Database;
 
-use kv_store::types::kv::immutable::KVStore;
-use kv_store::types::query::QueryMultiStore;
-use kv_store::{error::KVStoreError, StoreKey};
+use kv_store::{
+    error::KVStoreError, query::QueryMultiStore, store::kv::immutable::KVStore, StoreKey,
+};
 use tendermint::types::chain_id::ChainId;
 
 use crate::types::store::kv::Store;

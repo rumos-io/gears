@@ -1,7 +1,7 @@
 use std::ops::RangeBounds;
 
 use database::Database;
-use kv_store::types::kv::mutable::KVStoreMut;
+use kv_store::store::kv::mutable::KVStoreMut;
 
 use crate::types::store::gas::{
     errors::GasStoreErrors,

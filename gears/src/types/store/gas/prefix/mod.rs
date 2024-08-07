@@ -1,7 +1,7 @@
 use std::ops::RangeBounds;
 
 use database::Database;
-use kv_store::types::prefix::immutable::ImmutablePrefixStore;
+use kv_store::store::prefix::immutable::ImmutablePrefixStore;
 
 use super::{errors::GasStoreErrors, guard::GasGuard, range::GasRange};
 

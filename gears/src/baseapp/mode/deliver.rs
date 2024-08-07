@@ -1,13 +1,8 @@
 use database::Database;
-use kv_store::types::multi::MultiBank;
-use kv_store::TransactionStore;
+use kv_store::bank::multi::TransactionMultiBank;
 use tendermint::types::proto::event::Event;
-use tendermint::types::proto::header::Header;
 
-use super::{build_tx_gas_meter, ExecutionMode};
-use crate::baseapp::options::NodeOptions;
-use crate::baseapp::ConsensusParams;
-use crate::types::auth::fee::Fee;
+use super::ExecutionMode;
 use crate::types::gas::basic_meter::BasicGasMeter;
 use crate::types::gas::infinite_meter::InfiniteGasMeter;
 use crate::types::gas::kind::BlockKind;
@@ -22,11 +17,11 @@ use crate::{
 #[derive(Debug)]
 pub struct DeliverTxMode<DB, AH: ABCIHandler> {
     pub(crate) block_gas_meter: GasMeter<BlockKind>,
-    pub(crate) multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>,
+    pub(crate) multi_store: TransactionMultiBank<DB, AH::StoreKey>,
 }
 
 impl<DB, AH: ABCIHandler> DeliverTxMode<DB, AH> {
-    pub fn new(max_gas: Gas, multi_store: MultiBank<DB, AH::StoreKey, TransactionStore>) -> Self {
+    pub fn new(max_gas: Gas, multi_store: TransactionMultiBank<DB, AH::StoreKey>) -> Self {
         Self {
             block_gas_meter: GasMeter::new(match max_gas {
                 Gas::Infinite => Box::<InfiniteGasMeter>::default(),
@@ -37,33 +32,7 @@ impl<DB, AH: ABCIHandler> DeliverTxMode<DB, AH> {
     }
 }
 
-impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, AH> {
-    fn multi_store(
-        &mut self,
-    ) -> &mut MultiBank<DB, <AH as ABCIHandler>::StoreKey, TransactionStore> {
-        &mut self.multi_store
-    }
-
-    fn build_ctx(
-        &mut self,
-        height: u32,
-        header: Header,
-        consensus_params: ConsensusParams,
-        fee: Option<&Fee>,
-        options: NodeOptions,
-    ) -> TxContext<'_, DB, AH::StoreKey> {
-        TxContext::new(
-            &mut self.multi_store,
-            height,
-            header,
-            consensus_params,
-            build_tx_gas_meter(height, fee),
-            &mut self.block_gas_meter,
-            false,
-            options,
-        )
-    }
-
+impl<DB: Database, AH: ABCIHandler> ExecutionMode<DB, AH> for DeliverTxMode<DB, AH> {
     fn run_msg<'m>(
         ctx: &mut TxContext<'_, DB, AH::StoreKey>,
         handler: &AH,
@@ -72,12 +41,10 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         for msg in msgs {
             handler
                 .msg(ctx, msg)
-                .inspect_err(|_| ctx.multi_store_mut().caches_clear())? // This may be ignored as `CacheKind` MS gets dropped at end of `run_tx`, but I want to be 100% sure
+                .inspect_err(|_| ctx.multi_store_mut().clear_cache())?
         }
 
-        let events = ctx.events_drain();
-
-        Ok(events)
+        Ok(ctx.events_drain())
     }
 
     fn run_ante_checks(
@@ -85,13 +52,10 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         handler: &AH,
         tx_with_raw: &TxWithRaw<AH::Message>,
     ) -> Result<(), RunTxError> {
-        match handler.run_ante_checks(ctx, tx_with_raw) {
-            Ok(_) => Ok(()),
-            Err(e) => {
-                ctx.multi_store_mut().caches_clear();
-                Err(e.into())
-            }
-        }
+        handler
+            .run_ante_checks(ctx, tx_with_raw)
+            .inspect_err(|_| ctx.multi_store_mut().clear_cache())
+            .map_err(RunTxError::from)
     }
 
     fn runnable(ctx: &mut TxContext<'_, DB, AH::StoreKey>) -> Result<(), RunTxError> {
@@ -100,12 +64,5 @@ impl<DB: Database + Sync + Send, AH: ABCIHandler> ExecutionMode<DB, AH> for Deli
         } else {
             Ok(())
         }
-    }
-
-    fn commit(
-        mut ctx: TxContext<'_, DB, AH::StoreKey>,
-        global_ms: &mut MultiBank<DB, AH::StoreKey, kv_store::ApplicationStore>,
-    ) {
-        global_ms.sync(ctx.commit());
     }
 }

@@ -2,11 +2,9 @@ use std::{cell::RefCell, sync::Arc};
 
 use database::{prefix::PrefixDB, Database};
 use kv_store::{
-    types::{
-        kv::store_cache::CacheCommitList,
-        multi::{immutable::MultiStore, mutable::MultiStoreMut, MultiBank},
-    },
-    StoreKey, TransactionStore,
+    bank::multi::TransactionMultiBank,
+    store::multi::{immutable::MultiStore, mutable::MultiStoreMut},
+    StoreKey,
 };
 use tendermint::types::{
     chain_id::ChainId,
@@ -42,13 +40,13 @@ pub struct TxContext<'a, DB, SK> {
     pub(crate) header: Header,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
     pub(crate) consensus_params: ConsensusParams,
-    multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
+    multi_store: &'a mut TransactionMultiBank<DB, SK>,
     is_check: bool,
 }
 
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
-        multi_store: &'a mut MultiBank<DB, SK, TransactionStore>,
+        multi_store: &'a mut TransactionMultiBank<DB, SK>,
         height: u32,
         header: Header,
         consensus_params: ConsensusParams,
@@ -89,10 +87,6 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
 }
 
 impl<DB: Database, SK: StoreKey> TxContext<'_, DB, SK> {
-    pub(crate) fn commit(&mut self) -> CacheCommitList<SK> {
-        self.multi_store.commit()
-    }
-
     pub fn consensus_params(&self) -> &ConsensusParams {
         &self.consensus_params
     }

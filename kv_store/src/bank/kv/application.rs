@@ -1,6 +1,5 @@
 use std::{
     borrow::Cow,
-    marker::PhantomData,
     ops::RangeBounds,
     sync::{Arc, RwLock},
 };
@@ -8,44 +7,70 @@ use std::{
 use database::Database;
 use trees::iavl::Tree;
 
-use crate::{error::POISONED_LOCK, range::Range, utils::MergedRange};
+use crate::{
+    cache::KVCache,
+    error::{KVStoreError, POISONED_LOCK},
+    range::Range,
+    store::{
+        kv::{immutable::KVStore, mutable::KVStoreMut},
+        prefix::{immutable::ImmutablePrefixStore, mutable::MutablePrefixStore},
+    },
+    utils::MergedRange,
+    TREE_CACHE_SIZE,
+};
 
-use self::store_cache::KVCache;
-
-pub mod cache;
-pub mod commit;
-pub mod immutable;
-pub mod mutable;
-pub mod store_cache;
+use super::transaction::TransactionKVBank;
 
 #[derive(Debug)]
-pub struct KVBank<DB, SK> {
+pub struct ApplicationKVBank<DB> {
     pub(crate) persistent: Arc<RwLock<Tree<DB>>>,
     pub(crate) cache: KVCache,
-    _marker: PhantomData<SK>,
 }
 
-impl<DB: Database, SK> KVBank<DB, SK> {
-    #[inline]
-    pub fn head_commit_hash(&self) -> [u8; 32] {
-        self.persistent.read().expect(POISONED_LOCK).root_hash()
+impl<DB: Database> ApplicationKVBank<DB> {
+    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, KVStoreError> {
+        Ok(Self {
+            persistent: Arc::new(RwLock::new(Tree::new(
+                db,
+                target_version,
+                TREE_CACHE_SIZE
+                    .try_into()
+                    .expect("Unreachable. Tree cache size is > 0"),
+            )?)),
+            cache: Default::default(),
+        })
     }
 
+    /// Read persistent database
     #[inline]
-    pub fn last_committed_version(&self) -> u32 {
-        self.persistent
-            .read()
-            .expect(POISONED_LOCK)
-            .loaded_version()
+    pub fn persistent(&self) -> std::sync::RwLockReadGuard<Tree<DB>> {
+        self.persistent.read().expect(POISONED_LOCK)
     }
 
+    /// Clear uncommitted cache
+    #[inline]
+    pub fn cache_clear(&mut self) {
+        self.cache.storage.clear();
+        self.cache.delete.clear();
+    }
+
+    /// Return transaction store with same tree and copied cache
+    #[inline]
+    pub fn to_tx_kind(&self) -> TransactionKVBank<DB> {
+        TransactionKVBank {
+            persistent: Arc::clone(&self.persistent),
+            tx: Default::default(),
+            block: self.cache.clone(),
+        }
+    }
+
+    /// Delete key from storage
     #[inline]
     pub fn delete(&mut self, k: &[u8]) -> Option<Vec<u8>> {
-        self.cache
-            .delete(k)
-            .or(self.persistent.read().expect(POISONED_LOCK).get(k))
+        self.cache.delete(k).or(self.persistent().get(k))
     }
 
+    /// Set or append new key to storage
     #[inline]
     pub fn set<KI: IntoIterator<Item = u8>, VI: IntoIterator<Item = u8>>(
         &mut self,
@@ -55,18 +80,35 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         self.cache.set(key, value)
     }
 
-    pub fn clear_cache(&mut self) {
-        self.cache.storage.clear();
-        self.cache.delete.clear();
+    /// Return value of key in storage.
+    ///
+    /// _Note_: deleted keys wont be returned even before commit.
+    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
+        self.cache
+            .get(k.as_ref())
+            .ok()?
+            .cloned()
+            .or(self.persistent().get(k.as_ref()))
     }
 
-    pub fn get<R: AsRef<[u8]> + ?Sized>(&self, k: &R) -> Option<Vec<u8>> {
-        match self.cache.get(k.as_ref()) {
-            Ok(var) => var,
-            Err(_) => return None,
+    pub fn prefix_store<I: IntoIterator<Item = u8>>(
+        &self,
+        prefix: I,
+    ) -> ImmutablePrefixStore<'_, DB> {
+        ImmutablePrefixStore {
+            store: KVStore::from(self),
+            prefix: prefix.into_iter().collect(),
         }
-        .cloned()
-        .or(self.persistent.read().expect(POISONED_LOCK).get(k.as_ref()))
+    }
+
+    pub fn prefix_store_mut<I: IntoIterator<Item = u8>>(
+        &mut self,
+        prefix: I,
+    ) -> MutablePrefixStore<'_, DB> {
+        MutablePrefixStore {
+            store: KVStoreMut::from(self),
+            prefix: prefix.into_iter().collect(),
+        }
     }
 
     pub fn range<R: RangeBounds<Vec<u8>> + Clone>(&self, range: R) -> Range<'_, DB> {
@@ -86,24 +128,76 @@ impl<DB: Database, SK> KVBank<DB, SK> {
         MergedRange::merge(cached_values, persisted_values).into()
     }
 
-    pub fn caches_update(&mut self, KVCache { storage, delete }: KVCache) {
-        self.cache.storage.extend(storage);
-        self.cache.delete.extend(delete);
+    pub fn consume_block_cache(&mut self, other: &mut TransactionKVBank<DB>) {
+        let (set_values, del_values) = other.block.take();
+
+        for (key, value) in set_values {
+            self.cache.set(key, value)
+        }
+
+        for del in del_values {
+            self.cache.delete(&del);
+        }
+    }
+
+    pub fn commit(&mut self) -> [u8; 32] {
+        let (cache, delete) = self.cache.take();
+
+        let mut persistent = self.persistent.write().expect(POISONED_LOCK);
+
+        cache
+            .into_iter()
+            .filter(|(key, _)| !delete.contains(key))
+            .for_each(|(key, value)| persistent.set(key, value));
+
+        for key in delete {
+            let _ = persistent.remove(&key);
+        }
+
+        //TODO: is it safe to assume this won't ever error?
+        persistent.save_version().ok().unwrap_or_default().0
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use std::collections::BTreeMap;
 
     use database::MemDB;
 
-    use crate::TREE_CACHE_SIZE;
+    use crate::{
+        bank::kv::test_utils::{app_store_build, tx_store_build},
+        TREE_CACHE_SIZE,
+    };
 
     use super::*;
 
-    #[derive(Debug, Clone, Hash, Default, PartialEq, Eq, PartialOrd, Ord)]
-    pub struct TestStore;
+    #[test]
+    fn to_tx_kind_returns_empty() {
+        let store = app_store_build([], [], []);
+
+        let result = store.to_tx_kind();
+        let expected = tx_store_build([], [], [], [], []);
+
+        assert_eq!(result.block, expected.block);
+        assert_eq!(result.tx, expected.tx);
+    }
+
+    #[test]
+    fn to_tx_kind_returns_with_cache() {
+        let store = app_store_build([(1, 11)], [(2, 22), (3, 33)], [4, 5]);
+
+        let result = store.to_tx_kind();
+        let expected = tx_store_build([(1, 11)], [], [(2, 22), (3, 33)], [], [4, 5]);
+
+        assert_eq!(result.block, expected.block);
+        assert_eq!(result.tx, expected.tx);
+
+        let result_get = result.get(&[1]);
+
+        assert_eq!(Some(vec![11]), result_get)
+    }
 
     #[test]
     fn delete_empty_cache() {
@@ -389,11 +483,10 @@ mod tests {
         .expect("Failed to create Tree")
     }
 
-    fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> KVBank<MemDB, TestStore> {
-        KVBank {
+    fn build_store(tree: Tree<MemDB>, cache: Option<KVCache>) -> ApplicationKVBank<MemDB> {
+        ApplicationKVBank {
             persistent: Arc::new(RwLock::new(tree)),
             cache: cache.unwrap_or_default(),
-            _marker: PhantomData,
         }
     }
 }
