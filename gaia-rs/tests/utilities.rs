@@ -18,7 +18,7 @@ use gears::{
         },
     },
     config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
-    store::database::DBBuilder,
+    store::database::{rocks::RocksDB, DBBuilder},
     types::base::coins::UnsignedCoins,
 };
 use gears::{
@@ -61,7 +61,7 @@ pub fn run_gaia_and_tendermint(
     std::thread::sleep(Duration::from_secs(10));
 
     let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<GaiaCore, _, _, _>::new(
+        let node = NodeApplication::<GaiaCore, RocksDB, _, _>::new(
             GaiaCore,
             DBBuilder,
             GaiaABCIHandler::new,

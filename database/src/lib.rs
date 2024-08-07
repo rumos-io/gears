@@ -6,6 +6,7 @@ mod memory;
 pub mod prefix;
 #[cfg(feature = "rocksdb")]
 pub mod rocks;
+pub mod sled;
 
 use std::fmt::Debug;
 

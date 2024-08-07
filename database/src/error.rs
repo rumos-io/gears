@@ -1,13 +1,17 @@
-#[cfg(feature = "rocksdb")]
+#[cfg(any(feature = "rocksdb", feature = "sled"))]
 pub use self::inner::*;
 
-#[cfg(feature = "rocksdb")]
+#[cfg(any(feature = "rocksdb", feature = "sled"))]
 mod inner {
     use thiserror::Error;
 
     #[derive(Error, Debug, PartialEq, Eq)]
-    pub enum Error {
+    pub enum DatabaseError {
+        #[cfg(feature = "rocksdb")]
         #[error(transparent)]
-        Decode(#[from] rocksdb::Error),
+        Rocks(#[from] rocksdb::Error),
+        #[cfg(feature = "sled")]
+        #[error(transparent)]
+        Sleb(#[from] sled::Error),
     }
 }
