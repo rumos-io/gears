@@ -9,7 +9,7 @@ use gears::application::client::ClientApplication;
 use gears::application::node::NodeApplication;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
-use gears::store::database::rocks::RocksDB;
+use gears::store::database::sled::SledDb;
 use gears::store::database::DBBuilder;
 
 type Args = CliApplicationArgs<
@@ -26,7 +26,7 @@ fn main() -> anyhow::Result<()> {
     args.execute_or_help(
         |command| ClientApplication::new(GaiaCoreClient).execute(command.try_into()?),
         |command| {
-            NodeApplication::<GaiaCore, RocksDB, _, _>::new(
+            NodeApplication::<GaiaCore, SledDb, _, _>::new(
                 GaiaCore,
                 DBBuilder,
                 GaiaABCIHandler::new,

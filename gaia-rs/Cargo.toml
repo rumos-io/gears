@@ -16,7 +16,7 @@ gov = { path = "../x/gov" }
 gears = { path = "../gears", features = [
     "cli",
     "xmods",
-    "rocksdb",
+    "sled",
     "governance",
 ] }
 staking = { path = "../x/staking" }

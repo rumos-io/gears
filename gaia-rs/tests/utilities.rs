@@ -18,11 +18,11 @@ use gears::{
         },
     },
     config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
+    store::database::{sled::SledDb, DBBuilder},
     types::{
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         denom::Denom,
     },
-    store::database::{rocks::RocksDB, DBBuilder},
 };
 use gears::{
     types::address::AccAddress,
@@ -68,7 +68,7 @@ pub fn run_gaia_and_tendermint(
     std::thread::sleep(Duration::from_secs(10));
 
     let server_thread = std::thread::spawn(move || {
-        let node = NodeApplication::<GaiaCore, RocksDB, _, _>::new(
+        let node = NodeApplication::<GaiaCore, SledDb, _, _>::new(
             GaiaCore,
             DBBuilder,
             GaiaABCIHandler::new,
