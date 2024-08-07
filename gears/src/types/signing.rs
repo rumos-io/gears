@@ -2,13 +2,12 @@ use core_types::any::google::Any;
 use core_types::errors::CoreError as IbcError;
 use core_types::tx::mode_info::ModeInfo;
 use core_types::Protobuf;
-use keyring::error::DecodeError;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use serde_with::DisplayFromStr;
 
+use crate::crypto::public::DecodeError;
 use crate::crypto::public::PublicKey;
-use crate::crypto::secp256k1::RawSecp256k1PubKey;
 
 pub mod inner {
     pub use core_types::signing::SignerInfo;
@@ -37,18 +36,11 @@ impl TryFrom<inner::SignerInfo> for SignerInfo {
     type Error = IbcError;
 
     fn try_from(raw: inner::SignerInfo) -> Result<Self, Self::Error> {
-        let key: Option<PublicKey> = match raw.public_key {
-            Some(any) => {
-                let raw: RawSecp256k1PubKey = any
-                    .try_into()
-                    .map_err(|e: DecodeError| IbcError::DecodeAny(e.to_string()))?;
-
-                Some(PublicKey::Secp256k1(raw.try_into().map_err(
-                    |e: DecodeError| IbcError::DecodeAny(e.to_string()),
-                )?))
-            }
-            None => None,
-        };
+        let key = raw
+            .public_key
+            .map(TryInto::try_into)
+            .transpose()
+            .map_err(|e: DecodeError| IbcError::DecodeAny(e.to_string()))?;
         Ok(SignerInfo {
             public_key: key,
             mode_info: raw
@@ -64,9 +56,7 @@ impl TryFrom<inner::SignerInfo> for SignerInfo {
 
 impl From<SignerInfo> for inner::SignerInfo {
     fn from(info: SignerInfo) -> inner::SignerInfo {
-        let key: Option<Any> = info.public_key.map(|key| match key {
-            PublicKey::Secp256k1(key) => RawSecp256k1PubKey::from(key).into(),
-        });
+        let key: Option<Any> = info.public_key.map(Into::into);
 
         Self {
             public_key: key,

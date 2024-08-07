@@ -206,15 +206,18 @@ impl<
             .bank_keeper
             .get_all_balances::<DB, InitContext<'_, DB, SK>>(ctx, self.bonded_module.get_address())
             .unwrap_gas();
-        if bonded_balance
-            .clone()
-            .into_iter()
-            .all(|e| e.amount.is_zero())
-        {
-            self.auth_keeper
-                .check_create_new_module_account(ctx, &self.bonded_module)
-                .unwrap_gas();
-        }
+
+        // there's a check in the cosmos SDK to ensure that a new module account is only created if the balance is zero
+        // (the logic being that the module account will be set in the genesis file and created by the auth module
+        // if the balance is non-zero)
+        // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/genesis.go#L107
+        // However the call here in the cosmos SDK https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/genesis.go#L101
+        // has a side effect of creating a new module account.
+        // So whatever the bonded balance a call is made in the staking module to create a new module account.
+        self.auth_keeper
+            .check_create_new_module_account(ctx, &self.bonded_module)
+            .unwrap_gas();
+
         // if balance is different from bonded coins panic because genesis is most likely malformed
         assert_eq!(
             bonded_balance, bonded_coins,
@@ -229,15 +232,11 @@ impl<
                 self.not_bonded_module.get_address(),
             )
             .unwrap_gas();
-        if not_bonded_balance
-            .clone()
-            .into_iter()
-            .all(|e| e.amount.is_zero())
-        {
-            self.auth_keeper
-                .check_create_new_module_account(ctx, &self.not_bonded_module)
-                .unwrap_gas();
-        }
+
+        // see comment above for the logic of creating a new module account
+        self.auth_keeper
+            .check_create_new_module_account(ctx, &self.not_bonded_module)
+            .unwrap_gas();
 
         // if balance is different from non bonded coins panic because genesis is most likely malformed
         assert_eq!(
@@ -252,15 +251,16 @@ impl<
             for last_validator in genesis.last_validator_powers {
                 self.set_last_validator_power(ctx, &last_validator)
                     .unwrap_gas();
-                let validator = self
-                    .validator(ctx, &last_validator.address)
-                    .unwrap_gas()
-                    .expect("validator in the store was not found");
-                // TODO: check unwraps and update types to omit conversion
-                let mut update = validator
-                    .abci_validator_update(self.power_reduction(ctx))
-                    .unwrap();
-                update.power = (last_validator.power as u64).try_into().unwrap();
+                let validator = self.validator(ctx, &last_validator.address).unwrap_gas();
+
+                let Some(validator) = validator else {
+                    panic!("invalid genesis file: validator in `last_validator_powers` list not found in `validators` list");
+                };
+
+                let update = ValidatorUpdate {
+                    pub_key: validator.consensus_pubkey,
+                    power: (last_validator.power as u64).try_into().unwrap(), //TODO: unwrap
+                };
                 res.push(update);
             }
         } else {

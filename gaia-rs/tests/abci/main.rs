@@ -24,8 +24,11 @@ use gears::types::base::coins::Coins;
 use gears::types::tx::body::TxBody;
 use keyring::key::pair::KeyPair;
 use prost::Message;
+use std::fs;
+use std::path::Path;
 
 mod scenario_1;
+mod scenario_2;
 
 struct User {
     key_pair: KeyPair,
@@ -38,7 +41,9 @@ impl User {
     }
 }
 
-fn setup_mock_node() -> (
+fn setup_mock_node(
+    genesis_path: Option<impl AsRef<Path>>,
+) -> (
     MockNode<BaseApp<MemDB, GaiaParamsStoreKey, GaiaABCIHandler, GaiaApplication>, GenesisState>,
     User,
 ) {
@@ -59,13 +64,23 @@ fn setup_mock_node() -> (
     let address = key_pair.get_address();
     let consensus_key = gears::tendermint::crypto::new_private_key();
 
-    let mut genesis = GenesisState::default();
-    genesis
-        .add_genesis_account(
-            address.clone(),
-            "34uatom".parse().expect("hard coded coin is valid"),
-        )
-        .expect("won't fail since there's no existing account");
+    let genesis = if let Some(path) = genesis_path {
+        println!("Loading genesis state from {:?}", path.as_ref());
+        // print current directory
+        let current_dir = std::env::current_dir().unwrap();
+        println!("The current directory is {}", current_dir.display());
+        let genesis_state = fs::read_to_string(path.as_ref()).unwrap();
+        serde_json::from_str(&genesis_state).unwrap()
+    } else {
+        let mut genesis = GenesisState::default();
+        genesis
+            .add_genesis_account(
+                address.clone(),
+                "34uatom".parse().expect("hard coded coin is valid"),
+            )
+            .expect("won't fail since there's no existing account");
+        genesis
+    };
 
     let init_state = InitState {
         time: Timestamp::UNIX_EPOCH,

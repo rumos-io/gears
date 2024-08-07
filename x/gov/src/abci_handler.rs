@@ -225,8 +225,9 @@ impl<
         &self,
         ctx: &mut InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
-    ) {
-        self.keeper.init_genesis(ctx, genesis)
+    ) -> Vec<ValidatorUpdate> {
+        self.keeper.init_genesis(ctx, genesis);
+        vec![]
     }
 
     fn query<DB: Database>(
