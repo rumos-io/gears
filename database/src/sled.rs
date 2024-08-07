@@ -9,11 +9,11 @@ impl DatabaseBuilder<SledDb> for DBBuilder {
 }
 
 #[derive(Debug, Clone)]
-pub struct SledDb(sled::Db);
+pub struct SledDb(::sled::Db);
 
 impl SledDb {
     pub fn new<P: AsRef<std::path::Path>>(path: P) -> Result<Self, DatabaseError> {
-        Ok(Self(sled::open(path.as_ref())?))
+        Ok(Self(::sled::open(path.as_ref())?))
     }
 }
 

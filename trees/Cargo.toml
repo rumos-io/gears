@@ -21,7 +21,6 @@ thiserror = {workspace = true}
 caches = "0.2.4"
 
 [dev-dependencies]
-database = {path = "../database", features = ["rocksdb"]}
 criterion = "0.5.1"
 handlebars = { workspace = true }
 hex = { workspace = true }
@@ -38,3 +37,7 @@ name = "iavl_benchmark"
 [[example]]
 name = "benchtable"
 test = true
+
+[features]
+default = [ ]
+bench = ["database/rocksdb"]

@@ -6,6 +6,7 @@ mod memory;
 pub mod prefix;
 #[cfg(feature = "rocksdb")]
 pub mod rocks;
+#[cfg(feature = "sled")]
 pub mod sled;
 
 use std::fmt::Debug;
@@ -13,7 +14,7 @@ use std::fmt::Debug;
 pub use memory::*;
 
 /// Default builder which implements(if enable) builds for all db's
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DBBuilder;
 
 pub trait Database: Clone + Send + Sync + 'static {
