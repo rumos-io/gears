@@ -1,12 +1,9 @@
-use crate::{error::Error, Database, DatabaseBuilder};
+use crate::{error::Error, DBBuilder, Database, DatabaseBuilder};
 use std::{path::Path, sync::Arc};
 
 use rocksdb::{DBWithThreadMode, SingleThreaded};
 
-#[derive(Debug, Clone)]
-pub struct RocksDBBuilder;
-
-impl DatabaseBuilder<RocksDB> for RocksDBBuilder {
+impl DatabaseBuilder<RocksDB> for DBBuilder {
     type Err = Error;
 
     fn build<P: AsRef<std::path::Path>>(self, path: P) -> Result<RocksDB, Error> {

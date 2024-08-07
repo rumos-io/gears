@@ -11,6 +11,10 @@ use std::fmt::Debug;
 
 pub use memory::*;
 
+/// Default builder which implements(if enable) builds for all db's
+#[derive(Debug, Clone)]
+pub struct DBBuilder;
+
 pub trait Database: Clone + Send + Sync + 'static {
     fn get(&self, key: &[u8]) -> Option<Vec<u8>>;
 

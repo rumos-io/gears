@@ -9,7 +9,7 @@ use gears::application::client::ClientApplication;
 use gears::application::node::NodeApplication;
 use gears::cli::aux::CliNilAuxCommand;
 use gears::cli::CliApplicationArgs;
-use gears::store::database::rocks::RocksDBBuilder;
+use gears::store::database::DBBuilder;
 
 type Args = CliApplicationArgs<
     GaiaApplication,
@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
         |command| {
             NodeApplication::<GaiaCore, _, _, _>::new(
                 GaiaCore,
-                RocksDBBuilder,
+                DBBuilder,
                 GaiaABCIHandler::new,
                 GaiaParamsStoreKey::BaseApp,
             )
