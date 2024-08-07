@@ -46,7 +46,7 @@ pub fn acc_address() -> AccAddress {
 
 /// Helper method to start gaia node and tendermint in tmp folder
 pub fn run_gaia_and_tendermint(
-    accounts: impl IntoIterator<Item = (AccAddress, u32)>,
+    accounts: impl IntoIterator<Item = (AccAddress, UnsignedCoin)>,
 ) -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.to_path_buf();
@@ -56,14 +56,8 @@ pub fn run_gaia_and_tendermint(
     let genesis = {
         let mut genesis = MockGenesis::default();
 
-        for (acc, coins) in accounts {
-            genesis.add_genesis_account(
-                acc,
-                UnsignedCoins::new([UnsignedCoin {
-                    denom: Denom::from_str("uatom").expect("default denom should be valid"),
-                    amount: coins.into(),
-                }])?,
-            )?;
+        for (acc, coin) in accounts {
+            genesis.add_genesis_account(acc, UnsignedCoins::new([coin])?)?;
         }
 
         genesis
@@ -126,4 +120,11 @@ pub fn key_add(home: impl Into<PathBuf>, name: &str, mnemonic: &str) -> anyhow::
     keys(KeyCommand::Add(cmd))?;
 
     Ok(())
+}
+
+pub fn default_coin(amount: u32) -> UnsignedCoin {
+    UnsignedCoin {
+        denom: Denom::from_str("uatom").expect("default denom should be valid"),
+        amount: amount.into(),
+    }
 }

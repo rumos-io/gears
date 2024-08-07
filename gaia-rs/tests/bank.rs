@@ -28,7 +28,7 @@ use gears::{
     },
     types::{address::AccAddress, base::coin::UnsignedCoin, denom::Denom},
 };
-use utilities::{acc_address, run_gaia_and_tendermint};
+use utilities::{acc_address, default_coin, run_gaia_and_tendermint};
 
 use crate::utilities::KEY_NAME;
 
@@ -38,7 +38,8 @@ mod utilities;
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn balances_query() -> anyhow::Result<()> {
-    let (_tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), 34)])?;
+    let (_tendermint, _server_thread) =
+        run_gaia_and_tendermint([(acc_address(), default_coin(34))])?;
 
     let query = BalancesCommand {
         address: AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")?,
@@ -74,7 +75,8 @@ fn balances_query() -> anyhow::Result<()> {
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn denom_query() -> anyhow::Result<()> {
-    let (_tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), 34)])?;
+    let (_tendermint, _server_thread) =
+        run_gaia_and_tendermint([(acc_address(), default_coin(34))])?;
 
     let result = run_query(
         QueryCommand {
@@ -102,7 +104,8 @@ fn denom_query() -> anyhow::Result<()> {
 #[test]
 #[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn send_tx() -> anyhow::Result<()> {
-    let (tendermint, _server_thread) = run_gaia_and_tendermint([(acc_address(), 200_000_000_u32)])?;
+    let (tendermint, _server_thread) =
+        run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))])?;
 
     let tx_cmd = BankCommands::Send {
         to_address: AccAddress::from_bech32("cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut")?,
@@ -167,18 +170,18 @@ fn send_tx() -> anyhow::Result<()> {
 // #[test]
 // #[ignore = "rust usually run test in || while this tests be started ony by one"]
 // fn send_tx_in_parallel() -> anyhow::Result<()> {
-//     let coin = 200_000_000_u32;
+//     let coin = default_coin(200_000_000_u32);
 
 //     let addresses = [
-//         (random_address(), coin),
-//         (random_address(), coin),
-//         (random_address(), coin),
-//         (random_address(), coin),
-//         (random_address(), coin),
-//         (random_address(), coin),
-//         (random_address(), coin),
-//         (random_address(), coin),
-//         (random_address(), coin),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
+//         (random_address(), coin.clone()),
 //         (random_address(), coin),
 //     ];
 
