@@ -96,6 +96,8 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             if res.code != 0 {
                 println!("Error: {:?}", res.log);
             }
+
+            assert!(res.code == 0);
         }
 
         self.app.end_block(RequestEndBlock {

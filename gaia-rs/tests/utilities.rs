@@ -1,7 +1,7 @@
 //! This modules should be added to test modules with `#[path = "./utilities.rs"]` as it contains gaia specific code and dedicated crate is bothersome.
 #![allow(dead_code)]
 
-use std::{path::PathBuf, time::Duration};
+use std::{path::PathBuf, str::FromStr, time::Duration};
 
 use gaia_rs::{
     abci_handler::GaiaABCIHandler, config::AppConfig, genesis::GenesisState,
@@ -19,7 +19,10 @@ use gears::{
     },
     config::{DEFAULT_ADDRESS, DEFAULT_GRPC_LISTEN_ADDR, DEFAULT_REST_LISTEN_ADDR},
     store::database::rocks::RocksDBBuilder,
-    types::base::coins::UnsignedCoins,
+    types::{
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
+        denom::Denom,
+    },
 };
 use gears::{
     types::address::AccAddress,
@@ -43,20 +46,24 @@ pub fn acc_address() -> AccAddress {
 
 /// Helper method to start gaia node and tendermint in tmp folder
 pub fn run_gaia_and_tendermint(
-    coins: u32,
+    accounts: impl IntoIterator<Item = (AccAddress, UnsignedCoin)>,
 ) -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.to_path_buf();
 
     key_add(tmp_dir.to_path_buf(), KEY_NAME, BIP39_MNEMONIC)?;
 
-    let tendermint = TmpChild::run_tendermint::<_, AppConfig>(
-        tmp_dir,
-        TENDERMINT_PATH,
-        &MockGenesis::default(),
-        acc_address(),
-        coins,
-    )?;
+    let genesis = {
+        let mut genesis = MockGenesis::default();
+
+        for (acc, coin) in accounts {
+            genesis.add_genesis_account(acc, UnsignedCoins::new([coin])?)?;
+        }
+
+        genesis
+    };
+
+    let tendermint = TmpChild::run_tendermint::<_, AppConfig>(tmp_dir, TENDERMINT_PATH, &genesis)?;
 
     std::thread::sleep(Duration::from_secs(10));
 
@@ -113,4 +120,11 @@ pub fn key_add(home: impl Into<PathBuf>, name: &str, mnemonic: &str) -> anyhow::
     keys(KeyCommand::Add(cmd))?;
 
     Ok(())
+}
+
+pub fn default_coin(amount: u32) -> UnsignedCoin {
+    UnsignedCoin {
+        denom: Denom::from_str("uatom").expect("default denom should be valid"),
+        amount: amount.into(),
+    }
 }

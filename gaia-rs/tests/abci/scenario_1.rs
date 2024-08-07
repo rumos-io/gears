@@ -30,7 +30,7 @@ fn scenario_1() {
         amount,
     }));
 
-    let txs = generate_txs(msg, &user, 0, node.chain_id().clone());
+    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(

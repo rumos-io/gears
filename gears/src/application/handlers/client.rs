@@ -67,11 +67,11 @@ pub trait TxHandler {
 
         let address = key.get_address();
 
-        let account = get_account_latest(address, node.as_str())?;
+        let account = get_account_latest(address.to_owned(), node.as_str())?;
 
         let account = account
             .account
-            .ok_or_else(|| anyhow!("account not found"))?;
+            .ok_or_else(|| anyhow!("account not found: {}", address))?;
 
         let signing_infos = vec![SigningInfo {
             key,
