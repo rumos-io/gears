@@ -13,6 +13,9 @@ test:
 install:
 # "cargo install --path" ignores the lockfile, so we need to use "--locked" to ensure we use the same versions as in the lockfile
 # see https://github.com/rust-lang/cargo/issues/6983
+	cargo install --path ./gaia-rs --locked --no-default-features --features=rocksdb
+
+install-sled:
 	cargo install --path ./gaia-rs --locked
 
 init:
@@ -30,4 +33,4 @@ tendermint-start-second:
 run-second:
 	cargo run -- run --home ~/.gaia-rs-second --address "127.0.0.1:26661" --rest-listen-addr "127.0.0.1:1318" --min-gas-prices 0uatom
 
-.PHONY: run run-debug test install init tendermint-start init-second tendermint-start-second run-second
+.PHONY: run run-debug test install install-sled init tendermint-start init-second tendermint-start-second run-second

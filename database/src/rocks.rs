@@ -1,15 +1,12 @@
-use crate::{error::Error, Database, DatabaseBuilder};
+use crate::{error::DatabaseError, DBBuilder, Database, DatabaseBuilder};
 use std::{path::Path, sync::Arc};
 
 use rocksdb::{DBWithThreadMode, SingleThreaded};
 
-#[derive(Debug, Clone)]
-pub struct RocksDBBuilder;
+impl DatabaseBuilder<RocksDB> for DBBuilder {
+    type Err = DatabaseError;
 
-impl DatabaseBuilder<RocksDB> for RocksDBBuilder {
-    type Err = Error;
-
-    fn build<P: AsRef<std::path::Path>>(self, path: P) -> Result<RocksDB, Error> {
+    fn build<P: AsRef<std::path::Path>>(self, path: P) -> Result<RocksDB, DatabaseError> {
         RocksDB::new(path)
     }
 }
@@ -22,7 +19,7 @@ pub struct RocksDB {
 // TODO: remove panics
 
 impl RocksDB {
-    pub fn new<P>(path: P) -> Result<RocksDB, Error>
+    pub fn new<P>(path: P) -> Result<RocksDB, DatabaseError>
     where
         P: AsRef<Path>,
     {

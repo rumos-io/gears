@@ -16,7 +16,6 @@ gov = { path = "../x/gov" }
 gears = { path = "../gears", features = [
     "cli",
     "xmods",
-    "rocksdb",
     "governance",
 ] }
 staking = { path = "../x/staking" }
@@ -54,3 +53,9 @@ hex = { workspace = true }
 bip32 = { workspace = true }
 keyring = { path = "../keyring" }
 vec1 = { workspace = true }
+
+
+[features]
+default =  [ "sled" ]
+sled = ["gears/sled"]
+rocksdb = ["gears/rocksdb"]
