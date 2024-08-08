@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-use crate::{
+use tendermint::{
     application::ABCIApplication,
     types::{
         chain_id::ChainId,
