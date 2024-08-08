@@ -151,9 +151,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> Keeper<SK, PSK, M> {
         self.auth_params_keeper.set(ctx, genesis.params);
 
         // sanitizing
-        genesis
-            .accounts
-            .sort_by(|a, b| a.get_account_number().cmp(&b.get_account_number()));
+        genesis.accounts.sort_by_key(|a| a.get_account_number());
 
         for mut acct in genesis.accounts {
             acct.set_account_number(self.get_next_account_number(ctx).unwrap_gas());
