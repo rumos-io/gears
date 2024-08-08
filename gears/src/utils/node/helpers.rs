@@ -1,6 +1,7 @@
 use bytes::Bytes;
 
 use core_types::Protobuf as _;
+use kv_store::ext::UnwrapInfallible;
 use prost::Message;
 use tendermint::types::chain_id::ChainId;
 
@@ -50,7 +51,7 @@ pub fn generate_txs<M: TxMessage>(
             None,
             body_bytes,
         )
-        .expect("returns infallible result");
+        .unwrap_infallible();
 
         result.push(
             core_types::tx::raw::TxRaw::from(raw_tx)
