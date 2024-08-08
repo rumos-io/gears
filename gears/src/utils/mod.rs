@@ -1,2 +1,2 @@
-pub mod mock_node;
+pub mod node;
 pub mod tendermint;

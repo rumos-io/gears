@@ -13,7 +13,7 @@ use gears::tendermint::types::chain_id::ChainId;
 use gears::tendermint::types::proto::consensus::ConsensusParams;
 use gears::tendermint::types::proto::validator::{ValidatorUpdate, VotingPower};
 use gears::tendermint::types::time::timestamp::Timestamp;
-use gears::utils::mock_node::{InitState, MockNode, User};
+use gears::utils::node::{InitState, MockNode, User};
 use keyring::key::pair::KeyPair;
 use std::fs;
 use std::path::Path;

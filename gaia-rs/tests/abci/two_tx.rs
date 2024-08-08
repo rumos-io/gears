@@ -1,6 +1,6 @@
 use gears::types::base::coins::Coins;
 use gears::types::msg::send::MsgSend;
-use gears::utils::mock_node::generate_txs;
+use gears::utils::node::generate_txs;
 use gears::{tendermint::types::time::timestamp::Timestamp, types::address::AccAddress};
 
 use crate::setup_mock_node;
