@@ -94,7 +94,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             let res = self.app.deliver_tx(RequestDeliverTx { tx });
 
             if res.code != 0 {
-                println!("Error: {:?}", res.log);
+                eprintln!("Error: {:?}", res.log);
             }
 
             assert!(res.code == 0);
