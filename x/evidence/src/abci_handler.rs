@@ -1,7 +1,4 @@
-use crate::{
-    types::{Evidence, EvidenceHandler},
-    GenesisState, Keeper,
-};
+use crate::{types::Evidence, GenesisState, Keeper};
 use gears::{
     context::init::InitContext,
     core::any::google::Any,
@@ -18,12 +15,11 @@ pub struct ABCIHandler<
     StkK: SlashingStakingKeeper<SK, M>,
     SlsK: EvidenceSlashingKeeper<SK, M>,
     E: Evidence + Default,
-    EH: EvidenceHandler<E>,
     M: Module,
 > where
     <E as std::convert::TryFrom<Any>>::Error: std::fmt::Debug,
 {
-    keeper: Keeper<SK, StkK, SlsK, E, EH, M>,
+    keeper: Keeper<SK, StkK, SlsK, E, M>,
 }
 
 impl<
@@ -31,17 +27,22 @@ impl<
         StkK: SlashingStakingKeeper<SK, M>,
         SlsK: EvidenceSlashingKeeper<SK, M>,
         E: Evidence + Default,
-        EH: EvidenceHandler<E>,
         M: Module,
-    > ABCIHandler<SK, StkK, SlsK, E, EH, M>
+    > ABCIHandler<SK, StkK, SlsK, E, M>
 where
     <E as std::convert::TryFrom<Any>>::Error: std::fmt::Debug,
 {
-    pub fn new(keeper: Keeper<SK, StkK, SlsK, E, EH, M>) -> Self {
+    pub fn new(keeper: Keeper<SK, StkK, SlsK, E, M>) -> Self {
         ABCIHandler { keeper }
     }
 
-    pub fn genesis<DB: Database>(&self, ctx: &mut InitContext<'_, DB, SK>, genesis: GenesisState) {
-        self.keeper.init_genesis(ctx, genesis)
+    pub fn genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState<E>,
+    ) {
+        if let Err(e) = self.keeper.init_genesis(ctx, genesis) {
+            panic!("Cannot perform evidence genesis.\n{e}");
+        }
     }
 }

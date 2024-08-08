@@ -1,7 +1,4 @@
-use crate::{
-    types::{Evidence, EvidenceHandler},
-    GenesisState,
-};
+use crate::{errors::EvidenceError, types::Evidence, GenesisState};
 use gears::{
     context::{init::InitContext, QueryableContext, TransactionalContext},
     core::any::google::Any,
@@ -27,7 +24,6 @@ pub struct Keeper<
     StkK: SlashingStakingKeeper<SK, M>,
     SlsK: EvidenceSlashingKeeper<SK, M>,
     E: Evidence + Default,
-    EH: EvidenceHandler<E>,
     M: Module,
 > where
     <E as std::convert::TryFrom<Any>>::Error: std::fmt::Debug,
@@ -39,7 +35,7 @@ pub struct Keeper<
     #[allow(dead_code)]
     slashing_keeper: SlsK,
     #[allow(dead_code)]
-    evidence_handler: Option<EH>,
+    evidence_handler: Option<E>,
     _module: PhantomData<(M, E)>,
 }
 
@@ -48,9 +44,8 @@ impl<
         StkK: SlashingStakingKeeper<SK, M>,
         SlsK: EvidenceSlashingKeeper<SK, M>,
         E: Evidence + Default,
-        EH: EvidenceHandler<E>,
         M: Module,
-    > Keeper<SK, StkK, SlsK, E, EH, M>
+    > Keeper<SK, StkK, SlsK, E, M>
 where
     <E as std::convert::TryFrom<Any>>::Error: std::fmt::Debug,
 {
@@ -58,7 +53,7 @@ where
         store_key: SK,
         staking_keeper: StkK,
         slashing_keeper: SlsK,
-        evidence_handler: Option<EH>,
+        evidence_handler: Option<E>,
     ) -> Self {
         Self {
             store_key,
@@ -74,20 +69,15 @@ where
     pub fn init_genesis<DB: Database>(
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
-    ) {
-        if let Err(e) = genesis.validate::<E>() {
-            panic!("failed to validate evidence genesis state: {e}");
-        }
-
+        genesis: GenesisState<E>,
+    ) -> Result<(), EvidenceError> {
         for e in genesis.evidence {
-            let evidence = E::try_from(e).expect("validation of types is passed");
-            if self.evidence(ctx, evidence.hash()).unwrap_gas().is_some() {
-                panic!("evidence with hash {} already exists", evidence.hash());
+            if self.evidence(ctx, e.hash()).unwrap_gas().is_some() {
+                return Err(EvidenceError::AlreadyExists(e.hash()));
             }
-
-            self.set_evidence(ctx, &evidence).unwrap_gas();
+            self.set_evidence(ctx, &e).unwrap_gas();
         }
+        Ok(())
     }
 
     /// evidence gets Evidence by hash in the module's KVStore.
