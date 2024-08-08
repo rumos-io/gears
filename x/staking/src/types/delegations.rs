@@ -68,14 +68,12 @@ impl TryFrom<inner::Delegation> for Delegation {
 
     fn try_from(proto: inner::Delegation) -> Result<Self, Self::Error> {
         Ok(Delegation {
-            delegator_address: AccAddress::from_bech32(&proto.delegator_address).map_err(|e| {
-                CoreError::DecodeGeneral(format!("delegator_address: {}", e.to_string()))
-            })?,
-            validator_address: ValAddress::from_bech32(&proto.validator_address).map_err(|e| {
-                CoreError::DecodeGeneral(format!("validator_address: {}", e.to_string()))
-            })?,
+            delegator_address: AccAddress::from_bech32(&proto.delegator_address)
+                .map_err(|e| CoreError::DecodeGeneral(format!("delegator_address: {}", e)))?,
+            validator_address: ValAddress::from_bech32(&proto.validator_address)
+                .map_err(|e| CoreError::DecodeGeneral(format!("validator_address: {}", e)))?,
             shares: Decimal256::from_cosmos_proto_string(&proto.shares)
-                .map_err(|e| CoreError::DecodeGeneral(format!("shares: {}", e.to_string())))?,
+                .map_err(|e| CoreError::DecodeGeneral(format!("shares: {}", e)))?,
         })
     }
 }
