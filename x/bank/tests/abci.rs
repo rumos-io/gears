@@ -1,13 +1,20 @@
 use std::{marker::PhantomData, str::FromStr};
 
-use bank::{BankABCIHandler, GenesisState, Keeper};
+use bank::{BankABCIHandler, GenesisState, Keeper, Message};
 use gears::{
     application::handlers::node::ModuleInfo,
     params::{ParamsSubspaceKey, SubspaceParseError},
     store::StoreKey,
     tendermint::types::time::timestamp::Timestamp,
-    types::address::AccAddress,
-    utils::node::{init_node, GenesisSource, MockOptionsFormer},
+    types::{
+        address::AccAddress,
+        base::{
+            coin::UnsignedCoin,
+            coins::{Coins, UnsignedCoins},
+        },
+        msg::send::MsgSend,
+    },
+    utils::node::{acc_address, generate_txs, init_node, GenesisSource, MockOptionsFormer},
     x::{
         keepers::auth::{AuthKeeper, AuthParams},
         module::Module,
@@ -52,6 +59,67 @@ fn test_init_and_few_blocks() {
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
         "079ca947e30b69479b21da61e1cb9bad4ff5c8ec99dc3d9e32919179f6604a1d"
+    );
+}
+
+#[test]
+/// In this scenario, we test the initialization of the application and execute a tx
+fn test_init_and_sending_tx() {
+    let mut genesis = GenesisState::default();
+
+    genesis.add_genesis_account(
+        acc_address(),
+        UnsignedCoins::new(vec![UnsignedCoin::from_str("30uatom").unwrap()]).unwrap(),
+    );
+
+    let opt: MockOptionsFormer<
+        SubspaceKey,
+        BankABCIHandler<
+            SpaceKey,
+            SubspaceKey,
+            MockAuthKeeper<SpaceKey, BankModules>,
+            BankModules,
+            BankModuleInfo,
+        >,
+        GenesisState,
+    > = MockOptionsFormer::new()
+        .abci_handler(BankABCIHandler::new(Keeper::new(
+            SpaceKey::Auth,
+            SubspaceKey::Auth,
+            MockAuthKeeper::<_, BankModules>(PhantomData),
+        )))
+        .baseapp_sbs_key(SubspaceKey::BaseApp)
+        .genesis(GenesisSource::Genesis(genesis));
+
+    let (mut node, user) = init_node(opt);
+
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    assert_eq!(
+        data_encoding::HEXLOWER.encode(app_hash),
+        "7422bab46c0294d81bcf5fca0495c114a8e40ddd0601539775e5c03f479ad289"
+    );
+
+    node.step(vec![], Timestamp::UNIX_EPOCH);
+    node.step(vec![], Timestamp::UNIX_EPOCH);
+
+    let to_address = "cosmos180tr8wmsk8ugt32yynj8efqwg3yglmpwp22rut"
+        .parse()
+        .expect("hard coded address is valid");
+    let amount = Coins::new(vec!["10uatom".parse().expect("hard coded coin is valid")])
+        .expect("hard coded coins are valid");
+
+    let msg = Message::Send(MsgSend {
+        from_address: user.address(),
+        to_address,
+        amount,
+    });
+
+    let txs = generate_txs([(0, msg)], &user, node.chain_id().clone());
+
+    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
+    assert_eq!(
+        data_encoding::HEXLOWER.encode(app_hash),
+        "f9da1d84dcdbd650d3be54bb6fd02ce74c94667922aa9911bd96ca397f4d4e38"
     );
 }
 
@@ -130,7 +198,7 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper<SK, M> {
         _: &CTX,
         _: &AccAddress,
     ) -> Result<bool, gears::types::store::gas::errors::GasStoreErrors> {
-        todo!()
+        Ok(true)
     }
 
     fn get_account<

@@ -1,3 +1,4 @@
+use address::AccAddress;
 use bytes::Bytes;
 
 use core_types::Protobuf as _;
@@ -15,6 +16,12 @@ use crate::{
 };
 
 use super::User;
+
+pub const ACC_ADDRESS: &str = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux";
+
+pub fn acc_address() -> AccAddress {
+    AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
+}
 
 pub fn generate_txs<M: TxMessage>(
     msgs: impl IntoIterator<Item = (u64, M)>,
