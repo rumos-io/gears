@@ -1,5 +1,5 @@
 use gears::{
-    baseapp::genesis::GenesisError,
+    baseapp::genesis::{Genesis, GenesisError},
     types::{
         account::{Account, BaseAccount},
         address::AccAddress,
@@ -27,6 +27,16 @@ impl Default for GenesisState {
                 sig_verify_cost_secp256k1: 1000,
             },
         }
+    }
+}
+
+impl Genesis for GenesisState {
+    fn add_genesis_account(
+        &mut self,
+        address: AccAddress,
+        _: gears::types::base::coins::UnsignedCoins, // TODO
+    ) -> Result<(), GenesisError> {
+        self.add_genesis_account(address)
     }
 }
 

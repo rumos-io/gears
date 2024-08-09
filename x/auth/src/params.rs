@@ -197,3 +197,83 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use gears::{
+        context::init::InitContext,
+        params::SubspaceParseError,
+        store::{bank::multi::ApplicationMultiBank, database::MemDB, StoreKey},
+    };
+
+    use super::*;
+
+    #[test]
+    fn app_hash() {
+        let keeper = AuthParamsKeeper {
+            params_subspace_key: SubspaceKey::Auth,
+        };
+
+        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+
+        let before_hash = multi_store.head_commit_hash();
+
+        let mut ctx = InitContext::new(
+            &mut multi_store,
+            0,
+            gears::tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
+            gears::tendermint::types::chain_id::ChainId::default(),
+        );
+
+        keeper.set(&mut ctx, DEFAULT_PARAMS.clone());
+
+        multi_store.commit();
+        let after_hash = multi_store.head_commit_hash();
+
+        assert_ne!(before_hash, after_hash);
+
+        let expected_hash = [
+            45, 7, 91, 83, 117, 217, 8, 114, 126, 199, 246, 2, 201, 212, 145, 77, 228, 121, 160,
+            166, 79, 30, 133, 41, 6, 41, 130, 196, 85, 138, 248, 183,
+        ];
+
+        assert_eq!(expected_hash, after_hash);
+    }
+
+    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+    enum SubspaceKey {
+        Auth,
+        Params,
+    }
+
+    impl FromStr for SubspaceKey {
+        type Err = SubspaceParseError;
+
+        fn from_str(_: &str) -> Result<Self, Self::Err> {
+            Err(SubspaceParseError("omit".to_string()))
+        }
+    }
+
+    impl ParamsSubspaceKey for SubspaceKey {
+        fn name(&self) -> &'static str {
+            match self {
+                SubspaceKey::Params => "params",
+                SubspaceKey::Auth => "auth",
+            }
+        }
+    }
+
+    impl StoreKey for SubspaceKey {
+        fn name(&self) -> &'static str {
+            "auth"
+        }
+
+        fn params() -> &'static Self {
+            const PARAM_KEY: SubspaceKey = SubspaceKey::Params;
+
+            &PARAM_KEY
+        }
+    }
+}

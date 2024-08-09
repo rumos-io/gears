@@ -1,4 +1,7 @@
-use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::metadata::Metadata};
+use gears::{
+    baseapp::genesis::Genesis,
+    types::{address::AccAddress, base::coins::UnsignedCoins, tx::metadata::Metadata},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::BankParams;
@@ -56,5 +59,17 @@ impl GenesisState {
     /// will add another entry to the list i.e. it does not merge entries
     pub fn add_genesis_account(&mut self, address: AccAddress, coins: UnsignedCoins) {
         self.balances.push(Balance { address, coins })
+    }
+}
+
+impl Genesis for GenesisState {
+    fn add_genesis_account(
+        &mut self,
+        address: AccAddress,
+        coins: UnsignedCoins,
+    ) -> Result<(), gears::baseapp::genesis::GenesisError> {
+        self.add_genesis_account(address, coins);
+
+        Ok(())
     }
 }

@@ -1,8 +1,9 @@
 use gears::tendermint::types::time::timestamp::Timestamp;
 use gears::types::base::coins::Coins;
 use gears::types::msg::send::MsgSend;
+use gears::utils::node::generate_txs;
 
-use crate::{generate_txs, setup_mock_node};
+use crate::setup_mock_node;
 
 #[test]
 /// In this scenario, we test the initialization of the application and submit a balance transfer on block three.

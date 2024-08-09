@@ -1,6 +1,6 @@
 use bytes::Bytes;
 
-use crate::{
+use tendermint::{
     application::ABCIApplication,
     types::{
         chain_id::ChainId,
@@ -18,7 +18,6 @@ use crate::{
         time::timestamp::Timestamp,
     },
 };
-
 #[derive(Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, Debug)]
 pub struct InitState<G> {
     pub time: Timestamp,
@@ -73,6 +72,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             _phantom: Default::default(),
         }
     }
+
     pub fn step(&mut self, txs: Vec<Bytes>, block_time: Timestamp) -> &Bytes {
         let header = self.calculate_header();
         self.height += 1;
@@ -94,7 +94,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
             let res = self.app.deliver_tx(RequestDeliverTx { tx });
 
             if res.code != 0 {
-                println!("Error: {:?}", res.log);
+                eprintln!("Error: {:?}", res.log);
             }
 
             assert!(res.code == 0);

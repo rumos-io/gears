@@ -27,6 +27,35 @@ pub trait TxMessage:
     fn type_url(&self) -> &'static str;
 }
 
+#[derive(Debug, Clone, serde::Serialize)]
+pub enum NullTxMsg {}
+
+impl TryFrom<Any> for NullTxMsg {
+    type Error = CoreError;
+
+    fn try_from(_: Any) -> Result<Self, Self::Error> {
+        Err(CoreError::DecodeGeneral(
+            "not allowed cast any to null tx msg".to_string(),
+        ))
+    }
+}
+
+impl From<NullTxMsg> for Any {
+    fn from(_: NullTxMsg) -> Self {
+        unreachable!()
+    }
+}
+
+impl TxMessage for NullTxMsg {
+    fn get_signers(&self) -> Vec<&AccAddress> {
+        unreachable!()
+    }
+
+    fn type_url(&self) -> &'static str {
+        unreachable!()
+    }
+}
+
 /// Utility type that guarantees correctness of transaction messages set
 pub struct Messages<T: TxMessage> {
     messages: Vec1<T>,

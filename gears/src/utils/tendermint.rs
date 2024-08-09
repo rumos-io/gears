@@ -12,11 +12,11 @@ use rand::{prelude::Distribution, rngs::ThreadRng};
 use run_script::{IoOptions, ScriptOptions};
 use tendermint::types::chain_id::ChainId;
 
-/// Struct for process which lauched from tmp dir
+/// Struct for process which launched from tmp dir
 #[derive(Debug)]
-pub struct TmpChild(pub Child, pub TempDir);
+pub struct TendermintSubprocess(pub Child, pub TempDir);
 
-impl Drop for TmpChild {
+impl Drop for TendermintSubprocess {
     fn drop(&mut self) {
         // Stop child process before deletion of tmp dir
         while let Err(_) = self.0.kill() {
@@ -25,7 +25,7 @@ impl Drop for TmpChild {
     }
 }
 
-impl TmpChild {
+impl TendermintSubprocess {
     pub fn run_tendermint<G: Genesis, AC: crate::config::ApplicationConfig>(
         tmp_dir: TempDir,
         path_to_tendermint: &(impl AsRef<Path> + ?Sized),
