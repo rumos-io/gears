@@ -231,6 +231,41 @@ impl From<Duration> for inner::Duration {
     }
 }
 
+pub mod serde_with {
+    pub fn serialize_duration_opt_to_nanos_string<S>(
+        x: &Option<super::Duration>,
+        s: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        s.serialize_some(&x.map(|x| i128::from(x.duration_nanoseconds()).to_string()))
+    }
+
+    pub fn deserialize_duration_opt_from_nanos_string<'de, D>(
+        deserializer: D,
+    ) -> Result<Option<super::Duration>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::Deserialize;
+        let value = if let Some(duration_num_string) = <Option<String>>::deserialize(deserializer)?
+        {
+            Some(
+                super::Duration::try_new_from_nanos(
+                    duration_num_string
+                        .parse()
+                        .map_err(serde::de::Error::custom)?,
+                )
+                .map_err(serde::de::Error::custom)?,
+            )
+        } else {
+            None
+        };
+        Ok(value)
+    }
+}
+
 pub mod inner {
     pub use tendermint_proto::google::protobuf::Duration;
 }
