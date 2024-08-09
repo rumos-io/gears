@@ -322,6 +322,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "clap",
+ "data-encoding",
  "gears",
  "ibc-proto 0.33.0",
  "prost 0.11.9",
