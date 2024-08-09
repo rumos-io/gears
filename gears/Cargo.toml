@@ -86,7 +86,7 @@ dircpy = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 
 [dev-dependencies]
-trybuild = "1.0.99"
+trybuild = "1.0.99" 
 
 [features]
 default = ["cli", "xmods"]

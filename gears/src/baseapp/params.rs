@@ -39,7 +39,7 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 //##################################################################################
 
 /// A domain ConsensusParams type that wraps domain consensus params types.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConsensusParams {
     pub block: BlockParams,
     pub evidence: EvidenceParams,
@@ -101,7 +101,7 @@ impl ParamsDeserialize for ConsensusParams {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BlockParams {
     pub max_bytes: String,
     #[serde_as(as = "serde_with::DisplayFromStr")]
@@ -128,7 +128,7 @@ impl From<inner::BlockParams> for BlockParams {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
@@ -150,7 +150,7 @@ impl From<inner::ValidatorParams> for ValidatorParams {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EvidenceParams {
     pub max_age_num_blocks: String,
     pub max_age_duration: Option<String>,
@@ -266,7 +266,17 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
 
 #[cfg(test)]
 mod tests {
-    use super::EvidenceParams;
+    use std::str::FromStr;
+
+    use crate::{
+        context::init::InitContext,
+        params::{ParamsSubspaceKey, SubspaceParseError},
+        utils::node::build_init_ctx,
+    };
+
+    use super::*;
+    use database::MemDB;
+    use kv_store::bank::multi::ApplicationMultiBank;
     use tendermint::types::{
         proto::params::EvidenceParams as RawEvidenceParams, time::duration::Duration,
     };
@@ -285,5 +295,87 @@ mod tests {
             "{\"max_age_num_blocks\":\"0\",\"max_age_duration\":\"10000000030\",\"max_bytes\":\"0\"}"
                 .to_string()
         );
+    }
+
+    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+    enum SubspaceKey {
+        Params,
+    }
+
+    impl FromStr for SubspaceKey {
+        type Err = SubspaceParseError;
+
+        fn from_str(_: &str) -> Result<Self, Self::Err> {
+            Err(SubspaceParseError("empty enum".to_string()))
+        }
+    }
+
+    impl ParamsSubspaceKey for SubspaceKey {
+        fn name(&self) -> &'static str {
+            match self {
+                SubspaceKey::Params => "params",
+            }
+        }
+    }
+
+    impl StoreKey for SubspaceKey {
+        fn name(&self) -> &'static str {
+            "baseapp"
+        }
+
+        fn params() -> &'static Self {
+            const PARAM_KEY: SubspaceKey = SubspaceKey::Params;
+
+            &PARAM_KEY
+        }
+    }
+
+    #[test]
+    fn app_hash() {
+        let keeper = BaseAppParamsKeeper {
+            params_subspace_key: SubspaceKey::Params,
+        };
+
+        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+
+        let before_hash = multi_store.head_commit_hash();
+
+        let mut ctx = InitContext::new(
+            &mut multi_store,
+            0,
+            tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
+            tendermint::types::chain_id::ChainId::default(),
+        );
+
+        keeper.set_consensus_params(&mut ctx, ConsensusParams::default());
+
+        multi_store.commit();
+        let after_hash = multi_store.head_commit_hash();
+
+        assert_ne!(before_hash, after_hash);
+
+        let expected_hash = [
+            139, 30, 111, 121, 185, 80, 199, 158, 15, 181, 206, 115, 179, 223, 81, 183, 11, 85, 80,
+            14, 41, 195, 81, 139, 165, 139, 13, 128, 138, 187, 254, 129,
+        ];
+
+        assert_eq!(expected_hash, after_hash);
+    }
+
+    #[test]
+    fn set_read_works() {
+        let keeper = BaseAppParamsKeeper {
+            params_subspace_key: SubspaceKey::Params,
+        };
+
+        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+
+        let mut ctx = build_init_ctx(&mut multi_store);
+
+        keeper.set_consensus_params(&mut ctx, ConsensusParams::default());
+
+        let params = keeper.consensus_params(&ctx);
+
+        assert_eq!(ConsensusParams::default(), params);
     }
 }
