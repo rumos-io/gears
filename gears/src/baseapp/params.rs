@@ -3,7 +3,10 @@ use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use std::collections::{HashMap, HashSet};
-use tendermint::types::time::duration::Duration;
+use tendermint::types::time::duration::{
+    serde::{deserialize_duration_opt_from_nanos_string, serialize_duration_opt_to_nanos_string},
+    Duration,
+};
 
 use crate::{
     application::keepers::params::ParamsKeeper,
@@ -149,41 +152,13 @@ impl From<inner::ValidatorParams> for ValidatorParams {
     }
 }
 
-pub fn serialize_duration_to_string<S>(x: &Option<Duration>, s: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-{
-    s.serialize_some(&x.map(|x| i128::from(x.duration_nanoseconds()).to_string()))
-}
-
-pub fn deserialize_duration_from_string<'de, D>(
-    deserializer: D,
-) -> Result<Option<Duration>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let value = if let Some(duration_num_string) = <Option<String>>::deserialize(deserializer)? {
-        Some(
-            Duration::try_new_from_nanos(
-                duration_num_string
-                    .parse()
-                    .map_err(serde::de::Error::custom)?,
-            )
-            .map_err(serde::de::Error::custom)?,
-        )
-    } else {
-        None
-    };
-    Ok(value)
-}
-
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EvidenceParams {
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_age_num_blocks: i64,
-    #[serde(serialize_with = "serialize_duration_to_string")]
-    #[serde(deserialize_with = "deserialize_duration_from_string")]
+    #[serde(serialize_with = "serialize_duration_opt_to_nanos_string")]
+    #[serde(deserialize_with = "deserialize_duration_opt_from_nanos_string")]
     pub max_age_duration: Option<Duration>,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_bytes: i64,
