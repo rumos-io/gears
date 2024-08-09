@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
 use std::collections::{HashMap, HashSet};
 use tendermint::types::time::duration::{
-    serde::{deserialize_duration_opt_from_nanos_string, serialize_duration_opt_to_nanos_string},
+    serde_with::{
+        deserialize_duration_opt_from_nanos_string, serialize_duration_opt_to_nanos_string,
+    },
     Duration,
 };
 

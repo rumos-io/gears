@@ -231,7 +231,7 @@ impl From<Duration> for inner::Duration {
     }
 }
 
-pub mod serde {
+pub mod serde_with {
     pub fn serialize_duration_opt_to_nanos_string<S>(
         x: &Option<super::Duration>,
         s: S,
