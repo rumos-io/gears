@@ -278,7 +278,6 @@ mod tests {
     use crate::{
         context::init::InitContext,
         params::{ParamsSubspaceKey, SubspaceParseError},
-        utils::node::build_init_ctx,
     };
 
     use super::*;
@@ -377,7 +376,12 @@ mod tests {
 
         let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
 
-        let mut ctx = build_init_ctx(&mut multi_store);
+        let mut ctx = InitContext::new(
+            &mut multi_store,
+            0,
+            tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
+            tendermint::types::chain_id::ChainId::default(),
+        );
 
         keeper.set_consensus_params(&mut ctx, ConsensusParams::default());
 
