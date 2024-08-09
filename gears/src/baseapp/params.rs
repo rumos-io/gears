@@ -1,9 +1,12 @@
-use std::collections::{HashMap, HashSet};
-
 use database::Database;
 use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use std::collections::{HashMap, HashSet};
+use tendermint::types::time::duration::{
+    serde::{deserialize_duration_opt_from_nanos_string, serialize_duration_opt_to_nanos_string},
+    Duration,
+};
 
 use crate::{
     application::keepers::params::ParamsKeeper,
@@ -26,8 +29,6 @@ const KEY_EVIDENCE_PARAMS: &str = "EvidenceParams";
 const KEY_VALIDATOR_PARAMS: &str = "ValidatorParams";
 
 const _SUBSPACE_NAME: &str = "baseapp/";
-
-const SEC_TO_NANO: i64 = 1_000_000_000;
 
 //##################################################################################
 //##################################################################################
@@ -101,9 +102,10 @@ impl ParamsDeserialize for ConsensusParams {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlockParams {
-    pub max_bytes: String,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    pub max_bytes: i64,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_gas: i64,
 }
@@ -113,7 +115,7 @@ impl Default for BlockParams {
         // TODO: implement defaults
         // from sdk testing setup
         BlockParams {
-            max_bytes: 200_000.to_string(),
+            max_bytes: 200_000,
             max_gas: 2_000_000,
         }
     }
@@ -122,7 +124,7 @@ impl Default for BlockParams {
 impl From<inner::BlockParams> for BlockParams {
     fn from(params: inner::BlockParams) -> BlockParams {
         BlockParams {
-            max_bytes: params.max_bytes.to_string(),
+            max_bytes: params.max_bytes,
             max_gas: params.max_gas,
         }
     }
@@ -150,11 +152,16 @@ impl From<inner::ValidatorParams> for ValidatorParams {
     }
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EvidenceParams {
-    pub max_age_num_blocks: String,
-    pub max_age_duration: Option<String>,
-    pub max_bytes: String,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    pub max_age_num_blocks: i64,
+    #[serde(serialize_with = "serialize_duration_opt_to_nanos_string")]
+    #[serde(deserialize_with = "deserialize_duration_opt_from_nanos_string")]
+    pub max_age_duration: Option<Duration>,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    pub max_bytes: i64,
 }
 
 impl Default for EvidenceParams {
@@ -162,9 +169,9 @@ impl Default for EvidenceParams {
         // TODO: update defaults
         // from sdk testing setup
         EvidenceParams {
-            max_age_num_blocks: 302400.to_string(),
-            max_age_duration: Some((504 * 3600 * SEC_TO_NANO).to_string()), // 3 weeks
-            max_bytes: 10000.to_string(),
+            max_age_num_blocks: 302400,
+            max_age_duration: Some(Duration::new_from_secs(3 * 7 * 24 * 3600)), // 3 weeks
+            max_bytes: 10000,
         }
     }
 }
@@ -172,11 +179,9 @@ impl Default for EvidenceParams {
 impl From<inner::EvidenceParams> for EvidenceParams {
     fn from(params: inner::EvidenceParams) -> EvidenceParams {
         EvidenceParams {
-            max_age_num_blocks: params.max_age_num_blocks.to_string(),
-            max_age_duration: params
-                .max_age_duration
-                .map(|d| i128::from(d.duration_nanoseconds()).to_string()),
-            max_bytes: params.max_bytes.to_string(),
+            max_age_num_blocks: params.max_age_num_blocks,
+            max_age_duration: params.max_age_duration,
+            max_bytes: params.max_bytes,
         }
     }
 }
@@ -193,7 +198,7 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for BaseAppParamsKeeper<PSK> {
         &self.params_subspace_key
     }
 
-    #[cfg(all(feature = "governance"))]
+    #[cfg(feature = "governance")]
     fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
         match String::from_utf8_lossy(key.as_ref()).as_ref() {
             KEY_BLOCK_PARAMS => serde_json::from_slice::<BlockParams>(value.as_ref()).is_ok(),
