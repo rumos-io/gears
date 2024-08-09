@@ -110,7 +110,7 @@ tower-layer = "0.3.2"
 # test utils
 assert_fs = { version = "1.1.1" }
 run_script = { version = "0.10.1" }
-mockiato = "0.9.6"
+# mockiato = "0.9.6"
 
 # other
 byteorder = { version = "1.5.0" }
