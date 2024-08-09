@@ -1,7 +1,8 @@
 use std::marker::PhantomData;
 
-use gears::application::handlers::node::{ModuleInfo, TxError};
+use gears::application::handlers::node::{ABCIHandler, ModuleInfo, TxError};
 use gears::baseapp::errors::QueryError;
+use gears::baseapp::QueryRequest;
 use gears::context::{init::InitContext, query::QueryContext, tx::TxContext};
 use gears::core::Protobuf;
 use gears::derive::Query;
@@ -26,7 +27,13 @@ use crate::types::query::{
 use crate::{GenesisState, Keeper, Message};
 
 #[derive(Debug, Clone)]
-pub struct ABCIHandler<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI> {
+pub struct BankABCIHandler<
+    SK: StoreKey,
+    PSK: ParamsSubspaceKey,
+    AK: AuthKeeper<SK, M>,
+    M: Module,
+    MI,
+> {
     keeper: Keeper<SK, PSK, AK, M>,
     phantom_data: PhantomData<MI>,
 }
@@ -40,6 +47,12 @@ pub enum BankNodeQueryRequest {
     DenomMetadata(QueryDenomMetadataRequest),
 }
 
+impl QueryRequest for BankNodeQueryRequest {
+    fn height(&self) -> u32 {
+        todo!()
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Query)]
 #[serde(untagged)]
 pub enum BankNodeQueryResponse {
@@ -50,21 +63,29 @@ pub enum BankNodeQueryResponse {
     DenomMetadata(QueryDenomMetadataResponse),
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI: ModuleInfo>
-    ABCIHandler<SK, PSK, AK, M, MI>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M>,
+        M: Module,
+        MI: ModuleInfo + Clone + Send + Sync + 'static,
+    > ABCIHandler for BankABCIHandler<SK, PSK, AK, M, MI>
 {
-    pub fn new(keeper: Keeper<SK, PSK, AK, M>) -> Self {
-        ABCIHandler {
-            keeper,
-            phantom_data: PhantomData,
-        }
-    }
+    type Message = Message;
 
-    pub fn typed_query<DB: Database + Send + Sync>(
+    type Genesis = GenesisState;
+
+    type StoreKey = SK;
+
+    type QReq = BankNodeQueryRequest;
+
+    type QRes = BankNodeQueryResponse;
+
+    fn typed_query<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
-        query: BankNodeQueryRequest,
-    ) -> BankNodeQueryResponse {
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        query: Self::QReq,
+    ) -> Self::QRes {
         match query {
             BankNodeQueryRequest::Balance(req) => {
                 let res = self.keeper.query_balance(ctx, req);
@@ -89,10 +110,18 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
         }
     }
 
-    pub fn msg<DB: Database>(
+    fn run_ante_checks<DB: Database>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        msg: &Message,
+        _: &mut TxContext<'_, DB, Self::StoreKey>,
+        _: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+    ) -> Result<(), TxError> {
+        Ok(())
+    }
+
+    fn msg<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, Self::StoreKey>,
+        msg: &Self::Message,
     ) -> Result<(), TxError> {
         let result = match msg {
             Message::Send(msg_send) => self
@@ -103,11 +132,21 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
         result.map_err(|e| Into::<BankTxError>::into(e).into::<MI>())
     }
 
-    pub fn query<DB: Database>(
+    fn init_genesis<DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &mut InitContext<'_, DB, Self::StoreKey>,
+        genesis: Self::Genesis,
+    ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
+        self.genesis(ctx, genesis);
+
+        Vec::new()
+    }
+
+    fn query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> std::result::Result<bytes::Bytes, QueryError> {
+    ) -> Result<bytes::Bytes, QueryError> {
         match query.path.as_str() {
             QueryAllBalancesRequest::QUERY_URL => {
                 let req = QueryAllBalancesRequest::decode(query.data)?;
@@ -142,6 +181,17 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
             }
             _ => Err(QueryError::PathNotFound),
+        }
+    }
+}
+
+impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI: ModuleInfo>
+    BankABCIHandler<SK, PSK, AK, M, MI>
+{
+    pub fn new(keeper: Keeper<SK, PSK, AK, M>) -> Self {
+        BankABCIHandler {
+            keeper,
+            phantom_data: PhantomData,
         }
     }
 

@@ -30,4 +30,6 @@ axum = { workspace = true }
 tonic = { workspace = true }
 
 [dev-dependencies]
-hex = { workspace = true }
+gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils"] }
+strum = { workspace = true }
+data-encoding = { workspace = true }
