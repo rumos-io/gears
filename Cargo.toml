@@ -1,34 +1,35 @@
 [workspace]
 members = [
   # no local deps
-  "database",
-  "tendermint",
-  "core-types",
+  # "database",
+  # "tendermint",
+  # "core-types",
 
   # with local deps
-  "address",
-  "trees",
-  "kv_store",
-  "keyring",
-  "gears",
+  # "address",
+  # "trees",
+  # "kv_store",
+  # "keyring",
+  # "gears",
 
   # macros
   "macros/tx-derive",
   "macros/query-derive",
   "macros/protobuf-derive",
+  "macros/key-derive",
 
   # GAIA
-  "gaia-rs",
+  # "gaia-rs",
 
   # xmodules
-  "x/auth",
-  "x/bank",
-  "x/distribution",
-  "x/evidence",
-  "x/gov",
-  "x/ibc-rs",
-  "x/slashing",
-  "x/staking",
+  # "x/auth",
+  # "x/bank",
+  # "x/distribution",
+  # "x/evidence",
+  # "x/gov",
+  # "x/ibc-rs",
+  # "x/slashing",
+  # "x/staking", 
 
   # new unsorted
 ]
