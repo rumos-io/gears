@@ -1985,6 +1985,7 @@ dependencies = [
  "ibc-proto 0.33.0",
  "itertools 0.13.0",
  "k256",
+ "key-derive",
  "keyring",
  "kv_store",
  "ledger-cosmos",
