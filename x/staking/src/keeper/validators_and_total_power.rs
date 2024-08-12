@@ -78,12 +78,10 @@ impl<
         validator: &Validator,
     ) -> Result<(), GasStoreErrors> {
         let power_reduction = self.power_reduction(ctx);
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut validators_store = store.prefix_store_mut(VALIDATORS_BY_POWER_INDEX_KEY);
-
-        validators_store.set(
+        let mut store = ctx.kv_store_mut(&self.store_key);
+        store.set(
             validator.key_by_power_index_key(power_reduction),
-            validator.operator_address.to_string().as_bytes().to_vec(),
+            Vec::from(validator.operator_address.clone()),
         )
     }
 

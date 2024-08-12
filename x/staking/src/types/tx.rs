@@ -302,36 +302,79 @@ pub struct DescriptionUpdate {
 
 impl Protobuf<DescriptionUpdate> for DescriptionUpdate {}
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
-pub struct CreateValidatorRaw {
-    #[prost(message, optional)]
-    pub description: Option<Description>,
-    #[prost(message, optional)]
-    pub commission: Option<CommissionRatesRaw>,
-    #[prost(string)]
-    pub min_self_delegation: String,
-    #[prost(string)]
-    pub delegator_address: String,
-    #[prost(string)]
-    pub validator_address: String,
-    #[prost(bytes)]
-    pub pub_key: Vec<u8>,
-    #[prost(message, optional)]
-    pub value: Option<CoinRaw>,
+mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::CommissionRates;
+    pub use ibc_proto::cosmos::staking::v1beta1::Description;
+    pub use ibc_proto::cosmos::staking::v1beta1::MsgCreateValidator;
 }
 
-impl From<CreateValidator> for CreateValidatorRaw {
-    fn from(src: CreateValidator) -> Self {
+impl From<CreateValidator> for inner::MsgCreateValidator {
+    fn from(msg: CreateValidator) -> Self {
         Self {
-            description: Some(src.description),
-            commission: Some(src.commission.into()),
-            min_self_delegation: src.min_self_delegation.to_string(),
-            delegator_address: src.delegator_address.to_string(),
-            validator_address: src.validator_address.to_string(),
-            // TODO: Consider to implement Protobuf on PublicKey
-            pub_key: serde_json::to_vec(&src.pub_key).expect("Expected valid public key that can be converted into vector of bytes using serde_json"),
-            value: Some(src.value.into()),
+            description: Some(inner::Description {
+                moniker: msg.description.moniker,
+                identity: msg.description.identity,
+                website: msg.description.website,
+                security_contact: msg.description.security_contact,
+                details: msg.description.details,
+            }),
+            commission: Some(inner::CommissionRates {
+                rate: msg.commission.rate.to_cosmos_proto_string(),
+                max_rate: msg.commission.max_rate.to_cosmos_proto_string(),
+                max_change_rate: msg.commission.max_change_rate.to_cosmos_proto_string(),
+            }),
+            min_self_delegation: msg.min_self_delegation.to_string(),
+            delegator_address: msg.delegator_address.to_string(),
+            validator_address: msg.validator_address.to_string(),
+            pubkey: Some(gears::crypto::public::PublicKey::from(msg.pub_key).into()),
+            value: Some(msg.value.into()),
         }
+    }
+}
+
+impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
+    type Error = CoreError;
+
+    fn try_from(val: inner::MsgCreateValidator) -> Result<Self, Self::Error> {
+        let description = val
+            .description
+            .ok_or(CoreError::MissingField("description".into()))?;
+        let commission = val
+            .commission
+            .ok_or(CoreError::MissingField("commission".into()))?;
+        let pubkey = val.pubkey.ok_or(CoreError::MissingField("pubkey".into()))?;
+        let pubkey = gears::crypto::public::PublicKey::try_from(pubkey)
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
+
+        Ok(CreateValidator {
+            description: Description {
+                moniker: description.moniker,
+                identity: description.identity,
+                website: description.website,
+                security_contact: description.security_contact,
+                details: description.details,
+            },
+            commission: CommissionRates {
+                rate: Decimal256::from_cosmos_proto_string(&commission.rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+                max_rate: Decimal256::from_cosmos_proto_string(&commission.max_rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+                max_change_rate: Decimal256::from_cosmos_proto_string(&commission.max_change_rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            },
+            min_self_delegation: Uint256::from_str(&val.min_self_delegation)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            delegator_address: AccAddress::from_bech32(&val.delegator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            validator_address: ValAddress::from_bech32(&val.validator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            pub_key: pubkey.into(),
+            value: val
+                .value
+                .ok_or(CoreError::MissingField("value".into()))?
+                .try_into()
+                .map_err(|e| CoreError::Coin(format!("{e}")))?,
+        })
     }
 }
 
@@ -339,7 +382,7 @@ impl From<CreateValidator> for CreateValidatorRaw {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreateValidator {
     pub description: Description,
-    pub commission: CommissionRates,
+    pub commission: CommissionRates, //TODO: should name be commission_rate?
     pub min_self_delegation: Uint256,
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
@@ -347,39 +390,7 @@ pub struct CreateValidator {
     pub value: UnsignedCoin,
 }
 
-impl TryFrom<CreateValidatorRaw> for CreateValidator {
-    type Error = CoreError;
-
-    fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
-        Ok(CreateValidator {
-            description: src.description.ok_or(CoreError::MissingField(
-                "Missing field 'description'.".into(),
-            ))?,
-            commission: src
-                .commission
-                .ok_or(CoreError::MissingField(
-                    "Missing field 'commission'.".into(),
-                ))?
-                .try_into()
-                .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
-            min_self_delegation: Uint256::from_str(&src.min_self_delegation)
-                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            delegator_address: AccAddress::from_bech32(&src.delegator_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            validator_address: ValAddress::from_bech32(&src.validator_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            pub_key: serde_json::from_slice(&src.pub_key)
-                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            value: src
-                .value
-                .ok_or(CoreError::MissingField("Missing field 'value'.".into()))?
-                .try_into()
-                .map_err(|e| CoreError::Coin(format!("{e}")))?,
-        })
-    }
-}
-
-impl Protobuf<CreateValidatorRaw> for CreateValidator {}
+impl Protobuf<inner::MsgCreateValidator> for CreateValidator {}
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct EditValidatorRaw {

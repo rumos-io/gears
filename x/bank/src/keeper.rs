@@ -780,7 +780,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             ],
         ));
 
-        Ok(self.add_coins(ctx, &module_acc_addr, balances)?)
+        Ok(self.add_coins(ctx, &module_acc_addr, amount.into())?)
     }
 
     /// undelegate_coins_from_module_to_account undelegates the unbonding coins and transfers

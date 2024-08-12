@@ -10,15 +10,15 @@ use serde::Serialize;
 #[serde(tag = "@type")]
 #[allow(clippy::large_enum_variant)]
 pub enum Message {
-    #[serde(rename = "/cosmos.staking.v1beta1.CreateValidator")]
+    #[serde(rename = "/cosmos.staking.v1beta1.MsgCreateValidator")]
     CreateValidator(CreateValidator),
-    #[serde(rename = "/cosmos.staking.v1beta1.EditValidator")]
+    #[serde(rename = "/cosmos.staking.v1beta1.MsgEditValidator")]
     EditValidator(EditValidator),
-    #[serde(rename = "/cosmos.staking.v1beta1.Delegate")]
+    #[serde(rename = "/cosmos.staking.v1beta1.MsgDelegate")]
     Delegate(DelegateMsg),
-    #[serde(rename = "/cosmos.staking.v1beta1.Redelegate")]
+    #[serde(rename = "/cosmos.staking.v1beta1.MsgRedelegate")]
     Redelegate(RedelegateMsg),
-    #[serde(rename = "/cosmos.staking.v1beta1.Undelegate")]
+    #[serde(rename = "/cosmos.staking.v1beta1.MsgUndelegate")]
     Undelegate(UndelegateMsg),
 }
 
@@ -35,11 +35,11 @@ impl TxMessage for Message {
 
     fn type_url(&self) -> &'static str {
         match self {
-            Message::CreateValidator(_) => "/cosmos.staking.v1beta1.CreateValidator",
-            Message::EditValidator(_) => "/cosmos.staking.v1beta1.EditValidator",
-            Message::Delegate(_) => "/cosmos.staking.v1beta1.Delegate",
-            Message::Redelegate(_) => "/cosmos.staking.v1beta1.Redelegate",
-            Message::Undelegate(_) => "/cosmos.staking.v1beta1.Undelegate",
+            Message::CreateValidator(_) => "/cosmos.staking.v1beta1.MsgCreateValidator",
+            Message::EditValidator(_) => "/cosmos.staking.v1beta1.MsgEditValidator",
+            Message::Delegate(_) => "/cosmos.staking.v1beta1.MsgDelegate",
+            Message::Redelegate(_) => "/cosmos.staking.v1beta1.MsgRedelegate",
+            Message::Undelegate(_) => "/cosmos.staking.v1beta1.MsgUndelegate",
         }
     }
 }
@@ -48,23 +48,23 @@ impl From<Message> for Any {
     fn from(msg: Message) -> Self {
         match msg {
             Message::CreateValidator(msg) => Any {
-                type_url: "/cosmos.staking.v1beta1.CreateValidator".to_string(),
+                type_url: "/cosmos.staking.v1beta1.MsgCreateValidator".to_string(),
                 value: msg.encode_vec(),
             },
             Message::EditValidator(msg) => Any {
-                type_url: "/cosmos.staking.v1beta1.EditValidator".to_string(),
+                type_url: "/cosmos.staking.v1beta1.MsgEditValidator".to_string(),
                 value: msg.encode_vec(),
             },
             Message::Delegate(msg) => Any {
-                type_url: "/cosmos.staking.v1beta1.Delegate".to_string(),
+                type_url: "/cosmos.staking.v1beta1.MsgDelegate".to_string(),
                 value: msg.encode_vec(),
             },
             Message::Redelegate(msg) => Any {
-                type_url: "/cosmos.staking.v1beta1.Redelegate".to_string(),
+                type_url: "/cosmos.staking.v1beta1.MsgRedelegate".to_string(),
                 value: msg.encode_vec(),
             },
             Message::Undelegate(msg) => Any {
-                type_url: "/cosmos.staking.v1beta1.Undelegate".to_string(),
+                type_url: "/cosmos.staking.v1beta1.MsgUndelegate".to_string(),
                 value: msg.encode_vec(),
             },
         }
@@ -76,27 +76,27 @@ impl TryFrom<Any> for Message {
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
-            "/cosmos.staking.v1beta1.CreateValidator" => {
+            "/cosmos.staking.v1beta1.MsgCreateValidator" => {
                 let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::CreateValidator(msg))
             }
-            "/cosmos.staking.v1beta1.EditValidator" => {
+            "/cosmos.staking.v1beta1.MsgEditValidator" => {
                 let msg = EditValidator::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::EditValidator(msg))
             }
-            "/cosmos.staking.v1beta1.Delegate" => {
+            "/cosmos.staking.v1beta1.MsgDelegate" => {
                 let msg = DelegateMsg::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Delegate(msg))
             }
-            "/cosmos.staking.v1beta1.Redelegate" => {
+            "/cosmos.staking.v1beta1.MsgRedelegate" => {
                 let msg = RedelegateMsg::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Redelegate(msg))
             }
-            "/cosmos.staking.v1beta1.Undelegate" => {
+            "/cosmos.staking.v1beta1.MsgUndelegate" => {
                 let msg = UndelegateMsg::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::Undelegate(msg))
