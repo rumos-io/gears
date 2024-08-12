@@ -38,7 +38,7 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
                     ))?
                 }
 
-                enum_variants.push(quote! { Self::#ident (_) => #to_string });
+                enum_variants.push(quote! { Self::#ident => #to_string });
             }
 
             let result = quote! {
@@ -46,7 +46,7 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
                 {
                     fn name(&self) -> &'static str
                     {
-                        math self{
+                        match self{
                             #(#enum_variants),*
                         }
                     }
