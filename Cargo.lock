@@ -332,10 +332,8 @@ dependencies = [
  "serde_json",
  "sha2 0.10.8",
  "strum",
- "tokio",
  "tonic",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -1932,17 +1930,14 @@ dependencies = [
  "ibc-proto 0.33.0",
  "ibc-rs",
  "keyring",
- "prost 0.11.9",
  "rayon",
  "serde",
  "serde_json",
  "staking",
  "strum",
- "thiserror",
  "tonic",
  "tonic-reflection",
  "tower-layer",
- "tracing",
  "url",
  "vec1",
 ]
@@ -1955,7 +1950,6 @@ dependencies = [
  "anyhow",
  "assert_fs",
  "axum 0.7.5",
- "bech32 0.9.1",
  "bip32",
  "bytes",
  "ciborium",
@@ -4957,7 +4951,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",
- "chrono",
  "clap",
  "gears",
  "nz",
@@ -5040,7 +5033,6 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tonic",
- "tower-layer",
  "tracing",
 ]
 

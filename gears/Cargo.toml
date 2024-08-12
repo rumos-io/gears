@@ -42,7 +42,7 @@ itertools = "0.13.0"
 
 #serialization
 prost = { workspace = true }
-bech32 = { workspace = true }
+# bech32 = { workspace = true }
 hex = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde-aux = { workspace = true }

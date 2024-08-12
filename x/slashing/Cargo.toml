@@ -6,7 +6,7 @@ version = "0.1.0"
 [dependencies]
 anyhow = { workspace = true }
 bytes = { workspace = true }
-chrono = { version = "0.4.38", features = ["serde"] }
+# chrono = { version = "0.4.38", features = ["serde"] }
 clap = { workspace = true }
 gears = { path = "../../gears", features = ["cli", "xmods"] }
 prost = { workspace = true }

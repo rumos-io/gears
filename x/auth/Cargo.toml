@@ -26,9 +26,9 @@ serde_json = { workspace = true }
 serde-aux = { workspace = true }
 
 #other
-tokio = { workspace = true }
+# tokio = { workspace = true }
 tonic = { workspace = true }
-url = { workspace = true }
+# url = { workspace = true }
 
 [dev-dependencies]
 data-encoding = { workspace = true }
