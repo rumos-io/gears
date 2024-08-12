@@ -1,7 +1,7 @@
 //! This modules should be added to test modules with `#[path = "./utilities.rs"]` as it contains gaia specific code and dedicated crate is bothersome.
 #![allow(dead_code)]
 
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use std::{path::PathBuf, str::FromStr, sync::OnceLock, time::Duration};
 
 use gaia_rs::{
     abci_handler::GaiaABCIHandler, config::AppConfig, genesis::GenesisState,
@@ -42,6 +42,16 @@ pub const ACC_ADDRESS: &str = "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux";
 
 pub fn acc_address() -> AccAddress {
     AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
+}
+
+pub fn tendermint() -> &'static TmpChild {
+    static TENDERMINT: OnceLock<(TmpChild, std::thread::JoinHandle<()>)> = OnceLock::new();
+
+    &TENDERMINT
+        .get_or_init(|| {
+            run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))]).expect("msg")
+        })
+        .0
 }
 
 /// Helper method to start gaia node and tendermint in tmp folder

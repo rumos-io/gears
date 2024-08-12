@@ -11,25 +11,19 @@ use gears::{
     commands::client::query::{run_query, QueryCommand},
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     types::account::{Account, BaseAccount},
-    types::address::AccAddress,
 };
 
-use utilities::{acc_address, default_coin, run_gaia_and_tendermint};
+use utilities::{acc_address, tendermint};
 
 #[path = "./utilities.rs"]
 mod utilities;
 
 #[test]
-#[ignore = "rust usually run test in || while this tests be started ony by one"]
 fn account_query() -> anyhow::Result<()> {
-    let (_tendermint, _server_thread) =
-        run_gaia_and_tendermint([(acc_address(), default_coin(34))])?;
-
-    let acc_adress = AccAddress::from_bech32("cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux")
-        .expect("Valid value");
+    let _tendermint = tendermint();
 
     let query = AccountCommand {
-        address: acc_adress.clone(),
+        address: acc_address(),
     };
 
     let cmd = QueryCommand {
@@ -42,9 +36,10 @@ fn account_query() -> anyhow::Result<()> {
 
     let result = run_query(cmd, &GaiaCoreClient)?;
 
+    // Note that this may be issue 'cause of sequence
     let expected = GaiaQueryResponse::Auth(AuthQueryResponse::Account(QueryAccountResponse {
         account: Some(Account::Base(BaseAccount {
-            address: acc_adress,
+            address: acc_address(),
             pub_key: None,
             account_number: 2,
             sequence: 0,
