@@ -203,9 +203,9 @@ mod tests {
     use std::str::FromStr;
 
     use gears::{
-        context::init::InitContext,
         params::SubspaceParseError,
         store::{bank::multi::ApplicationMultiBank, database::MemDB, StoreKey},
+        utils::node::build_init_ctx,
     };
 
     use super::*;
@@ -220,12 +220,7 @@ mod tests {
 
         let before_hash = multi_store.head_commit_hash();
 
-        let mut ctx = InitContext::new(
-            &mut multi_store,
-            0,
-            gears::tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
-            gears::tendermint::types::chain_id::ChainId::default(),
-        );
+        let mut ctx = build_init_ctx(&mut multi_store);
 
         keeper.set(&mut ctx, DEFAULT_PARAMS.clone());
 
