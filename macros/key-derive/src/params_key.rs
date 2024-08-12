@@ -1,16 +1,33 @@
 use std::collections::HashSet;
 
-use darling::{util::Flag, FromAttributes};
+use darling::{FromAttributes, FromDeriveInput};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DataEnum, DeriveInput, Variant};
+use syn::{spanned::Spanned, DataEnum, DeriveInput, Variant};
 
-use crate::expand::KeysAttr;
+use crate::KeysArg;
 
-pub fn expand_params(
-    DeriveInput { ident, data, .. }: DeriveInput,
-    gears: Flag,
-) -> syn::Result<TokenStream> {
+#[derive(FromAttributes, Default)]
+#[darling(default, attributes(keys), forward_attrs(allow, doc, cfg))]
+#[darling(and_then = Self::not_empty)]
+pub struct KeysAttr {
+    pub to_string: String,
+}
+
+impl KeysAttr {
+    fn not_empty(self) -> darling::Result<Self> {
+        if self.to_string.is_empty() {
+            Err(darling::Error::custom("key can't be empty").with_span(&self.to_string.span()))
+        } else {
+            Ok(self)
+        }
+    }
+}
+
+pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
+    let KeysArg { gears } = KeysArg::from_derive_input(&input)?;
+    let DeriveInput { ident, data, .. } = input;
+
     match data {
         syn::Data::Enum(DataEnum { variants, .. }) => {
             let crate_prefix = match gears.is_present() {
