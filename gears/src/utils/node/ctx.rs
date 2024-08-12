@@ -52,9 +52,9 @@ pub fn build_tx_ctx<'a, DB, SK>(
     )
 }
 
-pub fn build_init_ctx<'a, DB, SK>(
-    multi_store: &'a mut ApplicationMultiBank<DB, SK>,
-) -> InitContext<'a, DB, SK> {
+pub fn build_init_ctx<DB, SK>(
+    multi_store: &mut ApplicationMultiBank<DB, SK>,
+) -> InitContext<'_, DB, SK> {
     InitContext::new(
         multi_store,
         0,
