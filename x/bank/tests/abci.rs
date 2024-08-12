@@ -51,9 +51,7 @@ fn test_init_and_few_blocks() {
         "079ca947e30b69479b21da61e1cb9bad4ff5c8ec99dc3d9e32919179f6604a1d"
     );
 
-    for _ in 0..100 {
-        node.step(vec![], Timestamp::UNIX_EPOCH);
-    }
+    node.skip_steps(100);
 
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(

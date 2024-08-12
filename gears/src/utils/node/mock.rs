@@ -73,7 +73,7 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
         }
     }
 
-    pub fn step(&mut self, txs: Vec<Bytes>, block_time: Timestamp) -> &Bytes {
+    pub fn step(&mut self, txs: impl IntoIterator<Item = Bytes>, block_time: Timestamp) -> &Bytes {
         let header = self.calculate_header();
         self.height += 1;
         self.time = block_time;
@@ -164,5 +164,11 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
 
     pub fn chain_id(&self) -> &ChainId {
         &self.chain_id
+    }
+
+    pub fn skip_steps(&mut self, steps: usize) {
+        for _ in 0..steps {
+            let _ = self.step([], Timestamp::UNIX_EPOCH);
+        }
     }
 }
