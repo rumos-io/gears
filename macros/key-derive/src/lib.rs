@@ -35,7 +35,7 @@ struct KeysAttr {
 
 impl KeysAttr {
     fn not_empty(self) -> darling::Result<Self> {
-        if self.to_string.is_empty() {
+        if self.to_string.is_empty() || self.to_string.replace(" ", "").is_empty() {
             Err(darling::Error::custom("key can't be empty").with_span(&self.to_string.span()))
         } else {
             Ok(self)
