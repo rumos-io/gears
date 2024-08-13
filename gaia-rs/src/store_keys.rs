@@ -1,35 +1,21 @@
-use gears::{derive::ParamsKeys, store::StoreKey};
+use gears::derive::{ParamsKeys, StoreKeys};
 use strum::EnumIter;
 
-#[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys)]
+#[skey(params = Params)]
 pub enum GaiaStoreKey {
+    #[skey(to_string = "bank")]
     Bank,
+    #[skey(to_string = "acc")]
     Auth,
+    #[skey(to_string = "params")]
     Params,
+    #[skey(to_string = "staking")]
     Staking,
+    #[skey(to_string = "ibc")]
     IBC,
+    #[skey(to_string = "capability")]
     Capability,
-}
-
-/// WARNING: a key name must not be a prefix of another, there is currently
-/// no check in the SDK to prevent this.
-impl StoreKey for GaiaStoreKey {
-    fn name(&self) -> &'static str {
-        match self {
-            GaiaStoreKey::Bank => "bank",
-            GaiaStoreKey::Auth => "acc",
-            GaiaStoreKey::Params => "params",
-            GaiaStoreKey::Staking => "staking",
-            GaiaStoreKey::IBC => "ibc",
-            GaiaStoreKey::Capability => "capability",
-        }
-    }
-
-    fn params() -> &'static Self {
-        const PARAM_KEY: GaiaStoreKey = GaiaStoreKey::Params;
-
-        &PARAM_KEY
-    }
 }
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
