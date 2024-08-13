@@ -200,11 +200,10 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
 
     use gears::{
-        params::SubspaceParseError,
-        store::{bank::multi::ApplicationMultiBank, database::MemDB, StoreKey},
+        derive::{ParamsKeys, StoreKeys},
+        store::{bank::multi::ApplicationMultiBank, database::MemDB},
         utils::node::build_init_ctx,
     };
 
@@ -230,45 +229,21 @@ mod tests {
         assert_ne!(before_hash, after_hash);
 
         let expected_hash = [
-            45, 7, 91, 83, 117, 217, 8, 114, 126, 199, 246, 2, 201, 212, 145, 77, 228, 121, 160,
-            166, 79, 30, 133, 41, 6, 41, 130, 196, 85, 138, 248, 183,
+            141, 88, 216, 237, 121, 214, 45, 53, 129, 175, 175, 125, 58, 187, 150, 212, 167, 90,
+            83, 33, 242, 181, 88, 5, 50, 204, 98, 57, 27, 186, 208, 220,
         ];
 
         assert_eq!(expected_hash, after_hash);
     }
 
-    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys, StoreKeys)]
+    #[skey(params = Params)]
     enum SubspaceKey {
+        #[skey(store_str = "auth")]
+        #[pkey(prefix_str = "auth")]
         Auth,
+        #[skey(store_str = "param")]
+        #[pkey(prefix_str = "params")]
         Params,
-    }
-
-    impl FromStr for SubspaceKey {
-        type Err = SubspaceParseError;
-
-        fn from_str(_: &str) -> Result<Self, Self::Err> {
-            Err(SubspaceParseError("omit".to_string()))
-        }
-    }
-
-    impl ParamsSubspaceKey for SubspaceKey {
-        fn name(&self) -> &'static str {
-            match self {
-                SubspaceKey::Params => "params",
-                SubspaceKey::Auth => "auth",
-            }
-        }
-    }
-
-    impl StoreKey for SubspaceKey {
-        fn name(&self) -> &'static str {
-            "auth"
-        }
-
-        fn params() -> &'static Self {
-            const PARAM_KEY: SubspaceKey = SubspaceKey::Params;
-
-            &PARAM_KEY
-        }
     }
 }

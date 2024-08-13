@@ -1,16 +1,11 @@
 use auth::{AuthABCIHandler, GenesisState, Keeper};
 use gears::{
+    derive::{ParamsKeys, StoreKeys},
     tendermint::types::time::timestamp::Timestamp,
     utils::node::{init_node, GenesisSource, MockOptionsFormer},
 };
-use std::str::FromStr;
 
-use gears::{
-    params::{ParamsSubspaceKey, SubspaceParseError},
-    store::StoreKey,
-    types::address::AccAddress,
-    x::module::Module,
-};
+use gears::{types::address::AccAddress, x::module::Module};
 
 #[test]
 /// In this scenario, we test the initialization of the application and execute a few blocks
@@ -73,54 +68,19 @@ impl Module for AuthModules {
     }
 }
 
-#[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys)]
+#[skey(params = Params)]
 pub enum SpaceKey {
+    #[skey(store_str = "acc")]
     Auth,
+    #[skey(store_str = "params")]
     Params,
 }
 
-#[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
 pub enum SubspaceKey {
+    #[pkey(prefix_str = "auth/")]
     Auth,
+    #[pkey(prefix_str = "baseapp/")]
     BaseApp,
-}
-
-impl FromStr for SubspaceKey {
-    type Err = SubspaceParseError;
-
-    fn from_str(_: &str) -> Result<Self, Self::Err> {
-        Err(SubspaceParseError("omit".to_string()))
-    }
-}
-
-impl FromStr for SpaceKey {
-    type Err = SubspaceParseError;
-
-    fn from_str(_: &str) -> Result<Self, Self::Err> {
-        Err(SubspaceParseError("omit".to_string()))
-    }
-}
-
-impl ParamsSubspaceKey for SubspaceKey {
-    fn name(&self) -> &'static str {
-        match self {
-            SubspaceKey::BaseApp => "baseapp/",
-            SubspaceKey::Auth => "auth/",
-        }
-    }
-}
-
-impl StoreKey for SpaceKey {
-    fn name(&self) -> &'static str {
-        match self {
-            SpaceKey::Auth => "acc",
-            SpaceKey::Params => "params",
-        }
-    }
-
-    fn params() -> &'static Self {
-        const PARAM_KEY: SpaceKey = SpaceKey::Params;
-
-        &PARAM_KEY
-    }
 }

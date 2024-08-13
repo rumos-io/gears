@@ -44,8 +44,9 @@ pub fn acc_address() -> AccAddress {
     AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
 }
 
-pub fn tendermint() -> &'static TmpChild {
-    static TENDERMINT: OnceLock<(TmpChild, std::thread::JoinHandle<()>)> = OnceLock::new();
+pub fn tendermint() -> &'static TendermintSubprocess {
+    static TENDERMINT: OnceLock<(TendermintSubprocess, std::thread::JoinHandle<()>)> =
+        OnceLock::new();
 
     &TENDERMINT
         .get_or_init(|| {

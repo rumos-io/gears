@@ -19,5 +19,3 @@ fn duplicate_key() {
     let t = trybuild::TestCases::new();
     t.compile_fail("tests/assets/paramskey/duplicate_key.rs");
 }
-
-
