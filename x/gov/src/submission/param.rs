@@ -38,7 +38,7 @@ impl<PSK: ParamsSubspaceKey> TryFrom<RawParamChange> for ParamChange<PSK> {
         }: RawParamChange,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            subspace: PSK::from_str(&subspace)
+            subspace: PSK::from_subspace_str(&subspace)
                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
             key,
             value,

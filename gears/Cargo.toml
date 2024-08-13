@@ -17,6 +17,7 @@ database = { path = "../database" }
 tx-derive = { path = "../macros/tx-derive" }
 query-derive = { path = "../macros/query-derive" }
 protobuf-derive = { path = "../macros/protobuf-derive" }
+key-derive = { path = "../macros/key-derive" }
 
 #newtypes
 vec1 = { workspace = true, features = ["serde"] }

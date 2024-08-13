@@ -36,6 +36,7 @@ pub mod store {
 }
 
 pub mod derive {
+    pub use key_derive::*;
     #[doc(inline)]
     pub use protobuf_derive::*;
     pub use query_derive::*;
