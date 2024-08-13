@@ -1,7 +1,4 @@
-use gears::{
-    params::{ParamsSubspaceKey, SubspaceParseError},
-    store::StoreKey,
-};
+use gears::{derive::ParamsKeys, store::StoreKey};
 use strum::EnumIter;
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
@@ -35,40 +32,18 @@ impl StoreKey for GaiaStoreKey {
     }
 }
 
-#[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
 pub enum GaiaParamsStoreKey {
+    #[pkey(to_string = "bank/")]
     Bank,
+    #[pkey(to_string = "auth/")]
     Auth,
+    #[pkey(to_string = "baseapp/")]
     BaseApp,
+    #[pkey(to_string = "staking/")]
     Staking,
+    #[pkey(to_string = "ibc/")]
     IBC,
+    #[pkey(to_string = "capability/")]
     Capability,
-}
-
-/// WARNING: a key name must not be a prefix of another, there is currently
-/// no check in the SDK to prevent this.
-impl ParamsSubspaceKey for GaiaParamsStoreKey {
-    fn name(&self) -> &'static str {
-        match self {
-            Self::Bank => "bank/",
-            Self::Auth => "auth/",
-            Self::BaseApp => "baseapp/",
-            Self::Staking => "staking/",
-            Self::IBC => "ibc/",
-            Self::Capability => "capability/",
-        }
-    }
-
-    fn from_subspace_str(val: &str) -> Result<Self, SubspaceParseError> {
-        Ok(match val {
-            "bank/" => Self::Bank,
-            "auth/" => Self::Auth,
-            "baseapp/" => Self::BaseApp,
-            "ibc/" => Self::IBC,
-            "capability/" => Self::Capability,
-            _ => Err(SubspaceParseError(
-                "missing valid key: {s} not found".to_string(),
-            ))?,
-        })
-    }
 }
