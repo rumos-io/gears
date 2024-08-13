@@ -29,7 +29,7 @@ members = [
   "x/gov",
   "x/ibc-rs",
   "x/slashing",
-  "x/staking", 
+  "x/staking",
 
   # new unsorted
 ]
