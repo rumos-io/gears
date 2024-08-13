@@ -39,21 +39,21 @@ pub fn expand_store(input: DeriveInput) -> syn::Result<TokenStream> {
                     ))?
                 }
 
-                enum_variants.push(quote! { Self::#ident (_) => #to_string });
+                enum_variants.push(quote! { Self::#ident => #to_string });
             }
 
             let result = quote! {
-                impl #crate_prefix ::params::ParamsSubspaceKey for #ident
+                impl #crate_prefix ::store::StoreKey for #ident
                 {
                     fn name(&self) -> &'static str
                     {
-                        math self {
+                        match self {
                             #(#enum_variants),*
                         }
                     }
 
                     fn params() -> &'static Self {
-                        const PARAM_KEY: Self = Self::#params;
+                        const PARAM_KEY: #ident = #ident::#params;
 
                         &PARAM_KEY
                     }
