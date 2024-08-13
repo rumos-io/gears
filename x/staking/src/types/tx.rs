@@ -396,24 +396,23 @@ impl Protobuf<inner::MsgCreateValidator> for CreateValidator {}
 pub struct EditValidatorRaw {
     #[prost(message, optional)]
     pub description: Option<DescriptionUpdate>,
-    #[prost(message, optional)]
+    #[prost(string)]
+    pub validator_address: String,
+    #[prost(string, optional)]
     pub commission_rate: Option<String>,
     #[prost(string, optional)]
     pub min_self_delegation: Option<String>,
-    #[prost(string)]
-    pub validator_address: String,
-    #[prost(string)]
-    pub from_address: String,
 }
 
 impl From<EditValidator> for EditValidatorRaw {
     fn from(src: EditValidator) -> Self {
         Self {
             description: Some(src.description),
-            commission_rate: src.commission_rate.map(|com_rate| com_rate.to_string()),
+            commission_rate: src
+                .commission_rate
+                .map(|com_rate| com_rate.to_cosmos_proto_string()),
             min_self_delegation: src.min_self_delegation.map(|msd| msd.to_string()),
             validator_address: src.validator_address.to_string(),
-            from_address: src.from_address.to_string(),
         }
     }
 }
@@ -426,7 +425,28 @@ pub struct EditValidator {
     pub min_self_delegation: Option<Uint256>,
     pub validator_address: ValAddress,
     // for method `get_signers`. The sdk converts validator_address
-    pub from_address: AccAddress,
+    from_address: AccAddress,
+}
+
+impl EditValidator {
+    pub fn new(
+        description: DescriptionUpdate,
+        commission_rate: Option<Decimal256>,
+        min_self_delegation: Option<Uint256>,
+        validator_address: ValAddress,
+    ) -> EditValidator {
+        EditValidator {
+            description,
+            commission_rate,
+            min_self_delegation,
+            validator_address: validator_address.clone(),
+            from_address: validator_address.into(),
+        }
+    }
+
+    pub fn get_signers(&self) -> Vec<&AccAddress> {
+        vec![&self.from_address]
+    }
 }
 
 impl TryFrom<EditValidatorRaw> for EditValidator {
@@ -434,7 +454,10 @@ impl TryFrom<EditValidatorRaw> for EditValidator {
 
     fn try_from(src: EditValidatorRaw) -> Result<Self, Self::Error> {
         let commission_rate = if let Some(rate) = src.commission_rate {
-            Some(Decimal256::from_str(&rate).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?)
+            Some(
+                Decimal256::from_cosmos_proto_string(&rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            )
         } else {
             None
         };
@@ -446,16 +469,18 @@ impl TryFrom<EditValidatorRaw> for EditValidator {
         } else {
             None
         };
+
+        let validator_address = ValAddress::from_bech32(&src.validator_address)
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
+
         Ok(EditValidator {
             description: src.description.ok_or(CoreError::MissingField(
                 "Missing field 'description'.".into(),
             ))?,
             commission_rate,
             min_self_delegation,
-            validator_address: ValAddress::from_bech32(&src.validator_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            from_address: AccAddress::from_bech32(&src.from_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            validator_address: validator_address.clone(),
+            from_address: validator_address.into(),
         })
     }
 }

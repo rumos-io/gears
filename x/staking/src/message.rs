@@ -26,7 +26,7 @@ impl TxMessage for Message {
     fn get_signers(&self) -> Vec<&AccAddress> {
         match &self {
             Message::CreateValidator(msg) => vec![&msg.delegator_address],
-            Message::EditValidator(msg) => vec![&msg.from_address],
+            Message::EditValidator(msg) => msg.get_signers(),
             Message::Delegate(msg) => vec![&msg.delegator_address],
             Message::Redelegate(msg) => vec![&msg.delegator_address],
             Message::Undelegate(msg) => vec![&msg.delegator_address],

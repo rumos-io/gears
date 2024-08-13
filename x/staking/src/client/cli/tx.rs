@@ -173,7 +173,6 @@ pub fn run_staking_tx_command(
             commission_rate,
             min_self_delegation,
         } => {
-            let delegator_address = from_address.clone();
             let validator_address = ValAddress::from(from_address);
             let description = DescriptionUpdate {
                 moniker: moniker.clone(),
@@ -182,13 +181,12 @@ pub fn run_staking_tx_command(
                 security_contact: security_contact.clone(),
                 details: details.clone(),
             };
-            let msg = StakingMessage::EditValidator(EditValidator {
+            let msg = StakingMessage::EditValidator(EditValidator::new(
                 description,
-                commission_rate: *commission_rate,
-                min_self_delegation: *min_self_delegation,
+                *commission_rate,
+                *min_self_delegation,
                 validator_address,
-                from_address: delegator_address,
-            });
+            ));
 
             Ok(msg)
         }
