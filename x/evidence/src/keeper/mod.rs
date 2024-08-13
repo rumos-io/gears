@@ -15,6 +15,8 @@ use gears::{
 };
 use std::marker::PhantomData;
 
+mod infraction;
+
 const KEY_PREFIX_EVIDENCE: [u8; 1] = [0x0];
 
 /// Keeper of the evidence store
@@ -72,7 +74,11 @@ where
         genesis: GenesisState<E>,
     ) -> Result<(), EvidenceError> {
         for e in genesis.evidence {
-            if self.evidence(ctx, e.hash()).unwrap_gas().is_some() {
+            if self
+                .evidence::<InitContext<DB, SK>, DB, E>(ctx, e.hash())
+                .unwrap_gas()
+                .is_some()
+            {
                 return Err(EvidenceError::AlreadyExists(e.hash()));
             }
             self.set_evidence(ctx, &e).unwrap_gas();
@@ -81,23 +87,23 @@ where
     }
 
     /// evidence gets Evidence by hash in the module's KVStore.
-    pub fn evidence<CTX: QueryableContext<DB, SK>, DB: Database>(
+    pub fn evidence<CTX: QueryableContext<DB, SK>, DB: Database, Ev: Evidence + Default>(
         &self,
         ctx: &mut CTX,
         evidence_hash: Hash,
-    ) -> Result<Option<E>, GasStoreErrors> {
+    ) -> Result<Option<Ev>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
         let store = store.prefix_store(KEY_PREFIX_EVIDENCE);
         Ok(store
             .get(evidence_hash.as_bytes())?
-            .map(|bytes| E::decode(bytes.as_slice()).unwrap_or_corrupt()))
+            .map(|bytes| Ev::decode(bytes.as_slice()).unwrap_or_corrupt()))
     }
 
     /// set_evidence sets Evidence by hash in the module's KVStore.
-    pub fn set_evidence<CTX: TransactionalContext<DB, SK>, DB: Database>(
+    pub fn set_evidence<CTX: TransactionalContext<DB, SK>, DB: Database, Ev: Evidence>(
         &self,
         ctx: &mut CTX,
-        evidence: &E,
+        evidence: &Ev,
     ) -> Result<(), GasStoreErrors> {
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(KEY_PREFIX_EVIDENCE);

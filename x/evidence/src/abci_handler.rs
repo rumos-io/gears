@@ -1,8 +1,12 @@
-use crate::{types::Evidence, GenesisState, Keeper};
+use crate::{
+    types::{Equivocation, Evidence},
+    GenesisState, Keeper,
+};
 use gears::{
-    context::init::InitContext,
+    context::{block::BlockContext, init::InitContext},
     core::any::google::Any,
     store::{database::Database, StoreKey},
+    tendermint::types::{proto::info::EvidenceType, request::begin_block::RequestBeginBlock},
     x::{
         keepers::{slashing::EvidenceSlashingKeeper, staking::SlashingStakingKeeper},
         module::Module,
@@ -43,6 +47,29 @@ where
     ) {
         if let Err(e) = self.keeper.init_genesis(ctx, genesis) {
             panic!("Cannot perform evidence genesis.\n{e}");
+        }
+    }
+
+    /// begin_block iterates through and handles any newly discovered evidence of
+    /// misbehavior submitted by Tendermint. Currently, only equivocation is handled.
+    pub fn begin_block<DB: Database>(
+        &self,
+        _ctx: &mut BlockContext<'_, DB, SK>,
+        request: RequestBeginBlock,
+    ) {
+        for evidence in request.byzantine_validators {
+            match evidence.r#type() {
+                // It's still ongoing discussion how should we treat and slash attacks with
+                // premeditation. So for now we agree to treat them in the same way.
+                EvidenceType::DuplicateVote | EvidenceType::LightClientAttack => {
+                    let _evidence: Equivocation = evidence.into();
+                    // self.keeper.handle_equivocation_evidence(ctx, &evidence);
+                    todo!()
+                }
+                EvidenceType::Unknown => {
+                    tracing::error!("ignored unknown evidence type: {}", evidence.r#type);
+                }
+            }
         }
     }
 }

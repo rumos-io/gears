@@ -22,7 +22,9 @@ const ABS_DURATION_NANOSECONDS: i128 =
 /// encoded in JSON format as "3s", while 3 seconds and 1 nanosecond should
 /// be expressed in JSON format as "3.000000001s", and 3 seconds and 1
 /// microsecond should be expressed in JSON format as "3.000001s".
-#[derive(Clone, Copy, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, ::prost::Message, serde::Serialize, serde::Deserialize,
+)]
 #[serde(
     try_from = "super::serializers::SerdeDuration",
     into = "super::serializers::SerdeDuration"
@@ -232,35 +234,33 @@ impl From<Duration> for inner::Duration {
 }
 
 pub mod serde_with {
+    use crate::types::time::duration::Duration;
+
     pub fn serialize_duration_opt_to_nanos_string<S>(
-        x: &Option<super::Duration>,
+        x: &super::Duration,
         s: S,
     ) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        s.serialize_some(&x.map(|x| i128::from(x.duration_nanoseconds()).to_string()))
+        s.serialize_str(&i128::from(x.duration_nanoseconds()).to_string())
     }
 
     pub fn deserialize_duration_opt_from_nanos_string<'de, D>(
         deserializer: D,
-    ) -> Result<Option<super::Duration>, D::Error>
+    ) -> Result<Duration, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         use serde::Deserialize;
-        let value = if let Some(duration_num_string) = <Option<String>>::deserialize(deserializer)?
-        {
-            Some(
-                super::Duration::try_new_from_nanos(
-                    duration_num_string
-                        .parse()
-                        .map_err(serde::de::Error::custom)?,
-                )
-                .map_err(serde::de::Error::custom)?,
+        let value = {
+            let duration_num_string = <String>::deserialize(deserializer)?;
+            Duration::try_new_from_nanos(
+                duration_num_string
+                    .parse()
+                    .map_err(serde::de::Error::custom)?,
             )
-        } else {
-            None
+            .map_err(serde::de::Error::custom)?
         };
         Ok(value)
     }

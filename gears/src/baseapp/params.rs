@@ -1,3 +1,4 @@
+use core_types::errors::CoreError;
 use database::Database;
 use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
@@ -51,20 +52,22 @@ pub struct ConsensusParams {
     // pub version: Option<VersionParams>
 }
 
-impl From<inner::ConsensusParams> for ConsensusParams {
-    fn from(
+impl TryFrom<inner::ConsensusParams> for ConsensusParams {
+    type Error = CoreError;
+
+    fn try_from(
         inner::ConsensusParams {
             block,
             evidence,
             validator,
             version: _,
         }: inner::ConsensusParams,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
             block: block.into(),
-            evidence: evidence.into(),
+            evidence: evidence.try_into()?,
             validator: validator.into(),
-        }
+        })
     }
 }
 
@@ -161,7 +164,7 @@ pub struct EvidenceParams {
     pub max_age_num_blocks: i64,
     #[serde(serialize_with = "serialize_duration_opt_to_nanos_string")]
     #[serde(deserialize_with = "deserialize_duration_opt_from_nanos_string")]
-    pub max_age_duration: Option<Duration>,
+    pub max_age_duration: Duration,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_bytes: i64,
 }
@@ -172,19 +175,23 @@ impl Default for EvidenceParams {
         // from sdk testing setup
         EvidenceParams {
             max_age_num_blocks: 302400,
-            max_age_duration: Some(Duration::new_from_secs(3 * 7 * 24 * 3600)), // 3 weeks
+            max_age_duration: Duration::new_from_secs(3 * 7 * 24 * 3600), // 3 weeks
             max_bytes: 10000,
         }
     }
 }
 
-impl From<inner::EvidenceParams> for EvidenceParams {
-    fn from(params: inner::EvidenceParams) -> EvidenceParams {
-        EvidenceParams {
+impl TryFrom<inner::EvidenceParams> for EvidenceParams {
+    type Error = CoreError;
+
+    fn try_from(params: inner::EvidenceParams) -> Result<Self, Self::Error> {
+        Ok(EvidenceParams {
             max_age_num_blocks: params.max_age_num_blocks,
-            max_age_duration: params.max_age_duration,
+            max_age_duration: params.max_age_duration.ok_or(CoreError::MissingField(
+                "field max_age_duration is missed".to_string(),
+            ))?,
             max_bytes: params.max_bytes,
-        }
+        })
     }
 }
 

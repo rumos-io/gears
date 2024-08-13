@@ -238,10 +238,10 @@ impl Timestamp {
     }
 
     /// Creates a new `Timestamp` from the given seconds and nanoseconds.
-    pub fn new(seconds: TimestampSeconds, nanos: Nanoseconds) -> Self {
+    pub const fn new(seconds: TimestampSeconds, nanos: Nanoseconds) -> Self {
         Self {
-            seconds: seconds.into(),
-            nanos: nanos.into(),
+            seconds: seconds.0,
+            nanos: nanos.0 as i32,
         }
     }
 

@@ -82,10 +82,16 @@ pub struct Evidence {
     /// The height when the offense occurred
     pub height: i64,
     /// The corresponding time where the offense occurred
-    pub time: Option<Timestamp>,
+    pub time: Timestamp,
     /// Total voting power of the validator set in case the ABCI application does
     /// not store historical validators.
     pub total_voting_power: i64,
+}
+
+impl Evidence {
+    pub fn r#type(&self) -> EvidenceType {
+        EvidenceType::from_i32(self.r#type).unwrap_or(EvidenceType::Unknown)
+    }
 }
 
 impl TryFrom<inner::Evidence> for Evidence {
@@ -108,11 +114,9 @@ impl TryFrom<inner::Evidence> for Evidence {
                 .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             height,
             time: time
-                .map(|t| {
-                    t.try_into()
-                        .map_err(|e| Self::Error::InvalidData(format!("{e}")))
-                })
-                .transpose()?,
+                .ok_or(Self::Error::InvalidData("time is missing".into()))?
+                .try_into()
+                .map_err(|e| Self::Error::InvalidData(format!("{e}")))?,
             total_voting_power,
         })
     }
@@ -132,7 +136,7 @@ impl From<Evidence> for inner::Evidence {
             r#type,
             validator: Some(validator.into()),
             height,
-            time: time.map(Into::into),
+            time: Some(time.into()),
             total_voting_power,
         }
     }
