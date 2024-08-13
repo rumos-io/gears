@@ -1,0 +1,12 @@
+#[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, gears::derive::StoreKeys)]
+#[skey(params = Params)]
+pub enum GaiaStoreKey {
+    #[skey(to_string = "bank")]
+    Bank,
+    #[skey(to_string = "bank")]
+    Auth,
+    #[skey(to_string = "params")]
+    Params,
+}
+
+fn main() {}
