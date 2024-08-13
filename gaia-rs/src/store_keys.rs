@@ -4,32 +4,32 @@ use strum::EnumIter;
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys)]
 #[skey(params = Params)]
 pub enum GaiaStoreKey {
-    #[skey(to_string = "bank")]
+    #[skey(store_str = "bank")]
     Bank,
-    #[skey(to_string = "acc")]
+    #[skey(store_str = "acc")]
     Auth,
-    #[skey(to_string = "params")]
+    #[skey(store_str = "params")]
     Params,
-    #[skey(to_string = "staking")]
+    #[skey(store_str = "staking")]
     Staking,
-    #[skey(to_string = "ibc")]
+    #[skey(store_str = "ibc")]
     IBC,
-    #[skey(to_string = "capability")]
+    #[skey(store_str = "capability")]
     Capability,
 }
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
 pub enum GaiaParamsStoreKey {
-    #[pkey(to_string = "bank/")]
+    #[pkey(prefix_str = "bank/")]
     Bank,
-    #[pkey(to_string = "auth/")]
+    #[pkey(prefix_str = "auth/")]
     Auth,
-    #[pkey(to_string = "baseapp/")]
+    #[pkey(prefix_str = "baseapp/")]
     BaseApp,
-    #[pkey(to_string = "staking/")]
+    #[pkey(prefix_str = "staking/")]
     Staking,
-    #[pkey(to_string = "ibc/")]
+    #[pkey(prefix_str = "ibc/")]
     IBC,
-    #[pkey(to_string = "capability/")]
+    #[pkey(prefix_str = "capability/")]
     Capability,
 }

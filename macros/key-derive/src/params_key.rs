@@ -3,15 +3,30 @@ use std::collections::HashSet;
 use darling::{util::Flag, FromAttributes, FromDeriveInput};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DataEnum, DeriveInput, Variant};
-
-use crate::KeysAttr;
+use syn::{spanned::Spanned, DataEnum, DeriveInput, Variant};
 
 #[derive(FromDeriveInput)]
 #[darling(attributes(pkey))]
 struct KeysArg {
     #[darling(default)]
     pub gears: Flag,
+}
+
+#[derive(FromAttributes, Default)]
+#[darling(default, attributes(pkey), forward_attrs(allow, doc, cfg))]
+#[darling(and_then = Self::not_empty)]
+struct KeysAttr {
+    pub prefix_str: String,
+}
+
+impl KeysAttr {
+    fn not_empty(self) -> darling::Result<Self> {
+        if self.prefix_str.is_empty() || self.prefix_str.replace(" ", "").is_empty() {
+            Err(darling::Error::custom("key can't be empty").with_span(&self.prefix_str.span()))
+        } else {
+            Ok(self)
+        }
+    }
 }
 
 pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
@@ -30,7 +45,7 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
             let mut set = HashSet::<String>::with_capacity(enum_variants.len());
 
             for Variant { attrs, ident, .. } in variants {
-                let KeysAttr { to_string } = KeysAttr::from_attributes(&attrs)?;
+                let KeysAttr { prefix_str: to_string } = KeysAttr::from_attributes(&attrs)?;
 
                 if !set.insert(to_string.clone()) {
                     Err(syn::Error::new(

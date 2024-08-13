@@ -84,16 +84,16 @@ data-encoding = { workspace = true }
 run_script = { workspace = true, optional = true }
 assert_fs = { workspace = true, optional = true }
 dircpy = { workspace = true, optional = true }
-rand = { workspace = true, optional = true } 
-trybuild = { version = "1.0.99", optional = true } 
+rand = { workspace = true, optional = true }
 
 [dev-dependencies]
+trybuild = { version = "1.0.99" }
 
 [features]
 default = ["cli", "xmods"]
 xmods = []
 governance = []
-macros_test = [ "dep:trybuild" ]
+macros_test = []
 utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy", "dep:rand",  ]
 cli = ["dep:clap", "dep:clap_complete"]
 rocksdb = ["database/rocksdb"]

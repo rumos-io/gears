@@ -273,15 +273,12 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
 
-    use crate::{
-        context::init::InitContext,
-        params::{ParamsSubspaceKey, SubspaceParseError},
-    };
+    use crate::context::init::InitContext;
 
     use super::*;
     use database::MemDB;
+    use key_derive::{ParamsKeys, StoreKeys};
     use kv_store::bank::multi::ApplicationMultiBank;
     use tendermint::types::{
         proto::params::EvidenceParams as RawEvidenceParams, time::duration::Duration,
@@ -303,37 +300,13 @@ mod tests {
         );
     }
 
-    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone)]
+    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys, ParamsKeys)]
+    #[skey(params = Params, gears)]
+    #[pkey(gears)]
     enum SubspaceKey {
+        #[skey(store_str = "baseapp")]
+        #[pkey(prefix_str = "params")]
         Params,
-    }
-
-    impl FromStr for SubspaceKey {
-        type Err = SubspaceParseError;
-
-        fn from_str(_: &str) -> Result<Self, Self::Err> {
-            Err(SubspaceParseError("empty enum".to_string()))
-        }
-    }
-
-    impl ParamsSubspaceKey for SubspaceKey {
-        fn name(&self) -> &'static str {
-            match self {
-                SubspaceKey::Params => "params",
-            }
-        }
-    }
-
-    impl StoreKey for SubspaceKey {
-        fn name(&self) -> &'static str {
-            "baseapp"
-        }
-
-        fn params() -> &'static Self {
-            const PARAM_KEY: SubspaceKey = SubspaceKey::Params;
-
-            &PARAM_KEY
-        }
     }
 
     #[test]
