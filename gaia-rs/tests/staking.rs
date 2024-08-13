@@ -231,7 +231,6 @@ fn redelegate_tx(home: PathBuf) -> anyhow::Result<Response> {
     )?;
 
     /* test */
-
     let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(10u64),
@@ -330,7 +329,6 @@ fn redelegate_failed_on_invalid_amount() -> anyhow::Result<()> {
     )?;
 
     /* test */
-
     let amount = UnsignedCoin {
         denom: "uatom".try_into()?,
         amount: Uint256::from(11u64),
