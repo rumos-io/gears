@@ -49,7 +49,12 @@ pub fn tendermint() -> &'static TmpChild {
 
     &TENDERMINT
         .get_or_init(|| {
-            run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))]).expect("msg")
+            let res = run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))]);
+
+            match res {
+                Ok(res) => res,
+                Err(err) => panic!("Failed to start tendermint with err: {err}"),
+            }
         })
         .0
 }
