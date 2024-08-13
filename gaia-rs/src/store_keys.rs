@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use gears::{
     params::{ParamsSubspaceKey, SubspaceParseError},
     store::StoreKey,
@@ -60,14 +58,9 @@ impl ParamsSubspaceKey for GaiaParamsStoreKey {
             Self::Capability => "capability/",
         }
     }
-}
 
-// TODO: for future params change
-impl FromStr for GaiaParamsStoreKey {
-    type Err = SubspaceParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(match s {
+    fn from_subspace_str(val: &str) -> Result<Self, SubspaceParseError> {
+        Ok(match val {
             "bank/" => Self::Bank,
             "auth/" => Self::Auth,
             "baseapp/" => Self::BaseApp,

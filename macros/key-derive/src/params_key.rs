@@ -26,6 +26,7 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
             };
 
             let mut enum_variants = Vec::<TokenStream>::new();
+            let mut from_str_impls = Vec::<TokenStream>::new();
             let mut set = HashSet::<String>::with_capacity(enum_variants.len());
 
             for Variant { attrs, ident, .. } in variants {
@@ -39,6 +40,7 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
                 }
 
                 enum_variants.push(quote! { Self::#ident => #to_string });
+                from_str_impls.push(quote! { #to_string => Self::#ident });
             }
 
             let result = quote! {
@@ -49,6 +51,16 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
                         match self{
                             #(#enum_variants),*
                         }
+                    }
+
+                    fn from_subspace_str(val: &str) -> ::std::result::Result<Self, #crate_prefix::params::SubspaceParseError> {
+                        let result = match val
+                        {
+                            #(#from_str_impls),*
+                            , _ => ::std::result::Result::Err(#crate_prefix::params::SubspaceParseError(::std::format!("missing valid key: {val} not found")))?,
+                        };
+
+                        ::std::result::Result::Ok(result)
                     }
                 }
             };
