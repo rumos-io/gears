@@ -1,3 +1,5 @@
+#![cfg(feature = "it")]
+
 use auth::{
     cli::query::{AccountCommand, AuthCommands, AuthQueryCli, AuthQueryResponse},
     query::QueryAccountResponse,
