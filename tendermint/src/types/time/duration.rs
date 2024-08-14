@@ -234,33 +234,35 @@ impl From<Duration> for inner::Duration {
 }
 
 pub mod serde_with {
-    use crate::types::time::duration::Duration;
-
     pub fn serialize_duration_opt_to_nanos_string<S>(
-        x: &super::Duration,
+        x: &Option<super::Duration>,
         s: S,
     ) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        s.serialize_str(&i128::from(x.duration_nanoseconds()).to_string())
+        s.serialize_some(&x.map(|x| i128::from(x.duration_nanoseconds()).to_string()))
     }
 
     pub fn deserialize_duration_opt_from_nanos_string<'de, D>(
         deserializer: D,
-    ) -> Result<Duration, D::Error>
+    ) -> Result<Option<super::Duration>, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         use serde::Deserialize;
-        let value = {
-            let duration_num_string = <String>::deserialize(deserializer)?;
-            Duration::try_new_from_nanos(
-                duration_num_string
-                    .parse()
-                    .map_err(serde::de::Error::custom)?,
+        let value = if let Some(duration_num_string) = <Option<String>>::deserialize(deserializer)?
+        {
+            Some(
+                super::Duration::try_new_from_nanos(
+                    duration_num_string
+                        .parse()
+                        .map_err(serde::de::Error::custom)?,
+                )
+                .map_err(serde::de::Error::custom)?,
             )
-            .map_err(serde::de::Error::custom)?
+        } else {
+            None
         };
         Ok(value)
     }

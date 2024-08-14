@@ -77,20 +77,22 @@ where
         // parameters defined.
         let cons_params = ctx.consensus_params();
 
-        if age_duration > cons_params.evidence.max_age_duration
-            && age_blocks > cons_params.evidence.max_age_num_blocks.try_into()?
-        {
-            tracing::info!(
-                name: "ignored equivocation; evidence too old",
-                target: "module::evidence",
-                validator = cons_address.to_string(),
-                ?infraction_height,
-                max_age_num_blocks = cons_params.evidence.max_age_num_blocks,
-                infraction_time = infraction_time.format_string_rounded(),
-                // TODO: what is better option to show duration?
-                max_age_duration = i128::from(cons_params.evidence.max_age_duration.duration_nanoseconds()),
-            );
-            return Ok(());
+        if let Some(max_age_duration) = cons_params.evidence.max_age_duration {
+            if age_duration > max_age_duration
+                && age_blocks > cons_params.evidence.max_age_num_blocks.try_into()?
+            {
+                tracing::info!(
+                    name: "ignored equivocation; evidence too old",
+                    target: "module::evidence",
+                    validator = cons_address.to_string(),
+                    ?infraction_height,
+                    max_age_num_blocks = cons_params.evidence.max_age_num_blocks,
+                    infraction_time = infraction_time.format_string_rounded(),
+                    // TODO: what is better option to show duration?
+                    max_age_duration = i128::from(max_age_duration.duration_nanoseconds()),
+                );
+                return Ok(());
+            }
         }
 
         let validator = if let Some(validator) = self
@@ -145,7 +147,7 @@ where
         // pre-genesis block (none) = at the beginning of the genesis block.
         // That's fine since this is just used to filter unbonding delegations & redelegations.
         let distribution_height = infraction_height
-            .checked_sub(VALIDATOR_UPDATE_DELAY.try_into()?)
+            .checked_sub(VALIDATOR_UPDATE_DELAY as i64)
             .ok_or(NumericError::Overflow(MathOperation::Sub))?;
 
         // Slash validator. The `power` is the int64 power of the validator as provided

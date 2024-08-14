@@ -63,9 +63,8 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut ctx = state.init_ctx(initial_height, time, chain_id);
 
-        // TODO: do we care about error in the consensus params?
         self.baseapp_params_keeper
-            .set_consensus_params(&mut ctx, consensus_params.clone().try_into().unwrap());
+            .set_consensus_params(&mut ctx, consensus_params.clone().into());
 
         let val_updates = self
             .abci_handler
