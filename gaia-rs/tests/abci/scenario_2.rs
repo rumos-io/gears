@@ -2,7 +2,7 @@ use std::path::Path;
 
 use gears::{
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
-    types::uint::Uint256,
+    types::{address::ValAddress, uint::Uint256},
 };
 use staking::{CommissionRates, CreateValidator, Description};
 
@@ -13,7 +13,12 @@ use crate::{setup_mock_node, User};
 fn scenario_2() {
     let genesis_path = Path::new("./tests/abci/assets/scenario_2_genesis.json");
     let (mut node, _) = setup_mock_node(Some(genesis_path));
-    let user = User::user_1(5);
+    let user_0 = User::user_0(4);
+    let user_1 = User::user_1(5);
+
+    let val_address: ValAddress = user_0.address().into();
+
+    println!("user_0 validator address: {}", val_address);
 
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
@@ -48,13 +53,13 @@ fn scenario_2() {
             )
             .unwrap(),
             min_self_delegation: Uint256::from(100u32),
-            delegator_address: user.address(),
-            validator_address: user.address().into(),
+            delegator_address: user_1.address(),
+            validator_address: user_1.address().into(),
             pub_key: consensus_pub_key,
             value: "10000uatom".parse().unwrap(),
         }));
 
-    let txs = crate::generate_txs([(0, msg)], &user, node.chain_id().clone());
+    let txs = crate::generate_txs([(0, msg)], &user_1, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
     assert_eq!(
@@ -76,19 +81,38 @@ fn scenario_2() {
             },
             Some("0.2".parse().unwrap()),
             Some(Uint256::from(200u32)),
-            user.address().into(),
+            user_1.address().into(),
         ),
     ));
 
-    let txs = crate::generate_txs([(1, msg)], &user, node.chain_id().clone());
-
-    println!("txs: {:?}", txs[0].to_vec());
-    // print hex encoded
-    println!("txs: {:?}", hex::encode(txs[0].to_vec()));
+    let txs = crate::generate_txs([(1, msg)], &user_1, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
     assert_eq!(
         hex::encode(app_hash),
         "5fd02c41a162e9b14341e1192296b939f00aa2395997c6b64b2940e401f717df"
+    );
+
+    //----------------------------------------
+    // Delegate to a validator
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Delegate(staking::DelegateMsg {
+            validator_address: user_0.address().into(),
+            amount: "1000uatom".parse().unwrap(),
+            delegator_address: user_1.address(),
+        }));
+
+    let txs = crate::generate_txs([(2, msg)], &user_1, node.chain_id().clone());
+
+    println!("txs: {:?}", txs[0].to_vec());
+    // print hex encoded
+    //println!("txs: {:?}", hex::encode(txs[0].to_vec()));
+
+    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(app_hash),
+        "13512b231d8ed1ab93df74530d232d71525ddf1666579f1690808fac882f3235"
     );
 }

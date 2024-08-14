@@ -42,7 +42,7 @@ impl User {
         self.key_pair.get_address()
     }
 
-    pub fn _user_0(account_number: u64) -> Self {
+    pub fn user_0(account_number: u64) -> Self {
         let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
         let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
         let key_pair = KeyPair::from_mnemonic(&mnemonic);
