@@ -19,11 +19,11 @@ Contains no additional attributes for container.
 ```rust
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
 pub enum GaiaParamsStoreKey {
-    #[pkey(params_str = "bank/")]
+    #[pkey(to_string = "bank/")]
     Bank,
-    #[pkey(params_str = "auth/")]
+    #[pkey(to_string = "auth/")]
     Auth,
-    #[pkey(params_str = "baseapp/")]
+    #[pkey(to_string = "baseapp/")]
     BaseApp,
 }
 ```
