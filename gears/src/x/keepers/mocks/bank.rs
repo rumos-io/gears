@@ -1,13 +1,15 @@
 use kv_store::StoreKey;
 
 use crate::{
-    types::{store::gas::errors::GasStoreErrors, tx::metadata::Metadata},
+    types::{base::coin::UnsignedCoin, store::gas::errors::GasStoreErrors, tx::metadata::Metadata},
     x::{errors::BankKeeperError, keepers::bank::BankKeeper, module::Module},
 };
 
 #[derive(former::Former, Clone, Debug)]
 pub struct MockBankKeeper {
-    get_denom_metadata: Option<Metadata>,
+    pub get_denom_metadata: Option<Metadata>,
+    pub balance_all: Vec<UnsignedCoin>,
+    pub balance: UnsignedCoin,
 }
 
 impl<SK: StoreKey, M: Module> BankKeeper<SK, M> for MockBankKeeper {
