@@ -1,9 +1,14 @@
-use std::collections::{HashMap, HashSet};
-
 use database::Database;
 use kv_store::StoreKey;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
+use std::collections::{HashMap, HashSet};
+use tendermint::types::time::duration::{
+    serde_with::{
+        deserialize_duration_opt_from_nanos_string, serialize_duration_opt_to_nanos_string,
+    },
+    Duration,
+};
 
 use crate::{
     application::keepers::params::ParamsKeeper,
@@ -27,8 +32,6 @@ const KEY_VALIDATOR_PARAMS: &str = "ValidatorParams";
 
 const _SUBSPACE_NAME: &str = "baseapp/";
 
-const SEC_TO_NANO: i64 = 1_000_000_000;
-
 //##################################################################################
 //##################################################################################
 // TODO: The cosmos sdk / tendermint uses a custom serializer/deserializer
@@ -39,7 +42,7 @@ const SEC_TO_NANO: i64 = 1_000_000_000;
 //##################################################################################
 
 /// A domain ConsensusParams type that wraps domain consensus params types.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ConsensusParams {
     pub block: BlockParams,
     pub evidence: EvidenceParams,
@@ -101,9 +104,10 @@ impl ParamsDeserialize for ConsensusParams {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct BlockParams {
-    pub max_bytes: String,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    pub max_bytes: i64,
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub max_gas: i64,
 }
@@ -113,7 +117,7 @@ impl Default for BlockParams {
         // TODO: implement defaults
         // from sdk testing setup
         BlockParams {
-            max_bytes: 200_000.to_string(),
+            max_bytes: 200_000,
             max_gas: 2_000_000,
         }
     }
@@ -122,13 +126,13 @@ impl Default for BlockParams {
 impl From<inner::BlockParams> for BlockParams {
     fn from(params: inner::BlockParams) -> BlockParams {
         BlockParams {
-            max_bytes: params.max_bytes.to_string(),
+            max_bytes: params.max_bytes,
             max_gas: params.max_gas,
         }
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
@@ -150,11 +154,16 @@ impl From<inner::ValidatorParams> for ValidatorParams {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct EvidenceParams {
-    pub max_age_num_blocks: String,
-    pub max_age_duration: Option<String>,
-    pub max_bytes: String,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    pub max_age_num_blocks: i64,
+    #[serde(serialize_with = "serialize_duration_opt_to_nanos_string")]
+    #[serde(deserialize_with = "deserialize_duration_opt_from_nanos_string")]
+    pub max_age_duration: Option<Duration>,
+    #[serde_as(as = "serde_with::DisplayFromStr")]
+    pub max_bytes: i64,
 }
 
 impl Default for EvidenceParams {
@@ -162,9 +171,9 @@ impl Default for EvidenceParams {
         // TODO: update defaults
         // from sdk testing setup
         EvidenceParams {
-            max_age_num_blocks: 302400.to_string(),
-            max_age_duration: Some((504 * 3600 * SEC_TO_NANO).to_string()), // 3 weeks
-            max_bytes: 10000.to_string(),
+            max_age_num_blocks: 302400,
+            max_age_duration: Some(Duration::new_from_secs(3 * 7 * 24 * 3600)), // 3 weeks
+            max_bytes: 10000,
         }
     }
 }
@@ -172,11 +181,9 @@ impl Default for EvidenceParams {
 impl From<inner::EvidenceParams> for EvidenceParams {
     fn from(params: inner::EvidenceParams) -> EvidenceParams {
         EvidenceParams {
-            max_age_num_blocks: params.max_age_num_blocks.to_string(),
-            max_age_duration: params
-                .max_age_duration
-                .map(|d| i128::from(d.duration_nanoseconds()).to_string()),
-            max_bytes: params.max_bytes.to_string(),
+            max_age_num_blocks: params.max_age_num_blocks,
+            max_age_duration: params.max_age_duration,
+            max_bytes: params.max_bytes,
         }
     }
 }
@@ -193,7 +200,7 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for BaseAppParamsKeeper<PSK> {
         &self.params_subspace_key
     }
 
-    #[cfg(all(feature = "governance"))]
+    #[cfg(feature = "governance")]
     fn validate(key: impl AsRef<[u8]>, value: impl AsRef<[u8]>) -> bool {
         match String::from_utf8_lossy(key.as_ref()).as_ref() {
             KEY_BLOCK_PARAMS => serde_json::from_slice::<BlockParams>(value.as_ref()).is_ok(),
@@ -266,7 +273,13 @@ impl<PSK: ParamsSubspaceKey> BaseAppParamsKeeper<PSK> {
 
 #[cfg(test)]
 mod tests {
-    use super::EvidenceParams;
+
+    use crate::context::init::InitContext;
+
+    use super::*;
+    use database::MemDB;
+    use key_derive::{ParamsKeys, StoreKeys};
+    use kv_store::bank::multi::ApplicationMultiBank;
     use tendermint::types::{
         proto::params::EvidenceParams as RawEvidenceParams, time::duration::Duration,
     };
@@ -285,5 +298,68 @@ mod tests {
             "{\"max_age_num_blocks\":\"0\",\"max_age_duration\":\"10000000030\",\"max_bytes\":\"0\"}"
                 .to_string()
         );
+    }
+
+    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys, ParamsKeys)]
+    #[skey(params = Params, gears)]
+    #[pkey(gears)]
+    enum SubspaceKey {
+        #[skey(to_string = "baseapp")]
+        #[pkey(to_string = "params")]
+        Params,
+    }
+
+    #[test]
+    fn app_hash() {
+        let keeper = BaseAppParamsKeeper {
+            params_subspace_key: SubspaceKey::Params,
+        };
+
+        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+
+        let before_hash = multi_store.head_commit_hash();
+
+        let mut ctx = InitContext::new(
+            &mut multi_store,
+            0,
+            tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
+            tendermint::types::chain_id::ChainId::default(),
+        );
+
+        keeper.set_consensus_params(&mut ctx, ConsensusParams::default());
+
+        multi_store.commit();
+        let after_hash = multi_store.head_commit_hash();
+
+        assert_ne!(before_hash, after_hash);
+
+        let expected_hash = [
+            139, 30, 111, 121, 185, 80, 199, 158, 15, 181, 206, 115, 179, 223, 81, 183, 11, 85, 80,
+            14, 41, 195, 81, 139, 165, 139, 13, 128, 138, 187, 254, 129,
+        ];
+
+        assert_eq!(expected_hash, after_hash);
+    }
+
+    #[test]
+    fn set_read_works() {
+        let keeper = BaseAppParamsKeeper {
+            params_subspace_key: SubspaceKey::Params,
+        };
+
+        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+
+        let mut ctx = InitContext::new(
+            &mut multi_store,
+            0,
+            tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
+            tendermint::types::chain_id::ChainId::default(),
+        );
+
+        keeper.set_consensus_params(&mut ctx, ConsensusParams::default());
+
+        let params = keeper.consensus_params(&ctx);
+
+        assert_eq!(ConsensusParams::default(), params);
     }
 }

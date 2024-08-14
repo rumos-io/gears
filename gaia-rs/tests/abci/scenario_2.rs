@@ -3,18 +3,19 @@ use std::path::Path;
 use gears::{
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::{address::ValAddress, uint::Uint256},
+    utils::node::generate_txs,
 };
 use staking::{CommissionRates, CreateValidator, Description};
 
-use crate::{setup_mock_node, User};
+use crate::setup_mock_node;
 
 #[test]
 /// This scenario has a richer genesis file, with more staking fields.
 fn scenario_2() {
     let genesis_path = Path::new("./tests/abci/assets/scenario_2_genesis.json");
     let (mut node, _) = setup_mock_node(Some(genesis_path));
-    let user_0 = User::user_0(4);
-    let user_1 = User::user_1(5);
+    let user_0 = crate::user_0(4);
+    let user_1 = crate::user_1(5);
 
     let val_address: ValAddress = user_0.address().into();
 
@@ -59,7 +60,7 @@ fn scenario_2() {
             value: "10000uatom".parse().unwrap(),
         }));
 
-    let txs = crate::generate_txs([(0, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_txs([(0, msg)], &user_1, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
     assert_eq!(
@@ -85,7 +86,7 @@ fn scenario_2() {
         ),
     ));
 
-    let txs = crate::generate_txs([(1, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_txs([(1, msg)], &user_1, node.chain_id().clone());
 
     let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
     assert_eq!(
@@ -103,7 +104,7 @@ fn scenario_2() {
             delegator_address: user_1.address(),
         }));
 
-    let txs = crate::generate_txs([(2, msg)], &user_1, node.chain_id().clone());
+    let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
 
     println!("txs: {:?}", txs[0].to_vec());
     // print hex encoded

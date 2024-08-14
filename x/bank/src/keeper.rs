@@ -25,8 +25,9 @@ use gears::types::tx::metadata::Metadata;
 use gears::types::uint::Uint256;
 use gears::x::errors::{AccountNotFound, BankCoinsError, BankKeeperError, InsufficientFundsError};
 use gears::x::keepers::auth::AuthKeeper;
-use gears::x::keepers::bank::{BankKeeper, StakingBankKeeper};
+use gears::x::keepers::bank::BankKeeper;
 use gears::x::keepers::gov::GovernanceBankKeeper;
+use gears::x::keepers::staking::StakingBankKeeper;
 use gears::x::module::Module;
 use std::marker::PhantomData;
 use std::ops::SubAssign;
@@ -53,8 +54,12 @@ pub struct Keeper<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M
     module_key: PhantomData<M>,
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> BankKeeper<SK, M>
-    for Keeper<SK, PSK, AK, M>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
+        M: Module,
+    > BankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
     fn send_coins_from_account_to_module<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
@@ -163,8 +168,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module> Ban
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
-    StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
+        M: Module,
+    > StakingBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
     fn get_all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
@@ -207,8 +216,12 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
     }
 }
 
-impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
-    GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
+        M: Module,
+    > GovernanceBankKeeper<SK, M> for Keeper<SK, PSK, AK, M>
 {
     fn balance_all<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,

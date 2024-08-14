@@ -1,7 +1,7 @@
 use crate::{
     Delegation, LastValidatorPower, Params, Redelegation, UnbondingDelegation, Validators,
 };
-use gears::types::uint::Uint256;
+use gears::{baseapp::genesis::Genesis, types::uint::Uint256};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
@@ -16,6 +16,16 @@ pub struct GenesisState {
     pub delegations: Vec<Delegation>,
     pub unbonding_delegations: Vec<UnbondingDelegation>,
     pub redelegations: Vec<Redelegation>,
+}
+
+impl Genesis for GenesisState {
+    fn add_genesis_account(
+        &mut self,
+        _address: gears::types::address::AccAddress,
+        _coins: gears::types::base::coins::UnsignedCoins,
+    ) -> Result<(), gears::baseapp::genesis::GenesisError> {
+        Ok(()) // TODO
+    }
 }
 
 #[cfg(test)]

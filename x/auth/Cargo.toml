@@ -9,7 +9,7 @@ gears = { path = "../../gears", features = ["cli", "xmods", "governance" ] }
 
 #newtypes
 bytes = { workspace = true }
-ibc-proto = { workspace = true }                                  # TODO: should we import through gears via core-types?
+ibc-proto = { workspace = true }
 
 #log
 tracing = { workspace = true }
@@ -26,10 +26,12 @@ serde_json = { workspace = true }
 serde-aux = { workspace = true }
 
 #other
-tokio = { workspace = true }
+# tokio = { workspace = true }
 tonic = { workspace = true }
-url = { workspace = true }
+# url = { workspace = true }
 
 [dev-dependencies]
+data-encoding = { workspace = true }
 rand = { workspace = true }
 strum = { workspace = true }
+gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils" ] }

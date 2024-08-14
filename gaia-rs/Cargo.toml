@@ -22,7 +22,7 @@ staking = { path = "../x/staking" }
 
 #newtypes
 bytes = { workspace = true }
-thiserror = { workspace = true }
+# thiserror = { workspace = true }
 
 #utils
 anyhow = { workspace = true }
@@ -31,10 +31,10 @@ strum = { workspace = true }
 
 #serialization
 serde = { workspace = true }
-prost = { workspace = true }
+# prost = { workspace = true }
 
 # log
-tracing = { workspace = true }
+# tracing = { workspace = true }
 
 #networking
 axum = { workspace = true }
@@ -59,3 +59,4 @@ vec1 = { workspace = true }
 default =  [ "sled" ]
 sled = ["gears/sled"]
 rocksdb = ["gears/rocksdb"]
+it = []

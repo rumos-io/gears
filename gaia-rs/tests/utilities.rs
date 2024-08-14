@@ -1,7 +1,7 @@
 //! This modules should be added to test modules with `#[path = "./utilities.rs"]` as it contains gaia specific code and dedicated crate is bothersome.
 #![allow(dead_code)]
 
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use std::{path::PathBuf, str::FromStr, sync::OnceLock, time::Duration};
 
 use gaia_rs::{
     abci_handler::GaiaABCIHandler, config::AppConfig, genesis::GenesisState,
@@ -26,7 +26,7 @@ use gears::{
 };
 use gears::{
     types::address::AccAddress,
-    utils::{TempDir, TmpChild},
+    utils::tendermint::{TempDir, TendermintSubprocess},
 };
 
 pub const TENDERMINT_PATH: &str = "./tests/assets";
@@ -44,10 +44,26 @@ pub fn acc_address() -> AccAddress {
     AccAddress::from_bech32(ACC_ADDRESS).expect("Default Address should be valid")
 }
 
+pub fn tendermint() -> &'static TendermintSubprocess {
+    static TENDERMINT: OnceLock<(TendermintSubprocess, std::thread::JoinHandle<()>)> =
+        OnceLock::new();
+
+    &TENDERMINT
+        .get_or_init(|| {
+            let res = run_gaia_and_tendermint([(acc_address(), default_coin(200_000_000_u32))]);
+
+            match res {
+                Ok(res) => res,
+                Err(err) => panic!("Failed to start tendermint with err: {err}"),
+            }
+        })
+        .0
+}
+
 /// Helper method to start gaia node and tendermint in tmp folder
 pub fn run_gaia_and_tendermint(
     accounts: impl IntoIterator<Item = (AccAddress, UnsignedCoin)>,
-) -> anyhow::Result<(TmpChild, std::thread::JoinHandle<()>)> {
+) -> anyhow::Result<(TendermintSubprocess, std::thread::JoinHandle<()>)> {
     let tmp_dir = TempDir::new()?;
     let tmp_path = tmp_dir.to_path_buf();
 
@@ -63,7 +79,8 @@ pub fn run_gaia_and_tendermint(
         genesis
     };
 
-    let tendermint = TmpChild::run_tendermint::<_, AppConfig>(tmp_dir, TENDERMINT_PATH, &genesis)?;
+    let tendermint =
+        TendermintSubprocess::run_tendermint::<_, AppConfig>(tmp_dir, TENDERMINT_PATH, &genesis)?;
 
     std::thread::sleep(Duration::from_secs(10));
 

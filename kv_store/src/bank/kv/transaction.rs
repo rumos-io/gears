@@ -746,7 +746,7 @@ mod tests {
 
         let mut store = build_store(tree, Some(cache));
         store.upgrade_cache();
-        store.delete(&vec![3]);
+        store.delete(&[3]);
 
         // ---
         let result_range = store.range(range.clone()).collect::<BTreeMap<_, _>>();
@@ -829,7 +829,7 @@ mod tests {
         store.set(vec![1], vec![1]);
         store.set(vec![3], vec![3]);
         store.set(vec![5], vec![55]);
-        store.delete(&vec![4]);
+        store.delete(&[4]);
 
         // ---
         let result_range = store.range(range.clone()).collect::<BTreeMap<_, _>>();

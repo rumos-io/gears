@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
-bank = { path = "../bank/" }
+# bank = { path = "../bank/" }
 #chrono = { version = "0.4.38", features = ["serde"] }
 clap = { workspace = true }
 gears = { path = "../../gears", features = ["cli", "xmods", "governance"] }
@@ -17,8 +17,10 @@ nz = { workspace = true }
 ibc-proto = { workspace = true }
 tracing = { workspace = true }
 tonic = { workspace = true }
-tower-layer = { workspace = true }
+# tower-layer = { workspace = true }
 serde-aux = { workspace = true }
 
 [dev-dependencies]
 data-encoding = { workspace = true }
+strum = { workspace = true }
+gears = { path = "../../gears", features = ["cli", "xmods", "governance", "utils", "mocks"] }

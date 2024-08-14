@@ -39,7 +39,7 @@ impl ConfigDirectory {
 pub trait ApplicationConfig: Serialize + DeserializeOwned + Default + Clone {}
 impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T {}
 
-#[derive(Deserialize, Serialize, Clone)]
+#[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 #[serde(default)]
 pub struct Config<AC: Default + Clone> {

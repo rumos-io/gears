@@ -31,15 +31,15 @@ impl ModuleInfo for StakingModuleInfo {
 
 #[derive(Debug, Clone)]
 pub struct GaiaABCIHandler {
-    bank_abci_handler: bank::ABCIHandler<
+    bank_abci_handler: bank::BankABCIHandler<
         GaiaStoreKey,
         GaiaParamsStoreKey,
         auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
         GaiaModules,
         BankModuleInfo,
     >,
-    auth_abci_handler: auth::ABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
-    staking_abci_handler: staking::ABCIHandler<
+    auth_abci_handler: auth::AuthABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
+    staking_abci_handler: staking::StakingABCIHandler<
         GaiaStoreKey,
         GaiaParamsStoreKey,
         auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
@@ -108,9 +108,9 @@ impl GaiaABCIHandler {
         let ibc_keeper = ibc_rs::keeper::Keeper::new(GaiaStoreKey::IBC, GaiaParamsStoreKey::IBC);
 
         GaiaABCIHandler {
-            bank_abci_handler: bank::ABCIHandler::new(bank_keeper.clone()),
-            auth_abci_handler: auth::ABCIHandler::new(auth_keeper.clone()),
-            staking_abci_handler: staking::ABCIHandler::new(staking_keeper),
+            bank_abci_handler: bank::BankABCIHandler::new(bank_keeper.clone()),
+            auth_abci_handler: auth::AuthABCIHandler::new(auth_keeper.clone()),
+            staking_abci_handler: staking::StakingABCIHandler::new(staking_keeper),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
             ante_handler: BaseAnteHandler::new(
                 auth_keeper,
