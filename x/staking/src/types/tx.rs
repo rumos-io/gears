@@ -15,6 +15,9 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+// constant used in flags to indicate that description field should not be updated
+pub const DO_NOT_MODIFY_DESCRIPTION: &str = "[do-not-modify]";
+
 /// CommissionRates defines the initial commission rates to be used for creating
 /// a validator.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
@@ -219,28 +222,45 @@ impl Description {
     /// returned if the resulting description contains an invalid length.
     pub fn create_updated_description(
         &self,
-        other: &DescriptionUpdate,
+        other: &Description,
     ) -> Result<Description, anyhow::Error> {
         let mut description = self.clone();
-        if let Some(moniker) = &other.moniker {
-            description.moniker.clone_from(moniker);
+
+        if &other.moniker == DO_NOT_MODIFY_DESCRIPTION {
+            description.moniker = self.moniker.clone();
+        } else {
+            description.moniker = other.moniker.clone();
         }
-        if let Some(identity) = &other.identity {
-            description.identity.clone_from(identity);
+
+        if &other.identity == DO_NOT_MODIFY_DESCRIPTION {
+            description.identity = self.identity.clone();
+        } else {
+            description.identity = other.identity.clone();
         }
-        if let Some(website) = &other.website {
-            description.website.clone_from(website);
+
+        if &other.website == DO_NOT_MODIFY_DESCRIPTION {
+            description.website = self.website.clone();
+        } else {
+            description.website = other.website.clone();
         }
-        if let Some(security_contact) = &other.security_contact {
-            description.security_contact.clone_from(security_contact);
+
+        if &other.security_contact == DO_NOT_MODIFY_DESCRIPTION {
+            description.security_contact = self.security_contact.clone();
+        } else {
+            description.security_contact = other.security_contact.clone();
         }
-        if let Some(details) = &other.details {
-            description.details.clone_from(details);
+
+        if &other.details == DO_NOT_MODIFY_DESCRIPTION {
+            description.details = self.details.clone();
+        } else {
+            description.details = other.details.clone();
         }
+
         description.ensure_length()?;
         Ok(description)
     }
 
+    // TODO: these constraints should be part of the `Description` type definition
     pub fn ensure_length(&self) -> Result<(), anyhow::Error> {
         if self.moniker.len() > MAX_MONIKER_LENGTH {
             return Err(self.form_ensure_length_err(
@@ -285,23 +305,6 @@ impl Description {
     }
 }
 
-/// DescriptionUpdate defines a validator description update data.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
-pub struct DescriptionUpdate {
-    #[prost(string, optional)]
-    pub moniker: Option<String>,
-    #[prost(string, optional)]
-    pub identity: Option<String>,
-    #[prost(string, optional)]
-    pub website: Option<String>,
-    #[prost(string, optional)]
-    pub security_contact: Option<String>,
-    #[prost(string, optional)]
-    pub details: Option<String>,
-}
-
-impl Protobuf<DescriptionUpdate> for DescriptionUpdate {}
-
 mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::CommissionRates;
     pub use ibc_proto::cosmos::staking::v1beta1::Description;
@@ -336,6 +339,8 @@ impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
     type Error = CoreError;
 
     fn try_from(val: inner::MsgCreateValidator) -> Result<Self, Self::Error> {
+        // TODO: there are missing checks here, like that validator address and delegator address should be the same
+        // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/msg.go#L89-L144
         let description = val
             .description
             .ok_or(CoreError::MissingField("description".into()))?;
@@ -392,10 +397,41 @@ pub struct CreateValidator {
 
 impl Protobuf<inner::MsgCreateValidator> for CreateValidator {}
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+/// CreateValidator defines a SDK message for creating a new validator.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EditValidator {
+    pub description: Description,
+    pub commission_rate: Option<Decimal256>, // TODO: add a CommissionRate type to capture the =< 1 constraint currently this is checked here https://github.com/rumos-io/gears/blob/672d6cf7e4376076c218b46121e197ac1f1029a7/x/staking/src/keeper/validator.rs#L67
+    pub min_self_delegation: Option<Uint256>,
+    pub validator_address: ValAddress,
+    // for method `get_signers`. The sdk converts validator_address
+    from_address: AccAddress,
+}
+
+impl EditValidator {
+    pub fn new(
+        description: Description,
+        commission_rate: Option<Decimal256>,
+        min_self_delegation: Option<Uint256>,
+        validator_address: ValAddress,
+    ) -> EditValidator {
+        EditValidator {
+            description,
+            commission_rate,
+            min_self_delegation,
+            validator_address: validator_address.clone(),
+            from_address: validator_address.into(),
+        }
+    }
+
+    pub fn get_signers(&self) -> Vec<&AccAddress> {
+        vec![&self.from_address]
+    }
+}
+#[derive(Clone, PartialEq, Message)]
 pub struct EditValidatorRaw {
     #[prost(message, optional)]
-    pub description: Option<DescriptionUpdate>,
+    pub description: Option<Description>,
     #[prost(string)]
     pub validator_address: String,
     #[prost(string, optional)]
@@ -417,42 +453,13 @@ impl From<EditValidator> for EditValidatorRaw {
     }
 }
 
-/// CreateValidator defines a SDK message for creating a new validator.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EditValidator {
-    pub description: DescriptionUpdate,
-    pub commission_rate: Option<Decimal256>,
-    pub min_self_delegation: Option<Uint256>,
-    pub validator_address: ValAddress,
-    // for method `get_signers`. The sdk converts validator_address
-    from_address: AccAddress,
-}
-
-impl EditValidator {
-    pub fn new(
-        description: DescriptionUpdate,
-        commission_rate: Option<Decimal256>,
-        min_self_delegation: Option<Uint256>,
-        validator_address: ValAddress,
-    ) -> EditValidator {
-        EditValidator {
-            description,
-            commission_rate,
-            min_self_delegation,
-            validator_address: validator_address.clone(),
-            from_address: validator_address.into(),
-        }
-    }
-
-    pub fn get_signers(&self) -> Vec<&AccAddress> {
-        vec![&self.from_address]
-    }
-}
-
 impl TryFrom<EditValidatorRaw> for EditValidator {
     type Error = CoreError;
 
     fn try_from(src: EditValidatorRaw) -> Result<Self, Self::Error> {
+        // TODO: there are missing checks here, like that at least one of the description fields should be non empty (yes that's right as long as one is set all is good!)
+        // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/msg.go#L185-L210
+        // we should capture this restriction in the description type
         let commission_rate = if let Some(rate) = src.commission_rate {
             Some(
                 Decimal256::from_cosmos_proto_string(&rate)

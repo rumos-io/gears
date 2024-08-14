@@ -4,7 +4,7 @@ use gears::{
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::uint::Uint256,
 };
-use staking::{CommissionRates, CreateValidator, Description, DescriptionUpdate};
+use staking::{CommissionRates, CreateValidator, Description};
 
 use crate::{setup_mock_node, User};
 
@@ -56,7 +56,7 @@ fn scenario_2() {
 
     let txs = crate::generate_txs([(0, msg)], &user, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
+    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
     assert_eq!(
         hex::encode(app_hash),
         "cf3f14e8812e97ab24cbe5bee1e8f50187fa9212992105d860c2c29b50c8fb70"
@@ -67,20 +67,13 @@ fn scenario_2() {
 
     let msg = gaia_rs::message::Message::Staking(staking::Message::EditValidator(
         staking::EditValidator::new(
-            DescriptionUpdate {
-                moniker: None,
-                identity: None,
-                website: None,
-                security_contact: None,
-                details: None,
+            Description {
+                moniker: "alice".to_string(),
+                identity: "".to_string(),
+                website: "".to_string(),
+                security_contact: "".to_string(),
+                details: "".to_string(),
             },
-            // DescriptionUpdate {
-            //     moniker: Some("new_moninker".to_string()),
-            //     identity: Some("new_identity".to_string()),
-            //     website: Some("new_website".to_string()),
-            //     security_contact: Some("new_security_contact".to_string()),
-            //     details: Some("new_details".to_string()),
-            // },
             Some("0.2".parse().unwrap()),
             Some(Uint256::from(200u32)),
             user.address().into(),
@@ -96,6 +89,6 @@ fn scenario_2() {
     let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
     assert_eq!(
         hex::encode(app_hash),
-        "cf3f14e8812e97ab24cbe5bee1e8f50187fa9212992105d860c2c29b50c8fb70"
+        "5fd02c41a162e9b14341e1192296b939f00aa2395997c6b64b2940e401f717df"
     );
 }
