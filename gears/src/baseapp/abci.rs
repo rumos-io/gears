@@ -245,21 +245,17 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        let consensus_params = {
-            let ctx = state.simple_ctx(request.header.height);
+        let ctx = state.simple_ctx(request.header.height);
 
-            let max_gas = self
-                .baseapp_params_keeper
-                .block_params(&ctx)
-                .map(|e| e.max_gas)
-                .unwrap_or_default(); // This is how cosmos handles it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
+        let max_gas = self
+            .baseapp_params_keeper
+            .block_params(&ctx)
+            .map(|e| e.max_gas)
+            .unwrap_or_default(); // This is how cosmos handles it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
-            let params = self.baseapp_params_keeper.consensus_params(&ctx);
+        let consensus_params = self.baseapp_params_keeper.consensus_params(&ctx);
 
-            state.replace_meter(Gas::from(max_gas));
-
-            params
-        };
+        state.replace_meter(Gas::from(max_gas));
 
         let mut ctx = state.block_ctx(request.header.clone(), consensus_params);
 

@@ -89,7 +89,7 @@ pub struct Evidence {
 }
 
 impl Evidence {
-    pub fn r#type(&self) -> EvidenceType {
+    pub fn kind(&self) -> EvidenceType {
         EvidenceType::from_i32(self.r#type).unwrap_or(EvidenceType::Unknown)
     }
 }

@@ -54,17 +54,18 @@ where
     /// misbehavior submitted by Tendermint. Currently, only equivocation is handled.
     pub fn begin_block<DB: Database>(
         &self,
-        _ctx: &mut BlockContext<'_, DB, SK>,
+        ctx: &mut BlockContext<'_, DB, SK>,
         request: RequestBeginBlock,
     ) {
         for evidence in request.byzantine_validators {
-            match evidence.r#type() {
+            match evidence.kind() {
                 // It's still ongoing discussion how should we treat and slash attacks with
                 // premeditation. So for now we agree to treat them in the same way.
                 EvidenceType::DuplicateVote | EvidenceType::LightClientAttack => {
-                    let _evidence: Equivocation = evidence.into();
-                    // self.keeper.handle_equivocation_evidence(ctx, &evidence);
-                    todo!()
+                    let ev: Equivocation = evidence.into();
+                    if let Err(e) = self.keeper.handle_equivocation_evidence(ctx, &ev) {
+                        panic!("Cannot perform evidence begin block routine.\n{e}");
+                    }
                 }
                 EvidenceType::Unknown => {
                     tracing::error!("ignored unknown evidence type: {}", evidence.r#type);
