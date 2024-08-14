@@ -5046,7 +5046,6 @@ name = "staking"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "bank",
  "clap",
  "data-encoding",
  "gears",
@@ -5056,6 +5055,7 @@ dependencies = [
  "serde",
  "serde-aux",
  "serde_json",
+ "strum",
  "thiserror",
  "tonic",
  "tracing",

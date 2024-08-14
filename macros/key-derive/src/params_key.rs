@@ -45,7 +45,9 @@ pub fn expand_params(input: DeriveInput) -> syn::Result<TokenStream> {
             let mut set = HashSet::<String>::with_capacity(enum_variants.len());
 
             for Variant { attrs, ident, .. } in variants {
-                let KeysAttr { prefix_str: to_string } = KeysAttr::from_attributes(&attrs)?;
+                let KeysAttr {
+                    prefix_str: to_string,
+                } = KeysAttr::from_attributes(&attrs)?;
 
                 if !set.insert(to_string.clone()) {
                     Err(syn::Error::new(

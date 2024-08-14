@@ -39,7 +39,7 @@ pub struct GaiaABCIHandler {
         BankModuleInfo,
     >,
     auth_abci_handler: auth::AuthABCIHandler<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
-    staking_abci_handler: staking::ABCIHandler<
+    staking_abci_handler: staking::StakingABCIHandler<
         GaiaStoreKey,
         GaiaParamsStoreKey,
         auth::Keeper<GaiaStoreKey, GaiaParamsStoreKey, GaiaModules>,
@@ -110,7 +110,7 @@ impl GaiaABCIHandler {
         GaiaABCIHandler {
             bank_abci_handler: bank::BankABCIHandler::new(bank_keeper.clone()),
             auth_abci_handler: auth::AuthABCIHandler::new(auth_keeper.clone()),
-            staking_abci_handler: staking::ABCIHandler::new(staking_keeper),
+            staking_abci_handler: staking::StakingABCIHandler::new(staking_keeper),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
             ante_handler: BaseAnteHandler::new(
                 auth_keeper,

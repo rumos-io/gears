@@ -5,10 +5,11 @@ use crate::{
     QueryValidatorResponse, Redelegation, RedelegationEntryResponse, RedelegationResponse,
 };
 use gears::{
-    application::handlers::node::{ModuleInfo, TxError},
-    baseapp::{errors::QueryError, QueryResponse},
+    application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
+    baseapp::{errors::QueryError, QueryRequest, QueryResponse},
     context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::Protobuf,
+    derive::Query,
     ext::Pagination,
     params::ParamsSubspaceKey,
     store::{database::Database, StoreKey},
@@ -20,14 +21,17 @@ use gears::{
     },
     types::{pagination::response::PaginationResponse, store::gas::ext::GasResultExt},
     x::{
-        keepers::{auth::AuthKeeper, staking::StakingBankKeeper, staking::KeeperHooks},
+        keepers::{
+            auth::AuthKeeper,
+            staking::{KeeperHooks, StakingBankKeeper},
+        },
         module::Module,
     },
 };
 use serde::Serialize;
 
 #[derive(Debug, Clone)]
-pub struct ABCIHandler<
+pub struct StakingABCIHandler<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
@@ -49,7 +53,13 @@ pub enum StakingNodeQueryRequest {
     Params,
 }
 
-#[derive(Clone, Serialize)]
+impl QueryRequest for StakingNodeQueryRequest {
+    fn height(&self) -> u32 {
+        todo!()
+    }
+}
+
+#[derive(Clone, Serialize, Query)]
 #[serde(untagged)]
 #[allow(clippy::large_enum_variant)]
 pub enum StakingNodeQueryResponse {
@@ -63,24 +73,61 @@ pub enum StakingNodeQueryResponse {
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M>,
+        AK: AuthKeeper<SK, M> + Clone + Send + Sync + 'static,
         BK: StakingBankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
-        MI: ModuleInfo,
-    > ABCIHandler<SK, PSK, AK, BK, KH, M, MI>
+        MI: ModuleInfo + Clone + Send + Sync + 'static,
+    > ABCIHandler for StakingABCIHandler<SK, PSK, AK, BK, KH, M, MI>
 {
-    pub fn new(keeper: Keeper<SK, PSK, AK, BK, KH, M>) -> Self {
-        ABCIHandler {
-            keeper,
-            phantom_data: std::marker::PhantomData,
+    type Message = Message;
+
+    type Genesis = GenesisState;
+
+    type StoreKey = SK;
+
+    type QReq = StakingNodeQueryRequest;
+
+    type QRes = StakingNodeQueryResponse;
+
+    fn typed_query<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, Self::StoreKey>,
+        query: Self::QReq,
+    ) -> Self::QRes {
+        match query {
+            StakingNodeQueryRequest::Validator(req) => {
+                StakingNodeQueryResponse::Validator(self.keeper.query_validator(ctx, req))
+            }
+            StakingNodeQueryRequest::Delegation(req) => {
+                StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
+            }
+            StakingNodeQueryRequest::Redelegation(req) => {
+                StakingNodeQueryResponse::Redelegation(self.query_redelegations(ctx, req))
+            }
+            StakingNodeQueryRequest::UnbondingDelegation(req) => {
+                StakingNodeQueryResponse::UnbondingDelegation(
+                    self.keeper.query_unbonding_delegation(ctx, req),
+                )
+            }
+            StakingNodeQueryRequest::Params => {
+                StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
+            }
         }
     }
 
-    pub fn msg<DB: Database + Sync + Send>(
+    fn run_ante_checks<DB: Database>(
         &self,
-        ctx: &mut TxContext<'_, DB, SK>,
-        msg: &Message,
+        _: &mut TxContext<'_, DB, Self::StoreKey>,
+        _: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+    ) -> Result<(), TxError> {
+        Ok(())
+    }
+
+    fn msg<DB: Database>(
+        &self,
+        ctx: &mut TxContext<'_, DB, Self::StoreKey>,
+        msg: &Self::Message,
     ) -> Result<(), TxError> {
         let result = match msg {
             Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
@@ -93,17 +140,17 @@ impl<
         result.map_err(|e| Into::<StakingTxError>::into(e).into::<MI>())
     }
 
-    pub fn genesis<DB: Database>(
+    fn init_genesis<DB: Database>(
         &self,
-        ctx: &mut InitContext<'_, DB, SK>,
-        genesis: GenesisState,
+        ctx: &mut InitContext<'_, DB, Self::StoreKey>,
+        genesis: Self::Genesis,
     ) -> Vec<ValidatorUpdate> {
-        self.keeper.init_genesis(ctx, genesis)
+        self.genesis(ctx, genesis)
     }
 
-    pub fn query<DB: Database + Send + Sync>(
+    fn query<DB: Database + Send + Sync>(
         &self,
-        ctx: &QueryContext<DB, SK>,
+        ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
     ) -> Result<prost::bytes::Bytes, QueryError> {
         match query.path.as_str() {
@@ -138,46 +185,46 @@ impl<
         }
     }
 
-    pub fn typed_query<DB: Database + Send + Sync>(
+    fn begin_block<'a, DB: Database>(
         &self,
-        ctx: &QueryContext<DB, SK>,
-        query: StakingNodeQueryRequest,
-    ) -> StakingNodeQueryResponse {
-        match query {
-            StakingNodeQueryRequest::Validator(req) => {
-                StakingNodeQueryResponse::Validator(self.keeper.query_validator(ctx, req))
-            }
-            StakingNodeQueryRequest::Delegation(req) => {
-                StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
-            }
-            StakingNodeQueryRequest::Redelegation(req) => {
-                StakingNodeQueryResponse::Redelegation(self.query_redelegations(ctx, req))
-            }
-            StakingNodeQueryRequest::UnbondingDelegation(req) => {
-                StakingNodeQueryResponse::UnbondingDelegation(
-                    self.keeper.query_unbonding_delegation(ctx, req),
-                )
-            }
-            StakingNodeQueryRequest::Params => {
-                StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
-            }
-        }
-    }
-
-    pub fn begin_block<DB: Database>(
-        &self,
-        ctx: &mut BlockContext<'_, DB, SK>,
+        ctx: &mut BlockContext<'_, DB, Self::StoreKey>,
         _request: RequestBeginBlock,
     ) {
         self.keeper.track_historical_info(ctx);
     }
 
-    pub fn end_block<DB: Database>(
+    fn end_block<DB: Database>(
         &self,
         ctx: &mut BlockContext<'_, DB, SK>,
         _request: RequestEndBlock,
     ) -> Vec<ValidatorUpdate> {
         self.keeper.block_validator_updates(ctx)
+    }
+}
+
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M>,
+        BK: StakingBankKeeper<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
+        M: Module,
+        MI: ModuleInfo,
+    > StakingABCIHandler<SK, PSK, AK, BK, KH, M, MI>
+{
+    pub fn new(keeper: Keeper<SK, PSK, AK, BK, KH, M>) -> Self {
+        StakingABCIHandler {
+            keeper,
+            phantom_data: std::marker::PhantomData,
+        }
+    }
+
+    pub fn genesis<DB: Database>(
+        &self,
+        ctx: &mut InitContext<'_, DB, SK>,
+        genesis: GenesisState,
+    ) -> Vec<ValidatorUpdate> {
+        self.keeper.init_genesis(ctx, genesis)
     }
 
     fn query_redelegations<DB: Database>(

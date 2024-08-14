@@ -1,9 +1,8 @@
 #![cfg(not(doctest))]
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"),"/","Readme.md"))]
 
- 
 use proc_macro::TokenStream;
-use syn::{parse_macro_input,   DeriveInput};
+use syn::{parse_macro_input, DeriveInput};
 
 mod params_key;
 mod store_key;
@@ -25,4 +24,3 @@ pub fn store_derive(input: TokenStream) -> TokenStream {
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }
-
