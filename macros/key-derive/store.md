@@ -20,11 +20,11 @@ You could implement it only on enum without fields or tuple.
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys)]
 #[skey(params = Params)]
 pub enum GaiaStoreKey {
-    #[skey(store_str = "bank")]
+    #[skey(to_string = "bank")]
     Bank,
-    #[skey(store_str = "acc")]
+    #[skey(to_string = "acc")]
     Auth,
-    #[skey(store_str = "params")]
+    #[skey(to_string = "params")]
     Params,
 }
 ```

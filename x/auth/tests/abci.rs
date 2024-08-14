@@ -71,16 +71,16 @@ impl Module for AuthModules {
 #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, StoreKeys)]
 #[skey(params = Params)]
 pub enum SpaceKey {
-    #[skey(store_str = "acc")]
+    #[skey(to_string = "acc")]
     Auth,
-    #[skey(store_str = "params")]
+    #[skey(to_string = "params")]
     Params,
 }
 
 #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
 pub enum SubspaceKey {
-    #[pkey(prefix_str = "auth/")]
+    #[pkey(to_string = "auth/")]
     Auth,
-    #[pkey(prefix_str = "baseapp/")]
+    #[pkey(to_string = "baseapp/")]
     BaseApp,
 }

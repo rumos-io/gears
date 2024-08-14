@@ -239,11 +239,11 @@ mod tests {
     #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys, StoreKeys)]
     #[skey(params = Params)]
     enum SubspaceKey {
-        #[skey(store_str = "auth")]
-        #[pkey(prefix_str = "auth")]
+        #[skey(to_string = "auth")]
+        #[pkey(to_string = "auth")]
         Auth,
-        #[skey(store_str = "param")]
-        #[pkey(prefix_str = "params")]
+        #[skey(to_string = "param")]
+        #[pkey(to_string = "params")]
         Params,
     }
 }

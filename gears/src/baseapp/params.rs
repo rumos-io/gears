@@ -304,8 +304,8 @@ mod tests {
     #[skey(params = Params, gears)]
     #[pkey(gears)]
     enum SubspaceKey {
-        #[skey(store_str = "baseapp")]
-        #[pkey(prefix_str = "params")]
+        #[skey(to_string = "baseapp")]
+        #[pkey(to_string = "params")]
         Params,
     }
 
