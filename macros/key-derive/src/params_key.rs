@@ -21,7 +21,7 @@ struct KeysAttr {
 
 impl KeysAttr {
     fn not_empty(self) -> darling::Result<Self> {
-        if self.prefix_str.is_empty() || self.prefix_str.replace(" ", "").is_empty() {
+        if self.prefix_str.is_empty() || self.prefix_str.replace(' ', "").is_empty() {
             Err(darling::Error::custom("key can't be empty").with_span(&self.prefix_str.span()))
         } else {
             Ok(self)
