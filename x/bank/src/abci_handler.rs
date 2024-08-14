@@ -66,7 +66,7 @@ pub enum BankNodeQueryResponse {
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M>,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
         M: Module,
         MI: ModuleInfo + Clone + Send + Sync + 'static,
     > ABCIHandler for BankABCIHandler<SK, PSK, AK, M, MI>

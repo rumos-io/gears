@@ -7,7 +7,7 @@ use super::*;
 impl<
         SK: StoreKey,
         PSK: ParamsSubspaceKey,
-        AK: AuthKeeper<SK, M>,
+        AK: AuthKeeper<SK, M> + Send + Sync + 'static,
         BK: GovernanceBankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
