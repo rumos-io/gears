@@ -26,7 +26,7 @@ use gears::{
         uint::Uint256,
     },
     x::{
-        keepers::{auth::AuthKeeper, bank::StakingBankKeeper, staking::KeeperHooks},
+        keepers::{auth::AuthKeeper, staking::KeeperHooks, staking::StakingBankKeeper},
         module::Module,
         types::validator::BondStatus,
     },

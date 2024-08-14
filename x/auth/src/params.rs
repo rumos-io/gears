@@ -197,3 +197,53 @@ impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for AuthParamsKeeper<PSK> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+
+    use gears::{
+        derive::{ParamsKeys, StoreKeys},
+        store::{bank::multi::ApplicationMultiBank, database::MemDB},
+        utils::node::build_init_ctx,
+    };
+
+    use super::*;
+
+    #[test]
+    fn app_hash() {
+        let keeper = AuthParamsKeeper {
+            params_subspace_key: SubspaceKey::Auth,
+        };
+
+        let mut multi_store = ApplicationMultiBank::<_, SubspaceKey>::new(MemDB::new());
+
+        let before_hash = multi_store.head_commit_hash();
+
+        let mut ctx = build_init_ctx(&mut multi_store);
+
+        keeper.set(&mut ctx, DEFAULT_PARAMS.clone());
+
+        multi_store.commit();
+        let after_hash = multi_store.head_commit_hash();
+
+        assert_ne!(before_hash, after_hash);
+
+        let expected_hash = [
+            141, 88, 216, 237, 121, 214, 45, 53, 129, 175, 175, 125, 58, 187, 150, 212, 167, 90,
+            83, 33, 242, 181, 88, 5, 50, 204, 98, 57, 27, 186, 208, 220,
+        ];
+
+        assert_eq!(expected_hash, after_hash);
+    }
+
+    #[derive(strum::EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys, StoreKeys)]
+    #[skey(params = Params)]
+    enum SubspaceKey {
+        #[skey(to_string = "auth")]
+        #[pkey(to_string = "auth")]
+        Auth,
+        #[skey(to_string = "param")]
+        #[pkey(to_string = "params")]
+        Params,
+    }
+}

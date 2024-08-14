@@ -3,9 +3,7 @@ use std::collections::HashSet;
 use darling::{util::Flag, FromAttributes, FromDeriveInput};
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{DataEnum, DeriveInput, Ident, Variant};
-
-use crate::KeysAttr;
+use syn::{spanned::Spanned, DataEnum, DeriveInput, Ident, Variant};
 
 #[derive(FromDeriveInput)]
 #[darling(attributes(skey))]
@@ -13,6 +11,23 @@ struct KeysArg {
     #[darling(default)]
     pub gears: Flag,
     pub params: Ident,
+}
+
+#[derive(FromAttributes, Default)]
+#[darling(default, attributes(skey), forward_attrs(allow, doc, cfg))]
+#[darling(and_then = Self::not_empty)]
+struct KeysAttr {
+    pub to_string: String,
+}
+
+impl KeysAttr {
+    fn not_empty(self) -> darling::Result<Self> {
+        if self.to_string.is_empty() || self.to_string.replace(' ', "").is_empty() {
+            Err(darling::Error::custom("key can't be empty").with_span(&self.to_string.span()))
+        } else {
+            Ok(self)
+        }
+    }
 }
 
 pub fn expand_store(input: DeriveInput) -> syn::Result<TokenStream> {

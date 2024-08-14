@@ -43,7 +43,7 @@ itertools = "0.13.0"
 
 #serialization
 prost = { workspace = true }
-bech32 = { workspace = true }
+# bech32 = { workspace = true }
 hex = { workspace = true }
 serde = { workspace = true, default-features = false }
 serde-aux = { workspace = true }
@@ -87,13 +87,15 @@ dircpy = { workspace = true, optional = true }
 rand = { workspace = true, optional = true }
 
 [dev-dependencies]
-trybuild = "1.0.99"
+trybuild = { version = "1.0.99" }
 
 [features]
 default = ["cli", "xmods"]
 xmods = []
 governance = []
-utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy", "dep:rand"]
+macros_test = []
+utils = ["dep:run_script", "dep:assert_fs", "dep:dircpy", "dep:rand" ]
+mocks = [ "utils", "xmods" ]
 cli = ["dep:clap", "dep:clap_complete"]
 rocksdb = ["database/rocksdb"]
 sled = ["database/sled"]

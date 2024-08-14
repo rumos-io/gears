@@ -27,7 +27,7 @@ impl<SK: StoreKey, AK: AuthKeeper<SK, M>, M: Module> MockHookKeeper<SK, AK, M> {
     }
 }
 
-impl<SK: StoreKey, AK: AuthKeeper<SK, M>, M: Module> KeeperHooks<SK, AK, M>
+impl<SK: StoreKey, AK: AuthKeeper<SK, M> + Send + Sync + 'static, M: Module> KeeperHooks<SK, AK, M>
     for MockHookKeeper<SK, AK, M>
 {
     fn after_validator_created<DB: Database, CTX: TransactionalContext<DB, SK>>(
