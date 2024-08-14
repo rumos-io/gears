@@ -1,10 +1,9 @@
-use std::{marker::PhantomData, str::FromStr};
+use std::str::FromStr;
 
 use bank::{BankABCIHandler, GenesisState, Keeper, Message};
 use gears::{
     application::handlers::node::ModuleInfo,
     derive::{ParamsKeys, StoreKeys},
-    store::StoreKey,
     tendermint::types::time::timestamp::Timestamp,
     types::{
         address::AccAddress,
@@ -15,10 +14,7 @@ use gears::{
         msg::send::MsgSend,
     },
     utils::node::{acc_address, generate_txs, init_node, GenesisSource, MockOptionsFormer},
-    x::{
-        keepers::auth::{AuthKeeper, AuthParams},
-        module::Module,
-    },
+    x::{keepers::mocks::auth::MockAuthKeeper, module::Module},
 };
 
 #[test]
@@ -26,19 +22,13 @@ use gears::{
 fn test_init_and_few_blocks() {
     let opt: MockOptionsFormer<
         SubspaceKey,
-        BankABCIHandler<
-            SpaceKey,
-            SubspaceKey,
-            MockAuthKeeper<SpaceKey, BankModules>,
-            BankModules,
-            BankModuleInfo,
-        >,
+        BankABCIHandler<SpaceKey, SubspaceKey, MockAuthKeeper, BankModules, BankModuleInfo>,
         GenesisState,
     > = MockOptionsFormer::new()
         .abci_handler(BankABCIHandler::new(Keeper::new(
             SpaceKey::Auth,
             SubspaceKey::Auth,
-            MockAuthKeeper::<_, BankModules>(PhantomData),
+            MockAuthKeeper::former().form(),
         )))
         .baseapp_sbs_key(SubspaceKey::BaseApp)
         .genesis(GenesisSource::Genesis(GenesisState::default()));
@@ -72,19 +62,13 @@ fn test_init_and_sending_tx() {
 
     let opt: MockOptionsFormer<
         SubspaceKey,
-        BankABCIHandler<
-            SpaceKey,
-            SubspaceKey,
-            MockAuthKeeper<SpaceKey, BankModules>,
-            BankModules,
-            BankModuleInfo,
-        >,
+        BankABCIHandler<SpaceKey, SubspaceKey, MockAuthKeeper, BankModules, BankModuleInfo>,
         GenesisState,
     > = MockOptionsFormer::new()
         .abci_handler(BankABCIHandler::new(Keeper::new(
             SpaceKey::Auth,
             SubspaceKey::Auth,
-            MockAuthKeeper::<_, BankModules>(PhantomData),
+            MockAuthKeeper::former().form(),
         )))
         .baseapp_sbs_key(SubspaceKey::BaseApp)
         .genesis(GenesisSource::Genesis(genesis));
@@ -153,97 +137,6 @@ impl Module for BankModules {
         match self {
             BankModules::FeeCollector => vec![],
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-struct MockAuthKeeper<SK, M>(pub PhantomData<(SK, M)>);
-
-struct MockAuthParams;
-
-impl AuthParams for MockAuthParams {
-    fn max_memo_characters(&self) -> u64 {
-        todo!()
-    }
-
-    fn sig_verify_cost_secp256k1(&self) -> u64 {
-        todo!()
-    }
-
-    fn tx_cost_per_byte(&self) -> u64 {
-        todo!()
-    }
-}
-
-impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper<SK, M> {
-    type Params = MockAuthParams;
-
-    fn get_auth_params<
-        DB: gears::store::database::Database,
-        CTX: gears::context::QueryableContext<DB, SK>,
-    >(
-        &self,
-        _: &CTX,
-    ) -> Result<Self::Params, gears::types::store::gas::errors::GasStoreErrors> {
-        todo!()
-    }
-
-    fn has_account<
-        DB: gears::store::database::Database,
-        CTX: gears::context::QueryableContext<DB, SK>,
-    >(
-        &self,
-        _: &CTX,
-        _: &AccAddress,
-    ) -> Result<bool, gears::types::store::gas::errors::GasStoreErrors> {
-        Ok(true)
-    }
-
-    fn get_account<
-        DB: gears::store::database::Database,
-        CTX: gears::context::QueryableContext<DB, SK>,
-    >(
-        &self,
-        _: &CTX,
-        _: &AccAddress,
-    ) -> Result<
-        Option<gears::types::account::Account>,
-        gears::types::store::gas::errors::GasStoreErrors,
-    > {
-        todo!()
-    }
-
-    fn set_account<
-        DB: gears::store::database::Database,
-        CTX: gears::context::TransactionalContext<DB, SK>,
-    >(
-        &self,
-        _: &mut CTX,
-        _: gears::types::account::Account,
-    ) -> Result<(), gears::types::store::gas::errors::GasStoreErrors> {
-        todo!()
-    }
-
-    fn create_new_base_account<
-        DB: gears::store::database::Database,
-        CTX: gears::context::TransactionalContext<DB, SK>,
-    >(
-        &self,
-        _: &mut CTX,
-        _: &AccAddress,
-    ) -> Result<(), gears::types::store::gas::errors::GasStoreErrors> {
-        todo!()
-    }
-
-    fn check_create_new_module_account<
-        DB: gears::store::database::Database,
-        CTX: gears::context::TransactionalContext<DB, SK>,
-    >(
-        &self,
-        _: &mut CTX,
-        _: &M,
-    ) -> Result<(), gears::types::store::gas::errors::GasStoreErrors> {
-        todo!()
     }
 }
 

@@ -42,35 +42,11 @@ impl AuthParams for MockAuthParams {
     }
 }
 
-#[derive(former::Former)]
+#[derive(former::Former, Clone, Debug)]
 pub struct MockAuthKeeper {
-    pub get_auth_params: Option<Box<dyn Fn() -> Result<MockAuthParams, GasStoreErrors>>>,
-    pub has_account: Option<Box<dyn Fn() -> Result<bool, GasStoreErrors>>>,
-    pub get_account: Option<Box<dyn Fn() -> Result<Option<Account>, GasStoreErrors>>>,
-    pub set_account: Option<Box<dyn Fn() -> Result<(), GasStoreErrors>>>,
-    pub create_new_base_account: Option<Box<dyn Fn() -> Result<(), GasStoreErrors>>>,
-    pub check_create_new_module_account: Option<Box<dyn Fn() -> Result<(), GasStoreErrors>>>,
-}
-
-impl Debug for MockAuthKeeper {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("MockAuthKeeper")
-            .field("get_auth_params: is_some", &self.get_auth_params.is_some())
-            .finish()
-    }
-}
-
-impl Clone for MockAuthKeeper {
-    fn clone(&self) -> Self {
-        Self {
-            get_auth_params: None,
-            has_account: None,
-            get_account: None,
-            set_account: None,
-            create_new_base_account: None,
-            check_create_new_module_account: None,
-        }
-    }
+    pub get_auth_params: MockAuthParams,
+    pub has_account: bool,
+    pub get_account: Option<Account>,
 }
 
 impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
@@ -80,9 +56,7 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
         &self,
         _: &CTX,
     ) -> Result<Self::Params, GasStoreErrors> {
-        self.get_auth_params
-            .as_ref()
-            .expect("get_auth_params mock not set")()
+        Ok(self.get_auth_params.clone())
     }
 
     fn has_account<DB: database::Database, CTX: QueryableContext<DB, SK>>(
@@ -90,7 +64,7 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
         _: &CTX,
         _: &address::AccAddress,
     ) -> Result<bool, GasStoreErrors> {
-        self.has_account.as_ref().expect("has_account mock not set")()
+        Ok(self.has_account)
     }
 
     fn get_account<DB: database::Database, CTX: QueryableContext<DB, SK>>(
@@ -98,7 +72,7 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
         _: &CTX,
         _: &address::AccAddress,
     ) -> Result<Option<Account>, GasStoreErrors> {
-        self.get_account.as_ref().expect("get_account mock not set")()
+        Ok(self.get_account.clone())
     }
 
     fn set_account<DB: database::Database, CTX: TransactionalContext<DB, SK>>(
@@ -106,7 +80,7 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
         _: &mut CTX,
         _: crate::types::account::Account,
     ) -> Result<(), GasStoreErrors> {
-        self.set_account.as_ref().expect("set_account mock not set")()
+        Ok(())
     }
 
     fn create_new_base_account<DB: database::Database, CTX: TransactionalContext<DB, SK>>(
@@ -114,9 +88,7 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
         _: &mut CTX,
         _: &address::AccAddress,
     ) -> Result<(), GasStoreErrors> {
-        self.create_new_base_account
-            .as_ref()
-            .expect("create_new_base_account mock not set")()
+        Ok(())
     }
 
     fn check_create_new_module_account<
@@ -127,8 +99,6 @@ impl<SK: StoreKey, M: Module> AuthKeeper<SK, M> for MockAuthKeeper {
         _: &mut CTX,
         _: &M,
     ) -> Result<(), GasStoreErrors> {
-        self.check_create_new_module_account
-            .as_ref()
-            .expect("check_create_new_module_account mock not set")()
+        Ok(())
     }
 }
