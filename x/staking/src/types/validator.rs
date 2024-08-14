@@ -118,6 +118,10 @@ impl StakingValidator for Validator {
         self.commission.commission_rates().rate()
     }
 
+    fn status(&self) -> BondStatus {
+        self.status
+    }
+
     fn tokens_from_shares(&self, shares: Decimal256) -> Result<Decimal256, NumericError> {
         self.tokens_from_shares(shares)
     }

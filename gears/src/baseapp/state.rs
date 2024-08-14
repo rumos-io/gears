@@ -13,7 +13,10 @@ use crate::{
     types::gas::{basic_meter::BasicGasMeter, infinite_meter::InfiniteGasMeter, Gas, GasMeter},
 };
 
-use super::mode::{check::CheckTxMode, deliver::DeliverTxMode};
+use super::{
+    mode::{check::CheckTxMode, deliver::DeliverTxMode},
+    ConsensusParams,
+};
 
 #[derive(Debug)]
 pub struct ApplicationState<DB, AH: ABCIHandler> {
@@ -93,7 +96,16 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         SimpleContext::new(SimpleBackend::Application(&mut self.multi_store), height)
     }
 
-    pub fn block_ctx(&mut self, header: Header) -> BlockContext<'_, DB, AH::StoreKey> {
-        BlockContext::new(&mut self.multi_store, header.height, header.clone())
+    pub fn block_ctx(
+        &mut self,
+        header: Header,
+        consensus_params: ConsensusParams,
+    ) -> BlockContext<'_, DB, AH::StoreKey> {
+        BlockContext::new(
+            &mut self.multi_store,
+            header.height,
+            header.clone(),
+            consensus_params,
+        )
     }
 }

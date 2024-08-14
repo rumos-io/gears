@@ -22,7 +22,9 @@ const ABS_DURATION_NANOSECONDS: i128 =
 /// encoded in JSON format as "3s", while 3 seconds and 1 nanosecond should
 /// be expressed in JSON format as "3.000000001s", and 3 seconds and 1
 /// microsecond should be expressed in JSON format as "3.000001s".
-#[derive(Clone, Copy, PartialEq, Eq, ::prost::Message, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, ::prost::Message, serde::Serialize, serde::Deserialize,
+)]
 #[serde(
     try_from = "super::serializers::SerdeDuration",
     into = "super::serializers::SerdeDuration"

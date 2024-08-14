@@ -244,19 +244,19 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        {
-            let mut ctx = state.simple_ctx(request.header.height);
+        let ctx = state.simple_ctx(request.header.height);
 
-            let max_gas = self
-                .baseapp_params_keeper
-                .block_params(&mut ctx)
-                .map(|e| e.max_gas)
-                .unwrap_or_default(); // This is how cosmos handles it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
+        let max_gas = self
+            .baseapp_params_keeper
+            .block_params(&ctx)
+            .map(|e| e.max_gas)
+            .unwrap_or_default(); // This is how cosmos handles it https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/baseapp/baseapp.go#L497
 
-            state.replace_meter(Gas::from(max_gas))
-        }
+        let consensus_params = self.baseapp_params_keeper.consensus_params(&ctx);
 
-        let mut ctx = state.block_ctx(request.header.clone());
+        state.replace_meter(Gas::from(max_gas));
+
+        let mut ctx = state.block_ctx(request.header.clone(), consensus_params);
 
         self.abci_handler.begin_block(&mut ctx, request);
 
@@ -276,7 +276,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
             .get_block_header()
             .expect("block header is set in begin block");
 
-        let mut ctx = state.block_ctx(header);
+        let consensus_params = {
+            self.baseapp_params_keeper
+                .consensus_params(&state.simple_ctx(header.height))
+        };
+
+        let mut ctx = state.block_ctx(header, consensus_params);
 
         let validator_updates = self.abci_handler.end_block(&mut ctx, request);
 

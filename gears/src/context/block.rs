@@ -5,7 +5,10 @@ use kv_store::{
     StoreKey,
 };
 
-use crate::types::store::kv::{mutable::StoreMut, Store};
+use crate::{
+    baseapp::ConsensusParams,
+    types::store::kv::{mutable::StoreMut, Store},
+};
 use tendermint::types::{
     chain_id::ChainId,
     proto::{event::Event, header::Header},
@@ -19,6 +22,7 @@ pub struct BlockContext<'a, DB, SK> {
     multi_store: &'a mut ApplicationMultiBank<DB, SK>,
     pub(crate) height: u32,
     pub header: Header,
+    pub(crate) consensus_params: ConsensusParams,
     pub events: Vec<Event>,
 }
 
@@ -27,17 +31,23 @@ impl<'a, DB, SK> BlockContext<'a, DB, SK> {
         multi_store: &'a mut ApplicationMultiBank<DB, SK>,
         height: u32,
         header: Header,
+        consensus_params: ConsensusParams,
     ) -> Self {
         BlockContext {
             multi_store,
             height,
             events: Vec::new(),
+            consensus_params,
             header,
         }
     }
 
     pub fn chain_id(&self) -> &ChainId {
         &self.header.chain_id
+    }
+
+    pub fn consensus_params(&self) -> &ConsensusParams {
+        &self.consensus_params
     }
 }
 
