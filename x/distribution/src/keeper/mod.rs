@@ -9,7 +9,8 @@ pub use gears::{
     store::{database::Database, StoreKey},
     x::{
         keepers::{
-            auth::AuthKeeper, bank::StakingBankKeeper as BankKeeper, staking::SlashingStakingKeeper,
+            auth::AuthKeeper, staking::SlashingStakingKeeper,
+            staking::StakingBankKeeper as BankKeeper,
         },
         module::Module,
         types::validator::StakingValidator,

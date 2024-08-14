@@ -18,8 +18,8 @@ use gears::{
     types::address::ConsAddress,
     x::{
         keepers::{
-            auth::AuthKeeper, bank::StakingBankKeeper as BankKeeper,
-            staking::DistributionStakingKeeper,
+            auth::AuthKeeper, staking::DistributionStakingKeeper,
+            staking::StakingBankKeeper as BankKeeper,
         },
         module::Module,
     },

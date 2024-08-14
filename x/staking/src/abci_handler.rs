@@ -20,7 +20,7 @@ use gears::{
     },
     types::{pagination::response::PaginationResponse, store::gas::ext::GasResultExt},
     x::{
-        keepers::{auth::AuthKeeper, bank::StakingBankKeeper, staking::KeeperHooks},
+        keepers::{auth::AuthKeeper, staking::StakingBankKeeper, staking::KeeperHooks},
         module::Module,
     },
 };
