@@ -16,7 +16,7 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 
 mod query;
-mod tx;
+pub use query::*;
 
 // DoubleSignJailEndTime period ends at Max Time supported by Amino
 // (Dec 31, 9999 - 23:59:59 GMT).
@@ -25,7 +25,7 @@ pub(crate) const DOUBLE_SIGN_JAIL_END_TIME: Timestamp =
 
 //
 
-pub trait Evidence: Message + TryFrom<Any> {
+pub trait Evidence: Message + TryFrom<Any> + Into<Any> {
     type Error;
     // TODO: uncomment or remove
     // fn route(&self) -> String;
@@ -80,6 +80,15 @@ impl From<TmEvidence> for Equivocation {
             time,
             power: validator.power,
             consensus_address: validator.address.into(),
+        }
+    }
+}
+
+impl From<RawEquivocation> for Any {
+    fn from(value: RawEquivocation) -> Self {
+        Any {
+            type_url: "equivocation".to_string(),
+            value: value.encode_to_vec(),
         }
     }
 }

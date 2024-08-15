@@ -1,12 +1,16 @@
 use crate::{
-    types::{Equivocation, Evidence},
+    types::{Equivocation, Evidence, QueryAllEvidenceRequest, QueryEvidenceRequest},
     GenesisState, Keeper,
 };
 use gears::{
-    context::{block::BlockContext, init::InitContext},
-    core::any::google::Any,
+    baseapp::{errors::QueryError, QueryResponse},
+    context::{block::BlockContext, init::InitContext, query::QueryContext},
+    core::{any::google::Any, Protobuf},
     store::{database::Database, StoreKey},
-    tendermint::types::{proto::info::EvidenceType, request::begin_block::RequestBeginBlock},
+    tendermint::types::{
+        proto::info::EvidenceType,
+        request::{begin_block::RequestBeginBlock, query::RequestQuery},
+    },
     x::{
         keepers::{slashing::EvidenceSlashingKeeper, staking::SlashingStakingKeeper},
         module::Module,
@@ -73,4 +77,39 @@ where
             }
         }
     }
+
+    pub fn query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: RequestQuery,
+    ) -> Result<prost::bytes::Bytes, QueryError> {
+        match query.path.as_str() {
+            "/cosmos.evidence.v1beta1.Query/Evidence" => {
+                let req = QueryEvidenceRequest::decode_vec(&query.data)?;
+
+                Ok(self.keeper.query_evidence(ctx, req).into_bytes().into())
+            }
+            "/cosmos.evidence.v1beta1.Query/AllEvidence" => {
+                let req = QueryAllEvidenceRequest::decode_vec(&query.data)?;
+
+                Ok(self.keeper.query_all_evidence(ctx, req).into_bytes().into())
+            }
+            _ => Err(QueryError::PathNotFound),
+        }
+    }
+
+    // pub fn typed_query<DB: Database + Send + Sync>(
+    //     &self,
+    //     ctx: &QueryContext<DB, SK>,
+    //     query: SlashingNodeQueryRequest,
+    // ) -> SlashingNodeQueryResponse {
+    //     match query {
+    //         SlashingNodeQueryRequest::SigningInfos(req) => {
+    //             SlashingNodeQueryResponse::SigningInfos(self.query_signing_infos(ctx, req))
+    //         }
+    //         SlashingNodeQueryRequest::Params(req) => {
+    //             SlashingNodeQueryResponse::Params(self.keeper.query_params(ctx, req))
+    //         }
+    //     }
+    // }
 }

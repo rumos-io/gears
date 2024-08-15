@@ -16,6 +16,7 @@ use gears::{
 use std::marker::PhantomData;
 
 mod infraction;
+mod query;
 
 const KEY_PREFIX_EVIDENCE: [u8; 1] = [0x0];
 
@@ -89,7 +90,7 @@ where
     /// evidence gets Evidence by hash in the module's KVStore.
     pub fn evidence<CTX: QueryableContext<DB, SK>, DB: Database, Ev: Evidence + Default>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         evidence_hash: Hash,
     ) -> Result<Option<Ev>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
@@ -97,6 +98,53 @@ where
         Ok(store
             .get(evidence_hash.as_bytes())?
             .map(|bytes| Ev::decode(bytes.as_slice()).unwrap_or_corrupt()))
+    }
+
+    /// evidence_non_fallible gets Evidence by hash in the module's KVStore and doesn't panic on
+    /// wrong decoding.
+    pub fn evidence_non_fallible<
+        CTX: QueryableContext<DB, SK>,
+        DB: Database,
+        Ev: Evidence + Default,
+    >(
+        &self,
+        ctx: &CTX,
+        evidence_hash: Hash,
+    ) -> Result<Option<Ev>, GasStoreErrors> {
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(KEY_PREFIX_EVIDENCE);
+        let evidence = if let Some(bytes) = store.get(evidence_hash.as_bytes())? {
+            if let Ok(ev) = Ev::decode(bytes.as_slice()) {
+                Some(ev)
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        Ok(evidence)
+    }
+
+    /// all_evidence_non_fallible gets Evidence's in the module's KVStore and doesn't panic on
+    /// wrong decoding.
+    pub fn all_evidence_non_fallible<
+        CTX: QueryableContext<DB, SK>,
+        DB: Database,
+        Ev: Evidence + Default,
+    >(
+        &self,
+        ctx: &CTX,
+    ) -> Result<Vec<Ev>, GasStoreErrors> {
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(KEY_PREFIX_EVIDENCE);
+        let mut evidences = vec![];
+        for r in store.into_range(..) {
+            let (_k, v) = r?;
+            if let Ok(ev) = Ev::decode(v.as_slice()) {
+                evidences.push(ev)
+            }
+        }
+        Ok(evidences)
     }
 
     /// set_evidence sets Evidence by hash in the module's KVStore.
