@@ -16,7 +16,9 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 
 mod query;
+mod tx;
 pub use query::*;
+pub use tx::*;
 
 // DoubleSignJailEndTime period ends at Max Time supported by Amino
 // (Dec 31, 9999 - 23:59:59 GMT).
@@ -26,7 +28,7 @@ pub(crate) const DOUBLE_SIGN_JAIL_END_TIME: Timestamp =
 //
 
 pub trait Evidence: Message + TryFrom<Any> + Into<Any> {
-    type Error;
+    type Error: std::fmt::Display;
     // TODO: uncomment or remove
     // fn route(&self) -> String;
     // Original method is named `type`, replaced as inner interface

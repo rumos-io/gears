@@ -1,4 +1,7 @@
-use crate::{errors::GenesisStateError, Evidence};
+use crate::{
+    errors::{DecodeError, GenesisStateError},
+    Evidence,
+};
 use gears::core::any::google::Any;
 use serde::{Deserialize, Serialize};
 
@@ -39,7 +42,7 @@ where
     fn try_from(values: Vec<Any>) -> Result<Self, Self::Error> {
         let mut evidences = vec![];
         for v in values {
-            let evidence: E = v.try_into().map_err(|_| GenesisStateError::Decode)?;
+            let evidence: E = v.try_into().map_err(|_| DecodeError)?;
             evidences.push(evidence);
         }
 

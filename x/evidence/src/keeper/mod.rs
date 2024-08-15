@@ -1,4 +1,4 @@
-use crate::{errors::EvidenceError, types::Evidence, GenesisState};
+use crate::{errors::EvidenceAlreadyExistsError, types::Evidence, GenesisState};
 use gears::{
     context::{init::InitContext, QueryableContext, TransactionalContext},
     core::any::google::Any,
@@ -17,6 +17,7 @@ use std::marker::PhantomData;
 
 mod infraction;
 mod query;
+mod tx;
 
 const KEY_PREFIX_EVIDENCE: [u8; 1] = [0x0];
 
@@ -73,14 +74,14 @@ where
         &self,
         ctx: &mut InitContext<'_, DB, SK>,
         genesis: GenesisState<E>,
-    ) -> Result<(), EvidenceError> {
+    ) -> Result<(), EvidenceAlreadyExistsError> {
         for e in genesis.evidence {
             if self
                 .evidence::<InitContext<DB, SK>, DB, E>(ctx, e.hash())
                 .unwrap_gas()
                 .is_some()
             {
-                return Err(EvidenceError::AlreadyExists(e.hash()));
+                return Err(EvidenceAlreadyExistsError(e.hash()));
             }
             self.set_evidence(ctx, &e).unwrap_gas();
         }

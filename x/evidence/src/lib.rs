@@ -3,6 +3,7 @@ mod client;
 pub mod errors;
 mod genesis;
 mod keeper;
+mod message;
 mod types;
 
 pub use abci_handler::*;

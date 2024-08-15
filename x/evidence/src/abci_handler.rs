@@ -1,10 +1,15 @@
 use crate::{
-    types::{Equivocation, Evidence, QueryAllEvidenceRequest, QueryEvidenceRequest},
+    errors::TxEvidenceError,
+    message::Message,
+    types::{
+        Equivocation, Evidence, QueryAllEvidenceRequest, QueryAllEvidenceResponse,
+        QueryEvidenceRequest, QueryEvidenceResponse,
+    },
     GenesisState, Keeper,
 };
 use gears::{
     baseapp::{errors::QueryError, QueryResponse},
-    context::{block::BlockContext, init::InitContext, query::QueryContext},
+    context::{block::BlockContext, init::InitContext, query::QueryContext, tx::TxContext},
     core::{any::google::Any, Protobuf},
     store::{database::Database, StoreKey},
     tendermint::types::{
@@ -16,6 +21,17 @@ use gears::{
         module::Module,
     },
 };
+
+#[derive(Debug, Clone)]
+pub enum EvidenceNodeQueryRequest {
+    Evidence(QueryEvidenceRequest),
+    AllEvidence(QueryAllEvidenceRequest),
+}
+#[derive(Debug, Clone)]
+pub enum EvidenceNodeQueryResponse {
+    Evidence(QueryEvidenceResponse),
+    AllEvidence(QueryAllEvidenceResponse),
+}
 
 #[derive(Debug, Clone)]
 pub struct ABCIHandler<
@@ -78,6 +94,16 @@ where
         }
     }
 
+    pub fn tx<DB: Database + Sync + Send>(
+        &self,
+        ctx: &mut TxContext<'_, DB, SK>,
+        msg: &Message,
+    ) -> Result<(), TxEvidenceError> {
+        match msg {
+            Message::SubmitEvidence(msg) => Ok(self.keeper.submit_evidence_cmd(ctx, msg)?),
+        }
+    }
+
     pub fn query<DB: Database + Send + Sync>(
         &self,
         ctx: &QueryContext<DB, SK>,
@@ -98,18 +124,18 @@ where
         }
     }
 
-    // pub fn typed_query<DB: Database + Send + Sync>(
-    //     &self,
-    //     ctx: &QueryContext<DB, SK>,
-    //     query: SlashingNodeQueryRequest,
-    // ) -> SlashingNodeQueryResponse {
-    //     match query {
-    //         SlashingNodeQueryRequest::SigningInfos(req) => {
-    //             SlashingNodeQueryResponse::SigningInfos(self.query_signing_infos(ctx, req))
-    //         }
-    //         SlashingNodeQueryRequest::Params(req) => {
-    //             SlashingNodeQueryResponse::Params(self.keeper.query_params(ctx, req))
-    //         }
-    //     }
-    // }
+    pub fn typed_query<DB: Database + Send + Sync>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: EvidenceNodeQueryRequest,
+    ) -> EvidenceNodeQueryResponse {
+        match query {
+            EvidenceNodeQueryRequest::Evidence(req) => {
+                EvidenceNodeQueryResponse::Evidence(self.keeper.query_evidence(ctx, req))
+            }
+            EvidenceNodeQueryRequest::AllEvidence(req) => {
+                EvidenceNodeQueryResponse::AllEvidence(self.keeper.query_all_evidence(ctx, req))
+            }
+        }
+    }
 }
