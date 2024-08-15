@@ -12,6 +12,7 @@ use gears::{
     x::types::delegation::StakingDelegation,
 };
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 
 use crate::consts::error::SERDE_ENCODING_DOMAIN_TYPE;
 
@@ -82,6 +83,8 @@ impl Protobuf<inner::Delegation> for Delegation {}
 
 mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::Delegation;
+    pub use ibc_proto::cosmos::staking::v1beta1::Redelegation;
+    pub use ibc_proto::cosmos::staking::v1beta1::RedelegationEntry;
 }
 
 /// Delegation represents the bond with tokens held by an account. It is
@@ -120,6 +123,39 @@ pub struct Redelegation {
     pub entries: Vec<RedelegationEntry>,
 }
 
+impl From<Redelegation> for inner::Redelegation {
+    fn from(value: Redelegation) -> Self {
+        inner::Redelegation {
+            delegator_address: value.delegator_address.to_string(),
+            validator_src_address: value.validator_src_address.to_string(),
+            validator_dst_address: value.validator_dst_address.to_string(),
+            entries: value.entries.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl TryFrom<inner::Redelegation> for Redelegation {
+    type Error = CoreError;
+
+    fn try_from(proto: inner::Redelegation) -> Result<Self, Self::Error> {
+        Ok(Redelegation {
+            delegator_address: AccAddress::from_bech32(&proto.delegator_address)
+                .map_err(|e| CoreError::DecodeGeneral(format!("delegator_address: {}", e)))?,
+            validator_src_address: ValAddress::from_bech32(&proto.validator_src_address)
+                .map_err(|e| CoreError::DecodeGeneral(format!("validator_src_address: {}", e)))?,
+            validator_dst_address: ValAddress::from_bech32(&proto.validator_dst_address)
+                .map_err(|e| CoreError::DecodeGeneral(format!("validator_dst_address: {}", e)))?,
+            entries: proto
+                .entries
+                .into_iter()
+                .map(TryFrom::try_from)
+                .collect::<Result<_, _>>()?,
+        })
+    }
+}
+
+impl Protobuf<inner::Redelegation> for Redelegation {}
+
 impl Redelegation {
     pub fn add_entry(&mut self, redelegation_entry: RedelegationEntry) {
         self.entries.push(redelegation_entry);
@@ -151,5 +187,38 @@ pub struct RedelegationEntry {
 impl RedelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
         self.completion_time <= *time
+    }
+}
+
+impl From<RedelegationEntry> for inner::RedelegationEntry {
+    fn from(value: RedelegationEntry) -> Self {
+        inner::RedelegationEntry {
+            creation_height: value.creation_height.into(),
+            completion_time: Some(value.completion_time.into()),
+            initial_balance: value.initial_balance.into(),
+            shares_dst: value.share_dst.to_cosmos_proto_string(),
+        }
+    }
+}
+
+impl TryFrom<inner::RedelegationEntry> for RedelegationEntry {
+    type Error = CoreError;
+
+    fn try_from(proto: inner::RedelegationEntry) -> Result<Self, Self::Error> {
+        Ok(RedelegationEntry {
+            creation_height: proto
+                .creation_height
+                .try_into()
+                .map_err(|e| CoreError::DecodeGeneral(format!("creation_height: {}", e)))?,
+            completion_time: proto
+                .completion_time
+                .ok_or(CoreError::DecodeGeneral("completion_time".to_string()))?
+                .try_into()
+                .map_err(|e| CoreError::DecodeGeneral(format!("completion_time: {}", e)))?,
+            initial_balance: Uint256::from_str(&proto.initial_balance)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            share_dst: Decimal256::from_cosmos_proto_string(&proto.shares_dst)
+                .map_err(|e| CoreError::DecodeGeneral(format!("shares_dst: {}", e)))?,
+        })
     }
 }

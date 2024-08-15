@@ -1,5 +1,10 @@
 use super::*;
-use crate::{length_prefixed_val_del_addrs_key, unbonding_delegation_time_key, RedelegationEntry};
+use crate::types::keys;
+use crate::{
+    length_prefixed_val_del_addrs_key, unbonding_delegation_time_key, DvvTriplets,
+    RedelegationEntry,
+};
+use gears::core::Protobuf;
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
     store::database::ext::UnwrapCorrupt,
@@ -180,14 +185,32 @@ impl<
         ctx: &mut CTX,
         delegation: &Redelegation,
     ) -> Result<(), GasStoreErrors> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(REDELEGATION_KEY);
-        let mut key = delegation.delegator_address.to_string().as_bytes().to_vec();
-        key.put(delegation.validator_src_address.to_string().as_bytes());
-        key.put(delegation.validator_dst_address.to_string().as_bytes());
-        delegations_store.set(
-            key,
-            serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
+        let mut store = ctx.kv_store_mut(&self.store_key);
+        store.set(
+            keys::redelegation_key(
+                &delegation.delegator_address,
+                &delegation.validator_src_address,
+                &delegation.validator_dst_address,
+            ),
+            delegation.encode_vec(),
+        )?;
+
+        store.set(
+            keys::redelegation_by_val_src_index_key(
+                &delegation.delegator_address,
+                &delegation.validator_src_address,
+                &delegation.validator_dst_address,
+            ),
+            vec![],
+        )?;
+
+        store.set(
+            keys::redelegation_by_val_dst_index_key(
+                &delegation.delegator_address,
+                &delegation.validator_src_address,
+                &delegation.validator_dst_address,
+            ),
+            vec![],
         )
     }
 
@@ -290,8 +313,8 @@ impl<
         let store = ctx.kv_store_mut(&self.store_key);
         let mut store = store.prefix_store_mut(REDELEGATION_QUEUE_KEY);
 
-        let key = completion_time.format_bytes_rounded(); //TODO: check if this is correct
-        let value = serde_json::to_vec(&redelegations).expect(SERDE_ENCODING_DOMAIN_TYPE);
+        let key = completion_time.format_bytes_rounded();
+        let value = DvvTriplets::from(redelegations).encode_vec();
         store.set(key, value)
     }
 

@@ -2,7 +2,7 @@ use std::path::Path;
 
 use gears::{
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
-    types::{address::ValAddress, uint::Uint256},
+    types::uint::Uint256,
     utils::node::generate_txs,
 };
 use staking::{CommissionRates, CreateValidator, Description};
@@ -16,10 +16,6 @@ fn scenario_2() {
     let (mut node, _) = setup_mock_node(Some(genesis_path));
     let user_0 = crate::user_0(4);
     let user_1 = crate::user_1(5);
-
-    let val_address: ValAddress = user_0.address().into();
-
-    println!("user_0 validator address: {}", val_address);
 
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
@@ -62,7 +58,7 @@ fn scenario_2() {
 
     let txs = generate_txs([(0, msg)], &user_1, node.chain_id().clone());
 
-    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+    let app_hash = node.step(txs, Timestamp::try_new(0, 0).unwrap());
     assert_eq!(
         hex::encode(app_hash),
         "cf3f14e8812e97ab24cbe5bee1e8f50187fa9212992105d860c2c29b50c8fb70"
@@ -106,7 +102,27 @@ fn scenario_2() {
 
     let txs = generate_txs([(2, msg)], &user_1, node.chain_id().clone());
 
-    println!("txs: {:?}", txs[0].to_vec());
+    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(app_hash),
+        "13512b231d8ed1ab93df74530d232d71525ddf1666579f1690808fac882f3235"
+    );
+
+    //----------------------------------------
+    // Redelegate from a validator to another validator
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Redelegate(staking::RedelegateMsg {
+            delegator_address: user_1.address(),
+            src_validator_address: user_0.address().into(),
+            dst_validator_address: user_1.address().into(),
+            amount: "500uatom".parse().unwrap(),
+        }));
+
+    let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
+
+    //println!("txs: {:?}", txs[0].to_vec());
     // print hex encoded
     //println!("txs: {:?}", hex::encode(txs[0].to_vec()));
 
@@ -114,6 +130,6 @@ fn scenario_2() {
 
     assert_eq!(
         hex::encode(app_hash),
-        "13512b231d8ed1ab93df74530d232d71525ddf1666579f1690808fac882f3235"
+        "b4c6b4c02a52f97507e765da4b07fd5d19d9df350c08d4439dcf0b3174d51889"
     );
 }

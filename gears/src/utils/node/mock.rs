@@ -74,9 +74,10 @@ impl<G: Clone, App: ABCIApplication<G>> MockNode<App, G> {
     }
 
     pub fn step(&mut self, txs: impl IntoIterator<Item = Bytes>, block_time: Timestamp) -> &Bytes {
-        let header = self.calculate_header();
         self.height += 1;
         self.time = block_time;
+        let header = self.calculate_header();
+
         // TODO: update last_block_id
 
         let request_begin_block = RequestBeginBlock {
