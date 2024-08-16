@@ -47,6 +47,20 @@ pub fn expand_store(input: DeriveInput) -> syn::Result<TokenStream> {
             for Variant { attrs, ident, .. } in variants {
                 let KeysAttr { to_string } = KeysAttr::from_attributes(&attrs)?;
 
+                if let Some(prefix) =
+                    set.iter()
+                        .find(|this| match this.len().cmp(&to_string.len()) {
+                            std::cmp::Ordering::Less => to_string.starts_with(*this),
+                            std::cmp::Ordering::Equal => this == &&to_string,
+                            std::cmp::Ordering::Greater => this.starts_with(&to_string),
+                        })
+                {
+                    Err(syn::Error::new(
+                        ident.span(),
+                        format!("Key: {} is prefix of another item: {}", to_string, prefix),
+                    ))?
+                }
+
                 if !set.insert(to_string.clone()) {
                     Err(syn::Error::new(
                         ident.span(),
