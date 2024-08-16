@@ -47,12 +47,21 @@ pub fn expand_store(input: DeriveInput) -> syn::Result<TokenStream> {
             for Variant { attrs, ident, .. } in variants {
                 let KeysAttr { to_string } = KeysAttr::from_attributes(&attrs)?;
 
-                if !set.insert(to_string.clone()) {
+                if let Some(prefix) =
+                    set.iter()
+                        .find(|this| match this.len().cmp(&to_string.len()) {
+                            std::cmp::Ordering::Less => to_string.starts_with(*this),
+                            std::cmp::Ordering::Equal => this == &&to_string,
+                            std::cmp::Ordering::Greater => this.starts_with(&to_string),
+                        })
+                {
                     Err(syn::Error::new(
                         ident.span(),
-                        format!("Duplicate item: {}", to_string),
+                        format!("Key: {} is prefix of another item: {}", to_string, prefix),
                     ))?
                 }
+
+                let _ = set.insert(to_string.clone());
 
                 enum_variants.push(quote! { Self::#ident => #to_string });
             }
