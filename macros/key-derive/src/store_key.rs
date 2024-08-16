@@ -61,12 +61,7 @@ pub fn expand_store(input: DeriveInput) -> syn::Result<TokenStream> {
                     ))?
                 }
 
-                if !set.insert(to_string.clone()) {
-                    Err(syn::Error::new(
-                        ident.span(),
-                        format!("Duplicate item: {}", to_string),
-                    ))?
-                }
+                let _ = set.insert(to_string.clone());
 
                 enum_variants.push(quote! { Self::#ident => #to_string });
             }
