@@ -8,7 +8,10 @@ use gears::{
         tx::metadata::Metadata,
     },
 };
+use prost::Message;
 use serde::{Deserialize, Serialize};
+
+use crate::BankParams;
 
 mod inner {
     pub use gears::core::bank::Metadata;
@@ -21,6 +24,7 @@ mod inner {
     pub use gears::core::query::response::bank::QueryTotalSupplyRequest;
     pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
     pub use gears::core::query::response::PageResponse;
+    pub use ibc_proto::cosmos::bank::v1beta1::Params;
 }
 
 #[derive(Clone, PartialEq, Debug, Query, Protobuf)]
@@ -61,6 +65,18 @@ pub struct QueryAllBalancesRequest {
     #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
 }
+
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.bank.v1beta1.Query/DenomsMetadata")]
+#[proto(raw = "inner::QueryDenomMetadataRequest")]
+pub struct QueryDenomMetadataRequest {
+    /// denom is the coin denom to query metadata for.
+    pub denom: Denom,
+}
+
+#[derive(Clone, PartialEq, Message, Raw, Query, Protobuf)]
+#[query(url = "/cosmos.bank.v1beta1.Query/Params")]
+pub struct QueryParamsRequest {}
 
 /// QueryAllBalancesResponse is the response type for the Query/AllBalances RPC
 /// method.
@@ -113,18 +129,18 @@ pub struct QueryDenomsMetadataResponse {
     pub pagination: Option<PaginationResponse>,
 }
 
-#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
-#[query(url = "/cosmos.bank.v1beta1.Query/DenomsMetadata")]
-#[proto(raw = "inner::QueryDenomMetadataRequest")]
-pub struct QueryDenomMetadataRequest {
-    /// denom is the coin denom to query metadata for.
-    pub denom: Denom,
-}
-
 #[derive(Clone, Debug, Serialize, Query, Raw, Protobuf)]
 pub struct QueryDenomMetadataResponse {
     /// metadata describes and provides all the client information for the requested token.
     #[proto(optional)]
     #[raw(kind(message), raw = inner::Metadata, optional)]
     pub metadata: Option<Metadata>,
+}
+
+/// QueryParamsResponse is the response type for the Query/Params RPC method
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Query, Raw, Protobuf)]
+pub struct QueryParamsResponse {
+    #[proto(optional)]
+    #[raw(kind(message), raw = "inner::Params", optional)]
+    pub params: BankParams,
 }
