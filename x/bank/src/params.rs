@@ -1,21 +1,35 @@
-use std::collections::{HashMap, HashSet};
-
 use gears::application::keepers::params::ParamsKeeper;
-
+use gears::derive::Protobuf;
 use gears::params::{ParamKind, ParamsDeserialize, ParamsSerialize, ParamsSubspaceKey};
-
+use gears::types::denom::Denom;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 const KEY_SEND_ENABLED: &str = "SendEnabled";
 const KEY_DEFAULT_SEND_ENABLED: &str = "DefaultSendEnabled";
 
-// NOTE: The send_enabled field of the bank params is hard coded to the empty list for now
-#[derive(Debug, Clone, Deserialize, Serialize)]
+mod inner {
+    pub use ibc_proto::cosmos::bank::v1beta1::Params;
+    pub use ibc_proto::cosmos::bank::v1beta1::SendEnabled;
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Protobuf)]
+#[proto(raw = "inner::SendEnabled")]
+pub struct SendEnabled {
+    pub denom: Denom,
+    pub enabled: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize, Protobuf)]
+#[proto(raw = "inner::Params")]
 pub struct BankParams {
+    #[proto(repeated)]
+    pub send_enabled: Vec<SendEnabled>,
     pub default_send_enabled: bool,
 }
 
 pub const DEFAULT_PARAMS: BankParams = BankParams {
+    send_enabled: vec![],
     default_send_enabled: true,
 };
 
@@ -33,18 +47,20 @@ impl ParamsSerialize for BankParams {
     }
 
     fn to_raw(&self) -> Vec<(&'static str, Vec<u8>)> {
-        let mut hash_map = Vec::with_capacity(2);
-
-        hash_map.push((
-            KEY_DEFAULT_SEND_ENABLED,
-            self.default_send_enabled.to_string().into_bytes(),
-        ));
-
-        // TODO: The send_enabled field is hard coded to the empty list for now
-        // TODO: if params are missing in the cosmos SDK (from genesis at least) then they are set to "null" i.e. [110, 117, 108, 108] when stored
-        hash_map.push((KEY_SEND_ENABLED, "[]".as_bytes().to_vec()));
-
-        hash_map
+        vec![
+            (
+                KEY_DEFAULT_SEND_ENABLED,
+                self.default_send_enabled.to_string().into_bytes(),
+            ),
+            // TODO: if params are missing in the cosmos SDK (e.g the send_enabled field is missing from the genesis json file)
+            // then they are set to "null" i.e. [110, 117, 108, 108] when stored. This is different to the Gears behaviour
+            // which would fail to parse if e.g. the send enabled field is missing
+            (
+                KEY_SEND_ENABLED,
+                serde_json::to_vec(&self.send_enabled)
+                    .expect("conversion of domain types won't fail"),
+            ),
+        ]
     }
 }
 
@@ -55,6 +71,13 @@ impl ParamsDeserialize for BankParams {
                 .parse_param(fields.remove(KEY_DEFAULT_SEND_ENABLED).unwrap())
                 .boolean()
                 .unwrap(),
+            send_enabled: serde_json::from_slice(
+                &ParamKind::Bytes
+                    .parse_param(fields.remove(KEY_SEND_ENABLED).unwrap())
+                    .bytes()
+                    .unwrap(),
+            )
+            .unwrap(),
         }
     }
 }

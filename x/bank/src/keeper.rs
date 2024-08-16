@@ -1,6 +1,6 @@
 use crate::types::iter::balances::BalanceIterator;
 use crate::types::query::{QueryBalanceRequest, QueryBalanceResponse};
-use crate::{BankParamsKeeper, GenesisState};
+use crate::{BankParams, BankParamsKeeper, GenesisState};
 use bytes::Bytes;
 use gears::application::keepers::params::ParamsKeeper;
 use gears::context::{init::InitContext, query::QueryContext};
@@ -348,6 +348,10 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
             },
             None => QueryBalanceResponse { balance: None },
         }
+    }
+
+    pub fn params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> BankParams {
+        self.bank_params_keeper.get(ctx)
     }
 
     // TODO: can we reuse with unwrap from `query_balance`?

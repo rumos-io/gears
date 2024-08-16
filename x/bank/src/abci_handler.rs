@@ -22,7 +22,8 @@ use crate::errors::BankTxError;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
-    QueryDenomsMetadataResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
+    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse, QueryTotalSupplyRequest,
+    QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
 
@@ -45,6 +46,7 @@ pub enum BankNodeQueryRequest {
     TotalSupply(QueryTotalSupplyRequest),
     DenomsMetadata(QueryDenomsMetadataRequest),
     DenomMetadata(QueryDenomMetadataRequest),
+    Params(QueryParamsRequest),
 }
 
 impl QueryRequest for BankNodeQueryRequest {
@@ -61,6 +63,7 @@ pub enum BankNodeQueryResponse {
     TotalSupply(QueryTotalSupplyResponse),
     DenomsMetadata(QueryDenomsMetadataResponse),
     DenomMetadata(QueryDenomMetadataResponse),
+    Params(QueryParamsResponse),
 }
 
 impl<
@@ -106,6 +109,11 @@ impl<
                     .get_denom_metadata(ctx, &req.denom)
                     .expect("Query ctx doesn't have any gas");
                 BankNodeQueryResponse::DenomMetadata(QueryDenomMetadataResponse { metadata })
+            }
+            BankNodeQueryRequest::Params(_req) => {
+                BankNodeQueryResponse::Params(QueryParamsResponse {
+                    params: self.keeper.params(ctx),
+                })
             }
         }
     }
@@ -179,6 +187,12 @@ impl<
                     .get_denom_metadata(ctx, &req.denom)
                     .expect("Query ctx doesn't have any gas");
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
+            }
+            "/cosmos.bank.v1beta1.Query/Params" => {
+                // a kind of type check
+                let _req = QueryParamsRequest::decode(query.data)?;
+                let params = self.keeper.params(ctx);
+                Ok(QueryParamsResponse { params }.encode_vec().into())
             }
             _ => Err(QueryError::PathNotFound),
         }
