@@ -2034,6 +2034,13 @@ dependencies = [
 [[package]]
 name = "genutil"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "gears",
+ "serde",
+ "serde_json",
+ "staking",
+]
 
 [[package]]
 name = "getrandom"

@@ -10,7 +10,7 @@ use serde::Serialize;
 #[serde(tag = "@type")]
 #[allow(clippy::large_enum_variant)]
 pub enum Message {
-    #[serde(rename = "/cosmos.staking.v1beta1.CreateValidator")]
+    #[serde(rename = "/cosmos.staking.v1beta1/MsgCreateValidator")]
     CreateValidator(CreateValidator),
     #[serde(rename = "/cosmos.staking.v1beta1.EditValidator")]
     EditValidator(EditValidator),
@@ -35,7 +35,7 @@ impl TxMessage for Message {
 
     fn type_url(&self) -> &'static str {
         match self {
-            Message::CreateValidator(_) => "/cosmos.staking.v1beta1.CreateValidator",
+            Message::CreateValidator(_) => CreateValidator::TYPE_URL,
             Message::EditValidator(_) => "/cosmos.staking.v1beta1.EditValidator",
             Message::Delegate(_) => "/cosmos.staking.v1beta1.Delegate",
             Message::Redelegate(_) => "/cosmos.staking.v1beta1.Redelegate",
@@ -48,7 +48,7 @@ impl From<Message> for Any {
     fn from(msg: Message) -> Self {
         match msg {
             Message::CreateValidator(msg) => Any {
-                type_url: "/cosmos.staking.v1beta1.CreateValidator".to_string(),
+                type_url: CreateValidator::TYPE_URL.to_string(),
                 value: msg.encode_vec(),
             },
             Message::EditValidator(msg) => Any {
@@ -76,7 +76,7 @@ impl TryFrom<Any> for Message {
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
-            "/cosmos.staking.v1beta1.CreateValidator" => {
+            CreateValidator::TYPE_URL => {
                 let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::CreateValidator(msg))
