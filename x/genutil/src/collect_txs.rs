@@ -1,14 +1,12 @@
 use std::{collections::HashMap, path::Path};
 
-use gears::types::{address::AccAddress, tx::Tx};
+use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx};
 use staking::CreateValidator;
-
-use crate::balances_iter::GenesisBalance;
 
 pub fn collect_txs(
     dir: impl AsRef<Path>,
     moniker: String,
-    balance: impl IntoIterator<Item = (AccAddress, GenesisBalance)>,
+    balance: impl IntoIterator<Item = (AccAddress, UnsignedCoins)>,
 ) -> anyhow::Result<(String, Vec<Tx<CreateValidator>>)> {
     let balance = balance.into_iter().collect::<HashMap<_, _>>();
 
@@ -69,7 +67,7 @@ pub fn collect_txs(
             .get(&msg.validator_address.clone().into())
             .ok_or(anyhow::anyhow!("account balance not in genesis state"))?;
 
-        if delegator_balance.coins.amount_of(&msg.value.denom) < msg.value.amount {
+        if delegator_balance.amount_of(&msg.value.denom) < msg.value.amount {
             Err(anyhow::anyhow!("insufficient fund for delegation"))?
         }
 
