@@ -22,7 +22,7 @@ pub fn collect_txs(
     dir: impl AsRef<Path>,
     moniker: String,
     balance: impl IntoIterator<Item = (AccAddress, GenesisBalance)>,
-) -> anyhow::Result<String> {
+) -> anyhow::Result<(String, Vec<Tx<CreateValidator>>)> {
     let balance = balance.into_iter().collect::<HashMap<_, _>>();
 
     let items = if dir.as_ref().is_dir() {
@@ -54,7 +54,7 @@ pub fn collect_txs(
     };
 
     let mut addresses_ip = Vec::with_capacity(items.len());
-    for tx in items {
+    for tx in &items {
         let msg = tx.get_msgs();
         if msg.len() != 1 {
             Err(anyhow::anyhow!(
@@ -104,5 +104,5 @@ pub fn collect_txs(
                 accumulator
             });
 
-    Ok(peers)
+    Ok((peers, items))
 }
