@@ -25,6 +25,8 @@ impl Default for GenesisState {
         Self {
             balances: vec![],
             params: BankParams {
+                // TODO: maybe default denom
+                send_enabled: vec![],
                 default_send_enabled: true,
             },
             //TODO: this denom metadata should not be hard coded into the bank module
