@@ -1,23 +1,10 @@
 use std::{collections::HashMap, path::Path};
 
-use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx};
+use gears::types::{address::AccAddress, tx::Tx};
 use staking::CreateValidator;
 
-// pub trait BankKeeper<SK: StoreKey, M: Module> {
-//     fn all_balances<DB: Database, CTX: QueryableContext<DB, SK>>(
-//         &self,
-//         ctx: &CTX,
-//         addr: AccAddress,
-//     ) -> Result<Vec<UnsignedCoin>, GasStoreErrors>;
-// }
+use crate::balances_iter::GenesisBalance;
 
-#[derive(Debug, Clone)]
-pub struct GenesisBalance {
-    pub address: AccAddress,
-    pub coins: UnsignedCoins,
-}
-
-// <SK: StoreKey, M: Module, DB: Database, CTX: QueryableContext<DB, SK>>
 pub fn collect_txs(
     dir: impl AsRef<Path>,
     moniker: String,
@@ -91,6 +78,8 @@ pub fn collect_txs(
             addresses_ip.push(format!("{node_id_addr},"))
         }
     }
+
+    addresses_ip.sort();
 
     let lenght = addresses_ip
         .iter()
