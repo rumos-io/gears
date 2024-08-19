@@ -8,10 +8,7 @@ use gears::{
     rest::{error::HTTPError, RestState},
     types::denom::Denom,
 };
-use gears::{
-    rest::Pagination,
-    types::{address::AccAddress, pagination::request::PaginationRequest},
-};
+use gears::{rest::Pagination, types::address::AccAddress};
 use serde::Deserialize;
 
 use crate::{
@@ -44,12 +41,12 @@ pub async fn get_balances<
     App: NodeQueryHandler<QReq, QRes>,
 >(
     Path(address): Path<AccAddress>,
-    pagination: Query<Option<PaginationRequest>>,
+    pagination: Query<Pagination>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::AllBalances(QueryAllBalancesRequest {
         address,
-        pagination: pagination.0,
+        pagination: Some(pagination.0.into()),
     });
 
     let res = rest_state.app.typed_query(req)?;

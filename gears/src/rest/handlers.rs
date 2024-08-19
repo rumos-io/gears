@@ -65,7 +65,8 @@ pub async fn txs<M: TxMessage>(
         .map_err(|e: tendermint::rpc::error::Error| {
             HTTPError::bad_request(e.detail().to_string())
         })?;
-    let (page, limit) = parse_pagination(pagination.0.clone());
+    let (page, limit) = parse_pagination(&pagination.0);
+    dbg!(page, limit);
 
     let res_tx = client
         .tx_search(query, false, page, limit, Order::Descending)
