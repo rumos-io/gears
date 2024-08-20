@@ -478,7 +478,7 @@ pub struct Tree<T> {
     pub(crate) node_db: NodeDB<T>,
     pub(crate) loaded_version: u32,
     pub(crate) versions: BTreeSet<u32>,
-    name: Option<String>,
+    _name: Option<String>,
 }
 
 #[nutype(validate(greater = 0), derive(TryFrom, Into))]
@@ -505,7 +505,7 @@ where
                 loaded_version: target_version,
                 node_db,
                 versions,
-                name,
+                _name: name,
             })
         } else {
             // use the latest version available
@@ -518,7 +518,7 @@ where
                     loaded_version: *latest_version,
                     node_db,
                     versions,
-                    name,
+                    _name: name,
                 })
             } else {
                 Ok(Tree {
@@ -526,7 +526,7 @@ where
                     loaded_version: 0,
                     node_db,
                     versions,
-                    name,
+                    _name: name,
                 })
             }
         }
