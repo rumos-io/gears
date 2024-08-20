@@ -174,6 +174,26 @@ mod tests {
     use super::*;
 
     #[test]
+    fn tree_commit() {
+        let mut store = app_store_build([(1, 11)], [(2, 22), (3, 33)], [4, 5]);
+
+        store.set([20], [10]);
+        store.set([30], [20]);
+        let _ = store.delete(&[10]);
+        store.set([40], [50]);
+        store.set([50], [50]);
+        let _ = store.delete(&[20]);
+
+        let resulted_cache = store.commit();
+        let expected_hash = [
+            27, 142, 171, 11, 85, 248, 28, 55, 237, 188, 171, 213, 171, 72, 204, 33, 55, 29, 113,
+            175, 221, 165, 53, 187, 80, 14, 185, 198, 52, 197, 207, 47,
+        ];
+
+        assert_eq!(resulted_cache, expected_hash)
+    }
+
+    #[test]
     fn to_tx_kind_returns_empty() {
         let store = app_store_build([], [], []);
 
