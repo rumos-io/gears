@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    collections::BTreeMap,
     ops::RangeBounds,
     sync::{Arc, RwLock},
 };
@@ -141,17 +142,26 @@ impl<DB: Database> ApplicationKVBank<DB> {
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
-        let (cache, delete) = self.cache.take();
+        let (insert, delete) = self.cache.take();
 
         let mut persistent = self.persistent.write().expect(POISONED_LOCK);
 
-        cache
+        let cache = insert
             .into_iter()
             .filter(|(key, _)| !delete.contains(key))
-            .for_each(|(key, value)| persistent.set(key, value));
+            .map(|(key, value)| (key, Some(value)))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .chain(delete.into_iter().map(|key| (key, None)))
+            .collect::<BTreeMap<_, _>>();
 
-        for key in delete {
-            let _ = persistent.remove(&key);
+        for (key, value) in cache {
+            match value {
+                Some(value) => persistent.set(key, value),
+                None => {
+                    let _ = persistent.remove(&key);
+                }
+            }
         }
 
         //TODO: is it safe to assume this won't ever error?
