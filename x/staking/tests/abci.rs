@@ -3,6 +3,7 @@ use std::str::FromStr;
 use gears::{
     application::handlers::node::ModuleInfo,
     derive::{ParamsKeys, StoreKeys},
+    tendermint::types::time::timestamp::Timestamp,
     types::{address::AccAddress, base::coin::UnsignedCoin},
     utils::node::{init_node, GenesisSource, MockOptionsFormer},
     x::{
@@ -42,22 +43,21 @@ fn test_init_and_few_blocks() {
         .baseapp_sbs_key(SubspaceKey::BaseApp)
         .genesis(GenesisSource::Default);
 
-    let (mut _node, _) = init_node(opt);
+    let (mut node, _) = init_node(opt);
 
-    // TOOD: fix this test
-    // let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
-    // assert_eq!(
-    //     data_encoding::HEXLOWER.encode(app_hash),
-    //     "6b7f4c7bad4a07cfd6789cf85a957a2caee04b7028713e075e7fbbc173e3675b"
-    // );
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    assert_eq!(
+        data_encoding::HEXLOWER.encode(app_hash),
+        "8ac50c72eb261112e2fabef56a8bd022b8bcb1fc488ca8894654f132579f6bbf"
+    );
 
-    // node.skip_steps(100);
+    node.skip_steps(100);
 
-    // let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
-    // assert_eq!(
-    //     data_encoding::HEXLOWER.encode(app_hash),
-    //     "2c2867fc264ff3cf51ddac242955ce6df60e4694adc9760cdf6d79752318d978"
-    // );
+    let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
+    assert_eq!(
+        data_encoding::HEXLOWER.encode(app_hash),
+        "4f6f2f29e65d8252fb617b91ad4658eda067cc8f627209ddc1ceed1bd55369d1"
+    );
 }
 
 #[derive(Debug, Clone)]
