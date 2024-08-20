@@ -5,4 +5,5 @@ pub mod balances_iter;
 pub mod client;
 pub mod collect_txs;
 pub mod deliver;
+pub mod errors;
 pub mod types;

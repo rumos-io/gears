@@ -3,8 +3,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx};
+use gears::{
+    store::StoreKey,
+    types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx},
+};
+use serde::{Deserialize, Serialize};
 use staking::CreateValidator;
+
+use crate::{balances_iter::GenesisBalanceIter, errors::SERDE_JSON_CONVERSION};
 
 #[derive(Debug, Clone)]
 pub struct CollectGentxCmd {
@@ -13,11 +19,61 @@ pub struct CollectGentxCmd {
     pub moniker: String,
 }
 
-pub fn collect_txs(
+pub fn gen_app_state_from_config<SK: StoreKey>(
+    CollectGentxCmd {
+        gentx_dir,
+        home,
+        moniker,
+    }: CollectGentxCmd,
+    balance_sk: &SK,
+    genutil_sk: &SK,
+) -> anyhow::Result<(Peers, serde_json::Value)> {
+    let txs_iter = GenesisBalanceIter::new(balance_sk, home.join("config/genesis.json"))?; // todo: better way to get path to genesis file
+
+    let (persistent_peers, app_gen_txs) = collect_txs(gentx_dir, moniker, txs_iter)?;
+
+    if app_gen_txs.is_empty() {
+        return Err(anyhow::anyhow!("there must be at least one genesis tx"));
+    }
+
+    let mut genesis: serde_json::Value =
+        serde_json::from_reader(std::fs::File::open(home.join("config/genesis.json"))?)?;
+
+    #[derive(Serialize, Deserialize, Default)]
+    struct GenutilGenesis {
+        gen_txs: Vec<Tx<CreateValidator>>,
+    }
+
+    let genesis_unparsed = genesis
+        .as_object_mut()
+        .ok_or(anyhow::anyhow!("failed to read json as object"))?;
+
+    let mut existed_gen_txs = match genesis_unparsed.get_mut(genutil_sk.name()) {
+        Some(genesis) => serde_json::from_value(genesis.take()).expect(SERDE_JSON_CONVERSION),
+        None => GenutilGenesis::default(),
+    };
+
+    for tx in app_gen_txs {
+        if existed_gen_txs.gen_txs.contains(&tx) {
+            continue;
+        }
+
+        existed_gen_txs.gen_txs.push(tx)
+    }
+
+    let _ = genesis_unparsed.insert(
+        genutil_sk.name().to_owned(),
+        serde_json::to_value(existed_gen_txs).expect(SERDE_JSON_CONVERSION),
+    );
+
+    Ok((persistent_peers, genesis))
+}
+
+fn collect_txs(
     dir: impl AsRef<Path>,
     moniker: String,
     balance: impl IntoIterator<Item = (AccAddress, UnsignedCoins)>,
-) -> anyhow::Result<(String, Vec<Tx<CreateValidator>>)> {
+) -> anyhow::Result<(Peers, Vec<Tx<CreateValidator>>)> {
     let balance = balance.into_iter().collect::<HashMap<_, _>>();
 
     let items = if dir.as_ref().is_dir() {
@@ -83,23 +139,14 @@ pub fn collect_txs(
 
         // exclude itself from persistent peers
         if msg.description.moniker != moniker {
-            addresses_ip.push(format!("{node_id_addr},"))
+            addresses_ip.push(node_id_addr.to_owned())
         }
     }
 
     addresses_ip.sort();
 
-    let lenght = addresses_ip
-        .iter()
-        .fold(0, |accumulator, this| accumulator + this.len());
-
-    let peers =
-        addresses_ip
-            .into_iter()
-            .fold(String::with_capacity(lenght), |mut accumulator, this| {
-                accumulator.extend(this.chars());
-                accumulator
-            });
-
-    Ok((peers, items))
+    Ok((Peers(addresses_ip), items))
 }
+
+#[derive(Debug, Clone)]
+pub struct Peers(pub Vec<String>);
