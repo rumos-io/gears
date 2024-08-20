@@ -10,6 +10,7 @@ use axum::Router;
 use bank::cli::query::BankQueryHandler;
 use bank::BankNodeQueryRequest;
 use bank::BankNodeQueryResponse;
+use clap::Subcommand;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::WrappedGaiaQueryCommands;
@@ -130,13 +131,32 @@ impl QueryHandler for GaiaCoreClient {
 }
 
 impl AuxHandler for GaiaCoreClient {
-    type AuxCommands = NilAuxCommand;
+    type AuxCommands = GaiaAuxCmd;
     type Aux = NilAux;
 
     fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
         println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
         Ok(NilAux)
     }
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum GaiaAuxCli<AI: ApplicationInfo> {
+    Genutil(genutil::client::cli::GenesisAuxCli<AI>),
+}
+
+impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
+    type Error = anyhow::Error;
+
+    fn try_from(value: GaiaAuxCli<AI>) -> std::result::Result<Self, Self::Error> {
+        Ok(match value {
+            GaiaAuxCli::Genutil(var) => GaiaAuxCmd::Genutil(var.try_into()?),
+        })
+    }
+}
+
+pub enum GaiaAuxCmd {
+    Genutil(genutil::cmd::GenesisCmd),
 }
 
 impl Client for GaiaCoreClient {}

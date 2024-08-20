@@ -4,7 +4,7 @@ use clap::Parser;
 use gaia_rs::abci_handler::GaiaABCIHandler;
 use gaia_rs::client::{GaiaQueryCommands, GaiaTxCommands};
 use gaia_rs::store_keys::GaiaParamsStoreKey;
-use gaia_rs::{GaiaApplication, GaiaCore, GaiaCoreClient};
+use gaia_rs::{GaiaApplication, GaiaAuxCli, GaiaCore, GaiaCoreClient};
 use gears::application::client::ClientApplication;
 use gears::application::node::NodeApplication;
 use gears::cli::aux::CliNilAuxCommand;
@@ -17,7 +17,7 @@ use gears::store::database::DBBuilder;
 
 type Args = CliApplicationArgs<
     GaiaApplication,
-    CliNilAuxCommand,
+    GaiaAuxCli<GaiaApplication>,
     CliNilAuxCommand,
     GaiaTxCommands,
     GaiaQueryCommands,

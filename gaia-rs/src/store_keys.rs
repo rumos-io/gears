@@ -16,6 +16,8 @@ pub enum GaiaStoreKey {
     IBC,
     #[skey(to_string = "capability")]
     Capability,
+    #[skey(to_string = "genutil")]
+    Genutil,
 }
 
 #[derive(EnumIter, Debug, PartialEq, Eq, Hash, Clone, ParamsKeys)]
