@@ -10,6 +10,6 @@ pub trait ApplicationInfo: Clone + Sync + Send + 'static {
     fn home_dir() -> std::path::PathBuf {
         dirs::home_dir()
             .expect("failed to get home dir")
-            .join(format!(".{}", Self::APP_NAME)) // TODO: what about using version as prefix?
+            .join(format!(".{}/", Self::APP_NAME)) // TODO: what about using version as prefix?
     }
 }

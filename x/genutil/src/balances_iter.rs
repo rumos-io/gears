@@ -19,6 +19,8 @@ impl GenesisBalanceIter {
         let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(genesis_path)?)?;
 
         let value = value
+            .get_mut("app_state")
+            .ok_or(anyhow::anyhow!("missing `app_state`"))?
             .get_mut(sk.name())
             .ok_or(anyhow::anyhow!("module is not found"))?
             .get_mut("balances")

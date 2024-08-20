@@ -6,6 +6,7 @@ use crate::cmd::GenesisCmd;
 
 pub mod collect;
 
+/// variety of genesis utility functionalities for usage within a blockchain application
 #[derive(Args, Debug, Clone)]
 pub struct GenesisAuxCli<AI: ApplicationInfo> {
     #[command(subcommand)]

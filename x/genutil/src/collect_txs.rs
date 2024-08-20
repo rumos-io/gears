@@ -27,7 +27,7 @@ pub fn gen_app_state_from_config<SK: StoreKey>(
     }: CollectGentxCmd,
     balance_sk: &SK,
     genutil_sk: &SK,
-) -> anyhow::Result<(Peers, serde_json::Value)> {
+) -> anyhow::Result<(Peers, String)> {
     let txs_iter = GenesisBalanceIter::new(balance_sk, home.join("config/genesis.json"))?; // todo: better way to get path to genesis file
 
     let (persistent_peers, app_gen_txs) = collect_txs(gentx_dir, moniker, txs_iter)?;
@@ -66,7 +66,10 @@ pub fn gen_app_state_from_config<SK: StoreKey>(
         serde_json::to_value(existed_gen_txs).expect(SERDE_JSON_CONVERSION),
     );
 
-    Ok((persistent_peers, genesis))
+    Ok((
+        persistent_peers,
+        serde_json::to_string_pretty(genesis_unparsed).expect(SERDE_JSON_CONVERSION),
+    ))
 }
 
 fn collect_txs(

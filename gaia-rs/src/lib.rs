@@ -36,6 +36,7 @@ use serde::Serialize;
 use staking::cli::query::StakingQueryHandler;
 use staking::StakingNodeQueryRequest;
 use staking::StakingNodeQueryResponse;
+use store_keys::GaiaStoreKey;
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;
@@ -134,8 +135,21 @@ impl AuxHandler for GaiaCoreClient {
     type AuxCommands = GaiaAuxCmd;
     type Aux = NilAux;
 
-    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
-        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
+    fn prepare_aux(&self, cmd: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
+        match cmd {
+            GaiaAuxCmd::Genutil(cmd) => match cmd {
+                genutil::cmd::GenesisCmd::CollectGentxs(cmd) => {
+                    let (_, genesis) = genutil::collect_txs::gen_app_state_from_config(
+                        cmd,
+                        &GaiaStoreKey::Bank,
+                        &GaiaStoreKey::Genutil,
+                    )?;
+
+                    println!("{genesis}");
+                }
+            },
+        }
+
         Ok(NilAux)
     }
 }

@@ -29,6 +29,10 @@ impl<AI: ApplicationInfo> TryFrom<CollectGentxCliAux<AI>> for CollectGentxCmd {
             _marker,
         }: CollectGentxCliAux<AI>,
     ) -> Result<Self, Self::Error> {
+        if !gentx_dir.exists() {
+            std::fs::create_dir(&gentx_dir)?;
+        }
+
         match (gentx_dir.is_dir(), home.is_dir()) {
             (true, true) => Ok(Self {
                 gentx_dir,
