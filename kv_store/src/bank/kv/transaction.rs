@@ -53,7 +53,6 @@ impl<DB: Database> TransactionKVBank<DB> {
     pub fn upgrade_cache(&mut self) {
         let (set_values, delete) = self.tx.take();
         for (key, value) in set_values {
-            self.block.delete.remove(&key);
             self.block.set(key, value);
         }
 
@@ -857,6 +856,7 @@ mod tests {
             TREE_CACHE_SIZE
                 .try_into()
                 .expect("Unreachable. Tree cache size is > 0"),
+            None,
         )
         .expect("Failed to create Tree");
 

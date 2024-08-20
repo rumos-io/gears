@@ -1,7 +1,11 @@
-use gears::types::address::{AccAddress, ValAddress};
+use gears::{
+    tendermint::types::time::timestamp::Timestamp,
+    types::address::{AccAddress, ValAddress},
+};
 
 use crate::consts::keeper::{
     REDELEGATION_BY_VAL_DST_INDEX_KEY, REDELEGATION_BY_VAL_SRC_INDEX_KEY, REDELEGATION_KEY,
+    UNBONDING_DELEGATION_BY_VAL_INDEX_KEY, UNBONDING_DELEGATION_KEY, UNBONDING_QUEUE_KEY,
 };
 
 /// Returns a key prefix for indexing a redelegation from a delegator
@@ -66,7 +70,7 @@ pub fn redelegation_by_val_dst_index_key(
 }
 
 /// Returns a key prefix for indexing a redelegation to a
-// destination (target) validator.
+/// destination (target) validator.
 pub fn redelegations_by_val_dst_index_key(val_dst_addr: &ValAddress) -> Vec<u8> {
     [
         &REDELEGATION_BY_VAL_DST_INDEX_KEY,
@@ -74,6 +78,56 @@ pub fn redelegations_by_val_dst_index_key(val_dst_addr: &ValAddress) -> Vec<u8> 
     ]
     .concat()
 }
+
+/// Creates the key for an unbonding delegation by delegator and validator addr
+/// VALUE: staking/UnbondingDelegation
+pub fn get_ubd_key(del_addr: &AccAddress, val_addr: &ValAddress) -> Vec<u8> {
+    [
+        get_ubds_key(del_addr).as_slice(),
+        val_addr.prefix_len_bytes().as_slice(),
+    ]
+    .concat()
+}
+
+/// Creates the prefix for all unbonding delegations from a delegator
+pub fn get_ubds_key(del_addr: &AccAddress) -> Vec<u8> {
+    [
+        &UNBONDING_DELEGATION_KEY,
+        del_addr.prefix_len_bytes().as_slice(),
+    ]
+    .concat()
+}
+
+/// Creates the index-key for an unbonding delegation, stored by validator-index
+/// VALUE: none (key rearrangement used)
+pub fn get_ubd_by_val_index_key(del_addr: &AccAddress, val_addr: &ValAddress) -> Vec<u8> {
+    [
+        get_ubds_by_val_index_key(val_addr).as_slice(),
+        del_addr.prefix_len_bytes().as_slice(),
+    ]
+    .concat()
+}
+
+/// Creates the prefix keyspace for the indexes of unbonding delegations for a validator
+fn get_ubds_by_val_index_key(val_addr: &ValAddress) -> Vec<u8> {
+    [
+        &UNBONDING_DELEGATION_BY_VAL_INDEX_KEY,
+        val_addr.prefix_len_bytes().as_slice(),
+    ]
+    .concat()
+}
+
+/// Creates the prefix for all unbonding delegations from a delegator
+pub fn get_unbonding_delegation_time_key(timestamp: Timestamp) -> Vec<u8> {
+    let bz = timestamp.format_bytes_rounded();
+    [&UNBONDING_QUEUE_KEY, bz.as_slice()].concat()
+}
+
+// // GetUnbondingDelegationTimeKey creates the prefix for all unbonding delegations from a delegator
+// func GetUnbondingDelegationTimeKey(timestamp time.Time) []byte {
+// 	bz := sdk.FormatTimeBytes(timestamp)
+// 	return append(UnbondingQueueKey, bz...)
+// }
 
 #[cfg(test)]
 mod tests {

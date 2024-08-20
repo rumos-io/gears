@@ -85,6 +85,8 @@ mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::Delegation;
     pub use ibc_proto::cosmos::staking::v1beta1::Redelegation;
     pub use ibc_proto::cosmos::staking::v1beta1::RedelegationEntry;
+    pub use ibc_proto::cosmos::staking::v1beta1::UnbondingDelegation;
+    pub use ibc_proto::cosmos::staking::v1beta1::UnbondingDelegationEntry;
 }
 
 /// Delegation represents the bond with tokens held by an account. It is
@@ -96,6 +98,36 @@ pub struct UnbondingDelegation {
     pub validator_address: ValAddress,
     pub entries: Vec<UnbondingDelegationEntry>,
 }
+
+impl From<UnbondingDelegation> for inner::UnbondingDelegation {
+    fn from(value: UnbondingDelegation) -> Self {
+        inner::UnbondingDelegation {
+            delegator_address: value.delegator_address.to_string(),
+            validator_address: value.validator_address.to_string(),
+            entries: value.entries.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+impl TryFrom<inner::UnbondingDelegation> for UnbondingDelegation {
+    type Error = CoreError;
+
+    fn try_from(proto: inner::UnbondingDelegation) -> Result<Self, Self::Error> {
+        Ok(UnbondingDelegation {
+            delegator_address: AccAddress::from_bech32(&proto.delegator_address)
+                .map_err(|e| CoreError::DecodeGeneral(format!("delegator_address: {}", e)))?,
+            validator_address: ValAddress::from_bech32(&proto.validator_address)
+                .map_err(|e| CoreError::DecodeGeneral(format!("validator_address: {}", e)))?,
+            entries: proto
+                .entries
+                .into_iter()
+                .map(TryFrom::try_from)
+                .collect::<Result<_, _>>()?,
+        })
+    }
+}
+
+impl Protobuf<inner::UnbondingDelegation> for UnbondingDelegation {}
 
 /// UnbondingDelegationEntry - entry to an UnbondingDelegation
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -109,6 +141,39 @@ pub struct UnbondingDelegationEntry {
 impl UnbondingDelegationEntry {
     pub fn is_mature(&self, time: &Timestamp) -> bool {
         self.completion_time <= *time
+    }
+}
+
+impl From<UnbondingDelegationEntry> for inner::UnbondingDelegationEntry {
+    fn from(value: UnbondingDelegationEntry) -> Self {
+        inner::UnbondingDelegationEntry {
+            creation_height: value.creation_height.into(),
+            completion_time: Some(value.completion_time.into()),
+            initial_balance: value.initial_balance.into(),
+            balance: value.balance.into(),
+        }
+    }
+}
+
+impl TryFrom<inner::UnbondingDelegationEntry> for UnbondingDelegationEntry {
+    type Error = CoreError;
+
+    fn try_from(proto: inner::UnbondingDelegationEntry) -> Result<Self, Self::Error> {
+        Ok(UnbondingDelegationEntry {
+            creation_height: proto
+                .creation_height
+                .try_into()
+                .map_err(|e| CoreError::DecodeGeneral(format!("creation_height: {}", e)))?,
+            completion_time: proto
+                .completion_time
+                .ok_or(CoreError::DecodeGeneral("completion_time".to_string()))?
+                .try_into()
+                .map_err(|e| CoreError::DecodeGeneral(format!("completion_time: {}", e)))?,
+            initial_balance: Uint256::from_str(&proto.initial_balance)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            balance: Uint256::from_str(&proto.balance)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+        })
     }
 }
 

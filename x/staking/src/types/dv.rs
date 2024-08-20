@@ -81,6 +81,8 @@ impl TryFrom<inner::DvvTriplets> for DvvTriplets {
 impl Protobuf<inner::DvvTriplets> for DvvTriplets {}
 
 mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::DvPair;
+    pub use ibc_proto::cosmos::staking::v1beta1::DvPairs;
     pub use ibc_proto::cosmos::staking::v1beta1::DvvTriplet;
     pub use ibc_proto::cosmos::staking::v1beta1::DvvTriplets;
 }
@@ -95,3 +97,54 @@ impl DvPair {
         Self { val_addr, del_addr }
     }
 }
+
+impl From<DvPair> for inner::DvPair {
+    fn from(value: DvPair) -> Self {
+        Self {
+            validator_address: value.val_addr.into(),
+            delegator_address: value.del_addr.into(),
+        }
+    }
+}
+
+impl TryFrom<inner::DvPair> for DvPair {
+    type Error = CoreError;
+
+    fn try_from(value: inner::DvPair) -> Result<Self, Self::Error> {
+        Ok(Self {
+            val_addr: ValAddress::from_bech32(&value.validator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            del_addr: AccAddress::from_bech32(&value.delegator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DvPairs {
+    pub pairs: Vec<DvPair>,
+}
+
+impl From<DvPairs> for inner::DvPairs {
+    fn from(value: DvPairs) -> Self {
+        Self {
+            pairs: value.pairs.into_iter().map(|x| x.into()).collect(),
+        }
+    }
+}
+
+impl TryFrom<inner::DvPairs> for DvPairs {
+    type Error = CoreError;
+
+    fn try_from(value: inner::DvPairs) -> Result<Self, Self::Error> {
+        Ok(Self {
+            pairs: value
+                .pairs
+                .into_iter()
+                .map(|x| DvPair::try_from(x))
+                .collect::<Result<Vec<_>, _>>()?,
+        })
+    }
+}
+
+impl Protobuf<inner::DvPairs> for DvPairs {}

@@ -122,14 +122,29 @@ fn scenario_2() {
 
     let txs = generate_txs([(3, msg)], &user_1, node.chain_id().clone());
 
-    //println!("txs: {:?}", txs[0].to_vec());
-    // print hex encoded
-    //println!("txs: {:?}", hex::encode(txs[0].to_vec()));
-
     let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
 
     assert_eq!(
         hex::encode(app_hash),
         "b4c6b4c02a52f97507e765da4b07fd5d19d9df350c08d4439dcf0b3174d51889"
+    );
+
+    //----------------------------------------
+    // Undelegate from a validator
+
+    let msg =
+        gaia_rs::message::Message::Staking(staking::Message::Undelegate(staking::UndelegateMsg {
+            validator_address: user_0.address().into(),
+            amount: "500uatom".parse().unwrap(),
+            delegator_address: user_1.address(),
+        }));
+
+    let txs = generate_txs([(4, msg)], &user_1, node.chain_id().clone());
+
+    let app_hash = node.step(txs, Timestamp::try_new(60 * 60 * 24, 0).unwrap());
+
+    assert_eq!(
+        hex::encode(app_hash),
+        "ad64e4941c58a6f4892bbe0054fd608c5e3917483cff79f8e042c341502c7eaf"
     );
 }

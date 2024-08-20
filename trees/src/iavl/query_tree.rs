@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn new_query_tree_works() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
         tree.set(b"alice".to_vec(), b"abc".to_vec());
         tree.save_version().unwrap();
         tree.set(b"alice".to_vec(), b"123".to_vec());
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn new_query_tree_works_empty_tree() {
         let db = MemDB::new();
-        let mut tree = Tree::new(db, None, 100.try_into().unwrap()).unwrap();
+        let mut tree = Tree::new(db, None, 100.try_into().unwrap(), None).unwrap();
         tree.save_version().unwrap();
 
         let query_tree = QueryTree::new(&tree, 1).unwrap();
