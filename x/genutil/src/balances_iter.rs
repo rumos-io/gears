@@ -15,7 +15,7 @@ pub struct GenesisBalance {
 pub struct GenesisBalanceIter(HashMap<AccAddress, UnsignedCoins>);
 
 impl GenesisBalanceIter {
-    pub fn new<SK: StoreKey>(sk: SK, genesis_path: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub fn new<SK: StoreKey>(sk: &SK, genesis_path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(genesis_path)?)?;
 
         let value = value

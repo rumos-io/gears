@@ -1,7 +1,17 @@
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx};
 use staking::CreateValidator;
+
+#[derive(Debug, Clone)]
+pub struct CollectGentxCmd {
+    pub(crate) gentx_dir: PathBuf,
+    pub(crate) home: PathBuf,
+    pub moniker: String,
+}
 
 pub fn collect_txs(
     dir: impl AsRef<Path>,
