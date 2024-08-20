@@ -1,18 +1,35 @@
-use gears::{tendermint::informal::Hash, types::address::ConsAddress};
+use gears::{
+    tendermint::informal::Hash,
+    types::{address::ConsAddress, store::gas::errors::GasStoreErrors},
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum GenesisStateError {
-    #[error("failure in conversion of any type into concrete evidence")]
-    Decode,
+    #[error("{0}")]
+    Decode(#[from] DecodeError),
     #[error("{0}")]
     Validation(#[from] anyhow::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum EvidenceError {
-    #[error("Evidence with hash {0} already exists")]
-    AlreadyExists(Hash),
+pub enum TxEvidenceError {
+    #[error("{0}")]
+    Decode(#[from] DecodeError),
+    #[error("{0}")]
+    Gas(#[from] GasStoreErrors),
+    #[error("Cannot handle evidence.\n{0}")]
+    Handle(String),
+    #[error(transparent)]
+    AlreadyExists(#[from] EvidenceAlreadyExistsError),
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("failure in conversion of any type into concrete evidence")]
+pub struct DecodeError;
+
+#[derive(Debug, thiserror::Error)]
+#[error("Evidence with hash {0} already exists")]
+pub struct EvidenceAlreadyExistsError(pub Hash);
 
 #[derive(Debug, thiserror::Error)]
 pub enum EquivocationEvidenceError {
