@@ -30,7 +30,10 @@ impl<AI: ApplicationInfo> TryFrom<CollectGentxCliAux<AI>> for CollectGentxCmd {
         }: CollectGentxCliAux<AI>,
     ) -> Result<Self, Self::Error> {
         if !gentx_dir.exists() {
-            std::fs::create_dir(&gentx_dir)?;
+            Err(anyhow::anyhow!(
+                "Failed to find folder: {}",
+                gentx_dir.to_string_lossy()
+            ))?
         }
 
         match (gentx_dir.is_dir(), home.is_dir()) {
