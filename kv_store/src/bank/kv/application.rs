@@ -1,5 +1,6 @@
 use std::{
     borrow::Cow,
+    collections::BTreeMap,
     ops::RangeBounds,
     sync::{Arc, RwLock},
 };
@@ -141,17 +142,24 @@ impl<DB: Database> ApplicationKVBank<DB> {
     }
 
     pub fn commit(&mut self) -> [u8; 32] {
-        let (cache, delete) = self.cache.take();
+        let (insert, delete) = self.cache.take();
 
         let mut persistent = self.persistent.write().expect(POISONED_LOCK);
 
-        cache
+        let cache = insert
             .into_iter()
-            .filter(|(key, _)| !delete.contains(key))
-            .for_each(|(key, value)| persistent.set(key, value));
+            .map(|(key, value)| (key, Some(value)))
+            .into_iter()
+            .chain(delete.into_iter().map(|key| (key, None)))
+            .collect::<BTreeMap<_, _>>();
 
-        for key in delete {
-            let _ = persistent.remove(&key);
+        for (key, value) in cache {
+            match value {
+                Some(value) => persistent.set(key, value),
+                None => {
+                    let _ = persistent.remove(&key);
+                }
+            }
         }
 
         //TODO: is it safe to assume this won't ever error?
@@ -172,6 +180,26 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn tree_commit() {
+        let mut store = app_store_build([(1, 11)], [(2, 22), (3, 33)], [4, 5]);
+
+        store.set([20], [10]);
+        store.set([30], [20]);
+        let _ = store.delete(&[10]);
+        store.set([40], [50]);
+        store.set([50], [50]);
+        let _ = store.delete(&[20]);
+
+        let resulted_cache = store.commit();
+        let expected_hash = [
+            27, 142, 171, 11, 85, 248, 28, 55, 237, 188, 171, 213, 171, 72, 204, 33, 55, 29, 113,
+            175, 221, 165, 53, 187, 80, 14, 185, 198, 52, 197, 207, 47,
+        ];
+
+        assert_eq!(resulted_cache, expected_hash)
+    }
 
     #[test]
     fn to_tx_kind_returns_empty() {

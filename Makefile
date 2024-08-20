@@ -8,7 +8,7 @@ run:
 	cargo run -- run --min-gas-prices 0uatom
 
 test:
-	cargo test --features=macros_test,it
+	cargo test --features=macros_test,it  --no-fail-fast 
 
 install:
 # "cargo install --path" ignores the lockfile, so we need to use "--locked" to ensure we use the same versions as in the lockfile
