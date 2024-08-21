@@ -5,7 +5,19 @@ use staking::{cli::tx::CreateValidatorCli, CreateValidator};
 
 #[derive(Debug, Clone)]
 pub struct GentxTxHandler {
-    pub output: PathBuf,
+    output_dir: PathBuf,
+}
+
+impl GentxTxHandler {
+    pub fn new(output_dir: PathBuf) -> anyhow::Result<Self> {
+        if output_dir.exists() && !output_dir.is_dir() {
+            Err(anyhow::anyhow!("use directory"))?
+        }
+
+        std::fs::create_dir(&output_dir)?;
+
+        Ok(Self { output_dir })
+    }
 }
 
 impl TxHandler for GentxTxHandler {
@@ -24,9 +36,13 @@ impl TxHandler for GentxTxHandler {
 
     fn handle_tx(
         &self,
-        _raw_tx: gears::types::tx::raw::TxRaw,
+        tx: gears::types::tx::Tx<Self::Message>,
         _node: url::Url,
     ) -> anyhow::Result<gears::application::handlers::client::TxExecutionResult> {
-        todo!()
+        let tx_str = serde_json::to_string_pretty(&tx)?;
+        let output = self.output_dir.join("gentx.json");
+        std::fs::write(&output, tx_str)?;
+
+        Ok(gears::application::handlers::client::TxExecutionResult::File(output))
     }
 }

@@ -19,7 +19,7 @@ use crate::{
     types::{
         auth::{fee::Fee, info::AuthInfo, tip::Tip},
         signing::SignerInfo,
-        tx::{body::TxBody, data::TxData, raw::TxRaw, signer::SignerData, TxMessage},
+        tx::{body::TxBody, signer::SignerData, Tx, TxMessage},
     },
 };
 
@@ -32,18 +32,18 @@ pub struct SigningInfo<'a, K> {
     pub account_number: u64,
 }
 
-pub fn create_signed_transaction_direct<K: SigningKey + GearsPublicKey>(
+pub fn create_signed_transaction_direct<M: TxMessage, K: SigningKey + GearsPublicKey>(
     signing_infos: Vec<SigningInfo<K>>,
     chain_id: ChainId,
     fee: Fee,
     tip: Option<Tip>,
-    body_bytes: Vec<u8>,
-) -> Result<TxRaw, K::Error> {
-    let auth_info_bytes = auth_info(&signing_infos, fee, tip, Mode::Direct).encode_vec();
+    body: TxBody<M>,
+) -> Result<Tx<M>, K::Error> {
+    let auth_info = auth_info(&signing_infos, fee, tip, Mode::Direct);
 
     let mut sign_doc = SignDoc {
-        body_bytes: body_bytes.clone(),
-        auth_info_bytes: auth_info_bytes.clone(),
+        body_bytes: body.encode_vec(),
+        auth_info_bytes: auth_info.encode_vec(),
         chain_id: chain_id.into(),
         account_number: 0, // This gets overwritten
     };
@@ -57,11 +57,13 @@ pub fn create_signed_transaction_direct<K: SigningKey + GearsPublicKey>(
         })
         .collect::<Result<Vec<Vec<u8>>, <K as crate::crypto::keys::SigningKey>::Error>>()?;
 
-    Ok(TxRaw {
-        body_bytes,
-        auth_info_bytes,
+    Ok(Tx {
+        body,
+        auth_info,
         signatures,
+        signatures_data: Vec::new(), // TODO: WHERE TO GET THOSE?
     })
+    // Ok()
 }
 
 // NOTE: we can't implement From<K::Error> for this type
@@ -91,15 +93,9 @@ pub fn create_signed_transaction_textual<
     fee: Fee,
     tip: Option<Tip>,
     node: url::Url,
-    tx_body: TxBody<M>,
-) -> Result<TxRaw, TextualSigningError<K>> {
-    let body_bytes = tx_body.encode_vec();
+    body: TxBody<M>,
+) -> Result<Tx<M>, TextualSigningError<K>> {
     let auth_info = auth_info(&signing_infos, fee, tip, Mode::Textual);
-    let auth_info_bytes = auth_info.encode_vec();
-    let tx_data = TxData {
-        body: tx_body,
-        auth_info,
-    };
 
     let sign_mode_handler = SignModeHandler;
 
@@ -118,7 +114,8 @@ pub fn create_signed_transaction_textual<
                 .sign_bytes_get(
                     &MetadataViaRPC { node: node.clone() },
                     signer_data,
-                    tx_data.clone(),
+                    &body,
+                    &auth_info,
                 )
                 .map_err(|e| TextualSigningError::Rendering(e))?;
 
@@ -128,10 +125,11 @@ pub fn create_signed_transaction_textual<
         })
         .collect::<Result<Vec<Vec<u8>>, TextualSigningError<K>>>()?;
 
-    Ok(TxRaw {
-        body_bytes,
-        auth_info_bytes,
+    Ok(Tx {
+        body,
+        auth_info,
         signatures,
+        signatures_data: Vec::new(), // TODO: WHERE TO GET THOSE?
     })
 }
 

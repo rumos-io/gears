@@ -2,10 +2,12 @@ use std::collections::BTreeMap;
 use std::fmt::Display;
 
 use crate::signing::renderer::tx::Envelope;
+use crate::types::auth::info::AuthInfo;
 use crate::types::denom::Denom;
+use crate::types::tx::body::TxBody;
 use crate::types::{
     rendering::screen::Screen,
-    tx::{data::TxData, metadata::Metadata, signer::SignerData, TxMessage},
+    tx::{metadata::Metadata, signer::SignerData, TxMessage},
 };
 use ciborium::{value::CanonicalValue, Value};
 
@@ -25,9 +27,10 @@ impl SignModeHandler {
         &self,
         get_metadata: &MG,
         signer_data: SignerData,
-        tx_data: TxData<impl TxMessage + ValueRenderer>,
+        body: &TxBody<impl TxMessage + ValueRenderer>,
+        auth_info: &AuthInfo,
     ) -> Result<Vec<u8>, SigningErrors> {
-        let data = Envelope::new(signer_data, tx_data);
+        let data = Envelope::new(signer_data, body, auth_info);
 
         let screens = data
             .format(get_metadata)
@@ -63,7 +66,7 @@ mod tests {
             screen::{Content, Indent, Screen},
         },
         signing::SignerInfo,
-        tx::{body::TxBody, data::TxData, signer::SignerData},
+        tx::{body::TxBody, signer::SignerData},
     };
     use ciborium::Value;
     use core_types::tx::mode_info::{ModeInfo, SignMode};
@@ -135,14 +138,9 @@ mod tests {
             non_critical_extension_options: Vec::new(),
         };
 
-        let tx_data = TxData::<MsgSend> {
-            body: tx_body,
-            auth_info: auth_inf,
-        };
-
         let handler = SignModeHandler;
 
-        let cbor = handler.sign_bytes_get(&TestMetadataGetter, signer_data, tx_data)?;
+        let cbor = handler.sign_bytes_get(&TestMetadataGetter, signer_data, &tx_body, &auth_inf)?;
 
         const EXPECTED_CBOR : &str = "a1018fa20168436861696e20696402686d792d636861696ea2016e4163636f756e74206e756d626572026131a2016853657175656e6365026132a301674164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e767161386579687304f5a3016a5075626c6963206b657902781f2f636f736d6f732e63727970746f2e736563703235366b312e5075624b657904f5a401634b657902785230324542204444374620453446442045423736204443384120323035452046363544203739304320443330452038413337203541354320323532382045423341203932334120463146422034443739203444030104f5a102781e54686973207472616e73616374696f6e206861732031204d657373616765a3016d4d6573736167652028312f312902781c2f636f736d6f732e62616e6b2e763162657461312e4d736753656e640301a3016c46726f6d206164647265737302782d636f736d6f7331756c6176336873656e7570737771666b77327933737570356b677471776e76716138657968730302a3016a546f206164647265737302782d636f736d6f7331656a726634637572327779366b667572673966326a707070326833616665356836706b6835740302a30166416d6f756e74026731302041544f4d0302a1026e456e64206f66204d657373616765a2016446656573026a302e3030322041544f4da30169476173206c696d697402673130302730303004f5a3017148617368206f66207261772062797465730278403738356264333036656138393632636462393630303038396264643635663364633032396531616561313132646565363965313935343663396164616438366504f5";
 
@@ -328,14 +326,10 @@ mod tests {
             non_critical_extension_options: Vec::new(),
         };
 
-        let tx_data = TxData::<MsgSend> {
-            body: tx_body,
-            auth_info: auth_inf,
-        };
-
         let handler = SignModeHandler;
 
-        let cbor = handler.sign_bytes_get(&TestNoneMetadataGetter, signer_data, tx_data)?;
+        let cbor =
+            handler.sign_bytes_get(&TestNoneMetadataGetter, signer_data, &tx_body, &auth_inf)?;
 
         let expected = [
             161u8, 1, 142, 162, 1, 104, 67, 104, 97, 105, 110, 32, 105, 100, 2, 106, 116, 101, 115,
@@ -434,14 +428,10 @@ mod tests {
             non_critical_extension_options: Vec::new(),
         };
 
-        let tx_data = TxData::<MsgSend> {
-            body: tx_body,
-            auth_info: auth_inf,
-        };
-
         let handler = SignModeHandler;
 
-        let cbor = handler.sign_bytes_get(&TestNoneMetadataGetter, signer_data, tx_data)?;
+        let cbor =
+            handler.sign_bytes_get(&TestNoneMetadataGetter, signer_data, &tx_body, &auth_inf)?;
 
         let expected = [
             161, 1, 142, 162, 1, 104, 67, 104, 97, 105, 110, 32, 105, 100, 2, 106, 116, 101, 115,

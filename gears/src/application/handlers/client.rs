@@ -17,7 +17,7 @@ use crate::{
         auth::fee::Fee,
         base::coins::UnsignedCoins,
         denom::Denom,
-        tx::{body::TxBody, raw::TxRaw, Messages, TxMessage},
+        tx::{body::TxBody, Messages, Tx, TxMessage},
     },
 };
 
@@ -38,10 +38,11 @@ use super::types::{
     QueryDenomMetadataResponse, RawQueryDenomMetadataResponse,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum TxExecutionResult {
     Broadcast(Response),
     File(PathBuf),
+    #[default]
     None,
 }
 
@@ -88,7 +89,7 @@ pub trait TxHandler {
         chain_id: ChainId,
         fees: Option<UnsignedCoins>,
         mode: SignMode,
-    ) -> anyhow::Result<TxRaw> {
+    ) -> anyhow::Result<Tx<Self::Message>> {
         let fee = Fee {
             amount: fees,
             gas_limit: 200_000_u64
@@ -123,14 +124,10 @@ pub trait TxHandler {
         let tip = None; //TODO: remove hard coded
 
         match mode {
-            SignMode::Direct => create_signed_transaction_direct(
-                signing_infos,
-                chain_id,
-                fee,
-                tip,
-                tx_body.encode_vec(),
-            )
-            .map_err(|e| anyhow!(e.to_string())),
+            SignMode::Direct => {
+                create_signed_transaction_direct(signing_infos, chain_id, fee, tip, tx_body)
+                    .map_err(|e| anyhow!(e.to_string()))
+            }
             SignMode::Textual => create_signed_transaction_textual(
                 signing_infos,
                 chain_id,
@@ -144,9 +141,13 @@ pub trait TxHandler {
         }
     }
 
-    fn handle_tx(&self, raw_tx: TxRaw, node: url::Url) -> anyhow::Result<TxExecutionResult> {
+    fn handle_tx(
+        &self,
+        raw_tx: Tx<Self::Message>,
+        node: url::Url,
+    ) -> anyhow::Result<TxExecutionResult> {
         let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
-        broadcast_tx_commit(client, raw_tx).map(Into::into)
+        broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
     }
 }
 
