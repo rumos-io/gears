@@ -504,40 +504,6 @@ impl From<CreateValidator> for Any {
     }
 }
 
-// impl TryFrom<CreateValidatorRaw> for CreateValidator {
-//     type Error = CoreError;
-
-//     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
-//         Ok(CreateValidator {
-//             description: src.description.ok_or(CoreError::MissingField(
-//                 "Missing field 'description'.".into(),
-//             ))?,
-//             commission: src
-//                 .commission
-//                 .ok_or(CoreError::MissingField(
-//                     "Missing field 'commission'.".into(),
-//                 ))?
-//                 .try_into()
-//                 .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
-//             min_self_delegation: Uint256::from_str(&src.min_self_delegation)
-//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-//             delegator_address: AccAddress::from_bech32(&src.delegator_address)
-//                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-//             validator_address: ValAddress::from_bech32(&src.validator_address)
-//                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-//             pub_key: serde_json::from_slice(&src.pub_key)
-//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-//             value: src
-//                 .value
-//                 .ok_or(CoreError::MissingField("Missing field 'value'.".into()))?
-//                 .try_into()
-//                 .map_err(|e| CoreError::Coin(format!("{e}")))?,
-//         })
-//     }
-// }
-
-// impl Protobuf<CreateValidatorRaw> for CreateValidator {}
-
 /// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EditValidator {
