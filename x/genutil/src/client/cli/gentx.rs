@@ -1,36 +1,25 @@
-use std::{marker::PhantomData, path::PathBuf};
+use std::path::PathBuf;
 
-use clap::{ArgAction, Args, ValueHint};
-use gears::{application::ApplicationInfo, types::address::AccAddress};
+use clap::Subcommand;
 use staking::cli::tx::CreateValidatorCli;
 
-#[derive(Args, Debug, Clone)]
-pub struct GentxCli<AI: ApplicationInfo> {
-    #[arg(long, action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = AI::home_dir(), help = "directory for config and data")]
-    pub home: PathBuf,
-    #[command(flatten)]
-    pub validator: CreateValidatorCli,
-    #[arg(long)]
-    pub from_address: AccAddress,
+use crate::gentx::GentxCmd;
 
-    #[arg(skip)]
-    _marker: PhantomData<AI>,
+#[derive(Subcommand, Debug, Clone)]
+pub enum GentxCli {
+    Validator {
+        output: Option<PathBuf>,
+        #[command(flatten)]
+        validator: CreateValidatorCli,
+    },
 }
 
-// impl<AI: ApplicationInfo> TryFrom<GentxCli<AI>> for GentxCmd {
-//     type Error = anyhow::Error;
+impl TryFrom<GentxCli> for GentxCmd {
+    type Error = anyhow::Error;
 
-//     fn try_from(
-//         GentxCli {
-//             home,
-//             validator,
-//             from_address,
-//             _marker,
-//         }: GentxCli<AI>,
-//     ) -> Result<Self, Self::Error> {
-//         Ok(Self {
-//             home,
-//             validator: validator.try_into_cmd(from_address)?,
-//         })
-//     }
-// }
+    fn try_from(cmd: GentxCli) -> Result<Self, Self::Error> {
+        match cmd {
+            GentxCli::Validator { output, validator } => Ok(Self { validator, output }),
+        }
+    }
+}

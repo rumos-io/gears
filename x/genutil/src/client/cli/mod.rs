@@ -1,6 +1,7 @@
 use clap::{Args, Subcommand};
 use collect::CollectGentxCliAux;
-use gears::application::ApplicationInfo;
+use gears::{application::ApplicationInfo, cli::tx::CliTxCommand};
+use gentx::GentxCli;
 
 use crate::cmd::GenesisCmd;
 
@@ -18,6 +19,7 @@ pub struct GenesisAuxCli<AI: ApplicationInfo> {
 pub enum GenesisCommands<AI: ApplicationInfo> {
     /// Collect genesis txs and output a genesis.json file
     CollectGentxs(CollectGentxCliAux<AI>),
+    Gentx(CliTxCommand<AI, GentxCli>),
 }
 
 impl<AI: ApplicationInfo> TryFrom<GenesisAuxCli<AI>> for GenesisCmd {
@@ -26,6 +28,7 @@ impl<AI: ApplicationInfo> TryFrom<GenesisAuxCli<AI>> for GenesisCmd {
     fn try_from(value: GenesisAuxCli<AI>) -> Result<Self, Self::Error> {
         Ok(match value.command {
             GenesisCommands::CollectGentxs(cmd) => Self::CollectGentxs(cmd.try_into()?),
+            GenesisCommands::Gentx(cmd) => Self::Gentx(cmd.try_into()?),
         })
     }
 }

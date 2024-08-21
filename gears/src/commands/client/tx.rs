@@ -6,7 +6,7 @@ use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
 
-use crate::application::handlers::client::TxHandler;
+use crate::application::handlers::client::{TxExecutionResult, TxHandler};
 use crate::commands::client::query::execute_query;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::ledger::LedgerProxyKey;
@@ -79,19 +79,36 @@ pub struct LocalInfo {
     pub home: PathBuf,
 }
 
+#[derive(Debug, Clone)]
+pub enum RuntxResult {
+    Broadcast(Vec<Response>),
+    File(PathBuf),
+    None,
+}
+
+impl From<TxExecutionResult> for RuntxResult {
+    fn from(value: TxExecutionResult) -> Self {
+        match value {
+            TxExecutionResult::Broadcast(var) => Self::Broadcast(vec![var]),
+            TxExecutionResult::File(var) => Self::File(var),
+            TxExecutionResult::None => Self::None,
+        }
+    }
+}
+
 pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     command: TxCommand<C>,
     handler: &H,
-) -> anyhow::Result<Vec<Response>> {
+) -> anyhow::Result<RuntxResult> {
     match command.keyring {
         Keyring::Ledger => {
             let key = LedgerProxyKey::new()?;
 
             let ctx = &(&command).into();
-            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
+            let messages = handler.prepare_tx(Some(ctx), command.inner, key.get_address())?;
             handler
                 .handle_tx(
-                    handler.sign_tx(
+                    handler.sign_msg(
                         messages,
                         &key,
                         &command.node,
@@ -100,10 +117,8 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                         SignMode::Textual,
                     )?,
                     command.node,
-                )?
-                .broadcast()
-                .ok_or(anyhow::anyhow!("tx is not broadcasted"))
-                .map(|res| vec![res])
+                )
+                .map(Into::into)
         }
         Keyring::Local(ref info) => {
             let keyring_home = info.home.join(info.keyring_backend.get_sub_dir());
@@ -113,7 +128,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
             )?;
 
             let ctx = &(&command).into();
-            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
+            let messages = handler.prepare_tx(Some(ctx), command.inner, key.get_address())?;
 
             if messages.chunk_size() > 0
             // TODO: uncomment and update logic when command will be extended by broadcast_mode
@@ -127,7 +142,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                     res.push(
                         handler
                             .handle_tx(
-                                handler.sign_tx(
+                                handler.sign_msg(
                                     slice
                                         .to_vec()
                                         .try_into()
@@ -144,12 +159,12 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                             .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
                     );
                 }
-                Ok(res)
+                Ok(RuntxResult::Broadcast(res))
             } else {
                 // TODO: can be reduced by changing variable `step`. Do we need it?
                 handler
                     .handle_tx(
-                        handler.sign_tx(
+                        handler.sign_msg(
                             messages,
                             &key,
                             &command.node,
@@ -158,10 +173,8 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                             SignMode::Direct,
                         )?,
                         command.node,
-                    )?
-                    .broadcast()
-                    .ok_or(anyhow::anyhow!("tx is not broadcasted"))
-                    .map(|res| vec![res])
+                    )
+                    .map(Into::into)
             }
         }
     }

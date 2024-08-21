@@ -31,7 +31,7 @@ pub enum GaiaTxCommands {
 }
 
 pub fn tx_command_handler(
-    _ctx: &ClientTxContext,
+    _ctx: Option<&ClientTxContext>,
     command: GaiaTxCommands,
     from_address: AccAddress,
 ) -> Result<Messages<Message>> {

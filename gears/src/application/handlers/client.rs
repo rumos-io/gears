@@ -76,12 +76,12 @@ pub trait TxHandler {
 
     fn prepare_tx(
         &self,
-        client_tx_context: &ClientTxContext,
+        client_tx_context: Option<&ClientTxContext>,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
-    fn sign_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
+    fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
         msgs: Messages<Self::Message>,
         key: &K,

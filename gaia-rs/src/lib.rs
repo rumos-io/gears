@@ -21,6 +21,7 @@ use gears::application::node::Node;
 use gears::application::ApplicationInfo;
 use gears::baseapp::NodeQueryHandler;
 use gears::baseapp::{QueryRequest, QueryResponse};
+use gears::commands::client::tx::run_tx;
 use gears::commands::client::tx::ClientTxContext;
 use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
@@ -30,6 +31,7 @@ use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
 use gears::types::address::AccAddress;
 use gears::types::tx::Messages;
+use genutil::gentx::GentxTxHandler;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
 use serde::Serialize;
@@ -70,7 +72,7 @@ impl TxHandler for GaiaCoreClient {
 
     fn prepare_tx(
         &self,
-        ctx: &ClientTxContext,
+        ctx: Option<&ClientTxContext>,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> Result<Messages<Self::Message>> {
@@ -146,6 +148,11 @@ impl AuxHandler for GaiaCoreClient {
                     )?;
 
                     println!("{genesis}");
+                }
+                genutil::cmd::GenesisCmd::Gentx(cmd) => {
+                    let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone())?;
+
+                    run_tx(cmd, &gentx_handler)?;
                 }
             },
         }
