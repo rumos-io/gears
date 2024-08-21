@@ -8,10 +8,12 @@ use gears::{
         base::coin::UnsignedCoin,
         decimal256::{CosmosDecimalProtoString, Decimal256, ONE_DEC},
         errors::StdError,
+        tx::TxMessage,
         uint::Uint256,
     },
 };
-use prost::Message;
+use ibc_proto::google::protobuf::Any;
+use prost::{bytes::Bytes, Message};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -345,6 +347,46 @@ pub struct CreateValidator {
     pub validator_address: ValAddress,
     pub pub_key: PublicKey,
     pub value: UnsignedCoin,
+}
+
+impl CreateValidator {
+    pub const TYPE_URL: &'static str = "/cosmos.staking.v1beta1.MsgCreateValidator";
+}
+
+impl TxMessage for CreateValidator {
+    fn get_signers(&self) -> Vec<&AccAddress> {
+        vec![&self.delegator_address]
+    }
+
+    fn type_url(&self) -> &'static str {
+        Self::TYPE_URL
+    }
+}
+
+impl TryFrom<Any> for CreateValidator {
+    type Error = CoreError;
+
+    fn try_from(value: Any) -> Result<Self, Self::Error> {
+        match value.type_url.as_str() {
+            CreateValidator::TYPE_URL => {
+                let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
+                Ok(msg)
+            }
+            _ => Err(gears::core::errors::CoreError::DecodeGeneral(
+                "message type not recognized".into(),
+            )),
+        }
+    }
+}
+
+impl From<CreateValidator> for Any {
+    fn from(msg: CreateValidator) -> Self {
+        Any {
+            type_url: CreateValidator::TYPE_URL.to_string(),
+            value: msg.encode_vec(),
+        }
+    }
 }
 
 impl TryFrom<CreateValidatorRaw> for CreateValidator {

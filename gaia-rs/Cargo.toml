@@ -19,6 +19,7 @@ gears = { path = "../gears", features = [
     "governance",
 ] }
 staking = { path = "../x/staking" }
+genutil = { path = "../x/genutil" }
 
 #newtypes
 bytes = { workspace = true }
