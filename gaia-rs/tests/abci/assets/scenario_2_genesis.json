@@ -21,7 +21,8 @@
             }
         ],
         "params": {
-            "default_send_enabled": true
+            "default_send_enabled": true,
+            "send_enabled":[]
         },
         "denom_metadata": []
     },
