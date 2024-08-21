@@ -26,7 +26,7 @@ pub fn gen_app_state_from_config<SK: StoreKey>(
         moniker,
     }: CollectGentxCmd,
     balance_sk: &SK,
-    genutil_sk: &SK,
+    genutil: &str,
 ) -> anyhow::Result<(Peers, String)> {
     let txs_iter = GenesisBalanceIter::new(balance_sk, home.join("config/genesis.json"))?; // todo: better way to get path to genesis file
 
@@ -48,7 +48,7 @@ pub fn gen_app_state_from_config<SK: StoreKey>(
         .as_object_mut()
         .ok_or(anyhow::anyhow!("failed to read json as object"))?;
 
-    let mut existed_gen_txs = match genesis_unparsed.get_mut(genutil_sk.name()) {
+    let mut existed_gen_txs = match genesis_unparsed.get_mut(genutil) {
         Some(genesis) => serde_json::from_value(genesis.take()).expect(SERDE_JSON_CONVERSION),
         None => GenutilGenesis::default(),
     };
@@ -62,7 +62,7 @@ pub fn gen_app_state_from_config<SK: StoreKey>(
     }
 
     let _ = genesis_unparsed.insert(
-        genutil_sk.name().to_owned(),
+        genutil.to_owned(),
         serde_json::to_value(existed_gen_txs).expect(SERDE_JSON_CONVERSION),
     );
 

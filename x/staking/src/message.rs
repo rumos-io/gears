@@ -10,7 +10,7 @@ use serde::Serialize;
 #[serde(tag = "@type")]
 #[allow(clippy::large_enum_variant)]
 pub enum Message {
-    #[serde(rename = "/cosmos.staking.v1beta1/MsgCreateValidator")]
+    #[serde(rename = "/cosmos.staking.v1beta1.MsgCreateValidator")]
     CreateValidator(CreateValidator),
     #[serde(rename = "/cosmos.staking.v1beta1.EditValidator")]
     EditValidator(EditValidator),

@@ -350,7 +350,7 @@ pub struct CreateValidator {
 }
 
 impl CreateValidator {
-    pub const TYPE_URL: &'static str = "/cosmos.staking.v1beta1/MsgCreateValidator";
+    pub const TYPE_URL: &'static str = "/cosmos.staking.v1beta1.MsgCreateValidator";
 }
 
 impl TxMessage for CreateValidator {
@@ -368,7 +368,7 @@ impl TryFrom<Any> for CreateValidator {
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
-            "/cosmos.staking.v1beta1.CreateValidator" => {
+            CreateValidator::TYPE_URL => {
                 let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(msg)
