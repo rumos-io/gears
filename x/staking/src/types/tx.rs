@@ -1,6 +1,7 @@
 use crate::consts::proto::*;
 use gears::{
     core::{errors::CoreError, Protobuf},
+    signing::renderer::value_renderer::ValueRenderer,
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::{
         address::{AccAddress, ValAddress},
@@ -347,6 +348,18 @@ pub struct CreateValidator {
     pub validator_address: ValAddress,
     pub pub_key: PublicKey,
     pub value: UnsignedCoin,
+}
+
+impl ValueRenderer for CreateValidator {
+    fn format<MG: gears::signing::handler::MetadataGetter>(
+        &self,
+        _get_metadata: &MG,
+    ) -> Result<
+        Vec<gears::types::rendering::screen::Screen>,
+        gears::signing::renderer::value_renderer::RenderError,
+    > {
+        Err(gears::signing::renderer::value_renderer::RenderError::NotImplemented)
+    }
 }
 
 impl CreateValidator {

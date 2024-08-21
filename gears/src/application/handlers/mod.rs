@@ -1,6 +1,6 @@
 pub mod client;
 pub mod node;
-mod types;
+pub mod types;
 
 /// Name aux stands for `auxiliary`. In terms of implementation this is more like user extension to CLI.
 /// It's reason exists to add user specific commands which doesn't supports usually.

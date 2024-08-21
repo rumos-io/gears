@@ -1,4 +1,3 @@
-pub mod gentx;
 use clap::{Args, Subcommand};
 use collect::CollectGentxCliAux;
 use gears::application::ApplicationInfo;
@@ -6,6 +5,7 @@ use gears::application::ApplicationInfo;
 use crate::cmd::GenesisCmd;
 
 pub mod collect;
+pub mod gentx;
 
 /// variety of genesis utility functionalities for usage within a blockchain application
 #[derive(Args, Debug, Clone)]

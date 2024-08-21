@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::{
     baseapp::Query,
     commands::client::{
@@ -15,7 +17,7 @@ use crate::{
         auth::fee::Fee,
         base::coins::UnsignedCoins,
         denom::Denom,
-        tx::{body::TxBody, Messages, TxMessage},
+        tx::{body::TxBody, raw::TxRaw, Messages, TxMessage},
     },
 };
 
@@ -36,6 +38,37 @@ use super::types::{
     QueryDenomMetadataResponse, RawQueryDenomMetadataResponse,
 };
 
+#[derive(Debug, Clone)]
+pub enum TxExecutionResult {
+    Broadcast(Response),
+    File(PathBuf),
+    None,
+}
+
+impl TxExecutionResult {
+    pub fn broadcast(self) -> Option<Response> {
+        match self {
+            TxExecutionResult::Broadcast(var) => Some(var),
+            TxExecutionResult::File(_) => None,
+            TxExecutionResult::None => None,
+        }
+    }
+
+    pub fn file(self) -> Option<PathBuf> {
+        match self {
+            TxExecutionResult::Broadcast(_) => None,
+            TxExecutionResult::File(var) => Some(var),
+            TxExecutionResult::None => None,
+        }
+    }
+}
+
+impl From<Response> for TxExecutionResult {
+    fn from(value: Response) -> Self {
+        Self::Broadcast(value)
+    }
+}
+
 pub trait TxHandler {
     type Message: TxMessage + ValueRenderer;
     type TxCommands;
@@ -47,15 +80,15 @@ pub trait TxHandler {
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
-    fn handle_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
+    fn sign_tx<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
         msgs: Messages<Self::Message>,
         key: &K,
-        node: url::Url,
+        node: &url::Url,
         chain_id: ChainId,
         fees: Option<UnsignedCoins>,
         mode: SignMode,
-    ) -> anyhow::Result<Response> {
+    ) -> anyhow::Result<TxRaw> {
         let fee = Fee {
             amount: fees,
             gas_limit: 200_000_u64
@@ -89,7 +122,7 @@ pub trait TxHandler {
 
         let tip = None; //TODO: remove hard coded
 
-        let raw_tx = match mode {
+        match mode {
             SignMode::Direct => create_signed_transaction_direct(
                 signing_infos,
                 chain_id,
@@ -97,7 +130,7 @@ pub trait TxHandler {
                 tip,
                 tx_body.encode_vec(),
             )
-            .map_err(|e| anyhow!(e.to_string()))?,
+            .map_err(|e| anyhow!(e.to_string())),
             SignMode::Textual => create_signed_transaction_textual(
                 signing_infos,
                 chain_id,
@@ -106,12 +139,14 @@ pub trait TxHandler {
                 node.clone(),
                 tx_body,
             )
-            .map_err(|e| anyhow!(e.to_string()))?,
-            _ => return Err(anyhow!("unsupported sign mode")),
-        };
+            .map_err(|e| anyhow!(e.to_string())),
+            _ => Err(anyhow!("unsupported sign mode")),
+        }
+    }
 
+    fn handle_tx(&self, raw_tx: TxRaw, node: url::Url) -> anyhow::Result<TxExecutionResult> {
         let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
-        broadcast_tx_commit(client, raw_tx)
+        broadcast_tx_commit(client, raw_tx).map(Into::into)
     }
 }
 

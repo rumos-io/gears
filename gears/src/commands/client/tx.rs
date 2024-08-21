@@ -91,13 +91,18 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
             let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
             handler
                 .handle_tx(
-                    messages,
-                    &key,
+                    handler.sign_tx(
+                        messages,
+                        &key,
+                        &command.node,
+                        command.chain_id,
+                        command.fees,
+                        SignMode::Textual,
+                    )?,
                     command.node,
-                    command.chain_id,
-                    command.fees,
-                    SignMode::Textual,
-                )
+                )?
+                .broadcast()
+                .ok_or(anyhow::anyhow!("tx is not broadcasted"))
                 .map(|res| vec![res])
         }
         Keyring::Local(ref info) => {
@@ -120,17 +125,23 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                 let mut res = vec![];
                 for slice in msgs.chunks(chunk_size) {
                     res.push(
-                        handler.handle_tx(
-                            slice
-                                .to_vec()
-                                .try_into()
-                                .expect("chunking of the messages excludes empty vectors"),
-                            &key,
-                            command.node.clone(),
-                            command.chain_id.clone(),
-                            command.fees.clone(),
-                            SignMode::Direct,
-                        )?,
+                        handler
+                            .handle_tx(
+                                handler.sign_tx(
+                                    slice
+                                        .to_vec()
+                                        .try_into()
+                                        .expect("chunking of the messages excludes empty vectors"),
+                                    &key,
+                                    &command.node,
+                                    command.chain_id.clone(),
+                                    command.fees.clone(),
+                                    SignMode::Direct,
+                                )?,
+                                command.node.clone(),
+                            )?
+                            .broadcast()
+                            .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
                     );
                 }
                 Ok(res)
@@ -138,13 +149,18 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                 // TODO: can be reduced by changing variable `step`. Do we need it?
                 handler
                     .handle_tx(
-                        messages,
-                        &key,
+                        handler.sign_tx(
+                            messages,
+                            &key,
+                            &command.node,
+                            command.chain_id,
+                            command.fees,
+                            SignMode::Direct,
+                        )?,
                         command.node,
-                        command.chain_id,
-                        command.fees,
-                        SignMode::Direct,
-                    )
+                    )?
+                    .broadcast()
+                    .ok_or(anyhow::anyhow!("tx is not broadcasted"))
                     .map(|res| vec![res])
             }
         }

@@ -2042,6 +2042,7 @@ dependencies = [
  "serde",
  "serde_json",
  "staking",
+ "url",
 ]
 
 [[package]]
