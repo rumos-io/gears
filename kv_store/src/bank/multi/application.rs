@@ -31,8 +31,12 @@ impl<DB: Database, SK: StoreKey> MultiBank<DB, SK, ApplicationStore<DB, SK>> {
 
         for store in SK::iter() {
             let prefix = store.name().as_bytes().to_vec(); // TODO:NOW check that store names are not prefixes
-            let kv_store =
-                ApplicationKVBank::new(PrefixDB::new(Arc::clone(&db), prefix), None).unwrap();
+            let kv_store = ApplicationKVBank::new(
+                PrefixDB::new(Arc::clone(&db), prefix),
+                None,
+                Some(store.name().to_owned()),
+            )
+            .unwrap();
 
             let store_info = StoreInfo {
                 name: store.name().into(),

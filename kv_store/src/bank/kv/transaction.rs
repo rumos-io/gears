@@ -856,6 +856,7 @@ mod tests {
             TREE_CACHE_SIZE
                 .try_into()
                 .expect("Unreachable. Tree cache size is > 0"),
+            None,
         )
         .expect("Failed to create Tree");
 

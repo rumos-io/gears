@@ -9,8 +9,10 @@ pub(crate) mod keeper {
 
     pub(crate) const DELEGATION_KEY: [u8; 1] = [49];
     pub(crate) const UNBONDING_DELEGATION_KEY: [u8; 1] = [50];
+    pub(crate) const UNBONDING_DELEGATION_BY_VAL_INDEX_KEY: [u8; 1] = [0x33];
     pub(crate) const REDELEGATION_KEY: [u8; 1] = [52];
-    pub(crate) const REDELEGATION_BY_VAL_DST_INDEX_KEY: [u8; 1] = [54];
+    pub(crate) const REDELEGATION_BY_VAL_SRC_INDEX_KEY: [u8; 1] = [0x35];
+    pub(crate) const REDELEGATION_BY_VAL_DST_INDEX_KEY: [u8; 1] = [0x36];
 
     pub(crate) const UNBONDING_QUEUE_KEY: [u8; 1] = [65];
     pub(crate) const REDELEGATION_QUEUE_KEY: [u8; 1] = [66];

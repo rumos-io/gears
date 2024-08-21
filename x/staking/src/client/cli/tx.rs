@@ -1,5 +1,5 @@
 use crate::{
-    CommissionRates, CreateValidator, DelegateMsg, Description, DescriptionUpdate, EditValidator,
+    CommissionRates, CreateValidator, DelegateMsg, Description, EditDescription, EditValidator,
     Message as StakingMessage, RedelegateMsg, UndelegateMsg,
 };
 use anyhow::Result;
@@ -173,22 +173,20 @@ pub fn run_staking_tx_command(
             commission_rate,
             min_self_delegation,
         } => {
-            let delegator_address = from_address.clone();
             let validator_address = ValAddress::from(from_address);
-            let description = DescriptionUpdate {
+            let description = EditDescription {
                 moniker: moniker.clone(),
                 identity: identity.clone(),
                 website: website.clone(),
                 security_contact: security_contact.clone(),
                 details: details.clone(),
             };
-            let msg = StakingMessage::EditValidator(EditValidator {
+            let msg = StakingMessage::EditValidator(EditValidator::new(
                 description,
-                commission_rate: *commission_rate,
-                min_self_delegation: *min_self_delegation,
+                *commission_rate,
+                *min_self_delegation,
                 validator_address,
-                from_address: delegator_address,
-            });
+            ));
 
             Ok(msg)
         }

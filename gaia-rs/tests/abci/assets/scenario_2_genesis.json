@@ -18,11 +18,20 @@
                         "denom": "uatom"
                     }
                 ]
+            },
+            {
+                "address": "cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q",
+                "coins": [
+                    {
+                        "amount": "500000",
+                        "denom": "uatom"
+                    }
+                ]
             }
         ],
         "params": {
-            "default_send_enabled": true,
-            "send_enabled":[]
+            "send_enabled": [],
+            "default_send_enabled": true
         },
         "denom_metadata": []
     },
@@ -59,6 +68,13 @@
             {
                 "@type": "/cosmos.auth.v1beta1.BaseAccount",
                 "address": "cosmos1syavy2npfyt9tcncdtsdzf7kny9lh777pahuux",
+                "pub_key": null,
+                "account_number": "2",
+                "sequence": "0"
+            },
+            {
+                "@type": "/cosmos.auth.v1beta1.BaseAccount",
+                "address": "cosmos15qzm75pjh0jqsv3u40hzp2vzs2hdp47fkz7j5q",
                 "pub_key": null,
                 "account_number": "2",
                 "sequence": "0"

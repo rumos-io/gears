@@ -17,6 +17,9 @@ use prost::{bytes::Bytes, Message};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+// constant used in flags to indicate that description field should not be updated
+pub const DO_NOT_MODIFY_DESCRIPTION: &str = "[do-not-modify]";
+
 /// CommissionRates defines the initial commission rates to be used for creating
 /// a validator.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
@@ -194,6 +197,87 @@ impl From<Commission> for CommissionRaw {
 impl Protobuf<CommissionRaw> for Commission {}
 
 /// Description defines a validator description.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EditDescription {
+    /// moniker defines a human-readable name for the validator.
+    pub moniker: Option<String>,
+    /// identity defines an optional identity signature (ex. UPort or Keybase).
+    pub identity: Option<String>,
+    /// website defines an optional website link.
+    pub website: Option<String>,
+    /// security_contact defines an optional email for security contact.
+    pub security_contact: Option<String>,
+    /// details define other optional details.
+    pub details: Option<String>,
+}
+
+impl From<Description> for EditDescription {
+    fn from(value: Description) -> Self {
+        let moniker = if value.moniker == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.moniker)
+        };
+        let identity = if value.identity == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.identity)
+        };
+        let website = if value.website == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.website)
+        };
+        let security_contact = if value.security_contact == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.security_contact)
+        };
+        let details = if value.details == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.details)
+        };
+
+        Self {
+            moniker,
+            identity,
+            website,
+            security_contact,
+            details,
+        }
+    }
+}
+
+impl From<EditDescription> for Description {
+    fn from(value: EditDescription) -> Self {
+        let moniker = value
+            .moniker
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let identity = value
+            .identity
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let website = value
+            .website
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let security_contact = value
+            .security_contact
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let details = value
+            .details
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+
+        Self {
+            moniker,
+            identity,
+            website,
+            security_contact,
+            details,
+        }
+    }
+}
+
+/// Description defines a validator description.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct Description {
     /// moniker defines a human-readable name for the validator.
@@ -221,7 +305,7 @@ impl Description {
     /// returned if the resulting description contains an invalid length.
     pub fn create_updated_description(
         &self,
-        other: &DescriptionUpdate,
+        other: &EditDescription,
     ) -> Result<Description, anyhow::Error> {
         let mut description = self.clone();
         if let Some(moniker) = &other.moniker {
@@ -243,6 +327,7 @@ impl Description {
         Ok(description)
     }
 
+    // TODO: these constraints should be part of the `Description` type definition
     pub fn ensure_length(&self) -> Result<(), anyhow::Error> {
         if self.moniker.len() > MAX_MONIKER_LENGTH {
             return Err(self.form_ensure_length_err(
@@ -287,53 +372,81 @@ impl Description {
     }
 }
 
-/// DescriptionUpdate defines a validator description update data.
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
-pub struct DescriptionUpdate {
-    #[prost(string, optional)]
-    pub moniker: Option<String>,
-    #[prost(string, optional)]
-    pub identity: Option<String>,
-    #[prost(string, optional)]
-    pub website: Option<String>,
-    #[prost(string, optional)]
-    pub security_contact: Option<String>,
-    #[prost(string, optional)]
-    pub details: Option<String>,
+mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::CommissionRates;
+    pub use ibc_proto::cosmos::staking::v1beta1::Description;
+    pub use ibc_proto::cosmos::staking::v1beta1::MsgCreateValidator;
 }
 
-impl Protobuf<DescriptionUpdate> for DescriptionUpdate {}
-
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
-pub struct CreateValidatorRaw {
-    #[prost(message, optional)]
-    pub description: Option<Description>,
-    #[prost(message, optional)]
-    pub commission: Option<CommissionRatesRaw>,
-    #[prost(string)]
-    pub min_self_delegation: String,
-    #[prost(string)]
-    pub delegator_address: String,
-    #[prost(string)]
-    pub validator_address: String,
-    #[prost(bytes)]
-    pub pub_key: Vec<u8>,
-    #[prost(message, optional)]
-    pub value: Option<CoinRaw>,
-}
-
-impl From<CreateValidator> for CreateValidatorRaw {
-    fn from(src: CreateValidator) -> Self {
+impl From<CreateValidator> for inner::MsgCreateValidator {
+    fn from(msg: CreateValidator) -> Self {
         Self {
-            description: Some(src.description),
-            commission: Some(src.commission.into()),
-            min_self_delegation: src.min_self_delegation.to_string(),
-            delegator_address: src.delegator_address.to_string(),
-            validator_address: src.validator_address.to_string(),
-            // TODO: Consider to implement Protobuf on PublicKey
-            pub_key: serde_json::to_vec(&src.pub_key).expect("Expected valid public key that can be converted into vector of bytes using serde_json"),
-            value: Some(src.value.into()),
+            description: Some(inner::Description {
+                moniker: msg.description.moniker,
+                identity: msg.description.identity,
+                website: msg.description.website,
+                security_contact: msg.description.security_contact,
+                details: msg.description.details,
+            }),
+            commission: Some(inner::CommissionRates {
+                rate: msg.commission.rate.to_cosmos_proto_string(),
+                max_rate: msg.commission.max_rate.to_cosmos_proto_string(),
+                max_change_rate: msg.commission.max_change_rate.to_cosmos_proto_string(),
+            }),
+            min_self_delegation: msg.min_self_delegation.to_string(),
+            delegator_address: msg.delegator_address.to_string(),
+            validator_address: msg.validator_address.to_string(),
+            pubkey: Some(gears::crypto::public::PublicKey::from(msg.pub_key).into()),
+            value: Some(msg.value.into()),
         }
+    }
+}
+
+impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
+    type Error = CoreError;
+
+    fn try_from(val: inner::MsgCreateValidator) -> Result<Self, Self::Error> {
+        // TODO: there are missing checks here, like that validator address and delegator address should be the same
+        // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/msg.go#L89-L144
+        let description = val
+            .description
+            .ok_or(CoreError::MissingField("description".into()))?;
+        let commission = val
+            .commission
+            .ok_or(CoreError::MissingField("commission".into()))?;
+        let pubkey = val.pubkey.ok_or(CoreError::MissingField("pubkey".into()))?;
+        let pubkey = gears::crypto::public::PublicKey::try_from(pubkey)
+            .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?;
+
+        Ok(CreateValidator {
+            description: Description {
+                moniker: description.moniker,
+                identity: description.identity,
+                website: description.website,
+                security_contact: description.security_contact,
+                details: description.details,
+            },
+            commission: CommissionRates {
+                rate: Decimal256::from_cosmos_proto_string(&commission.rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+                max_rate: Decimal256::from_cosmos_proto_string(&commission.max_rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+                max_change_rate: Decimal256::from_cosmos_proto_string(&commission.max_change_rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            },
+            min_self_delegation: Uint256::from_str(&val.min_self_delegation)
+                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            delegator_address: AccAddress::from_bech32(&val.delegator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            validator_address: ValAddress::from_bech32(&val.validator_address)
+                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            pub_key: pubkey.into(),
+            value: val
+                .value
+                .ok_or(CoreError::MissingField("value".into()))?
+                .try_into()
+                .map_err(|e| CoreError::Coin(format!("{e}")))?,
+        })
     }
 }
 
@@ -348,6 +461,8 @@ pub struct CreateValidator {
     pub pub_key: PublicKey,
     pub value: UnsignedCoin,
 }
+
+impl Protobuf<inner::MsgCreateValidator> for CreateValidator {}
 
 impl CreateValidator {
     pub const TYPE_URL: &'static str = "/cosmos.staking.v1beta1.MsgCreateValidator";
@@ -389,83 +504,108 @@ impl From<CreateValidator> for Any {
     }
 }
 
-impl TryFrom<CreateValidatorRaw> for CreateValidator {
-    type Error = CoreError;
+// impl TryFrom<CreateValidatorRaw> for CreateValidator {
+//     type Error = CoreError;
 
-    fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
-        Ok(CreateValidator {
-            description: src.description.ok_or(CoreError::MissingField(
-                "Missing field 'description'.".into(),
-            ))?,
-            commission: src
-                .commission
-                .ok_or(CoreError::MissingField(
-                    "Missing field 'commission'.".into(),
-                ))?
-                .try_into()
-                .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
-            min_self_delegation: Uint256::from_str(&src.min_self_delegation)
-                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            delegator_address: AccAddress::from_bech32(&src.delegator_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            validator_address: ValAddress::from_bech32(&src.validator_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            pub_key: serde_json::from_slice(&src.pub_key)
-                .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
-            value: src
-                .value
-                .ok_or(CoreError::MissingField("Missing field 'value'.".into()))?
-                .try_into()
-                .map_err(|e| CoreError::Coin(format!("{e}")))?,
-        })
-    }
+//     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
+//         Ok(CreateValidator {
+//             description: src.description.ok_or(CoreError::MissingField(
+//                 "Missing field 'description'.".into(),
+//             ))?,
+//             commission: src
+//                 .commission
+//                 .ok_or(CoreError::MissingField(
+//                     "Missing field 'commission'.".into(),
+//                 ))?
+//                 .try_into()
+//                 .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
+//             min_self_delegation: Uint256::from_str(&src.min_self_delegation)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             delegator_address: AccAddress::from_bech32(&src.delegator_address)
+//                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+//             validator_address: ValAddress::from_bech32(&src.validator_address)
+//                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+//             pub_key: serde_json::from_slice(&src.pub_key)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             value: src
+//                 .value
+//                 .ok_or(CoreError::MissingField("Missing field 'value'.".into()))?
+//                 .try_into()
+//                 .map_err(|e| CoreError::Coin(format!("{e}")))?,
+//         })
+//     }
+// }
+
+// impl Protobuf<CreateValidatorRaw> for CreateValidator {}
+
+/// CreateValidator defines a SDK message for creating a new validator.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EditValidator {
+    pub description: EditDescription,
+    pub commission_rate: Option<Decimal256>, // TODO: add a CommissionRate type to capture the =< 1 constraint currently this is checked here https://github.com/rumos-io/gears/blob/672d6cf7e4376076c218b46121e197ac1f1029a7/x/staking/src/keeper/validator.rs#L67
+    pub min_self_delegation: Option<Uint256>,
+    pub validator_address: ValAddress,
+    // for method `get_signers`. The sdk converts validator_address
+    from_address: AccAddress,
 }
 
-impl Protobuf<CreateValidatorRaw> for CreateValidator {}
+impl EditValidator {
+    pub fn new(
+        description: EditDescription,
+        commission_rate: Option<Decimal256>,
+        min_self_delegation: Option<Uint256>,
+        validator_address: ValAddress,
+    ) -> EditValidator {
+        EditValidator {
+            description,
+            commission_rate,
+            min_self_delegation,
+            validator_address: validator_address.clone(),
+            from_address: validator_address.into(),
+        }
+    }
 
-#[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
+    pub fn get_signers(&self) -> Vec<&AccAddress> {
+        vec![&self.from_address]
+    }
+}
+#[derive(Clone, PartialEq, Message)]
 pub struct EditValidatorRaw {
     #[prost(message, optional)]
-    pub description: Option<DescriptionUpdate>,
-    #[prost(message, optional)]
+    pub description: Option<Description>,
+    #[prost(string)]
+    pub validator_address: String,
+    #[prost(string, optional)]
     pub commission_rate: Option<String>,
     #[prost(string, optional)]
     pub min_self_delegation: Option<String>,
-    #[prost(string)]
-    pub validator_address: String,
-    #[prost(string)]
-    pub from_address: String,
 }
 
 impl From<EditValidator> for EditValidatorRaw {
     fn from(src: EditValidator) -> Self {
         Self {
-            description: Some(src.description),
-            commission_rate: src.commission_rate.map(|com_rate| com_rate.to_string()),
+            description: Some(src.description.into()),
+            commission_rate: src
+                .commission_rate
+                .map(|com_rate| com_rate.to_cosmos_proto_string()),
             min_self_delegation: src.min_self_delegation.map(|msd| msd.to_string()),
             validator_address: src.validator_address.to_string(),
-            from_address: src.from_address.to_string(),
         }
     }
-}
-
-/// CreateValidator defines a SDK message for creating a new validator.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct EditValidator {
-    pub description: DescriptionUpdate,
-    pub commission_rate: Option<Decimal256>,
-    pub min_self_delegation: Option<Uint256>,
-    pub validator_address: ValAddress,
-    // for method `get_signers`. The sdk converts validator_address
-    pub from_address: AccAddress,
 }
 
 impl TryFrom<EditValidatorRaw> for EditValidator {
     type Error = CoreError;
 
     fn try_from(src: EditValidatorRaw) -> Result<Self, Self::Error> {
+        // TODO: there are missing checks here, like that at least one of the description fields should be non empty (yes that's right as long as one is set all is good!)
+        // see https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/msg.go#L185-L210
+        // we should capture this restriction in the description type
         let commission_rate = if let Some(rate) = src.commission_rate {
-            Some(Decimal256::from_str(&rate).map_err(|e| CoreError::DecodeGeneral(e.to_string()))?)
+            Some(
+                Decimal256::from_cosmos_proto_string(&rate)
+                    .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+            )
         } else {
             None
         };
@@ -477,16 +617,21 @@ impl TryFrom<EditValidatorRaw> for EditValidator {
         } else {
             None
         };
+
+        let validator_address = ValAddress::from_bech32(&src.validator_address)
+            .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
+
         Ok(EditValidator {
-            description: src.description.ok_or(CoreError::MissingField(
-                "Missing field 'description'.".into(),
-            ))?,
+            description: src
+                .description
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'description'.".into(),
+                ))?
+                .into(),
             commission_rate,
             min_self_delegation,
-            validator_address: ValAddress::from_bech32(&src.validator_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            from_address: AccAddress::from_bech32(&src.from_address)
-                .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+            validator_address: validator_address.clone(),
+            from_address: validator_address.into(),
         })
     }
 }

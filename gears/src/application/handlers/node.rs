@@ -55,6 +55,10 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         tx: &TxWithRaw<Self::Message>,
     ) -> Result<(), TxError>;
 
+    // TODO: this should return a Result similar to the SDK. See:
+    // 1. https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/baseapp/baseapp.go#L717
+    // 2. https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/types/abci.pb.go#L323-L333
+    // 3. https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/types/result.go#L233-L258
     fn msg<DB: Database>(
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
