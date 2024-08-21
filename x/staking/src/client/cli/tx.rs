@@ -1,6 +1,6 @@
 use crate::{
-    CommissionRates, CreateValidator, DelegateMsg, Description, EditValidator,
-    Message as StakingMessage, RedelegateMsg, UndelegateMsg, DO_NOT_MODIFY_DESCRIPTION,
+    CommissionRates, CreateValidator, DelegateMsg, Description, EditDescription, EditValidator,
+    Message as StakingMessage, RedelegateMsg, UndelegateMsg,
 };
 use anyhow::Result;
 use clap::{Args, Subcommand};
@@ -62,20 +62,19 @@ pub enum StakingCommands {
     /// Edit an existing validator account
     EditValidator {
         /// The validator's name
-        #[arg(default_value = DO_NOT_MODIFY_DESCRIPTION)]
-        moniker: String,
+        moniker: Option<String>,
         /// The optional identity signature (ex. UPort or Keybase)
-        #[arg(long, default_value = DO_NOT_MODIFY_DESCRIPTION)]
-        identity: String,
+        #[arg(long)]
+        identity: Option<String>,
         /// The validator's (optional) website
-        #[arg(long, default_value = DO_NOT_MODIFY_DESCRIPTION)]
-        website: String,
+        #[arg(long)]
+        website: Option<String>,
         /// The validator's (optional) security contact email
-        #[arg(long, default_value = DO_NOT_MODIFY_DESCRIPTION)]
-        security_contact: String,
+        #[arg(long)]
+        security_contact: Option<String>,
         /// The validator's (optional) details
-        #[arg(long, default_value = DO_NOT_MODIFY_DESCRIPTION)]
-        details: String,
+        #[arg(long)]
+        details: Option<String>,
         /// The initial commission rate percentage
         #[arg(long)]
         commission_rate: Option<Decimal256>,
@@ -175,7 +174,7 @@ pub fn run_staking_tx_command(
             min_self_delegation,
         } => {
             let validator_address = ValAddress::from(from_address);
-            let description = Description {
+            let description = EditDescription {
                 moniker: moniker.clone(),
                 identity: identity.clone(),
                 website: website.clone(),

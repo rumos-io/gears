@@ -195,6 +195,87 @@ impl From<Commission> for CommissionRaw {
 impl Protobuf<CommissionRaw> for Commission {}
 
 /// Description defines a validator description.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct EditDescription {
+    /// moniker defines a human-readable name for the validator.
+    pub moniker: Option<String>,
+    /// identity defines an optional identity signature (ex. UPort or Keybase).
+    pub identity: Option<String>,
+    /// website defines an optional website link.
+    pub website: Option<String>,
+    /// security_contact defines an optional email for security contact.
+    pub security_contact: Option<String>,
+    /// details define other optional details.
+    pub details: Option<String>,
+}
+
+impl From<Description> for EditDescription {
+    fn from(value: Description) -> Self {
+        let moniker = if value.moniker == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.moniker)
+        };
+        let identity = if value.identity == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.identity)
+        };
+        let website = if value.website == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.website)
+        };
+        let security_contact = if value.security_contact == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.security_contact)
+        };
+        let details = if value.details == DO_NOT_MODIFY_DESCRIPTION {
+            None
+        } else {
+            Some(value.details)
+        };
+
+        Self {
+            moniker,
+            identity,
+            website,
+            security_contact,
+            details,
+        }
+    }
+}
+
+impl From<EditDescription> for Description {
+    fn from(value: EditDescription) -> Self {
+        let moniker = value
+            .moniker
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let identity = value
+            .identity
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let website = value
+            .website
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let security_contact = value
+            .security_contact
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+        let details = value
+            .details
+            .unwrap_or(DO_NOT_MODIFY_DESCRIPTION.to_string());
+
+        Self {
+            moniker,
+            identity,
+            website,
+            security_contact,
+            details,
+        }
+    }
+}
+
+/// Description defines a validator description.
 #[derive(Clone, PartialEq, Serialize, Deserialize, Message)]
 pub struct Description {
     /// moniker defines a human-readable name for the validator.
@@ -222,40 +303,24 @@ impl Description {
     /// returned if the resulting description contains an invalid length.
     pub fn create_updated_description(
         &self,
-        other: &Description,
+        other: &EditDescription,
     ) -> Result<Description, anyhow::Error> {
         let mut description = self.clone();
-
-        if &other.moniker == DO_NOT_MODIFY_DESCRIPTION {
-            description.moniker = self.moniker.clone();
-        } else {
-            description.moniker = other.moniker.clone();
+        if let Some(moniker) = &other.moniker {
+            description.moniker.clone_from(moniker);
         }
-
-        if &other.identity == DO_NOT_MODIFY_DESCRIPTION {
-            description.identity = self.identity.clone();
-        } else {
-            description.identity = other.identity.clone();
+        if let Some(identity) = &other.identity {
+            description.identity.clone_from(identity);
         }
-
-        if &other.website == DO_NOT_MODIFY_DESCRIPTION {
-            description.website = self.website.clone();
-        } else {
-            description.website = other.website.clone();
+        if let Some(website) = &other.website {
+            description.website.clone_from(website);
         }
-
-        if &other.security_contact == DO_NOT_MODIFY_DESCRIPTION {
-            description.security_contact = self.security_contact.clone();
-        } else {
-            description.security_contact = other.security_contact.clone();
+        if let Some(security_contact) = &other.security_contact {
+            description.security_contact.clone_from(security_contact);
         }
-
-        if &other.details == DO_NOT_MODIFY_DESCRIPTION {
-            description.details = self.details.clone();
-        } else {
-            description.details = other.details.clone();
+        if let Some(details) = &other.details {
+            description.details.clone_from(details);
         }
-
         description.ensure_length()?;
         Ok(description)
     }
@@ -400,7 +465,7 @@ impl Protobuf<inner::MsgCreateValidator> for CreateValidator {}
 /// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct EditValidator {
-    pub description: Description,
+    pub description: EditDescription,
     pub commission_rate: Option<Decimal256>, // TODO: add a CommissionRate type to capture the =< 1 constraint currently this is checked here https://github.com/rumos-io/gears/blob/672d6cf7e4376076c218b46121e197ac1f1029a7/x/staking/src/keeper/validator.rs#L67
     pub min_self_delegation: Option<Uint256>,
     pub validator_address: ValAddress,
@@ -410,7 +475,7 @@ pub struct EditValidator {
 
 impl EditValidator {
     pub fn new(
-        description: Description,
+        description: EditDescription,
         commission_rate: Option<Decimal256>,
         min_self_delegation: Option<Uint256>,
         validator_address: ValAddress,
@@ -443,7 +508,7 @@ pub struct EditValidatorRaw {
 impl From<EditValidator> for EditValidatorRaw {
     fn from(src: EditValidator) -> Self {
         Self {
-            description: Some(src.description),
+            description: Some(src.description.into()),
             commission_rate: src
                 .commission_rate
                 .map(|com_rate| com_rate.to_cosmos_proto_string()),
@@ -481,9 +546,12 @@ impl TryFrom<EditValidatorRaw> for EditValidator {
             .map_err(|e| CoreError::DecodeAddress(e.to_string()))?;
 
         Ok(EditValidator {
-            description: src.description.ok_or(CoreError::MissingField(
-                "Missing field 'description'.".into(),
-            ))?,
+            description: src
+                .description
+                .ok_or(CoreError::MissingField(
+                    "Missing field 'description'.".into(),
+                ))?
+                .into(),
             commission_rate,
             min_self_delegation,
             validator_address: validator_address.clone(),

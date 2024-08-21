@@ -5,7 +5,7 @@ use gears::{
     types::uint::Uint256,
     utils::node::generate_txs,
 };
-use staking::{CommissionRates, CreateValidator, Description};
+use staking::{CommissionRates, CreateValidator, Description, EditDescription};
 
 use crate::{setup_mock_node, USER_0, USER_1};
 
@@ -69,12 +69,12 @@ fn scenario_2() {
 
     let msg = gaia_rs::message::Message::Staking(staking::Message::EditValidator(
         staking::EditValidator::new(
-            Description {
-                moniker: "alice".to_string(),
-                identity: "".to_string(),
-                website: "".to_string(),
-                security_contact: "".to_string(),
-                details: "".to_string(),
+            EditDescription {
+                moniker: Some("alice".to_string()),
+                identity: Some("".to_string()),
+                website: Some("".to_string()),
+                security_contact: Some("".to_string()),
+                details: Some("".to_string()),
             },
             Some("0.2".parse().unwrap()),
             Some(Uint256::from(200u32)),
