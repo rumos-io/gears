@@ -7,4 +7,5 @@ pub mod cmd;
 pub mod collect_txs;
 pub mod deliver;
 pub mod errors;
+pub mod gentx;
 pub mod types;

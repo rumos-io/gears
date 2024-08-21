@@ -27,7 +27,7 @@ use staking::{
             DelegationCommand, RedelegationCommand, StakingCommands as QueryStakingCommands,
             StakingQueryCli, ValidatorCommand,
         },
-        tx::{StakingCommands, StakingTxCli},
+        tx::{CreateValidatorCli, StakingCommands, StakingTxCli},
     },
     CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
 };
@@ -80,7 +80,7 @@ fn new_validator(
     moniker: &str,
 ) -> anyhow::Result<Response> {
     let pubkey = serde_json::from_str(pubkey)?;
-    let tx_cmd = StakingCommands::CreateValidator {
+    let tx_cmd = StakingCommands::CreateValidator(CreateValidatorCli {
         pubkey,
         amount,
         moniker: moniker.to_string(),
@@ -92,7 +92,7 @@ fn new_validator(
         commission_max_rate: Decimal256::from_atomics(2u64, 1).unwrap(),
         commission_max_change_rate: Decimal256::from_atomics(1u64, 2).unwrap(),
         min_self_delegation: Uint256::one(),
-    };
+    });
     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
     run_tx_local(from_key, home, command)
 }

@@ -1,3 +1,4 @@
+pub mod gentx;
 use clap::{Args, Subcommand};
 use collect::CollectGentxCliAux;
 use gears::application::ApplicationInfo;
