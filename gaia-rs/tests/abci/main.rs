@@ -23,8 +23,11 @@ mod scenario_2;
 #[cfg(test)]
 mod two_tx;
 
-pub fn user_0(account_number: u64) -> User {
-    let mnemonic = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
+const USER_0: &str = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
+const USER_1: &str = "unfair live spike near cushion blanket club salad poet cigar venue above north speak harbor salute curve tail appear obvious month end boss priority";
+
+// This is a helper function to create a user with a specific account number
+pub fn user(account_number: u64, mnemonic: &str) -> User {
     let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
     let key_pair = KeyPair::from_mnemonic(&mnemonic);
 
@@ -33,18 +36,6 @@ pub fn user_0(account_number: u64) -> User {
         account_number,
     }
 }
-
-pub fn user_1(account_number: u64) -> User {
-    let mnemonic = "unfair live spike near cushion blanket club salad poet cigar venue above north speak harbor salute curve tail appear obvious month end boss priority";
-    let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
-    let key_pair = KeyPair::from_mnemonic(&mnemonic);
-
-    User {
-        key_pair,
-        account_number,
-    }
-}
-//}
 
 fn setup_mock_node(
     genesis_path: Option<impl AsRef<Path>>,

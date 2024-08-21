@@ -7,15 +7,15 @@ use gears::{
 };
 use staking::{CommissionRates, CreateValidator, Description};
 
-use crate::setup_mock_node;
+use crate::{setup_mock_node, USER_0, USER_1};
 
 #[test]
 /// This scenario has a richer genesis file, with more staking fields.
 fn scenario_2() {
     let genesis_path = Path::new("./tests/abci/assets/scenario_2_genesis.json");
     let (mut node, _) = setup_mock_node(Some(genesis_path));
-    let user_0 = crate::user_0(4);
-    let user_1 = crate::user_1(5);
+    let user_0 = crate::user(4, USER_0);
+    let user_1 = crate::user(5, USER_1);
 
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
