@@ -31,7 +31,7 @@ impl<AI: ApplicationInfo> TryFrom<CollectGentxCliAux<AI>> for CollectGentxCmd {
     ) -> Result<Self, Self::Error> {
         if !gentx_dir.exists() {
             Err(anyhow::anyhow!(
-                "Failed to find folder: {}",
+                "Failed to find directory: {}",
                 gentx_dir.to_string_lossy()
             ))?
         }

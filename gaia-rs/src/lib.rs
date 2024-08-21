@@ -142,7 +142,7 @@ impl AuxHandler for GaiaCoreClient {
                     let (_, genesis) = genutil::collect_txs::gen_app_state_from_config(
                         cmd,
                         &GaiaStoreKey::Bank,
-                        &GaiaStoreKey::Genutil,
+                        "genutil",
                     )?;
 
                     println!("{genesis}");
