@@ -1,0 +1,18 @@
+[package]
+name = "genutil"
+version = "0.1.0"
+edition = "2021"
+
+[lints]
+workspace = true
+
+[dependencies]
+gears = { path = "../../gears", features = [ "cli", "xmods" ] }
+staking = { path = "../staking" }
+
+# unsorted
+clap = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# bip32 = { workspace = true }

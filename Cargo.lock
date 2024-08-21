@@ -1936,6 +1936,7 @@ dependencies = [
  "clap",
  "data-encoding",
  "gears",
+ "genutil",
  "gov",
  "hex 0.4.3",
  "ibc-proto 0.33.0",
@@ -2029,6 +2030,18 @@ dependencies = [
  "typenum",
  "version_check",
  "zeroize",
+]
+
+[[package]]
+name = "genutil"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "gears",
+ "serde",
+ "serde_json",
+ "staking",
 ]
 
 [[package]]

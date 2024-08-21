@@ -10,6 +10,7 @@ use axum::Router;
 use bank::cli::query::BankQueryHandler;
 use bank::BankNodeQueryRequest;
 use bank::BankNodeQueryResponse;
+use clap::Subcommand;
 use client::tx_command_handler;
 use client::GaiaQueryCommands;
 use client::WrappedGaiaQueryCommands;
@@ -35,6 +36,7 @@ use serde::Serialize;
 use staking::cli::query::StakingQueryHandler;
 use staking::StakingNodeQueryRequest;
 use staking::StakingNodeQueryResponse;
+use store_keys::GaiaStoreKey;
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;
@@ -130,13 +132,45 @@ impl QueryHandler for GaiaCoreClient {
 }
 
 impl AuxHandler for GaiaCoreClient {
-    type AuxCommands = NilAuxCommand;
+    type AuxCommands = GaiaAuxCmd;
     type Aux = NilAux;
 
-    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
-        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
+    fn prepare_aux(&self, cmd: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
+        match cmd {
+            GaiaAuxCmd::Genutil(cmd) => match cmd {
+                genutil::cmd::GenesisCmd::CollectGentxs(cmd) => {
+                    let (_, genesis) = genutil::collect_txs::gen_app_state_from_config(
+                        cmd,
+                        &GaiaStoreKey::Bank,
+                        "genutil",
+                    )?;
+
+                    println!("{genesis}");
+                }
+            },
+        }
+
         Ok(NilAux)
     }
+}
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum GaiaAuxCli<AI: ApplicationInfo> {
+    Genutil(genutil::client::cli::GenesisAuxCli<AI>),
+}
+
+impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
+    type Error = anyhow::Error;
+
+    fn try_from(value: GaiaAuxCli<AI>) -> std::result::Result<Self, Self::Error> {
+        Ok(match value {
+            GaiaAuxCli::Genutil(var) => GaiaAuxCmd::Genutil(var.try_into()?),
+        })
+    }
+}
+
+pub enum GaiaAuxCmd {
+    Genutil(genutil::cmd::GenesisCmd),
 }
 
 impl Client for GaiaCoreClient {}

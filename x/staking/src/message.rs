@@ -35,7 +35,7 @@ impl TxMessage for Message {
 
     fn type_url(&self) -> &'static str {
         match self {
-            Message::CreateValidator(_) => "/cosmos.staking.v1beta1.MsgCreateValidator",
+            Message::CreateValidator(_) => CreateValidator::TYPE_URL,
             Message::EditValidator(_) => "/cosmos.staking.v1beta1.MsgEditValidator",
             Message::Delegate(_) => "/cosmos.staking.v1beta1.MsgDelegate",
             Message::Redelegate(_) => "/cosmos.staking.v1beta1.MsgBeginRedelegate",
@@ -48,7 +48,7 @@ impl From<Message> for Any {
     fn from(msg: Message) -> Self {
         match msg {
             Message::CreateValidator(msg) => Any {
-                type_url: "/cosmos.staking.v1beta1.MsgCreateValidator".to_string(),
+                type_url: CreateValidator::TYPE_URL.to_string(),
                 value: msg.encode_vec(),
             },
             Message::EditValidator(msg) => Any {
@@ -76,7 +76,7 @@ impl TryFrom<Any> for Message {
 
     fn try_from(value: Any) -> Result<Self, Self::Error> {
         match value.type_url.as_str() {
-            "/cosmos.staking.v1beta1.MsgCreateValidator" => {
+            CreateValidator::TYPE_URL => {
                 let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
                     .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
                 Ok(Message::CreateValidator(msg))

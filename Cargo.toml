@@ -30,6 +30,7 @@ members = [
   "x/ibc-rs",
   "x/slashing",
   "x/staking",
+  "x/genutil",
 
   # new unsorted
 ]

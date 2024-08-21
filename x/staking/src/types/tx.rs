@@ -8,10 +8,12 @@ use gears::{
         base::coin::UnsignedCoin,
         decimal256::{CosmosDecimalProtoString, Decimal256, ONE_DEC},
         errors::StdError,
+        tx::TxMessage,
         uint::Uint256,
     },
 };
-use prost::Message;
+use ibc_proto::google::protobuf::Any;
+use prost::{bytes::Bytes, Message};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
@@ -461,6 +463,80 @@ pub struct CreateValidator {
 }
 
 impl Protobuf<inner::MsgCreateValidator> for CreateValidator {}
+
+impl CreateValidator {
+    pub const TYPE_URL: &'static str = "/cosmos.staking.v1beta1.MsgCreateValidator";
+}
+
+impl TxMessage for CreateValidator {
+    fn get_signers(&self) -> Vec<&AccAddress> {
+        vec![&self.delegator_address]
+    }
+
+    fn type_url(&self) -> &'static str {
+        Self::TYPE_URL
+    }
+}
+
+impl TryFrom<Any> for CreateValidator {
+    type Error = CoreError;
+
+    fn try_from(value: Any) -> Result<Self, Self::Error> {
+        match value.type_url.as_str() {
+            CreateValidator::TYPE_URL => {
+                let msg = CreateValidator::decode::<Bytes>(value.value.clone().into())
+                    .map_err(|e| gears::core::errors::CoreError::DecodeProtobuf(e.to_string()))?;
+                Ok(msg)
+            }
+            _ => Err(gears::core::errors::CoreError::DecodeGeneral(
+                "message type not recognized".into(),
+            )),
+        }
+    }
+}
+
+impl From<CreateValidator> for Any {
+    fn from(msg: CreateValidator) -> Self {
+        Any {
+            type_url: CreateValidator::TYPE_URL.to_string(),
+            value: msg.encode_vec(),
+        }
+    }
+}
+
+// impl TryFrom<CreateValidatorRaw> for CreateValidator {
+//     type Error = CoreError;
+
+//     fn try_from(src: CreateValidatorRaw) -> Result<Self, Self::Error> {
+//         Ok(CreateValidator {
+//             description: src.description.ok_or(CoreError::MissingField(
+//                 "Missing field 'description'.".into(),
+//             ))?,
+//             commission: src
+//                 .commission
+//                 .ok_or(CoreError::MissingField(
+//                     "Missing field 'commission'.".into(),
+//                 ))?
+//                 .try_into()
+//                 .map_err(|e| CoreError::DecodeProtobuf(format!("{e}")))?,
+//             min_self_delegation: Uint256::from_str(&src.min_self_delegation)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             delegator_address: AccAddress::from_bech32(&src.delegator_address)
+//                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+//             validator_address: ValAddress::from_bech32(&src.validator_address)
+//                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
+//             pub_key: serde_json::from_slice(&src.pub_key)
+//                 .map_err(|e| CoreError::DecodeGeneral(e.to_string()))?,
+//             value: src
+//                 .value
+//                 .ok_or(CoreError::MissingField("Missing field 'value'.".into()))?
+//                 .try_into()
+//                 .map_err(|e| CoreError::Coin(format!("{e}")))?,
+//         })
+//     }
+// }
+
+// impl Protobuf<CreateValidatorRaw> for CreateValidator {}
 
 /// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

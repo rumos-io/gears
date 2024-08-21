@@ -37,7 +37,6 @@ impl ConfigDirectory {
 }
 
 pub trait ApplicationConfig: Serialize + DeserializeOwned + Default + Clone {}
-impl<T: DeserializeOwned + Serialize + Default + Clone> ApplicationConfig for T {}
 
 #[derive(Deserialize, Serialize, Clone, Debug)]
 #[serde(deny_unknown_fields)]
@@ -79,6 +78,18 @@ impl<AC: ApplicationConfig> Config<AC> {
         writeln!(file)?;
         writeln!(file, "[app_config]")?;
         file.write_all(app_cfg.as_bytes()).map_err(|e| e.into())
+    }
+
+    /// Clone itself with default `[app_state]` e.g. `app_config` field
+    pub fn clone_with_default(&self) -> Self {
+        Self {
+            tendermint_rpc_address: self.tendermint_rpc_address.to_owned(),
+            rest_listen_addr: self.rest_listen_addr.to_owned(),
+            grpc_listen_addr: self.grpc_listen_addr.to_owned(),
+            address: self.address.to_owned(),
+            min_gas_prices: self.min_gas_prices.to_owned(),
+            app_config: AC::default(),
+        }
     }
 }
 
