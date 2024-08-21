@@ -387,7 +387,7 @@ impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CreateValidator {
     pub description: Description,
-    pub commission: CommissionRates, //TODO: should name be commission_rate?
+    pub commission: CommissionRates,
     pub min_self_delegation: Uint256,
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
