@@ -151,7 +151,7 @@ impl<
     /// amount of respective shares is returned, otherwise an error is returned.
     pub fn validate_unbond_amount<DB: Database, CTX: TransactionalContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         del_addr: &AccAddress,
         val_addr: &ValAddress,
         amount: Uint256,

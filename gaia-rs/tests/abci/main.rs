@@ -23,6 +23,20 @@ mod scenario_2;
 #[cfg(test)]
 mod two_tx;
 
+const USER_0: &str = "race draft rival universe maid cheese steel logic crowd fork comic easy truth drift tomorrow eye buddy head time cash swing swift midnight borrow";
+const USER_1: &str = "unfair live spike near cushion blanket club salad poet cigar venue above north speak harbor salute curve tail appear obvious month end boss priority";
+
+// This is a helper function to create a user with a specific account number
+pub fn user(account_number: u64, mnemonic: &str) -> User {
+    let mnemonic = bip32::Mnemonic::new(mnemonic, bip32::Language::English).unwrap();
+    let key_pair = KeyPair::from_mnemonic(&mnemonic);
+
+    User {
+        key_pair,
+        account_number,
+    }
+}
+
 fn setup_mock_node(
     genesis_path: Option<impl AsRef<Path>>,
 ) -> (
@@ -47,10 +61,6 @@ fn setup_mock_node(
     let consensus_key = gears::tendermint::crypto::new_private_key();
 
     let genesis = if let Some(path) = genesis_path {
-        println!("Loading genesis state from {:?}", path.as_ref());
-        // print current directory
-        let current_dir = std::env::current_dir().unwrap();
-        println!("The current directory is {}", current_dir.display());
         let genesis_state = fs::read_to_string(path.as_ref()).unwrap();
         serde_json::from_str(&genesis_state).unwrap()
     } else {

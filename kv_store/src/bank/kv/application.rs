@@ -29,7 +29,11 @@ pub struct ApplicationKVBank<DB> {
 }
 
 impl<DB: Database> ApplicationKVBank<DB> {
-    pub fn new(db: DB, target_version: Option<u32>) -> Result<Self, KVStoreError> {
+    pub fn new(
+        db: DB,
+        target_version: Option<u32>,
+        name: Option<String>,
+    ) -> Result<Self, KVStoreError> {
         Ok(Self {
             persistent: Arc::new(RwLock::new(Tree::new(
                 db,
@@ -37,6 +41,7 @@ impl<DB: Database> ApplicationKVBank<DB> {
                 TREE_CACHE_SIZE
                     .try_into()
                     .expect("Unreachable. Tree cache size is > 0"),
+                name,
             )?)),
             cache: Default::default(),
         })
@@ -507,6 +512,7 @@ mod tests {
             TREE_CACHE_SIZE
                 .try_into()
                 .expect("Unreachable. Tree cache size is > 0"),
+            None,
         )
         .expect("Failed to create Tree")
     }

@@ -1,7 +1,9 @@
 use super::*;
 use crate::{
-    consts::error::SERDE_ENCODING_DOMAIN_TYPE, parse_validator_queue_key,
-    unbonding_delegation_time_key, validator_queue_key, UnbondingDelegationEntry,
+    consts::error::SERDE_ENCODING_DOMAIN_TYPE,
+    parse_validator_queue_key,
+    types::keys::{get_ubd_by_val_index_key, get_ubd_key, get_unbonding_delegation_time_key},
+    unbonding_delegation_time_key, validator_queue_key, DvPairs, UnbondingDelegationEntry,
 };
 use gears::{
     context::{InfallibleContext, InfallibleContextMut},
@@ -41,14 +43,13 @@ impl<
         ctx: &mut CTX,
         delegation: &UnbondingDelegation,
     ) -> Result<(), GasStoreErrors> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut delegations_store = store.prefix_store_mut(UNBONDING_DELEGATION_KEY);
-        let mut key = Vec::from(delegation.delegator_address.clone());
-        key.extend_from_slice(&Vec::from(delegation.validator_address.clone()));
-        delegations_store.set(
-            key,
-            serde_json::to_vec(&delegation).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        )
+        let mut store = ctx.kv_store_mut(&self.store_key);
+        let key = get_ubd_key(&delegation.delegator_address, &delegation.validator_address);
+        let value = delegation.encode_vec();
+        store.set(key, value)?;
+        let key =
+            get_ubd_by_val_index_key(&delegation.delegator_address, &delegation.validator_address);
+        store.set(key, vec![])
     }
 
     /// set_unbonding_delegation_entry adds an entry to the unbonding delegation at
@@ -175,7 +176,7 @@ impl<
 
     pub fn ubd_queue_time_slice<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         time: &Timestamp,
     ) -> Result<Option<Vec<DvPair>>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
@@ -193,13 +194,9 @@ impl<
         time: Timestamp,
         time_slice: Vec<DvPair>,
     ) -> Result<(), GasStoreErrors> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut store = store.prefix_store_mut(UNBONDING_QUEUE_KEY);
-        let key = time.encode_vec();
-        store.set(
-            key,
-            serde_json::to_vec(&time_slice).expect(SERDE_ENCODING_DOMAIN_TYPE),
-        )
+        let mut store = ctx.kv_store_mut(&self.store_key);
+        let bz = DvPairs { pairs: time_slice }.encode_vec();
+        store.set(get_unbonding_delegation_time_key(time), bz)
     }
 
     pub fn after_validator_begin_unbonding<DB: Database, CTX: TransactionalContext<DB, SK>>(
