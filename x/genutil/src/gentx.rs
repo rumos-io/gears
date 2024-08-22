@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use gears::application::handlers::client::TxHandler;
+use gears::{application::handlers::client::TxHandler, commands::client::tx::TxCommand};
 use staking::{cli::tx::CreateValidatorCli, CreateValidator};
 
 #[derive(Debug, Clone)]
@@ -9,8 +9,16 @@ pub struct GentxCmd {
     pub output: Option<PathBuf>,
 }
 
+pub fn gentx_cmd(cmd: TxCommand<GentxCmd>) -> anyhow::Result<()> {
+    let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone())?;
+
+    gears::commands::client::tx::run_tx(cmd, &gentx_handler)?;
+
+    Ok(())
+}
+
 #[derive(Debug, Clone)]
-pub struct GentxTxHandler {
+struct GentxTxHandler {
     output_dir: Option<PathBuf>,
 }
 
