@@ -13,7 +13,7 @@ fn scenario_1() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
-        "d0254da38fc9c97292f65f4e8af3276209c6d6f8a922bbad8fc4a8f36af55f67"
+        "36fd98b5248f0e4bfa6ef4e311134403b1b3deb8865bdbba7187cf05e5644a83"
     );
 
     node.step(vec![], Timestamp::UNIX_EPOCH);
@@ -36,6 +36,6 @@ fn scenario_1() {
     let app_hash = node.step(txs, Timestamp::UNIX_EPOCH);
     assert_eq!(
         hex::encode(app_hash),
-        "7bc0e95da6ba637bddaade5e6911fdb20030956a4bb8e305fb1c390ff7bcea20"
+        "8eb5f41a3f77e034185be06e5385ff0d0a42f8d0f59171b1cc12b1ac6a66bbef"
     );
 }

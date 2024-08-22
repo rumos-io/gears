@@ -1,5 +1,8 @@
 use crate::Validator;
-use gears::tendermint::types::proto::header::Header;
+use gears::{
+    core::{errors::CoreError, Protobuf},
+    tendermint::{self, types::proto::header::Header},
+};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -9,8 +12,8 @@ use std::cmp::Ordering;
 /// (`n` is set by the staking module's `historical_entries` parameter).
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct HistoricalInfo {
-    header: Header,
-    validators: Vec<Validator>,
+    pub header: Header,
+    pub validators: Vec<Validator>,
 }
 
 impl HistoricalInfo {
@@ -36,3 +39,42 @@ impl HistoricalInfo {
         HistoricalInfo { header, validators }
     }
 }
+
+mod inner {
+    pub use gears::tendermint::types::proto::header::HistoricalInfo;
+}
+
+impl From<HistoricalInfo> for inner::HistoricalInfo {
+    fn from(historical_info: HistoricalInfo) -> Self {
+        inner::HistoricalInfo {
+            header: Some(historical_info.header.into()),
+            validators: historical_info
+                .validators
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
+    }
+}
+
+impl TryFrom<inner::HistoricalInfo> for HistoricalInfo {
+    type Error = CoreError;
+
+    fn try_from(value: inner::HistoricalInfo) -> Result<Self, Self::Error> {
+        let header = value
+            .header
+            .ok_or(CoreError::MissingField("Missing field 'header'.".into()))?
+            .try_into()
+            .map_err(|e: tendermint::error::Error| CoreError::DecodeGeneral(e.to_string()))?;
+        Ok(HistoricalInfo {
+            header,
+            validators: value
+                .validators
+                .into_iter()
+                .map(TryInto::try_into)
+                .collect::<Result<Vec<Validator>, _>>()?,
+        })
+    }
+}
+
+impl Protobuf<inner::HistoricalInfo> for HistoricalInfo {}
