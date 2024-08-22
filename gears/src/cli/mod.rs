@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use clap::{Command, CommandFactory, Subcommand};
+use clap::{Args, Command, CommandFactory, Subcommand};
 pub use clap_complete::Shell;
 use clap_complete::{generate, Generator};
 use human_panic::setup_panic;
@@ -41,7 +41,7 @@ where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
     CliAppAUX: Subcommand,
-    CliTX: Subcommand,
+    CliTX: Args,
     CliQue: Subcommand,
 {
     #[command(subcommand, value_parser = value_parser!(PhantomData))]
@@ -54,7 +54,7 @@ where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
     CliAppAUX: Subcommand,
-    CliTX: Subcommand,
+    CliTX: Args,
     CliQue: Subcommand,
 {
     pub fn execute_or_help(
@@ -94,7 +94,7 @@ where
     ClientAUX: TryFrom<CliClientAUX, Error = anyhow::Error>,
     CliAppAUX: Subcommand,
     AppAUX: TryFrom<CliAppAUX, Error = anyhow::Error>,
-    CliTX: Subcommand,
+    CliTX: Args,
     TX: TryFrom<CliTX, Error = anyhow::Error>,
     CliQue: Subcommand,
     QUE: TryFrom<CliQue, Error = anyhow::Error>,
@@ -119,7 +119,7 @@ where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
     CliAppAUX: Subcommand,
-    CliTX: Subcommand,
+    CliTX: Args,
     CliQue: Subcommand,
 {
     #[command(flatten, value_parser = value_parser!(PhantomData))]
@@ -140,7 +140,7 @@ where
     T: ApplicationInfo,
     CliClientAUX: Subcommand,
     CliAppAUX: Subcommand,
-    CliTX: Subcommand,
+    CliTX: Args,
     CliQue: Subcommand,
 {
     #[command(flatten)]
@@ -154,7 +154,7 @@ pub enum CliClientCommands<T, CliAUX, CliTX, CliQue>
 where
     T: ApplicationInfo,
     CliAUX: Subcommand,
-    CliTX: Subcommand,
+    CliTX: Args,
     CliQue: Subcommand,
 {
     #[command(flatten)]
@@ -172,7 +172,7 @@ impl<T: ApplicationInfo, CliAUX, AUX, CliTX, TX, CliQue, QUE>
 where
     CliAUX: Subcommand,
     AUX: TryFrom<CliAUX, Error = anyhow::Error>,
-    CliTX: Subcommand,
+    CliTX: Args,
     TX: TryFrom<CliTX, Error = anyhow::Error>,
     CliQue: Subcommand,
     QUE: TryFrom<CliQue, Error = anyhow::Error>,

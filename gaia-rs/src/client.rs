@@ -4,7 +4,7 @@ use bank::cli::{
     query::BankQueryCli,
     tx::{run_bank_tx_command, BankTxCli},
 };
-use clap::Subcommand;
+use clap::{Args, Subcommand};
 use gears::{
     commands::client::tx::ClientTxContext,
     types::{address::AccAddress, tx::Messages},
@@ -19,6 +19,12 @@ use staking::cli::{
 };
 
 use crate::message::Message;
+
+#[derive(Debug, Clone, Args)]
+pub struct GaiaTxArgs {
+    #[command(subcommand)]
+    pub command: GaiaTxCommands,
+}
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum GaiaTxCommands {
@@ -64,11 +70,11 @@ pub enum GaiaQueryCommands {
 #[derive(Debug, Clone)]
 pub struct WrappedGaiaTxCommands(pub GaiaTxCommands);
 
-impl TryFrom<GaiaTxCommands> for WrappedGaiaTxCommands {
+impl TryFrom<GaiaTxArgs> for WrappedGaiaTxCommands {
     type Error = anyhow::Error;
 
-    fn try_from(command: GaiaTxCommands) -> Result<Self, Self::Error> {
-        Ok(Self(command))
+    fn try_from(command: GaiaTxArgs) -> Result<Self, Self::Error> {
+        Ok(Self(command.command))
     }
 }
 

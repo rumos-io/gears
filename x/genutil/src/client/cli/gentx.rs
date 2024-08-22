@@ -1,25 +1,21 @@
 use std::path::PathBuf;
 
-use clap::Subcommand;
+use clap::Args;
 use staking::cli::tx::CreateValidatorCli;
 
 use crate::gentx::GentxCmd;
 
-#[derive(Subcommand, Debug, Clone)]
-pub enum GentxCli {
-    Validator {
-        output: Option<PathBuf>,
-        #[command(flatten)]
-        validator: CreateValidatorCli,
-    },
+#[derive(Args, Debug, Clone)]
+pub struct GentxCli {
+    pub output: Option<PathBuf>,
+    #[command(flatten)]
+    pub validator: CreateValidatorCli,
 }
 
 impl TryFrom<GentxCli> for GentxCmd {
     type Error = anyhow::Error;
 
-    fn try_from(cmd: GentxCli) -> Result<Self, Self::Error> {
-        match cmd {
-            GentxCli::Validator { output, validator } => Ok(Self { validator, output }),
-        }
+    fn try_from(GentxCli { output, validator }: GentxCli) -> Result<Self, Self::Error> {
+        Ok(Self { validator, output })
     }
 }

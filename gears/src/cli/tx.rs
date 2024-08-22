@@ -1,6 +1,6 @@
 use std::{marker::PhantomData, path::PathBuf, str::FromStr};
 
-use clap::{ArgAction, Subcommand, ValueEnum, ValueHint};
+use clap::{ArgAction, Args, Subcommand, ValueEnum, ValueHint};
 use strum::Display;
 use tendermint::types::chain_id::ChainId;
 
@@ -16,7 +16,7 @@ use crate::{
 
 /// Transaction subcommands
 #[derive(Debug, Clone, ::clap::Args)]
-pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
+pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     /// <host>:<port> to Tendermint RPC interface for this chain
     #[arg(long, global = true, action = ArgAction::Set, value_hint = ValueHint::Url, default_value_t = DEFAULT_TENDERMINT_RPC_ADDRESS.parse().expect( "const should be valid"))]
     pub node: url::Url,
@@ -34,7 +34,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Subcommand> {
     #[group(id = "local", conflicts_with = Keyring::Ledger, global = true)]
     pub local: Option<Local<T>>,
 
-    #[command(subcommand)]
+    #[command(flatten)]
     pub command: C,
 
     #[arg(skip)]
@@ -84,7 +84,7 @@ pub struct MissingCliOptions(pub String);
 impl<T, C, AC> TryFrom<CliTxCommand<T, C>> for TxCommand<AC>
 where
     T: ApplicationInfo,
-    C: Subcommand,
+    C: Args,
     AC: TryFrom<C, Error = anyhow::Error>,
 {
     type Error = anyhow::Error;
