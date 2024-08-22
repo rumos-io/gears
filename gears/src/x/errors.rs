@@ -101,6 +101,8 @@ pub(crate) enum AnteError {
     Gas(#[from] GasStoreErrors),
     #[error("failed to send coins: {0}")]
     CoinsSend(#[from] BankKeeperError),
+    #[error("legacy amino json encoding failed")]
+    LegacyAminoJson,
 }
 
 impl From<AnteError> for TxError {
@@ -123,6 +125,7 @@ impl From<AnteError> for TxError {
             AnteError::AccountNotFound(_) => 8,
             AnteError::CoinsSend(_) => 9,
             AnteError::Gas(_) => 10,
+            AnteError::LegacyAminoJson => 11,
         };
 
         TxError {

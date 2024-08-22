@@ -19,7 +19,7 @@ install-sled:
 	cargo install --path ./gaia-rs --locked
 
 init:
-	./gaia-rs/scripts/init.sh
+	AMOUNT=$(AMOUNT) ./gaia-rs/scripts/init.sh
 
 tendermint-start:
 	tendermint start --home ~/.gaia-rs

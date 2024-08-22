@@ -1,15 +1,20 @@
 use crate::rest::error::HTTPError;
 use crate::types::pagination::response::PaginationResponse;
+use crate::types::request::tx::BroadcastTxRequest;
 use crate::types::response::any::AnyTx;
-use crate::types::response::tx::TxResponse;
+use crate::types::response::tx::{
+    BroadcastTxResponse, BroadcastTxResponseLight, TxResponse, TxResponseLight,
+};
 use crate::types::response::tx_event::GetTxsEventResponse;
 use crate::types::tx::{Tx, TxMessage};
-use axum::extract::{Query as AxumQuery, State};
+use axum::extract::{Path, Query as AxumQuery, State};
 use axum::Json;
 use bytes::Bytes;
 use core_types::Protobuf;
+use ibc_proto::cosmos::tx::v1beta1::BroadcastMode;
 use serde::{Deserialize, Serialize};
 use tendermint::informal::node::Info;
+use tendermint::informal::Hash;
 use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
 use tendermint::rpc::query::Query;
 use tendermint::rpc::response::tx::search::Response;
@@ -66,7 +71,6 @@ pub async fn txs<M: TxMessage>(
             HTTPError::bad_request(e.detail().to_string())
         })?;
     let (page, limit) = parse_pagination(&pagination.0);
-    dbg!(page, limit);
 
     let res_tx = client
         .tx_search(query, false, page, limit, Order::Descending)
@@ -79,6 +83,82 @@ pub async fn txs<M: TxMessage>(
     let res = map_responses(res_tx)?;
 
     Ok(Json(res))
+}
+
+pub async fn tx<M: TxMessage>(
+    Path(hash): Path<Hash>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<BroadcastTxResponse<M>>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let res = client.tx(hash, true).await.ok();
+    let res = if let Some(r) = res {
+        Some(
+            TxResponse::new_from_tx_response_and_string_time(r, "".to_string())
+                .map_err(|_| HTTPError::internal_server_error())?,
+        )
+    } else {
+        None
+    };
+    Ok(Json(BroadcastTxResponse { tx_response: res }))
+}
+
+pub async fn send_tx(
+    state: State<HttpClientUrl>,
+    tx_request: String,
+) -> Result<Json<BroadcastTxResponseLight>, HTTPError> {
+    let client = HttpClient::new::<Url>(state.0.clone().into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+    let tx_request: BroadcastTxRequest =
+        serde_json::from_str(&tx_request).map_err(|_| HTTPError::bad_gateway())?;
+
+    let bytes = data_encoding::BASE64
+        .decode(tx_request.tx_bytes.as_bytes())
+        .map_err(|_| HTTPError::internal_server_error())?;
+
+    let tx_response = if let Some(mode) = BroadcastMode::from_str_name(&tx_request.mode) {
+        match mode {
+            BroadcastMode::Sync => {
+                let res = client
+                    .broadcast_tx_sync(bytes)
+                    .await
+                    .map_err(|_| HTTPError::internal_server_error())?;
+                TxResponseLight {
+                    txhash: res.hash.to_string(),
+                    code: res.code.into(),
+                    raw_log: res.log,
+                }
+            }
+            BroadcastMode::Async => {
+                let res = client
+                    .broadcast_tx_async(bytes)
+                    .await
+                    .map_err(|_| HTTPError::internal_server_error())?;
+                TxResponseLight {
+                    txhash: res.hash.to_string(),
+                    code: res.code.into(),
+                    raw_log: res.log,
+                }
+            }
+            // TODO: is it a default value? keplr uses sync as default
+            BroadcastMode::Block | BroadcastMode::Unspecified => {
+                let res = client
+                    .broadcast_tx_commit(bytes)
+                    .await
+                    .map_err(|_| HTTPError::internal_server_error())?;
+                TxResponseLight {
+                    txhash: res.hash.to_string(),
+                    code: res.deliver_tx.code.into(),
+                    raw_log: res.deliver_tx.log,
+                }
+            }
+        }
+    } else {
+        return Err(HTTPError::internal_server_error());
+    };
+
+    Ok(Json(BroadcastTxResponseLight {
+        tx_response: Some(tx_response),
+    }))
 }
 
 // Maps a tendermint tx_search response to a Cosmos get txs by event response
@@ -94,7 +174,7 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
 
         tx_responses.push(TxResponse {
             height: tx.height.into(),
-            tx_hash: tx.hash.to_string(),
+            txhash: tx.hash.to_string(),
             codespace: tx.tx_result.codespace,
             code: tx.tx_result.code.value(),
             data: hex::encode(tx.tx_result.data),

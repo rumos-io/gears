@@ -1,6 +1,7 @@
 use crate::application::handlers::node::TxError;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
+use crate::signing::std_sign_doc;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
 use crate::types::base::coin::UnsignedCoin;
@@ -335,7 +336,7 @@ impl<
         Ok(())
     }
 
-    fn deduct_fee_ante_handler<'a, DB: Database, M: TxMessage>(
+    fn deduct_fee_ante_handler<DB: Database, M: TxMessage>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
@@ -450,6 +451,60 @@ impl<
                         account_number: acct.get_account_number(),
                     }
                     .encode_to_vec(),
+                    SignMode::LegacyAminoJson => {
+                        let mut msgs = vec![];
+                        for msg in tx.tx.get_msgs() {
+                            // TODO: don't have proper value getter, maybe extend trait
+                            let mut value: serde_json::Map<String, serde_json::Value> =
+                                serde_json::from_slice(
+                                    &serde_json::to_vec(&msg)
+                                        .map_err(|_| AnteError::LegacyAminoJson)?,
+                                )
+                                .map_err(|_| AnteError::LegacyAminoJson)?;
+                            value.remove("@type");
+
+                            msgs.push(std_sign_doc::Msg {
+                                kind: std_sign_doc::proto_type_url_to_legacy_amino_type_url(
+                                    msg.type_url(),
+                                ),
+                                value,
+                            })
+                        }
+                        let amount = {
+                            let fee = tx
+                                .tx
+                                .auth_info
+                                .fee
+                                .amount
+                                .clone()
+                                .ok_or(AnteError::MissingFee)?;
+                            fee.into_inner()
+                                .into_iter()
+                                .map(|coin| std_sign_doc::Coin {
+                                    amount: coin.amount.to_string(),
+                                    denom: coin.denom.to_string(),
+                                })
+                                .collect()
+                        };
+                        let doc = std_sign_doc::StdSignDoc {
+                            account_number: acct.get_account_number().to_string(),
+                            chain_id: ctx.chain_id().to_string(),
+                            fee: std_sign_doc::StdFee {
+                                amount,
+                                gas: u64::from(tx.tx.auth_info.fee.gas_limit).to_string(),
+                                // TODO: check impl
+                                granter: None,
+                                payer: None,
+                            },
+                            memo: tx.tx.get_memo().to_string(),
+                            msgs,
+                            sequence: account_seq.to_string(),
+                            // TODO: check impl
+                            // timeout_height: Some(u64::from(tx.tx.get_timeout_height()).to_string()),
+                            timeout_height: None,
+                        };
+                        serde_json::to_vec(&doc).map_err(|_| AnteError::LegacyAminoJson)?
+                    }
                     SignMode::Textual => {
                         let handler = SignModeHandler;
 
@@ -475,7 +530,12 @@ impl<
                         handler.sign_bytes_get(&f, signer_data, tx_data).unwrap()
                         //TODO: remove unwrap
                     }
-                    _ => return Err(AnteError::Validation("sign mode not supported".to_string())),
+                    mode => {
+                        return Err(AnteError::Validation(format!(
+                            "sign mode not supported: {:?}",
+                            mode
+                        )))
+                    }
                 },
                 ModeInfo::Multi(_) => {
                     return Err(AnteError::Validation("multi sig not supported".to_string()));

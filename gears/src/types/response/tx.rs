@@ -15,7 +15,7 @@ pub struct TxResponse<M: TxMessage> {
     /// The block height
     pub height: i64,
     /// The transaction hash.
-    pub tx_hash: String,
+    pub txhash: String,
     /// Namespace for the Code
     pub codespace: String,
     /// Response code.
@@ -59,7 +59,7 @@ impl<M: TxMessage> TxResponse<M> {
 
         Ok(TxResponse {
             height: tx_response.height.into(),
-            tx_hash: tx_response.hash.to_string(),
+            txhash: tx_response.hash.to_string(),
             codespace: tx_response.tx_result.codespace,
             code: tx_response.tx_result.code.value(),
             data: hex::encode(tx_response.tx_result.data),
@@ -86,7 +86,7 @@ impl<M: TxMessage> TryFrom<TxResponseRaw> for TxResponse<M> {
     fn try_from(
         TxResponseRaw {
             height,
-            tx_hash,
+            txhash,
             codespace,
             code,
             data,
@@ -102,7 +102,7 @@ impl<M: TxMessage> TryFrom<TxResponseRaw> for TxResponse<M> {
     ) -> Result<Self, Self::Error> {
         Ok(Self {
             height,
-            tx_hash,
+            txhash,
             codespace,
             code,
             data,
@@ -128,7 +128,7 @@ pub struct TxResponseRaw {
     #[prost(int64, tag = "1")]
     pub height: i64,
     #[prost(string, tag = "2")]
-    pub tx_hash: String,
+    pub txhash: String,
     #[prost(string, tag = "3")]
     pub codespace: String,
     #[prost(uint32, tag = "4")]
@@ -157,7 +157,7 @@ impl<M: TxMessage> From<TxResponse<M>> for TxResponseRaw {
     fn from(
         TxResponse {
             height,
-            tx_hash,
+            txhash,
             codespace,
             code,
             data,
@@ -173,7 +173,7 @@ impl<M: TxMessage> From<TxResponse<M>> for TxResponseRaw {
     ) -> Self {
         Self {
             height,
-            tx_hash,
+            txhash,
             codespace,
             code,
             data,
@@ -187,4 +187,23 @@ impl<M: TxMessage> From<TxResponse<M>> for TxResponseRaw {
             events,
         }
     }
+}
+
+/// BroadcastTxResponse is the response type for the
+/// Service.BroadcastTx method.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BroadcastTxResponse<M: TxMessage> {
+    /// tx_response is the queried TxResponses.
+    pub tx_response: Option<TxResponse<M>>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TxResponseLight {
+    pub txhash: String,
+    pub code: u32,
+    pub raw_log: String,
+}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BroadcastTxResponseLight {
+    pub tx_response: Option<TxResponseLight>,
 }
