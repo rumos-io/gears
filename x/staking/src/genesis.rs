@@ -1,5 +1,5 @@
 use crate::{
-    Delegation, LastValidatorPower, Params, Redelegation, UnbondingDelegation, Validators,
+    Delegation, LastValidatorPower, Redelegation, StakingParams, UnbondingDelegation, Validators,
 };
 use gears::{baseapp::genesis::Genesis, types::uint::Uint256};
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Default, Clone, Deserialize, Serialize)]
 pub struct GenesisState {
     /// params defines all the parameters of related to deposit.
-    pub params: Params,
+    pub params: StakingParams,
     /// validators defines the validator set at genesis.
     pub validators: Validators,
     pub last_total_power: Uint256,

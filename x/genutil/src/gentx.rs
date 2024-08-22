@@ -1,16 +1,25 @@
 use std::path::PathBuf;
 
-use gears::{application::handlers::client::TxHandler, commands::client::tx::TxCommand};
-use staking::{cli::tx::CreateValidatorCli, CreateValidator};
+use gears::{
+    application::handlers::client::TxHandler, commands::client::tx::TxCommand, store::StoreKey,
+    types::base::coins::UnsignedCoins,
+};
+use staking::CreateValidator;
+
+use crate::utils::{parse_staking_params_from_genesis, GenesisBalanceIter};
 
 #[derive(Debug, Clone)]
 pub struct GentxCmd {
-    pub validator: CreateValidatorCli,
+    pub coins: UnsignedCoins,
     pub output: Option<PathBuf>,
 }
 
-pub fn gentx_cmd(cmd: TxCommand<GentxCmd>) -> anyhow::Result<()> {
-    let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone())?;
+pub fn gentx_cmd<SK: StoreKey>(
+    cmd: TxCommand<GentxCmd>,
+    balance_sk: SK,
+    staking_sk: SK,
+) -> anyhow::Result<()> {
+    let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk)?;
 
     gears::commands::client::tx::run_tx(cmd, &gentx_handler)?;
 
@@ -18,12 +27,18 @@ pub fn gentx_cmd(cmd: TxCommand<GentxCmd>) -> anyhow::Result<()> {
 }
 
 #[derive(Debug, Clone)]
-struct GentxTxHandler {
+struct GentxTxHandler<SK> {
     output_dir: Option<PathBuf>,
+    pub balance_sk: SK,
+    pub staking_sk: SK,
 }
 
-impl GentxTxHandler {
-    pub fn new(output_dir: Option<PathBuf>) -> anyhow::Result<Self> {
+impl<SK> GentxTxHandler<SK> {
+    pub fn new(
+        output_dir: Option<PathBuf>,
+        balance_sk: SK,
+        staking_sk: SK,
+    ) -> anyhow::Result<Self> {
         match output_dir {
             Some(output_dir) => {
                 if output_dir.exists() && !output_dir.is_dir() {
@@ -34,29 +49,64 @@ impl GentxTxHandler {
 
                 Ok(Self {
                     output_dir: Some(output_dir),
+                    balance_sk,
+                    staking_sk,
                 })
             }
-            None => Ok(Self { output_dir: None }),
+            None => Ok(Self {
+                output_dir: None,
+                balance_sk,
+                staking_sk,
+            }),
         }
     }
 }
 
-impl TxHandler for GentxTxHandler {
+impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
     type Message = CreateValidator;
 
     type TxCommands = GentxCmd;
 
     fn prepare_tx(
         &self,
-        _client_tx_context: &gears::commands::client::tx::ClientTxContext,
-        command: Self::TxCommands,
+        client_tx_context: &gears::commands::client::tx::ClientTxContext,
+        Self::TxCommands { coins, output: _ }: Self::TxCommands,
         from_address: gears::types::address::AccAddress,
     ) -> anyhow::Result<gears::types::tx::Messages<Self::Message>> {
-        command
-            .validator
-            .clone()
-            .try_into_cmd(from_address)
-            .map(Into::into)
+        // check that the provided account has a sufficient balance in the set of genesis accounts.
+        let txs_iter = GenesisBalanceIter::new(
+            &self.balance_sk,
+            client_tx_context.home.join("config/genesis.json"), // todo: better way to get path to genesis file
+        )?
+        .into_inner();
+
+        match txs_iter.get(&from_address) {
+            Some(acc_coins) => {
+                let staking_params = parse_staking_params_from_genesis(
+                    &self.staking_sk,
+                    "params",
+                    client_tx_context.home.join("config/genesis.json"),
+                )?;
+
+                let bond_denom = staking_params.bond_denom();
+
+                if coins.amount_of(bond_denom) > acc_coins.amount_of(bond_denom) {
+                    Err(anyhow::anyhow!("account {from_address} has a balance in genesis, but it only has {}{bond_denom} available to stake, not {}{bond_denom}", 
+                    acc_coins.amount_of(bond_denom), coins.amount_of(bond_denom) ))?
+                }
+            }
+            None => Err(anyhow::anyhow!(
+                "account {from_address} does not have a balance in the genesis state"
+            ))?,
+        }
+
+        // command
+        //     .coins
+        //     .clone()
+        //     .try_into_cmd(from_address)
+        //     .map(Into::into)
+
+        todo!()
     }
 
     fn handle_tx(

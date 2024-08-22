@@ -45,10 +45,10 @@ fn run_tx_local(
     // a comment
     let mut responses = run_tx(
         TxCommand {
+            home,
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
                 from_key: from_key.to_owned(),
-                home,
             }),
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             chain_id: ChainId::from_str("test-chain")?,

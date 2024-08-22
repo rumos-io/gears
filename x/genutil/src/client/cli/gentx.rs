@@ -16,6 +16,7 @@ impl TryFrom<GentxCli> for GentxCmd {
     type Error = anyhow::Error;
 
     fn try_from(GentxCli { output, validator }: GentxCli) -> Result<Self, Self::Error> {
-        Ok(Self { validator, output })
+        // Ok(Self { validator, output })
+        todo!()
     }
 }

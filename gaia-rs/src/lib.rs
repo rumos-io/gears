@@ -148,7 +148,7 @@ impl AuxHandler for GaiaCoreClient {
                     println!("{genesis}");
                 }
                 genutil::cmd::GenesisCmd::Gentx(cmd) => {
-                    genutil::gentx::gentx_cmd(cmd)?;
+                    genutil::gentx::gentx_cmd(cmd, GaiaStoreKey::Bank, GaiaStoreKey::Staking)?;
                 }
             },
         }

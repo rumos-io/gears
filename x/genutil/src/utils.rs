@@ -4,6 +4,7 @@ use gears::{
     store::StoreKey,
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
+use staking::StakingParams;
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct GenesisBalance {
@@ -37,7 +38,11 @@ impl GenesisBalanceIter {
         ))
     }
 
-    pub fn into_inner(self) -> Vec<GenesisBalance> {
+    pub fn into_inner(self) -> HashMap<AccAddress, UnsignedCoins> {
+        self.0
+    }
+
+    pub fn into_vec(self) -> Vec<GenesisBalance> {
         self.0
             .into_iter()
             .map(|(address, coins)| GenesisBalance { address, coins })
@@ -53,4 +58,25 @@ impl IntoIterator for GenesisBalanceIter {
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
+}
+
+pub fn parse_staking_params_from_genesis<SK: StoreKey>(
+    sk: &SK,
+    params_str: &str,
+    genesis_path: impl AsRef<Path>,
+) -> anyhow::Result<StakingParams> {
+    let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(genesis_path)?)?;
+
+    let value = value
+        .get_mut("app_state")
+        .ok_or(anyhow::anyhow!("missing `app_state`"))?
+        .get_mut(sk.name())
+        .ok_or(anyhow::anyhow!("staking module is not found"))?
+        .get_mut(params_str)
+        .ok_or(anyhow::anyhow!("params is not found"))?
+        .take();
+
+    let result = serde_json::from_value::<StakingParams>(value)?;
+
+    Ok(result)
 }

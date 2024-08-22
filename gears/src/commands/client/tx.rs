@@ -18,6 +18,7 @@ use super::keys::KeyringBackend;
 
 #[derive(Debug, Clone, former::Former)]
 pub struct TxCommand<C> {
+    pub home: PathBuf,
     pub node: url::Url,
     pub chain_id: ChainId,
     pub fees: Option<UnsignedCoins>,
@@ -28,6 +29,7 @@ pub struct TxCommand<C> {
 #[allow(dead_code)]
 pub struct ClientTxContext {
     node: url::Url,
+    pub home: PathBuf,
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
     keyring: Keyring,
@@ -50,6 +52,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
     fn from(
         // to keep structure after changes in TxCommand
         TxCommand {
+            home,
             node,
             chain_id,
             fees,
@@ -58,6 +61,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
         }: &TxCommand<C>,
     ) -> Self {
         Self {
+            home: home.clone(),
             node: node.clone(),
             chain_id: chain_id.clone(),
             fees: fees.clone(),
@@ -76,7 +80,6 @@ pub enum Keyring {
 pub struct LocalInfo {
     pub keyring_backend: KeyringBackend,
     pub from_key: String,
-    pub home: PathBuf,
 }
 
 #[derive(Debug, Clone)]
@@ -139,7 +142,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                 .map(Into::into)
         }
         Keyring::Local(ref info) => {
-            let keyring_home = info.home.join(info.keyring_backend.get_sub_dir());
+            let keyring_home = command.home.join(info.keyring_backend.get_sub_dir());
             let key = keyring::key_by_name(
                 &info.from_key,
                 info.keyring_backend.to_keyring_backend(&keyring_home),

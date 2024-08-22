@@ -10,7 +10,7 @@ use gears::{
 use serde::{Deserialize, Serialize};
 use staking::CreateValidator;
 
-use crate::{balances_iter::GenesisBalanceIter, errors::SERDE_JSON_CONVERSION};
+use crate::{utils::GenesisBalanceIter, errors::SERDE_JSON_CONVERSION};
 
 #[derive(Debug, Clone)]
 pub struct CollectGentxCmd {
