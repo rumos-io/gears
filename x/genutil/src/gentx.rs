@@ -40,7 +40,7 @@ impl TxHandler for GentxTxHandler {
 
     fn prepare_tx(
         &self,
-        _client_tx_context: Option<&gears::commands::client::tx::ClientTxContext>,
+        _client_tx_context: &gears::commands::client::tx::ClientTxContext,
         command: Self::TxCommands,
         from_address: gears::types::address::AccAddress,
     ) -> anyhow::Result<gears::types::tx::Messages<Self::Message>> {

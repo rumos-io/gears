@@ -72,7 +72,7 @@ impl TxHandler for GaiaCoreClient {
 
     fn prepare_tx(
         &self,
-        ctx: Option<&ClientTxContext>,
+        ctx: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> Result<Messages<Self::Message>> {

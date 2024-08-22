@@ -76,7 +76,7 @@ pub trait TxHandler {
 
     fn prepare_tx(
         &self,
-        client_tx_context: Option<&ClientTxContext>,
+        client_tx_context: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>>;

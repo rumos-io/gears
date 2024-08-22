@@ -123,7 +123,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
             let key = LedgerProxyKey::new()?;
 
             let ctx = &(&command).into();
-            let messages = handler.prepare_tx(Some(ctx), command.inner, key.get_address())?;
+            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
             handler
                 .handle_tx(
                     handler.sign_msg(
@@ -146,7 +146,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
             )?;
 
             let ctx = &(&command).into();
-            let messages = handler.prepare_tx(Some(ctx), command.inner, key.get_address())?;
+            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
 
             if messages.chunk_size() > 0
             // TODO: uncomment and update logic when command will be extended by broadcast_mode

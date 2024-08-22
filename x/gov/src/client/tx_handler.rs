@@ -28,7 +28,7 @@ impl TxHandler for GovClientHandler {
 
     fn prepare_tx(
         &self,
-        _ctx: Option<&ClientTxContext>,
+        _ctx: &ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>> {
