@@ -56,7 +56,9 @@ fn run_tx_local(
             inner: WrappedGaiaTxCommands(command),
         },
         &GaiaCoreClient,
-    )?;
+    )?
+    .broadcast()
+    .expect("broadcast tx inside");
     assert_eq!(responses.len(), 1);
     Ok(responses.pop().expect("vector has exactly single element"))
 }

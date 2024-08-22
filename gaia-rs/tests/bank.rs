@@ -121,7 +121,10 @@ fn send_tx() -> anyhow::Result<()> {
             inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
         },
         &GaiaCoreClient,
-    )?;
+    )?
+    .broadcast()
+    .expect("broadcast tx inside");
+
     assert_eq!(responses.len(), 1);
     let Response {
         check_tx: _,

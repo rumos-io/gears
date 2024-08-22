@@ -86,6 +86,24 @@ pub enum RuntxResult {
     None,
 }
 
+impl RuntxResult {
+    pub fn broadcast(self) -> Option<Vec<Response>> {
+        match self {
+            Self::Broadcast(var) => Some(var),
+            Self::File(_) => None,
+            Self::None => None,
+        }
+    }
+
+    pub fn file(self) -> Option<PathBuf> {
+        match self {
+            Self::Broadcast(_) => None,
+            Self::File(var) => Some(var),
+            Self::None => None,
+        }
+    }
+}
+
 impl From<TxExecutionResult> for RuntxResult {
     fn from(value: TxExecutionResult) -> Self {
         match value {
