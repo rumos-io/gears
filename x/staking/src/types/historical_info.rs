@@ -1,8 +1,5 @@
 use crate::Validator;
-use gears::{
-    core::{errors::CoreError, Protobuf},
-    tendermint::{self, types::proto::header::Header},
-};
+use gears::{derive::Protobuf, tendermint::types::proto::header::Header};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -10,9 +7,12 @@ use std::cmp::Ordering;
 /// It is stored as part of staking module's state, which persists the `n` most
 /// recent HistoricalInfo
 /// (`n` is set by the staking module's `historical_entries` parameter).
-#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize, Protobuf)]
+#[proto(raw = "inner::HistoricalInfo")]
 pub struct HistoricalInfo {
+    #[proto(optional)]
     pub header: Header,
+    #[proto(repeated)]
     pub validators: Vec<Validator>,
 }
 
@@ -43,38 +43,3 @@ impl HistoricalInfo {
 mod inner {
     pub use gears::tendermint::types::proto::header::HistoricalInfo;
 }
-
-impl From<HistoricalInfo> for inner::HistoricalInfo {
-    fn from(historical_info: HistoricalInfo) -> Self {
-        inner::HistoricalInfo {
-            header: Some(historical_info.header.into()),
-            validators: historical_info
-                .validators
-                .into_iter()
-                .map(Into::into)
-                .collect(),
-        }
-    }
-}
-
-impl TryFrom<inner::HistoricalInfo> for HistoricalInfo {
-    type Error = CoreError;
-
-    fn try_from(value: inner::HistoricalInfo) -> Result<Self, Self::Error> {
-        let header = value
-            .header
-            .ok_or(CoreError::MissingField("Missing field 'header'.".into()))?
-            .try_into()
-            .map_err(|e: tendermint::error::Error| CoreError::DecodeGeneral(e.to_string()))?;
-        Ok(HistoricalInfo {
-            header,
-            validators: value
-                .validators
-                .into_iter()
-                .map(TryInto::try_into)
-                .collect::<Result<Vec<Validator>, _>>()?,
-        })
-    }
-}
-
-impl Protobuf<inner::HistoricalInfo> for HistoricalInfo {}
