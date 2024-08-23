@@ -4,6 +4,9 @@ use thiserror::Error;
 
 use crate::types::proto::crypto::PublicKey;
 
+pub use tendermint_informal::PrivateKey;
+pub use tendermint_informal::private_key::Ed25519;
+
 pub fn new_private_key() -> tendermint_informal::PrivateKey {
     let csprng = OsRng {};
     let signing_key = SigningKey::new(csprng);

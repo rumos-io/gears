@@ -3,8 +3,7 @@ use std::{net::SocketAddr, path::PathBuf};
 use gears::{
     application::handlers::client::TxHandler,
     commands::client::tx::TxCommand,
-    crypto::keys::GearsPublicKey,
-    keyring::key::pair::KeyPair,
+    crypto::{ed25519::Ed25519PubKey, public::PublicKey},
     store::StoreKey,
     types::{
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
@@ -142,18 +141,25 @@ impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
         }
 
         let pub_key = match pubkey {
-            Some(var) => var,
+            Some(var) => PublicKey::from(var),
             None => {
                 #[derive(serde::Deserialize)]
                 struct NodeKeyJson {
-                    pub priv_key: KeyPair,
+                    pub priv_key: gears::tendermint::crypto::PrivateKey,
                 }
 
                 let key: NodeKeyJson = serde_json::from_reader(std::fs::File::open(
                     client_tx_context.home.join("config/node_key.json"),
                 )?)?;
 
-                key.priv_key.get_gears_public_key().into()
+                let key = match key.priv_key {
+                    gears::tendermint::crypto::PrivateKey::Ed25519(var) => PublicKey::Ed25519(
+                        Ed25519PubKey::try_from(var.verification_key().as_bytes().to_vec())?,
+                    ),
+                    _ => unreachable!(),
+                };
+
+                key
             }
         };
 
@@ -173,7 +179,7 @@ impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
             min_self_delegation,
             delegator_address: from_address.clone(),
             validator_address: from_address.into(),
-            pub_key,
+            pub_key: pub_key.into(),
             value: amount,
         });
 
