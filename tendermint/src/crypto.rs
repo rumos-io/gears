@@ -4,8 +4,8 @@ use thiserror::Error;
 
 use crate::types::proto::crypto::PublicKey;
 
-pub use tendermint_informal::PrivateKey;
 pub use tendermint_informal::private_key::Ed25519;
+pub use tendermint_informal::PrivateKey;
 
 pub fn new_private_key() -> tendermint_informal::PrivateKey {
     let csprng = OsRng {};

@@ -77,12 +77,16 @@ pub trait TxHandler {
 
     fn prepare_tx(
         &self,
-        client_tx_context: &ClientTxContext,
+        client_tx_context: &mut ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
-    fn account(&self, address: AccAddress, client_tx_context: &ClientTxContext,) -> anyhow::Result<Option<Account>> {
+    fn account(
+        &self,
+        address: AccAddress,
+        client_tx_context: &mut ClientTxContext,
+    ) -> anyhow::Result<Option<Account>> {
         Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
     }
 
@@ -94,7 +98,7 @@ pub trait TxHandler {
         chain_id: ChainId,
         fees: Option<UnsignedCoins>,
         mode: SignMode,
-        client_tx_context: &ClientTxContext,
+        client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<Tx<Self::Message>> {
         let fee = Fee {
             amount: fees,
@@ -148,9 +152,11 @@ pub trait TxHandler {
     fn handle_tx(
         &self,
         raw_tx: Tx<Self::Message>,
-        node: url::Url,
+        client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<TxExecutionResult> {
-        let client = HttpClient::new(tendermint::rpc::url::Url::try_from(node)?)?;
+        let client = HttpClient::new(tendermint::rpc::url::Url::try_from(
+            client_tx_context.node.clone(),
+        )?)?;
         broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
     }
 }

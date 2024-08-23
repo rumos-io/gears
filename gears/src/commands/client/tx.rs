@@ -26,6 +26,7 @@ pub struct TxCommand<C> {
     pub inner: C,
 }
 
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct ClientTxContext {
     pub node: url::Url,
@@ -33,6 +34,7 @@ pub struct ClientTxContext {
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
     keyring: Keyring,
+    pub memo: Option<String>,
 }
 
 impl ClientTxContext {
@@ -66,6 +68,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
             chain_id: chain_id.clone(),
             fees: fees.clone(),
             keyring: keyring.clone(),
+            memo: None,
         }
     }
 }
@@ -125,7 +128,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
         Keyring::Ledger => {
             let key = LedgerProxyKey::new()?;
 
-            let ctx = &(&command).into();
+            let ctx = &mut (&command).into();
             let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
             handler
                 .handle_tx(
@@ -136,9 +139,9 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                         command.chain_id,
                         command.fees,
                         SignMode::Textual,
-                        &ctx,
+                        ctx,
                     )?,
-                    command.node,
+                    ctx,
                 )
                 .map(Into::into)
         }
@@ -149,7 +152,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                 info.keyring_backend.to_keyring_backend(&keyring_home),
             )?;
 
-            let ctx = &(&command).into();
+            let ctx = &mut (&command).into();
             let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
 
             if messages.chunk_size() > 0
@@ -174,9 +177,9 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                                     command.chain_id.clone(),
                                     command.fees.clone(),
                                     SignMode::Direct,
-                                    &ctx,
+                                    ctx,
                                 )?,
-                                command.node.clone(),
+                                ctx,
                             )?
                             .broadcast()
                             .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
@@ -194,9 +197,9 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                             command.chain_id,
                             command.fees,
                             SignMode::Direct,
-                            &ctx,
+                            ctx,
                         )?,
-                        command.node,
+                        ctx,
                     )
                     .map(Into::into)
             }

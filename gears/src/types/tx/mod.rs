@@ -62,7 +62,6 @@ pub struct Messages<T: TxMessage> {
     /// A number of messages in the transaction. Zero means unlimited number of messages.
     /// Default is 0
     chunk_size: usize,
-    pub memo: Option<String>, // TODO:NOW BETTER IDEA FOR IT
 }
 
 impl<T: TxMessage> Messages<T> {
@@ -70,7 +69,6 @@ impl<T: TxMessage> Messages<T> {
         Ok(Messages {
             messages: messages.try_into().map_err(|_| EmptyMessagesError)?,
             chunk_size,
-            memo: None,
         })
     }
 
@@ -89,7 +87,6 @@ impl<T: TxMessage> From<T> for Messages<T> {
         Self {
             messages: vec1![value],
             chunk_size: 0,
-            memo: None,
         }
     }
 }

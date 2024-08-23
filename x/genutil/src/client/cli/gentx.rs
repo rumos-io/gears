@@ -56,7 +56,7 @@ pub struct GentxCli {
     pub ip: SocketAddr,
     /// The node's NodeID
     #[arg(long)]
-    pub node_id: String,
+    pub node_id: Option<String>,
 }
 
 impl TryFrom<GentxCli> for GentxCmd {
@@ -80,11 +80,6 @@ impl TryFrom<GentxCli> for GentxCmd {
             min_self_delegation,
         }: GentxCli,
     ) -> Result<Self, Self::Error> {
-        let node_id = match node_id.is_empty() {
-            true => None,
-            false => Some(node_id),
-        };
-
         Ok(Self {
             output,
             node_id,

@@ -2,7 +2,7 @@ use std::{net::SocketAddr, path::PathBuf};
 
 use gears::{
     application::handlers::client::TxHandler,
-    commands::client::tx::TxCommand,
+    commands::client::tx::{ClientTxContext, TxCommand},
     crypto::{ed25519::Ed25519PubKey, public::PublicKey},
     types::{
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
@@ -97,7 +97,7 @@ impl TxHandler for GentxTxHandler {
 
     fn prepare_tx(
         &self,
-        client_tx_context: &gears::commands::client::tx::ClientTxContext,
+        client_tx_context: &mut ClientTxContext,
         Self::TxCommands {
             pubkey,
             amount,
@@ -168,7 +168,7 @@ impl TxHandler for GentxTxHandler {
             }
         };
 
-        let mut tx = Messages::from(CreateValidator {
+        let tx = Messages::from(CreateValidator {
             description: Description {
                 moniker,
                 identity,
@@ -188,9 +188,9 @@ impl TxHandler for GentxTxHandler {
             value: amount,
         });
 
-        tx.memo = Some(format!(
+        client_tx_context.memo = Some(format!(
             "{}@{ip}",
-            node_id.ok_or(anyhow::anyhow!("node_id is required"))? // TODO: Read node_id from https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L68-L76
+            node_id.unwrap_or("TODO:TODO:TODO".to_owned()) // TODO: Read node_id from https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L68-L76
         ));
 
         Ok(tx)
@@ -199,7 +199,7 @@ impl TxHandler for GentxTxHandler {
     fn account(
         &self,
         address: gears::types::address::AccAddress,
-        client_tx_context: &gears::commands::client::tx::ClientTxContext,
+        client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<Option<gears::types::account::Account>> {
         GenesisAccounts::new(
             self.auth_sk,
@@ -210,9 +210,13 @@ impl TxHandler for GentxTxHandler {
 
     fn handle_tx(
         &self,
-        tx: gears::types::tx::Tx<Self::Message>,
-        _node: url::Url,
+        mut tx: gears::types::tx::Tx<Self::Message>,
+        client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<gears::application::handlers::client::TxExecutionResult> {
+        if let Some(memo) = client_tx_context.memo.take() {
+            tx.body.memo = memo;
+        }
+
         let tx_str = serde_json::to_string_pretty(&tx)?;
         match self.output_dir.clone() {
             Some(dir) => {
