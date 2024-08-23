@@ -1,17 +1,39 @@
-use std::path::PathBuf;
+use std::{net::SocketAddr, path::PathBuf};
 
 use gears::{
-    application::handlers::client::TxHandler, commands::client::tx::TxCommand, store::StoreKey,
-    types::base::coins::UnsignedCoins,
+    application::handlers::client::TxHandler,
+    commands::client::tx::TxCommand,
+    store::StoreKey,
+    types::{
+        base::{coin::UnsignedCoin, coins::UnsignedCoins},
+        decimal256::Decimal256,
+        tx::Messages,
+        uint::Uint256,
+    },
 };
-use staking::CreateValidator;
+use staking::{CommissionRates, CreateValidator, Description};
 
 use crate::utils::{parse_staking_params_from_genesis, GenesisBalanceIter};
 
+use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
+
 #[derive(Debug, Clone)]
 pub struct GentxCmd {
-    pub coins: UnsignedCoins,
+    pub pubkey: Option<TendermintPublicKey>,
+    pub amount: UnsignedCoin,
+    pub moniker: String,
+    pub identity: String,
+    pub website: String,
+    pub security_contact: String,
+    pub details: String,
+    pub commission_rate: Decimal256,
+    pub commission_max_rate: Decimal256,
+    pub commission_max_change_rate: Decimal256,
+    pub min_self_delegation: Uint256,
+
     pub output: Option<PathBuf>,
+    pub ip: SocketAddr,
+    pub node_id: Option<String>,
 }
 
 pub fn gentx_cmd<SK: StoreKey>(
@@ -70,9 +92,26 @@ impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
     fn prepare_tx(
         &self,
         client_tx_context: &gears::commands::client::tx::ClientTxContext,
-        Self::TxCommands { coins, output: _ }: Self::TxCommands,
+        Self::TxCommands {
+            pubkey,
+            amount,
+            moniker,
+            identity,
+            website,
+            security_contact,
+            details,
+            commission_rate,
+            commission_max_rate,
+            commission_max_change_rate,
+            min_self_delegation,
+            output: _,
+            ip,
+            node_id,
+        }: Self::TxCommands,
         from_address: gears::types::address::AccAddress,
     ) -> anyhow::Result<gears::types::tx::Messages<Self::Message>> {
+        let coins = UnsignedCoins::new([amount.clone()]).expect("hardcoded coin"); // I don't want to comment this code. See: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L118-L147
+
         // check that the provided account has a sufficient balance in the set of genesis accounts.
         let txs_iter = GenesisBalanceIter::new(
             &self.balance_sk,
@@ -100,13 +139,37 @@ impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
             ))?,
         }
 
-        // command
-        //     .coins
-        //     .clone()
-        //     .try_into_cmd(from_address)
-        //     .map(Into::into)
+        let pub_key = match pubkey {
+            Some(var) => var,
+            None => todo!(),
+        };
 
-        todo!()
+        let mut tx = Messages::from(CreateValidator {
+            description: Description {
+                moniker,
+                identity,
+                website,
+                security_contact,
+                details,
+            },
+            commission: CommissionRates::new(
+                commission_rate,
+                commission_max_rate,
+                commission_max_change_rate,
+            )?,
+            min_self_delegation,
+            delegator_address: from_address.clone(),
+            validator_address: from_address.into(),
+            pub_key,
+            value: amount,
+        });
+
+        tx.memo = Some(format!(
+            "{}@{ip}",
+            node_id.ok_or(anyhow::anyhow!("node_id is required"))? // TODO: Read node_id from https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L68-L76
+        ));
+
+        Ok(tx)
     }
 
     fn handle_tx(
