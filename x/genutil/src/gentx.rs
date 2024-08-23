@@ -14,7 +14,7 @@ use gears::{
 };
 use staking::{CommissionRates, CreateValidator, Description};
 
-use crate::utils::{parse_staking_params_from_genesis, GenesisBalanceIter};
+use crate::utils::{parse_staking_params_from_genesis, GenesisAccounts, GenesisBalanceIter};
 
 use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
 
@@ -41,8 +41,10 @@ pub fn gentx_cmd<SK: StoreKey>(
     cmd: TxCommand<GentxCmd>,
     balance_sk: SK,
     staking_sk: SK,
+    auth_sk: SK,
 ) -> anyhow::Result<()> {
-    let gentx_handler = GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk)?;
+    let gentx_handler =
+        GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk, auth_sk)?;
 
     gears::commands::client::tx::run_tx(cmd, &gentx_handler)?;
 
@@ -54,6 +56,7 @@ struct GentxTxHandler<SK> {
     output_dir: Option<PathBuf>,
     pub balance_sk: SK,
     pub staking_sk: SK,
+    pub auth_sk: SK,
 }
 
 impl<SK> GentxTxHandler<SK> {
@@ -61,6 +64,7 @@ impl<SK> GentxTxHandler<SK> {
         output_dir: Option<PathBuf>,
         balance_sk: SK,
         staking_sk: SK,
+        auth_sk: SK,
     ) -> anyhow::Result<Self> {
         match output_dir {
             Some(output_dir) => {
@@ -74,12 +78,14 @@ impl<SK> GentxTxHandler<SK> {
                     output_dir: Some(output_dir),
                     balance_sk,
                     staking_sk,
+                    auth_sk,
                 })
             }
             None => Ok(Self {
                 output_dir: None,
                 balance_sk,
                 staking_sk,
+                auth_sk,
             }),
         }
     }
@@ -189,6 +195,18 @@ impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
         ));
 
         Ok(tx)
+    }
+
+    fn account(
+        &self,
+        address: gears::types::address::AccAddress,
+        client_tx_context: &gears::commands::client::tx::ClientTxContext,
+    ) -> anyhow::Result<Option<gears::types::account::Account>> {
+        GenesisAccounts::new(
+            &self.auth_sk,
+            client_tx_context.home.join("config/node_key.json"),
+        )
+        .map(|this| this.into_inner().remove(&address))
     }
 
     fn handle_tx(

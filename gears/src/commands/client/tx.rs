@@ -28,7 +28,7 @@ pub struct TxCommand<C> {
 
 #[allow(dead_code)]
 pub struct ClientTxContext {
-    node: url::Url,
+    pub node: url::Url,
     pub home: PathBuf,
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
@@ -136,6 +136,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                         command.chain_id,
                         command.fees,
                         SignMode::Textual,
+                        &ctx,
                     )?,
                     command.node,
                 )
@@ -173,6 +174,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                                     command.chain_id.clone(),
                                     command.fees.clone(),
                                     SignMode::Direct,
+                                    &ctx,
                                 )?,
                                 command.node.clone(),
                             )?
@@ -192,6 +194,7 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                             command.chain_id,
                             command.fees,
                             SignMode::Direct,
+                            &ctx,
                         )?,
                         command.node,
                     )

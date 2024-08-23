@@ -13,6 +13,7 @@ use crate::{
     runtime::runtime,
     signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
+        account::Account,
         address::AccAddress,
         auth::fee::Fee,
         base::coins::UnsignedCoins,
@@ -81,6 +82,10 @@ pub trait TxHandler {
         from_address: AccAddress,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
+    fn account(&self, address: AccAddress, client_tx_context: &ClientTxContext,) -> anyhow::Result<Option<Account>> {
+        Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
+    }
+
     fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey>(
         &self,
         msgs: Messages<Self::Message>,
@@ -89,6 +94,7 @@ pub trait TxHandler {
         chain_id: ChainId,
         fees: Option<UnsignedCoins>,
         mode: SignMode,
+        client_tx_context: &ClientTxContext,
     ) -> anyhow::Result<Tx<Self::Message>> {
         let fee = Fee {
             amount: fees,
@@ -101,10 +107,8 @@ pub trait TxHandler {
 
         let address = key.get_address();
 
-        let account = get_account_latest(address.to_owned(), node.as_str())?;
-
-        let account = account
-            .account
+        let account = self
+            .account(address.to_owned(), client_tx_context)?
             .ok_or_else(|| anyhow!("account not found: {}", address))?;
 
         let signing_infos = vec![SigningInfo {
