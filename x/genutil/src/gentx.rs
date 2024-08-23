@@ -168,6 +168,11 @@ impl TxHandler for GentxTxHandler {
             }
         };
 
+        client_tx_context.memo = Some(format!(
+            "{}@{ip}",
+            node_id.unwrap_or(pub_key.get_address().as_hex())
+        ));
+
         let tx = Messages::from(CreateValidator {
             description: Description {
                 moniker,
@@ -187,11 +192,6 @@ impl TxHandler for GentxTxHandler {
             pubkey: pub_key.into(),
             value: amount,
         });
-
-        client_tx_context.memo = Some(format!(
-            "{}@{ip}",
-            node_id.unwrap_or("TODO:TODO:TODO".to_owned()) // TODO: Read node_id from https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L68-L76
-        ));
 
         Ok(tx)
     }
