@@ -184,7 +184,7 @@ impl TxHandler for GentxTxHandler {
             min_self_delegation,
             delegator_address: from_address.clone(),
             validator_address: from_address.into(),
-            pub_key: pub_key.into(),
+            pubkey: pub_key.into(),
             value: amount,
         });
 

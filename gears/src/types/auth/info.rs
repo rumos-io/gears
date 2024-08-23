@@ -32,6 +32,7 @@ pub struct AuthInfo {
     // `TipDecorator` in its posthandler.
     //
     // Since: cosmos-sdk 0.46
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub tip: Option<Tip>,
 }
 

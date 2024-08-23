@@ -95,7 +95,7 @@ impl CreateValidatorCli {
             min_self_delegation,
             delegator_address,
             validator_address,
-            pub_key: pubkey.clone(),
+            pubkey: pubkey.clone(),
             value: amount.clone(),
         };
 

@@ -27,11 +27,11 @@ impl<
             return Err(anyhow::anyhow!("Account {} exists", msg.validator_address));
         };
 
-        let cons_addr: ConsAddress = msg.pub_key.clone().into();
+        let cons_addr: ConsAddress = msg.pubkey.clone().into();
         if self.validator_by_cons_addr(ctx, &cons_addr)?.is_some() {
             return Err(anyhow::anyhow!(
                 "Public key {} exists",
-                ConsAddress::from(msg.pub_key.clone())
+                ConsAddress::from(msg.pubkey.clone())
             ));
         }
 
@@ -46,7 +46,7 @@ impl<
         msg.description.ensure_length()?;
 
         let consensus_validators = &ctx.consensus_params().validator;
-        let pub_key_type = msg.pub_key.str_type();
+        let pub_key_type = msg.pubkey.str_type();
         if !consensus_validators
             .pub_key_types
             .iter()
@@ -57,7 +57,7 @@ impl<
 
         let mut validator = Validator::new_with_defaults(
             msg.validator_address.clone(),
-            msg.pub_key.clone(),
+            msg.pubkey.clone(),
             msg.description.clone(),
         );
 

@@ -45,7 +45,7 @@ pub struct GentxCli {
     #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 2).unwrap())]
     pub commission_max_change_rate: Decimal256,
     /// The minimum self delegation required on the validator
-    #[arg(long, default_value_t = Uint256::one())]
+    #[arg(long, default_value_t = Uint256::zero())]
     pub min_self_delegation: Uint256,
 
     /// Output dir to place a new tx file

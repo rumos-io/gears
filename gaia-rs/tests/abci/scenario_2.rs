@@ -52,7 +52,7 @@ fn scenario_2() {
             min_self_delegation: Uint256::from(100u32),
             delegator_address: user_1.address(),
             validator_address: user_1.address().into(),
-            pub_key: consensus_pub_key,
+            pubkey: consensus_pub_key,
             value: "10000uatom".parse().unwrap(),
         }));
 
