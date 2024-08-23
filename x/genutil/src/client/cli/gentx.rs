@@ -14,6 +14,7 @@ const DEFAULT_NODE_IP: SocketAddr = socket_addr!(192, 168, 1, 106, 26656);
 #[derive(Args, Debug, Clone)]
 pub struct GentxCli {
     /// The validator's Protobuf JSON encoded public key
+    #[arg(long)]
     pub pubkey: Option<TendermintPublicKey>,
     /// Amount of coins to bond
     pub amount: UnsignedCoin,
@@ -21,16 +22,16 @@ pub struct GentxCli {
     pub moniker: String,
     /// The optional identity signature (ex. UPort or Keybase)
     #[arg(long)]
-    pub identity: String,
+    pub identity: Option<String>,
     /// The validator's (optional) website
     #[arg(long)]
-    pub website: String,
+    pub website: Option<String>,
     /// The validator's (optional) security contact email
     #[arg(long)]
-    pub security_contact: String,
+    pub security_contact: Option<String>,
     /// The validator's (optional) details
     #[arg(long)]
-    pub details: String,
+    pub details: Option<String>,
     /// The initial commission rate percentage
     /* 0.1 */
     #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 1).unwrap())]
@@ -91,10 +92,10 @@ impl TryFrom<GentxCli> for GentxCmd {
             pubkey,
             amount,
             moniker,
-            identity,
-            website,
-            security_contact,
-            details,
+            identity: identity.unwrap_or_default(),
+            website: website.unwrap_or_default(),
+            security_contact: security_contact.unwrap_or_default(),
+            details: details.unwrap_or_default(),
             commission_rate,
             commission_max_rate,
             commission_max_change_rate,

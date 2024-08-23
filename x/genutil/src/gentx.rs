@@ -3,6 +3,8 @@ use std::{net::SocketAddr, path::PathBuf};
 use gears::{
     application::handlers::client::TxHandler,
     commands::client::tx::TxCommand,
+    crypto::keys::GearsPublicKey,
+    keyring::key::pair::KeyPair,
     store::StoreKey,
     types::{
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
@@ -141,7 +143,18 @@ impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
 
         let pub_key = match pubkey {
             Some(var) => var,
-            None => todo!(),
+            None => {
+                #[derive(serde::Deserialize)]
+                struct NodeKeyJson {
+                    pub priv_key: KeyPair,
+                }
+
+                let key: NodeKeyJson = serde_json::from_reader(std::fs::File::open(
+                    client_tx_context.home.join("config/node_key.json"),
+                )?)?;
+
+                key.priv_key.get_gears_public_key().into()
+            }
         };
 
         let mut tx = Messages::from(CreateValidator {

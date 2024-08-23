@@ -20,6 +20,10 @@ pub mod utils;
 #[cfg(feature = "xmods")]
 pub mod x;
 
+pub mod keyring {
+    pub use keyring::*;
+}
+
 pub mod core {
     pub use core_types::*;
 }
