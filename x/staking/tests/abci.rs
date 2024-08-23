@@ -48,7 +48,7 @@ fn test_init_and_few_blocks() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
-        "8ac50c72eb261112e2fabef56a8bd022b8bcb1fc488ca8894654f132579f6bbf"
+        "67647df38f8fe610ef4c15581f73ac76d4c8598f02db3fb3cf23052a9de7da22"
     );
 
     node.skip_steps(100);
@@ -56,7 +56,7 @@ fn test_init_and_few_blocks() {
     let app_hash = node.step(vec![], Timestamp::UNIX_EPOCH);
     assert_eq!(
         data_encoding::HEXLOWER.encode(app_hash),
-        "4f6f2f29e65d8252fb617b91ad4658eda067cc8f627209ddc1ceed1bd55369d1"
+        "0b82cabbbe14529b18ce923a4599cfa8ce5b9557fc8bf3d9a430af4858de3632"
     );
 }
 

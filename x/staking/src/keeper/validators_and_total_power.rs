@@ -123,15 +123,15 @@ impl<
         let max_validators = self.staking_params_keeper.try_get(ctx)?.max_validators() as usize;
         let mut validators = Vec::with_capacity(max_validators);
         for (i, next) in validators_store.into_range(..).enumerate() {
-            let (_k, v) = next?;
+            let (k, _v) = next?;
             assert!(
                 i < max_validators,
                 "more validators than maxValidators found"
             );
-            let last_validator: LastValidatorPower = serde_json::from_slice(&v).unwrap_or_corrupt();
+            let last_validator = ValAddress::try_from_prefix_length_bytes(&k).unwrap_or_corrupt();
             let validator = self
-                .validator(ctx, &last_validator.address)?
-                .expect("validator stored in last validators queue should be presented in store");
+                .validator(ctx, &last_validator)?
+                .expect("validator stored in last validators queue should be present in store");
             validators.push(validator);
         }
         Ok(validators)

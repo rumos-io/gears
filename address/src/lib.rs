@@ -78,6 +78,23 @@ impl<const PREFIX: u8> BaseAddress<PREFIX> {
         [&[len], self.0.as_slice()].concat()
     }
 
+    /// Returns the address bytes with the length prefix removed.
+    pub fn try_from_prefix_length_bytes(v: &[u8]) -> Result<Self, AddressError> {
+        if v.is_empty() {
+            return Err(AddressError::EmptyAddress);
+        }
+
+        let len = v[0] as usize;
+        if v.len() != len + 1 {
+            return Err(AddressError::InvalidLengthPrefix {
+                prefix: v[0],
+                found: v.len() - 1,
+            });
+        }
+
+        v[1..].try_into()
+    }
+
     pub fn as_hex(&self) -> String {
         data_encoding::HEXLOWER.encode(&self.0)
     }
@@ -231,8 +248,11 @@ pub enum AddressError {
     #[error("invalid length, max length is: {max:?}, found {found:?})")]
     InvalidLength { max: u8, found: usize },
 
-    #[error("bech32 decode error: address is empty")]
+    #[error("address is empty")]
     EmptyAddress,
+
+    #[error("length prefix does not match length (prefix length {prefix:?}, found {found:?})")]
+    InvalidLengthPrefix { prefix: u8, found: usize },
 }
 
 #[cfg(test)]

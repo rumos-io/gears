@@ -1,5 +1,5 @@
 use crate::Validator;
-use gears::tendermint::types::proto::header::Header;
+use gears::{derive::Protobuf, tendermint::types::proto::header::Header};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 
@@ -7,10 +7,13 @@ use std::cmp::Ordering;
 /// It is stored as part of staking module's state, which persists the `n` most
 /// recent HistoricalInfo
 /// (`n` is set by the staking module's `historical_entries` parameter).
-#[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Clone, Deserialize, Serialize, Protobuf)]
+#[proto(raw = "inner::HistoricalInfo")]
 pub struct HistoricalInfo {
-    header: Header,
-    validators: Vec<Validator>,
+    #[proto(optional)]
+    pub header: Header,
+    #[proto(repeated)]
+    pub validators: Vec<Validator>,
 }
 
 impl HistoricalInfo {
@@ -35,4 +38,8 @@ impl HistoricalInfo {
         validators.sort_by(|v1, v2| less(v1, v2, power_reduction));
         HistoricalInfo { header, validators }
     }
+}
+
+mod inner {
+    pub use gears::tendermint::types::proto::header::HistoricalInfo;
 }

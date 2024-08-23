@@ -143,10 +143,10 @@ impl ABCIHandler for GaiaABCIHandler {
 
     fn begin_block<'a, DB: Database>(
         &self,
-        _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
-        _request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
+        ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
+        request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
     ) {
-        //self.staking_abci_handler.begin_block(ctx, request);
+        self.staking_abci_handler.begin_block(ctx, request);
     }
 
     fn end_block<'a, DB: Database>(

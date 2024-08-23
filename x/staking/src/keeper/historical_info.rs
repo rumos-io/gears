@@ -1,6 +1,8 @@
 use super::*;
 use crate::{historical_info_key, HistoricalInfo};
+use gears::core::Protobuf;
 use gears::{store::database::ext::UnwrapCorrupt, types::store::gas::ext::GasResultExt};
+use prost::bytes::Bytes;
 
 impl<
         SK: StoreKey,
@@ -24,7 +26,6 @@ impl<
         // and then return at the first empty entry.
 
         if ctx.height() >= entry_num {
-            // if (ctx.height() as i64 - entry_num as i64) >= 0 {
             for i in (0..=(ctx.height() - entry_num)).rev() {
                 if let Some(_info) = self.historical_info(ctx, i).unwrap_gas() {
                     self.delete_historical_info(ctx, i).unwrap();
@@ -59,11 +60,10 @@ impl<
         height: u32,
     ) -> Result<Option<HistoricalInfo>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);
-        let store = store.prefix_store(HISTORICAL_INFO_KEY);
         let key = historical_info_key(height);
         Ok(store
             .get(&key)?
-            .map(|bytes| serde_json::from_slice(&bytes).unwrap_or_corrupt()))
+            .map(|bytes| HistoricalInfo::decode::<Bytes>(bytes.into()).unwrap_or_corrupt()))
     }
 
     /// delete_historical_info deletes the historical info at a given height
@@ -72,8 +72,7 @@ impl<
         ctx: &mut CTX,
         height: u32,
     ) -> Result<Option<Vec<u8>>, GasStoreErrors> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut store = store.prefix_store_mut(HISTORICAL_INFO_KEY);
+        let mut store = ctx.kv_store_mut(&self.store_key);
         let key = historical_info_key(height);
         store.delete(&key)
     }
@@ -85,10 +84,9 @@ impl<
         height: u32,
         info: &HistoricalInfo,
     ) -> Result<(), GasStoreErrors> {
-        let store = ctx.kv_store_mut(&self.store_key);
-        let mut store = store.prefix_store_mut(HISTORICAL_INFO_KEY);
+        let mut store = ctx.kv_store_mut(&self.store_key);
         let key = historical_info_key(height);
-        let info = serde_json::to_vec(&info).expect(SERDE_ENCODING_DOMAIN_TYPE);
+        let info = info.encode_vec();
         store.set(key, info)
     }
 }

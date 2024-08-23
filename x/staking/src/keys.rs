@@ -24,10 +24,7 @@ pub fn length_prefixed_val_del_addrs_key(
 }
 
 pub fn historical_info_key(height: u32) -> Vec<u8> {
-    let mut res = Vec::with_capacity(9);
-    res.extend_from_slice(&HISTORICAL_INFO_KEY);
-    res.extend_from_slice(&height.to_le_bytes());
-    res
+    [&HISTORICAL_INFO_KEY, height.to_string().as_bytes()].concat()
 }
 
 pub(super) fn validator_queue_key(end_time: &Timestamp, end_height: u32) -> Vec<u8> {
