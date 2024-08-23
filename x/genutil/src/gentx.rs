@@ -4,7 +4,6 @@ use gears::{
     application::handlers::client::TxHandler,
     commands::client::tx::TxCommand,
     crypto::{ed25519::Ed25519PubKey, public::PublicKey},
-    store::StoreKey,
     types::{
         base::{coin::UnsignedCoin, coins::UnsignedCoins},
         decimal256::Decimal256,
@@ -37,11 +36,11 @@ pub struct GentxCmd {
     pub node_id: Option<String>,
 }
 
-pub fn gentx_cmd<SK: StoreKey>(
+pub fn gentx_cmd(
     cmd: TxCommand<GentxCmd>,
-    balance_sk: SK,
-    staking_sk: SK,
-    auth_sk: SK,
+    balance_sk: &'static str,
+    staking_sk: &'static str,
+    auth_sk: &'static str,
 ) -> anyhow::Result<()> {
     let gentx_handler =
         GentxTxHandler::new(cmd.inner.output.clone(), balance_sk, staking_sk, auth_sk)?;
@@ -52,19 +51,19 @@ pub fn gentx_cmd<SK: StoreKey>(
 }
 
 #[derive(Debug, Clone)]
-struct GentxTxHandler<SK> {
+struct GentxTxHandler {
     output_dir: Option<PathBuf>,
-    pub balance_sk: SK,
-    pub staking_sk: SK,
-    pub auth_sk: SK,
+    pub balance_sk: &'static str,
+    pub staking_sk: &'static str,
+    pub auth_sk: &'static str,
 }
 
-impl<SK> GentxTxHandler<SK> {
+impl GentxTxHandler {
     pub fn new(
         output_dir: Option<PathBuf>,
-        balance_sk: SK,
-        staking_sk: SK,
-        auth_sk: SK,
+        balance_sk: &'static str,
+        staking_sk: &'static str,
+        auth_sk: &'static str,
     ) -> anyhow::Result<Self> {
         match output_dir {
             Some(output_dir) => {
@@ -91,7 +90,7 @@ impl<SK> GentxTxHandler<SK> {
     }
 }
 
-impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
+impl TxHandler for GentxTxHandler {
     type Message = CreateValidator;
 
     type TxCommands = GentxCmd;
@@ -203,8 +202,8 @@ impl<SK: StoreKey> TxHandler for GentxTxHandler<SK> {
         client_tx_context: &gears::commands::client::tx::ClientTxContext,
     ) -> anyhow::Result<Option<gears::types::account::Account>> {
         GenesisAccounts::new(
-            &self.auth_sk,
-            client_tx_context.home.join("config/node_key.json"),
+            self.auth_sk,
+            client_tx_context.home.join("config/genesis.json"),
         )
         .map(|this| this.into_inner().remove(&address))
     }

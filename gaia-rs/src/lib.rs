@@ -36,7 +36,6 @@ use serde::Serialize;
 use staking::cli::query::StakingQueryHandler;
 use staking::StakingNodeQueryRequest;
 use staking::StakingNodeQueryResponse;
-use store_keys::GaiaStoreKey;
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;
@@ -139,21 +138,13 @@ impl AuxHandler for GaiaCoreClient {
         match cmd {
             GaiaAuxCmd::Genutil(cmd) => match cmd {
                 genutil::cmd::GenesisCmd::CollectGentxs(cmd) => {
-                    let (_, genesis) = genutil::collect_txs::gen_app_state_from_config(
-                        cmd,
-                        &GaiaStoreKey::Bank,
-                        "genutil",
-                    )?;
+                    let (_, genesis) =
+                        genutil::collect_txs::gen_app_state_from_config(cmd, "bank", "genutil")?;
 
                     println!("{genesis}");
                 }
                 genutil::cmd::GenesisCmd::Gentx(cmd) => {
-                    genutil::gentx::gentx_cmd(
-                        cmd,
-                        GaiaStoreKey::Bank,
-                        GaiaStoreKey::Staking,
-                        GaiaStoreKey::Auth,
-                    )?;
+                    genutil::gentx::gentx_cmd(cmd, "bank", "staking", "auth")?;
                 }
             },
         }

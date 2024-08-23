@@ -1,9 +1,6 @@
 use std::{collections::HashMap, path::Path};
 
-use gears::{
-    store::StoreKey,
-    types::{account::Account, address::AccAddress, base::coins::UnsignedCoins},
-};
+use gears::types::{account::Account, address::AccAddress, base::coins::UnsignedCoins};
 use staking::StakingParams;
 
 #[derive(Debug, Clone, serde::Deserialize)]
@@ -12,14 +9,14 @@ pub struct GenesisAccounts {
 }
 
 impl GenesisAccounts {
-    pub fn new<SK: StoreKey>(sk: &SK, genesis_path: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub fn new(sk: &str, genesis_path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(genesis_path)?)?;
 
         let value = value
             .get_mut("app_state")
             .ok_or(anyhow::anyhow!("missing `app_state`"))?
-            .get_mut(sk.name())
-            .ok_or(anyhow::anyhow!("module is not found"))?
+            .get_mut(sk)
+            .ok_or(anyhow::anyhow!("auth module {sk} is not found"))?
             .get_mut("accounts")
             .ok_or(anyhow::anyhow!("accounts is not found"))?
             .take();
@@ -59,14 +56,14 @@ pub struct GenesisBalance {
 pub struct GenesisBalanceIter(HashMap<AccAddress, UnsignedCoins>);
 
 impl GenesisBalanceIter {
-    pub fn new<SK: StoreKey>(sk: &SK, genesis_path: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub fn new(sk: &str, genesis_path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let mut value: serde_json::Value = serde_json::from_slice(&std::fs::read(genesis_path)?)?;
 
         let value = value
             .get_mut("app_state")
             .ok_or(anyhow::anyhow!("missing `app_state`"))?
-            .get_mut(sk.name())
-            .ok_or(anyhow::anyhow!("module is not found"))?
+            .get_mut(sk)
+            .ok_or(anyhow::anyhow!("bank module {sk} is not found"))?
             .get_mut("balances")
             .ok_or(anyhow::anyhow!("balances is not found"))?
             .take();
@@ -103,8 +100,8 @@ impl IntoIterator for GenesisBalanceIter {
     }
 }
 
-pub fn parse_staking_params_from_genesis<SK: StoreKey>(
-    sk: &SK,
+pub fn parse_staking_params_from_genesis(
+    sk: &str,
     params_str: &str,
     genesis_path: impl AsRef<Path>,
 ) -> anyhow::Result<StakingParams> {
@@ -113,7 +110,7 @@ pub fn parse_staking_params_from_genesis<SK: StoreKey>(
     let value = value
         .get_mut("app_state")
         .ok_or(anyhow::anyhow!("missing `app_state`"))?
-        .get_mut(sk.name())
+        .get_mut(sk)
         .ok_or(anyhow::anyhow!("staking module is not found"))?
         .get_mut(params_str)
         .ok_or(anyhow::anyhow!("params is not found"))?

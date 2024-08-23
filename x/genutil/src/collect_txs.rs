@@ -3,14 +3,11 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use gears::{
-    store::StoreKey,
-    types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx},
-};
+use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx};
 use serde::{Deserialize, Serialize};
 use staking::CreateValidator;
 
-use crate::{utils::GenesisBalanceIter, errors::SERDE_JSON_CONVERSION};
+use crate::{errors::SERDE_JSON_CONVERSION, utils::GenesisBalanceIter};
 
 #[derive(Debug, Clone)]
 pub struct CollectGentxCmd {
@@ -19,13 +16,13 @@ pub struct CollectGentxCmd {
     pub moniker: String,
 }
 
-pub fn gen_app_state_from_config<SK: StoreKey>(
+pub fn gen_app_state_from_config(
     CollectGentxCmd {
         gentx_dir,
         home,
         moniker,
     }: CollectGentxCmd,
-    balance_sk: &SK,
+    balance_sk: &str,
     genutil: &str,
 ) -> anyhow::Result<(Peers, String)> {
     let txs_iter = GenesisBalanceIter::new(balance_sk, home.join("config/genesis.json"))?; // todo: better way to get path to genesis file
