@@ -101,7 +101,9 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let ctx = self.state.read().expect(POISONED_LOCK).query_ctx(version)?;
 
-        self.abci_handler.query(&ctx, request.clone())
+        self.abci_handler
+            .query(&ctx, request.clone())
+            .map(Into::into)
     }
 
     fn run_tx<MD: ExecutionMode<DB, H>>(

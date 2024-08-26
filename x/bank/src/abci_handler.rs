@@ -154,7 +154,7 @@ impl<
         &self,
         ctx: &QueryContext<DB, Self::StoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         match query.path.as_str() {
             QueryAllBalancesRequest::QUERY_URL => {
                 let req = QueryAllBalancesRequest::decode(query.data)?;

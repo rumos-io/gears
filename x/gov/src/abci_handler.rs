@@ -1,6 +1,5 @@
 use std::marker::PhantomData;
 
-use bytes::Bytes;
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
     baseapp::{errors::QueryError, QueryResponse},
@@ -239,7 +238,7 @@ impl<
             height: _,
             prove: _,
         }: RequestQuery,
-    ) -> Result<Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         let query = match path.as_str() {
             QueryDepositRequest::QUERY_URL => GovQuery::Deposit(QueryDepositRequest::decode(data)?),
             QueryDepositsRequest::QUERY_URL => {

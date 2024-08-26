@@ -39,3 +39,31 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
         Ok(self.abci_handler.typed_query(&ctx, request))
     }
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum NullQueryRequest {}
+
+impl Query for NullQueryRequest {
+    fn query_url(&self) -> &'static str {
+        unreachable!()
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        unreachable!()
+    }
+}
+
+impl QueryRequest for NullQueryRequest {
+    fn height(&self) -> u32 {
+        unreachable!()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize)]
+pub enum NullQueryResponse {}
+
+impl QueryResponse for NullQueryResponse {
+    fn into_bytes(self) -> Vec<u8> {
+        unreachable!()
+    }
+}
