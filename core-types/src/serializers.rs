@@ -3,7 +3,7 @@ use base64::{
     Engine,
 };
 use base64_serde::base64_serde_type;
-use serde::ser::SerializeSeq;
+use serde::{ser::SerializeSeq, Deserialize};
 
 pub fn serialize_number_to_string<T, S>(x: &T, s: S) -> Result<S::Ok, S::Error>
 where
@@ -27,4 +27,21 @@ where
     }
 
     seq.end()
+}
+
+pub fn deserialize_vec_of_base64_to_vec_of_vec<'de, D>(
+    deserializer: D,
+) -> Result<Vec<Vec<u8>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    Vec::<String>::deserialize(deserializer).and_then(|vec| {
+        vec.into_iter()
+            .map(|this| {
+                data_encoding::BASE64
+                    .decode(this.as_bytes())
+                    .map_err(|err| serde::de::Error::custom(err.to_string()))
+            })
+            .collect()
+    })
 }

@@ -86,7 +86,7 @@ fn collect_txs(
                 continue;
             }
 
-            if !Path::new(&dir.file_name()).ends_with(".json") {
+            if !dir.file_name().to_string_lossy().ends_with(".json") {
                 continue;
             }
 
