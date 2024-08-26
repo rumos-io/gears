@@ -25,6 +25,12 @@ pub trait TxMessage:
     fn get_signers(&self) -> Vec<&AccAddress>;
 
     fn type_url(&self) -> &'static str;
+
+    fn amino_url(&self) -> &'static str {
+        // we don't force to add legacy amino type url because the app should be focused
+        // on better signing processes
+        self.type_url()
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

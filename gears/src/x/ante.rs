@@ -1,6 +1,8 @@
 use crate::application::handlers::node::TxError;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
+use crate::signing::renderer::amino_renderer::{AminoRenderer, RenderError as AminoRendererError};
+use crate::signing::std_sign_doc;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
 use crate::types::base::coin::UnsignedCoin;
@@ -108,7 +110,7 @@ impl<
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, M: TxMessage + ValueRenderer>(
+    pub fn run<DB: Database, M: TxMessage + ValueRenderer + AminoRenderer>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -335,7 +337,7 @@ impl<
         Ok(())
     }
 
-    fn deduct_fee_ante_handler<'a, DB: Database, M: TxMessage>(
+    fn deduct_fee_ante_handler<DB: Database, M: TxMessage>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &Tx<M>,
@@ -404,7 +406,7 @@ impl<
         Ok(())
     }
 
-    fn sig_verification_handler<DB: Database, M: TxMessage + ValueRenderer>(
+    fn sig_verification_handler<DB: Database, M: TxMessage + ValueRenderer + AminoRenderer>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -450,6 +452,32 @@ impl<
                         account_number: acct.get_account_number(),
                     }
                     .encode_to_vec(),
+                    SignMode::LegacyAminoJson => {
+                        let mut msgs = vec![];
+                        for msg in tx.tx.get_msgs() {
+                            dbg!(msg.get_signers());
+                            dbg!(msg.amino_url());
+                            msgs.push(std_sign_doc::Msg {
+                                kind: msg.amino_url().to_string(),
+                                value: msg.render()?,
+                            })
+                        }
+                        let doc = std_sign_doc::StdSignDoc {
+                            account_number: acct.get_account_number().to_string(),
+                            chain_id: ctx.chain_id().to_string(),
+                            fee: tx.tx.auth_info.fee.clone().into(),
+                            memo: tx.tx.get_memo().to_string(),
+                            msgs,
+                            sequence: account_seq.to_string(),
+                            // TODO: check impl
+                            // timeout_height: Some(u64::from(tx.tx.get_timeout_height()).to_string()),
+                            timeout_height: None,
+                        };
+
+                        doc.to_sign_bytes().map_err(|e| {
+                            AnteError::LegacyAminoJson(AminoRendererError::Rendering(e.to_string()))
+                        })?
+                    }
                     SignMode::Textual => {
                         let handler = SignModeHandler;
 
@@ -472,7 +500,12 @@ impl<
                             .unwrap()
                         //TODO: remove unwrap
                     }
-                    _ => return Err(AnteError::Validation("sign mode not supported".to_string())),
+                    mode => {
+                        return Err(AnteError::Validation(format!(
+                            "sign mode not supported: {:?}",
+                            mode
+                        )))
+                    }
                 },
                 ModeInfo::Multi(_) => {
                     return Err(AnteError::Validation("multi sig not supported".to_string()));

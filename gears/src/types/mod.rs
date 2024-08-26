@@ -12,6 +12,7 @@ pub mod gas;
 pub mod msg;
 pub mod pagination;
 pub mod rendering;
+pub mod request;
 pub mod response;
 pub mod signing;
 pub mod store;
