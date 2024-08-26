@@ -8,11 +8,13 @@ use crate::signing::{
     },
 };
 use crate::types::address::AccAddress;
+use crate::types::auth::info::AuthInfo;
+use crate::types::tx::body::TxBody;
 use crate::types::{
     auth::tip::Tip,
     base::coins::UnsignedCoins,
     rendering::screen::{Indent, Screen},
-    tx::{data::TxData, signer::SignerData, TxMessage},
+    tx::{signer::SignerData, TxMessage},
 };
 
 use core_types::Protobuf;
@@ -44,11 +46,11 @@ pub struct Envelope<M> {
 }
 
 impl<M: TxMessage> Envelope<M> {
-    pub fn new(signer_data: SignerData, tx_data: TxData<M>) -> Self {
-        let body_bytes = tx_data.body.to_owned().encode_vec();
-        let auth_info_bytes = tx_data.auth_info.to_owned().encode_vec();
+    pub fn new(signer_data: SignerData, body: &TxBody<M>, auth_info: &AuthInfo) -> Self {
+        let body_bytes = body.encode_vec();
+        let auth_info_bytes = auth_info.encode_vec();
 
-        let (tip, tipper) = match tx_data.auth_info.tip {
+        let (tip, tipper) = match auth_info.tip.to_owned() {
             Some(Tip { amount, tipper }) => (amount, Some(tipper)),
             None => (None, None),
         };
@@ -59,15 +61,15 @@ impl<M: TxMessage> Envelope<M> {
             sequence: signer_data.sequence,
             address: signer_data.address,
             public_key: signer_data.pub_key,
-            message: tx_data.body.messages.into_vec(),
-            memo: tx_data.body.memo,
-            fees: tx_data.auth_info.fee.amount,
-            fee_payer: tx_data.auth_info.fee.payer,
-            fee_granter: tx_data.auth_info.fee.granter,
+            message: body.messages.to_owned().into_vec(),
+            memo: body.memo.to_owned(),
+            fees: auth_info.fee.amount.to_owned(),
+            fee_payer: auth_info.fee.payer.to_owned(),
+            fee_granter: auth_info.fee.granter.to_owned(),
             tip,
             tipper,
-            gas_limit: tx_data.auth_info.fee.gas_limit.into(),
-            timeout_height: tx_data.body.timeout_height,
+            gas_limit: auth_info.fee.gas_limit.into(),
+            timeout_height: body.timeout_height,
             hash_of_raw_bytes: hash_get(&body_bytes, &auth_info_bytes),
         }
     }
@@ -242,7 +244,6 @@ mod tests {
     use crate::types::rendering::screen::{Content, Indent, Screen};
     use crate::types::signing::SignerInfo;
     use crate::types::tx::body::TxBody;
-    use crate::types::tx::data::TxData;
     use crate::types::tx::signer::SignerData;
     use core_types::tx::mode_info::{ModeInfo, SignMode};
     use cosmwasm_std::Uint256;
@@ -332,12 +333,7 @@ mod tests {
             non_critical_extension_options: Vec::new(),
         };
 
-        let tx_data = TxData::<MsgSend> {
-            body: tx_body,
-            auth_info,
-        };
-
-        let data = Envelope::new(signer_data, tx_data);
+        let data = Envelope::new(signer_data, &tx_body, &auth_info);
 
         Ok(data)
     }

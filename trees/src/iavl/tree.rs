@@ -2357,7 +2357,7 @@ mod tests {
                         "{}{}[Hash: {}<br/>Height: {}<br/>Size: {}];\n",
                         prefix,
                         self_hash,
-                        self_hash[0..8].to_string(),
+                        &self_hash[0..8],
                         self_height,
                         self_size,
                     );

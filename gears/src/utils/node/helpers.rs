@@ -11,7 +11,7 @@ use crate::{
     types::{
         auth::fee::Fee,
         base::coins::Coins,
-        tx::{body::TxBody, TxMessage},
+        tx::{body::TxBody, Tx, TxMessage},
     },
 };
 
@@ -49,21 +49,30 @@ pub fn generate_txs<M: TxMessage>(
             account_number: user.account_number,
         };
 
-        let body_bytes = TxBody::new_with_defaults(vec1::vec1![msg]).encode_vec();
+        let body = TxBody::new_with_defaults(vec1::vec1![msg]);
 
-        let raw_tx = crate::crypto::info::create_signed_transaction_direct(
+        let Tx {
+            body,
+            auth_info,
+            signatures,
+            signatures_data: _,
+        } = crate::crypto::info::create_signed_transaction_direct(
             vec![signing_info],
             chain_id.to_owned(),
             fee.to_owned(),
             None,
-            body_bytes,
+            body,
         )
         .unwrap_infallible();
 
         result.push(
-            core_types::tx::raw::TxRaw::from(raw_tx)
-                .encode_to_vec()
-                .into(),
+            core_types::tx::raw::TxRaw {
+                body_bytes: body.encode_vec(),
+                auth_info_bytes: auth_info.encode_vec(),
+                signatures,
+            }
+            .encode_to_vec()
+            .into(),
         )
     }
 

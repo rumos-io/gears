@@ -1,8 +1,13 @@
 #![warn(rust_2018_idioms)]
 
+#[cfg(all(feature = "sled", feature = "rocksdb"))]
+fn compile_check() {
+    compile_error!("Can't use `sled` and `rocksdb` at one time. Chose only one DB")
+}
+
 use clap::Parser;
 use gaia_rs::abci_handler::GaiaABCIHandler;
-use gaia_rs::client::{GaiaQueryCommands, GaiaTxCommands};
+use gaia_rs::client::{GaiaQueryCommands, GaiaTxArgs};
 use gaia_rs::store_keys::GaiaParamsStoreKey;
 use gaia_rs::{GaiaApplication, GaiaAuxCli, GaiaCore, GaiaCoreClient};
 use gears::application::client::ClientApplication;
@@ -19,7 +24,7 @@ type Args = CliApplicationArgs<
     GaiaApplication,
     GaiaAuxCli<GaiaApplication>,
     CliNilAuxCommand,
-    GaiaTxCommands,
+    GaiaTxArgs,
     GaiaQueryCommands,
 >;
 

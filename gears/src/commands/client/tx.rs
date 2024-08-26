@@ -6,7 +6,7 @@ use tendermint::rpc::client::{Client, HttpClient};
 use tendermint::rpc::response::tx::broadcast::Response;
 use tendermint::types::chain_id::ChainId;
 
-use crate::application::handlers::client::TxHandler;
+use crate::application::handlers::client::{TxExecutionResult, TxHandler};
 use crate::commands::client::query::execute_query;
 use crate::crypto::keys::ReadAccAddress;
 use crate::crypto::ledger::LedgerProxyKey;
@@ -18,6 +18,7 @@ use super::keys::KeyringBackend;
 
 #[derive(Debug, Clone, former::Former)]
 pub struct TxCommand<C> {
+    pub home: PathBuf,
     pub node: url::Url,
     pub chain_id: ChainId,
     pub fees: Option<UnsignedCoins>,
@@ -25,12 +26,15 @@ pub struct TxCommand<C> {
     pub inner: C,
 }
 
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub struct ClientTxContext {
-    node: url::Url,
+    pub node: url::Url,
+    pub home: PathBuf,
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
     keyring: Keyring,
+    pub memo: Option<String>,
 }
 
 impl ClientTxContext {
@@ -50,6 +54,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
     fn from(
         // to keep structure after changes in TxCommand
         TxCommand {
+            home,
             node,
             chain_id,
             fees,
@@ -58,10 +63,12 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
         }: &TxCommand<C>,
     ) -> Self {
         Self {
+            home: home.clone(),
             node: node.clone(),
             chain_id: chain_id.clone(),
             fees: fees.clone(),
             keyring: keyring.clone(),
+            memo: None,
         }
     }
 }
@@ -76,38 +83,76 @@ pub enum Keyring {
 pub struct LocalInfo {
     pub keyring_backend: KeyringBackend,
     pub from_key: String,
-    pub home: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+pub enum RuntxResult {
+    Broadcast(Vec<Response>),
+    File(PathBuf),
+    None,
+}
+
+impl RuntxResult {
+    pub fn broadcast(self) -> Option<Vec<Response>> {
+        match self {
+            Self::Broadcast(var) => Some(var),
+            Self::File(_) => None,
+            Self::None => None,
+        }
+    }
+
+    pub fn file(self) -> Option<PathBuf> {
+        match self {
+            Self::Broadcast(_) => None,
+            Self::File(var) => Some(var),
+            Self::None => None,
+        }
+    }
+}
+
+impl From<TxExecutionResult> for RuntxResult {
+    fn from(value: TxExecutionResult) -> Self {
+        match value {
+            TxExecutionResult::Broadcast(var) => Self::Broadcast(vec![var]),
+            TxExecutionResult::File(var) => Self::File(var),
+            TxExecutionResult::None => Self::None,
+        }
+    }
 }
 
 pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     command: TxCommand<C>,
     handler: &H,
-) -> anyhow::Result<Vec<Response>> {
+) -> anyhow::Result<RuntxResult> {
     match command.keyring {
         Keyring::Ledger => {
             let key = LedgerProxyKey::new()?;
 
-            let ctx = &(&command).into();
+            let ctx = &mut (&command).into();
             let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
             handler
                 .handle_tx(
-                    messages,
-                    &key,
-                    command.node,
-                    command.chain_id,
-                    command.fees,
-                    SignMode::Textual,
+                    handler.sign_msg(
+                        messages,
+                        &key,
+                        &command.node,
+                        command.chain_id,
+                        command.fees,
+                        SignMode::Textual,
+                        ctx,
+                    )?,
+                    ctx,
                 )
-                .map(|res| vec![res])
+                .map(Into::into)
         }
         Keyring::Local(ref info) => {
-            let keyring_home = info.home.join(info.keyring_backend.get_sub_dir());
+            let keyring_home = command.home.join(info.keyring_backend.get_sub_dir());
             let key = keyring::key_by_name(
                 &info.from_key,
                 info.keyring_backend.to_keyring_backend(&keyring_home),
             )?;
 
-            let ctx = &(&command).into();
+            let ctx = &mut (&command).into();
             let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
 
             if messages.chunk_size() > 0
@@ -120,32 +165,43 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
                 let mut res = vec![];
                 for slice in msgs.chunks(chunk_size) {
                     res.push(
-                        handler.handle_tx(
-                            slice
-                                .to_vec()
-                                .try_into()
-                                .expect("chunking of the messages excludes empty vectors"),
-                            &key,
-                            command.node.clone(),
-                            command.chain_id.clone(),
-                            command.fees.clone(),
-                            SignMode::Direct,
-                        )?,
+                        handler
+                            .handle_tx(
+                                handler.sign_msg(
+                                    slice
+                                        .to_vec()
+                                        .try_into()
+                                        .expect("chunking of the messages excludes empty vectors"),
+                                    &key,
+                                    &command.node,
+                                    command.chain_id.clone(),
+                                    command.fees.clone(),
+                                    SignMode::Direct,
+                                    ctx,
+                                )?,
+                                ctx,
+                            )?
+                            .broadcast()
+                            .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
                     );
                 }
-                Ok(res)
+                Ok(RuntxResult::Broadcast(res))
             } else {
                 // TODO: can be reduced by changing variable `step`. Do we need it?
                 handler
                     .handle_tx(
-                        messages,
-                        &key,
-                        command.node,
-                        command.chain_id,
-                        command.fees,
-                        SignMode::Direct,
+                        handler.sign_msg(
+                            messages,
+                            &key,
+                            &command.node,
+                            command.chain_id,
+                            command.fees,
+                            SignMode::Direct,
+                            ctx,
+                        )?,
+                        ctx,
                     )
-                    .map(|res| vec![res])
+                    .map(Into::into)
             }
         }
     }

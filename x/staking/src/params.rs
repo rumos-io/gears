@@ -17,8 +17,8 @@ const KEY_BOND_DENOM: &str = "BondDenom";
 /// - max_validators is positive
 /// - max_entries is positive
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-#[serde(try_from = "RawParams")]
-pub struct Params {
+#[serde(try_from = "RawStakingParams")]
+pub struct StakingParams {
     // sdk counts duration as simple i64 type that represents difference
     // between two instants
     unbonding_time: i64, //TODO: doesn't the SDK use a Duration type? https://github.com/cosmos/cosmos-sdk/blob/2582f0aab7b2cbf66ade066fe570a4622cf0b098/x/staking/types/staking.pb.go#L837
@@ -30,7 +30,7 @@ pub struct Params {
 
 /// [`RawParams`] exists to allow us to validate params when deserializing them
 #[derive(Deserialize)]
-struct RawParams {
+struct RawStakingParams {
     unbonding_time: i64,
     max_validators: u32,
     max_entries: u32,
@@ -38,11 +38,11 @@ struct RawParams {
     bond_denom: Denom,
 }
 
-impl TryFrom<RawParams> for Params {
+impl TryFrom<RawStakingParams> for StakingParams {
     type Error = anyhow::Error;
 
-    fn try_from(params: RawParams) -> Result<Self, Self::Error> {
-        Params::new(
+    fn try_from(params: RawStakingParams) -> Result<Self, Self::Error> {
+        StakingParams::new(
             params.unbonding_time,
             params.max_validators,
             params.max_entries,
@@ -52,11 +52,11 @@ impl TryFrom<RawParams> for Params {
     }
 }
 
-impl Default for Params {
+impl Default for StakingParams {
     fn default() -> Self {
         let bond_denom =
             Denom::try_from("uatom".to_string()).expect("default denom should be valid");
-        Params {
+        StakingParams {
             // 3 weeks
             unbonding_time: 60_000_000_000 * 60 * 24 * 7 * 3,
             max_validators: 100,
@@ -67,7 +67,7 @@ impl Default for Params {
     }
 }
 
-impl ParamsSerialize for Params {
+impl ParamsSerialize for StakingParams {
     fn keys() -> HashSet<&'static str> {
         [
             KEY_UNBONDING_TIME,
@@ -103,7 +103,7 @@ impl ParamsSerialize for Params {
     }
 }
 
-impl ParamsDeserialize for Params {
+impl ParamsDeserialize for StakingParams {
     fn from_raw(mut fields: HashMap<&'static str, Vec<u8>>) -> Self {
         let unbonding_time = ParamKind::I64
             .parse_param(fields.remove(KEY_UNBONDING_TIME).unwrap())
@@ -134,7 +134,7 @@ impl ParamsDeserialize for Params {
 
         // TODO: should we validate the params here?
 
-        Params {
+        StakingParams {
             unbonding_time,
             max_validators,
             max_entries,
@@ -144,7 +144,7 @@ impl ParamsDeserialize for Params {
     }
 }
 
-impl Params {
+impl StakingParams {
     pub fn new(
         unbonding_time: i64,
         max_validators: u32,
@@ -173,7 +173,7 @@ impl Params {
             )));
         }
 
-        Ok(Params {
+        Ok(StakingParams {
             unbonding_time,
             max_validators,
             max_entries,
@@ -208,7 +208,7 @@ pub struct StakingParamsKeeper<PSK: ParamsSubspaceKey> {
     pub params_subspace_key: PSK,
 }
 impl<PSK: ParamsSubspaceKey> ParamsKeeper<PSK> for StakingParamsKeeper<PSK> {
-    type Param = Params;
+    type Param = StakingParams;
 
     fn psk(&self) -> &PSK {
         &self.params_subspace_key

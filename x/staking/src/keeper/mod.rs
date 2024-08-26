@@ -560,7 +560,7 @@ impl<
         let validator = self.validator(ctx, val_addr)?;
         let validator_status = validator
             .as_ref()
-            .map(|v| v.status.clone())
+            .map(|v| v.status)
             .unwrap_or(BondStatus::Bonded);
 
         match validator_status {

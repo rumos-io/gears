@@ -1,6 +1,6 @@
 use crate::{
-    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Params, Redelegation, RedelegationEntry,
-    UnbondingDelegation, Validator,
+    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Redelegation, RedelegationEntry,
+    StakingParams, UnbondingDelegation, Validator,
 };
 use gears::{
     core::{
@@ -238,14 +238,14 @@ impl Protobuf<RawQueryUnbondingDelegationResponse> for QueryUnbondingDelegationR
 /// QueryParamsResponse is the response type for the Query/Params RPC method.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
 pub struct QueryParamsResponse {
-    pub params: Params,
+    pub params: StakingParams,
 }
 
 impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
     type Error = CoreError;
 
     fn try_from(raw: QueryParamsResponseRaw) -> Result<Self, Self::Error> {
-        let params = Params::new(
+        let params = StakingParams::new(
             raw.unbonding_time,
             raw.max_validators,
             raw.max_entries,

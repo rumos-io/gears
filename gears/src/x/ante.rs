@@ -16,7 +16,7 @@ use crate::x::keepers::auth::AuthParams;
 use crate::x::keepers::bank::BankKeeper;
 use crate::{
     context::{tx::TxContext, QueryableContext},
-    types::tx::{data::TxData, raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
+    types::tx::{raw::TxWithRaw, signer::SignerData, Tx, TxMessage},
 };
 use core_types::tx::signature::SignatureData;
 use core_types::{
@@ -461,18 +461,15 @@ impl<
                             pub_key: public_key.to_owned(),
                         };
 
-                        let tx_data = TxData {
-                            body: tx.tx.body.clone(),
-                            auth_info: tx.tx.auth_info.clone(),
-                        };
-
                         let f = MetadataFromState {
                             bank_keeper: &self.bank_keeper,
                             ctx,
                             _phantom: PhantomData,
                         };
 
-                        handler.sign_bytes_get(&f, signer_data, tx_data).unwrap()
+                        handler
+                            .sign_bytes_get(&f, signer_data, &tx.tx.body, &tx.tx.auth_info)
+                            .unwrap()
                         //TODO: remove unwrap
                     }
                     _ => return Err(AnteError::Validation("sign mode not supported".to_string())),

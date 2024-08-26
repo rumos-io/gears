@@ -32,7 +32,15 @@ impl<Core: Client> ClientApplication<Core> {
             ClientCommands::Tx(cmd) => {
                 let tx = run_tx(cmd, &self.core)?;
 
-                println!("{}", serde_json::to_string_pretty(&tx)?);
+                match tx {
+                    crate::commands::client::tx::RuntxResult::Broadcast(tx) => {
+                        println!("{}", serde_json::to_string_pretty(&tx)?);
+                    }
+                    crate::commands::client::tx::RuntxResult::File(file) => {
+                        println!("Saved to file: {}", file.to_string_lossy())
+                    }
+                    crate::commands::client::tx::RuntxResult::None => (),
+                }
             }
             ClientCommands::Query(cmd) => {
                 let query = run_query(cmd, &self.core)?;

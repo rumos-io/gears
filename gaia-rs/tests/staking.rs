@@ -27,7 +27,7 @@ use staking::{
             DelegationCommand, RedelegationCommand, StakingCommands as QueryStakingCommands,
             StakingQueryCli, ValidatorCommand,
         },
-        tx::{StakingCommands, StakingTxCli},
+        tx::{CreateValidatorCli, StakingCommands, StakingTxCli},
     },
     CommissionRatesRaw, CommissionRaw, DelegationResponse, Description, Validator,
 };
@@ -45,10 +45,10 @@ fn run_tx_local(
     // a comment
     let mut responses = run_tx(
         TxCommand {
+            home,
             keyring: Keyring::Local(LocalInfo {
                 keyring_backend: KeyringBackend::Test,
                 from_key: from_key.to_owned(),
-                home,
             }),
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             chain_id: ChainId::from_str("test-chain")?,
@@ -56,7 +56,9 @@ fn run_tx_local(
             inner: WrappedGaiaTxCommands(command),
         },
         &GaiaCoreClient,
-    )?;
+    )?
+    .broadcast()
+    .expect("broadcast tx inside");
     assert_eq!(responses.len(), 1);
     Ok(responses.pop().expect("vector has exactly single element"))
 }
@@ -80,7 +82,7 @@ fn new_validator(
     moniker: &str,
 ) -> anyhow::Result<Response> {
     let pubkey = serde_json::from_str(pubkey)?;
-    let tx_cmd = StakingCommands::CreateValidator {
+    let tx_cmd = StakingCommands::CreateValidator(CreateValidatorCli {
         pubkey,
         amount,
         moniker: moniker.to_string(),
@@ -92,7 +94,7 @@ fn new_validator(
         commission_max_rate: Decimal256::from_atomics(2u64, 1).unwrap(),
         commission_max_change_rate: Decimal256::from_atomics(1u64, 2).unwrap(),
         min_self_delegation: Uint256::one(),
-    };
+    });
     let command = GaiaTxCommands::Staking(StakingTxCli { command: tx_cmd });
     run_tx_local(from_key, home, command)
 }

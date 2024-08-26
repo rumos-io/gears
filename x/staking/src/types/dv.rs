@@ -72,7 +72,7 @@ impl TryFrom<inner::DvvTriplets> for DvvTriplets {
             triplets: value
                 .triplets
                 .into_iter()
-                .map(|x| DvvTriplet::try_from(x))
+                .map(DvvTriplet::try_from)
                 .collect::<Result<Vec<_>, _>>()?,
         })
     }
@@ -141,7 +141,7 @@ impl TryFrom<inner::DvPairs> for DvPairs {
             pairs: value
                 .pairs
                 .into_iter()
-                .map(|x| DvPair::try_from(x))
+                .map(DvPair::try_from)
                 .collect::<Result<Vec<_>, _>>()?,
         })
     }

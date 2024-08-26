@@ -36,7 +36,6 @@ use serde::Serialize;
 use staking::cli::query::StakingQueryHandler;
 use staking::StakingNodeQueryRequest;
 use staking::StakingNodeQueryResponse;
-use store_keys::GaiaStoreKey;
 use tonic::transport::Server;
 use tonic::Status;
 use tower_layer::Identity;
@@ -70,7 +69,7 @@ impl TxHandler for GaiaCoreClient {
 
     fn prepare_tx(
         &self,
-        ctx: &ClientTxContext,
+        ctx: &mut ClientTxContext,
         command: Self::TxCommands,
         from_address: AccAddress,
     ) -> Result<Messages<Self::Message>> {
@@ -139,13 +138,13 @@ impl AuxHandler for GaiaCoreClient {
         match cmd {
             GaiaAuxCmd::Genutil(cmd) => match cmd {
                 genutil::cmd::GenesisCmd::CollectGentxs(cmd) => {
-                    let (_, genesis) = genutil::collect_txs::gen_app_state_from_config(
-                        cmd,
-                        &GaiaStoreKey::Bank,
-                        "genutil",
-                    )?;
+                    let (_, genesis) =
+                        genutil::collect_txs::gen_app_state_from_config(cmd, "bank", "genutil")?;
 
                     println!("{genesis}");
+                }
+                genutil::cmd::GenesisCmd::Gentx(cmd) => {
+                    genutil::gentx::gentx_cmd(cmd, "bank", "staking", "auth")?;
                 }
             },
         }
@@ -156,7 +155,8 @@ impl AuxHandler for GaiaCoreClient {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum GaiaAuxCli<AI: ApplicationInfo> {
-    Genutil(genutil::client::cli::GenesisAuxCli<AI>),
+    #[command(flatten)]
+    Genutil(genutil::client::cli::GenesisCommands<AI>),
 }
 
 impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
@@ -164,7 +164,9 @@ impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
 
     fn try_from(value: GaiaAuxCli<AI>) -> std::result::Result<Self, Self::Error> {
         Ok(match value {
-            GaiaAuxCli::Genutil(var) => GaiaAuxCmd::Genutil(var.try_into()?),
+            GaiaAuxCli::Genutil(var) => GaiaAuxCmd::Genutil(
+                genutil::client::cli::GenesisAuxCli { command: var }.try_into()?,
+            ),
         })
     }
 }

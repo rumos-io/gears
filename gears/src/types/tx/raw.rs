@@ -16,6 +16,23 @@ pub struct TxRaw {
     pub signatures: Vec<Vec<u8>>,
 }
 
+impl<'a, M: TxMessage> From<&'a Tx<M>> for TxRaw {
+    fn from(
+        Tx {
+            body,
+            auth_info,
+            signatures,
+            signatures_data: _,
+        }: &'a Tx<M>,
+    ) -> Self {
+        Self {
+            body_bytes: body.encode_vec(),
+            auth_info_bytes: auth_info.encode_vec(),
+            signatures: signatures.clone(),
+        }
+    }
+}
+
 impl From<inner::TxRaw> for TxRaw {
     fn from(
         inner::TxRaw {

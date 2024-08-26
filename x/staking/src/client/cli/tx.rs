@@ -20,45 +20,93 @@ pub struct StakingTxCli {
     pub command: StakingCommands,
 }
 
+/// Create new validator initialized with a self-delegation to it
+#[derive(Args, Debug, Clone)]
+pub struct CreateValidatorCli {
+    /// The validator's Protobuf JSON encoded public key
+    pub pubkey: TendermintPublicKey,
+    /// Amount of coins to bond
+    pub amount: UnsignedCoin,
+    /// The validator's name
+    pub moniker: String,
+    /// The optional identity signature (ex. UPort or Keybase)
+    #[arg(long)]
+    pub identity: String,
+    /// The validator's (optional) website
+    #[arg(long)]
+    pub website: String,
+    /// The validator's (optional) security contact email
+    #[arg(long)]
+    pub security_contact: String,
+    /// The validator's (optional) details
+    #[arg(long)]
+    pub details: String,
+    /// The initial commission rate percentage
+    /* 0.1 */
+    #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 1).unwrap())]
+    pub commission_rate: Decimal256,
+    /// The maximum commission rate percentage
+    /* 0.2 */
+    #[arg(long, default_value_t = Decimal256::from_atomics(2u64, 1).unwrap())]
+    pub commission_max_rate: Decimal256,
+    /// The maximum commission change rate percentage (per day)
+    /* 0.01 */
+    #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 2).unwrap())]
+    pub commission_max_change_rate: Decimal256,
+    /// The minimum self delegation required on the validator
+    #[arg(long, default_value_t = Uint256::one())]
+    pub min_self_delegation: Uint256,
+}
+
+impl CreateValidatorCli {
+    pub fn try_into_cmd(self, from_address: AccAddress) -> anyhow::Result<CreateValidator> {
+        let CreateValidatorCli {
+            pubkey,
+            amount,
+            moniker,
+            identity,
+            website,
+            security_contact,
+            details,
+            commission_rate,
+            commission_max_rate,
+            commission_max_change_rate,
+            min_self_delegation,
+        } = self;
+
+        let delegator_address = from_address.clone();
+        let validator_address = ValAddress::from(from_address);
+        let description = Description {
+            moniker: moniker.to_string(),
+            identity: identity.to_string(),
+            website: website.to_string(),
+            security_contact: security_contact.to_string(),
+            details: details.to_string(),
+        };
+        let commission = CommissionRates::new(
+            commission_rate,
+            commission_max_rate,
+            commission_max_change_rate,
+        )?;
+
+        let msg = CreateValidator {
+            description,
+            commission,
+            min_self_delegation,
+            delegator_address,
+            validator_address,
+            pubkey: pubkey.clone(),
+            value: amount.clone(),
+        };
+
+        Ok(msg)
+    }
+}
+
 #[derive(Subcommand, Debug, Clone)]
 #[allow(clippy::large_enum_variant)]
 pub enum StakingCommands {
-    /// Create new validator initialized with a self-delegation to it
-    CreateValidator {
-        /// The validator's Protobuf JSON encoded public key
-        pubkey: TendermintPublicKey,
-        /// Amount of coins to bond
-        amount: UnsignedCoin,
-        /// The validator's name
-        moniker: String,
-        /// The optional identity signature (ex. UPort or Keybase)
-        #[arg(long)]
-        identity: String,
-        /// The validator's (optional) website
-        #[arg(long)]
-        website: String,
-        /// The validator's (optional) security contact email
-        #[arg(long)]
-        security_contact: String,
-        /// The validator's (optional) details
-        #[arg(long)]
-        details: String,
-        /// The initial commission rate percentage
-        /* 0.1 */
-        #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 1).unwrap())]
-        commission_rate: Decimal256,
-        /// The maximum commission rate percentage
-        /* 0.2 */
-        #[arg(long, default_value_t = Decimal256::from_atomics(2u64, 1).unwrap())]
-        commission_max_rate: Decimal256,
-        /// The maximum commission change rate percentage (per day)
-        /* 0.01 */
-        #[arg(long, default_value_t = Decimal256::from_atomics(1u64, 2).unwrap())]
-        commission_max_change_rate: Decimal256,
-        /// The minimum self delegation required on the validator
-        #[arg(long, default_value_t = Uint256::one())]
-        min_self_delegation: Uint256,
-    },
+    CreateValidator(CreateValidatorCli),
     /// Edit an existing validator account
     EditValidator {
         /// The validator's name
@@ -112,43 +160,8 @@ pub fn run_staking_tx_command(
     from_address: AccAddress,
 ) -> Result<StakingMessage> {
     match &args.command {
-        StakingCommands::CreateValidator {
-            pubkey,
-            amount,
-            moniker,
-            identity,
-            website,
-            security_contact,
-            details,
-            commission_rate,
-            commission_max_rate,
-            commission_max_change_rate,
-            min_self_delegation,
-        } => {
-            let delegator_address = from_address.clone();
-            let validator_address = ValAddress::from(from_address);
-            let description = Description {
-                moniker: moniker.to_string(),
-                identity: identity.to_string(),
-                website: website.to_string(),
-                security_contact: security_contact.to_string(),
-                details: details.to_string(),
-            };
-            let commission = CommissionRates::new(
-                *commission_rate,
-                *commission_max_rate,
-                *commission_max_change_rate,
-            )?;
-
-            let msg = StakingMessage::CreateValidator(CreateValidator {
-                description,
-                commission,
-                min_self_delegation: *min_self_delegation,
-                delegator_address,
-                validator_address,
-                pub_key: pubkey.clone(),
-                value: amount.clone(),
-            });
+        StakingCommands::CreateValidator(msg) => {
+            let msg = StakingMessage::CreateValidator(msg.clone().try_into_cmd(from_address)?);
 
             Ok(msg)
 

@@ -1,6 +1,7 @@
 use crate::consts::proto::*;
 use gears::{
     core::{errors::CoreError, Protobuf},
+    signing::renderer::value_renderer::ValueRenderer,
     tendermint::types::{proto::crypto::PublicKey, time::timestamp::Timestamp},
     types::{
         address::{AccAddress, ValAddress},
@@ -396,7 +397,7 @@ impl From<CreateValidator> for inner::MsgCreateValidator {
             min_self_delegation: msg.min_self_delegation.to_string(),
             delegator_address: msg.delegator_address.to_string(),
             validator_address: msg.validator_address.to_string(),
-            pubkey: Some(gears::crypto::public::PublicKey::from(msg.pub_key).into()),
+            pubkey: Some(gears::crypto::public::PublicKey::from(msg.pubkey).into()),
             value: Some(msg.value.into()),
         }
     }
@@ -440,7 +441,7 @@ impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
             validator_address: ValAddress::from_bech32(&val.validator_address)
                 .map_err(|e| CoreError::DecodeAddress(e.to_string()))?,
-            pub_key: pubkey.into(),
+            pubkey: pubkey.into(),
             value: val
                 .value
                 .ok_or(CoreError::MissingField("value".into()))?
@@ -452,17 +453,31 @@ impl TryFrom<inner::MsgCreateValidator> for CreateValidator {
 
 /// CreateValidator defines a SDK message for creating a new validator.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "@type")]
+#[serde(rename = "/cosmos.staking.v1beta1.MsgCreateValidator")]
 pub struct CreateValidator {
     pub description: Description,
     pub commission: CommissionRates,
     pub min_self_delegation: Uint256,
     pub delegator_address: AccAddress,
     pub validator_address: ValAddress,
-    pub pub_key: PublicKey,
+    pub pubkey: PublicKey,
     pub value: UnsignedCoin,
 }
 
 impl Protobuf<inner::MsgCreateValidator> for CreateValidator {}
+
+impl ValueRenderer for CreateValidator {
+    fn format<MG: gears::signing::handler::MetadataGetter>(
+        &self,
+        _get_metadata: &MG,
+    ) -> Result<
+        Vec<gears::types::rendering::screen::Screen>,
+        gears::signing::renderer::value_renderer::RenderError,
+    > {
+        Err(gears::signing::renderer::value_renderer::RenderError::NotImplemented)
+    }
+}
 
 impl CreateValidator {
     pub const TYPE_URL: &'static str = "/cosmos.staking.v1beta1.MsgCreateValidator";
