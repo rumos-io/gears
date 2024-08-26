@@ -1,9 +1,14 @@
-use gears::baseapp::genesis::Genesis;
+use gears::{
+    baseapp::genesis::Genesis,
+    context::{InfallibleContext, TransactionalContext},
+    store::database::Database,
+    tendermint::types::proto::validator::ValidatorUpdate,
+};
 use staking::CreateValidator;
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct GenutilGenesis {
-    gen_txs: Vec<CreateValidator>,
+    pub gen_txs: Vec<CreateValidator>,
 }
 
 impl Genesis for GenutilGenesis {
@@ -14,4 +19,14 @@ impl Genesis for GenutilGenesis {
     ) -> Result<(), gears::baseapp::genesis::GenesisError> {
         Ok(())
     }
+}
+
+pub trait GenutilStakingBankKeeper<SK> {
+    fn apply_and_return_validator_set_updates<
+        DB: Database,
+        CTX: TransactionalContext<DB, SK> + InfallibleContext<DB, SK>,
+    >(
+        &self,
+        ctx: &mut CTX,
+    ) -> anyhow::Result<Vec<ValidatorUpdate>>;
 }
