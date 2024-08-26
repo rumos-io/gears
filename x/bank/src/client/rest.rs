@@ -13,7 +13,7 @@ use axum::{
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
     rest::{error::HTTPError, Pagination, RestState},
-    types::{address::AccAddress, denom::Denom},
+    types::{address::AccAddress, denom::Denom, pagination::request::PaginationRequest},
 };
 use serde::Deserialize;
 
