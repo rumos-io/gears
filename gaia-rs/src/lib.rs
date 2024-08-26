@@ -155,7 +155,8 @@ impl AuxHandler for GaiaCoreClient {
 
 #[derive(Subcommand, Debug, Clone)]
 pub enum GaiaAuxCli<AI: ApplicationInfo> {
-    Genutil(genutil::client::cli::GenesisAuxCli<AI>),
+    #[command(flatten)]
+    Genutil(genutil::client::cli::GenesisCommands<AI>),
 }
 
 impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
@@ -163,7 +164,9 @@ impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
 
     fn try_from(value: GaiaAuxCli<AI>) -> std::result::Result<Self, Self::Error> {
         Ok(match value {
-            GaiaAuxCli::Genutil(var) => GaiaAuxCmd::Genutil(var.try_into()?),
+            GaiaAuxCli::Genutil(var) => GaiaAuxCmd::Genutil(
+                genutil::client::cli::GenesisAuxCli { command: var }.try_into()?,
+            ),
         })
     }
 }
