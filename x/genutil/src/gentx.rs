@@ -71,7 +71,9 @@ impl GentxTxHandler {
                     Err(anyhow::anyhow!("use directory"))?
                 }
 
-                std::fs::create_dir(&output_dir)?;
+                if !output_dir.exists() {
+                    std::fs::create_dir(&output_dir)?;
+                }
 
                 Ok(Self {
                     output_dir: Some(output_dir),
@@ -157,8 +159,6 @@ impl TxHandler for GentxTxHandler {
                     client_tx_context.home.join("config/node_key.json"),
                 )?)?;
 
-                
-
                 match key.priv_key {
                     gears::tendermint::crypto::PrivateKey::Ed25519(var) => PublicKey::Ed25519(
                         Ed25519PubKey::try_from(var.verification_key().as_bytes().to_vec())?,
@@ -217,10 +217,12 @@ impl TxHandler for GentxTxHandler {
             tx.body.memo = memo;
         }
 
+        let addr = &tx.body.messages.first().delegator_address;
+
         let tx_str = serde_json::to_string_pretty(&tx)?;
         match self.output_dir.clone() {
             Some(dir) => {
-                let output = dir.join("gentx.json");
+                let output = dir.join(format!("gentx-{}.json", addr.as_hex()));
                 std::fs::write(&output, tx_str)?;
                 Ok(gears::application::handlers::client::TxExecutionResult::File(output))
             }
