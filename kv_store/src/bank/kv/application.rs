@@ -154,7 +154,6 @@ impl<DB: Database> ApplicationKVBank<DB> {
         let cache = insert
             .into_iter()
             .map(|(key, value)| (key, Some(value)))
-            .into_iter()
             .chain(delete.into_iter().map(|key| (key, None)))
             .collect::<BTreeMap<_, _>>();
 

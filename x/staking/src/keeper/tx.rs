@@ -150,7 +150,7 @@ impl<
         }
 
         if let Some(min_self_delegation) = msg.min_self_delegation {
-            if !(min_self_delegation > validator.min_self_delegation) {
+            if min_self_delegation <= validator.min_self_delegation {
                 return Err(anyhow::anyhow!(
                     "trying to decrease validator minimal self delegation",
                 ));

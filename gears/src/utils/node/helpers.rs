@@ -69,7 +69,7 @@ pub fn generate_txs<M: TxMessage>(
             core_types::tx::raw::TxRaw {
                 body_bytes: body.encode_vec(),
                 auth_info_bytes: auth_info.encode_vec(),
-                signatures: signatures,
+                signatures,
             }
             .encode_to_vec()
             .into(),

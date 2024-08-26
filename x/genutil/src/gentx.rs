@@ -120,7 +120,7 @@ impl TxHandler for GentxTxHandler {
 
         // check that the provided account has a sufficient balance in the set of genesis accounts.
         let txs_iter = GenesisBalanceIter::new(
-            &self.balance_sk,
+            self.balance_sk,
             client_tx_context.home.join("config/genesis.json"), // todo: better way to get path to genesis file
         )?
         .into_inner();
@@ -128,7 +128,7 @@ impl TxHandler for GentxTxHandler {
         match txs_iter.get(&from_address) {
             Some(acc_coins) => {
                 let staking_params = parse_staking_params_from_genesis(
-                    &self.staking_sk,
+                    self.staking_sk,
                     "params",
                     client_tx_context.home.join("config/genesis.json"),
                 )?;
@@ -157,14 +157,14 @@ impl TxHandler for GentxTxHandler {
                     client_tx_context.home.join("config/node_key.json"),
                 )?)?;
 
-                let key = match key.priv_key {
+                
+
+                match key.priv_key {
                     gears::tendermint::crypto::PrivateKey::Ed25519(var) => PublicKey::Ed25519(
                         Ed25519PubKey::try_from(var.verification_key().as_bytes().to_vec())?,
                     ),
                     _ => unreachable!(),
-                };
-
-                key
+                }
             }
         };
 
