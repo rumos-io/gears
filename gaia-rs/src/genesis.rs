@@ -4,6 +4,7 @@ use gears::{
     baseapp::genesis::GenesisError,
     types::{address::AccAddress, base::coins::UnsignedCoins},
 };
+use genutil::genesis::GenutilGenesis;
 use ibc_rs::GenesisState as IBCGenesis;
 use serde::{Deserialize, Serialize};
 use staking::GenesisState as StakingGenesis;
@@ -15,6 +16,7 @@ pub struct GenesisState {
     pub auth: AuthGenesis,
     pub staking: StakingGenesis,
     pub ibc: IBCGenesis,
+    pub genutil : GenutilGenesis
 }
 
 impl gears::baseapp::genesis::Genesis for GenesisState {

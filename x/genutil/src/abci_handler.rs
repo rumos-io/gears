@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use gears::{
     application::handlers::node::ABCIHandler,
     baseapp::{NullQueryRequest, NullQueryResponse},
@@ -28,8 +26,21 @@ pub struct GenutilAbciHandler<
     KH: KeeperHooks<SK, AK, M>,
     M: Module,
 > {
-    _sk_marker: PhantomData<SK>,
     staking: staking::Keeper<SK, PSK, AK, BK, KH, M>,
+}
+
+impl<
+        SK: StoreKey,
+        PSK: ParamsSubspaceKey,
+        AK: AuthKeeper<SK, M>,
+        BK: StakingBankKeeper<SK, M>,
+        KH: KeeperHooks<SK, AK, M>,
+        M: Module,
+    > GenutilAbciHandler<SK, PSK, AK, BK, KH, M>
+{
+    pub fn new(staking: staking::Keeper<SK, PSK, AK, BK, KH, M>) -> Self {
+        Self { staking }
+    }
 }
 
 impl<
