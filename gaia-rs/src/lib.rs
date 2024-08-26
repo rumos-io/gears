@@ -130,7 +130,7 @@ impl QueryHandler for GaiaCoreClient {
     }
 }
 
-impl AuxHandler for GaiaCoreClient {
+impl AuxHandler for GaiaCore {
     type AuxCommands = GaiaAuxCmd;
     type Aux = NilAux;
 
@@ -173,6 +173,11 @@ impl<AI: ApplicationInfo> TryFrom<GaiaAuxCli<AI>> for GaiaAuxCmd {
 
 pub enum GaiaAuxCmd {
     Genutil(genutil::cmd::GenesisCmd),
+}
+
+impl AuxHandler for GaiaCoreClient {
+    type AuxCommands = NilAuxCommand;
+    type Aux = NilAux;
 }
 
 impl Client for GaiaCoreClient {}
@@ -290,15 +295,5 @@ impl RouterBuilder<GaiaNodeQueryRequest, GaiaNodeQueryResponse> for GaiaCore {
             .add_service(bank::grpc::new(app))
             .add_service(health_server())
             .add_service(tx_server())
-    }
-}
-
-impl AuxHandler for GaiaCore {
-    type AuxCommands = NilAuxCommand;
-    type Aux = NilAux;
-
-    fn prepare_aux(&self, _: Self::AuxCommands) -> anyhow::Result<Self::Aux> {
-        println!("{} doesn't have any AUX command", GaiaApplication::APP_NAME);
-        Ok(NilAux)
     }
 }

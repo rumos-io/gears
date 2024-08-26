@@ -22,8 +22,8 @@ use gears::store::database::DBBuilder;
 
 type Args = CliApplicationArgs<
     GaiaApplication,
-    GaiaAuxCli<GaiaApplication>,
     CliNilAuxCommand,
+    GaiaAuxCli<GaiaApplication>,
     GaiaTxArgs,
     GaiaQueryCommands,
 >;
