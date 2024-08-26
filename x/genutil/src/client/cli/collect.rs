@@ -3,7 +3,7 @@ use std::{marker::PhantomData, path::PathBuf};
 use clap::{ArgAction, Args, ValueHint};
 use gears::application::ApplicationInfo;
 
-use crate::collect_txs::CollectGentxCmd;
+use crate::collect_txs::{CollectGentxCmd, CollectMode};
 
 #[derive(Args, Debug, Clone)]
 pub struct CollectGentxCliAux<AI: ApplicationInfo> {
@@ -13,6 +13,12 @@ pub struct CollectGentxCliAux<AI: ApplicationInfo> {
     pub home: PathBuf,
     #[arg(required = true)]
     pub moniker: String,
+    /// Backup original files
+    #[arg(long, default_value_t = false)]
+    pub backup: bool,
+    /// Print edited files to STDOUT
+    #[arg(long, default_value_t = false)]
+    pub generate_only: bool,
 
     #[arg(skip)]
     _marker: PhantomData<AI>,
@@ -26,6 +32,8 @@ impl<AI: ApplicationInfo> TryFrom<CollectGentxCliAux<AI>> for CollectGentxCmd {
             gentx_dir,
             home,
             moniker,
+            backup,
+            generate_only,
             _marker,
         }: CollectGentxCliAux<AI>,
     ) -> Result<Self, Self::Error> {
@@ -37,11 +45,29 @@ impl<AI: ApplicationInfo> TryFrom<CollectGentxCliAux<AI>> for CollectGentxCmd {
         }
 
         match (gentx_dir.is_dir(), home.is_dir()) {
-            (true, true) => Ok(Self {
-                gentx_dir,
-                home,
-                moniker,
-            }),
+            (true, true) => match (backup, generate_only) {
+                (true, true) => Err(anyhow::anyhow!(
+                    "Can't use `backup` and `generate-only` at the same time"
+                ))?,
+                (true, false) => Ok(Self {
+                    gentx_dir,
+                    home,
+                    moniker,
+                    mode: CollectMode::File(true),
+                }),
+                (false, true) => Ok(Self {
+                    gentx_dir,
+                    home,
+                    moniker,
+                    mode: CollectMode::Display,
+                }),
+                (false, false) => Ok(Self {
+                    gentx_dir,
+                    home,
+                    moniker,
+                    mode: CollectMode::File(false),
+                }),
+            },
             _ => Err(anyhow::anyhow!(
                 "`gentx-dir` and `home` args should be dirs"
             )),
