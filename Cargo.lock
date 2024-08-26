@@ -2043,6 +2043,7 @@ dependencies = [
  "serde",
  "serde_json",
  "staking",
+ "toml_edit 0.22.20",
  "url",
 ]
 

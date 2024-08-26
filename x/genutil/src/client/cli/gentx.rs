@@ -51,7 +51,7 @@ pub struct GentxCli<AI: ApplicationInfo> {
     pub min_self_delegation: Uint256,
 
     /// Build an transaction and write it to STDOUT
-    #[arg(long)]
+    #[arg(long, default_value_t = false)]
     pub generate_only: bool,
     /// Output dir to place a new tx file
     #[arg(long,   action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = AI::home_dir().join("config/gentx") )]

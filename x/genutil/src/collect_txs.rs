@@ -10,10 +10,17 @@ use staking::CreateValidator;
 use crate::{errors::SERDE_JSON_CONVERSION, utils::GenesisBalanceIter};
 
 #[derive(Debug, Clone)]
+pub enum CollectMode {
+    File(bool),
+    Display,
+}
+
+#[derive(Debug, Clone)]
 pub struct CollectGentxCmd {
     pub(crate) gentx_dir: PathBuf,
     pub(crate) home: PathBuf,
     pub moniker: String,
+    pub mode: CollectMode,
 }
 
 pub fn gen_app_state_from_config(
@@ -21,11 +28,14 @@ pub fn gen_app_state_from_config(
         gentx_dir,
         home,
         moniker,
+        mode,
     }: CollectGentxCmd,
     balance_sk: &str,
     genutil: &str,
-) -> anyhow::Result<(Peers, String)> {
-    let txs_iter = GenesisBalanceIter::new(balance_sk, home.join("config/genesis.json"))?; // todo: better way to get path to genesis file
+) -> anyhow::Result<()> {
+    let genesis_file = home.join("config/genesis.json");
+
+    let txs_iter = GenesisBalanceIter::new(balance_sk, &genesis_file)?; // todo: better way to get path to genesis file
 
     let (persistent_peers, app_gen_txs) = collect_txs(gentx_dir, moniker, txs_iter)?;
 
@@ -34,7 +44,7 @@ pub fn gen_app_state_from_config(
     }
 
     let mut genesis: serde_json::Value =
-        serde_json::from_reader(std::fs::File::open(home.join("config/genesis.json"))?)?;
+        serde_json::from_reader(std::fs::File::open(&genesis_file)?)?;
 
     #[derive(Serialize, Deserialize, Default)]
     struct GenutilGenesis {
@@ -63,10 +73,71 @@ pub fn gen_app_state_from_config(
         serde_json::to_value(existed_gen_txs).expect(SERDE_JSON_CONVERSION),
     );
 
-    Ok((
-        persistent_peers,
-        serde_json::to_string_pretty(genesis_unparsed).expect(SERDE_JSON_CONVERSION),
-    ))
+    match mode {
+        CollectMode::File(backup) => {
+            let config_file = home.join("config/config.toml");
+
+            if backup {
+                std::fs::copy(&genesis_file, home.join("config/genesis.old.json"))?;
+                std::fs::copy(&config_file, home.join("config/config.old.toml"))?;
+            }
+
+            let genesis_output =
+                serde_json::to_string_pretty(genesis_unparsed).expect(SERDE_JSON_CONVERSION);
+            let config_output = add_peers_to_tm_toml_config(&home, persistent_peers)?;
+
+            std::fs::write(&genesis_file, genesis_output)?;
+            std::fs::write(&config_file, config_output.to_string())?;
+        }
+        CollectMode::Display => {
+            let genesis_output =
+                serde_json::to_string_pretty(genesis_unparsed).expect(SERDE_JSON_CONVERSION);
+
+            println!("# genesis.json\n{}", genesis_output);
+
+            let config_output = add_peers_to_tm_toml_config(&home, persistent_peers)?;
+
+            println!("# config.toml\n{}", config_output.to_string());
+        }
+    }
+
+    Ok(())
+}
+
+fn add_peers_to_tm_toml_config(
+    home: impl AsRef<Path>,
+    peers: Peers,
+) -> anyhow::Result<toml_edit::DocumentMut> {
+    let mut tendermint_config: toml_edit::DocumentMut =
+        std::fs::read_to_string(home.as_ref().join("config/config.toml"))?.parse()?;
+
+    let peers_str = peers.to_string();
+
+    match tendermint_config.get_mut("p2p") {
+        Some(config) => match config.get_mut("persistent_peers") {
+            Some(peers) => {
+                *peers = toml_edit::value(peers_str);
+            }
+            None => {
+                config
+                    .as_table_mut()
+                    .ok_or(anyhow::anyhow!(
+                        "invalid config. Can't read `[p2p]` as table"
+                    ))?
+                    .insert("persistent_peers", toml_edit::value(peers_str));
+            }
+        },
+        None => {
+            let mut table = toml_edit::Table::default();
+            table["persistent_peers"] = toml_edit::value(peers_str);
+
+            tendermint_config
+                .as_table_mut()
+                .insert("p2p", toml_edit::Item::Table(table));
+        }
+    }
+
+    Ok(tendermint_config)
 }
 
 fn collect_txs(
@@ -150,3 +221,9 @@ fn collect_txs(
 
 #[derive(Debug, Clone)]
 pub struct Peers(pub Vec<String>);
+
+impl std::fmt::Display for Peers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.join(","))
+    }
+}
