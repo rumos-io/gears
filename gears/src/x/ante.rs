@@ -1,6 +1,7 @@
 use crate::application::handlers::node::TxError;
 use crate::crypto::public::PublicKey;
 use crate::signing::handler::MetadataGetter;
+use crate::signing::renderer::amino_renderer::{AminoRenderer, RenderError as AminoRendererError};
 use crate::signing::std_sign_doc;
 use crate::signing::{handler::SignModeHandler, renderer::value_renderer::ValueRenderer};
 use crate::types::auth::gas::Gas;
@@ -109,7 +110,7 @@ impl<
             sk: PhantomData,
         }
     }
-    pub fn run<DB: Database, M: TxMessage + ValueRenderer>(
+    pub fn run<DB: Database, M: TxMessage + ValueRenderer + AminoRenderer>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -405,7 +406,7 @@ impl<
         Ok(())
     }
 
-    fn sig_verification_handler<DB: Database, M: TxMessage + ValueRenderer>(
+    fn sig_verification_handler<DB: Database, M: TxMessage + ValueRenderer + AminoRenderer>(
         &self,
         ctx: &mut TxContext<'_, DB, SK>,
         tx: &TxWithRaw<M>,
@@ -454,48 +455,17 @@ impl<
                     SignMode::LegacyAminoJson => {
                         let mut msgs = vec![];
                         for msg in tx.tx.get_msgs() {
-                            // TODO: don't have proper value getter, maybe extend trait
-                            let mut value: serde_json::Map<String, serde_json::Value> =
-                                serde_json::from_slice(
-                                    &serde_json::to_vec(&msg)
-                                        .map_err(|_| AnteError::LegacyAminoJson)?,
-                                )
-                                .map_err(|_| AnteError::LegacyAminoJson)?;
-                            value.remove("@type");
-
+                            dbg!(msg.get_signers());
+                            dbg!(msg.amino_url());
                             msgs.push(std_sign_doc::Msg {
-                                kind: std_sign_doc::proto_type_url_to_legacy_amino_type_url(
-                                    msg.type_url(),
-                                ),
-                                value,
+                                kind: msg.amino_url().to_string(),
+                                value: msg.render()?,
                             })
                         }
-                        let amount = {
-                            let fee = tx
-                                .tx
-                                .auth_info
-                                .fee
-                                .amount
-                                .clone()
-                                .ok_or(AnteError::MissingFee)?;
-                            fee.into_inner()
-                                .into_iter()
-                                .map(|coin| std_sign_doc::Coin {
-                                    amount: coin.amount.to_string(),
-                                    denom: coin.denom.to_string(),
-                                })
-                                .collect()
-                        };
                         let doc = std_sign_doc::StdSignDoc {
                             account_number: acct.get_account_number().to_string(),
                             chain_id: ctx.chain_id().to_string(),
-                            fee: std_sign_doc::StdFee {
-                                amount,
-                                gas: u64::from(tx.tx.auth_info.fee.gas_limit).to_string(),
-                                // TODO: check impl
-                                granter: None,
-                                payer: None,
-                            },
+                            fee: tx.tx.auth_info.fee.clone().into(),
                             memo: tx.tx.get_memo().to_string(),
                             msgs,
                             sequence: account_seq.to_string(),
@@ -503,7 +473,10 @@ impl<
                             // timeout_height: Some(u64::from(tx.tx.get_timeout_height()).to_string()),
                             timeout_height: None,
                         };
-                        serde_json::to_vec(&doc).map_err(|_| AnteError::LegacyAminoJson)?
+
+                        doc.to_sign_bytes().map_err(|e| {
+                            AnteError::LegacyAminoJson(AminoRendererError::Rendering(e.to_string()))
+                        })?
                     }
                     SignMode::Textual => {
                         let handler = SignModeHandler;

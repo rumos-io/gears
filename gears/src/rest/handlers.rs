@@ -100,7 +100,13 @@ pub async fn tx<M: TxMessage>(
     } else {
         None
     };
-    Ok(Json(BroadcastTxResponse { tx_response: res }))
+
+    Ok(Json(BroadcastTxResponse {
+        tx: res.as_ref().map(|r| r.tx.clone()).map(|tx| match tx {
+            AnyTx::Tx(tx) => tx,
+        }),
+        tx_response: res,
+    }))
 }
 
 pub async fn send_tx(

@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
+use crate::types::auth::fee::Fee;
+
 // gears::core::base::coin::Coin has wrong order of fields
 // It is better to create a struct with correct order than
 // reorder fields by some dynamic struct
@@ -27,6 +29,31 @@ pub struct StdFee {
     pub payer: Option<String>,
 }
 
+impl From<Fee> for StdFee {
+    fn from(value: Fee) -> Self {
+        let amount = {
+            let fee = value.amount.clone();
+            fee.map(|fee| {
+                fee.into_inner()
+                    .into_iter()
+                    .map(|coin| Coin {
+                        amount: coin.amount.to_string(),
+                        denom: coin.denom.to_string(),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+        };
+        StdFee {
+            amount,
+            gas: u64::from(value.gas_limit).to_string(),
+            // TODO: check impl
+            granter: None,
+            payer: None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Msg {
     #[serde(rename = "type")]
@@ -51,11 +78,9 @@ pub struct StdSignDoc {
     pub timeout_height: Option<String>,
 }
 
-pub fn proto_type_url_to_legacy_amino_type_url(kind: &str) -> String {
-    // it seems like the other transactions will have it's amino type
-    match kind {
-        "/cosmos.bank.v1beta1.MsgSend" => "cosmos-sdk/MsgSend".to_string(),
-        _ => kind.to_string(),
+impl StdSignDoc {
+    pub fn to_sign_bytes(&self) -> Result<Vec<u8>, serde_json::Error> {
+        serde_json::to_vec(self)
     }
 }
 

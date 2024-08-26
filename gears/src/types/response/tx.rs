@@ -193,6 +193,8 @@ impl<M: TxMessage> From<TxResponse<M>> for TxResponseRaw {
 /// Service.BroadcastTx method.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct BroadcastTxResponse<M: TxMessage> {
+    /// tx represents the transaction that is placed inside tx_response
+    pub tx: Option<Tx<M>>,
     /// tx_response is the queried TxResponses.
     pub tx_response: Option<TxResponse<M>>,
 }

@@ -83,6 +83,10 @@ impl TxMessage for MsgSend {
     fn type_url(&self) -> &'static str {
         "/cosmos.bank.v1beta1.MsgSend"
     }
+
+    fn amino_url(&self) -> &'static str {
+        "cosmos-sdk/MsgSend"
+    }
 }
 
 impl TryFrom<Any> for MsgSend {
