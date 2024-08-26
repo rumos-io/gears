@@ -175,7 +175,7 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &QueryContext<DB, GaiaStoreKey>,
         query: RequestQuery,
-    ) -> Result<bytes::Bytes, QueryError> {
+    ) -> Result<Vec<u8>, QueryError> {
         if query.path.starts_with("/cosmos.auth") {
             self.auth_abci_handler.query(ctx, query)
         } else if query.path.starts_with("/cosmos.bank") {

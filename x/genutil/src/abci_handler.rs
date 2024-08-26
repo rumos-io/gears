@@ -46,7 +46,7 @@ impl<SK: StoreKey> ABCIHandler for GenutilAbciHandler<SK> {
         _ctx: &mut gears::context::tx::TxContext<'_, DB, Self::StoreKey>,
         _msg: &Self::Message,
     ) -> Result<(), gears::application::handlers::node::TxError> {
-        todo!()
+        unreachable!()
     }
 
     fn init_genesis<DB: gears::store::database::Database>(
