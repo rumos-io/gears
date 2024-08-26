@@ -7,6 +7,7 @@ pub mod tx {
 
     pub mod broadcast {
         pub use tendermint_rpc::endpoint::broadcast::tx_commit::Response;
+        pub use tendermint_rpc::endpoint::broadcast::tx_sync::Response as SyncResponse;
     }
 
     pub mod search {

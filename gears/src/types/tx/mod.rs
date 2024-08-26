@@ -25,6 +25,12 @@ pub trait TxMessage:
     fn get_signers(&self) -> Vec<&AccAddress>;
 
     fn type_url(&self) -> &'static str;
+
+    fn amino_url(&self) -> &'static str {
+        // we don't force to add legacy amino type url because the app should be focused
+        // on better signing processes
+        self.type_url()
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -114,10 +120,13 @@ pub struct Tx<M> {
     /// signatures is a list of signatures that matches the length and order of
     /// AuthInfo's signer_infos to allow connecting signature meta information like
     /// public key and signing mode by position.
-    #[serde(serialize_with = "core_types::serializers::serialize_vec_of_vec_to_vec_of_base64")]
+    #[serde(
+        serialize_with = "core_types::serializers::serialize_vec_of_vec_to_vec_of_base64",
+        deserialize_with = "core_types::serializers::deserialize_vec_of_base64_to_vec_of_vec"
+    )]
     pub signatures: Vec<Vec<u8>>,
-    #[serde(skip_serializing)]
-    pub signatures_data: Vec<SignatureData>,
+    #[serde(skip_serializing, skip_deserializing)]
+    pub signatures_data: Vec<SignatureData>, // TODO: DO WE REALLY NEED THIS FIELD?
 }
 
 // TODO:

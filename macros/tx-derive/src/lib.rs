@@ -37,6 +37,12 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                 }
             });
 
+            let amino_url = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
+                quote! {
+                    Self::#i(msg) => ::gears::types::tx::TxMessage::amino_url(msg)
+                }
+            });
+
             let into_any = enum_data.variants.iter().map(|v| v.clone().ident).map(|i| {
                 quote! {
                     #name ::#i(msg) => msg.into()
@@ -70,6 +76,12 @@ fn impl_message(ast: &syn::DeriveInput) -> TokenStream {
                     fn type_url(&self) -> &'static str {
                         match self {
                             #(#type_url),*
+                        }
+                    }
+
+                    fn amino_url(&self) -> &'static str {
+                        match self {
+                            #(#amino_url),*
                         }
                     }
 

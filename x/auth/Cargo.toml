@@ -27,6 +27,7 @@ serde-aux = { workspace = true }
 
 #other
 # tokio = { workspace = true }
+axum = { workspace = true }
 tonic = { workspace = true }
 # url = { workspace = true }
 

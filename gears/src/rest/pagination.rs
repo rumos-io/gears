@@ -17,17 +17,18 @@ pub struct Pagination {
 
 impl From<Pagination> for PaginationRequest {
     fn from(pagination: Pagination) -> Self {
-        let (offset, limit) = parse_pagination(pagination);
+        let (offset, limit) = parse_pagination(&pagination);
 
         Self {
             limit,
-            kind: PaginationKind::Offset { offset },
+            // the app page offset starts from 0
+            kind: PaginationKind::Offset { offset: offset - 1 },
         }
     }
 }
 
-// ParsePagination validate Pagination and returns page number & limit.
-pub fn parse_pagination(pagination: Pagination) -> (u32, u8) {
+/// parse_pagination validates Pagination and returns page number & limit.
+pub fn parse_pagination(pagination: &Pagination) -> (u32, u8) {
     let offset = pagination.offset.unwrap_or(0);
     let mut limit = pagination.limit.unwrap_or(QUERY_DEFAULT_LIMIT);
 
@@ -47,7 +48,7 @@ mod tests {
 
     #[test]
     fn parse_pagination_works() {
-        let (page, limit) = parse_pagination(Pagination {
+        let (page, limit) = parse_pagination(&Pagination {
             offset: Some(100),
             limit: Some(30),
         });
@@ -55,7 +56,7 @@ mod tests {
         assert_eq!(page, 4);
         assert_eq!(limit, 30);
 
-        let (page, limit) = parse_pagination(Pagination {
+        let (page, limit) = parse_pagination(&Pagination {
             offset: Some(100),
             limit: Some(0),
         });
@@ -63,7 +64,7 @@ mod tests {
         assert_eq!(page, 2);
         assert_eq!(limit, 100);
 
-        let (page, limit) = parse_pagination(Pagination {
+        let (page, limit) = parse_pagination(&Pagination {
             offset: None,
             limit: None,
         });

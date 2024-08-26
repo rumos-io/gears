@@ -182,10 +182,7 @@ impl<
             }
             "/cosmos.bank.v1beta1.Query/DenomMetadata" => {
                 let req = QueryDenomMetadataRequest::decode(query.data)?;
-                let metadata = self
-                    .keeper
-                    .get_denom_metadata(ctx, &req.denom)
-                    .expect("Query ctx doesn't have any gas");
+                let metadata = self.keeper.get_denom_metadata(ctx, &req.denom).unwrap_gas();
                 Ok(QueryDenomMetadataResponse { metadata }.encode_vec().into())
             }
             "/cosmos.bank.v1beta1.Query/Params" => {

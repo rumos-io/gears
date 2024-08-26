@@ -1,3 +1,10 @@
+use crate::{
+    types::query::{
+        QueryAllBalancesRequest, QueryBalanceRequest, QueryDenomMetadataRequest,
+        QueryTotalSupplyRequest,
+    },
+    BankNodeQueryRequest, BankNodeQueryResponse,
+};
 use axum::{
     extract::{Path, Query, State},
     routing::get,
@@ -5,19 +12,10 @@ use axum::{
 };
 use gears::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::{error::HTTPError, RestState},
-    types::denom::Denom,
-};
-use gears::{
-    rest::Pagination,
-    types::{address::AccAddress, pagination::request::PaginationRequest},
+    rest::{error::HTTPError, Pagination, RestState},
+    types::{address::AccAddress, denom::Denom},
 };
 use serde::Deserialize;
-
-use crate::{
-    types::query::{QueryAllBalancesRequest, QueryBalanceRequest, QueryTotalSupplyRequest},
-    BankNodeQueryRequest, BankNodeQueryResponse,
-};
 
 /// Gets the total supply of every denom
 pub async fn supply<
@@ -43,12 +41,12 @@ pub async fn get_balances<
     App: NodeQueryHandler<QReq, QRes>,
 >(
     Path(address): Path<AccAddress>,
-    pagination: Query<Option<PaginationRequest>>,
+    pagination: Query<Pagination>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = BankNodeQueryRequest::AllBalances(QueryAllBalancesRequest {
         address,
-        pagination: pagination.0,
+        pagination: Some(pagination.0.into()),
     });
 
     let res = rest_state.app.typed_query(req)?;
@@ -83,6 +81,20 @@ pub async fn get_balances_by_denom<
     Ok(Json(res))
 }
 
+/// get_denom_metadata queries the client metadata for all registered coin denominations.
+pub async fn get_denom_metadata<
+    QReq: QueryRequest + From<BankNodeQueryRequest>,
+    QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
+    App: NodeQueryHandler<QReq, QRes>,
+>(
+    Path(denom): Path<Denom>,
+    State(rest_state): State<RestState<QReq, QRes, App>>,
+) -> Result<Json<QRes>, HTTPError> {
+    let req = BankNodeQueryRequest::DenomMetadata(QueryDenomMetadataRequest { denom });
+    let res = rest_state.app.typed_query(req)?;
+    Ok(Json(res))
+}
+
 pub fn get_router<
     QReq: QueryRequest + From<BankNodeQueryRequest>,
     QRes: QueryResponse + TryInto<BankNodeQueryResponse>,
@@ -94,5 +106,9 @@ pub fn get_router<
         .route(
             "/v1beta1/balances/:address/by_denom",
             get(get_balances_by_denom::<QReq, QRes, App>),
+        )
+        .route(
+            "/v1beta1/denoms_metadata/:denom",
+            get(get_denom_metadata::<QReq, QRes, App>),
         )
 }

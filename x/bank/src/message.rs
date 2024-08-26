@@ -36,6 +36,12 @@ impl TxMessage for Message {
             Message::Send(_) => "/cosmos.bank.v1beta1.MsgSend",
         }
     }
+
+    fn amino_url(&self) -> &'static str {
+        match self {
+            Message::Send(_) => "cosmos-sdk/MsgSend",
+        }
+    }
 }
 
 impl From<Message> for Any {

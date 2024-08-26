@@ -1,3 +1,4 @@
+pub mod amino_renderer;
 pub mod messages;
 pub mod primitives;
 pub mod tx;
