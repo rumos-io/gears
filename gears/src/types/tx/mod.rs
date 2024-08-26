@@ -120,7 +120,7 @@ pub struct Tx<M> {
     )]
     pub signatures: Vec<Vec<u8>>,
     #[serde(skip_serializing, skip_deserializing)]
-    pub signatures_data: Vec<SignatureData>,
+    pub signatures_data: Vec<SignatureData>, // TODO: DO WE REALLY NEED THIS FIELD?
 }
 
 // TODO:
