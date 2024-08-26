@@ -19,7 +19,7 @@ pub struct GenesisAuxCli<AI: ApplicationInfo> {
 pub enum GenesisCommands<AI: ApplicationInfo> {
     /// Collect genesis txs and output a genesis.json file
     CollectGentxs(CollectGentxCliAux<AI>),
-    Gentx(CliTxCommand<AI, GentxCli>),
+    Gentx(CliTxCommand<AI, GentxCli<AI>>),
 }
 
 impl<AI: ApplicationInfo> TryFrom<GenesisAuxCli<AI>> for GenesisCmd {

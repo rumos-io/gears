@@ -1,6 +1,8 @@
+use std::marker::PhantomData;
 use std::{net::SocketAddr, path::PathBuf};
 
-use clap::Args;
+use clap::{ArgAction, Args, ValueHint};
+use gears::application::ApplicationInfo;
 use gears::tendermint::types::proto::crypto::PublicKey as TendermintPublicKey;
 use gears::{
     socket_addr,
@@ -12,7 +14,7 @@ use crate::gentx::GentxCmd;
 const DEFAULT_NODE_IP: SocketAddr = socket_addr!(192, 168, 1, 106, 26656);
 
 #[derive(Args, Debug, Clone)]
-pub struct GentxCli {
+pub struct GentxCli<AI: ApplicationInfo> {
     /// The validator's Protobuf JSON encoded public key
     #[arg(long)]
     pub pubkey: Option<TendermintPublicKey>,
@@ -48,18 +50,24 @@ pub struct GentxCli {
     #[arg(long, default_value_t = Uint256::zero())]
     pub min_self_delegation: Uint256,
 
-    /// Output dir to place a new tx file
+    /// Build an transaction and write it to STDOUT
     #[arg(long)]
-    pub output: Option<PathBuf>,
+    pub generate_only: bool,
+    /// Output dir to place a new tx file
+    #[arg(long,   action = ArgAction::Set, value_hint = ValueHint::DirPath, default_value_os_t = AI::home_dir().join("config/gentx") )]
+    pub output: PathBuf,
     /// The node's public IP
     #[arg(long, default_value_t = DEFAULT_NODE_IP)]
     pub ip: SocketAddr,
     /// The node's NodeID
     #[arg(long)]
     pub node_id: Option<String>,
+
+    #[arg(skip)]
+    _marker: PhantomData<AI>,
 }
 
-impl TryFrom<GentxCli> for GentxCmd {
+impl<AI: ApplicationInfo> TryFrom<GentxCli<AI>> for GentxCmd {
     type Error = anyhow::Error;
 
     fn try_from(
@@ -78,10 +86,15 @@ impl TryFrom<GentxCli> for GentxCmd {
             commission_max_rate,
             commission_max_change_rate,
             min_self_delegation,
-        }: GentxCli,
+            generate_only,
+            _marker,
+        }: GentxCli<AI>,
     ) -> Result<Self, Self::Error> {
         Ok(Self {
-            output,
+            output: match generate_only {
+                true => None,
+                false => Some(output),
+            },
             node_id,
             ip,
             pubkey,
