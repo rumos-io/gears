@@ -92,15 +92,15 @@ impl<
         genesis: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
         for tx in genesis.gen_txs {
-            let result = gears::global_node::global_node()
-                .expect("node should be set when we call `init_genesis`")
-                .deliver_tx(RequestDeliverTx {
-                    tx: tx.encode_vec().into(),
-                });
+            // let result = gears::global_node::global_node()
+            //     .expect("node should be set when we call `init_genesis`")
+            //     .deliver_tx(RequestDeliverTx {
+            //         tx: tx.encode_vec().into(),
+            //     });
 
-            if result.code > 0 {
-                panic!("log :{}, info: {}", result.log, result.info);
-            }
+            // if result.code > 0 {
+            //     panic!("log :{}, info: {}", result.log, result.info);
+            // }
         }
 
         match self.staking.apply_and_return_validator_set_updates(ctx) {

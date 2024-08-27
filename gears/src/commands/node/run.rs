@@ -4,7 +4,6 @@ use crate::baseapp::options::NodeOptions;
 use crate::baseapp::{BaseApp, NodeQueryHandler};
 use crate::config::{ApplicationConfig, Config, ConfigDirectory};
 use crate::grpc::run_grpc_server;
-use crate::global_node::GLOBAL_NODE;
 use crate::params::ParamsSubspaceKey;
 use crate::rest::{run_rest_server, RestState};
 use crate::types::base::min_gas::MinGasPrices;
@@ -132,9 +131,6 @@ pub fn run<
     )?);
 
     let app: BaseApp<DB, PSK, H, AI> = BaseApp::new(db, params_subspace_key, abci_handler, options);
-
-    // At this point to other code should have set this, so we may ignore result.
-    let _ = GLOBAL_NODE.set(Box::new(app.clone()));
 
     run_rest_server::<H::Message, H::QReq, H::QRes, _>(
         app.clone(),

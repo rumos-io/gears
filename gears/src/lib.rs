@@ -10,7 +10,6 @@ pub mod defaults;
 pub mod error;
 pub mod ext;
 pub mod grpc;
-pub mod global_node;
 pub mod params;
 pub mod rest;
 pub(crate) mod runtime;
