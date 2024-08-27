@@ -182,13 +182,44 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut InitContext<'_, DB, GaiaStoreKey>,
         genesis: GenesisState,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        self.bank_abci_handler.genesis(ctx, genesis.bank);
-        let mut validator_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
-        self.ibc_abci_handler.genesis(ctx, genesis.ibc);
-        self.auth_abci_handler.genesis(ctx, genesis.auth);
-        validator_updates.append(&mut self.genutil_handler.init_genesis(ctx, genesis.genutil));
+        // capabilitytypes.ModuleName,
+        // authtypes.ModuleName,
+        // banktypes.ModuleName,
+        // distrtypes.ModuleName,
+        // govtypes.ModuleName,
+        // stakingtypes.ModuleName,
+        // slashingtypes.ModuleName,
+        // minttypes.ModuleName,
+        // crisistypes.ModuleName,
+        // genutiltypes.ModuleName,
+        // ibctransfertypes.ModuleName,
+        // ibchost.ModuleName,
+        // icatypes.ModuleName,
+        // evidencetypes.ModuleName,
+        // authz.ModuleName,
+        // feegrant.ModuleName,
+        // routertypes.ModuleName,
+        // paramstypes.ModuleName,
+        // upgradetypes.ModuleName,
+        // vestingtypes.ModuleName,
+        // globalfee.ModuleName,
+        // providertypes.ModuleName,
 
-        validator_updates
+        self.auth_abci_handler.genesis(ctx, genesis.auth);
+        self.bank_abci_handler.genesis(ctx, genesis.bank);
+        let validator_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
+        self.ibc_abci_handler.genesis(ctx, genesis.ibc);
+        let genutil_validators = self.genutil_handler.init_genesis(ctx, genesis.genutil);
+
+        match (validator_updates.is_empty(), genutil_validators.is_empty()) {
+            (true, true) => Vec::new(),
+            (true, false) => genutil_validators,
+            (false, true) => validator_updates,
+            (false, false) => {
+                // https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/types/module/module.go#L331-L336
+                panic!("validator InitGenesis updates already set by a previous module")
+            }
+        }
     }
 
     fn query<DB: Database + Send + Sync>(
