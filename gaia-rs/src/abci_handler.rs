@@ -182,33 +182,10 @@ impl ABCIHandler for GaiaABCIHandler {
         ctx: &mut InitContext<'_, DB, GaiaStoreKey>,
         genesis: GenesisState,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        // capabilitytypes.ModuleName,
-        // authtypes.ModuleName,
-        // banktypes.ModuleName,
-        // distrtypes.ModuleName,
-        // govtypes.ModuleName,
-        // stakingtypes.ModuleName,
-        // slashingtypes.ModuleName,
-        // minttypes.ModuleName,
-        // crisistypes.ModuleName,
-        // genutiltypes.ModuleName,
-        // ibctransfertypes.ModuleName,
-        // ibchost.ModuleName,
-        // icatypes.ModuleName,
-        // evidencetypes.ModuleName,
-        // authz.ModuleName,
-        // feegrant.ModuleName,
-        // routertypes.ModuleName,
-        // paramstypes.ModuleName,
-        // upgradetypes.ModuleName,
-        // vestingtypes.ModuleName,
-        // globalfee.ModuleName,
-        // providertypes.ModuleName,
-
-        self.auth_abci_handler.genesis(ctx, genesis.auth);
         self.bank_abci_handler.genesis(ctx, genesis.bank);
         let validator_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
+        self.auth_abci_handler.genesis(ctx, genesis.auth);
         let genutil_validators = self.genutil_handler.init_genesis(ctx, genesis.genutil);
 
         match (validator_updates.is_empty(), genutil_validators.is_empty()) {
