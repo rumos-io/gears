@@ -4,10 +4,9 @@ use std::{
 };
 
 use gears::types::{address::AccAddress, base::coins::UnsignedCoins, tx::Tx};
-use serde::{Deserialize, Serialize};
 use staking::CreateValidator;
 
-use crate::{errors::SERDE_JSON_CONVERSION, utils::GenesisBalanceIter};
+use crate::{errors::SERDE_JSON_CONVERSION, genesis::GenutilGenesis, utils::GenesisBalanceIter};
 
 #[derive(Debug, Clone)]
 pub enum CollectMode {
@@ -46,17 +45,8 @@ pub fn gen_app_state_from_config(
     let mut genesis: serde_json::Value =
         serde_json::from_reader(std::fs::File::open(&genesis_file)?)?;
 
-    #[derive(Serialize, Deserialize, Default)]
-    struct GenutilGenesis {
-        gen_txs: Vec<Tx<CreateValidator>>,
-    }
-
-    let genesis_unparsed = genesis
-        .as_object_mut()
-        .ok_or(anyhow::anyhow!("failed to read json as object"))?;
-
-    let mut existed_gen_txs = match genesis_unparsed.get_mut(genutil) {
-        Some(genesis) => serde_json::from_value(genesis.take()).expect(SERDE_JSON_CONVERSION),
+    let mut existed_gen_txs = match genesis.pointer_mut("genutil/gen_txs") {
+        Some(val) => serde_json::from_value(val.take()).expect(SERDE_JSON_CONVERSION),
         None => GenutilGenesis::default(),
     };
 
@@ -68,10 +58,40 @@ pub fn gen_app_state_from_config(
         existed_gen_txs.gen_txs.push(tx)
     }
 
-    let _ = genesis_unparsed.insert(
-        genutil.to_owned(),
-        serde_json::to_value(existed_gen_txs).expect(SERDE_JSON_CONVERSION),
-    );
+    match genesis
+        .pointer_mut("/app_state")
+        .ok_or(anyhow::anyhow!("Failed to read `app_state` from genesis"))?
+        .pointer_mut(&format!("/{genutil}"))
+    {
+        Some(genesis) => match genesis.pointer_mut("/gen_txs") {
+            Some(genesis) => {
+                *genesis =
+                    serde_json::to_value(existed_gen_txs.gen_txs).expect(SERDE_JSON_CONVERSION)
+            }
+            None => {
+                let _ = genesis
+                    .as_object_mut()
+                    .ok_or(anyhow::anyhow!(
+                        "Failed to read `gen_txs` as object. Probably invalid genesis file"
+                    ))?
+                    .insert(
+                        "gen_txs".to_owned(),
+                        serde_json::to_value(existed_gen_txs.gen_txs).expect(SERDE_JSON_CONVERSION),
+                    );
+            }
+        },
+        None => {
+            let _ = genesis
+                .as_object_mut()
+                .ok_or(anyhow::anyhow!(
+                    "Failed to read `{genutil}` as object. Probably invalid genesis file"
+                ))?
+                .insert(
+                    genutil.to_owned(),
+                    serde_json::to_value(existed_gen_txs).expect(SERDE_JSON_CONVERSION),
+                );
+        }
+    }
 
     match mode {
         CollectMode::File(backup) => {
@@ -83,7 +103,7 @@ pub fn gen_app_state_from_config(
             }
 
             let genesis_output =
-                serde_json::to_string_pretty(genesis_unparsed).expect(SERDE_JSON_CONVERSION);
+                serde_json::to_string_pretty(&genesis).expect(SERDE_JSON_CONVERSION);
             let config_output = add_peers_to_tm_toml_config(&home, persistent_peers)?;
 
             std::fs::write(&genesis_file, genesis_output)?;
@@ -91,7 +111,7 @@ pub fn gen_app_state_from_config(
         }
         CollectMode::Display => {
             let genesis_output =
-                serde_json::to_string_pretty(genesis_unparsed).expect(SERDE_JSON_CONVERSION);
+                serde_json::to_string_pretty(&genesis).expect(SERDE_JSON_CONVERSION);
 
             println!("# genesis.json\n{}", genesis_output);
 

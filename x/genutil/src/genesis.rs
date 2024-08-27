@@ -1,9 +1,9 @@
-use gears::baseapp::genesis::Genesis;
+use gears::{baseapp::genesis::Genesis, types::tx::Tx};
 use staking::CreateValidator;
 
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct GenutilGenesis {
-    pub gen_txs: Vec<CreateValidator>,
+    pub gen_txs: Vec<Tx<CreateValidator>>,
 }
 
 impl Genesis for GenutilGenesis {
