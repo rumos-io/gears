@@ -37,7 +37,7 @@ pub struct TxContext<'a, DB, SK> {
     pub events: Vec<Event>,
     pub options: NodeOptions,
     pub(crate) height: u32,
-    pub(crate) header: Header,
+    pub(crate) header: Option<Header>,
     pub(crate) block_gas_meter: &'a mut GasMeter<BlockKind>,
     pub(crate) consensus_params: ConsensusParams,
     multi_store: &'a mut TransactionMultiBank<DB, SK>,
@@ -47,8 +47,7 @@ pub struct TxContext<'a, DB, SK> {
 impl<'a, DB, SK> TxContext<'a, DB, SK> {
     pub fn new(
         multi_store: &'a mut TransactionMultiBank<DB, SK>,
-        height: u32,
-        header: Header,
+        header: Option<Header>,
         consensus_params: ConsensusParams,
         gas_meter: GasMeter<TxKind>,
         block_gas_meter: &'a mut GasMeter<BlockKind>,
@@ -58,7 +57,10 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         Self {
             events: Vec::new(),
             multi_store,
-            height,
+            height: match &header {
+                Some(var) => var.height,
+                None => 0,
+            },
             header,
             gas_meter: Arc::new(RefCell::new(gas_meter)),
             block_gas_meter,
@@ -77,12 +79,17 @@ impl<'a, DB, SK> TxContext<'a, DB, SK> {
         MultiStoreMut::from(&mut *self.multi_store)
     }
 
-    pub fn chain_id(&self) -> &ChainId {
-        &self.header.chain_id
+    pub fn chain_id(&self) -> ChainId {
+        self.header
+            .clone()
+            .expect("block header is set in begin block")
+            .chain_id
     }
 
-    pub fn header(&self) -> &Header {
-        &self.header
+    pub fn header(&self) -> Header {
+        self.header
+            .clone()
+            .expect("block header is set in begin block")
     }
 }
 
@@ -135,7 +142,10 @@ impl<DB: Database, SK: StoreKey> TransactionalContext<DB, SK> for TxContext<'_, 
     }
 
     fn get_time(&self) -> Timestamp {
-        self.header.time
+        self.header
+            .clone()
+            .expect("block header is set in begin block")
+            .time
     }
 
     fn kv_store_mut(&mut self, store_key: &SK) -> StoreMut<'_, PrefixDB<DB>> {

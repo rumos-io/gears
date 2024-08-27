@@ -19,7 +19,6 @@ pub fn build_store<SK: StoreKey>() -> ApplicationMultiBank<MemDB, SK> {
 }
 
 pub struct ContextOptions {
-    height: u32,
     header: Header,
     consensus_params: ConsensusParams,
     gas_meter: GasMeter<TxKind>,
@@ -33,7 +32,6 @@ pub fn build_tx_ctx<'a, DB, SK>(
     opt: impl Into<ContextOptions>,
 ) -> TxContext<'a, DB, SK> {
     let ContextOptions {
-        height,
         header,
         consensus_params,
         gas_meter,
@@ -42,8 +40,7 @@ pub fn build_tx_ctx<'a, DB, SK>(
     } = opt.into();
     TxContext::new(
         multi_store,
-        height,
-        header,
+        Some(header),
         consensus_params,
         gas_meter,
         block_gas_meter,
