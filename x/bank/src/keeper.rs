@@ -633,9 +633,9 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module>
         )
     }
 
-    pub fn supply<DB: Database, CTX: TransactionalContext<DB, SK>>(
+    pub fn supply<DB: Database, CTX: QueryableContext<DB, SK>>(
         &self,
-        ctx: &mut CTX,
+        ctx: &CTX,
         denom: &Denom,
     ) -> Result<Option<UnsignedCoin>, GasStoreErrors> {
         let store = ctx.kv_store(&self.store_key);

@@ -25,6 +25,16 @@ mod inner {
     pub use gears::core::query::response::bank::QueryTotalSupplyResponse;
     pub use gears::core::query::response::PageResponse;
     pub use ibc_proto::cosmos::bank::v1beta1::Params;
+    pub use ibc_proto::cosmos::bank::v1beta1::{QuerySupplyOfRequest, QuerySupplyOfResponse};
+}
+
+/// QuerySupplyOfParams defines the params for the following queries:
+/// - 'custom/bank/totalSupplyOf'
+#[derive(Clone, PartialEq, Debug, Query, Protobuf)]
+#[query(url = "/custom/bank/totalSupplyOf")]
+#[proto(raw = "inner::QuerySupplyOfRequest")]
+pub struct QuerySupplyOfRequest {
+    pub denom: Denom,
 }
 
 #[derive(Clone, PartialEq, Debug, Query, Protobuf)]
@@ -98,6 +108,15 @@ pub struct QueryBalanceResponse {
     /// balance is the balance of the coin.
     #[proto(optional)]
     pub balance: Option<UnsignedCoin>,
+}
+
+/// QuerySupplyOfResponse is the response type for the Query/SupplyOf RPC method.
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize, Query, Protobuf)]
+#[proto(raw = "inner::QuerySupplyOfResponse")]
+pub struct QuerySupplyOfResponse {
+    /// amount is the supply of the coin.
+    #[proto(optional)]
+    pub amount: Option<UnsignedCoin>,
 }
 
 /// QueryTotalSupplyResponse is the response type for the Query/TotalSupply RPC

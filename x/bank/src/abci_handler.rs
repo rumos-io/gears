@@ -22,8 +22,8 @@ use crate::errors::BankTxError;
 use crate::types::query::{
     QueryAllBalancesRequest, QueryAllBalancesResponse, QueryBalanceRequest, QueryBalanceResponse,
     QueryDenomMetadataRequest, QueryDenomMetadataResponse, QueryDenomsMetadataRequest,
-    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse, QueryTotalSupplyRequest,
-    QueryTotalSupplyResponse,
+    QueryDenomsMetadataResponse, QueryParamsRequest, QueryParamsResponse, QuerySupplyOfRequest,
+    QuerySupplyOfResponse, QueryTotalSupplyRequest, QueryTotalSupplyResponse,
 };
 use crate::{GenesisState, Keeper, Message};
 
@@ -44,6 +44,7 @@ pub enum BankNodeQueryRequest {
     Balance(QueryBalanceRequest),
     AllBalances(QueryAllBalancesRequest),
     TotalSupply(QueryTotalSupplyRequest),
+    SupplyOf(QuerySupplyOfRequest),
     DenomsMetadata(QueryDenomsMetadataRequest),
     DenomMetadata(QueryDenomMetadataRequest),
     Params(QueryParamsRequest),
@@ -61,6 +62,7 @@ pub enum BankNodeQueryResponse {
     Balance(QueryBalanceResponse),
     AllBalances(QueryAllBalancesResponse),
     TotalSupply(QueryTotalSupplyResponse),
+    SupplyOf(QuerySupplyOfResponse),
     DenomsMetadata(QueryDenomsMetadataResponse),
     DenomMetadata(QueryDenomMetadataResponse),
     Params(QueryParamsResponse),
@@ -99,6 +101,9 @@ impl<
             }
             BankNodeQueryRequest::TotalSupply(req) => {
                 BankNodeQueryResponse::TotalSupply(self.query_total_supply(ctx, req))
+            }
+            BankNodeQueryRequest::SupplyOf(req) => {
+                BankNodeQueryResponse::SupplyOf(self.query_supply_of(ctx, req))
             }
             BankNodeQueryRequest::DenomsMetadata(req) => {
                 BankNodeQueryResponse::DenomsMetadata(self.query_denoms(ctx, req))
@@ -257,5 +262,14 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, AK: AuthKeeper<SK, M>, M: Module, MI:
             supply,
             pagination: p_result.map(PaginationResponse::from),
         }
+    }
+
+    fn query_supply_of<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        QuerySupplyOfRequest { denom }: QuerySupplyOfRequest,
+    ) -> QuerySupplyOfResponse {
+        let supply = self.keeper.supply(ctx, &denom).unwrap_gas();
+        QuerySupplyOfResponse { amount: supply }
     }
 }
