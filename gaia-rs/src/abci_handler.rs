@@ -87,6 +87,7 @@ pub struct GaiaABCIHandler {
             GaiaModules,
         >,
         GaiaModules,
+        DefaultSignGasConsumer,
     >,
 }
 
@@ -124,19 +125,20 @@ impl GaiaABCIHandler {
         );
 
         let ibc_keeper = ibc_rs::keeper::Keeper::new(GaiaStoreKey::IBC, GaiaParamsStoreKey::IBC);
+        let ante_handler = BaseAnteHandler::new(
+            auth_keeper.clone(),
+            bank_keeper.clone(),
+            DefaultSignGasConsumer,
+            GaiaModules::FeeCollector,
+        );
 
         GaiaABCIHandler {
-            bank_abci_handler: bank::BankABCIHandler::new(bank_keeper.clone()),
-            auth_abci_handler: auth::AuthABCIHandler::new(auth_keeper.clone()),
-            genutil_handler: GenutilAbciHandler::new(staking_keeper.clone()),
+            bank_abci_handler: bank::BankABCIHandler::new(bank_keeper),
+            auth_abci_handler: auth::AuthABCIHandler::new(auth_keeper),
+            genutil_handler: GenutilAbciHandler::new(staking_keeper.clone(), ante_handler.clone()),
             staking_abci_handler: staking::StakingABCIHandler::new(staking_keeper),
             ibc_abci_handler: ibc_rs::ABCIHandler::new(ibc_keeper.clone()),
-            ante_handler: BaseAnteHandler::new(
-                auth_keeper,
-                bank_keeper,
-                DefaultSignGasConsumer,
-                GaiaModules::FeeCollector,
-            ),
+            ante_handler: ante_handler,
         }
     }
 }

@@ -5,8 +5,10 @@ use gears::{
     store::StoreKey,
     types::tx::NullTxMsg,
     x::{
+        ante::{BaseAnteHandler, SignGasConsumer},
         keepers::{
             auth::AuthKeeper,
+            bank::BankKeeper,
             staking::{KeeperHooks, StakingBankKeeper},
         },
         module::Module,
@@ -20,11 +22,13 @@ pub struct GenutilAbciHandler<
     SK: StoreKey,
     PSK: ParamsSubspaceKey,
     AK: AuthKeeper<SK, M>,
-    BK: StakingBankKeeper<SK, M>,
+    BK: StakingBankKeeper<SK, M> + BankKeeper<SK, M>,
     KH: KeeperHooks<SK, AK, M>,
     M: Module,
+    GC: SignGasConsumer,
 > {
     staking: staking::Keeper<SK, PSK, AK, BK, KH, M>,
+    ante_handler: BaseAnteHandler<BK, AK, SK, GC, M>,
 }
 
 impl<
@@ -34,10 +38,17 @@ impl<
         BK: StakingBankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
-    > GenutilAbciHandler<SK, PSK, AK, BK, KH, M>
+        GC: SignGasConsumer,
+    > GenutilAbciHandler<SK, PSK, AK, BK, KH, M, GC>
 {
-    pub fn new(staking: staking::Keeper<SK, PSK, AK, BK, KH, M>) -> Self {
-        Self { staking }
+    pub fn new(
+        staking: staking::Keeper<SK, PSK, AK, BK, KH, M>,
+        ante_handler: BaseAnteHandler<BK, AK, SK, GC, M>,
+    ) -> Self {
+        Self {
+            staking,
+            ante_handler,
+        }
     }
 }
 
@@ -48,7 +59,8 @@ impl<
         BK: StakingBankKeeper<SK, M>,
         KH: KeeperHooks<SK, AK, M>,
         M: Module,
-    > ABCIHandler for GenutilAbciHandler<SK, PSK, AK, BK, KH, M>
+        GC: SignGasConsumer,
+    > ABCIHandler for GenutilAbciHandler<SK, PSK, AK, BK, KH, M, GC>
 {
     type Message = NullTxMsg;
 
