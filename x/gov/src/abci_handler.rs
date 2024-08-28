@@ -105,6 +105,7 @@ impl<
         &self,
         _ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         _tx: &TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }

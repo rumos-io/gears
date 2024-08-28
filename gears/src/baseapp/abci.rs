@@ -244,7 +244,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let mut state = self.state.write().expect(POISONED_LOCK);
 
-        let ctx = state.simple_ctx(request.header.height);
+        let ctx = state.simple_ctx(request.header.height, request.header.chain_id.clone());
 
         let max_gas = self
             .baseapp_params_keeper
@@ -278,7 +278,7 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         let consensus_params = {
             self.baseapp_params_keeper
-                .consensus_params(&state.simple_ctx(header.height))
+                .consensus_params(&state.simple_ctx(header.height, header.chain_id.clone()))
         };
 
         let mut ctx = state.block_ctx(header, consensus_params);

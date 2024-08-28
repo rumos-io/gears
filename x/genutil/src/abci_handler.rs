@@ -1,10 +1,8 @@
 use gears::{
     application::handlers::node::ABCIHandler,
     baseapp::{NullQueryRequest, NullQueryResponse},
-    core::Protobuf,
     params::ParamsSubspaceKey,
     store::StoreKey,
-    tendermint::types::request::deliver_tx::RequestDeliverTx,
     types::tx::NullTxMsg,
     x::{
         keepers::{
@@ -74,6 +72,7 @@ impl<
         &self,
         _ctx: &mut gears::context::tx::TxContext<'_, DB, Self::StoreKey>,
         _tx: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), gears::application::handlers::node::TxError> {
         Ok(())
     }
@@ -91,7 +90,7 @@ impl<
         ctx: &mut gears::context::init::InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        for tx in genesis.gen_txs {
+        for _tx in genesis.gen_txs {
             // let result = gears::global_node::global_node()
             //     .expect("node should be set when we call `init_genesis`")
             //     .deliver_tx(RequestDeliverTx {
@@ -101,6 +100,7 @@ impl<
             // if result.code > 0 {
             //     panic!("log :{}, info: {}", result.log, result.info);
             // }
+            // TODO:NOW
         }
 
         match self.staking.apply_and_return_validator_set_updates(ctx) {

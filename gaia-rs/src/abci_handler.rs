@@ -213,8 +213,15 @@ impl ABCIHandler for GaiaABCIHandler {
         &self,
         ctx: &mut TxContext<'_, DB, GaiaStoreKey>,
         tx: &TxWithRaw<Message>,
+        is_check: bool,
     ) -> Result<(), TxError> {
-        self.ante_handler.run(ctx, tx)
+        self.ante_handler.run(
+            ctx,
+            tx,
+            is_check,
+            ctx.node_opt.clone(),
+            ctx.gas_meter.clone(),
+        )
     }
 
     fn typed_query<DB: Database + Send + Sync>(

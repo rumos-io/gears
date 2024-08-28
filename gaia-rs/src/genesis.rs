@@ -16,7 +16,7 @@ pub struct GenesisState {
     pub auth: AuthGenesis,
     pub staking: StakingGenesis,
     pub ibc: IBCGenesis,
-    pub genutil : GenutilGenesis
+    pub genutil: GenutilGenesis,
 }
 
 impl gears::baseapp::genesis::Genesis for GenesisState {

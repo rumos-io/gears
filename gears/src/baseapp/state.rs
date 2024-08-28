@@ -92,8 +92,16 @@ impl<DB: Database, AH: ABCIHandler> ApplicationState<DB, AH> {
         InitContext::new(&mut self.multi_store, height, time, chain_id)
     }
 
-    pub fn simple_ctx(&mut self, height: u32) -> SimpleContext<'_, DB, AH::StoreKey> {
-        SimpleContext::new(SimpleBackend::Application(&mut self.multi_store), height)
+    pub fn simple_ctx(
+        &mut self,
+        height: u32,
+        chain_id: ChainId,
+    ) -> SimpleContext<'_, DB, AH::StoreKey> {
+        SimpleContext::new(
+            SimpleBackend::Application(&mut self.multi_store),
+            height,
+            chain_id,
+        )
     }
 
     pub fn block_ctx(

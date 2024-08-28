@@ -122,6 +122,7 @@ impl<
         &self,
         _: &mut TxContext<'_, DB, Self::StoreKey>,
         _: &gears::types::tx::raw::TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }

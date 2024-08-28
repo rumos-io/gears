@@ -85,6 +85,7 @@ impl<SK: StoreKey, PSK: ParamsSubspaceKey, M: Module> ABCIHandler for AuthABCIHa
         &self,
         _: &mut TxContext<'_, DB, Self::StoreKey>,
         _: &TxWithRaw<Self::Message>,
+        _: bool,
     ) -> Result<(), TxError> {
         Ok(())
     }

@@ -53,6 +53,7 @@ pub trait ABCIHandler: Clone + Send + Sync + 'static {
         &self,
         ctx: &mut TxContext<'_, DB, Self::StoreKey>,
         tx: &TxWithRaw<Self::Message>,
+        is_check: bool,
     ) -> Result<(), TxError>;
 
     // TODO: this should return a Result similar to the SDK. See:

@@ -36,10 +36,6 @@ impl<'a, DB, SK> InitContext<'a, DB, SK> {
             chain_id,
         }
     }
-
-    pub fn chain_id(&self) -> &ChainId {
-        &self.chain_id
-    }
 }
 
 impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
@@ -55,6 +51,10 @@ impl<'a, DB: Database, SK: StoreKey> InitContext<'a, DB, SK> {
 impl<DB: Database, SK: StoreKey> QueryableContext<DB, SK> for InitContext<'_, DB, SK> {
     fn height(&self) -> u32 {
         self.height
+    }
+
+    fn chain_id(&self) -> &ChainId {
+        &self.chain_id
     }
 
     fn kv_store(&self, store_key: &SK) -> Store<'_, PrefixDB<DB>> {
