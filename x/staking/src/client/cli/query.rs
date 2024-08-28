@@ -1,7 +1,8 @@
 use crate::{
-    QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
-    QueryRedelegationResponse, QueryUnbondingDelegationResponse, QueryValidatorRequest,
-    QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
+    QueryDelegationRequest, QueryDelegationResponse, QueryDelegatorDelegationsRequest,
+    QueryDelegatorDelegationsResponse, QueryRedelegationRequest, QueryRedelegationResponse,
+    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use clap::{Args, Subcommand};
 use gears::{
@@ -30,6 +31,7 @@ pub enum StakingCommands {
     Validator(ValidatorCommand),
     Validators(ValidatorsCommand),
     Delegation(DelegationCommand),
+    Delegations(DelegatorDelegationsCommand),
     Redelegation(RedelegationCommand),
     UnbondingDelegation(UnbondingDelegationCommand),
 }
@@ -57,15 +59,13 @@ pub struct DelegationCommand {
     pub validator_address: ValAddress,
 }
 
-/// Query implements the command to query a single redelegation record.
+/// Query all the delegations made from one delegator
 #[derive(Args, Debug, Clone)]
-pub struct RedelegationCommand {
-    /// Delegator address who sent delegation
+pub struct DelegatorDelegationsCommand {
+    /// Delegator address who made delegations
     pub delegator_address: AccAddress,
-    /// Source validator address which is addressed to delegation
-    pub src_validator_address: ValAddress,
-    /// Destination validator address which is addressed to delegation
-    pub dst_validator_address: ValAddress,
+    #[command(flatten)]
+    pub pagination: Option<CliPaginationRequest>,
 }
 
 /// Query an unbonding-delegation record based on delegator and validator address
@@ -75,6 +75,17 @@ pub struct UnbondingDelegationCommand {
     pub delegator_address: AccAddress,
     /// Validator address from which coins are unbonded
     pub validator_address: ValAddress,
+}
+
+/// Query implements the command to query a single redelegation record.
+#[derive(Args, Debug, Clone)]
+pub struct RedelegationCommand {
+    /// Delegator address who sent delegation
+    pub delegator_address: AccAddress,
+    /// Source validator address which is addressed to delegation
+    pub src_validator_address: ValAddress,
+    /// Destination validator address which is addressed to delegation
+    pub dst_validator_address: ValAddress,
 }
 
 #[derive(Debug, Clone)]
@@ -107,8 +118,22 @@ impl QueryHandler for StakingQueryHandler {
                 delegator_address,
                 validator_address,
             }) => StakingQuery::Delegation(QueryDelegationRequest {
-                delegator_address: delegator_address.clone(),
-                validator_address: validator_address.clone(),
+                delegator_addr: delegator_address.clone(),
+                validator_addr: validator_address.clone(),
+            }),
+            StakingCommands::Delegations(DelegatorDelegationsCommand {
+                delegator_address,
+                pagination,
+            }) => StakingQuery::Delegations(QueryDelegatorDelegationsRequest {
+                delegator_addr: delegator_address.clone(),
+                pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
+            }),
+            StakingCommands::UnbondingDelegation(UnbondingDelegationCommand {
+                delegator_address,
+                validator_address,
+            }) => StakingQuery::UnbondingDelegation(QueryDelegationRequest {
+                delegator_addr: delegator_address.clone(),
+                validator_addr: validator_address.clone(),
             }),
             StakingCommands::Redelegation(RedelegationCommand {
                 delegator_address,
@@ -119,13 +144,6 @@ impl QueryHandler for StakingQueryHandler {
                 src_validator_address: src_validator_address.clone().into(),
                 dst_validator_address: dst_validator_address.clone().into(),
                 pagination: None,
-            }),
-            StakingCommands::UnbondingDelegation(UnbondingDelegationCommand {
-                delegator_address,
-                validator_address,
-            }) => StakingQuery::UnbondingDelegation(QueryDelegationRequest {
-                delegator_address: delegator_address.clone(),
-                validator_address: validator_address.clone(),
             }),
         };
 
@@ -147,11 +165,14 @@ impl QueryHandler for StakingQueryHandler {
             StakingCommands::Delegation(_) => {
                 StakingQueryResponse::Delegation(QueryDelegationResponse::decode_vec(&query_bytes)?)
             }
-            StakingCommands::Redelegation(_) => StakingQueryResponse::Redelegation(
-                QueryRedelegationResponse::decode_vec(&query_bytes)?,
+            StakingCommands::Delegations(_) => StakingQueryResponse::Delegations(
+                QueryDelegatorDelegationsResponse::decode_vec(&query_bytes)?,
             ),
             StakingCommands::UnbondingDelegation(_) => StakingQueryResponse::UnbondingDelegation(
                 QueryUnbondingDelegationResponse::decode_vec(&query_bytes)?,
+            ),
+            StakingCommands::Redelegation(_) => StakingQueryResponse::Redelegation(
+                QueryRedelegationResponse::decode_vec(&query_bytes)?,
             ),
         };
 
@@ -165,8 +186,9 @@ pub enum StakingQuery {
     Validator(QueryValidatorRequest),
     Validators(QueryValidatorsRequest),
     Delegation(QueryDelegationRequest),
-    Redelegation(QueryRedelegationRequest),
+    Delegations(QueryDelegatorDelegationsRequest),
     UnbondingDelegation(QueryDelegationRequest),
+    Redelegation(QueryRedelegationRequest),
 }
 
 #[derive(Clone, PartialEq, Serialize, Deserialize, Debug, Query)]
@@ -176,6 +198,7 @@ pub enum StakingQueryResponse {
     Validator(QueryValidatorResponse),
     Validators(QueryValidatorsResponse),
     Delegation(QueryDelegationResponse),
-    Redelegation(QueryRedelegationResponse),
+    Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
+    Redelegation(QueryRedelegationResponse),
 }

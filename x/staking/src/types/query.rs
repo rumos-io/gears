@@ -21,8 +21,15 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 
 mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::DelegationResponse;
     pub use ibc_proto::cosmos::staking::v1beta1::QueryPoolResponse;
     pub use ibc_proto::cosmos::staking::v1beta1::QueryUnbondingDelegationResponse;
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryDelegationRequest, QueryDelegationResponse,
+    };
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
+    };
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryParamsRequest, QueryParamsResponse};
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryValidatorRequest, QueryValidatorResponse};
     pub use ibc_proto::cosmos::staking::v1beta1::{
@@ -56,15 +63,27 @@ pub struct QueryValidatorsRequest {
 }
 
 /// QueryDelegationRequest is request type for the Query/Delegation RPC method.
-#[derive(Clone, Debug, PartialEq, Query, Raw, Protobuf)]
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/Delegation")]
+#[proto(raw = "inner::QueryDelegationRequest")]
 pub struct QueryDelegationRequest {
     /// delegator_addr defines the delegator address to query for.
-    #[raw(kind(string), raw = String)]
-    pub delegator_address: AccAddress,
+    pub delegator_addr: AccAddress,
     /// validator_addr defines the validator address to query for.
-    #[raw(kind(string), raw = String)]
-    pub validator_address: ValAddress,
+    pub validator_addr: ValAddress,
+}
+
+/// QueryDelegatorDelegationsRequest is request type for the
+/// Query/DelegatorDelegations RPC method.
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/Delegations")]
+#[proto(raw = "inner::QueryDelegatorDelegationsRequest")]
+pub struct QueryDelegatorDelegationsRequest {
+    /// delegator_addr defines the delegator address to query for.
+    pub delegator_addr: AccAddress,
+    /// pagination defines an optional pagination for the request.
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
 }
 
 #[derive(Clone, Debug, PartialEq, Query, Raw, Protobuf)]
@@ -136,21 +155,35 @@ pub struct QueryValidatorsResponse {
 
 /// DelegationResponse is equivalent to Delegation except that it contains a
 /// balance in addition to shares which is more suitable for client responses.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Raw, Protobuf)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::DelegationResponse")]
 pub struct DelegationResponse {
-    #[raw(kind(bytes), raw = Vec::<u8>)]
-    pub delegation: Delegation,
-    #[raw(kind(bytes), raw = Vec::<u8>)]
-    pub balance: UnsignedCoin,
+    #[proto(optional)]
+    pub delegation: Option<Delegation>,
+    #[proto(optional)]
+    pub balance: Option<UnsignedCoin>,
 }
 
 /// QueryDelegationResponse is the response type for the Query/Delegation RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Raw, Protobuf)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryDelegationResponse")]
 pub struct QueryDelegationResponse {
     /// Delegation with balance.
-    #[raw(kind(message), raw = RawDelegationResponse, optional)]
     #[proto(optional)]
     pub delegation_response: Option<DelegationResponse>,
+}
+
+/// QueryDelegatorDelegationsResponse is response type for the
+/// Query/DelegatorDelegations RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryDelegatorDelegationsResponse")]
+pub struct QueryDelegatorDelegationsResponse {
+    /// delegation_responses defines all the delegations' info of a delegator.
+    #[proto(repeated)]
+    pub delegation_responses: Vec<DelegationResponse>,
+    /// pagination defines the pagination in the response.
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
 }
 
 /// RedelegationEntryResponse is equivalent to a RedelegationEntry except that it

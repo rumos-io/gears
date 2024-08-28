@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
-    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryParamsResponse,
+    DelegationResponse, QueryDelegationRequest, QueryDelegationResponse,
+    QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse, QueryParamsResponse,
     QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
     QueryValidatorsRequest, QueryValidatorsResponse,
 };
@@ -63,7 +64,7 @@ impl<
         query: QueryDelegationRequest,
     ) -> QueryDelegationResponse {
         if let Some(delegation) = self
-            .delegation(ctx, &query.delegator_address, &query.validator_address)
+            .delegation(ctx, &query.delegator_addr, &query.validator_addr)
             .unwrap_gas()
         {
             let delegation_response = self.delegation_to_delegation_response(ctx, delegation).ok();
@@ -94,9 +95,50 @@ impl<
             amount: tokens.to_uint_floor(),
         };
         Ok(DelegationResponse {
-            delegation,
-            balance,
+            delegation: Some(delegation),
+            balance: Some(balance),
         })
+    }
+
+    pub fn query_delegator_delegations<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegatorDelegationsRequest,
+    ) -> QueryDelegatorDelegationsResponse {
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(DELEGATION_KEY);
+        let key = query.delegator_addr.prefix_len_bytes();
+        let (p_result, iterator) = store
+            .into_range(..)
+            .maybe_paginate(query.pagination.map(gears::ext::Pagination::from));
+
+        let delegation_responses = iterator
+            .filter_map(|(k, bytes)| {
+                if k.starts_with(&key) {
+                    Delegation::decode_vec(&bytes).ok()
+                } else {
+                    None
+                }
+            })
+            .filter_map(|del| self.delegation_to_delegation_response(ctx, del).ok())
+            .collect();
+
+        QueryDelegatorDelegationsResponse {
+            delegation_responses,
+            pagination: p_result.map(PaginationResponse::from),
+        }
+    }
+
+    pub fn query_unbonding_delegation<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryDelegationRequest,
+    ) -> QueryUnbondingDelegationResponse {
+        QueryUnbondingDelegationResponse {
+            unbond: self
+                .unbonding_delegation(ctx, &query.delegator_addr, &query.validator_addr)
+                .unwrap_gas(),
+        }
     }
 
     pub fn redelegations<DB: Database>(
@@ -134,18 +176,6 @@ impl<
         let (p_result, iter) = redelegations.into_iter().maybe_paginate(pagination);
 
         (p_result, iter.collect())
-    }
-
-    pub fn query_unbonding_delegation<DB: Database>(
-        &self,
-        ctx: &QueryContext<DB, SK>,
-        query: QueryDelegationRequest,
-    ) -> QueryUnbondingDelegationResponse {
-        QueryUnbondingDelegationResponse {
-            unbond: self
-                .unbonding_delegation(ctx, &query.delegator_address, &query.validator_address)
-                .unwrap_gas(),
-        }
     }
 
     pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {
