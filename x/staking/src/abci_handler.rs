@@ -130,7 +130,10 @@ impl<
         msg: &Self::Message,
     ) -> Result<(), TxError> {
         let result = match msg {
-            Message::CreateValidator(msg) => self.keeper.create_validator(ctx, msg),
+            Message::CreateValidator(msg) => {
+                self.keeper
+                    .create_validator(ctx, ctx.consensus_params().validator.clone(), msg)
+            }
             Message::EditValidator(msg) => self.keeper.edit_validator(ctx, msg),
             Message::Delegate(msg) => self.keeper.delegate_cmd_handler(ctx, msg),
             Message::Redelegate(msg) => self.keeper.redelegate_cmd_handler(ctx, msg),

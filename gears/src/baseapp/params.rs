@@ -132,7 +132,7 @@ impl From<inner::BlockParams> for BlockParams {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct ValidatorParams {
     pub pub_key_types: Vec<String>,
 }
