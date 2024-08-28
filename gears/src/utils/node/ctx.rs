@@ -51,11 +51,13 @@ pub fn build_tx_ctx<'a, DB, SK>(
 
 pub fn build_init_ctx<DB, SK>(
     multi_store: &mut ApplicationMultiBank<DB, SK>,
+    consensus_params: ConsensusParams,
 ) -> InitContext<'_, DB, SK> {
     InitContext::new(
         multi_store,
         0,
         tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
         tendermint::types::chain_id::ChainId::default(),
+        consensus_params,
     )
 }

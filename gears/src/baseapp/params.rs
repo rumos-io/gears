@@ -324,6 +324,7 @@ mod tests {
             0,
             tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
             tendermint::types::chain_id::ChainId::default(),
+            ConsensusParams::default(),
         );
 
         keeper.set_consensus_params(&mut ctx, ConsensusParams::default());
@@ -354,6 +355,7 @@ mod tests {
             0,
             tendermint::types::time::timestamp::Timestamp::UNIX_EPOCH,
             tendermint::types::chain_id::ChainId::default(),
+            ConsensusParams::default(),
         );
 
         keeper.set_consensus_params(&mut ctx, ConsensusParams::default());

@@ -61,7 +61,12 @@ impl<DB: Database, PSK: ParamsSubspaceKey, H: ABCIHandler, AI: ApplicationInfo>
 
         //TODO: handle request height > 1 as is done in SDK
 
-        let mut ctx = state.init_ctx(initial_height, time, chain_id);
+        let mut ctx = state.init_ctx(
+            initial_height,
+            time,
+            chain_id,
+            consensus_params.clone().into(),
+        );
 
         self.baseapp_params_keeper
             .set_consensus_params(&mut ctx, consensus_params.clone().into());

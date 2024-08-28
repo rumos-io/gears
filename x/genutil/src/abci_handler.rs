@@ -1,9 +1,15 @@
+use std::{cell::RefCell, sync::Arc};
+
 use gears::{
     application::handlers::node::ABCIHandler,
-    baseapp::{NullQueryRequest, NullQueryResponse},
+    baseapp::{options::NodeOptions, NullQueryRequest, NullQueryResponse},
     params::ParamsSubspaceKey,
     store::StoreKey,
-    types::tx::NullTxMsg,
+    types::{
+        base::min_gas::MinGasPrices,
+        gas::GasMeter,
+        tx::{raw::TxWithRaw, NullTxMsg},
+    },
     x::{
         ante::{BaseAnteHandler, SignGasConsumer},
         keepers::{
@@ -102,17 +108,31 @@ impl<
         ctx: &mut gears::context::init::InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        for _tx in genesis.gen_txs {
-            // let result = gears::global_node::global_node()
-            //     .expect("node should be set when we call `init_genesis`")
-            //     .deliver_tx(RequestDeliverTx {
-            //         tx: tx.encode_vec().into(),
-            //     });
+        for tx in genesis.gen_txs {
+            let tx = TxWithRaw::from(tx);
+            let ante_check_res = self.ante_handler.run(
+                ctx,
+                &tx,
+                false,
+                NodeOptions::new(MinGasPrices::default()),
+                Arc::new(RefCell::new(GasMeter::infinite())),
+            );
 
-            // if result.code > 0 {
-            //     panic!("log :{}, info: {}", result.log, result.info);
-            // }
-            // TODO:NOW
+            match ante_check_res {
+                Ok(_) => (),
+                Err(err) => panic!("Failed to run ante checks for tx: {err}"),
+            }
+
+            let msg = tx.tx.body.messages.first(); // We know that such tx should contain only one message
+
+            let tx_result =
+                self.staking
+                    .create_validator(ctx, ctx.consensus_params().validator.clone(), msg);
+
+            match tx_result {
+                Ok(_) => (),
+                Err(err) => panic!("Failed to run message from tx: {err}"),
+            }
         }
 
         match self.staking.apply_and_return_validator_set_updates(ctx) {
