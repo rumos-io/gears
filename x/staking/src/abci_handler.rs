@@ -1,8 +1,9 @@
 use crate::{
     error::StakingTxError, GenesisState, Keeper, Message, QueryDelegationRequest,
-    QueryDelegationResponse, QueryParamsResponse, QueryRedelegationRequest,
-    QueryRedelegationResponse, QueryUnbondingDelegationResponse, QueryValidatorRequest,
-    QueryValidatorResponse, Redelegation, RedelegationEntryResponse, RedelegationResponse,
+    QueryDelegationResponse, QueryParamsRequest, QueryParamsResponse, QueryPoolRequest,
+    QueryPoolResponse, QueryRedelegationRequest, QueryRedelegationResponse,
+    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse, Redelegation,
+    RedelegationEntryResponse, RedelegationResponse,
 };
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
@@ -50,7 +51,8 @@ pub enum StakingNodeQueryRequest {
     Delegation(QueryDelegationRequest),
     Redelegation(QueryRedelegationRequest),
     UnbondingDelegation(QueryDelegationRequest),
-    Params,
+    Pool(QueryPoolRequest),
+    Params(QueryParamsRequest),
 }
 
 impl QueryRequest for StakingNodeQueryRequest {
@@ -67,6 +69,7 @@ pub enum StakingNodeQueryResponse {
     Delegation(QueryDelegationResponse),
     Redelegation(QueryRedelegationResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
+    Pool(QueryPoolResponse),
     Params(QueryParamsResponse),
 }
 
@@ -110,7 +113,10 @@ impl<
                     self.keeper.query_unbonding_delegation(ctx, req),
                 )
             }
-            StakingNodeQueryRequest::Params => {
+            StakingNodeQueryRequest::Pool(_) => {
+                StakingNodeQueryResponse::Pool(self.query_pool(ctx))
+            }
+            StakingNodeQueryRequest::Params(_) => {
                 StakingNodeQueryResponse::Params(self.keeper.query_params(ctx))
             }
         }
@@ -178,7 +184,7 @@ impl<
                     .into_bytes()
                     .into())
             }
-            "/cosmos/staking/v1beta1/params" | "/cosmos.staking.v1beta1.Query/Params" => {
+            "/cosmos.staking.v1beta1.Query/Params" => {
                 Ok(self.keeper.query_params(ctx).into_bytes().into())
             }
             _ => Err(QueryError::PathNotFound),
@@ -254,6 +260,11 @@ impl<
             redelegation_responses,
             pagination: p_result.map(PaginationResponse::from),
         }
+    }
+
+    fn query_pool<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryPoolResponse {
+        let pool = self.keeper.pool(ctx).unwrap_gas();
+        QueryPoolResponse { pool: Some(pool) }
     }
 
     fn redelegations_to_redelegations_response<DB: Database>(

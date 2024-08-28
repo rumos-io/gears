@@ -119,6 +119,8 @@ impl<
 
     pub fn query_params<DB: Database>(&self, ctx: &QueryContext<DB, SK>) -> QueryParamsResponse {
         let params = self.staking_params_keeper.get(ctx);
-        QueryParamsResponse { params }
+        QueryParamsResponse {
+            params: Some(params),
+        }
     }
 }

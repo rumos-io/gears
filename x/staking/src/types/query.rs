@@ -1,5 +1,5 @@
 use crate::{
-    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Redelegation, RedelegationEntry,
+    consts::error::SERDE_ENCODING_DOMAIN_TYPE, Delegation, Pool, Redelegation, RedelegationEntry,
     StakingParams, UnbondingDelegation, Validator,
 };
 use gears::{
@@ -9,17 +9,21 @@ use gears::{
         Protobuf,
     },
     derive::{Protobuf, Query, Raw},
-    store::database::ext::UnwrapCorrupt,
     types::{
         address::{AccAddress, ValAddress},
         base::coin::UnsignedCoin,
-        errors::DenomError,
         pagination::{request::PaginationRequest, response::PaginationResponse},
         uint::Uint256,
     },
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
+
+mod inner {
+    pub use ibc_proto::cosmos::staking::v1beta1::QueryParamsResponse;
+    pub use ibc_proto::cosmos::staking::v1beta1::QueryPoolResponse;
+    pub use ibc_proto::cosmos::staking::v1beta1::QueryUnbondingDelegationResponse;
+}
 
 // ===
 // requests
@@ -78,6 +82,14 @@ pub struct QueryRedelegationRequest {
     #[proto(optional)]
     pub pagination: Option<PaginationRequest>,
 }
+
+#[derive(Clone, PartialEq, Message, Raw, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/Pool")]
+pub struct QueryPoolRequest {}
+
+#[derive(Clone, PartialEq, Message, Raw, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/Params")]
+pub struct QueryParamsRequest {}
 
 // ===
 // responses
@@ -202,87 +214,27 @@ pub struct QueryRedelegationResponse {
 }
 
 /// QueryUnbondingDelegationResponse is the response type for the Query/UnbondingDelegation RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Raw)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryUnbondingDelegationResponse")]
 pub struct QueryUnbondingDelegationResponse {
     /// UnbondingDelegation with balance.
-    #[raw(kind(bytes), raw = Vec::<u8>, optional)]
+    #[proto(optional)]
     pub unbond: Option<UnbondingDelegation>,
 }
 
-impl TryFrom<RawQueryUnbondingDelegationResponse> for QueryUnbondingDelegationResponse {
-    type Error = CoreError;
-
-    fn try_from(raw: RawQueryUnbondingDelegationResponse) -> Result<Self, Self::Error> {
-        if let Some(ubd) = raw.unbond {
-            Ok(QueryUnbondingDelegationResponse {
-                unbond: Some(serde_json::from_slice(&ubd).unwrap_or_corrupt()),
-            })
-        } else {
-            Ok(QueryUnbondingDelegationResponse { unbond: None })
-        }
-    }
+/// QueryPoolResponse is response type for the Query/Pool RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryPoolResponse")]
+pub struct QueryPoolResponse {
+    /// UnbondingDelegation with balance.
+    #[proto(optional)]
+    pub pool: Option<Pool>,
 }
-
-impl From<QueryUnbondingDelegationResponse> for RawQueryUnbondingDelegationResponse {
-    fn from(query: QueryUnbondingDelegationResponse) -> Self {
-        Self {
-            unbond: query
-                .unbond
-                .map(|ubd| serde_json::to_vec(&ubd).expect(SERDE_ENCODING_DOMAIN_TYPE)),
-        }
-    }
-}
-
-impl Protobuf<RawQueryUnbondingDelegationResponse> for QueryUnbondingDelegationResponse {}
 
 /// QueryParamsResponse is the response type for the Query/Params RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryParamsResponse")]
 pub struct QueryParamsResponse {
-    pub params: StakingParams,
+    #[proto(optional)]
+    pub params: Option<StakingParams>,
 }
-
-impl TryFrom<QueryParamsResponseRaw> for QueryParamsResponse {
-    type Error = CoreError;
-
-    fn try_from(raw: QueryParamsResponseRaw) -> Result<Self, Self::Error> {
-        let params = StakingParams::new(
-            raw.unbonding_time,
-            raw.max_validators,
-            raw.max_entries,
-            raw.historical_entries,
-            raw.bond_denom
-                .try_into()
-                .map_err(|e: DenomError| CoreError::Custom(e.to_string()))?,
-        )
-        .map_err(|e| CoreError::Custom(e.to_string()))?;
-        Ok(QueryParamsResponse { params })
-    }
-}
-
-#[derive(Clone, PartialEq, Message)]
-pub struct QueryParamsResponseRaw {
-    #[prost(int64)]
-    pub unbonding_time: i64,
-    #[prost(uint32)]
-    pub max_validators: u32,
-    #[prost(uint32)]
-    pub max_entries: u32,
-    #[prost(uint32)]
-    pub historical_entries: u32,
-    #[prost(string)]
-    pub bond_denom: String,
-}
-
-impl From<QueryParamsResponse> for QueryParamsResponseRaw {
-    fn from(query: QueryParamsResponse) -> Self {
-        Self {
-            unbonding_time: query.params.unbonding_time(),
-            max_validators: query.params.max_validators(),
-            max_entries: query.params.max_entries(),
-            historical_entries: query.params.historical_entries(),
-            bond_denom: query.params.bond_denom().to_string(),
-        }
-    }
-}
-
-impl Protobuf<QueryParamsResponseRaw> for QueryParamsResponse {}

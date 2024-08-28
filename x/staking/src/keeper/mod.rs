@@ -1,6 +1,6 @@
 use crate::{
     consts::{error::SERDE_ENCODING_DOMAIN_TYPE, keeper::*},
-    Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Redelegation,
+    Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
 use gears::{
@@ -579,6 +579,27 @@ impl<
                 Ok((validator.unbonding_time, validator.unbonding_height, false))
             }
         }
+    }
+
+    pub fn pool<DB: Database, CTX: QueryableContext<DB, SK>>(
+        &self,
+        ctx: &CTX,
+    ) -> Result<Pool, GasStoreErrors> {
+        let denom = self.staking_params_keeper.try_get(ctx)?.bond_denom;
+        let not_bonded_tokens = self
+            .bank_keeper
+            .get_all_balances(ctx, self.not_bonded_module.get_address())?
+            .into_iter()
+            .find(|e| e.denom == denom);
+        let bonded_tokens = self
+            .bank_keeper
+            .get_all_balances(ctx, self.bonded_module.get_address())?
+            .into_iter()
+            .find(|e| e.denom == denom);
+        Ok(Pool {
+            not_bonded_tokens: not_bonded_tokens.map(|t| t.amount).unwrap_or_default(),
+            bonded_tokens: bonded_tokens.map(|t| t.amount).unwrap_or_default(),
+        })
     }
 }
 
