@@ -15,14 +15,19 @@ use gears::{
         pagination::{request::PaginationRequest, response::PaginationResponse},
         uint::Uint256,
     },
+    x::types::validator::BondStatus,
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
 
 mod inner {
-    pub use ibc_proto::cosmos::staking::v1beta1::QueryParamsResponse;
     pub use ibc_proto::cosmos::staking::v1beta1::QueryPoolResponse;
     pub use ibc_proto::cosmos::staking::v1beta1::QueryUnbondingDelegationResponse;
+    pub use ibc_proto::cosmos::staking::v1beta1::{QueryParamsRequest, QueryParamsResponse};
+    pub use ibc_proto::cosmos::staking::v1beta1::{QueryValidatorRequest, QueryValidatorResponse};
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryValidatorsRequest, QueryValidatorsResponse,
+    };
 }
 
 // ===
@@ -30,12 +35,24 @@ mod inner {
 // ===
 
 /// QueryValidatorRequest is the request type for the Query/Validator RPC method.
-#[derive(Clone, Debug, PartialEq, Query, Raw, Protobuf)]
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/Validator")]
+#[proto(raw = "inner::QueryValidatorRequest")]
 pub struct QueryValidatorRequest {
     /// Address of queried validator.
-    #[raw(kind(string), raw = String)]
-    pub address: ValAddress,
+    pub validator_addr: ValAddress,
+}
+
+/// QueryValidatorsRequest is request type for Query/Validators RPC method.
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/Validators")]
+#[proto(raw = "inner::QueryValidatorsRequest")]
+pub struct QueryValidatorsRequest {
+    /// status enables to query for validators matching a given status.
+    pub status: BondStatus,
+    /// pagination defines an optional pagination for the request.
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
 }
 
 /// QueryDelegationRequest is request type for the Query/Delegation RPC method.
@@ -87,8 +104,9 @@ pub struct QueryRedelegationRequest {
 #[query(url = "/cosmos.staking.v1beta1.Query/Pool")]
 pub struct QueryPoolRequest {}
 
-#[derive(Clone, PartialEq, Message, Raw, Query, Protobuf)]
+#[derive(Clone, PartialEq, Message, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/Params")]
+#[proto(raw = "inner::QueryParamsRequest")]
 pub struct QueryParamsRequest {}
 
 // ===
@@ -96,13 +114,24 @@ pub struct QueryParamsRequest {}
 // ===
 
 /// QueryValidatorResponse is the response type for the Query/Validator RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Raw, Protobuf)]
-
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryValidatorResponse")]
 pub struct QueryValidatorResponse {
     /// Full data about validator.
-    #[raw(kind(bytes), raw = Vec::<u8>, optional )]
     #[proto(optional)]
     pub validator: Option<Validator>,
+}
+
+/// QueryValidatorsResponse is response type for the Query/Validators RPC method
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryValidatorsResponse")]
+pub struct QueryValidatorsResponse {
+    /// validators contains all the queried validators.
+    #[proto(repeated)]
+    pub validators: Vec<Validator>,
+    /// pagination defines the pagination in the response.
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
 }
 
 /// DelegationResponse is equivalent to Delegation except that it contains a

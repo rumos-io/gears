@@ -1,14 +1,20 @@
 use crate::{
     QueryDelegationRequest, QueryDelegationResponse, QueryRedelegationRequest,
     QueryRedelegationResponse, QueryUnbondingDelegationResponse, QueryValidatorRequest,
-    QueryValidatorResponse,
+    QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use clap::{Args, Subcommand};
 use gears::{
     application::handlers::client::QueryHandler,
+    cli::pagination::CliPaginationRequest,
     core::Protobuf,
     derive::Query,
-    types::address::{AccAddress, ValAddress},
+    ext::FallibleMapExt,
+    types::{
+        address::{AccAddress, ValAddress},
+        pagination::request::PaginationRequest,
+    },
+    x::types::validator::BondStatus,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
@@ -22,6 +28,7 @@ pub struct StakingQueryCli {
 #[derive(Subcommand, Debug)]
 pub enum StakingCommands {
     Validator(ValidatorCommand),
+    Validators(ValidatorsCommand),
     Delegation(DelegationCommand),
     Redelegation(RedelegationCommand),
     UnbondingDelegation(UnbondingDelegationCommand),
@@ -32,6 +39,13 @@ pub enum StakingCommands {
 pub struct ValidatorCommand {
     /// address
     pub address: ValAddress,
+}
+
+/// Validators implements the query all validators command
+#[derive(Args, Debug, Clone)]
+pub struct ValidatorsCommand {
+    #[command(flatten)]
+    pub pagination: Option<CliPaginationRequest>,
 }
 
 /// Query for delegation from a delegator address to validator address
@@ -80,7 +94,13 @@ impl QueryHandler for StakingQueryHandler {
         let res = match &command.command {
             StakingCommands::Validator(ValidatorCommand { address }) => {
                 StakingQuery::Validator(QueryValidatorRequest {
-                    address: address.clone(),
+                    validator_addr: address.clone(),
+                })
+            }
+            StakingCommands::Validators(ValidatorsCommand { pagination }) => {
+                StakingQuery::Validators(QueryValidatorsRequest {
+                    status: BondStatus::Unspecified,
+                    pagination: pagination.to_owned().try_map(PaginationRequest::try_from)?,
                 })
             }
             StakingCommands::Delegation(DelegationCommand {
@@ -121,6 +141,9 @@ impl QueryHandler for StakingQueryHandler {
             StakingCommands::Validator(_) => {
                 StakingQueryResponse::Validator(QueryValidatorResponse::decode_vec(&query_bytes)?)
             }
+            StakingCommands::Validators(_) => {
+                StakingQueryResponse::Validators(QueryValidatorsResponse::decode_vec(&query_bytes)?)
+            }
             StakingCommands::Delegation(_) => {
                 StakingQueryResponse::Delegation(QueryDelegationResponse::decode_vec(&query_bytes)?)
             }
@@ -140,6 +163,7 @@ impl QueryHandler for StakingQueryHandler {
 #[query(request)]
 pub enum StakingQuery {
     Validator(QueryValidatorRequest),
+    Validators(QueryValidatorsRequest),
     Delegation(QueryDelegationRequest),
     Redelegation(QueryRedelegationRequest),
     UnbondingDelegation(QueryDelegationRequest),
@@ -150,6 +174,7 @@ pub enum StakingQuery {
 #[allow(clippy::large_enum_variant)]
 pub enum StakingQueryResponse {
     Validator(QueryValidatorResponse),
+    Validators(QueryValidatorsResponse),
     Delegation(QueryDelegationResponse),
     Redelegation(QueryRedelegationResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),

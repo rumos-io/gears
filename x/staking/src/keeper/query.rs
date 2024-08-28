@@ -2,10 +2,13 @@ use super::*;
 use crate::{
     DelegationResponse, QueryDelegationRequest, QueryDelegationResponse, QueryParamsResponse,
     QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryValidatorsRequest, QueryValidatorsResponse,
 };
 use gears::{
     context::query::QueryContext,
+    core::Protobuf,
     ext::{IteratorPaginate, Pagination, PaginationResult},
+    types::pagination::response::PaginationResponse,
 };
 
 impl<
@@ -22,8 +25,36 @@ impl<
         ctx: &QueryContext<DB, SK>,
         query: QueryValidatorRequest,
     ) -> QueryValidatorResponse {
-        let validator = self.validator(ctx, &query.address).unwrap_gas();
+        let validator = self.validator(ctx, &query.validator_addr).unwrap_gas();
         QueryValidatorResponse { validator }
+    }
+
+    pub fn query_validators<DB: Database>(
+        &self,
+        ctx: &QueryContext<DB, SK>,
+        query: QueryValidatorsRequest,
+    ) -> QueryValidatorsResponse {
+        let (validators, p_result) = match query.status {
+            BondStatus::Unspecified => {
+                let store = ctx.kv_store(&self.store_key);
+                let store = store.prefix_store(VALIDATORS_KEY);
+
+                let (p_result, iterator) = store
+                    .into_range(..)
+                    .maybe_paginate(query.pagination.map(gears::ext::Pagination::from));
+                let validators = iterator
+                    .filter_map(|(_k, bytes)| Validator::decode_vec(&bytes).ok())
+                    .collect();
+                (validators, p_result)
+            }
+            // TODO: unimplemented
+            _ => (vec![], None),
+        };
+
+        QueryValidatorsResponse {
+            validators,
+            pagination: p_result.map(PaginationResponse::from),
+        }
     }
 
     pub fn query_delegation<DB: Database>(

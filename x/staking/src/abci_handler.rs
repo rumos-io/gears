@@ -2,8 +2,9 @@ use crate::{
     error::StakingTxError, GenesisState, Keeper, Message, QueryDelegationRequest,
     QueryDelegationResponse, QueryParamsRequest, QueryParamsResponse, QueryPoolRequest,
     QueryPoolResponse, QueryRedelegationRequest, QueryRedelegationResponse,
-    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse, Redelegation,
-    RedelegationEntryResponse, RedelegationResponse,
+    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryValidatorsRequest, QueryValidatorsResponse, Redelegation, RedelegationEntryResponse,
+    RedelegationResponse,
 };
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
@@ -48,6 +49,7 @@ pub struct StakingABCIHandler<
 #[derive(Clone)]
 pub enum StakingNodeQueryRequest {
     Validator(QueryValidatorRequest),
+    Validators(QueryValidatorsRequest),
     Delegation(QueryDelegationRequest),
     Redelegation(QueryRedelegationRequest),
     UnbondingDelegation(QueryDelegationRequest),
@@ -66,6 +68,7 @@ impl QueryRequest for StakingNodeQueryRequest {
 #[allow(clippy::large_enum_variant)]
 pub enum StakingNodeQueryResponse {
     Validator(QueryValidatorResponse),
+    Validators(QueryValidatorsResponse),
     Delegation(QueryDelegationResponse),
     Redelegation(QueryRedelegationResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
@@ -101,6 +104,9 @@ impl<
         match query {
             StakingNodeQueryRequest::Validator(req) => {
                 StakingNodeQueryResponse::Validator(self.keeper.query_validator(ctx, req))
+            }
+            StakingNodeQueryRequest::Validators(req) => {
+                StakingNodeQueryResponse::Validators(self.keeper.query_validators(ctx, req))
             }
             StakingNodeQueryRequest::Delegation(req) => {
                 StakingNodeQueryResponse::Delegation(self.keeper.query_delegation(ctx, req))
@@ -164,6 +170,11 @@ impl<
                 let req = QueryValidatorRequest::decode(query.data)?;
 
                 Ok(self.keeper.query_validator(ctx, req).into_bytes().into())
+            }
+            "/cosmos.staking.v1beta1.Query/Validators" => {
+                let req = QueryValidatorsRequest::decode(query.data)?;
+
+                Ok(self.keeper.query_validators(ctx, req).into_bytes().into())
             }
             "/cosmos.staking.v1beta1.Query/Delegation" => {
                 let req = QueryDelegationRequest::decode(query.data)?;

@@ -3,6 +3,7 @@ use crate::{
     Delegation, DvPair, DvvTriplet, GenesisState, LastValidatorPower, Pool, Redelegation,
     StakingParamsKeeper, UnbondingDelegation, Validator,
 };
+use anyhow::anyhow;
 use gears::{
     application::keepers::params::ParamsKeeper,
     context::{
@@ -145,6 +146,8 @@ impl<
                 BondStatus::Unbonding | BondStatus::Unbonded => {
                     not_bonded_tokens += validator.tokens;
                 }
+                // TODO: maybe move panics to abci handler
+                BondStatus::Unspecified => panic!("invalid validator status"),
             }
         }
 
@@ -441,6 +444,7 @@ impl<
                         amt_from_not_bonded_to_bonded + validator.tokens;
                 }
                 BondStatus::Bonded => {}
+                BondStatus::Unspecified => return Err(anyhow!("unexpected validator status")),
             }
 
             // fetch the old power bytes
@@ -578,6 +582,8 @@ impl<
                 let validator = validator.unwrap();
                 Ok((validator.unbonding_time, validator.unbonding_height, false))
             }
+            // TODO: maybe change signature and move panic
+            BondStatus::Unspecified => panic!("unexpected validator status"),
         }
     }
 
