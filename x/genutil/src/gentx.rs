@@ -101,7 +101,7 @@ impl TxHandler for GentxTxHandler {
         &self,
         client_tx_context: &mut ClientTxContext,
         Self::TxCommands {
-            pubkey,
+            pubkey: pub_key,
             amount,
             moniker,
             identity,
@@ -116,7 +116,7 @@ impl TxHandler for GentxTxHandler {
             ip,
             node_id,
         }: Self::TxCommands,
-        from_address: gears::types::address::AccAddress,
+        pubkey: PublicKey,
     ) -> anyhow::Result<gears::types::tx::Messages<Self::Message>> {
         let coins = UnsignedCoins::new([amount.clone()]).expect("hardcoded coin"); // I don't want to comment this code. See: https://github.com/cosmos/cosmos-sdk/blob/d3f09c222243bb3da3464969f0366330dcb977a8/x/genutil/client/cli/gentx.go#L118-L147
 
@@ -126,6 +126,8 @@ impl TxHandler for GentxTxHandler {
             client_tx_context.home.join("config/genesis.json"), // todo: better way to get path to genesis file
         )?
         .into_inner();
+
+        let from_address = pubkey.get_address();
 
         match txs_iter.get(&from_address) {
             Some(acc_coins) => {
@@ -147,7 +149,7 @@ impl TxHandler for GentxTxHandler {
             ))?,
         }
 
-        let pub_key = match pubkey {
+        let pub_key = match pub_key {
             Some(var) => PublicKey::from(var),
             None => {
                 #[derive(serde::Deserialize)]

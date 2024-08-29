@@ -4,11 +4,14 @@ use crate::{
     baseapp::Query,
     commands::client::{
         query::execute_query,
-        tx::{broadcast_tx_commit, ClientTxContext},
+        tx::{broadcast_tx_commit, ClientTxContext, Keyring},
     },
     crypto::{
+        any_key::AnyKey,
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
         keys::{GearsPublicKey, ReadAccAddress, SigningKey},
+        ledger::LedgerProxyKey,
+        public::PublicKey,
     },
     runtime::runtime,
     signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
@@ -75,11 +78,29 @@ pub trait TxHandler {
     type Message: TxMessage + ValueRenderer;
     type TxCommands;
 
+    fn handle_key(&self, client_tx_context: &mut ClientTxContext) -> anyhow::Result<AnyKey> {
+        match client_tx_context.keyring {
+            Keyring::Ledger => Ok(AnyKey::Ledger(LedgerProxyKey::new()?)),
+            Keyring::Local(ref local) => {
+                let keyring_home = client_tx_context
+                    .home
+                    .join(local.keyring_backend.get_sub_dir());
+                let key = keyring::key_by_name(
+                    &local.from_key,
+                    local.keyring_backend.to_keyring_backend(&keyring_home),
+                )?;
+
+                Ok(AnyKey::Local(key))
+            }
+            Keyring::None => Err(anyhow::anyhow!("Missing `--from-key`")),
+        }
+    }
+
     fn prepare_tx(
         &self,
         client_tx_context: &mut ClientTxContext,
         command: Self::TxCommands,
-        from_address: AccAddress,
+        pubkey: PublicKey,
     ) -> anyhow::Result<Messages<Self::Message>>;
 
     fn account(

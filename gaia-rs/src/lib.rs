@@ -25,10 +25,10 @@ use gears::commands::client::tx::ClientTxContext;
 use gears::commands::node::run::RouterBuilder;
 use gears::commands::NilAux;
 use gears::commands::NilAuxCommand;
+use gears::crypto::public::PublicKey;
 use gears::grpc::health::health_server;
 use gears::grpc::tx::tx_server;
 use gears::rest::RestState;
-use gears::types::address::AccAddress;
 use gears::types::tx::Messages;
 use ibc_rs::client::cli::query::IbcQueryHandler;
 use rest::get_router;
@@ -71,9 +71,9 @@ impl TxHandler for GaiaCoreClient {
         &self,
         ctx: &mut ClientTxContext,
         command: Self::TxCommands,
-        from_address: AccAddress,
+        pubkey: PublicKey,
     ) -> Result<Messages<Self::Message>> {
-        tx_command_handler(ctx, command.0, from_address)
+        tx_command_handler(ctx, command.0, pubkey.get_address())
     }
 }
 

@@ -8,8 +8,7 @@ use tendermint::types::chain_id::ChainId;
 
 use crate::application::handlers::client::{TxExecutionResult, TxHandler};
 use crate::commands::client::query::execute_query;
-use crate::crypto::keys::ReadAccAddress;
-use crate::crypto::ledger::LedgerProxyKey;
+use crate::crypto::keys::GearsPublicKey;
 use crate::runtime::runtime;
 use crate::types::base::coins::UnsignedCoins;
 use crate::types::tx::raw::TxRaw;
@@ -31,10 +30,10 @@ pub struct TxCommand<C> {
 pub struct ClientTxContext {
     pub node: url::Url,
     pub home: PathBuf,
+    pub keyring: Keyring,
+    pub memo: Option<String>,
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
-    keyring: Keyring,
-    pub memo: Option<String>,
 }
 
 impl ClientTxContext {
@@ -73,10 +72,12 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub enum Keyring {
     Ledger,
     Local(LocalInfo),
+    #[default]
+    None,
 }
 
 #[derive(Debug, Clone)]
@@ -124,86 +125,58 @@ pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     command: TxCommand<C>,
     handler: &H,
 ) -> anyhow::Result<RuntxResult> {
-    match command.keyring {
-        Keyring::Ledger => {
-            let key = LedgerProxyKey::new()?;
+    let ctx = &mut (&command).into();
+    let key = handler.handle_key(ctx)?;
 
-            let ctx = &mut (&command).into();
-            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
-            handler
-                .handle_tx(
-                    handler.sign_msg(
-                        messages,
-                        &key,
-                        &command.node,
-                        command.chain_id,
-                        command.fees,
-                        SignMode::Textual,
-                        ctx,
-                    )?,
-                    ctx,
-                )
-                .map(Into::into)
-        }
-        Keyring::Local(ref info) => {
-            let keyring_home = command.home.join(info.keyring_backend.get_sub_dir());
-            let key = keyring::key_by_name(
-                &info.from_key,
-                info.keyring_backend.to_keyring_backend(&keyring_home),
-            )?;
+    let messages = handler.prepare_tx(ctx, command.inner, key.get_gears_public_key())?;
 
-            let ctx = &mut (&command).into();
-            let messages = handler.prepare_tx(ctx, command.inner, key.get_address())?;
+    if messages.chunk_size() > 0
+    // TODO: uncomment and update logic when command will be extended by broadcast_mode
+    /* && command.broadcast_mode == BroadcastMode::Block */
+    {
+        let chunk_size = messages.chunk_size();
+        let msgs = messages.into_msgs();
 
-            if messages.chunk_size() > 0
-            // TODO: uncomment and update logic when command will be extended by broadcast_mode
-            /* && command.broadcast_mode == BroadcastMode::Block */
-            {
-                let chunk_size = messages.chunk_size();
-                let msgs = messages.into_msgs();
-
-                let mut res = vec![];
-                for slice in msgs.chunks(chunk_size) {
-                    res.push(
-                        handler
-                            .handle_tx(
-                                handler.sign_msg(
-                                    slice
-                                        .to_vec()
-                                        .try_into()
-                                        .expect("chunking of the messages excludes empty vectors"),
-                                    &key,
-                                    &command.node,
-                                    command.chain_id.clone(),
-                                    command.fees.clone(),
-                                    SignMode::Direct,
-                                    ctx,
-                                )?,
-                                ctx,
-                            )?
-                            .broadcast()
-                            .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
-                    );
-                }
-                Ok(RuntxResult::Broadcast(res))
-            } else {
-                // TODO: can be reduced by changing variable `step`. Do we need it?
+        let mut res = vec![];
+        for slice in msgs.chunks(chunk_size) {
+            res.push(
                 handler
                     .handle_tx(
                         handler.sign_msg(
-                            messages,
+                            slice
+                                .to_vec()
+                                .try_into()
+                                .expect("chunking of the messages excludes empty vectors"),
                             &key,
                             &command.node,
-                            command.chain_id,
-                            command.fees,
+                            command.chain_id.clone(),
+                            command.fees.clone(),
                             SignMode::Direct,
                             ctx,
                         )?,
                         ctx,
-                    )
-                    .map(Into::into)
-            }
+                    )?
+                    .broadcast()
+                    .ok_or(anyhow::anyhow!("tx is not broadcasted"))?,
+            );
         }
+        Ok(RuntxResult::Broadcast(res))
+    } else {
+        // TODO: can be reduced by changing variable `step`. Do we need it?
+        handler
+            .handle_tx(
+                handler.sign_msg(
+                    messages,
+                    &key,
+                    &command.node,
+                    command.chain_id,
+                    command.fees,
+                    SignMode::Direct,
+                    ctx,
+                )?,
+                ctx,
+            )
+            .map(Into::into)
     }
 }
 
