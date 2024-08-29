@@ -164,6 +164,21 @@ impl<M: TxMessage> Tx<M> {
         signers
     }
 
+    // TODO: Remove this method and read valid structure
+    pub fn set_signatures_data(&mut self) {
+        let mut signatures_data = Vec::with_capacity(self.signatures.len());
+        for (i, signature) in self.signatures.iter().enumerate() {
+            signatures_data.push(SignatureData {
+                signature: signature.clone(),
+                // the check above, tx.signatures.len() != tx.auth_info.signer_infos.len(), ensures that this indexing is safe
+                sequence: self.auth_info.signer_infos[i].sequence,
+                mode_info: self.auth_info.signer_infos[i].mode_info.clone(),
+            })
+        }
+
+        self.signatures_data = signatures_data;
+    }
+
     pub fn get_signatures(&self) -> &Vec<Vec<u8>> {
         &self.signatures
     }

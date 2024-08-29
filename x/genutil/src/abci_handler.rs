@@ -108,7 +108,8 @@ impl<
         ctx: &mut gears::context::init::InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
-        for tx in genesis.gen_txs {
+        for mut tx in genesis.gen_txs {
+            tx.set_signatures_data();
             let tx = TxWithRaw::from(tx);
             let ante_check_res = self.ante_handler.run(
                 ctx,
@@ -118,6 +119,8 @@ impl<
                 Arc::new(RefCell::new(GasMeter::infinite())),
             );
 
+            dbg!(&ante_check_res);
+
             match ante_check_res {
                 Ok(_) => (),
                 Err(err) => panic!("Failed to run ante checks for tx: {err}"),
@@ -125,9 +128,13 @@ impl<
 
             let msg = tx.tx.body.messages.first(); // We know that such tx should contain only one message
 
+            dbg!(msg);
+
             let tx_result =
                 self.staking
                     .create_validator(ctx, ctx.consensus_params().validator.clone(), msg);
+
+            dbg!(&tx_result);
 
             match tx_result {
                 Ok(_) => (),
