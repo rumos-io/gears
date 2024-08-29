@@ -36,21 +36,26 @@ impl<
         ctx: &QueryContext<DB, SK>,
         query: QueryValidatorsRequest,
     ) -> QueryValidatorsResponse {
-        let (validators, p_result) = match query.status {
-            BondStatus::Unspecified => {
-                let store = ctx.kv_store(&self.store_key);
-                let store = store.prefix_store(VALIDATORS_KEY);
+        let store = ctx.kv_store(&self.store_key);
+        let store = store.prefix_store(VALIDATORS_KEY);
 
-                let (p_result, iterator) = store
-                    .into_range(..)
-                    .maybe_paginate(query.pagination.map(gears::ext::Pagination::from));
-                let validators = iterator
-                    .filter_map(|(_k, bytes)| Validator::decode_vec(&bytes).ok())
-                    .collect();
-                (validators, p_result)
+        let iterator = store.into_range(..).filter_map(|(k, bytes)| {
+            if let Ok(v) = Validator::decode_vec(&bytes) {
+                Some((k, v))
+            } else {
+                None
             }
-            // TODO: unimplemented
-            _ => (vec![], None),
+        });
+
+        let pagination = query.pagination.map(gears::ext::Pagination::from);
+        let (validators, p_result) = if query.status == BondStatus::Unspecified {
+            let (p_result, iterator) = iterator.maybe_paginate(pagination);
+            (iterator.map(|(_k, v)| v).collect(), p_result)
+        } else {
+            let (p_result, iterator) = iterator
+                .filter(|(_k, v)| v.status == query.status)
+                .maybe_paginate(pagination);
+            (iterator.map(|(_k, v)| v).collect(), p_result)
         };
 
         QueryValidatorsResponse {

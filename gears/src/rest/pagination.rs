@@ -15,6 +15,12 @@ pub struct Pagination {
     limit: Option<u8>,
 }
 
+impl Pagination {
+    pub fn new(offset: Option<u32>, limit: Option<u8>) -> Pagination {
+        Pagination { offset, limit }
+    }
+}
+
 impl From<Pagination> for PaginationRequest {
     fn from(pagination: Pagination) -> Self {
         let (offset, limit) = parse_pagination(&pagination);

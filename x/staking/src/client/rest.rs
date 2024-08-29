@@ -13,20 +13,31 @@ use gears::{
     types::{address::AccAddress, pagination::request::PaginationRequest},
     x::types::validator::BondStatus,
 };
+use serde::{Deserialize, Serialize};
+
+#[derive(Deserialize, Serialize)]
+pub struct ValidatorsQuery {
+    status: Option<BondStatus>,
+    // TODO: serde(flatten) doesn't work
+    offset: Option<u32>,
+    limit: Option<u8>,
+}
 
 pub async fn validators<
     QReq: QueryRequest + From<StakingNodeQueryRequest>,
     QRes: QueryResponse + TryInto<StakingNodeQueryResponse>,
     App: NodeQueryHandler<QReq, QRes>,
 >(
-    // TODO: add status
-    Query(pagination): Query<Pagination>,
+    Query(ValidatorsQuery {
+        status,
+        offset,
+        limit,
+    }): Query<ValidatorsQuery>,
     State(rest_state): State<RestState<QReq, QRes, App>>,
 ) -> Result<Json<QRes>, HTTPError> {
     let req = StakingNodeQueryRequest::Validators(crate::QueryValidatorsRequest {
-        // TODO
-        status: BondStatus::Unspecified,
-        pagination: Some(PaginationRequest::from(pagination)),
+        status: status.unwrap_or(BondStatus::Unspecified),
+        pagination: Some(PaginationRequest::from(Pagination::new(offset, limit))),
     });
     let res = rest_state.app.typed_query(req)?;
     Ok(Json(res))
