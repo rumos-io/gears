@@ -18,6 +18,7 @@ use tendermint::informal::Hash;
 use tendermint::rpc::client::{Client, HttpClient, HttpClientUrl};
 use tendermint::rpc::query::Query;
 use tendermint::rpc::response::tx::search::Response;
+use tendermint::rpc::response::validators::Response as ValidatorsResponse;
 use tendermint::rpc::url::Url;
 use tendermint::rpc::Order;
 
@@ -49,6 +50,50 @@ pub async fn node_info(
         node_info: res.node_info,
     };
     Ok(Json(node_info))
+}
+
+pub async fn validatorsets_latest(
+    AxumQuery(pagination): AxumQuery<Pagination>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<ValidatorsResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let (page, limit) = parse_pagination(&pagination);
+    let res = client
+        .validators_latest(tendermint::rpc::client::Paging::Specific {
+            page_number: (page as usize).into(),
+            per_page: limit.into(),
+        })
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })?;
+    Ok(Json(res))
+}
+
+pub async fn validatorsets(
+    Path(height): Path<u32>,
+    AxumQuery(pagination): AxumQuery<Pagination>,
+    State(tendermint_rpc_address): State<HttpClientUrl>,
+) -> Result<Json<ValidatorsResponse>, HTTPError> {
+    let client = HttpClient::new::<Url>(tendermint_rpc_address.into()).expect("the conversion to Url then back to HttClientUrl should not be necessary, it will never fail, the dep needs to be fixed");
+
+    let (page, limit) = parse_pagination(&pagination);
+    let res = client
+        .validators(
+            height,
+            tendermint::rpc::client::Paging::Specific {
+                page_number: (page as usize).into(),
+                per_page: limit.into(),
+            },
+        )
+        .await
+        .map_err(|e| {
+            tracing::error!("Error connecting to Tendermint: {e}");
+            HTTPError::gateway_timeout()
+        })?;
+    Ok(Json(res))
 }
 
 #[derive(Deserialize)]

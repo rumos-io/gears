@@ -5249,6 +5249,7 @@ name = "tendermint"
 version = "0.1.0"
 dependencies = [
  "address",
+ "async-trait",
  "bytes",
  "chrono",
  "ed25519-consensus",

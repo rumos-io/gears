@@ -14,3 +14,7 @@ pub mod tx {
         pub use tendermint_rpc::endpoint::tx_search::Response;
     }
 }
+
+pub mod validators {
+    pub use tendermint_rpc::endpoint::validators::Response;
+}

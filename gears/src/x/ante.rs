@@ -455,8 +455,6 @@ impl<
                     SignMode::LegacyAminoJson => {
                         let mut msgs = vec![];
                         for msg in tx.tx.get_msgs() {
-                            dbg!(msg.get_signers());
-                            dbg!(msg.amino_url());
                             msgs.push(std_sign_doc::Msg {
                                 kind: msg.amino_url().to_string(),
                                 value: msg.render()?,
