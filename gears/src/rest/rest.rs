@@ -1,6 +1,6 @@
 use crate::{
     baseapp::{NodeQueryHandler, QueryRequest, QueryResponse},
-    rest::handlers::{block_latest, node_info, send_tx, staking_params, tx, txs},
+    rest::handlers::{block_latest, node_info, send_tx, tx, txs},
     runtime::runtime,
     types::tx::TxMessage,
 };
@@ -78,7 +78,6 @@ async fn launch<
 
     let app = Router::new()
         .route("/cosmos/base/tendermint/v1beta1/node_info", get(node_info))
-        .route("/cosmos/staking/v1beta1/params", get(staking_params))
         .route("/cosmos/tx/v1beta1/txs", get(txs::<M>).post(send_tx))
         .route("/cosmos/tx/v1beta1/txs/:hash", get(tx::<M>))
         .route(

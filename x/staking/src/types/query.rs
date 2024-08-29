@@ -22,15 +22,20 @@ use serde::{Deserialize, Serialize};
 
 mod inner {
     pub use ibc_proto::cosmos::staking::v1beta1::DelegationResponse;
-    pub use ibc_proto::cosmos::staking::v1beta1::QueryPoolResponse;
-    pub use ibc_proto::cosmos::staking::v1beta1::QueryUnbondingDelegationResponse;
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryDelegationRequest, QueryDelegationResponse,
     };
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
     };
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
+    };
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryParamsRequest, QueryParamsResponse};
+    pub use ibc_proto::cosmos::staking::v1beta1::{QueryPoolRequest, QueryPoolResponse};
+    pub use ibc_proto::cosmos::staking::v1beta1::{
+        QueryUnbondingDelegationRequest, QueryUnbondingDelegationResponse,
+    };
     pub use ibc_proto::cosmos::staking::v1beta1::{QueryValidatorRequest, QueryValidatorResponse};
     pub use ibc_proto::cosmos::staking::v1beta1::{
         QueryValidatorsRequest, QueryValidatorsResponse,
@@ -76,7 +81,7 @@ pub struct QueryDelegationRequest {
 /// QueryDelegatorDelegationsRequest is request type for the
 /// Query/DelegatorDelegations RPC method.
 #[derive(Clone, Debug, PartialEq, Query, Protobuf)]
-#[query(url = "/cosmos.staking.v1beta1.Query/Delegations")]
+#[query(url = "/cosmos.staking.v1beta1.Query/DelegatorDelegations")]
 #[proto(raw = "inner::QueryDelegatorDelegationsRequest")]
 pub struct QueryDelegatorDelegationsRequest {
     /// delegator_addr defines the delegator address to query for.
@@ -86,15 +91,29 @@ pub struct QueryDelegatorDelegationsRequest {
     pub pagination: Option<PaginationRequest>,
 }
 
-#[derive(Clone, Debug, PartialEq, Query, Raw, Protobuf)]
+/// QueryUnbondingDelegationRequest is request type for the
+/// Query/UnbondingDelegation RPC method.
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/UnbondingDelegation")]
-pub struct QueryUnboundingDelegationRequest {
+#[proto(raw = "inner::QueryUnbondingDelegationRequest")]
+pub struct QueryUnbondingDelegationRequest {
     /// delegator_addr defines the delegator address to query for.
-    #[raw(kind(string), raw = String)]
-    pub delegator_address: AccAddress,
+    pub delegator_addr: AccAddress,
     /// validator_addr defines the validator address to query for.
-    #[raw(kind(string), raw = String)]
-    pub validator_address: ValAddress,
+    pub validator_addr: ValAddress,
+}
+
+/// QueryDelegatorUnbondingDelegationsRequest is request type for the
+/// Query/DelegatorUnbondingDelegations RPC method.
+#[derive(Clone, Debug, PartialEq, Query, Protobuf)]
+#[query(url = "/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations")]
+#[proto(raw = "inner::QueryDelegatorUnbondingDelegationsRequest")]
+pub struct QueryDelegatorUnbondingDelegationsRequest {
+    /// delegator_addr defines the delegator address to query for.
+    pub delegator_addr: AccAddress,
+    /// pagination defines an optional pagination for the request.
+    #[proto(optional)]
+    pub pagination: Option<PaginationRequest>,
 }
 
 /// QueryRedelegationRequest is request type for the Query/Redelegation RPC method.
@@ -119,8 +138,9 @@ pub struct QueryRedelegationRequest {
     pub pagination: Option<PaginationRequest>,
 }
 
-#[derive(Clone, PartialEq, Message, Raw, Query, Protobuf)]
+#[derive(Clone, PartialEq, Message, Query, Protobuf)]
 #[query(url = "/cosmos.staking.v1beta1.Query/Pool")]
+#[proto(raw = "inner::QueryPoolRequest")]
 pub struct QueryPoolRequest {}
 
 #[derive(Clone, PartialEq, Message, Query, Protobuf)]
@@ -181,6 +201,27 @@ pub struct QueryDelegatorDelegationsResponse {
     /// delegation_responses defines all the delegations' info of a delegator.
     #[proto(repeated)]
     pub delegation_responses: Vec<DelegationResponse>,
+    /// pagination defines the pagination in the response.
+    #[proto(optional)]
+    pub pagination: Option<PaginationResponse>,
+}
+
+/// QueryUnbondingDelegationResponse is the response type for the Query/UnbondingDelegation RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryUnbondingDelegationResponse")]
+pub struct QueryUnbondingDelegationResponse {
+    /// UnbondingDelegation with balance.
+    #[proto(optional)]
+    pub unbond: Option<UnbondingDelegation>,
+}
+
+/// QueryUnbondingDelegatorDelegationsResponse is response type for the
+/// Query/UnbondingDelegatorDelegations RPC method.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
+#[proto(raw = "inner::QueryDelegatorUnbondingDelegationsResponse")]
+pub struct QueryDelegatorUnbondingDelegationsResponse {
+    #[proto(repeated)]
+    pub unbonding_responses: Vec<UnbondingDelegation>,
     /// pagination defines the pagination in the response.
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
@@ -273,15 +314,6 @@ pub struct QueryRedelegationResponse {
     #[raw(kind(message), raw = PageResponse, optional)]
     #[proto(optional)]
     pub pagination: Option<PaginationResponse>,
-}
-
-/// QueryUnbondingDelegationResponse is the response type for the Query/UnbondingDelegation RPC method.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize, Query, Protobuf)]
-#[proto(raw = "inner::QueryUnbondingDelegationResponse")]
-pub struct QueryUnbondingDelegationResponse {
-    /// UnbondingDelegation with balance.
-    #[proto(optional)]
-    pub unbond: Option<UnbondingDelegation>,
 }
 
 /// QueryPoolResponse is response type for the Query/Pool RPC method.

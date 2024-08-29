@@ -208,24 +208,6 @@ fn map_responses<M: TxMessage>(res_tx: Response) -> Result<GetTxsEventResponse<M
     })
 }
 
-// This is a hack for now to make the front end work
-// TODO: remove this once the staking module is implemented
-//#[get("/cosmos/staking/v1beta1/params")]
-pub async fn staking_params() -> &'static str {
-    r#"
-    {
-        "params": {
-          "unbonding_time": "0",
-          "max_validators": 0,
-          "max_entries": 0,
-          "historical_entries": 0,
-          "bond_denom": "uatom",
-          "min_commission_rate": "0"
-        }
-      }
-    "#
-}
-
 pub async fn block_latest(
     State(tendermint_rpc_address): State<HttpClientUrl>,
 ) -> Result<Json<tendermint::rpc::endpoint::Response>, HTTPError> {

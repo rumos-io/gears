@@ -1,10 +1,12 @@
 use crate::{
     error::StakingTxError, GenesisState, Keeper, Message, QueryDelegationRequest,
     QueryDelegationResponse, QueryDelegatorDelegationsRequest, QueryDelegatorDelegationsResponse,
+    QueryDelegatorUnbondingDelegationsRequest, QueryDelegatorUnbondingDelegationsResponse,
     QueryParamsRequest, QueryParamsResponse, QueryPoolRequest, QueryPoolResponse,
-    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationResponse,
-    QueryValidatorRequest, QueryValidatorResponse, QueryValidatorsRequest, QueryValidatorsResponse,
-    Redelegation, RedelegationEntryResponse, RedelegationResponse,
+    QueryRedelegationRequest, QueryRedelegationResponse, QueryUnbondingDelegationRequest,
+    QueryUnbondingDelegationResponse, QueryValidatorRequest, QueryValidatorResponse,
+    QueryValidatorsRequest, QueryValidatorsResponse, Redelegation, RedelegationEntryResponse,
+    RedelegationResponse,
 };
 use gears::{
     application::handlers::node::{ABCIHandler, ModuleInfo, TxError},
@@ -52,7 +54,8 @@ pub enum StakingNodeQueryRequest {
     Validators(QueryValidatorsRequest),
     Delegation(QueryDelegationRequest),
     Delegations(QueryDelegatorDelegationsRequest),
-    UnbondingDelegation(QueryDelegationRequest),
+    UnbondingDelegation(QueryUnbondingDelegationRequest),
+    UnbondingDelegations(QueryDelegatorUnbondingDelegationsRequest),
     Redelegation(QueryRedelegationRequest),
     Pool(QueryPoolRequest),
     Params(QueryParamsRequest),
@@ -73,6 +76,7 @@ pub enum StakingNodeQueryResponse {
     Delegation(QueryDelegationResponse),
     Delegations(QueryDelegatorDelegationsResponse),
     UnbondingDelegation(QueryUnbondingDelegationResponse),
+    UnbondingDelegations(QueryDelegatorUnbondingDelegationsResponse),
     Redelegation(QueryRedelegationResponse),
     Pool(QueryPoolResponse),
     Params(QueryParamsResponse),
@@ -119,6 +123,11 @@ impl<
             StakingNodeQueryRequest::UnbondingDelegation(req) => {
                 StakingNodeQueryResponse::UnbondingDelegation(
                     self.keeper.query_unbonding_delegation(ctx, req),
+                )
+            }
+            StakingNodeQueryRequest::UnbondingDelegations(req) => {
+                StakingNodeQueryResponse::UnbondingDelegations(
+                    self.keeper.query_unbonding_delegations(ctx, req),
                 )
             }
             StakingNodeQueryRequest::Redelegation(req) => {
@@ -186,7 +195,7 @@ impl<
 
                 Ok(self.keeper.query_delegation(ctx, req).into_bytes().into())
             }
-            "/cosmos.staking.v1beta1.Query/Delegations" => {
+            "/cosmos.staking.v1beta1.Query/DelegatorDelegations" => {
                 let req = QueryDelegatorDelegationsRequest::decode(query.data)?;
 
                 Ok(self
@@ -196,11 +205,20 @@ impl<
                     .into())
             }
             "/cosmos.staking.v1beta1.Query/UnbondingDelegation" => {
-                let req = QueryDelegationRequest::decode(query.data)?;
+                let req = QueryUnbondingDelegationRequest::decode(query.data)?;
 
                 Ok(self
                     .keeper
                     .query_unbonding_delegation(ctx, req)
+                    .into_bytes()
+                    .into())
+            }
+            "/cosmos.staking.v1beta1.Query/DelegatorUnbondingDelegations" => {
+                let req = QueryDelegatorUnbondingDelegationsRequest::decode(query.data)?;
+
+                Ok(self
+                    .keeper
+                    .query_unbonding_delegations(ctx, req)
                     .into_bytes()
                     .into())
             }
