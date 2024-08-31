@@ -91,14 +91,11 @@ impl<M: TxMessage> TxWithRaw<M> {
 
 impl<M: TxMessage> From<Tx<M>> for TxWithRaw<M> {
     fn from(tx: Tx<M>) -> Self {
-        let raw = tx.encode_vec();
-        let tx_len = raw.len();
+        let tx_len = tx.encode_vec().len();
 
         Self {
-            tx,
-            raw: inner::TxRaw::decode(Bytes::from(raw))
-                .expect("We deserialize from bytes of correct type")
-                .into(),
+            tx: tx.clone(),
+            raw: TxRaw::from(&tx),
             tx_len,
         }
     }
