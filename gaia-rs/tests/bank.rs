@@ -118,6 +118,7 @@ fn send_tx() -> anyhow::Result<()> {
             node: DEFAULT_TENDERMINT_RPC_ADDRESS.parse()?,
             chain_id: ChainId::from_str("test-chain")?,
             fees: None,
+            account: gears::commands::client::tx::AccountProvider::Online,
             inner: WrappedGaiaTxCommands(GaiaTxCommands::Bank(BankTxCli { command: tx_cmd })),
         },
         &GaiaCoreClient,
