@@ -55,8 +55,10 @@ pub struct Mode {
     /// the transaction to fail.
     #[arg(long, default_value_t = false)]
     pub offline: bool,
+    /// The sequence number of the signing account (offline mode only)
     #[arg(long, required = false)]
     pub sequence: Option<u64>,
+    /// The account number of the signing account (offline mode only)
     #[arg(long, required = false)]
     pub account_number: Option<u64>,
 }
@@ -140,6 +142,22 @@ where
             } => AccountProvider::Offline {
                 sequence: sequence.unwrap_or_default(),
                 account_number: account_number.unwrap_or_default(),
+            },
+            Mode {
+                offline: false,
+                sequence: Some(sequence),
+                account_number,
+            } => AccountProvider::Offline {
+                sequence: sequence,
+                account_number: account_number.unwrap_or_default(),
+            },
+            Mode {
+                offline: false,
+                sequence,
+                account_number: Some(account_number),
+            } => AccountProvider::Offline {
+                sequence: sequence.unwrap_or_default(),
+                account_number: account_number,
             },
             _ => AccountProvider::Online,
         };

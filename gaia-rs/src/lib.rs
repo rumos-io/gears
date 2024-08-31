@@ -141,7 +141,7 @@ impl AuxHandler for GaiaCore {
                     genutil::collect_txs::gen_app_state_from_config(cmd, "bank", "genutil")?;
                 }
                 genutil::cmd::GenesisCmd::Gentx(cmd) => {
-                    genutil::gentx::gentx_cmd(cmd, "bank", "staking", "auth")?;
+                    genutil::gentx::gentx_cmd(cmd, "bank", "staking")?;
                 }
             },
         }

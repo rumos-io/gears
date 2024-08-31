@@ -188,7 +188,11 @@ impl ABCIHandler for GaiaABCIHandler {
         let validator_updates = self.staking_abci_handler.genesis(ctx, genesis.staking);
         self.ibc_abci_handler.genesis(ctx, genesis.ibc);
         self.auth_abci_handler.genesis(ctx, genesis.auth);
-        // validator_updates.append(&mut self.genutil_handler.init_genesis(ctx, genesis.genutil));
+        let genutil_updates = self.genutil_handler.init_genesis(ctx, genesis.genutil);
+
+        if !(genutil_updates.is_empty() && validator_updates.is_empty()) {
+            panic!("validator InitGenesis updates already set by a previous module")
+        }
 
         validator_updates
     }
