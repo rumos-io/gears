@@ -8,7 +8,9 @@ use tendermint::types::chain_id::ChainId;
 
 use crate::application::handlers::client::{TxExecutionResult, TxHandler};
 use crate::commands::client::query::execute_query;
+use crate::crypto::any_key::AnyKey;
 use crate::crypto::keys::GearsPublicKey;
+use crate::crypto::ledger::LedgerProxyKey;
 use crate::runtime::runtime;
 use crate::types::base::coins::UnsignedCoins;
 use crate::types::tx::raw::TxRaw;
@@ -72,12 +74,10 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub enum Keyring {
     Ledger,
     Local(LocalInfo),
-    #[default]
-    None,
 }
 
 #[derive(Debug, Clone)]
@@ -121,12 +121,29 @@ impl From<TxExecutionResult> for RuntxResult {
     }
 }
 
+fn handle_key(client_tx_context: &ClientTxContext) -> anyhow::Result<AnyKey> {
+    match client_tx_context.keyring {
+        Keyring::Ledger => Ok(AnyKey::Ledger(LedgerProxyKey::new()?)),
+        Keyring::Local(ref local) => {
+            let keyring_home = client_tx_context
+                .home
+                .join(local.keyring_backend.get_sub_dir());
+            let key = keyring::key_by_name(
+                &local.from_key,
+                local.keyring_backend.to_keyring_backend(&keyring_home),
+            )?;
+
+            Ok(AnyKey::Local(key))
+        }
+    }
+}
+
 pub fn run_tx<C, H: TxHandler<TxCommands = C>>(
     command: TxCommand<C>,
     handler: &H,
 ) -> anyhow::Result<RuntxResult> {
     let ctx = &mut (&command).into();
-    let key = handler.handle_key(ctx)?;
+    let key = handle_key(ctx)?;
 
     let messages = handler.prepare_tx(ctx, command.inner, key.get_gears_public_key())?;
 

@@ -29,7 +29,7 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     #[arg(long, global = true, action = ArgAction::Set)]
     pub fees: Option<UnsignedCoins>,
 
-    #[arg(long, short, default_value_t = Keyring::None)]
+    #[arg(long, short, default_value_t = Keyring::Local)]
     pub keyring: Keyring,
 
     #[command(flatten)]
@@ -51,9 +51,6 @@ pub enum Keyring {
     /// Use a local keyring to source the signing key
     #[strum(to_string = "local")]
     Local,
-    /// Don't use any signing. Ignored if you specify any local signing options
-    #[strum(to_string = "none")]
-    None,
 }
 
 #[derive(Debug, Clone, ::clap::Args)]
@@ -114,16 +111,6 @@ where
                     from_key,
                 })
             }
-            Keyring::None => match local {
-                Some(Local {
-                    from_key,
-                    keyring_backend,
-                }) => TxKeyring::Local(LocalInfo {
-                    keyring_backend,
-                    from_key,
-                }),
-                None => TxKeyring::None,
-            },
         };
 
         Ok(Self {
