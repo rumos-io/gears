@@ -17,11 +17,18 @@ use crate::types::tx::raw::TxRaw;
 
 use super::keys::KeyringBackend;
 
+#[derive(Debug, Clone)]
+pub enum AccountProvider {
+    Offline { sequence: u64, account_number: u64 },
+    Online,
+}
+
 #[derive(Debug, Clone, former::Former)]
 pub struct TxCommand<C> {
     pub home: PathBuf,
     pub node: url::Url,
     pub chain_id: ChainId,
+    pub account: AccountProvider,
     pub fees: Option<UnsignedCoins>,
     pub keyring: Keyring,
     pub inner: C,
@@ -34,6 +41,7 @@ pub struct ClientTxContext {
     pub home: PathBuf,
     pub keyring: Keyring,
     pub memo: Option<String>,
+    pub account: AccountProvider,
     chain_id: ChainId,
     fees: Option<UnsignedCoins>,
 }
@@ -60,6 +68,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
             chain_id,
             fees,
             keyring,
+            account,
             inner: _,
         }: &TxCommand<C>,
     ) -> Self {
@@ -69,6 +78,7 @@ impl<C> From<&TxCommand<C>> for ClientTxContext {
             chain_id: chain_id.clone(),
             fees: fees.clone(),
             keyring: keyring.clone(),
+            account: account.clone(),
             memo: None,
         }
     }

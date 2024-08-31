@@ -8,7 +8,7 @@ use crate::{
     application::ApplicationInfo,
     commands::client::{
         keys::KeyringBackend,
-        tx::{Keyring as TxKeyring, LocalInfo, TxCommand},
+        tx::{AccountProvider, Keyring as TxKeyring, LocalInfo, TxCommand},
     },
     config::DEFAULT_TENDERMINT_RPC_ADDRESS,
     types::base::coins::UnsignedCoins,
@@ -37,10 +37,28 @@ pub struct CliTxCommand<T: ApplicationInfo, C: Args> {
     pub local: Option<Local>,
 
     #[command(flatten)]
+    #[group(id = "Broadcast mode", global = true)]
+    pub mode: Mode,
+
+    #[command(flatten)]
     pub command: C,
 
     #[arg(skip)]
     _marker: PhantomData<T>,
+}
+
+#[derive(Debug, Clone, ::clap::Args)]
+pub struct Mode {
+    /// makes sure that the client will not reach out to full node.
+    /// As a result, the account and sequence number queries will not be performed and
+    /// it is required to set such parameters manually. Note, invalid values will cause
+    /// the transaction to fail.
+    #[arg(long, default_value_t = false)]
+    pub offline: bool,
+    #[arg(long, required = false)]
+    pub sequence: Option<u64>,
+    #[arg(long, required = false)]
+    pub account_number: Option<u64>,
 }
 
 #[derive(ValueEnum, Debug, Clone, Display)]
@@ -93,6 +111,7 @@ where
             _marker,
             keyring,
             local,
+            mode,
             command,
         } = value;
 
@@ -113,6 +132,18 @@ where
             }
         };
 
+        let account = match mode {
+            Mode {
+                offline: true,
+                sequence,
+                account_number,
+            } => AccountProvider::Offline {
+                sequence: sequence.unwrap_or_default(),
+                account_number: account_number.unwrap_or_default(),
+            },
+            _ => AccountProvider::Online,
+        };
+
         Ok(Self {
             home,
             node,
@@ -120,6 +151,7 @@ where
             fees: fee,
             keyring,
             inner: command.try_into()?,
+            account,
         })
     }
 }

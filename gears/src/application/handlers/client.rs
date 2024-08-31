@@ -4,7 +4,7 @@ use crate::{
     baseapp::Query,
     commands::client::{
         query::execute_query,
-        tx::{broadcast_tx_commit, ClientTxContext},
+        tx::{broadcast_tx_commit, AccountProvider, ClientTxContext},
     },
     crypto::{
         info::{create_signed_transaction_direct, create_signed_transaction_textual, SigningInfo},
@@ -14,7 +14,7 @@ use crate::{
     runtime::runtime,
     signing::{handler::MetadataGetter, renderer::value_renderer::ValueRenderer},
     types::{
-        account::Account,
+        account::{Account, BaseAccount},
         address::AccAddress,
         auth::fee::Fee,
         base::coins::UnsignedCoins,
@@ -88,7 +88,20 @@ pub trait TxHandler {
         address: AccAddress,
         client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<Option<Account>> {
-        Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
+        match client_tx_context.account {
+            AccountProvider::Offline {
+                sequence,
+                account_number,
+            } => Ok(Some(Account::Base(BaseAccount {
+                address,
+                pub_key: None,
+                account_number,
+                sequence,
+            }))),
+            AccountProvider::Online => {
+                Ok(get_account_latest(address, client_tx_context.node.as_str())?.account)
+            }
+        }
     }
 
     fn sign_msg<K: SigningKey + ReadAccAddress + GearsPublicKey>(
@@ -155,10 +168,22 @@ pub trait TxHandler {
         raw_tx: Tx<Self::Message>,
         client_tx_context: &mut ClientTxContext,
     ) -> anyhow::Result<TxExecutionResult> {
-        let client = HttpClient::new(tendermint::rpc::url::Url::try_from(
-            client_tx_context.node.clone(),
-        )?)?;
-        broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
+        match client_tx_context.account {
+            AccountProvider::Offline {
+                sequence: _,
+                account_number: _,
+            } => {
+                println!("{}", serde_json::to_string_pretty(&raw_tx)?);
+
+                Ok(TxExecutionResult::None)
+            }
+            AccountProvider::Online => {
+                let client = HttpClient::new(tendermint::rpc::url::Url::try_from(
+                    client_tx_context.node.clone(),
+                )?)?;
+                broadcast_tx_commit(client, Into::into(&raw_tx)).map(Into::into)
+            }
+        }
     }
 }
 
