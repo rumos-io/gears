@@ -108,8 +108,11 @@ impl<
         ctx: &mut gears::context::init::InitContext<'_, DB, Self::StoreKey>,
         genesis: Self::Genesis,
     ) -> Vec<gears::tendermint::types::proto::validator::ValidatorUpdate> {
+        dbg!(&genesis);
+
         for mut tx in genesis.gen_txs {
             tx.set_signatures_data();
+            dbg!(&tx);
             let tx = TxWithRaw::from(tx);
             let ante_check_res = self.ante_handler.run(
                 ctx,

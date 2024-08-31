@@ -449,6 +449,8 @@ impl<
                 .auth_keeper
                 .get_account(ctx, signer)?
                 .ok_or(AccountNotFound::from(signer.to_owned()))?;
+            dbg!(&acct);
+
             let account_seq = acct.get_sequence();
             if account_seq != signature_data.sequence {
                 return Err(AnteError::Validation(format!(

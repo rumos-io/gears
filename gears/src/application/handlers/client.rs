@@ -137,7 +137,7 @@ pub trait TxHandler {
 
         let tx_body = TxBody {
             messages: msgs.into_msgs(),
-            memo: String::new(),                    // TODO: remove hard coded
+            memo: client_tx_context.memo.clone().unwrap_or_default(),
             timeout_height: 0,                      // TODO: remove hard coded
             extension_options: vec![],              // TODO: remove hard coded
             non_critical_extension_options: vec![], // TODO: remove hard coded
