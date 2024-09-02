@@ -1,4 +1,4 @@
-use darling::{util::Flag, FromAttributes, FromDeriveInput};
+use darling::{util::Flag, FromAttributes, FromDeriveInput, FromMeta};
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, spanned::Spanned};
 
@@ -10,16 +10,24 @@ mod struct_impl;
 struct MessageArg {
     #[darling(default)]
     pub gears: Flag,
+    #[darling(default, flatten)]
+    pub url: Url,
 }
 
 #[derive(FromAttributes, Default)]
 #[darling(default, attributes(tx_msg), forward_attrs(allow, doc, cfg))]
-#[darling(and_then = Self::validate)]
 struct MessageAttr {
-    pub url: Option<String>,
+    #[darling(default, flatten)]
+    pub url: Url,
 }
 
-impl MessageAttr {
+#[derive(FromMeta, Default)]
+#[darling(and_then = Self::validate)]
+struct Url {
+    url: Option<String>,
+}
+
+impl Url {
     fn validate(self) -> darling::Result<Self> {
         match &self.url {
             Some(var) => {
@@ -31,6 +39,10 @@ impl MessageAttr {
             }
             None => Ok(self),
         }
+    }
+
+    fn into_inner(self) -> Option<String> {
+        self.url
     }
 }
 
@@ -49,7 +61,7 @@ mod inner {
     use crate::{enum_impl, MessageArg};
 
     pub fn expand_macro(input: DeriveInput) -> syn::Result<proc_macro2::TokenStream> {
-        let MessageArg { gears } = MessageArg::from_derive_input(&input)?;
+        let MessageArg { gears, url } = MessageArg::from_derive_input(&input)?;
         let DeriveInput { ident, data, .. } = input;
 
         let crate_prefix = match gears.is_present() {
@@ -58,7 +70,7 @@ mod inner {
         };
 
         match data {
-            syn::Data::Struct(_) => Ok(quote! {}),
+            syn::Data::Struct(data) => Ok(quote! {}),
             syn::Data::Enum(data) => enum_impl::expand_macro(data, ident, crate_prefix),
             syn::Data::Union(_) => Err(syn::Error::new(
                 proc_macro2::Span::call_site(),
