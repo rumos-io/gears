@@ -6,11 +6,11 @@ members = [
   "core-types",
 
   # with local deps
-  "address",
-  "trees",
-  "kv_store",
-  "keyring",
-  "gears",
+  # "address",
+  # "trees",
+  # "kv_store",
+  # "keyring",
+  # "gears",
 
   # macros
   "macros/tx-derive",
@@ -19,18 +19,18 @@ members = [
   "macros/key-derive",
 
   # GAIA
-  "gaia-rs",
+  # "gaia-rs",
 
   # xmodules
-  "x/auth",
-  "x/bank",
-  "x/distribution",
-  "x/evidence",
-  "x/gov",
-  "x/ibc-rs",
-  "x/slashing",
-  "x/staking",
-  "x/genutil",
+  # "x/auth",
+  # "x/bank",
+  # "x/distribution",
+  # "x/evidence",
+  # "x/gov",
+  # "x/ibc-rs",
+  # "x/slashing",
+  # "x/staking",
+  # "x/genutil",
 
   # new unsorted
 ]
@@ -118,6 +118,13 @@ run_script = { version = "0.10.1" }
 byteorder = { version = "1.5.0" }
 handlebars = { version = "5.1.0" }
 rpassword = { version = "7.2.0" }
+
+#macros
+quote = "1.0"
+syn = "2.0" 
+proc-macro2 = "1.0"
+darling = "0.20"
+
 
 [workspace.lints.clippy]
 unused_async = "deny"
