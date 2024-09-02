@@ -162,7 +162,7 @@ impl ABCIHandler for GaiaABCIHandler {
         }
     }
 
-    fn begin_block<'a, DB: Database>(
+    fn begin_block<DB: Database>(
         &self,
         ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         request: gears::tendermint::types::request::begin_block::RequestBeginBlock,
@@ -170,7 +170,7 @@ impl ABCIHandler for GaiaABCIHandler {
         self.staking_abci_handler.begin_block(ctx, request);
     }
 
-    fn end_block<'a, DB: Database>(
+    fn end_block<DB: Database>(
         &self,
         _ctx: &mut gears::context::block::BlockContext<'_, DB, Self::StoreKey>,
         _request: gears::tendermint::types::request::end_block::RequestEndBlock,
@@ -190,7 +190,7 @@ impl ABCIHandler for GaiaABCIHandler {
         self.auth_abci_handler.genesis(ctx, genesis.auth);
         let genutil_updates = self.genutil_handler.init_genesis(ctx, genesis.genutil);
 
-        if !(genutil_updates.is_empty() && validator_updates.is_empty()) {
+        if !genutil_updates.is_empty() && !validator_updates.is_empty() {
             panic!("validator InitGenesis updates already set by a previous module")
         }
 
